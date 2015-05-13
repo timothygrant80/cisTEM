@@ -1,5 +1,4 @@
-#include <fstream>
-#include <iostream>
+#include "core_headers.h"
 
 bool GetMRCDetails(const char *filename, long &x_size, long &y_size, long &number_of_images)
 {

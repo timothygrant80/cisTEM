@@ -1,6 +1,5 @@
 #include "movie_asset.h"
-#include "functions.h"
-#include <iostream>
+#include "core_headers.h"
 
 
 MovieAsset::MovieAsset()
@@ -10,6 +9,7 @@ MovieAsset::MovieAsset()
 	y_size = 0;
 	pixel_size = 0;
 	microscope_voltage = 0;
+	spherical_aberration = 0;
 	dose_per_frame = 0;
 	total_dose = 0;
 	

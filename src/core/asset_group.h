@@ -1,5 +1,3 @@
-#include <wx/string.h>
-
 class AssetGroup {
 
 	long number_allocated;

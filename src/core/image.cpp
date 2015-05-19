@@ -373,7 +373,8 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 			input_file->SetNumberOfSlices(end_slice);
 		}
 
-		input_file->WriteHeader();
+		//input_file->WriteHeader();
+		input_file->rewrite_header_on_close = true;
 	}
 	else // if the last slice is bigger than the current max number of slices, increase the max number of slices
 	{
@@ -382,7 +383,7 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 			input_file->SetNumberOfSlices(end_slice);
 		}
 
-		input_file->WriteHeader();
+		input_file->rewrite_header_on_close = true;
 	}
 
 

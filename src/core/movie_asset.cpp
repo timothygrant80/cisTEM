@@ -1,5 +1,5 @@
-#include "movie_asset.h"
 #include "core_headers.h"
+#include "gui_core_headers.h"
 
 
 MovieAsset::MovieAsset()
@@ -34,6 +34,8 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	pixel_size = 0;
 	microscope_voltage = 0;
 	dose_per_frame = 0;
+	spherical_aberration = 0;
+	total_dose = 0;
 	
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{

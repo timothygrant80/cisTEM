@@ -1,5 +1,6 @@
-#include "asset_group.h"
-#include <iostream>
+#include "core_headers.h"
+#include "gui_core_headers.h"
+
 
 AssetGroup::AssetGroup()
 {

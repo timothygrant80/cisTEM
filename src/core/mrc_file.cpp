@@ -8,6 +8,12 @@ MRCFile::MRCFile(std::string filename, bool overwrite)
 
 MRCFile::~MRCFile()
 {
+	CloseFile();
+}
+
+void MRCFile::CloseFile()
+{
+	if (rewrite_header_on_close == true) WriteHeader();
 	if (my_file.is_open()) my_file.close();
 }
 
@@ -55,6 +61,8 @@ void MRCFile::OpenFile(std::string filename, bool overwrite)
 
 		my_header.BlankHeader();
 	}
+
+	rewrite_header_on_close = false;
 }
 
 void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array)

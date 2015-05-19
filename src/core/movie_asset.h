@@ -1,5 +1,5 @@
-#include <wx/string.h>
-#include <wx/filename.h>
+#ifndef __MOVIEASSET_H__
+#define __MOVIEASSET_H__
 
 class MovieAsset {
     
@@ -57,3 +57,5 @@ public:
 	long FindFile(wxFileName file_to_find);
 
 };
+
+#endif

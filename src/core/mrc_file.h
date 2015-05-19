@@ -8,6 +8,8 @@ class MRCFile {
 	std::fstream my_file;
 	MRCHeader my_header;
 
+	bool rewrite_header_on_close;
+
 	MRCFile(std::string filename, bool overwrite = false);
 	~MRCFile();
 

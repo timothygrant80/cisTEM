@@ -1,10 +1,7 @@
-#include <wx/wx.h>
-#include "../../gui/ProjectX_gui.h"
+#include "../../core/core_headers.h"
+#include "../../core/gui_core_headers.h"
 
-#include "../../gui/MainFrame.h"
-#include "../../gui/MovieAssetPanel.h"
-#include "../../gui/MovieImportDialog.h"
-#include "../../gui/AlignMoviesPanel.h"
+// icons..
 
 #include "../../gui/icons/overview_icon.cpp"
 #include "../../gui/icons/assets_icon.cpp"
@@ -15,7 +12,6 @@
 #include "../../gui/icons/ctf_icon.cpp"
 
 #include "../../gui/icons/movie_align_icon.cpp"
-
 
 class
 MyApp : public wxApp
@@ -36,6 +32,8 @@ ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
 ImageAssetPanel *image_asset_panel;
 MyMovieAssetPanel *movie_asset_panel;
+
+SETUP_SOCKET_CODES
 
 
 bool MyApp::OnInit()
@@ -123,5 +121,14 @@ bool MyApp::OnInit()
 	// welcome text..
 
 	//main_frame->StatusText->AppendText(wxT("Welcome to Project...X!\n"));
+
+	GuiJob test_job;
+
+	test_job.parent_panel = align_movies_panel;
+	test_job.parent_panel->UpdateJobDetails("Hello\n");
+
+
+
+
 	return true;
 }

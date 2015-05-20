@@ -6045,7 +6045,7 @@
             <property name="name">AlignMoviesPanel</property>
             <property name="pos"></property>
             <property name="size">869,566</property>
-            <property name="subclass"></property>
+            <property name="subclass">JobPanel; job_panel.h</property>
             <property name="tooltip"></property>
             <property name="window_extra_style"></property>
             <property name="window_name"></property>

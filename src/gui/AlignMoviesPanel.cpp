@@ -1,6 +1,8 @@
-#include "AlignMoviesPanel.h"
+#include "../core/core_headers.h"
+#include "../core/gui_core_headers.h"
 
 extern MyMovieAssetPanel *movie_asset_panel;
+extern MyMainFrame *main_frame;
 
 MyAlignMoviesPanel::MyAlignMoviesPanel( wxWindow* parent )
 :
@@ -64,6 +66,8 @@ AlignMoviesPanel( parent )
 
 	    FillGroupComboBox();
 
+	    my_job_id = -1;
+
 }
 
 void MyAlignMoviesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
@@ -109,4 +113,75 @@ void MyAlignMoviesPanel::FillGroupComboBox()
 	GroupComboBox->SetSelection(0);
 
 	GroupComboBox->Thaw();
+}
+
+void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
+{
+	// we need to run the job.. so set the details for my_job then pass it on to the gui job controller..
+
+	// Package the job details..
+
+
+
+
+
+	my_job_id = main_frame->job_controller.AddJob(this);
+}
+
+
+void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
+{
+      SETUP_SOCKET_CODES
+
+	  wxString s = _("OnSocketEvent: ");
+	  wxSocketBase *sock = event.GetSocket();
+
+	  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
+
+	  // First, print a message
+	  switch(event.GetSocketEvent())
+	  {
+	    case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
+	    case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
+	    default             : s.Append(_("Unexpected event !\n")); break;
+	  }
+
+	  //m_text->AppendText(s);
+
+	  MyDebugPrint(s);
+
+	  // Now we process the event
+	  switch(event.GetSocketEvent())
+	  {
+	    case wxSOCKET_INPUT:
+	    {
+	      // We disable input events, so that the test doesn't trigger
+	      // wxSocketEvent again.
+	      sock->SetNotify(wxSOCKET_LOST_FLAG);
+	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+
+	      if (memcmp(socket_input_buffer, send_job_details, SOCKET_CODE_SIZE) == 0) // identification
+	      {
+	    	  // send the job details..
+
+	    	  MyDebugPrint("Sending Job Details...");
+
+	      }
+
+	      // Enable input events again.
+
+	      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	      break;
+	    }
+
+	    case wxSOCKET_LOST:
+	    {
+
+	    	MyDebugPrint("Socket Disconnected!!\n");
+	        sock->Destroy();
+	        break;
+	    }
+	    default: ;
+	  }
+
 }

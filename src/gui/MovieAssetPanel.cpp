@@ -1,19 +1,10 @@
-#include "MovieAssetPanel.h"
-#include "MovieImportDialog.h"
-#include <wx/log.h>
-#include <iostream>
-
+#include "../core/core_headers.h"
+#include "../core/gui_core_headers.h"
 
 extern MyMainFrame *main_frame;
 extern wxTreeItemId Tree_Root;
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
-
-#ifdef DEBUG
-#define MyDebugPrint(...)	wxLogDebug(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__);
-#else
-#define MyDebugPrint(...)
-#endif
 
 MyMovieAssetPanel::MyMovieAssetPanel( wxWindow* parent )
 :

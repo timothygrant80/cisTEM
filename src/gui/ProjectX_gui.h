@@ -10,6 +10,9 @@
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
+class JobPanel;
+
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -278,7 +281,7 @@ class ErrorDialog : public wxDialog
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AlignMoviesPanel
 ///////////////////////////////////////////////////////////////////////////////
-class AlignMoviesPanel : public wxPanel 
+class AlignMoviesPanel : public JobPanel
 {
 	private:
 	
@@ -321,6 +324,7 @@ class AlignMoviesPanel : public wxPanel
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartAlignmentClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnStartAlignmentButtonUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		
 	

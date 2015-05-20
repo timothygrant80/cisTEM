@@ -1,5 +1,9 @@
-#include "MainFrame.h"
+#include "../core/core_headers.h"
+#include "../core/gui_core_headers.h"
+#include "../core/socket_codes.h"
 
+#define SERVER_ID 100
+#define SOCKET_ID 101
 
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
@@ -8,11 +12,24 @@ MyMainFrame::MyMainFrame( wxWindow* parent )
 :
 MainFrame( parent )
 {
+	wxIPV4address addr;
+	addr.Service(3000); // fixed to 3000 at the moment
+	my_port = wxString::Format("%i", 3000);
+
+	socket_server = new wxSocketServer(addr);
 
 	tree_root = AssetTree->AddRoot("Assets");
 
 	// Add Movies..
 	movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
+
+	// setup the socket server and socket events..
+
+	socket_server->SetEventHandler(*this, SERVER_ID);
+	socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
+	socket_server->Notify(true);
+
+	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
 
 }
 
@@ -86,4 +103,78 @@ void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
 
 	align_movies_panel->FillGroupComboBox();
 
+}
+
+// SOCKETS
+
+void MyMainFrame::OnServerEvent(wxSocketEvent& event)
+{
+	  SETUP_SOCKET_CODES
+
+	  long current_job;
+	  wxString s = _("OnServerEvent: ");
+	  wxSocketBase *sock = NULL;
+
+	  switch(event.GetSocketEvent())
+	  {
+	    case wxSOCKET_CONNECTION : s.Append(_("wxSOCKET_CONNECTION\n")); break;
+	    default                  : s.Append(_("Unexpected event !\n")); break;
+	  }
+
+	  MyDebugPrint(s);
+
+      // Accept new connection if there is one in the pending
+      // connections queue, else exit. We use Accept(false) for
+      // non-blocking accept (although if we got here, there
+      // should ALWAYS be a pending connection).
+
+      sock = socket_server->Accept(false);
+	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
+
+	  // request identification..
+	  MyDebugPrint(" Requesting identification...");
+   	  sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
+   	  MyDebugPrint(" Waiting for reply...");
+  	  sock->WaitForRead(5);
+
+      if (sock->IsData() == true)
+      {
+
+    	  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+
+    	  // does this correspond to one of our jobs?
+
+    	  current_job = job_controller.ReturnJobNumberFromJobCode(socket_input_buffer);
+
+  	      if (current_job == -1)
+  	      {
+  	    	  MyDebugPrint(" Unknown JOB ID - Closing Connection\n");
+  	    	  MyDebugPrint("");
+
+  	    	  // incorrect identification - close the connection..
+	    	  sock->Destroy();
+	    	  sock = NULL;
+	      }
+	      else
+	      {
+	    	  MyDebugPrint("Connection from Job #%li", current_job);
+
+	    	  job_controller.job_list[current_job].socket = sock;
+	    	  job_controller.job_list[current_job].parent_panel->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( JobPanel::OnJobSocketEvent) );
+	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
+	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
+	    	  sock->Notify(true);
+
+	    	  // Tell the socket it is connected
+
+	    	  sock->WriteMsg(you_are_connected, SOCKET_CODE_SIZE);
+	      }
+      }
+      else
+   	  {
+	  	   	   wxPrintf(" ...Read Timeout \n\n");
+	  	   	   // time out - close the connection
+	    	   sock->Destroy();
+	    	   sock = NULL;
+	  }
 }

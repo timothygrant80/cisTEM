@@ -153,15 +153,33 @@ AssetGroupList::~AssetGroupList()
 
 // Removes the specified member from all extra (not all movies) groups.
 
-void AssetGroupList::RemoveMemberFromAllExtraGroups(long wanted_member)
+void AssetGroupList::RemoveAssetFromExtraGroups(long wanted_asset)
 {
 	long found_position;
 
 	for (long counter = 1; counter < number_of_groups; counter++)
 	{
-		found_position = groups[counter].FindMember(wanted_member);
+		found_position = groups[counter].FindMember(wanted_asset);
 
 		if (found_position != -1) groups[counter].RemoveMember(found_position);
+
+	}
+
+}
+
+void AssetGroupList::ShiftMembersDueToAssetRemoval(long wanted_asset)
+{
+	long group_counter;
+	long member_counter;
+
+	for (group_counter = 1; group_counter < number_of_groups; group_counter++)
+	{
+		for (member_counter = 0; member_counter < groups[group_counter].number_of_members ; member_counter++)
+		{
+			if (groups[group_counter].members[member_counter] > wanted_asset)groups[group_counter].members[member_counter]--;
+		}
+
+
 	}
 
 }

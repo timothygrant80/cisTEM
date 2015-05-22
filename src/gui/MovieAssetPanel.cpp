@@ -30,12 +30,45 @@ void MyMovieAssetPanel::ImportMovieClick( wxCommandEvent& event )
 
 }
 
+void MyMovieAssetPanel::CompletelyRemoveAsset(long wanted_asset)
+{
+	// first off remove it from the asset list..
+
+	all_assets_list.RemoveMovie(wanted_asset);
+
+	// we never actually want to remove members from the all_movies group, but we need to make note that there is 1 less movie.
+
+	all_groups_list.groups[0].number_of_members--;
+
+	// if the removed movie was referenced in other groups we need to remove it..
+
+	all_groups_list.RemoveAssetFromExtraGroups(wanted_asset);
+
+	// because we have shifted the asset list up, any item with a number greater than this item needs to be subtracted by 1
+
+	all_groups_list.ShiftMembersDueToAssetRemoval(wanted_asset);
+
+
+
+}
+
 void MyMovieAssetPanel::RemoveMovieClick( wxCommandEvent& event )
 {
 	// How many movies are selected?
 
 	long number_selected = ContentsListBox->GetSelectedItemCount();
 	long selected_movie;
+	long number_removed = 0;
+	long removed_counter;
+
+	long item;
+	long adjusted_item;
+
+	long *already_removed = new long[number_selected];
+
+	long currently_selected_group = selected_group;
+
+
 
 
 	if (number_selected > 0)
@@ -46,17 +79,30 @@ void MyMovieAssetPanel::RemoveMovieClick( wxCommandEvent& event )
 
 			if (check_dialog->ShowModal() ==  wxID_YES)
 			{
-				long item = -1;
+				item = -1;
 
 				for ( ;; )
 				{
 					item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+
 					if ( item == -1 )
 						break;
 
-					all_assets_list.RemoveMovie(item);
-					all_groups_list.groups[0].RemoveMember(item);
-					all_groups_list.RemoveMemberFromAllExtraGroups(item);
+					adjusted_item = item;
+
+					// the problem is, that depending on what has been removed - the item from the contentslistbox may not point to the
+					// correct place after the first one has been removed.
+
+					for (removed_counter = 0; removed_counter < number_removed; removed_counter++)
+					{
+						if (already_removed[removed_counter] < item) adjusted_item--;
+					}
+
+					CompletelyRemoveAsset(adjusted_item);
+					already_removed[number_removed] = item;
+					number_removed++;
+
+
 				}
 			}
 		}
@@ -70,21 +116,38 @@ void MyMovieAssetPanel::RemoveMovieClick( wxCommandEvent& event )
 					if ( item == -1 )
 					break;
 
-					selected_movie = all_groups_list.ReturnGroupMember(selected_group, item);
+					adjusted_item = item;
 
-					all_groups_list.groups[selected_group].RemoveMember(selected_movie);
+					// the problem is, that depending on what has been removed - the item from the contentslistbox may not point to the
+					// correct place after the first one has been removed.
+
+					for (removed_counter = 0; removed_counter < number_removed; removed_counter++)
+					{
+						if (already_removed[removed_counter] < item) adjusted_item--;
+					}
+
+					all_groups_list.groups[selected_group].RemoveMember(adjusted_item);
+
+					already_removed[number_removed] = item;
+					number_removed++;
+
+
+
 			}
 
 		}
 
 		FillGroupList();
+		SetSelectedGroup(currently_selected_group);
 		FillContentsList();
 		main_frame->RecalculateAssetBrowser();
-		//UpdateMovieInfo();
+		UpdateMovieInfo();
 
 
 
 	}
+
+	delete [] already_removed;
 
 }
 
@@ -92,7 +155,7 @@ void MyMovieAssetPanel::AddContentItemToGroup(long wanted_group, long wanted_con
 {
 
 	long selected_movie = all_groups_list.ReturnGroupMember(selected_group, wanted_content_item);
-	MyDebugPrint("%li\n", selected_movie);
+
 	if (all_groups_list.groups[wanted_group].FindMember(selected_movie) == -1)
 	{
 		all_groups_list.groups[wanted_group].AddMember(selected_movie);
@@ -169,6 +232,8 @@ void MyMovieAssetPanel::RemoveAllClick( wxCommandEvent& event )
 
 				SetSelectedGroup(0);
 				CheckActiveButtons();
+				FillGroupList();
+				FillContentsList();
 				main_frame->RecalculateAssetBrowser();
 		}
 	}
@@ -180,13 +245,6 @@ void MyMovieAssetPanel::RemoveAllClick( wxCommandEvent& event )
 		CheckActiveButtons();
 		main_frame->RecalculateAssetBrowser();
 	}
-
-
-	MyDebugPrint("Remove All Clicked!");
-
-
-
-
 }
 
 void MyMovieAssetPanel:: NewGroupClick( wxCommandEvent& event )
@@ -247,22 +305,13 @@ void MyMovieAssetPanel::AddAsset(MovieAsset *asset_to_add)
 
 void MyMovieAssetPanel::SetSelectedGroup(long wanted_group)
 {
-	wxLogDebug("Setting group #%li\n", wanted_group);
-	MyDebugPrint("There are #%li groups in total.\n", all_groups_list.number_of_groups);
+	MyDebugAssertTrue(wanted_group >= 0 && wanted_group <= all_groups_list.number_of_groups, "Trying to select a group that doesn't exist!");
 
-	if (wanted_group < 0 || wanted_group >= all_groups_list.number_of_groups)
-	{
-		wxPrintf("Error! Trying to select a group that doesn't exist!\n\n");
-		exit(-1);
-	}
-	else
-	{
-		GroupListBox->SetItemState(wanted_group, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-		selected_group = wanted_group;
-		selected_content = 0;
-		//FillGroupList();
-		FillContentsList();
-	}
+	GroupListBox->SetItemState(wanted_group, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+	selected_group = wanted_group;
+	selected_content = 0;
+	//FillGroupList();
+	FillContentsList();
 
 	CheckActiveButtons();
 
@@ -369,10 +418,9 @@ void MyMovieAssetPanel::FillGroupList()
 {
 	//wxColor my_grey(50,50,50);
 
-	wxPrintf("Filling Group List\n");
 	wxFont current_font;
 
-	long currently_selected = selected_group;
+	//long currently_selected = selected_group;
 
 	GroupListBox->Freeze();
 	GroupListBox->ClearAll();

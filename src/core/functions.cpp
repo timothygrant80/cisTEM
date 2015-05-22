@@ -88,3 +88,52 @@ bool GetMRCDetails(const char *filename, long &x_size, long &y_size, long &numbe
 	return true;
 
 }
+
+// Assumption is that turning off of events etc has been done, and that
+// all other considerations have done.
+
+void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
+{
+	wxCharBuffer buffer = string_to_send->mb_str();
+	int length_of_string = buffer.length();
+	unsigned char *char_pointer;
+
+	// send the length of the string, followed by the string
+
+	char_pointer = (unsigned char*)&length_of_string;
+	socket->WriteMsg(char_pointer, 4);
+	socket->WriteMsg(buffer.data(), length_of_string);
+}
+
+wxString ReceivewxStringFromSocket(wxSocketBase *socket)
+{
+
+	int length_of_string;
+	unsigned char *char_pointer;
+
+	// receive the length of the string, followed by the string
+
+	char_pointer = (unsigned char*)&length_of_string;
+	socket->ReadMsg(char_pointer, 4);
+
+	// setup a temp array to receive the string into.
+
+	unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
+
+	socket->ReadMsg(transfer_buffer, length_of_string);
+
+	// add the null
+
+	transfer_buffer[length_of_string] = 0;
+
+	// make a wxstring from this buffer..
+
+	wxString temp_string(transfer_buffer);
+
+	// delete the buffer
+
+	delete [] transfer_buffer;
+
+	return temp_string;
+
+}

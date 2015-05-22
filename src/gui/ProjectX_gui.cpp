@@ -647,19 +647,19 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText24->Wrap( -1 );
 	fgSizer1->Add( m_staticText24, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_textCtrl5 = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_textCtrl5->SetToolTip( wxT("Minimum shift for first alignment round") );
+	minimum_shift_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, 0 );
+	minimum_shift_text->SetToolTip( wxT("Minimum shift for first alignment round") );
 	
-	fgSizer1->Add( m_textCtrl5, 0, wxALL|wxEXPAND, 5 );
+	fgSizer1->Add( minimum_shift_text, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText40 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Maximum Shift (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText40->Wrap( -1 );
 	fgSizer1->Add( m_staticText40, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_textCtrl10 = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("80"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_textCtrl10->SetToolTip( wxT("Maximum shift for each alignment round") );
+	maximum_shift_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("80"), wxDefaultPosition, wxDefaultSize, 0 );
+	maximum_shift_text->SetToolTip( wxT("Maximum shift for each alignment round") );
 	
-	fgSizer1->Add( m_textCtrl10, 0, wxALL|wxEXPAND, 5 );
+	fgSizer1->Add( maximum_shift_text, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText44 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Dose Filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText44->Wrap( -1 );
@@ -670,15 +670,15 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_checkBox4 = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Dose Filter Sums?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_checkBox4->SetValue(true); 
-	m_checkBox4->SetToolTip( wxT("Make a dose weighted sum") );
+	dose_filter_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Dose Filter Sums?"), wxDefaultPosition, wxDefaultSize, 0 );
+	dose_filter_checkbox->SetValue(true); 
+	dose_filter_checkbox->SetToolTip( wxT("Make a dose weighted sum") );
 	
-	fgSizer1->Add( m_checkBox4, 1, wxALIGN_LEFT|wxALL, 5 );
+	fgSizer1->Add( dose_filter_checkbox, 1, wxALIGN_LEFT|wxALL, 5 );
 	
-	m_checkBox5 = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Restore Power?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_checkBox5->SetValue(true); 
-	fgSizer1->Add( m_checkBox5, 1, wxALIGN_RIGHT|wxALL, 5 );
+	restore_power_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Restore Power?"), wxDefaultPosition, wxDefaultSize, 0 );
+	restore_power_checkbox->SetValue(true); 
+	fgSizer1->Add( restore_power_checkbox, 1, wxALIGN_RIGHT|wxALL, 5 );
 	
 	m_staticText45 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Convergence"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText45->Wrap( -1 );
@@ -693,15 +693,15 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText46->Wrap( -1 );
 	fgSizer1->Add( m_staticText46, 0, wxALL, 5 );
 	
-	m_textCtrl11 = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( m_textCtrl11, 0, wxALL|wxEXPAND, 5 );
+	termination_threshold_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( termination_threshold_text, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText47 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Max Iterations :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText47->Wrap( -1 );
 	fgSizer1->Add( m_staticText47, 0, wxALL, 5 );
 	
-	m_spinCtrl5 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 20 );
-	fgSizer1->Add( m_spinCtrl5, 0, wxALL|wxEXPAND, 5 );
+	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 20 );
+	fgSizer1->Add( max_iterations_spinctrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText48 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText48->Wrap( -1 );
@@ -716,12 +716,12 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText49->Wrap( -1 );
 	fgSizer1->Add( m_staticText49, 0, wxALL, 5 );
 	
-	m_spinCtrl6 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 1500 );
-	fgSizer1->Add( m_spinCtrl6, 0, wxALL|wxEXPAND, 5 );
+	bfactor_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 1500 );
+	fgSizer1->Add( bfactor_spinctrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_checkBox11 = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Mask Central Cross?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_checkBox11->SetValue(true); 
-	fgSizer1->Add( m_checkBox11, 0, wxALL, 5 );
+	mask_central_cross_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Mask Central Cross?"), wxDefaultPosition, wxDefaultSize, 0 );
+	mask_central_cross_checkbox->SetValue(true); 
+	fgSizer1->Add( mask_central_cross_checkbox, 0, wxALL, 5 );
 	
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -730,15 +730,15 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText50->Wrap( -1 );
 	fgSizer1->Add( m_staticText50, 0, wxALL, 5 );
 	
-	m_spinCtrl7 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 1 );
-	fgSizer1->Add( m_spinCtrl7, 0, wxALL|wxEXPAND, 5 );
+	horizontal_mask_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 1 );
+	fgSizer1->Add( horizontal_mask_spinctrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText51 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Vertial Mask (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText51 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Vertical Mask (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText51->Wrap( -1 );
 	fgSizer1->Add( m_staticText51, 0, wxALL, 5 );
 	
-	m_spinCtrl8 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 1 );
-	fgSizer1->Add( m_spinCtrl8, 0, wxALL|wxEXPAND, 5 );
+	vertical_mask_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 1 );
+	fgSizer1->Add( vertical_mask_spinctrl, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer64->Add( fgSizer1, 0, wxEXPAND, 5 );

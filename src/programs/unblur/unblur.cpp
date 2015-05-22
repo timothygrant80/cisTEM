@@ -40,21 +40,19 @@ MyApp : public wxAppConsole
 	public:
 		virtual bool OnInit();
 
-		wxSocketClient *m_sock;
-		bool            m_busy;
+		wxSocketClient *controller_socket;
 		bool 			is_connected;
+		wxIPV4address 	controller_address;
+		long 			controller_port;
+		unsigned char   job_code[SOCKET_CODE_SIZE];
 
-		void OnSocketEvent(wxSocketEvent& event);
-
-	private:
+		private:
 
 		 CalculateThread *work_thread;
 
+		 void OnSocketEvent(wxSocketEvent& event);
 		 void OnThreadUpdate(wxThreadEvent&);
 		 void OnThreadComplete(wxThreadEvent&);
-
-
-
 };
 
 
@@ -63,15 +61,100 @@ IMPLEMENT_APP(MyApp)
 
 bool MyApp::OnInit()
 {
+	long counter;
+
 	// Bind the thread events
 
 	Bind(wxEVT_COMMAND_MYTHREAD_UPDATE, &MyApp::OnThreadUpdate, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this);
 
 
-	// Socket stuff?
+	// Connect to the controller program..
+	// set up the parameters for passing the gui address..
+
+	static const wxCmdLineEntryDesc command_line_descriptor[] =
+	{
+			{ wxCMD_LINE_PARAM, "a", "address", "gui_address", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY },
+			{ wxCMD_LINE_PARAM, "p", "port", "gui_port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_OPTION_MANDATORY },
+			{ wxCMD_LINE_PARAM, "j", "job_code", "job_code", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY },
+			{ wxCMD_LINE_NONE }
+	};
 
 
+	wxCmdLineParser command_line_parser( command_line_descriptor, argc, argv);
+
+	wxPrintf("\n");
+	if (command_line_parser.Parse(true) != 0)
+	{
+		wxPrintf("\n\n");
+		exit(0);
+	}
+
+	// get the address and port of the gui (should be command line options).
+
+
+	if (controller_address.Hostname(command_line_parser.GetParam(0)) == false)
+	{
+		MyDebugPrint(" Error: Address (%s) - not recognized as an IP or hostname\n\n", command_line_parser.GetParam(0));
+		exit(-1);
+	};
+
+	if (command_line_parser.GetParam(1).ToLong(&controller_port) == false)
+	{
+		MyDebugPrint(" Error: Port (%s) - not recognized as a port\n\n", command_line_parser.GetParam(1));
+		exit(-1);
+	}
+
+	if (command_line_parser.GetParam(2).Len() != SOCKET_CODE_SIZE)
+	{
+		{
+			MyDebugPrint(" Error: Code (%s) - is the incorrect length(%i instead of %i)\n\n", command_line_parser.GetParam(2), command_line_parser.GetParam(2).Len(), SOCKET_CODE_SIZE);
+			exit(-1);
+		}
+	}
+
+	// copy over job code.
+
+	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
+	{
+		job_code[counter] = command_line_parser.GetParam(2).GetChar(counter);
+	}
+
+
+	controller_address.Service(controller_port);
+
+	// Attempt to connect to the controller..
+
+	MyDebugPrint("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 10 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
+	controller_socket = new wxSocketClient();
+
+	// Setup the event handler and subscribe to most events
+
+	controller_socket->SetEventHandler(*this, SOCKET_ID);
+	controller_socket->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
+	controller_socket->Notify(true);
+	is_connected = false;
+
+	this->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnSocketEvent) );
+
+
+	controller_socket->Connect(controller_address, false);
+	controller_socket->WaitOnConnect(30);
+
+	if (controller_socket->IsConnected() == false)
+	{
+	   controller_socket->Close();
+	   MyDebugPrint("Failed ! Unable to connect\n");
+	   return false;
+	}
+
+	MyDebugPrint(" JOB CONTROL: Succeeded - Connection established!\n\n");
+	is_connected = true;
+
+	// we should be connected, and our subsequent socket iteraction will be taken care of
+	// by events.
+
+	/*
 	// Run the processing thread
 
 	work_thread = new CalculateThread(this);
@@ -86,42 +169,14 @@ bool MyApp::OnInit()
 	}
 
 	// should be done.
-
-	/*
-	m_sock = new wxSocketClient();
-	wxIPV4address addr;
-
-	// Setup the event handler and subscribe to most events
-	m_sock->SetEventHandler(*this, SOCKET_ID);
-	m_sock->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
-	m_sock->Notify(true);
-	m_busy = false;
-
-	is_connected = false;
-
-	this->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnSocketEvent) );
-
-	 addr.Hostname("localhost");
-	 addr.Service(3000);
-
-	 wxPrintf(_("\nTrying to connect (timeout = 10 sec) ...\n"));
-	 m_sock->Connect(addr, false);
-	 m_sock->WaitOnConnect(10);
-
-	 if (m_sock->IsConnected())
-	  {
-	    wxPrintf(_("Succeeded - Connection established!\n\n"));
-		is_connected = true;
-		return true;
-	  }
-	  else
-	  {
-		m_sock->Close();
-		wxPrintf(_("Failed ! Unable to connect\n"));
-		return false;
-	  }*/
+	*/
 
 	return true;
+}
+
+void MyApp::OnSocketEvent(wxSocketEvent &event)
+{
+
 }
 
 void MyApp::OnThreadUpdate(wxThreadEvent&)

@@ -9,6 +9,7 @@
 
 #define SERVER_ID 100
 #define GUI_SOCKET_ID 101
+#define MASTER_SOCKET_ID 102
 
 SETUP_SOCKET_CODES
 
@@ -18,14 +19,17 @@ SETUP_SOCKET_CODES
 class
 JobControlApp : public wxAppConsole
 {
+	bool have_assigned_master;
 	wxIPV4address gui_address;
 	wxIPV4address my_address;
 	wxIPV4address master_process_address;
 
-	wxSocketClient *gui_socket;
-	bool            gui_socket_is_busy;
-	bool 			gui_socket_is_connected;
-	bool            gui_panel_is_connected;
+	wxSocketServer *socket_server;
+	wxSocketClient  *gui_socket;
+	wxSocketBase   *master_socket;
+	bool           gui_socket_is_busy;
+	bool 		   gui_socket_is_connected;
+	bool           gui_panel_is_connected;
 
 	unsigned char   job_code[SOCKET_CODE_SIZE];
 
@@ -33,12 +37,21 @@ JobControlApp : public wxAppConsole
 	long my_port;
 	long master_process_port;
 
-	long total_number_of_slaves;
-	long number_of_slaves_;
+	wxString my_port_string;
+	wxString master_ip_address;
+	wxString master_port;
 
-	void LaunchSlaves();
+	long number_of_slaves_already_connected;
+
+	JobPackage my_job_package;
+
+	void LaunchRemoteJob();
 	bool ConnectToGui();
 	void OnGuiSocketEvent(wxSocketEvent& event);
+	void OnMasterSocketEvent(wxSocketEvent& event);
+	void OnServerEvent(wxSocketEvent& event);
+
+
 
 
 	public:
@@ -135,17 +148,196 @@ bool JobControlApp::OnInit()
 	   MyDebugPrint("Failed ! Unable to connect\n");
 	   return false;
 	}
+
+	MyDebugPrint(" JOB CONTROL: Succeeded - Connection established!\n\n");
+	gui_socket_is_connected = true;
+
+
+	// setup a server... so that slaves can later contact back.
+
+	my_port = 3011; // fixed to 3011 at the moment
+	wxIPV4address addr;
+	addr.Service(my_port);
+	my_port_string = wxString::Format("%li", my_port);
+
+	wxPrintf("my_port_string = %s\n", my_port_string);
+
+	socket_server = new wxSocketServer(addr);
+	if (! socket_server->Ok())
+	{
+		wxPrintf("Could not listen at the specified port !\n\n");
+		abort();
+	}
+
+	// setup events for the socket server..
+
+	socket_server->SetEventHandler(*this, SERVER_ID);
+	socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
+	socket_server->Notify(true);
+
+	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( JobControlApp::OnServerEvent) );
+
+	return true;
+
+}
+
+void JobControlApp::LaunchRemoteJob()
+{
+	long counter;
+	wxIPV4address address;
+
+	MyDebugPrint("Launching Slaves");
+
+	// for n processes (specified in the job package) we need to launch the specified command, along with our
+	// IP address, port and job code..
+
+	address.Hostname(wxGetFullHostName()); // hopefully get my ip
+	wxString ip_address = address.IPAddress();
+
+	wxString execution_command;
+	execution_command = my_job_package.command_to_run + " " + ip_address + " " + my_port_string + " ";
+
+
+	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
+	{
+		execution_command += job_code[counter];
+	}
+
+	MyDebugPrint("Launching \"%s\" %i times\n", execution_command, my_job_package.number_of_processes);
+
+	for (counter = 0; counter < my_job_package.number_of_processes; counter++)
+	{
+		wxExecute(execution_command);
+	}
+
+	// now we wait for the connections - this is taken care of as server events..
+
+}
+
+void JobControlApp::OnServerEvent(wxSocketEvent& event)
+{
+	  SETUP_SOCKET_CODES
+
+	  wxString s = _("OnServerEvent: ");
+	  wxSocketBase *sock = NULL;
+
+	  switch(event.GetSocketEvent())
+	  {
+	    case wxSOCKET_CONNECTION : s.Append(_("wxSOCKET_CONNECTION\n")); break;
+	    default                  : s.Append(_("Unexpected event !\n")); break;
+	  }
+
+	  //MyDebugPrint(s);
+
+	  // Accept new connection if there is one in the pending
+	  // connections queue, else exit. We use Accept(false) for
+	  // non-blocking accept (although if we got here, there
+	  // should ALWAYS be a pending connection).
+
+	  sock = socket_server->Accept(false);
+	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
+
+	  // request identification..
+	  //MyDebugPrint(" Requesting identification...");
+	  sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
+	  //MyDebugPrint(" Waiting for reply...");
+	  sock->WaitForRead(5);
+
+	  if (sock->IsData() == true)
+	  {
+    	  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+
+    	  // does this correspond to our job code?
+
+	    if ((memcmp(socket_input_buffer, job_code, SOCKET_CODE_SIZE) != 0) )
+	  	{
+	  	  	MyDebugPrint(" Unknown JOB ID - Closing Connection\n");
+
+	  	  	// incorrect identification - close the connection..
+		    sock->Destroy();
+		    sock = NULL;
+		}
+		else
+		{
+			// one of the slaves has connected to us.  If it is the first one then
+			// we need to make it the master, tell it to start a socket server
+			// and send us the address so we can pass it on to all future slaves.
+
+			// If we have already assigned the master, then we just need to send it
+			// the masters address.
+
+			if (have_assigned_master == false)  // we don't have a master, so assign it
+			{
+				sock->WriteMsg(socket_you_are_the_master, SOCKET_CODE_SIZE);
+
+				// read the ip address and port..
+
+				sock->WaitForRead(5);
+				if (sock->IsData() == true)
+				{
+					master_ip_address = ReceivewxStringFromSocket(sock);
+				}
+				else
+				{
+					MyDebugPrintWithDetails("Read Timeout!!");
+					abort();
+				}
+
+				sock->WaitForRead(5);
+				if (sock->IsData() == true)
+				{
+					master_port = ReceivewxStringFromSocket(sock);
+				}
+				else
+				{
+					MyDebugPrintWithDetails("Read Timeout!!");
+					abort();
+				}
+
+				master_socket = sock;
+				have_assigned_master = true;
+
+				// setup events on the master..
+
+				this->Connect(MASTER_SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( JobControlApp::OnMasterSocketEvent) );
+
+				sock->SetEventHandler(*this, GUI_SOCKET_ID);
+				sock->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
+				sock->Notify(true);
+
+
+			}
+			else  // we have a master, tell this slave who it's master is.
+			{
+				sock->WriteMsg(socket_you_are_a_slave, SOCKET_CODE_SIZE);
+				SendwxStringToSocket(&master_ip_address, sock);
+				SendwxStringToSocket(&master_port, sock);
+
+				// that should be the end of our interactions with the slave
+				// it should disconnect itself, we won't even bother
+				// setting up events for it..
+			}
+		}
+	}
 	else
 	{
-		MyDebugPrint("Succeeded - Connection established!\n\n");
-		gui_socket_is_connected = true;
-		return true;
+		MyDebugPrint(" ...Read Timeout \n\n");
+	 	// time out - close the connection
+		sock->Destroy();
+		sock = NULL;
 	}
+
 }
+
+void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
+{
+
+}
+
 
 void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 {
-	  wxString s = _("OnSocketEvent: ");
+	  wxString s = _("JOB CONTROL : OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
 
 	  MyDebugAssertTrue(sock == gui_socket, "GUI Socket event from Non GUI socket??");
@@ -178,32 +370,36 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	    	  sock->WriteMsg(job_code, SOCKET_CODE_SIZE);
 	      }
 	      else
-	      if (memcmp(socket_input_buffer, you_are_connected, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
+	      if (memcmp(socket_input_buffer, socket_you_are_connected, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
 	      {
 	    	  MyDebugPrint("JOB CONTROL : Connected to Panel");
 	    	  gui_panel_is_connected = true;
 
 	    	  // ask the panel to send job details..
 
-	    	  sock->WriteMsg(send_job_details, SOCKET_CODE_SIZE);
-
-
+	    	  MyDebugPrint("JOB CONTROL : Asking for job details");
+	    	  sock->WriteMsg(socket_send_job_details, SOCKET_CODE_SIZE);
 
 	      }
+	      else
+		  if (memcmp(socket_input_buffer, socket_ready_to_send_job_package, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
+		  {
+			  // receive the job details..
 
-	/*
-	      // Which test are we going to run?
+			 // MyDebugPrint("JOB CONTROL : Receiving Job Package");
+			  my_job_package.ReceiveJobPackage(sock);
+			  MyDebugPrint("JOB CONTROL : Package Received");
 
-	      switch (c)
-	      {
-	        case 0xBE:  wxPrintf("0xBE\n\n"); break;//Test1(sock); break;
-	        case 0xCE:  wxPrintf("0xCE\n\n"); break;//Test2(sock); break;
-	        case 0xDE:  wxPrintf("0xDE\n\n");break;//Test3(sock); break;
-	        default:
-	          wxPrintf("Unknown test id received from client\n\n");
-	      }
+			  //MyDebugPrint("Filename = %s", my_job_package.jobs[0].arguments[0].string_argument[0]);
 
-	*/
+			  // Now we have the job, we can launch the slaves..
+
+			  LaunchRemoteJob();
+
+
+		  }
+
+
 	      // Enable input events again.
 
 	      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -213,7 +409,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
-	        wxPrintf("Socket Disconnected!!\n");
+	        wxPrintf("JOB CONTROL : Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
 

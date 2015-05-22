@@ -22,6 +22,7 @@ class MyMainFrame : public MainFrame
 		void OnMenuBookChange( wxListbookEvent& event );
 
 		void OnServerEvent(wxSocketEvent& event);
+		void OnSocketEvent(wxSocketEvent& event);
 		//LaunchJob(JobPanel *parent_panel, )
 
 };

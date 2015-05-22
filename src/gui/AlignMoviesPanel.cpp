@@ -117,15 +117,98 @@ void MyAlignMoviesPanel::FillGroupComboBox()
 
 void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 {
-	// we need to run the job.. so set the details for my_job then pass it on to the gui job controller..
-
 	// Package the job details..
 
+	long counter;
+	long number_of_jobs = movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many movies in the selected group..
+	long number_of_processes = 8; // NEED TO DO THIS PROPERLY LATER
+
+	bool ok_number_conversion;
+
+	double minimum_shift;
+	double maximum_shift;
+
+	bool should_dose_filter;
+	bool should_restore_power;
+
+	double termination_threshold;
+	int max_iterations;
+	int bfactor;
+
+	bool should_mask_central_cross;
+	int horizontal_mask;
+	int vertical_mask;
+
+	std::string current_filename;
+
+	// read the options form the gui..
+
+	// min_shift
+	ok_number_conversion = minimum_shift_text->GetLineText(0).ToDouble(&minimum_shift);
+	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert minimum shift text to number!");
+
+	// max_shift
+	ok_number_conversion = maximum_shift_text->GetLineText(0).ToDouble(&maximum_shift);
+	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert maximum shift text to number!");
+
+	// dose filter
+	should_dose_filter = dose_filter_checkbox->IsChecked();
+
+	// restore power
+	should_restore_power = restore_power_checkbox->IsChecked();
+
+	// termination threshold
+	ok_number_conversion = termination_threshold_text->GetLineText(0).ToDouble(&termination_threshold);
+	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert termination threshold text to number!");
+
+	// max iterations
+
+	max_iterations = max_iterations_spinctrl->GetValue();
+
+	// b-factor
+
+	bfactor = bfactor_spinctrl->GetValue();
+
+	// mask central cross
+
+	should_mask_central_cross = mask_central_cross_checkbox->IsChecked();
+
+	// horizontal mask
+
+	horizontal_mask = horizontal_mask_spinctrl->GetValue();
+
+	// vertical mask
+
+	vertical_mask = vertical_mask_spinctrl->GetValue();
 
 
 
+	my_job_package.Reset("unblur", number_of_processes, number_of_jobs);
+
+	for (counter = 0; counter < number_of_jobs; counter++)
+	{
+		// job is :-
+		//
+		// Filename (string)
+		// Minimum shift in angstroms (float)
+		// Maximum Shift in angstroms (float)
+		// Dose filter Sums? (bool)
+		// Restore power? (bool)
+		// Termination threshold in angstroms (float)
+		// Max iterations (int)
+		// B-Factor in angstroms (float)
+		// Mask central cross (bool)
+		// Horizontal mask size in pixels (int)
+		// Vertical mask size in pixels (int)
+
+		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
+		my_job_package.AddJob("sffbbfifbii", current_filename.c_str(), float(minimum_shift), float(maximum_shift), should_dose_filter, should_restore_power, float(termination_threshold), max_iterations, float(bfactor), should_mask_central_cross, horizontal_mask, vertical_mask);
+	}
+
+	// launch a controller
 
 	my_job_id = main_frame->job_controller.AddJob(this);
+
 }
 
 
@@ -148,7 +231,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 	  //m_text->AppendText(s);
 
-	  MyDebugPrint(s);
+	  //MyDebugPrint(s);
 
 	  // Now we process the event
 	  switch(event.GetSocketEvent())
@@ -160,11 +243,12 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
 	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
 
-	      if (memcmp(socket_input_buffer, send_job_details, SOCKET_CODE_SIZE) == 0) // identification
+	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 	      {
 	    	  // send the job details..
 
-	    	  MyDebugPrint("Sending Job Details...");
+	    	  //MyDebugPrint("Sending Job Details...");
+	    	  my_job_package.SendJobPackage(sock);
 
 	      }
 
@@ -177,7 +261,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
-	    	MyDebugPrint("Socket Disconnected!!\n");
+	    	//MyDebugPrint("Socket Disconnected!!\n");
 	        sock->Destroy();
 	        break;
 	    }

@@ -1,4 +1,3 @@
-#include <wx/wx.h>
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/gdicmn.h>
@@ -33,9 +32,7 @@
 #include <wx/dnd.h>
 #include <wx/dir.h>
 #include <wx/progdlg.h>
-#include "wx/socket.h"
 
-#include "socket_codes.h"
 #include "../gui/job_panel.h"
 #include "movie_asset.h"
 #include "asset_group.h"

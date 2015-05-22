@@ -14,3 +14,7 @@ inline bool DoesFileExist(std::string filename)
     return false;
 };
 
+void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);
+wxString ReceivewxStringFromSocket(wxSocketBase *socket);
+
+

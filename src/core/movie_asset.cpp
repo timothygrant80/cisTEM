@@ -166,7 +166,7 @@ void MovieAssetList::RemoveMovie(long number_to_remove)
 
 	for (long counter = number_to_remove; counter < number_of_assets -1; counter++)
 	{
-		assets[counter] = assets[counter + 1];
+		assets[counter].CopyFrom(&assets[counter + 1]);
 	}
 
 	number_of_assets--;

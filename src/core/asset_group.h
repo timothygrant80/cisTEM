@@ -42,7 +42,8 @@ public:
 	void RemoveGroup(long number_to_remove);
 	void AddMemberToGroup(long wanted_group_number, long member_to_add);
 	long ReturnGroupMember(long wanted_group_number, long wanted_member);
-	void RemoveMemberFromAllExtraGroups(long wanted_member);
+	void RemoveAssetFromExtraGroups(long wanted_asset);
+	void ShiftMembersDueToAssetRemoval(long number_to_shift_after);
 };
 
 

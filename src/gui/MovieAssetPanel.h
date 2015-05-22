@@ -80,6 +80,8 @@ class MyMovieAssetPanel : public MovieAssetPanel
 		long ReturnGroupSize(long wanted_group);
 		long ReturnGroupMember(long wanted_group, long wanted_member);
 
+		void CompletelyRemoveAsset(long wanted_asset);
+
 		void FillGroupList();
 		void FillContentsList();
 		void UpdateMovieInfo();

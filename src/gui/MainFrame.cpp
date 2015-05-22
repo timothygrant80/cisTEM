@@ -17,6 +17,11 @@ MainFrame( parent )
 	my_port = wxString::Format("%i", 3000);
 
 	socket_server = new wxSocketServer(addr);
+	if (! socket_server->Ok())
+	{
+		wxPrintf("Could not listen at the specified port !\n\n");
+		abort();
+	}
 
 	tree_root = AssetTree->AddRoot("Assets");
 
@@ -107,6 +112,11 @@ void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
 
 // SOCKETS
 
+void MyMainFrame::OnSocketEvent(wxSocketEvent& event)
+{
+	MyDebugPrint("MyMainFrame::OnSocketEvent - This should not happen!");
+}
+
 void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 {
 	  SETUP_SOCKET_CODES
@@ -121,7 +131,7 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    default                  : s.Append(_("Unexpected event !\n")); break;
 	  }
 
-	  MyDebugPrint(s);
+	  //MyDebugPrint(s);
 
       // Accept new connection if there is one in the pending
       // connections queue, else exit. We use Accept(false) for
@@ -132,9 +142,9 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
 
 	  // request identification..
-	  MyDebugPrint(" Requesting identification...");
+	  //MyDebugPrint(" Requesting identification...");
    	  sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
-   	  MyDebugPrint(" Waiting for reply...");
+   	  //MyDebugPrint(" Waiting for reply...");
   	  sock->WaitForRead(5);
 
       if (sock->IsData() == true)
@@ -149,7 +159,6 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
   	      if (current_job == -1)
   	      {
   	    	  MyDebugPrint(" Unknown JOB ID - Closing Connection\n");
-  	    	  MyDebugPrint("");
 
   	    	  // incorrect identification - close the connection..
 	    	  sock->Destroy();
@@ -160,19 +169,21 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	  MyDebugPrint("Connection from Job #%li", current_job);
 
 	    	  job_controller.job_list[current_job].socket = sock;
-	    	  job_controller.job_list[current_job].parent_panel->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( JobPanel::OnJobSocketEvent) );
+	    	  job_controller.job_list[current_job].parent_panel->Bind(wxEVT_SOCKET, &JobPanel::OnJobSocketEvent, job_controller.job_list[current_job].parent_panel, SOCKET_ID);
+
 	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
+	    	  //sock->SetEventHandler(*this, SOCKET_ID);
 	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
 	    	  sock->Notify(true);
 
 	    	  // Tell the socket it is connected
 
-	    	  sock->WriteMsg(you_are_connected, SOCKET_CODE_SIZE);
+	    	  sock->WriteMsg(socket_you_are_connected, SOCKET_CODE_SIZE);
 	      }
       }
       else
    	  {
-	  	   	   wxPrintf(" ...Read Timeout \n\n");
+	  	   	   MyDebugPrint(" ...Read Timeout \n\n");
 	  	   	   // time out - close the connection
 	    	   sock->Destroy();
 	    	   sock = NULL;

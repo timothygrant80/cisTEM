@@ -9,6 +9,7 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 
 		bool show_expert_options;
 		long my_job_id;
+		JobPackage my_job_package;
 
 public:
 		/** Constructor */

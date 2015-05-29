@@ -535,6 +535,330 @@ RunJob::~RunJob()
 
 }
 
+void RunJob::SendJob(wxSocketBase *socket)
+{
+	SETUP_SOCKET_CODES
+
+	long counter;
+	long argument_counter;
+	long byte_counter = 0;
+
+	int length_of_string;
+	int temp_int;
+	float temp_float;
+	std::string temp_string;
+
+	unsigned char* char_pointer;
+
+	long transfer_size = ReturnEncodedByteTransferSize();
+
+	// allocate a character array for the jobs..
+
+	unsigned char *transfer_buffer = new unsigned char[transfer_size];
+
+	for (argument_counter = 0; argument_counter < number_of_arguments; argument_counter++)
+	{
+		// ok, what is this argument..
+
+		if (arguments[argument_counter].type_of_argument == INTEGER)
+		{
+			 // set the descriptor byte
+
+			 transfer_buffer[byte_counter] = (unsigned char)INTEGER;
+			 byte_counter++;
+
+			 // set the value of the integer..
+
+			 temp_int = arguments[argument_counter].ReturnIntegerArgument();
+			 char_pointer = (unsigned char*)&temp_int;
+
+			 transfer_buffer[byte_counter] = char_pointer[0];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[1];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[2];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[3];
+			 byte_counter++;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == FLOAT)
+		 {
+			 // set the descriptor byte
+
+			 transfer_buffer[byte_counter] = (unsigned char)FLOAT;
+			 byte_counter++;
+
+			 // set the value of the float..
+
+			 temp_float = arguments[argument_counter].ReturnFloatArgument();
+			 char_pointer = (unsigned char*)&temp_float;
+
+			 transfer_buffer[byte_counter] = char_pointer[0];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[1];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[2];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[3];
+			 byte_counter++;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == BOOL)
+		 {
+			 // set the descriptor byte
+
+			 transfer_buffer[byte_counter] = (unsigned char)BOOL;
+			 byte_counter++;
+
+			 // set the value of the bool..
+
+			 transfer_buffer[byte_counter] = (unsigned char) arguments[argument_counter].ReturnBoolArgument();
+			 byte_counter++;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == TEXT)
+		 {
+			 // set the descriptor byte
+
+			 transfer_buffer[byte_counter] = (unsigned char)TEXT;
+			 byte_counter++;
+
+			 // add the length of the string..
+
+			 temp_string = arguments[argument_counter].ReturnStringArgument();
+			 length_of_string = temp_string.length();
+
+			 char_pointer = (unsigned char*)&length_of_string;
+
+			 transfer_buffer[byte_counter] = char_pointer[0];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[1];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[2];
+			 byte_counter++;
+			 transfer_buffer[byte_counter] = char_pointer[3];
+			 byte_counter++;
+
+			 // now add the contents of the string..
+
+			 for (counter = 0; counter < length_of_string; counter++)
+			 {
+				 transfer_buffer[byte_counter] = temp_string[counter];
+				 byte_counter++;
+			 }
+		 }
+
+	 }
+
+	 // now we should everything encoded, so send the information to the socket..
+	 // disable events on the socket..
+
+	 socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+	 // inform what we want to do..
+	 socket->WriteMsg(socket_ready_to_send_single_job, SOCKET_CODE_SIZE);
+	 socket->WaitForRead(5);
+
+    if (socket->IsData() == true)
+    {
+
+    	// we should get a message saying the socket is ready to receive the data..
+
+    	socket->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+
+    	// check it is ok..
+
+    	if (memcmp(socket_input_buffer, socket_send_single_job, SOCKET_CODE_SIZE) == 0) // send it..
+    	{
+    		// first - send how many bytes it is..
+
+    		char_pointer = (unsigned char*)&transfer_size;
+    		socket->WriteMsg(char_pointer, 8);
+
+    		// now send the whole buffer..
+
+    		socket->WriteMsg(transfer_buffer, transfer_size);
+
+    	}
+    	else
+    	{
+    		MyPrintWithDetails("Oops, didn't understand the reply!");
+    		abort();
+    	}
+    }
+    else
+    {
+    		MyPrintWithDetails("Oops, unexpected timeout!");
+        	abort();
+    }
+
+    // restore socket events..
+
+    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	delete [] transfer_buffer;
+
+
+
+}
+
+void RunJob::RecieveJob(wxSocketBase *socket)
+{
+	SETUP_SOCKET_CODES
+
+	long counter;
+	long argument_counter;
+	long byte_counter;
+	long transfer_size;
+
+
+	int length_of_string;
+	int number_of_arguments;
+	int temp_int;
+	float temp_float;
+	std::string temp_string;
+
+	unsigned char* char_pointer;
+
+	// disable events on the socket..
+	socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+	// Send a message saying we are ready to receive the package
+
+	socket->WriteMsg(socket_send_single_job, SOCKET_CODE_SIZE);
+
+	char_pointer = (unsigned char*)&transfer_size;
+
+	// receive how many bytes we need for the buffer..
+
+	socket->ReadMsg(char_pointer, 8);
+
+	// allocate an array..
+
+	unsigned char *transfer_buffer = new unsigned char[transfer_size];
+
+	// now receive the package..
+
+	socket->ReadMsg(transfer_buffer, transfer_size);
+
+    // restore socket events..
+    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+	// now we need to decode the buffer
+
+    byte_counter = 0;
+
+    // How many arguments are there for this job
+
+	char_pointer = (unsigned char*)&temp_int;
+	char_pointer[0] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[1] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[2] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[3] = transfer_buffer[byte_counter];
+	byte_counter++;
+
+	// reset the job..
+	Reset(temp_int);
+
+	// for this job we loop over all arguments
+
+	for (argument_counter = 0; argument_counter < number_of_arguments; argument_counter++)
+	{
+		// ok, what is this argument..
+
+		arguments[argument_counter].type_of_argument = int(transfer_buffer[byte_counter]);
+
+		byte_counter++;
+
+		 if (arguments[argument_counter].type_of_argument == INTEGER)
+		 {
+			// read the value of the integer..
+			char_pointer = (unsigned char*)&temp_int;
+
+			char_pointer[0] = transfer_buffer[byte_counter];
+			byte_counter++;
+			char_pointer[1] = transfer_buffer[byte_counter];
+			byte_counter++;
+			char_pointer[2] = transfer_buffer[byte_counter];
+			byte_counter++;
+			char_pointer[3] = transfer_buffer[byte_counter];
+			byte_counter++;
+
+			// allocate memory
+
+			arguments[argument_counter].integer_argument = new int;
+			arguments[argument_counter].integer_argument[0] = temp_int;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == FLOAT)
+		 {
+			 // read the value of the float..
+			 char_pointer = (unsigned char*)&temp_float;
+
+			 char_pointer[0] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[1] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[2] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[3] = transfer_buffer[byte_counter];
+			 byte_counter++;
+
+			 // allocate memory
+
+			 arguments[argument_counter].float_argument = new float;
+			 arguments[argument_counter].float_argument[0] = temp_float;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == BOOL)
+		 {
+			 // read the value of the bool..
+
+			 // allocate memory
+
+			 arguments[argument_counter].bool_argument = new bool;
+			 arguments[argument_counter].bool_argument[0] = bool(transfer_buffer[byte_counter]);
+			 byte_counter++;
+		 }
+		 else
+		 if (arguments[argument_counter].type_of_argument == TEXT)
+		 {
+			 // read length of command string
+
+			 char_pointer = (unsigned char*)&length_of_string;
+
+			 char_pointer[0] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[1] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[2] = transfer_buffer[byte_counter];
+			 byte_counter++;
+			 char_pointer[3] = transfer_buffer[byte_counter];
+			 byte_counter++;
+
+			 // allocate memory
+
+			 arguments[argument_counter].string_argument = new std::string;
+			 arguments[argument_counter].string_argument[0].clear();
+
+			 // fill the string..
+
+			 for (counter = 0; counter < length_of_string; counter++)
+			 {
+				 arguments[argument_counter].string_argument[0] += transfer_buffer[byte_counter];
+				 byte_counter++;
+			 }
+		  }
+	}
+
+	// delete the buffer
+	delete [] transfer_buffer;
+
+}
+
 void RunJob::Deallocate()
 {
 	if (number_of_arguments > 0)

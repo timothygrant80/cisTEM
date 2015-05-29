@@ -24,8 +24,8 @@ CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimiza
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
-  CXXFLAGS="-g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
+  CPPFLAGS="-g -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
+  CXXFLAGS="-g -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
   fi
   ])
 
@@ -76,6 +76,10 @@ if test -n "$vers" && test "$vers" -ge 3000000; then
 	WX_CPPFLAGS="`$WXCONFIG --cppflags`"
 	WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
 	WX_LIBS="`$WXCONFIG --libs std,aui`"
+
+	WX_CPPFLAGS_BASE="`$WXCONFIG --cppflags base`"
+	WX_CXXFLAGS_BASE="`$WXCONFIG --cxxflags base | sed -e 's/-fno-exceptions//'`"
+        WX_LIBS_BASE="`$WXCONFIG --libs base,net`"
 	wx_is_available=1
 else
         AC_MSG_ERROR("wxWidgets version > 3.0.0 required.")
@@ -160,5 +164,7 @@ AC_CHECK_LIB(fftw3, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3"],AC_MSG_
 #AC_SUBST(MPI_CPPFLAGS)
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
+AC_SUBST(WX_LIBS_BASE)
+AC_SUBST(WX_CPPFLAGS_BASE)
 
 AC_OUTPUT(Makefile src/Makefile)

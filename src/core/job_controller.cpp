@@ -56,12 +56,9 @@ long GuiJobController::AddJob(JobPanel *wanted_parent_panel)
 void GuiJobController::LaunchJob(unsigned char *job_code)
 {
 	long counter;
-	wxIPV4address address;
-	address.Hostname(wxGetFullHostName()); // hopefully get my ip
-	wxString ip_address = address.IPAddress();
 
 	wxString execution_command;
-	execution_command = "guix_job_control " + ip_address + " " + main_frame->my_port + " ";
+	execution_command = "guix_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " > control.log";
 
 
 	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)

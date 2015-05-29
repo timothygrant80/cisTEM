@@ -13,7 +13,7 @@
 SETUP_SOCKET_CODES
 
 class
-MyApp : public wxAppConsole
+MyTestApp : public wxAppConsole
 {
 
 	public:
@@ -43,10 +43,10 @@ MyApp : public wxAppConsole
 };
 
 
-IMPLEMENT_APP(MyApp)
+IMPLEMENT_APP(MyTestApp)
 
 
-bool MyApp::OnInit()
+bool MyTestApp::OnInit()
 {
 
 	wxIPV4address addr;
@@ -71,8 +71,8 @@ bool MyApp::OnInit()
 	m_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
 	m_server->Notify(true);
 
-	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnServerEvent) );
-	this->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnSocketEvent) );
+	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyTestApp::OnServerEvent) );
+	this->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( MyTestApp::OnSocketEvent) );
 
 	m_busy = false;
 	m_numClients = 0;
@@ -82,7 +82,7 @@ bool MyApp::OnInit()
 }
 
 
-void MyApp::OnServerEvent(wxSocketEvent& event)
+void MyTestApp::OnServerEvent(wxSocketEvent& event)
 {
 	  wxString s = _("OnServerEvent: ");
 	  wxSocketBase *sock = NULL;
@@ -194,7 +194,7 @@ void MyApp::OnServerEvent(wxSocketEvent& event)
 	  //UpdateStatusBar();
 }
 
-void MyApp::OnSocketEvent(wxSocketEvent& event)
+void MyTestApp::OnSocketEvent(wxSocketEvent& event)
 {
   wxString s = _("OnSocketEvent: ");
   wxSocketBase *sock = event.GetSocket();

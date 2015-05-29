@@ -14,7 +14,7 @@
 #include "../../gui/icons/movie_align_icon.cpp"
 
 class
-MyApp : public wxApp
+MyGuiApp : public wxApp
 {
 
 	public:
@@ -22,7 +22,7 @@ MyApp : public wxApp
 };
 
 
-IMPLEMENT_APP(MyApp)
+IMPLEMENT_APP(MyGuiApp)
 
 MyMainFrame *main_frame;
 MyAlignMoviesPanel *align_movies_panel;
@@ -36,7 +36,7 @@ MyMovieAssetPanel *movie_asset_panel;
 SETUP_SOCKET_CODES
 
 
-bool MyApp::OnInit()
+bool MyGuiApp::OnInit()
 {
 	wxImage::AddHandler(new wxPNGHandler);
 

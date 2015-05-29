@@ -121,7 +121,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	long counter;
 	long number_of_jobs = movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many movies in the selected group..
-	long number_of_processes = 8; // NEED TO DO THIS PROPERLY LATER
+	long number_of_processes = 2; // NEED TO DO THIS PROPERLY LATER
 
 	bool ok_number_conversion;
 

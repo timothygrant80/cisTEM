@@ -12,29 +12,52 @@ MyMainFrame::MyMainFrame( wxWindow* parent )
 :
 MainFrame( parent )
 {
-	wxIPV4address addr;
-	addr.Service(3000); // fixed to 3000 at the moment
-	my_port = wxString::Format("%i", 3000);
-
-	socket_server = new wxSocketServer(addr);
-	if (! socket_server->Ok())
-	{
-		wxPrintf("Could not listen at the specified port !\n\n");
-		abort();
-	}
-
 	tree_root = AssetTree->AddRoot("Assets");
 
 	// Add Movies..
 	movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
-	// setup the socket server and socket events..
+	SetupServer();
+}
 
-	socket_server->SetEventHandler(*this, SERVER_ID);
-	socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
-	socket_server->Notify(true);
+void MyMainFrame::SetupServer()
+{
+	wxIPV4address my_address;
+	wxIPV4address buffer_address;
 
-	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
+	for (short int current_port = START_PORT; current_port <= END_PORT; current_port++)
+	{
+
+		if (current_port == END_PORT)
+		{
+			wxPrintf("JOB CONTROL : Could not find a valid port !\n\n");
+			abort();
+		}
+
+		my_port = current_port;
+		my_address.Service(my_port);
+
+		socket_server = new wxSocketServer(my_address);
+
+		if (	socket_server->Ok())
+		{
+			  // setup events for the socket server..
+
+		   	  socket_server->SetEventHandler(*this, SERVER_ID);
+		   	  socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
+		  	  socket_server->Notify(true);
+
+		  	  this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
+
+			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
+			  my_ip_address = buffer_address.IPAddress();
+			  my_port_string = wxString::Format("%hi", my_port);
+
+
+			  break;
+		}
+		else socket_server->Destroy();
+	}
 
 }
 

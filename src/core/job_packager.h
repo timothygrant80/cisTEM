@@ -66,6 +66,8 @@ public:
 	void Deallocate();
 	void SetArguments(const char *format, va_list args);
 	long ReturnEncodedByteTransferSize();
+	void SendJob(wxSocketBase *socket);
+	void RecieveJob(wxSocketBase *socket);
 
 
 };

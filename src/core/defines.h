@@ -1,3 +1,6 @@
+#define START_PORT 3000
+#define END_PORT 5000
+
 #define MyPrintWithDetails(...)	wxLogDebug(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__);
 
 #ifdef DEBUG

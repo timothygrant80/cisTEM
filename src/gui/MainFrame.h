@@ -10,13 +10,18 @@ class MyMainFrame : public MainFrame
 	//// end generated class members
 
 		wxSocketServer *socket_server;
-		wxString my_port;
 
 		wxTreeItemId tree_root;
 		wxTreeItemId movie_branch;
 
 		GuiJobController job_controller;
 
+		wxString my_ip_address;
+		wxString my_port_string;
+
+		short int my_port;
+
+		void SetupServer();
 		void RecalculateAssetBrowser(void);
 		void OnCollapseAll( wxCommandEvent& event );
 		void OnMenuBookChange( wxListbookEvent& event );

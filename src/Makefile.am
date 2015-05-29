@@ -30,7 +30,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/image.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
-                       core/job_packager.cpp
+                       core/job_packager.cpp \
+                       core/myapp.cpp
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)

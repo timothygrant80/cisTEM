@@ -6,12 +6,15 @@
 #include "../../gui/icons/overview_icon.cpp"
 #include "../../gui/icons/assets_icon.cpp"
 #include "../../gui/icons/action_icon.cpp"
+#include "../../gui/icons/settings_icon.cpp"
 
 #include "../../gui/icons/movie_icon.cpp"
 #include "../../gui/icons/image_icon.cpp"
-#include "../../gui/icons/ctf_icon.cpp"
 
 #include "../../gui/icons/movie_align_icon.cpp"
+#include "../../gui/icons/ctf_icon.cpp"
+
+#include "../../gui/icons/run_profiles_icon.cpp"
 
 class
 MyGuiApp : public wxApp
@@ -30,8 +33,12 @@ MyAlignMoviesPanel *align_movies_panel;
 OverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
+SettingsPanel *settings_panel;
+
 ImageAssetPanel *image_asset_panel;
 MyMovieAssetPanel *movie_asset_panel;
+
+MyRunProfilesPanel *run_profiles_panel;
 
 SETUP_SOCKET_CODES
 
@@ -43,6 +50,7 @@ bool MyGuiApp::OnInit()
 	wxImageList *MenuBookIconImages;
 	wxImageList *ActionsBookIconImages;
 	wxImageList *AssetsBookIconImages;
+	wxImageList *SettingsBookIconImages;
 
 	main_frame = new MyMainFrame( (wxWindow*)NULL);
 
@@ -51,13 +59,15 @@ bool MyGuiApp::OnInit()
 	overview_panel = new OverviewPanel(main_frame->MenuBook, wxID_ANY);
 	actions_panel = new ActionsPanel(main_frame->MenuBook, wxID_ANY);
 	assets_panel = new AssetsPanel(main_frame->MenuBook, wxID_ANY);
+	settings_panel = new SettingsPanel(main_frame->MenuBook, wxID_ANY);
 
 	// Individual Panels
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new ImageAssetPanel(assets_panel->AssetsBook, wxID_ANY);
-
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
+
+	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
 
 
 	main_frame->Show();
@@ -67,21 +77,27 @@ bool MyGuiApp::OnInit()
 	MenuBookIconImages = new wxImageList();
 	ActionsBookIconImages = new wxImageList();
 	AssetsBookIconImages = new wxImageList();
+	SettingsBookIconImages = new wxImageList();
 
 	wxBitmap overview_icon_bmp = wxBITMAP_PNG_FROM_DATA(overview_icon);
 	wxBitmap assets_icon_bmp = wxBITMAP_PNG_FROM_DATA(assets_icon);
 	wxBitmap action_icon_bmp = wxBITMAP_PNG_FROM_DATA(action_icon);
+	wxBitmap settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(settings_icon);
 
 	wxBitmap movie_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_icon);
 	wxBitmap image_icon_bmp = wxBITMAP_PNG_FROM_DATA(image_icon);
-	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
 
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
+	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
+
+	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
+
 
 
 	MenuBookIconImages->Add(overview_icon_bmp);
 	MenuBookIconImages->Add(assets_icon_bmp);
 	MenuBookIconImages->Add(action_icon_bmp);
+	MenuBookIconImages->Add(settings_icon_bmp);
 
 	ActionsBookIconImages->Add(movie_align_icon_bmp);
 	ActionsBookIconImages->Add(ctf_icon_bmp);
@@ -89,20 +105,26 @@ bool MyGuiApp::OnInit()
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
 
+	SettingsBookIconImages->Add(run_profiles_icon_bmp);
+
 
 	main_frame->MenuBook->SetImageList(MenuBookIconImages);
 	actions_panel->ActionsBook->SetImageList(ActionsBookIconImages);
 	assets_panel->AssetsBook->SetImageList(AssetsBookIconImages);
+	settings_panel->SettingsBook->SetImageList(SettingsBookIconImages);
 
 	main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
 	main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
 	main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
+	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 3);
 
 	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", false, 0);
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(image_asset_panel, "Find CTF", false, 1);
+
+	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
 
 	// Setup Movie Panel
 

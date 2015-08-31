@@ -189,7 +189,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	{
 		// job is :-
 		//
-		// Filename (string)
+		// Input Filename (string)
+		// Output Filename (string)
 		// Minimum shift in angstroms (float)
 		// Maximum Shift in angstroms (float)
 		// Dose filter Sums? (bool)

@@ -96,6 +96,24 @@ class ActionsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class SettingsPanel
+///////////////////////////////////////////////////////////////////////////////
+class SettingsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline3;
+	
+	public:
+		wxListbook* SettingsBook;
+		
+		SettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~SettingsPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class AssetsPanel
 ///////////////////////////////////////////////////////////////////////////////
 class AssetsPanel : public wxPanel 
@@ -255,6 +273,69 @@ class MovieAssetPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class RunProfilesPanel
+///////////////////////////////////////////////////////////////////////////////
+class RunProfilesPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxSplitterWindow* m_splitter5;
+		wxPanel* ProfilesPanel;
+		wxListCtrl* ProfilesListBox;
+		wxButton* AddProfileButton;
+		wxButton* RenameProfileButton;
+		wxButton* RemoveProfileButton;
+		wxPanel* CommandsPanel;
+		wxStaticLine* m_staticline15;
+		wxStaticText* m_staticText34;
+		wxStaticText* NumberProcessesStaticText;
+		wxStaticText* m_staticText36;
+		wxTextCtrl* ManagerTextCtrl;
+		wxStaticText* CommandErrorStaticText;
+		wxListCtrl* CommandsListBox;
+		wxButton* AddCommandButton;
+		wxButton* EditCommandButton;
+		wxButton* RemoveCommandButton;
+		wxButton* CommandsSaveButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnProfileDClick( wxMouseEvent& event ) { event.Skip(); }
+		virtual void OnProfileLeftDown( wxMouseEvent& event ) { event.Skip(); }
+		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
+		virtual void OnEndProfileEdit( wxListEvent& event ) { event.Skip(); }
+		virtual void OnProfilesListItemActivated( wxListEvent& event ) { event.Skip(); }
+		virtual void OnProfilesFocusChange( wxListEvent& event ) { event.Skip(); }
+		virtual void OnAddProfileClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRenameProfileClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRemoveProfileClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ManagerTextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCommandDClick( wxMouseEvent& event ) { event.Skip(); }
+		virtual void OnCommandLeftDown( wxMouseEvent& event ) { event.Skip(); }
+		virtual void OnCommandsActivated( wxListEvent& event ) { event.Skip(); }
+		virtual void OnCommandsFocusChange( wxListEvent& event ) { event.Skip(); }
+		virtual void OnUpdateIU( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void AddCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void EditCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void RemoveCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void CommandsSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		RunProfilesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+		~RunProfilesPanel();
+		
+		void m_splitter5OnIdle( wxIdleEvent& )
+		{
+			m_splitter5->SetSashPosition( 300 );
+			m_splitter5->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RunProfilesPanel::m_splitter5OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class ErrorDialog
 ///////////////////////////////////////////////////////////////////////////////
 class ErrorDialog : public wxDialog 
@@ -332,6 +413,36 @@ class AlignMoviesPanel : public JobPanel
 		
 		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 869,566 ), long style = wxTAB_TRAVERSAL ); 
 		~AlignMoviesPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class AddRunCommandDialog
+///////////////////////////////////////////////////////////////////////////////
+class AddRunCommandDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText45;
+		wxStaticText* m_staticText46;
+		wxStaticText* ErrorStaticText;
+		wxStaticLine* m_staticline14;
+		wxButton* OKButton;
+		wxButton* CancelButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		wxTextCtrl* CommandTextCtrl;
+		wxSpinCtrl* NumberCopiesSpinCtrl;
+		
+		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~AddRunCommandDialog();
 	
 };
 

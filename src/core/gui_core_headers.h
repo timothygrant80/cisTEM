@@ -44,4 +44,6 @@
 #include "../gui/MovieAssetPanel.h"
 #include "../gui/MovieImportDialog.h"
 #include "../gui/AlignMoviesPanel.h"
-
+#include "../gui/AlignMoviesPanel.h"
+#include "../gui/MyRunProfilesPanel.h"
+#include "../gui/MyAddRunCommandDialog.h"

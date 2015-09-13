@@ -212,3 +212,67 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	   sock = NULL;
 	  }
 }
+
+void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
+{
+	MyNewProjectWizard *my_wizard = new MyNewProjectWizard(this);
+	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
+	my_wizard->RunWizard(my_wizard->m_pages.Item(0));
+
+	if (current_project.is_open == true)
+	{
+		SetTitle("ProjectX - [" + current_project.project_name + "]");
+	}
+
+}
+
+void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
+{
+	// find a DB file..
+
+	if (current_project.is_open)
+	{
+	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
+
+	    current_project.Close();
+		SetTitle("ProjectX");
+
+	}
+
+	wxFileDialog openFileDialog(this, _("Open db file"), "", "", "DB files (*.db)|*.db", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+
+	if (openFileDialog.ShowModal() == wxID_CANCEL) return;     // the user changed idea...
+
+	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
+	{
+		SetTitle("ProjectX - [" + current_project.project_name + "]");
+	}
+	else
+	{
+		MyPrintWithDetails("An error occured opening the database file..");
+	}
+
+
+
+}
+
+void MyMainFrame::OnFileExit( wxCommandEvent& event )
+{
+	Close(true);
+
+}
+
+void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
+{
+	current_project.Close();
+	SetTitle("ProjectX");
+
+}
+void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )
+{
+	if (current_project.is_open == true)
+	{
+		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(true);
+	}
+	else FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(false);
+}

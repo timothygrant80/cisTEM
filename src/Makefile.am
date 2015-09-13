@@ -30,9 +30,12 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/image.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
+                       core/database.cpp \
+                       core/project.cpp \
                        core/job_packager.cpp \
                        core/run_profiles.cpp \
                        core/myapp.cpp
+
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -46,7 +49,7 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 
 
-ProjectX_SOURCES = programs/projectx/projectx.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/MainFrame.cpp gui/MovieAssetPanel.cpp gui/MovieImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyAddRunCommandDialog.cpp
+ProjectX_SOURCES = programs/projectx/projectx.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/MainFrame.cpp gui/MovieAssetPanel.cpp gui/MovieImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp
 ProjectX_CXXFLAGS = $(WX_CPPFLAGS)
 ProjectX_CPPFLAGS = $(WX_CPPFLAGS)
 ProjectX_LDFLAGS = $(WX_LIBS)

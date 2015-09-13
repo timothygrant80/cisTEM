@@ -26,6 +26,10 @@ class JobPanel;
 #include <wx/button.h>
 #include <wx/statbox.h>
 #include <wx/splitter.h>
+#include <wx/bitmap.h>
+#include <wx/image.h>
+#include <wx/icon.h>
+#include <wx/menu.h>
 #include <wx/frame.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
@@ -33,13 +37,13 @@ class JobPanel;
 #include <wx/combobox.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/icon.h>
 #include <wx/statbmp.h>
 #include <wx/tglbtn.h>
 #include <wx/spinctrl.h>
 #include <wx/gauge.h>
+#include <wx/wizard.h>
+#include <wx/dynarray.h>
+WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -55,17 +59,24 @@ class MainFrame : public wxFrame
 		wxPanel* LeftPanel;
 		wxPanel* RightPanel;
 		wxButton* m_button12;
+		wxMenuBar* m_menubar1;
+		wxMenu* FileMenu;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
 		virtual void OnCollapseAll( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFileMenuUpdate( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnFileNewProject( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		wxListbook* MenuBook;
 		wxTreeCtrl* AssetTree;
 		
-		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("ProjectX!"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,800 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
+		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("ProjectX"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,800 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
 		
 		~MainFrame();
 		
@@ -443,6 +454,39 @@ class AddRunCommandDialog : public wxDialog
 		
 		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~AddRunCommandDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class NewProjectWizard
+///////////////////////////////////////////////////////////////////////////////
+class NewProjectWizard : public wxWizard 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText41;
+		wxTextCtrl* ProjectNameTextCtrl;
+		wxStaticText* m_staticText42;
+		wxTextCtrl* ParentDirTextCtrl;
+		wxButton* m_button24;
+		wxStaticText* m_staticText45;
+		wxTextCtrl* ProjectPathTextCtrl;
+		wxStaticText* ErrorText;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
+		virtual void OnProjectTextChange( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnParentDirChange( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnProjectPathChange( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		NewProjectWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
+		WizardPages m_pages;
+		~NewProjectWizard();
 	
 };
 

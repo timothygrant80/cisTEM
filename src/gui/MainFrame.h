@@ -19,12 +19,20 @@ class MyMainFrame : public MainFrame
 		wxString my_ip_address;
 		wxString my_port_string;
 
+		Project current_project;
+
 		short int my_port;
 
 		void SetupServer();
 		void RecalculateAssetBrowser(void);
 		void OnCollapseAll( wxCommandEvent& event );
 		void OnMenuBookChange( wxListbookEvent& event );
+
+		void OnFileNewProject( wxCommandEvent& event );
+		void OnFileOpenProject( wxCommandEvent& event );
+		void OnFileExit( wxCommandEvent& event );
+		void OnFileCloseProject( wxCommandEvent& event );
+		void OnFileMenuUpdate( wxUpdateUIEvent& event );
 
 		void OnServerEvent(wxSocketEvent& event);
 		void OnSocketEvent(wxSocketEvent& event);

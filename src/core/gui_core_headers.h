@@ -28,7 +28,6 @@
 #include <wx/spinctrl.h>
 #include <wx/gauge.h>
 #include <wx/string.h>
-#include <wx/filename.h>
 #include <wx/dnd.h>
 #include <wx/dir.h>
 #include <wx/progdlg.h>
@@ -47,3 +46,4 @@
 #include "../gui/AlignMoviesPanel.h"
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
+#include "../gui/MyNewProjectWizard.h"

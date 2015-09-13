@@ -1,5 +1,5 @@
 AC_INIT(ProjectX, 0.1)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
 CPPFLAGS=$CPPFLAGS
@@ -53,6 +53,19 @@ AC_ARG_WITH(fftw-dir,
     fi
 ])
 
+AC_ARG_WITH(sqlite3-dir,
+[[  --with-sqlite3-dir=DIR     Declare the root directory of sqlite3, if its
+                          current location is not system accessible ]],
+[
+    if test "$withval" != "yes" -a "$withval" != ""; then
+        CPPFLAGS="$CPPFLAGS -I$withval/include -L$withval/lib"
+        CXXFLAGS="$CXXFLAGS -I$withval/include -L$withval/lib"
+        LDFLAGS="$LDFLAGS -L$withval/lib"
+    fi
+])
+
+
+
 wxversion=0
 
 AC_DEFUN([WXTEST],
@@ -97,6 +110,11 @@ fi
 
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h. Please check your installation of FFTW3."))
 AC_CHECK_LIB(fftw3, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+
+# SQLITE 3 Checks
+
+AC_CHECK_HEADER(sqlite3.h, , AC_MSG_ERROR("Can't find sqlite3.h. Please check your installation of SQLITE3."))
+AC_CHECK_LIB(sqlite3, sqlite3_open, [LIBS="$LIBS -lsqlite3"],AC_MSG_ERROR("Can't find SQLITE3's libraries. Please check your installation of SQLITE3."))
 
 # MPI Checks..
 

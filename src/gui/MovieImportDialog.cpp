@@ -135,7 +135,8 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 	bool have_errors = false;
 
-	VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
+	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
+	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
 	PixelSizeText->GetLineText(0).ToDouble(&pixel_size);
 	CsText->GetLineText(0).ToDouble(&spherical_aberration);
 	DoseText->GetLineText(0).ToDouble(&dose_per_frame);
@@ -148,6 +149,8 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 	{
 		MovieAsset temp_asset;
 
+
+
 		temp_asset.microscope_voltage = microscope_voltage;
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.dose_per_frame = dose_per_frame;
@@ -159,6 +162,9 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		// loop through all the files and add them as assets..
 
+		// for adding to the database..
+		main_frame->current_project.database.BeginMovieAssetInsert();
+
 		for (long counter = 0; counter < PathListCtrl->GetItemCount(); counter++)
 		{
 			temp_asset.Update(PathListCtrl->GetItemText(counter));
@@ -169,8 +175,13 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			{
 				if (temp_asset.movie_is_valid == true)
 					{
+						temp_asset.asset_id = movie_asset_panel->current_asset_number;
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
+
+						main_frame->current_project.database.AddMovieAsset(movie_asset_panel->current_asset_number, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
+						movie_asset_panel->current_asset_number++;
+
 					}
 					else
 					{
@@ -186,6 +197,10 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 			my_progress_dialog->Update(counter);
 		}
+
+		// do database write..
+
+		main_frame->current_project.database.EndMovieAssetInsert();
 
 		my_progress_dialog->Destroy();
 

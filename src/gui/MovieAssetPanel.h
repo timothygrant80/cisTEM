@@ -40,6 +40,7 @@ class MyMovieAssetPanel : public MovieAssetPanel
 		long highlighted_item;
 
 		bool name_is_being_edited;
+		bool should_veto_motion;
 
 		AssetGroupList all_groups_list;
 		MovieAssetList all_assets_list;
@@ -49,9 +50,18 @@ class MyMovieAssetPanel : public MovieAssetPanel
 		void RemoveAllClick( wxCommandEvent& event );
 		void NewGroupClick( wxCommandEvent& event );
 		void RemoveGroupClick( wxCommandEvent& event );
+		void RenameGroupClick( wxCommandEvent& event );
 		void AddSelectedClick( wxCommandEvent& event );
+		void OnUpdateUI( wxUpdateUIEvent& event );
+		void MouseVeto( wxMouseEvent& event );
+		void OnMotion( wxMouseEvent& event );
+		void VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event );
+		void MouseCheckGroupsVeto( wxMouseEvent& event );
+		void MouseCheckContentsVeto( wxMouseEvent& event );
 
 	public:
+
+		int current_asset_number;
 
 		MyMovieAssetPanel( wxWindow* parent );
 
@@ -65,6 +75,7 @@ class MyMovieAssetPanel : public MovieAssetPanel
 		void OnBeginContentsDrag( wxListEvent& event );
 
 		void SizeGroupColumn();
+		void SizeContentsColumn(int column_number);
 
 		unsigned long ReturnNumberOfAssets();
 		unsigned long ReturnNumberOfGroups();
@@ -88,9 +99,13 @@ class MyMovieAssetPanel : public MovieAssetPanel
 
 		void SetSelectedGroup(long wanted_group);
 
-		void CheckActiveButtons();
+		//void CheckActiveButtons();
 
 		bool IsFileAnAsset(wxFileName file_to_check);
+
+		void ImportAllFromDatabase();
+		void Reset();
+
 };
 
 

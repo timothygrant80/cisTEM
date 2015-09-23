@@ -1,9 +1,11 @@
 class Project {
 
 
-	Database database;
 
 public :
+
+
+	Database database;
 
 	bool is_open;
 	wxString project_name;

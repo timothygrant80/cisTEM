@@ -1,4 +1,4 @@
-bool GetMRCDetails(const char *filename, long &x_size, long &y_size, long &number_of_images);
+bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_of_images);
 
 inline bool IsEven(int number_to_check)
 {

@@ -246,6 +246,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
+		movie_asset_panel->ImportAllFromDatabase();
 	}
 	else
 	{
@@ -265,6 +266,11 @@ void MyMainFrame::OnFileExit( wxCommandEvent& event )
 void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 {
 	current_project.Close();
+	movie_asset_panel->Reset();
+
+	RecalculateAssetBrowser();
+
+
 	SetTitle("ProjectX");
 
 }

@@ -92,8 +92,21 @@ void MyNewProjectWizard::CheckProjectPath()
 
 	// the last directory is the project name..
 
-	if (current_dirname.Exists()) ErrorText->SetLabel("Error: Directory Exists");
-	else ErrorText->SetLabel("");
+	if (current_dirname.Exists())
+	{
+		ErrorText->SetLabel("Error: Directory Exists");
+		wxWindow *win = wxWindow::FindWindowById(wxID_FORWARD);
+		if(win) win->Enable(false);
+	}
+	else
+	{
+		ErrorText->SetLabel("");
+		wxWindow *win = wxWindow::FindWindowById(wxID_FORWARD);
+		if(win) win->Enable(true);
+
+	}
+
+
 
 
 

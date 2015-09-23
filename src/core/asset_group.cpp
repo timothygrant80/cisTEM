@@ -1,5 +1,5 @@
 #include "core_headers.h"
-#include "gui_core_headers.h"
+//#include "gui_core_headers.h"
 
 
 AssetGroup::AssetGroup()
@@ -219,7 +219,7 @@ void AssetGroupList::AddGroup(wxString name)
 
 void AssetGroupList::RemoveGroup(long number_to_remove)
 {
-	wxPrintf("Removing group #%li\n", number_to_remove);
+	//wxPrintf("Removing group #%li\n", number_to_remove);
 
 	if (number_to_remove < 0 || number_to_remove >= number_of_groups)
 	{
@@ -239,4 +239,16 @@ void AssetGroupList::RemoveGroup(long number_to_remove)
 long AssetGroupList::ReturnNumberOfGroups()
 {
 	return number_of_groups;
+}
+
+void AssetGroupList::RemoveAll()
+{
+
+	for (long counter = 0; counter < number_of_groups; counter++)
+	{
+		groups[counter].RemoveAll();
+	}
+
+	number_of_groups = 1;
+
 }

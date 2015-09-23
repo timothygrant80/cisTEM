@@ -1,6 +1,6 @@
 #include "core_headers.h"
 
-bool GetMRCDetails(const char *filename, long &x_size, long &y_size, long &number_of_images)
+bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_of_images)
 {
 	FILE * input;
 	input = fopen(filename, "rb");

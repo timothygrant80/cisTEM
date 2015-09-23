@@ -15,7 +15,9 @@ MovieAssetPanel( parent )
 	FillGroupList();
 	FillContentsList();
 	highlighted_item = -1;
+	current_asset_number = 0;
 
+	bool should_veto_motion = true;
 	name_is_being_edited = false;
 
 	GroupListBox->SetDropTarget(new GroupDropTarget(GroupListBox));
@@ -167,10 +169,8 @@ void MyMovieAssetPanel::AddSelectedClick( wxCommandEvent& event )
 	// How many movies are selected?
 
 	long number_selected = ContentsListBox->GetSelectedItemCount();
-	long selected_movie;
 
-
-	if (number_selected > 0)
+		if (number_selected > 0)
 	{
 		if (all_groups_list.number_of_groups > 1)
 		{
@@ -195,7 +195,7 @@ void MyMovieAssetPanel::AddSelectedClick( wxCommandEvent& event )
 					if ( item == -1 )
 						break;
 
-					AddContentItemToGroup(group_choice->GetSelection() + 1, selected_movie);
+					AddContentItemToGroup(group_choice->GetSelection() + 1, item);
 				}
 			}
 
@@ -221,20 +221,8 @@ void MyMovieAssetPanel::RemoveAllClick( wxCommandEvent& event )
 
 				if (check_dialog->ShowModal() ==  wxID_YES)
 				{
-					all_assets_list.RemoveAll();
-
-					for (long counter = 0; counter < all_groups_list.number_of_groups; counter++)
-					{
-						all_groups_list.groups[counter].RemoveAll();
-					}
+					Reset();
 				}
-
-
-				SetSelectedGroup(0);
-				CheckActiveButtons();
-				FillGroupList();
-				FillContentsList();
-				main_frame->RecalculateAssetBrowser();
 		}
 	}
 	else
@@ -242,7 +230,7 @@ void MyMovieAssetPanel::RemoveAllClick( wxCommandEvent& event )
 		all_groups_list.groups[selected_group].RemoveAll();
 		FillGroupList();
 		FillContentsList();
-		CheckActiveButtons();
+		//CheckActiveButtons();
 		main_frame->RecalculateAssetBrowser();
 	}
 }
@@ -254,7 +242,7 @@ void MyMovieAssetPanel:: NewGroupClick( wxCommandEvent& event )
 	all_groups_list.AddGroup("New Group");
 
 	// How many movies are selected?
-
+/*
 	long number_selected = ContentsListBox->GetSelectedItemCount();
 
 
@@ -273,9 +261,9 @@ void MyMovieAssetPanel:: NewGroupClick( wxCommandEvent& event )
 			}
 			//UpdateMovieInfo();
 	}
-
+*/
 	FillGroupList();
-	SetSelectedGroup(all_groups_list.ReturnNumberOfGroups() - 1);
+	//SetSelectedGroup(all_groups_list.ReturnNumberOfGroups() - 1);
 
 	main_frame->RecalculateAssetBrowser();
 }
@@ -293,12 +281,20 @@ void MyMovieAssetPanel:: RemoveGroupClick( wxCommandEvent& event )
 	main_frame->RecalculateAssetBrowser();
 }
 
+void MyMovieAssetPanel:: RenameGroupClick( wxCommandEvent& event )
+{
+	MyDebugAssertTrue(selected_group >= 0 && selected_group < all_groups_list.number_of_groups, "Trying to rename an non existent group!");
+	GroupListBox->EditLabel(selected_group);
+}
+
 void MyMovieAssetPanel::AddAsset(MovieAsset *asset_to_add)
 {
 	// Firstly add the asset to the Asset list
 
 	all_assets_list.AddMovie(asset_to_add);
 	all_groups_list.AddMemberToGroup(0, all_assets_list.number_of_assets - 1);
+
+	if (asset_to_add->asset_id > current_asset_number) current_asset_number = asset_to_add->asset_id;
 
 	//FillContentsList();
 }
@@ -308,54 +304,27 @@ void MyMovieAssetPanel::SetSelectedGroup(long wanted_group)
 	MyDebugAssertTrue(wanted_group >= 0 && wanted_group <= all_groups_list.number_of_groups, "Trying to select a group that doesn't exist!");
 
 	GroupListBox->SetItemState(wanted_group, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-	selected_group = wanted_group;
-	selected_content = 0;
-	//FillGroupList();
-	FillContentsList();
 
-	CheckActiveButtons();
+	if (wanted_group != selected_group)
+	{
+		selected_group = wanted_group;
+		selected_content = 0;
+		//FillGroupList();
+		FillContentsList();
+
+	}
+
+
+	//CheckActiveButtons();
 
 }
 
-void MyMovieAssetPanel::CheckActiveButtons()
-{
-	if (selected_group == 0)
-	{
-		RemoveGroupButton->Enable(false);
-	}
-	else
-	{
-		RemoveGroupButton->Enable(true);
-	}
-
-	if (ContentsListBox->GetItemCount() < 1)
-	{
-		RemoveAllMoviesButton->Enable(false);
-		RemoveSelectedMovieButton->Enable(false);
-		AddSelectedButton->Enable(false);
-	}
-	else
-	{
-		RemoveAllMoviesButton->Enable(true);
-
-		if (ContentsListBox->GetSelectedItemCount() < 1)
-		{
-			RemoveSelectedMovieButton->Enable(false);
-			AddSelectedButton->Enable(false);
-		}
-		else
-		{
-			RemoveSelectedMovieButton->Enable(true);
-
-			if (ReturnNumberOfGroups() > 1) AddSelectedButton->Enable(true);
-			else AddSelectedButton->Enable(false);
-		}
-	}
+//void MyMovieAssetPanel::CheckActiveButtons()
+//{
 
 
 
-
-}
+//}
 
 
 unsigned long MyMovieAssetPanel::ReturnNumberOfAssets()
@@ -438,6 +407,16 @@ void MyMovieAssetPanel::FillGroupList()
 	}
 
 	SizeGroupColumn();
+
+	if (selected_group >= 0 && selected_group < all_groups_list.number_of_groups)
+	{
+		GroupListBox->SetItemState(selected_group, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+	}
+	else
+	{
+		selected_group = 0;
+		GroupListBox->SetItemState(selected_group, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+	}
 	GroupListBox->Thaw();
 }
 
@@ -487,6 +466,80 @@ void MyMovieAssetPanel::OnEndEdit( wxListEvent& event )
 
 void MyMovieAssetPanel::FillContentsList()
 {
+	if ( selected_group >= 0  )
+	{
+		ContentsListBox->Freeze();
+		ContentsListBox->ClearAll();
+		ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(1, "File", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(2, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(3, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(4, "No. frames", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(5, "Pixel size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(6, "Exp. per frame", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+
+
+		for (long counter = 0; counter < all_groups_list.groups[selected_group].number_of_members; counter++)
+		{
+			ContentsListBox->InsertItem(counter, wxString::Format(wxT("%i"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].asset_id, counter));
+			ContentsListBox->SetItem(counter, 1, all_assets_list.assets[ReturnGroupMember(selected_group, counter)].ReturnShortNameString());
+			ContentsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].x_size));
+			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%i"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].y_size));
+			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%i"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].number_of_frames));
+			ContentsListBox->SetItem(counter, 5, wxString::Format(wxT("%.3f"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].pixel_size));
+			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%.3f"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].dose_per_frame));
+			ContentsListBox->SetItem(counter, 7, wxString::Format(wxT("%.2f"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].spherical_aberration));
+			ContentsListBox->SetItem(counter, 8, wxString::Format(wxT("%.2f"), all_assets_list.assets[ReturnGroupMember(selected_group, counter)].microscope_voltage));
+
+
+		}
+
+		SizeContentsColumn(0);
+		SizeContentsColumn(1);
+		SizeContentsColumn(2);
+		SizeContentsColumn(3);
+		SizeContentsColumn(4);
+		SizeContentsColumn(5);
+		SizeContentsColumn(6);
+		SizeContentsColumn(7);
+		SizeContentsColumn(8);
+
+		if (selected_content >= 0 && selected_content < all_groups_list.groups[selected_group].number_of_members)
+		{
+			ContentsListBox->SetItemState(selected_content, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+		}
+		else
+		{
+			if (all_groups_list.groups[selected_group].number_of_members > 0)
+			{
+				selected_content = 0;
+				ContentsListBox->SetItemState(selected_content, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+				UpdateMovieInfo();
+			}
+		}
+
+
+		ContentsListBox->Thaw();
+	}
+}
+
+void MyMovieAssetPanel::SizeContentsColumn(int column_number)
+{
+	int header_width, text_width;
+
+	ContentsListBox->SetColumnWidth(column_number, wxLIST_AUTOSIZE);
+	text_width = ContentsListBox->GetColumnWidth(column_number);
+	ContentsListBox->SetColumnWidth(column_number, wxLIST_AUTOSIZE_USEHEADER);
+	header_width = ContentsListBox->GetColumnWidth(column_number);
+
+	if (text_width > header_width) ContentsListBox->SetColumnWidth(column_number, wxLIST_AUTOSIZE);
+
+}
+/*
+void MyMovieAssetPanel::FillContentsList()
+{
 
 	if ( selected_group >= 0  )
 	{
@@ -504,14 +557,17 @@ void MyMovieAssetPanel::FillContentsList()
 		ContentsListBox->Thaw();
 	}
 }
+*/
 
 void MyMovieAssetPanel::OnGroupFocusChange( wxListEvent& event )
 {
-	selected_group = event.GetIndex();
+	if (event.GetIndex() != selected_group)
+	{
+		selected_group = event.GetIndex();
+		selected_content = -1;
+		FillContentsList();
+	}
 
-	//wxPrintf("Group Change\n\n");
-	FillContentsList();
-	CheckActiveButtons();
 	event.Skip();
 }
 
@@ -525,7 +581,7 @@ void MyMovieAssetPanel::OnContentsSelected( wxListEvent& event )
 	event.Skip();
 
 	UpdateMovieInfo();
-	CheckActiveButtons();
+	//CheckActiveButtons();
 
 }
 
@@ -548,22 +604,67 @@ void MyMovieAssetPanel::UpdateMovieInfo()
 {
 	if (selected_content >= 0 && selected_group >= 0 && all_groups_list.groups[selected_group].number_of_members > 0)
 	{
-		FilenameText->SetLabel(all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].ReturnShortNameString());
-		NumberOfFramesText->SetLabel(wxString::Format(wxT("%li"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].number_of_frames));
-		TotalDoseText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].total_dose));
+		IDText->SetLabel(wxString::Format(wxT("%i"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].asset_id));
+		FilenameText->SetLabel(all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].ReturnFullPathString());
+		NumberOfFramesText->SetLabel(wxString::Format(wxT("%i"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].number_of_frames));
 		PixelSizeText->SetLabel(wxString::Format(wxT("%.2f Å"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].pixel_size));
-	    DosePerFrameText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].dose_per_frame));
-
+		XSizeText->SetLabel(wxString::Format(wxT("%i px"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].x_size));
+		YSizeText->SetLabel(wxString::Format(wxT("%i px"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].y_size));
+		TotalDoseText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].total_dose));
+		DosePerFrameText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].dose_per_frame));
+		VoltageText->SetLabel(wxString::Format(wxT("%.2f kV"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].microscope_voltage));
+		CSText->SetLabel(wxString::Format(wxT("%.2f mm"), all_assets_list.assets[all_groups_list.ReturnGroupMember(selected_group, selected_content)].spherical_aberration));
 	}
 	else
 	{
+		IDText->SetLabel("-");
 		FilenameText->SetLabel("-");
 		NumberOfFramesText->SetLabel("-");
-		TotalDoseText->SetLabel("-");
 		PixelSizeText->SetLabel("-");
+		XSizeText->SetLabel("-");
+		YSizeText->SetLabel("-");
+		TotalDoseText->SetLabel("-");
 	    DosePerFrameText->SetLabel("-");
+	    VoltageText->SetLabel("-");
+	    CSText->SetLabel("-");
 	}
 
+}
+
+void MyMovieAssetPanel::MouseVeto( wxMouseEvent& event )
+{
+	//Do nothing
+
+}
+
+void MyMovieAssetPanel::MouseCheckContentsVeto( wxMouseEvent& event )
+{
+	VetoInvalidMouse(ContentsListBox, event);
+
+}
+
+void MyMovieAssetPanel::MouseCheckGroupsVeto( wxMouseEvent& event )
+{
+	VetoInvalidMouse(GroupListBox, event);
+}
+
+void MyMovieAssetPanel::VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event )
+{
+	// Don't allow clicking on anything other than item, to stop the selection bar changing
+
+	int flags;
+
+	if (wanted_list->HitTest(event.GetPosition(), flags)  !=  wxNOT_FOUND)
+	{
+		should_veto_motion = false;
+		event.Skip();
+	}
+	else should_veto_motion = true;
+}
+
+void MyMovieAssetPanel::OnMotion(wxMouseEvent& event)
+{
+	if (should_veto_motion == false) event.Skip();
 }
 
 bool MyMovieAssetPanel::IsFileAnAsset(wxFileName file_to_check)
@@ -607,6 +708,94 @@ bool MyMovieAssetPanel::DragOverGroups(wxCoord x, wxCoord y)
 		return false;
 	}
 
+}
+
+
+void MyMovieAssetPanel::ImportAllFromDatabase()
+{
+	MovieAsset temp_asset;
+
+	all_assets_list.RemoveAll();
+	all_groups_list.RemoveAll();
+
+
+
+	main_frame->current_project.database.BeginAllMovieAssetsSelect();
+
+	while (main_frame->current_project.database.last_return_code == SQLITE_ROW)
+	{
+		temp_asset = main_frame->current_project.database.GetNextMovieAsset();
+		AddAsset(&temp_asset);
+	}
+
+	main_frame->current_project.database.EndAllMovieAssetsSelect();
+
+	FillGroupList();
+	FillContentsList();
+}
+
+void MyMovieAssetPanel::Reset()
+{
+
+	all_assets_list.RemoveAll();
+	all_groups_list.RemoveAll();
+
+
+	SetSelectedGroup(0);
+	selected_content = -1;
+
+	FillGroupList();
+	FillContentsList();
+	main_frame->RecalculateAssetBrowser();
+	UpdateMovieInfo();
+
+}
+
+void MyMovieAssetPanel::OnUpdateUI( wxUpdateUIEvent& event )
+{
+	if (main_frame->current_project.is_open == false)
+	{
+		Enable(false);
+	}
+	else
+	{
+		Enable(true);
+
+		if (selected_group == 0)
+		{
+			RemoveGroupButton->Enable(false);
+			RenameGroupButton->Enable(false);
+		}
+		else
+		{
+			RemoveGroupButton->Enable(true);
+			RenameGroupButton->Enable(true);
+		}
+
+		if (ContentsListBox->GetItemCount() < 1)
+		{
+			RemoveAllMoviesButton->Enable(false);
+			RemoveSelectedMovieButton->Enable(false);
+			AddSelectedButton->Enable(false);
+		}
+		else
+		{
+			RemoveAllMoviesButton->Enable(true);
+
+			if (ContentsListBox->GetSelectedItemCount() < 1)
+			{
+				RemoveSelectedMovieButton->Enable(false);
+				AddSelectedButton->Enable(false);
+			}
+			else
+			{
+				RemoveSelectedMovieButton->Enable(true);
+
+				if (ReturnNumberOfGroups() > 1) AddSelectedButton->Enable(true);
+				else AddSelectedButton->Enable(false);
+			}
+		}
+	}
 }
 
 // Drag and Drop

@@ -232,40 +232,55 @@ class MovieAssetPanel : public wxPanel
 		wxSplitterWindow* m_splitter2;
 		wxPanel* m_panel4;
 		wxStaticText* m_staticText18;
+		wxButton* AddGroupButton;
+		wxButton* RenameGroupButton;
+		wxButton* RemoveGroupButton;
 		wxPanel* m_panel3;
 		wxStaticText* m_staticText22;
 		wxListCtrl* ContentsListBox;
-		wxStaticText* m_staticText19;
 		wxButton* ImportMovie;
 		wxButton* RemoveSelectedMovieButton;
 		wxButton* RemoveAllMoviesButton;
-		wxStaticText* m_staticText20;
-		wxButton* m_button21;
-		wxButton* RemoveGroupButton;
 		wxButton* AddSelectedButton;
 		wxStaticLine* m_staticline6;
 		wxStaticText* m_staticText24;
 		wxStaticText* FilenameText;
+		wxStaticText* m_staticText50;
+		wxStaticText* IDText;
 		wxStaticText* m_staticText4;
 		wxStaticText* NumberOfFramesText;
-		wxStaticText* m_staticText7;
-		wxStaticText* TotalDoseText;
 		wxStaticText* m_staticText9;
 		wxStaticText* PixelSizeText;
+		wxStaticText* m_staticText45;
+		wxStaticText* XSizeText;
+		wxStaticText* YSizeLabel;
+		wxStaticText* YSizeText;
+		wxStaticText* m_staticText7;
+		wxStaticText* TotalDoseText;
 		wxStaticText* m_staticText6;
 		wxStaticText* DosePerFrameText;
+		wxStaticText* m_staticText51;
+		wxStaticText* VoltageText;
+		wxStaticText* m_staticText53;
+		wxStaticText* CSText;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void MouseCheckGroupsVeto( wxMouseEvent& event ) { event.Skip(); }
+		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }
 		virtual void OnEndEdit( wxListEvent& event ) { event.Skip(); }
 		virtual void OnGroupFocusChange( wxListEvent& event ) { event.Skip(); }
+		virtual void NewGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void RenameGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void RemoveGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void MouseCheckContentsVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginContentsDrag( wxListEvent& event ) { event.Skip(); }
 		virtual void OnContentsSelected( wxListEvent& event ) { event.Skip(); }
+		virtual void OnMotion( wxMouseEvent& event ) { event.Skip(); }
 		virtual void ImportMovieClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveMovieClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveAllClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void NewGroupClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void RemoveGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddSelectedClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
@@ -277,7 +292,7 @@ class MovieAssetPanel : public wxPanel
 		
 		void m_splitter2OnIdle( wxIdleEvent& )
 		{
-			m_splitter2->SetSashPosition( 200 );
+			m_splitter2->SetSashPosition( 300 );
 			m_splitter2->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MovieAssetPanel::m_splitter2OnIdle ), NULL, this );
 		}
 	

@@ -11,6 +11,8 @@
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
+#include "movie_asset.h"
+#include "asset_group.h"
 #include "defines.h"
 #include "socket_codes.h"
 #include "functions.h"

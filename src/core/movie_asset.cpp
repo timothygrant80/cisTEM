@@ -1,9 +1,10 @@
 #include "core_headers.h"
-#include "gui_core_headers.h"
+//#include "gui_core_headers.h"
 
 
 MovieAsset::MovieAsset()
 {
+	asset_id = -1;
 	number_of_frames = 0;
 	x_size = 0;
 	y_size = 0;
@@ -27,6 +28,8 @@ MovieAsset::~MovieAsset()
 MovieAsset::MovieAsset(wxString wanted_filename)
 {
 	filename = wanted_filename;
+	asset_id = -1;
+	position_in_stack = 1;
 
 	number_of_frames = 0;
 	x_size = 0;
@@ -68,12 +71,16 @@ void MovieAsset::Update(wxString wanted_filename)
 
 void MovieAsset::CopyFrom(MovieAsset *other_asset)
 {
+
+	asset_id = other_asset->asset_id;
+	position_in_stack = other_asset->position_in_stack;
 	x_size = other_asset->x_size;
 	y_size = other_asset->y_size;
 	number_of_frames = other_asset->number_of_frames;
 	filename = other_asset->filename;
 	pixel_size = other_asset->pixel_size;
 	microscope_voltage = other_asset->microscope_voltage;
+	spherical_aberration = other_asset->spherical_aberration;
 	dose_per_frame = other_asset->dose_per_frame;
 	movie_is_valid = other_asset->movie_is_valid;	
 	total_dose = other_asset->total_dose;
@@ -153,6 +160,8 @@ void MovieAssetList::AddMovie(MovieAsset *asset_to_add)
 	assets[number_of_assets].CopyFrom(asset_to_add);
 	number_of_assets++;
 	
+
+
 }
 
 

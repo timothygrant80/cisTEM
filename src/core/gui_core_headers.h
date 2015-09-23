@@ -33,8 +33,6 @@
 #include <wx/progdlg.h>
 
 #include "../gui/job_panel.h"
-#include "movie_asset.h"
-#include "asset_group.h"
 #include "gui_job_controller.h"
 #include "../gui/mathplot.h"
 #include "../gui/ProjectX_gui.h"

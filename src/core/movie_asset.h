@@ -5,9 +5,12 @@ class MovieAsset {
     
   public:
 
-	long x_size;
-	long y_size;
-	long number_of_frames;
+	int asset_id;
+	int position_in_stack;
+
+	int x_size;
+	int y_size;
+	int number_of_frames;
 	
 	wxFileName filename;
 	

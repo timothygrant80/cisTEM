@@ -10,7 +10,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/ErrorDialog.h \
                  gui/MainFrame.h \
                  gui/mathplot.h \
-                 gui/MovieAssetPanel.h \
+                 gui/MyMovieAssetPanel.h \
                  gui/MovieImportDialog.h \
                  gui/ProjectX_gui.h \
                  gui/icons/action_icon.cpp \
@@ -27,6 +27,8 @@ bin_PROGRAMS = ProjectX unblur guix_job_control console_test
 
 
 libcore_a_SOURCES =    core/functions.cpp \
+                       core/assets.cpp \
+                       core/asset_group.cpp \
                        core/image.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
@@ -40,16 +42,14 @@ libcore_a_SOURCES =    core/functions.cpp \
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
-libguicore_a_SOURCES =  core/asset_group.cpp \
-                        core/movie_asset.cpp \
-                        core/gui_job_controller.cpp
+libguicore_a_SOURCES =  core/gui_job_controller.cpp
 
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 
 
-ProjectX_SOURCES = programs/projectx/projectx.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/MainFrame.cpp gui/MovieAssetPanel.cpp gui/MovieImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp
+ProjectX_SOURCES = programs/projectx/projectx.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MovieImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp
 ProjectX_CXXFLAGS = $(WX_CPPFLAGS)
 ProjectX_CPPFLAGS = $(WX_CPPFLAGS)
 ProjectX_LDFLAGS = $(WX_LIBS)

@@ -7,6 +7,8 @@ class MyMainFrame : public MainFrame
 	public:
 		/** Constructor */
 		MyMainFrame( wxWindow* parent );
+		~MyMainFrame();
+
 	//// end generated class members
 
 		wxSocketServer *socket_server;

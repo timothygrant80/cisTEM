@@ -466,9 +466,13 @@ JobPackage::JobPackage()
 
 	// memory allocation..
 
-	if (number_of_jobs == 1) jobs = new RunJob;
-	else
-	jobs = new RunJob[number_of_jobs];
+	if (number_of_jobs > 0)
+	{
+		if (number_of_jobs == 1) jobs = new RunJob;
+		else
+		jobs = new RunJob[number_of_jobs];
+	}
+
 }
 
 

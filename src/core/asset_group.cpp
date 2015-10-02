@@ -5,7 +5,7 @@
 AssetGroup::AssetGroup()
 {
 	// start off with 15 members;
-
+	id = -1;
 	name = wxEmptyString;
 	number_of_members = 0;
 	number_allocated = 15;
@@ -17,6 +17,74 @@ AssetGroup::~AssetGroup()
 	delete [] members;
 }
 
+AssetGroup::AssetGroup( const AssetGroup &obj) // copy constructor
+{
+	id = obj.id;
+	name = obj.name;
+	number_of_members = obj.number_of_members;
+	number_allocated = obj.number_allocated;
+
+	members = new long[number_allocated];
+
+	for (long counter = 0; counter < number_of_members; counter++)
+	{
+		members[counter] = obj.members[counter];
+	}
+}
+
+AssetGroup & AssetGroup::operator = (const AssetGroup &t)
+{
+   // Check for self assignment
+
+   if(this != &t)
+   {
+	   if(this->number_allocated != t.number_allocated)
+	   {
+		   delete [] this->members;
+
+		   this->members = new long[t.number_allocated];
+		   this->number_allocated = t.number_allocated;
+	   }
+
+	   this->id = t.id;
+	   this->number_of_members = t.number_of_members;
+	   this->name = t.name;
+
+	   for (long counter = 0; counter < t.number_of_members; counter++)
+	   {
+		   this->members[counter] = t.members[counter];
+	   }
+   }
+
+   return *this;
+}
+
+AssetGroup & AssetGroup::operator = (const AssetGroup *t)
+{
+   // Check for self assignment
+
+   if(this != t)
+   {
+	   if(this->number_allocated != t->number_allocated)
+	   {
+		   delete [] this->members;
+
+		   this->members = new long[t->number_allocated];
+		   this->number_allocated = t->number_allocated;
+	   }
+
+	   this->id = t->id;
+	   this->number_of_members = t->number_of_members;
+	   this->name = t->name;
+
+	   for (long counter = 0; counter < t->number_of_members; counter++)
+	   {
+		   this->members[counter] = t->members[counter];
+	   }
+   }
+
+   return *this;
+}
 
 void AssetGroup::SetName(wxString wanted_name)
 {
@@ -68,6 +136,7 @@ void AssetGroup::AddMember(long number_to_add)
 void AssetGroup::CopyFrom(AssetGroup *other_group)
 {
 	RemoveAll();
+	id = other_group->id;
 	name = other_group->name;
 
 	for (long counter = 0; counter < other_group->number_of_members; counter++)
@@ -118,7 +187,7 @@ AssetGroupList::AssetGroupList()
 
 	groups = new AssetGroup[5];
 
-	groups[0].SetName("All Movies");
+	//groups[0].SetName("All Movies");
 }
 
 void AssetGroupList::AddMemberToGroup(long wanted_group_number, long member_to_add)
@@ -214,6 +283,38 @@ void AssetGroupList::AddGroup(wxString name)
 	groups[number_of_groups].RemoveAll();
 	number_of_groups++;
 	 // this is in case it used to exist.
+
+}
+
+void AssetGroupList::AddGroup(AssetGroup *group_to_add)
+{
+	// check we have enough memory
+
+	AssetGroup *buffer;
+
+	if (number_of_groups >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_allocated < 1000) number_allocated *= 2;
+		else number_allocated += 1000;
+
+		buffer = new AssetGroup[number_allocated];
+
+		for (long counter = 0; counter < number_of_groups; counter++)
+		{
+			buffer[counter].CopyFrom(&groups[counter]);
+		}
+
+		delete [] groups;
+		groups = buffer;
+	}
+
+	// Should be fine for memory, so just add one.
+
+	groups[number_of_groups] = group_to_add;
+	number_of_groups++;
+
 
 }
 

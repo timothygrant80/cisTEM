@@ -60,8 +60,8 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void SetSelectedProfile(long wanted_profile);
 		void SetSelectedCommand(long wanted_command);
 
-
-	
+		void ImportAllFromDatabase();
+		void Reset();
 };
 
 #endif // __MyRunProfilesPanel__

@@ -22,6 +22,7 @@ MyGuiApp : public wxApp
 
 	public:
 		virtual bool OnInit();
+		virtual int OnExit();
 };
 
 
@@ -35,10 +36,16 @@ ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
 SettingsPanel *settings_panel;
 
-ImageAssetPanel *image_asset_panel;
+AssetParentPanel *image_asset_panel;
 MyMovieAssetPanel *movie_asset_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
+
+wxImageList *MenuBookIconImages;
+wxImageList *ActionsBookIconImages;
+wxImageList *AssetsBookIconImages;
+wxImageList *SettingsBookIconImages;
+
 
 SETUP_SOCKET_CODES
 
@@ -64,7 +71,7 @@ bool MyGuiApp::OnInit()
 	// Individual Panels
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
-	image_asset_panel = new ImageAssetPanel(assets_panel->AssetsBook, wxID_ANY);
+	image_asset_panel = new AssetParentPanel(assets_panel->AssetsBook, wxID_ANY);
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
@@ -108,10 +115,10 @@ bool MyGuiApp::OnInit()
 	SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
 
-	main_frame->MenuBook->SetImageList(MenuBookIconImages);
-	actions_panel->ActionsBook->SetImageList(ActionsBookIconImages);
-	assets_panel->AssetsBook->SetImageList(AssetsBookIconImages);
-	settings_panel->SettingsBook->SetImageList(SettingsBookIconImages);
+	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
+	actions_panel->ActionsBook->AssignImageList(ActionsBookIconImages);
+	assets_panel->AssetsBook->AssignImageList(AssetsBookIconImages);
+	settings_panel->SettingsBook->AssignImageList(SettingsBookIconImages);
 
 	main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
 	main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
@@ -144,13 +151,35 @@ bool MyGuiApp::OnInit()
 
 	//main_frame->StatusText->AppendText(wxT("Welcome to Project...X!\n"));
 
-	GuiJob test_job;
+	//GuiJob test_job;
 
-	test_job.parent_panel = align_movies_panel;
-	test_job.parent_panel->UpdateJobDetails("Hello\n");
+	//test_job.parent_panel = align_movies_panel;
+	//test_job.parent_panel->UpdateJobDetails("Hello\n");
 
 
-
+	//delete MenuBookIconImages;
+	//delete ActionsBookIconImages;
+	//delete AssetsBookIconImages;
+	//delete SettingsBookIconImages;
 
 	return true;
 }
+
+int MyGuiApp::OnExit()
+{
+
+/*	main_frame->Destroy();
+	overview_panel->Destroy();
+	actions_panel->Destroy();
+	assets_panel->Destroy();
+	settings_panel->Destroy();
+
+	// Individual Panels
+
+	movie_asset_panel->Destroy();
+	image_asset_panel->Destroy();
+	align_movies_panel->Destroy();
+	run_profiles_panel->Destroy();*/
+
+}
+

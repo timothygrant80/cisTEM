@@ -224,26 +224,6 @@ OverviewPanel::~OverviewPanel()
 {
 }
 
-ImageAssetPanel::ImageAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
-{
-	wxBoxSizer* bSizer14;
-	bSizer14 = new wxBoxSizer( wxVERTICAL );
-	
-	m_checkBox2 = new wxCheckBox( this, wxID_ANY, wxT("Check Me!"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer14->Add( m_checkBox2, 0, wxALL, 5 );
-	
-	m_listCtrl1 = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_ICON );
-	bSizer14->Add( m_listCtrl1, 100, wxALL|wxEXPAND, 5 );
-	
-	
-	this->SetSizer( bSizer14 );
-	this->Layout();
-}
-
-ImageAssetPanel::~ImageAssetPanel()
-{
-}
-
 MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
@@ -391,7 +371,7 @@ MovieImportDialog::~MovieImportDialog()
 	
 }
 
-MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	this->SetMinSize( wxSize( 680,400 ) );
 	
@@ -406,7 +386,7 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	
 	m_splitter2 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter2->SetSashGravity( 0.2 );
-	m_splitter2->Connect( wxEVT_IDLE, wxIdleEventHandler( MovieAssetPanel::m_splitter2OnIdle ), NULL, this );
+	m_splitter2->Connect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::m_splitter2OnIdle ), NULL, this );
 	
 	m_panel4 = new wxPanel( m_splitter2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer27;
@@ -448,9 +428,9 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	wxBoxSizer* bSizer30;
 	bSizer30 = new wxBoxSizer( wxVERTICAL );
 	
-	m_staticText22 = new wxStaticText( m_panel3, wxID_ANY, wxT("Movies :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText22->Wrap( -1 );
-	bSizer30->Add( m_staticText22, 0, wxALL, 5 );
+	AssetTypeText = new wxStaticText( m_panel3, wxID_ANY, wxT("Asset Type :"), wxDefaultPosition, wxDefaultSize, 0 );
+	AssetTypeText->Wrap( -1 );
+	bSizer30->Add( AssetTypeText, 0, wxALL, 5 );
 	
 	wxBoxSizer* bSizer25;
 	bSizer25 = new wxBoxSizer( wxVERTICAL );
@@ -461,23 +441,23 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	wxBoxSizer* bSizer28;
 	bSizer28 = new wxBoxSizer( wxHORIZONTAL );
 	
-	ImportMovie = new wxButton( m_panel3, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer28->Add( ImportMovie, 0, wxALL|wxEXPAND, 5 );
+	ImportAsset = new wxButton( m_panel3, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer28->Add( ImportAsset, 0, wxALL|wxEXPAND, 5 );
 	
-	RemoveSelectedMovieButton = new wxButton( m_panel3, wxID_ANY, wxT("Remove"), wxDefaultPosition, wxDefaultSize, 0 );
-	RemoveSelectedMovieButton->Enable( false );
+	RemoveSelectedAssetButton = new wxButton( m_panel3, wxID_ANY, wxT("Remove"), wxDefaultPosition, wxDefaultSize, 0 );
+	RemoveSelectedAssetButton->Enable( false );
 	
-	bSizer28->Add( RemoveSelectedMovieButton, 0, wxALL|wxEXPAND, 5 );
+	bSizer28->Add( RemoveSelectedAssetButton, 0, wxALL|wxEXPAND, 5 );
 	
-	RemoveAllMoviesButton = new wxButton( m_panel3, wxID_ANY, wxT("Remove All"), wxDefaultPosition, wxDefaultSize, 0 );
-	RemoveAllMoviesButton->Enable( false );
+	RemoveAllAssetsButton = new wxButton( m_panel3, wxID_ANY, wxT("Remove All"), wxDefaultPosition, wxDefaultSize, 0 );
+	RemoveAllAssetsButton->Enable( false );
 	
-	bSizer28->Add( RemoveAllMoviesButton, 0, wxALL|wxEXPAND, 5 );
+	bSizer28->Add( RemoveAllAssetsButton, 0, wxALL|wxEXPAND, 5 );
 	
-	AddSelectedButton = new wxButton( m_panel3, wxID_ANY, wxT("Add To Group"), wxDefaultPosition, wxDefaultSize, 0 );
-	AddSelectedButton->Enable( false );
+	AddSelectedAssetButton = new wxButton( m_panel3, wxID_ANY, wxT("Add To Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	AddSelectedAssetButton->Enable( false );
 	
-	bSizer28->Add( AddSelectedButton, 0, wxALL|wxEXPAND, 5 );
+	bSizer28->Add( AddSelectedAssetButton, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer25->Add( bSizer28, 0, wxEXPAND, 5 );
@@ -504,18 +484,15 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	wxGridSizer* gSizer1;
 	gSizer1 = new wxGridSizer( 4, 6, 0, 0 );
 	
-	m_staticText24 = new wxStaticText( this, wxID_ANY, wxT("Filename :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText24->Wrap( -1 );
-	m_staticText24->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	Label0Title = new wxStaticText( this, wxID_ANY, wxT("Label 0 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label0Title->Wrap( -1 );
+	Label0Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	gSizer1->Add( m_staticText24, 0, wxALIGN_RIGHT|wxALL, 5 );
+	gSizer1->Add( Label0Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	FilenameText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	FilenameText->Wrap( -1 );
-	gSizer1->Add( FilenameText, 0, wxALIGN_LEFT|wxALL, 5 );
-	
-	
-	gSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	Label0Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label0Text->Wrap( -1 );
+	gSizer1->Add( Label0Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
 	
 	gSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -526,95 +503,98 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	
 	gSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_staticText50 = new wxStaticText( this, wxID_ANY, wxT("I.D. :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText50->Wrap( -1 );
-	m_staticText50->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	gSizer1->Add( m_staticText50, 0, wxALIGN_RIGHT|wxALL, 5 );
+	gSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	IDText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	IDText->Wrap( -1 );
-	gSizer1->Add( IDText, 0, wxALL, 5 );
+	Label1Title = new wxStaticText( this, wxID_ANY, wxT("Label 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label1Title->Wrap( -1 );
+	Label1Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText4 = new wxStaticText( this, wxID_ANY, wxT("No. Frames :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText4->Wrap( -1 );
-	m_staticText4->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label1Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText4, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label1Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label1Text->Wrap( -1 );
+	gSizer1->Add( Label1Text, 0, wxALL, 5 );
 	
-	NumberOfFramesText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	NumberOfFramesText->Wrap( -1 );
-	gSizer1->Add( NumberOfFramesText, 0, wxALIGN_LEFT|wxALL, 5 );
+	Label2Title = new wxStaticText( this, wxID_ANY, wxT("Label 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label2Title->Wrap( -1 );
+	Label2Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText9 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText9->Wrap( -1 );
-	m_staticText9->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label2Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText9, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label2Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label2Text->Wrap( -1 );
+	gSizer1->Add( Label2Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
-	PixelSizeText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	PixelSizeText->Wrap( -1 );
-	gSizer1->Add( PixelSizeText, 0, wxALIGN_LEFT|wxALL, 5 );
+	Label3Title = new wxStaticText( this, wxID_ANY, wxT("Label 3 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label3Title->Wrap( -1 );
+	Label3Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText45 = new wxStaticText( this, wxID_ANY, wxT("X Size :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText45->Wrap( -1 );
-	m_staticText45->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label3Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText45, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label3Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label3Text->Wrap( -1 );
+	gSizer1->Add( Label3Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
-	XSizeText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	XSizeText->Wrap( -1 );
-	gSizer1->Add( XSizeText, 0, wxALIGN_LEFT|wxALL, 5 );
+	Label4Title = new wxStaticText( this, wxID_ANY, wxT("Label 4 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label4Title->Wrap( -1 );
+	Label4Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	YSizeLabel = new wxStaticText( this, wxID_ANY, wxT("Y Size :"), wxDefaultPosition, wxDefaultSize, 0 );
-	YSizeLabel->Wrap( -1 );
-	YSizeLabel->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label4Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( YSizeLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label4Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label4Text->Wrap( -1 );
+	gSizer1->Add( Label4Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
-	YSizeText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	YSizeText->Wrap( -1 );
-	gSizer1->Add( YSizeText, 0, wxALL, 5 );
+	Label5Title = new wxStaticText( this, wxID_ANY, wxT("Label 5 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label5Title->Wrap( -1 );
+	Label5Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText7 = new wxStaticText( this, wxID_ANY, wxT("Total Exposure  :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText7->Wrap( -1 );
-	m_staticText7->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label5Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText7, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label5Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label5Text->Wrap( -1 );
+	gSizer1->Add( Label5Text, 0, wxALL, 5 );
 	
-	TotalDoseText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	TotalDoseText->Wrap( -1 );
-	gSizer1->Add( TotalDoseText, 0, wxALIGN_LEFT|wxALL, 5 );
+	Label6Title = new wxStaticText( this, wxID_ANY, wxT("Label 6 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label6Title->Wrap( -1 );
+	Label6Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText6 = new wxStaticText( this, wxID_ANY, wxT("Exp. Per Frame :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText6->Wrap( -1 );
-	m_staticText6->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label6Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText6, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label6Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label6Text->Wrap( -1 );
+	gSizer1->Add( Label6Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
-	DosePerFrameText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	DosePerFrameText->Wrap( -1 );
-	gSizer1->Add( DosePerFrameText, 0, wxALIGN_LEFT|wxALL, 5 );
+	Label7Title = new wxStaticText( this, wxID_ANY, wxT("Label 7 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label7Title->Wrap( -1 );
+	Label7Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText51 = new wxStaticText( this, wxID_ANY, wxT("Voltage :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText51->Wrap( -1 );
-	m_staticText51->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label7Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText51, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label7Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label7Text->Wrap( -1 );
+	gSizer1->Add( Label7Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
-	VoltageText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	VoltageText->Wrap( -1 );
-	gSizer1->Add( VoltageText, 0, wxALL, 5 );
+	Label8Title = new wxStaticText( this, wxID_ANY, wxT("Label 8 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label8Title->Wrap( -1 );
+	Label8Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
-	m_staticText53 = new wxStaticText( this, wxID_ANY, wxT("Cs :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText53->Wrap( -1 );
-	m_staticText53->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	gSizer1->Add( Label8Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	gSizer1->Add( m_staticText53, 0, wxALIGN_RIGHT|wxALL, 5 );
+	Label8Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label8Text->Wrap( -1 );
+	gSizer1->Add( Label8Text, 0, wxALL, 5 );
 	
-	CSText = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
-	CSText->Wrap( -1 );
-	gSizer1->Add( CSText, 0, wxALL, 5 );
+	Label9Title = new wxStaticText( this, wxID_ANY, wxT("Label 9 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label9Title->Wrap( -1 );
+	Label9Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	
+	gSizer1->Add( Label9Title, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	Label9Text = new wxStaticText( this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0 );
+	Label9Text->Wrap( -1 );
+	gSizer1->Add( Label9Text, 0, wxALL, 5 );
 	
 	
 	bSizer34->Add( gSizer1, 90, wxEXPAND, 5 );
@@ -627,77 +607,79 @@ MovieAssetPanel::MovieAssetPanel( wxWindow* parent, wxWindowID id, const wxPoint
 	this->Layout();
 	
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MovieAssetPanel::OnUpdateUI ) );
-	GroupListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( MovieAssetPanel::OnBeginEdit ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( MovieAssetPanel::OnEndEdit ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( MovieAssetPanel::OnGroupFocusChange ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	AddGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::NewGroupClick ), NULL, this );
-	RenameGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RenameGroupClick ), NULL, this );
-	RemoveGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveGroupClick ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( MovieAssetPanel::OnBeginContentsDrag ), NULL, this );
-	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( MovieAssetPanel::OnContentsSelected ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( MovieAssetPanel::OnMotion ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ImportMovie->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::ImportMovieClick ), NULL, this );
-	RemoveSelectedMovieButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveMovieClick ), NULL, this );
-	RemoveAllMoviesButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveAllClick ), NULL, this );
-	AddSelectedButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::AddSelectedClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetParentPanel::OnUpdateUI ) );
+	GroupListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnBeginEdit ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnEndEdit ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnGroupActivated ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetParentPanel::OnGroupFocusChange ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	AddGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
+	RenameGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
+	RemoveGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetParentPanel::OnBeginContentsDrag ), NULL, this );
+	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetParentPanel::OnContentsSelected ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::OnMotion ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ImportAsset->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::ImportAssetClick ), NULL, this );
+	RemoveSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAssetClick ), NULL, this );
+	RemoveAllAssetsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
+	AddSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
 }
 
-MovieAssetPanel::~MovieAssetPanel()
+AssetParentPanel::~AssetParentPanel()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MovieAssetPanel::OnUpdateUI ) );
-	GroupListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( MovieAssetPanel::OnBeginEdit ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( MovieAssetPanel::OnEndEdit ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( MovieAssetPanel::OnGroupFocusChange ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	AddGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::NewGroupClick ), NULL, this );
-	RenameGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RenameGroupClick ), NULL, this );
-	RemoveGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveGroupClick ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( MovieAssetPanel::OnBeginContentsDrag ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( MovieAssetPanel::OnContentsSelected ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( MovieAssetPanel::OnMotion ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( MovieAssetPanel::MouseVeto ), NULL, this );
-	ImportMovie->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::ImportMovieClick ), NULL, this );
-	RemoveSelectedMovieButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveMovieClick ), NULL, this );
-	RemoveAllMoviesButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::RemoveAllClick ), NULL, this );
-	AddSelectedButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAssetPanel::AddSelectedClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetParentPanel::OnUpdateUI ) );
+	GroupListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnBeginEdit ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnEndEdit ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnGroupActivated ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetParentPanel::OnGroupFocusChange ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	AddGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
+	RenameGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
+	RemoveGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetParentPanel::OnBeginContentsDrag ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetParentPanel::OnContentsSelected ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::OnMotion ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
+	ImportAsset->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::ImportAssetClick ), NULL, this );
+	RemoveSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAssetClick ), NULL, this );
+	RemoveAllAssetsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
+	AddSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
 	
 }
 
@@ -839,6 +821,7 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	this->Layout();
 	
 	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RunProfilesPanel::OnUpdateIU ) );
 	ProfilesListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RunProfilesPanel::OnProfileDClick ), NULL, this );
 	ProfilesListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RunProfilesPanel::OnProfileLeftDown ), NULL, this );
 	ProfilesListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
@@ -868,7 +851,6 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	CommandsListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
 	CommandsListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
 	CommandsListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
-	CommandsListBox->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RunProfilesPanel::OnUpdateIU ), NULL, this );
 	AddCommandButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::AddCommandButtonClick ), NULL, this );
 	EditCommandButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::EditCommandButtonClick ), NULL, this );
 	RemoveCommandButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::RemoveCommandButtonClick ), NULL, this );
@@ -878,6 +860,7 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 RunProfilesPanel::~RunProfilesPanel()
 {
 	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RunProfilesPanel::OnUpdateIU ) );
 	ProfilesListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RunProfilesPanel::OnProfileDClick ), NULL, this );
 	ProfilesListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RunProfilesPanel::OnProfileLeftDown ), NULL, this );
 	ProfilesListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
@@ -907,7 +890,6 @@ RunProfilesPanel::~RunProfilesPanel()
 	CommandsListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
 	CommandsListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
 	CommandsListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
-	CommandsListBox->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RunProfilesPanel::OnUpdateIU ), NULL, this );
 	AddCommandButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::AddCommandButtonClick ), NULL, this );
 	EditCommandButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::EditCommandButtonClick ), NULL, this );
 	RemoveCommandButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::RemoveCommandButtonClick ), NULL, this );

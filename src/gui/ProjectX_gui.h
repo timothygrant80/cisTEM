@@ -33,12 +33,12 @@ class JobPanel;
 #include <wx/frame.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
-#include <wx/checkbox.h>
 #include <wx/combobox.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
 #include <wx/statbmp.h>
 #include <wx/tglbtn.h>
+#include <wx/checkbox.h>
 #include <wx/spinctrl.h>
 #include <wx/gauge.h>
 #include <wx/wizard.h>
@@ -161,24 +161,6 @@ class OverviewPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ImageAssetPanel
-///////////////////////////////////////////////////////////////////////////////
-class ImageAssetPanel : public wxPanel 
-{
-	private:
-	
-	protected:
-		wxCheckBox* m_checkBox2;
-		wxListCtrl* m_listCtrl1;
-	
-	public:
-		
-		ImageAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
-		~ImageAssetPanel();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class MovieImportDialog
 ///////////////////////////////////////////////////////////////////////////////
 class MovieImportDialog : public wxDialog 
@@ -221,9 +203,9 @@ class MovieImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class MovieAssetPanel
+/// Class AssetParentPanel
 ///////////////////////////////////////////////////////////////////////////////
-class MovieAssetPanel : public wxPanel 
+class AssetParentPanel : public wxPanel 
 {
 	private:
 	
@@ -236,33 +218,33 @@ class MovieAssetPanel : public wxPanel
 		wxButton* RenameGroupButton;
 		wxButton* RemoveGroupButton;
 		wxPanel* m_panel3;
-		wxStaticText* m_staticText22;
+		wxStaticText* AssetTypeText;
 		wxListCtrl* ContentsListBox;
-		wxButton* ImportMovie;
-		wxButton* RemoveSelectedMovieButton;
-		wxButton* RemoveAllMoviesButton;
-		wxButton* AddSelectedButton;
+		wxButton* ImportAsset;
+		wxButton* RemoveSelectedAssetButton;
+		wxButton* RemoveAllAssetsButton;
+		wxButton* AddSelectedAssetButton;
 		wxStaticLine* m_staticline6;
-		wxStaticText* m_staticText24;
-		wxStaticText* FilenameText;
-		wxStaticText* m_staticText50;
-		wxStaticText* IDText;
-		wxStaticText* m_staticText4;
-		wxStaticText* NumberOfFramesText;
-		wxStaticText* m_staticText9;
-		wxStaticText* PixelSizeText;
-		wxStaticText* m_staticText45;
-		wxStaticText* XSizeText;
-		wxStaticText* YSizeLabel;
-		wxStaticText* YSizeText;
-		wxStaticText* m_staticText7;
-		wxStaticText* TotalDoseText;
-		wxStaticText* m_staticText6;
-		wxStaticText* DosePerFrameText;
-		wxStaticText* m_staticText51;
-		wxStaticText* VoltageText;
-		wxStaticText* m_staticText53;
-		wxStaticText* CSText;
+		wxStaticText* Label0Title;
+		wxStaticText* Label0Text;
+		wxStaticText* Label1Title;
+		wxStaticText* Label1Text;
+		wxStaticText* Label2Title;
+		wxStaticText* Label2Text;
+		wxStaticText* Label3Title;
+		wxStaticText* Label3Text;
+		wxStaticText* Label4Title;
+		wxStaticText* Label4Text;
+		wxStaticText* Label5Title;
+		wxStaticText* Label5Text;
+		wxStaticText* Label6Title;
+		wxStaticText* Label6Text;
+		wxStaticText* Label7Title;
+		wxStaticText* Label7Text;
+		wxStaticText* Label8Title;
+		wxStaticText* Label8Text;
+		wxStaticText* Label9Title;
+		wxStaticText* Label9Text;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -270,6 +252,7 @@ class MovieAssetPanel : public wxPanel
 		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }
 		virtual void OnEndEdit( wxListEvent& event ) { event.Skip(); }
+		virtual void OnGroupActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void OnGroupFocusChange( wxListEvent& event ) { event.Skip(); }
 		virtual void NewGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RenameGroupClick( wxCommandEvent& event ) { event.Skip(); }
@@ -278,22 +261,22 @@ class MovieAssetPanel : public wxPanel
 		virtual void OnBeginContentsDrag( wxListEvent& event ) { event.Skip(); }
 		virtual void OnContentsSelected( wxListEvent& event ) { event.Skip(); }
 		virtual void OnMotion( wxMouseEvent& event ) { event.Skip(); }
-		virtual void ImportMovieClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void RemoveMovieClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void RemoveAllClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void AddSelectedClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ImportAssetClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void RemoveAssetClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void RemoveAllAssetsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void AddSelectedAssetClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		wxListCtrl* GroupListBox;
 		
-		MovieAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
-		~MovieAssetPanel();
+		AssetParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+		~AssetParentPanel();
 		
 		void m_splitter2OnIdle( wxIdleEvent& )
 		{
 			m_splitter2->SetSashPosition( 300 );
-			m_splitter2->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MovieAssetPanel::m_splitter2OnIdle ), NULL, this );
+			m_splitter2->Disconnect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::m_splitter2OnIdle ), NULL, this );
 		}
 	
 };
@@ -327,6 +310,7 @@ class RunProfilesPanel : public wxPanel
 		wxButton* CommandsSaveButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateIU( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnProfileDClick( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnProfileLeftDown( wxMouseEvent& event ) { event.Skip(); }
 		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
@@ -341,7 +325,6 @@ class RunProfilesPanel : public wxPanel
 		virtual void OnCommandLeftDown( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnCommandsActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void OnCommandsFocusChange( wxListEvent& event ) { event.Skip(); }
-		virtual void OnUpdateIU( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void AddCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void EditCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }

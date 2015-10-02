@@ -179,7 +179,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddMovieAsset(movie_asset_panel->current_asset_number, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
+						main_frame->current_project.database.AddNextMovieAsset(movie_asset_panel->current_asset_number, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
 						movie_asset_panel->current_asset_number++;
 
 					}
@@ -206,7 +206,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		movie_asset_panel->SetSelectedGroup(0);
 		movie_asset_panel->FillGroupList();
-		//movie_asset_panel->FillContentsList();
+		movie_asset_panel->FillContentsList();
 		main_frame->RecalculateAssetBrowser();
 	}
 

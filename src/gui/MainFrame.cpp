@@ -7,6 +7,7 @@
 
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
+extern MyRunProfilesPanel *run_profiles_panel;
 
 MyMainFrame::MyMainFrame( wxWindow* parent )
 :
@@ -17,9 +18,20 @@ MainFrame( parent )
 	// Add Movies..
 	movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
+	socket_server = NULL;
+
 	SetupServer();
+
+
 }
 
+MyMainFrame::~MyMainFrame()
+{
+	if (socket_server != NULL)
+	{
+		socket_server->Destroy();
+	}
+}
 void MyMainFrame::SetupServer()
 {
 	wxIPV4address my_address;
@@ -246,7 +258,10 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
+
 		movie_asset_panel->ImportAllFromDatabase();
+		run_profiles_panel->ImportAllFromDatabase();
+
 	}
 	else
 	{
@@ -266,9 +281,10 @@ void MyMainFrame::OnFileExit( wxCommandEvent& event )
 void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 {
 	current_project.Close();
-	movie_asset_panel->Reset();
 
+	movie_asset_panel->Reset();
 	RecalculateAssetBrowser();
+	run_profiles_panel->Reset();
 
 
 	SetTitle("ProjectX");

@@ -1,6 +1,7 @@
 #include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyMainFrame *main_frame;
 
 MyRunProfilesPanel::MyRunProfilesPanel( wxWindow* parent )
 :
@@ -196,61 +197,72 @@ void MyRunProfilesPanel::OnEndProfileEdit( wxListEvent& event )
 	else
 	{
 		SetProfileName(event.GetIndex(), event.GetLabel());
+		main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnProfilePointer(event.GetIndex()));
 	}
 
 }
 
 void  MyRunProfilesPanel::OnUpdateIU( wxUpdateUIEvent& event )
 {
-	int commands_listbox_client_height;
-	int commands_listbox_client_width;
-
-	CommandsListBox->GetClientSize(&commands_listbox_client_width, &commands_listbox_client_height);
-
-	if (commands_listbox_client_width != old_commands_listbox_client_width)
+	if (main_frame->current_project.is_open == false)
 	{
-		SizeCommandsColumns();
-	}
-
-	if (run_profile_manager.number_of_run_profiles <= 0 || selected_profile < 0 || selected_profile >= run_profile_manager.number_of_run_profiles)
-	{
-		RemoveProfileButton->Enable(false);
-		RenameProfileButton->Enable(false);
+		Enable(false);
 	}
 	else
 	{
-		RemoveProfileButton->Enable(true);
-		RenameProfileButton->Enable(true);
-	}
+		Enable(true);
+		int commands_listbox_client_height;
+		int commands_listbox_client_width;
 
-	if (buffer_profile.number_of_run_commands <= 0 || selected_command < 0 || selected_command >= buffer_profile.number_of_run_commands)
-	{
-		RemoveCommandButton->Enable(false);
-		EditCommandButton->Enable(false);
-	}
-	else
-	{
-		RemoveCommandButton->Enable(true);
+		CommandsListBox->GetClientSize(&commands_listbox_client_width, &commands_listbox_client_height);
 
-		if (selected_command >= 0 && selected_command < buffer_profile.number_of_run_commands)
+		if (commands_listbox_client_width != old_commands_listbox_client_width)
 		{
-			EditCommandButton->Enable(true);
+			SizeCommandsColumns();
+		}
+
+		if (run_profile_manager.number_of_run_profiles <= 0 || selected_profile < 0 || selected_profile >= run_profile_manager.number_of_run_profiles)
+		{
+			RemoveProfileButton->Enable(false);
+			RenameProfileButton->Enable(false);
 		}
 		else
 		{
-			EditCommandButton->Enable(false);
+			RemoveProfileButton->Enable(true);
+			RenameProfileButton->Enable(true);
 		}
 
-	}
+		if (buffer_profile.number_of_run_commands <= 0 || selected_command < 0 || selected_command >= buffer_profile.number_of_run_commands)
+		{
+			RemoveCommandButton->Enable(false);
+			EditCommandButton->Enable(false);
+		}
+		else
+		{
+			RemoveCommandButton->Enable(true);
 
-	if (command_panel_has_changed == true) CommandsSaveButton->Enable(true);
-	else CommandsSaveButton->Enable(false);
+			if (selected_command >= 0 && selected_command < buffer_profile.number_of_run_commands)
+			{
+				EditCommandButton->Enable(true);
+			}
+			else
+			{
+				EditCommandButton->Enable(false);
+			}
+
+		}
+
+		if (command_panel_has_changed == true) CommandsSaveButton->Enable(true);
+		else CommandsSaveButton->Enable(false);
+	}
 
 }
 
 void MyRunProfilesPanel::OnAddProfileClick( wxCommandEvent& event )
 {
 	run_profile_manager.AddBlankProfile();
+	main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer());
+
 
 	FillProfilesBox();
 	SetSelectedProfile(run_profile_manager.number_of_run_profiles - 1);
@@ -264,6 +276,7 @@ void MyRunProfilesPanel::OnRemoveProfileClick( wxCommandEvent& event )
 	{
 		MyDebugAssertTrue(selected_profile >= 0 && selected_profile < run_profile_manager.number_of_run_profiles, "Trying to remove a profile that doesn't exist!");
 
+		main_frame->current_project.database.DeleteRunProfile(run_profile_manager.run_profiles[selected_profile].id);
 		run_profile_manager.RemoveProfile(selected_profile);
 
 		FillProfilesBox();
@@ -297,6 +310,8 @@ void MyRunProfilesPanel::CommandsSaveButtonClick( wxCommandEvent& event )
 
 		buffer_profile.manager_command = ManagerTextCtrl->GetValue();
 		run_profile_manager.run_profiles[selected_profile] = buffer_profile;
+		main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnProfilePointer(selected_profile));
+
 		command_panel_has_changed = false;
 	}
 
@@ -340,9 +355,13 @@ void MyRunProfilesPanel::OnProfilesFocusChange( wxListEvent& event )
 		selected_profile = event.GetIndex();
 
 		buffer_profile = run_profile_manager.run_profiles[selected_profile];
-		command_panel_has_changed = false;
-		selected_command = -1;
+
+
+		if (run_profile_manager.run_profiles[selected_profile].number_of_run_commands > 0) selected_command = 0;
+		else selected_command = -1;
+
 		FillCommandsBox();
+		command_panel_has_changed = false;
 	}
 
 	event.Skip();
@@ -420,4 +439,40 @@ void MyRunProfilesPanel::EditCommand()
 	add_dialog->NumberCopiesSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].number_of_copies);
 	add_dialog->ShowModal();
 }
+
+void MyRunProfilesPanel::ImportAllFromDatabase()
+{
+	RunProfile temp_profile;
+
+	run_profile_manager.RemoveAllProfiles();
+
+	main_frame->current_project.database.BeginAllRunProfilesSelect();
+
+	while (main_frame->current_project.database.last_return_code == SQLITE_ROW)
+	{
+		temp_profile = main_frame->current_project.database.GetNextRunProfile();
+		run_profile_manager.AddProfile(&temp_profile);
+
+	}
+
+	main_frame->current_project.database.EndAllRunProfilesSelect();
+
+	if (run_profile_manager.number_of_run_profiles > 0) selected_profile = 0;
+	FillProfilesBox();
+	FillCommandsBox();
+	command_panel_has_changed = false;
+
+
+}
+
+void MyRunProfilesPanel::Reset()
+{
+	run_profile_manager.RemoveAllProfiles();
+
+	FillProfilesBox();
+	FillCommandsBox();
+
+
+}
+
 

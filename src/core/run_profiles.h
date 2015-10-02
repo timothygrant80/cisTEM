@@ -13,12 +13,15 @@ public:
 class RunProfile {
 
 public:
+
+	int id;
 	long number_of_run_commands;
 	long number_allocated;
 
 	public :
 
 	RunProfile();
+	RunProfile( const RunProfile &obj); // copy contructor
 	~RunProfile();
 
 	wxString name;
@@ -30,6 +33,7 @@ public:
 	void RemoveCommand(int number_to_remove);
 
 	RunProfile & operator = (const RunProfile &t);
+	RunProfile & operator = (const RunProfile *t);
 };
 
 
@@ -37,15 +41,19 @@ class RunProfileManager {
 
 public:
 
+	int current_id_number;
 	long number_of_run_profiles;
 	long number_allocated;
 
 	RunProfile *run_profiles;
 
-	void AddProfile(RunProfile profile_to_add);
+	void AddProfile(RunProfile *profile_to_add);
 	void AddBlankProfile();
 	void RemoveProfile(int number_to_remove);
 	void RemoveAllProfiles();
+
+	RunProfile * ReturnLastProfilePointer();
+	RunProfile * ReturnProfilePointer(int wanted_profile);
 
 	RunProfileManager();
 	~RunProfileManager();

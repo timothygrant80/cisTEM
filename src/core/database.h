@@ -9,7 +9,6 @@ class Database {
 
 	sqlite3_stmt *batch_statement;
 
-
 public :
 
 
@@ -24,6 +23,8 @@ public :
 	bool Open(wxFileName file_to_open);
 
 	bool CreateTable(const char *table_name, const char *column_format, ...);
+	bool DeleteTable(const char *table_name);
+	//bool DeleteTable(const char *table_name);
 	bool InsertOrReplace(const char *table_name, const char *column_format, ...);
 	bool GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run);
 	bool CreateAllTables();
@@ -36,10 +37,17 @@ public :
 	void GetFromBatchSelect(const char *column_format, ...);
 	void EndBatchSelect();
 
+	bool ExecuteSQL(const char *command);
+
 	//Convenience insertion functions..
 
+	//void AddSingleMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
+
+	bool AddOrReplaceRunProfile(RunProfile *profile_to_add);
+	bool DeleteRunProfile(int wanted_id);
+
 	void BeginMovieAssetInsert();
-	void AddMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
+	void AddNextMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
 	void EndMovieAssetInsert();
 
 	// Convenience select functions...
@@ -48,5 +56,12 @@ public :
 	MovieAsset GetNextMovieAsset();
 	void EndAllMovieAssetsSelect();
 
+	void BeginAllMovieGroupsSelect();
+	AssetGroup GetNextMovieGroup();
+	void EndAllMovieGroupsSelect();
+
+	void BeginAllRunProfilesSelect();
+	RunProfile GetNextRunProfile();
+	void EndAllRunProfilesSelect();
 
 };

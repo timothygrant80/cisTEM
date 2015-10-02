@@ -14,12 +14,24 @@ Database::Database()
 
 Database::~Database()
 {
-	if (is_open == true)
-	{
-		int return_code = sqlite3_close_v2(sqlite_database);
-		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-	}
+	Close();
 }
+
+bool Database::ExecuteSQL(const char *command)
+{
+	char *error_message = NULL;
+	int return_code = sqlite3_exec(sqlite_database, command, NULL, 0, &error_message);
+
+	if( return_code != SQLITE_OK )
+	{
+	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", error_message, command);
+	    sqlite3_free(error_message);
+	    return false;
+	}
+
+	return true;
+}
+
 
 bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 {
@@ -96,6 +108,14 @@ bool Database::Open(wxFileName file_to_open)
 	return true;
 
 
+}
+
+bool Database::DeleteTable(const char *table_name)
+{
+	wxString sql_command = "DROP TABLE IF EXISTS ";
+	sql_command += table_name;
+
+	return ExecuteSQL(sql_command.ToUTF8().data());
 }
 
 bool Database::CreateTable(const char *table_name, const char *column_format, ...)
@@ -176,13 +196,11 @@ bool Database::CreateAllTables()
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
 	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
 	success = CreateTable("RUN_PROFILES", "ptti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "COMMANDS_ID");
-
-
 	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiirrrrriiriiiii", "ALIGNMENT_NUMBER", "DATETIME_OF_RUN", "MOVIE_ASSET_ID", "ALIGNMENT_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 	success = CreateTable("IMAGE_ASSETS", "ptiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("ESTIMATED_IMAGE_CTF_PARAMETERS", "piirrrrirrrrrrirrrrrr", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "SPECTRUM_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE");
-
 
 	return success;
 }
@@ -232,13 +250,14 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 			sql_command += wxString::Format("%f", va_arg(args, double));
 		}
 		else
-		if (*column_format == 'i') // integer
+		if (*column_format == 'i' || *column_format == 'p') // integer
 		{
 			sql_command += wxString::Format("%i",  va_arg(args, int));
 		}
 		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
+			abort();
 		}
 
 		if (current_column < number_of_columns) sql_command += ", ";
@@ -253,7 +272,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 
     if( return_code != SQLITE_OK )
     {
-    	MyPrintWithDetails("SQL Error: %s\n", error_message);
+    	MyPrintWithDetails("SQL Error: %s\n\nFor :-\n%s", error_message, sql_command);
         sqlite3_free(error_message);
         return false;
     }
@@ -288,12 +307,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	total_cpu_hours = sqlite3_column_double(sqlite_statement, 4);
 	total_jobs_run = sqlite3_column_int(sqlite_statement, 5);
 
-    if (batch_statement != NULL)
-    {
-    	sqlite3_free(batch_statement);
-    	batch_statement = NULL;
-    }
-
+	sqlite3_finalize(sqlite_statement);
 	return true;
 }
 
@@ -301,7 +315,8 @@ void Database::Close()
 {
 	if (is_open == true)
 	{
-		sqlite3_close(sqlite_database);
+		int return_code = sqlite3_close(sqlite_database);
+		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL close error, return code : %i\n", return_code );
 	}
 
 	is_open = false;
@@ -428,12 +443,7 @@ void Database::EndBatchInsert()
         sqlite3_free(error_message);
     }
 
-    if (batch_statement != NULL)
-    {
-    	sqlite3_free(batch_statement);
-    	batch_statement = NULL;
-    }
-
+    sqlite3_finalize(batch_statement);
     in_batch_insert = false;
 }
 
@@ -442,7 +452,7 @@ void Database::BeginMovieAssetInsert()
 	BeginBatchInsert("MOVIE_ASSETS", 10, "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 }
 
-void Database::AddMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration)
 {
 	AddToBatchInsert("itiiiirrrr", movie_asset_id, filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration);
 }
@@ -464,6 +474,7 @@ void Database::BeginBatchSelect(const char *select_command)
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	MyDebugAssertTrue(in_batch_insert == false, "Starting batch select but already in batch insert mode");
 	MyDebugAssertTrue(in_batch_select == false, "Starting batch select but already in batch select mode");
+
 
 	in_batch_select = true;
 	int return_code;
@@ -535,20 +546,87 @@ void Database::GetFromBatchSelect(const char *column_format, ...)
 
 void Database::EndBatchSelect()
 {
-    if (batch_statement != NULL)
-    {
-    	sqlite3_free(batch_statement);
-    	batch_statement = NULL;
-    }
-
+	sqlite3_finalize(batch_statement);
 	in_batch_select = false;
-
 }
 
 void Database::BeginAllMovieAssetsSelect()
 {
-	BeginBatchSelect("SELECT * FROM MOVIE_ASSETS");
+	BeginBatchSelect("SELECT * FROM MOVIE_ASSETS;");
 }
+
+void Database::BeginAllMovieGroupsSelect()
+{
+	BeginBatchSelect("SELECT * FROM MOVIE_GROUP_LIST;");
+}
+
+void Database::BeginAllRunProfilesSelect()
+{
+	BeginBatchSelect("SELECT * FROM RUN_PROFILES;");
+}
+
+RunProfile Database::GetNextRunProfile()
+{
+	RunProfile temp_profile;
+	int profile_table_number;
+	int return_code;
+	wxString profile_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("itti", &temp_profile.id, &temp_profile.name, &temp_profile.manager_command, &profile_table_number);
+
+	// now we fill from the specific group table.
+
+	profile_sql_select_command = wxString::Format("SELECT * FROM RUN_PROFILE_COMMANDS_%i", profile_table_number);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, profile_sql_select_command.ToUTF8().data(), profile_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2));
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+	return temp_profile;
+}
+
+AssetGroup Database::GetNextMovieGroup()
+{
+	AssetGroup temp_group;
+	int group_table_number;
+	int return_code;
+	wxString group_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("iti", &temp_group.id, &temp_group.name, &group_table_number);
+
+	// now we fill from the specific group table.
+
+	group_sql_select_command = wxString::Format("SELECT * FROM MOVIE_GROUP_%i", group_table_number);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
+			return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+	return temp_group;
+}
+
 
 MovieAsset Database::GetNextMovieAsset()
 {
@@ -559,9 +637,39 @@ MovieAsset Database::GetNextMovieAsset()
 	return temp_asset;
 }
 
+void Database::EndAllMovieGroupsSelect()
+{
+	EndBatchSelect();
+}
+
 void Database::EndAllMovieAssetsSelect()
 {
 	EndBatchSelect();
 
+}
+
+void Database::EndAllRunProfilesSelect()
+{
+	EndBatchSelect();
+
+}
+
+bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
+{
+
+	InsertOrReplace("RUN_PROFILES", "ptti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "COMMANDS_ID", profile_to_add->id, profile_to_add->name.ToUTF8().data(), profile_to_add->manager_command.ToUTF8().data(), profile_to_add->id);
+	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id));
+	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "pti", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES");
+
+	for (int counter = 0; counter < profile_to_add->number_of_run_commands; counter++)
+	{
+		InsertOrReplace(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "pti", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", counter, profile_to_add->run_commands[counter].command_to_run.ToUTF8().data(), profile_to_add->run_commands[counter].number_of_copies);
+	}
+}
+
+bool Database::DeleteRunProfile(int wanted_id)
+{
+	ExecuteSQL(wxString::Format("DELETE FROM RUN_PROFILES WHERE RUN_PROFILE_ID=%i", wanted_id).ToUTF8().data());
+	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", wanted_id));
 }
 

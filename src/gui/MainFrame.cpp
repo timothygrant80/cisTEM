@@ -6,6 +6,7 @@
 #define SOCKET_ID 101
 
 extern MyMovieAssetPanel *movie_asset_panel;
+extern MyImageAssetPanel *image_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 
@@ -62,8 +63,11 @@ void MyMainFrame::SetupServer()
 		  	  this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
 
 			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
-			  my_ip_address = buffer_address.IPAddress();
+			 // my_ip_address = buffer_address.IPAddress();
+			  my_ip_address = ReturnIPAddress();
 			  my_port_string = wxString::Format("%hi", my_port);
+
+
 
 
 			  break;
@@ -141,7 +145,7 @@ void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
 {
 	// redo groups..
 
-	align_movies_panel->FillGroupComboBox();
+	align_movies_panel->Refresh();
 
 }
 
@@ -260,7 +264,9 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
+		image_asset_panel->ImportAllFromDatabase();
 		run_profiles_panel->ImportAllFromDatabase();
+		align_movies_panel->Refresh();
 
 	}
 	else
@@ -283,6 +289,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	current_project.Close();
 
 	movie_asset_panel->Reset();
+	image_asset_panel->Reset();
 	RecalculateAssetBrowser();
 	run_profiles_panel->Reset();
 

@@ -14,6 +14,7 @@ GuiJob::GuiJob()
 	is_active = false;
 	socket = NULL;
 	parent_panel = NULL;
+	launch_command = "guix_job_control";
 }
 
 GuiJob::GuiJob(JobPanel *wanted_parent_panel)
@@ -21,10 +22,11 @@ GuiJob::GuiJob(JobPanel *wanted_parent_panel)
 	is_active = false;
 	socket = NULL;
 	parent_panel = wanted_parent_panel;
+	launch_command = "guix_job_control";
 
 }
 
-long GuiJobController::AddJob(JobPanel *wanted_parent_panel)
+long GuiJobController::AddJob(JobPanel *wanted_parent_panel, wxString wanted_launch_command)
 {
 	// check if there is a free slot
 
@@ -41,36 +43,46 @@ long GuiJobController::AddJob(JobPanel *wanted_parent_panel)
 	job_list[new_index].is_active = true;
 	job_list[new_index].parent_panel = wanted_parent_panel;
 
+	wanted_launch_command.Replace("$command", "guix_job_control");
+
+	job_list[new_index].launch_command = wanted_launch_command;
+
 	GenerateJobCode(job_list[new_index].job_code);
 
 	// Launch the job..
 
-	LaunchJob(job_list[new_index].job_code);
-
-	// send back the index
-
-	return new_index;
+	if (LaunchJob(&job_list[new_index]) == true) return new_index;
+	else return -1;
 
 }
 
-void GuiJobController::LaunchJob(unsigned char *job_code)
+bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 {
 	long counter;
 
 	wxString execution_command;
-	execution_command = "guix_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
+	execution_command = job_to_launch->launch_command + " " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
 
 
 	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
 	{
-		execution_command += job_code[counter];
+		execution_command += job_to_launch->job_code[counter];
 	}
 
 
-	MyDebugPrint("Launching %s\n", execution_command);
+	job_to_launch->parent_panel->WriteInfoText("Launching Job...\n(" + execution_command + ")\n");
 
-	wxExecute(execution_command);
+	if (wxExecute(execution_command) == -1)
+	{
+		job_to_launch->parent_panel->WriteErrorText("Failed: Error launching job!\n\n");
+		return false;
+	}
+	else
+	{
+		job_to_launch->parent_panel->WriteInfoText("Success: Job launched!\n\n");
+	}
 
+	return true;
 }
 
 void GuiJobController::GenerateJobCode(unsigned char *job_code)

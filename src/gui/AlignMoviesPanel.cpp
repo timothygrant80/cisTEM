@@ -2,6 +2,7 @@
 #include "../core/gui_core_headers.h"
 
 extern MyMovieAssetPanel *movie_asset_panel;
+extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
 
 MyAlignMoviesPanel::MyAlignMoviesPanel( wxWindow* parent )
@@ -13,17 +14,17 @@ AlignMoviesPanel( parent )
 
 		mpFXYVector* vectorLayer = new mpFXYVector((""));
 
-		accumulated_dose_data.push_back(0);
-		accumulated_dose_data.push_back(5);
-		accumulated_dose_data.push_back(10);
-		accumulated_dose_data.push_back(15);
-		accumulated_dose_data.push_back(20);
+	//	accumulated_dose_data.push_back(0);
+//		accumulated_dose_data.push_back(5);
+//		accumulated_dose_data.push_back(10);
+//		accumulated_dose_data.push_back(15);
+		//accumulated_dose_data.push_back(20);
 
-		average_movement_data.push_back(10);
-		average_movement_data.push_back(6);
-		average_movement_data.push_back(4);
-		average_movement_data.push_back(2);
-		average_movement_data.push_back(1);
+		//average_movement_data.push_back(10);
+		//average_movement_data.push_back(6);
+		//average_movement_data.push_back(4);
+		//average_movement_data.push_back(2);
+		//average_movement_data.push_back(1);
 
 		vectorLayer->SetData(accumulated_dose_data, average_movement_data);
 		vectorLayer->SetContinuity(true);
@@ -67,6 +68,174 @@ AlignMoviesPanel( parent )
 	    FillGroupComboBox();
 
 	    my_job_id = -1;
+	    running_job = false;
+
+	    SetInfo();
+
+}
+
+void MyAlignMoviesPanel::SetInfo()
+{
+	#include "icons/dlp_alignment.cpp"
+	wxBitmap alignment_bmp = wxBITMAP_PNG_FROM_DATA(dlp_alignment);
+
+	InfoText->BeginSuppressUndo();
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->BeginFontSize(14);
+	InfoText->WriteText(wxT("Movie Alignment"));
+	InfoText->EndFontSize();
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->WriteText(wxT("Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction.  Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data.  This panel therefore attempts to align movies based on the Unblur algorithm described in (Grant and Grigorieff, 2015)."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->WriteImage(alignment_bmp);
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->WriteText(wxT("Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses.  This exposure weighting is described in (Grant and Grigorieff, 2015)."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Program Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Input Group : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The group of movie assets that will be aligned.  For each movie within the group, the output will be an image representing the sum of the aligned movie.  This movie will be automatically added to the image assets list."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Run Profile : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Expert Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Minimum Shift : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("This is the minimum shift that can be applied during the initial refinement stage.  Its purpose is to prevent images aligning to detector artifacts that may be reinforced in the initial sum which is used as the first reference. It is applied only during the first alignment round, and is ignored after that. "));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Maximum Shift : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("This is the maximum shift that can be applied in any single alignment round. Its purpose is to avoid alignment to spurious noise peaks by not considering unreasonably large shifts.  This limit is applied during every alignment round, but only for that round, such that it can be exceeded over a number of successive rounds."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Exposure Filter Sums? : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If selected the resulting aligned movie sums will be calculated using the exposure filter as described in Grant and Grigorieff (2015)."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Restore Power? : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If selected, and the exposure filter is used to calculate the sum then the sum will be high pass filtered to restore the noise power.  This is essentially the denominator of Eq. 9 in Grant and Grigorieff (2015)."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Termination Threshold : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The frames will be iteratively aligned until either the maximum number of iterations is reached, or if after an alignment round every frame was shifted by less than this threshold."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Max Iterations : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The maximum number of iterations that can be run for the movie alignment. If reached, the alignment will stop and the current best values will be taken."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("B-Factor : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("This B-Factor is applied to the reference sum prior to alignment.  It is intended to low-pass filter the images in order to prevent alignment to spurious noise peaks and detector artifacts."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Mask Central Cross : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centred on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Horizontal Mask : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The width of the horizontal line in the central cross mask. It is only used if Mask Central Cross is selected."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Vertical Mask : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The width of the vertical line in the central cross mask. It is only used if Mask Central Cross is selected."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("References"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Brilot, A.F., Chen, J.Z., Cheng, A., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Henderson, R., Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637. doi:10.1016/j.jsb.2012.02.003"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Campbell, M.G., Cheng, A., Brilot, A.F., Moeller, A., Lyumkis, D., Veesler, D., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8. doi:10.1016/j.str.2012.08.026"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. doi:10.7554/eLife.06980"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. doi:10.1038/nmeth.2472"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Scheres, S.H.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. doi:10.7554/eLife.03665"));
+	InfoText->Newline();
+
+	InfoText->EndSuppressUndo();
+
 
 }
 
@@ -86,15 +255,52 @@ void MyAlignMoviesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	}
 }
 
-void MyAlignMoviesPanel::OnStartAlignmentButtonUpdateUI( wxUpdateUIEvent& event )
+void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	// are there enough members in the selected group.
-
-	if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0)
+	if (main_frame->current_project.is_open == false)
 	{
-		StartAlignmentButton->Enable(true);
+		RunProfileComboBox->Enable(false);
+		GroupComboBox->Enable(false);
+		ExpertToggleButton->Enable(false);
+		StartAlignmentButton->Enable(false);
 	}
-	else StartAlignmentButton->Enable(false);
+	else
+	{
+		//Enable(true);
+
+
+		if (running_job == false)
+		{
+			RunProfileComboBox->Enable(true);
+			GroupComboBox->Enable(true);
+			ExpertToggleButton->Enable(true);
+
+			if (RunProfileComboBox->GetCount() > 0)
+			{
+				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				{
+					StartAlignmentButton->Enable(true);
+				}
+				else StartAlignmentButton->Enable(false);
+			}
+			else
+			{
+				StartAlignmentButton->Enable(false);
+			}
+		}
+		else
+		{
+			ExpertToggleButton->Enable(false);
+			GroupComboBox->Enable(false);
+			RunProfileComboBox->Enable(false);
+			//StartAlignmentButton->SetLabel("Stop Job");
+			//StartAlignmentButton->Enable(true);
+		}
+	}
+
+
+
 
 }
 
@@ -113,6 +319,27 @@ void MyAlignMoviesPanel::FillGroupComboBox()
 	GroupComboBox->SetSelection(0);
 
 	GroupComboBox->Thaw();
+}
+
+void MyAlignMoviesPanel::Refresh()
+{
+	FillGroupComboBox();
+	FillRunProfileComboBox();
+}
+
+void MyAlignMoviesPanel::FillRunProfileComboBox()
+{
+	RunProfileComboBox->Freeze();
+	RunProfileComboBox->Clear();
+
+	for (long counter = 0; counter < run_profiles_panel->run_profile_manager.number_of_run_profiles; counter++)
+	{
+		RunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
+	}
+
+	if (RunProfileComboBox->GetCount() > 0) RunProfileComboBox->SetSelection(0);
+	RunProfileComboBox->Thaw();
+
 }
 
 void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
@@ -182,8 +409,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	vertical_mask = vertical_mask_spinctrl->GetValue();
 
 
-
-	my_job_package.Reset("unblur", number_of_processes, number_of_jobs);
+	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
 
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
@@ -208,8 +434,73 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	// launch a controller
 
-	my_job_id = main_frame->job_controller.AddJob(this);
+	my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command);
 
+	if (my_job_id != -1)
+	{
+
+		StartPanel->Show(false);
+		ProgressPanel->Show(true);
+
+
+		ExpertPanel->Show(false);
+		InfoPanel->Show(false);
+		OutputTextPanel->Show(true);
+		GraphPanel->Show(true);
+
+		ExpertToggleButton->Enable(false);
+		GroupComboBox->Enable(false);
+		Layout();
+
+		running_job = true;
+
+	}
+	ProgressBar->Pulse();
+
+}
+
+void MyAlignMoviesPanel::FinishButtonClick( wxCommandEvent& event )
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	GraphPanel->Show(false);
+	InfoPanel->Show(true);
+
+	if (show_expert_options == true) ExpertPanel->Show(true);
+	else ExpertPanel->Show(false);
+	running_job = false;
+	Layout();
+
+
+
+}
+
+void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
+{
+
+}
+
+void MyAlignMoviesPanel::WriteInfoText(wxString text_to_write)
+{
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+	output_textctrl->AppendText(text_to_write);
+
+	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+}
+
+void MyAlignMoviesPanel::WriteErrorText(wxString text_to_write)
+{
+	 output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
+	 output_textctrl->AppendText(text_to_write);
+
+	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
 }
 
 
@@ -248,16 +539,64 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      {
 	    	  // send the job details..
 
-	    	  //MyDebugPrint("Sending Job Details...");
+	    	  MyDebugPrint("Sending Job Details...");
 	    	  my_job_package.SendJobPackage(sock);
 
 	      }
+	      else
+	      if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+	      {
+
+	    	  wxString error_message;
+   			  error_message = ReceivewxStringFromSocket(sock);
+
+   			  WriteErrorText(error_message);
+    	  }
+	      else
+	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
+	 	  {
+	 		 // which job is finished?
+
+	 		 int finished_job;
+	 		 sock->ReadMsg(&finished_job, 4);
+
+	 		 //WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
+	 	  }
+	      else
+		  if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
+		  {
+			  // how many connections are there?
+
+			  int number_of_connections;
+              sock->ReadMsg(&number_of_connections, 4);
+
+              ProgressBar->Pulse();
+
+              // send the info to the gui
+
+		 	  if (number_of_connections == my_job_package.my_profile.ReturnTotalJobs()) WriteInfoText(wxString::Format("All %i jobs are running and connected.\n\n", number_of_connections));
+		  }
+	      else
+		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
+		  {
+			  WriteInfoText("All Jobs have finished.");
+			  ProgressBar->SetValue(100);
+			  TimeRemainingText->SetLabel("Remaining : All Done!");
+			  CancelAlignmentButton->Show(false);
+			  FinishButton->Show(true);
+			  ProgressPanel->Layout();
+			  //running_job = false;
+
+		  }
+
 
 	      // Enable input events again.
 
 	      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 	      break;
 	    }
+
+
 
 	    case wxSOCKET_LOST:
 	    {

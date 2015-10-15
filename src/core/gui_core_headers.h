@@ -31,6 +31,7 @@
 #include <wx/dnd.h>
 #include <wx/dir.h>
 #include <wx/progdlg.h>
+#include <wx/richtext/richtextctrl.h>
 
 #include "../gui/job_panel.h"
 #include "gui_job_controller.h"
@@ -40,7 +41,9 @@
 #include "../gui/ErrorDialog.h"
 #include "../gui/MyAssetParentPanel.h"
 #include "../gui/MyMovieAssetPanel.h"
+#include "../gui/MyImageAssetPanel.h"
 #include "../gui/MovieImportDialog.h"
+#include "../gui/MyImageImportDialog.h"
 #include "../gui/AlignMoviesPanel.h"
 #include "../gui/AlignMoviesPanel.h"
 #include "../gui/MyRunProfilesPanel.h"

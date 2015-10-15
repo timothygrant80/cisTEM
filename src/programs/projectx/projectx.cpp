@@ -36,8 +36,8 @@ ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
 SettingsPanel *settings_panel;
 
-AssetParentPanel *image_asset_panel;
 MyMovieAssetPanel *movie_asset_panel;
+MyImageAssetPanel *image_asset_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
 
@@ -71,7 +71,7 @@ bool MyGuiApp::OnInit()
 	// Individual Panels
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
-	image_asset_panel = new AssetParentPanel(assets_panel->AssetsBook, wxID_ANY);
+	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);

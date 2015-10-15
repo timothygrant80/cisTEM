@@ -88,7 +88,7 @@ vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1 * 1000 + $
 if test -n "$vers" && test "$vers" -ge 3000000; then
 	WX_CPPFLAGS="`$WXCONFIG --cppflags`"
 	WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
-	WX_LIBS="`$WXCONFIG --libs std,aui`"
+	WX_LIBS="`$WXCONFIG --libs richtext,std,aui`"
 
 	WX_CPPFLAGS_BASE="`$WXCONFIG --cppflags base`"
 	WX_CXXFLAGS_BASE="`$WXCONFIG --cxxflags base | sed -e 's/-fno-exceptions//'`"

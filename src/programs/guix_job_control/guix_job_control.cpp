@@ -53,7 +53,10 @@ JobControlApp : public wxAppConsole
 	void OnGuiSocketEvent(wxSocketEvent& event);
 	void OnMasterSocketEvent(wxSocketEvent& event);
 	void OnServerEvent(wxSocketEvent& event);
-
+	void SendError(wxString error_to_send);
+	void SendJobFinished(int job_number);
+	void SendAllJobsFinished();
+	void SendNumberofConnections();
 
 
 
@@ -71,6 +74,7 @@ bool JobControlApp::OnInit()
 {
 
 	long counter;
+	wxIPV4address my_address;
 
 	// set up the parameters for passing the gui address..
 
@@ -156,9 +160,13 @@ bool JobControlApp::OnInit()
 	MyDebugPrint(" JOB CONTROL: Succeeded - Connection established!\n\n");
 	gui_socket_is_connected = true;
 
+	// we can use this socket to get our ip_address
+
+	my_ip_address = ReturnIPAddressFromSocket(gui_socket);
 
 	// setup a server... so that slaves can later contact back.
 
+	number_of_slaves_already_connected = 0;
 	SetupServer();
 
 	return true;
@@ -168,6 +176,9 @@ bool JobControlApp::OnInit()
 void JobControlApp::LaunchRemoteJob()
 {
 	long counter;
+	long command_counter;
+	long process_counter;
+
 	wxIPV4address address;
 
 	//MyDebugPrint("Launching Slaves");
@@ -176,24 +187,46 @@ void JobControlApp::LaunchRemoteJob()
 	// IP address, port and job code..
 
 	wxString execution_command;
-	execution_command = my_job_package.command_to_run + " " + my_ip_address + " " + my_port_string + " ";
 
 
-	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
+	for (command_counter = 0; command_counter < my_job_package.my_profile.number_of_run_commands; command_counter++)
 	{
-		execution_command += job_code[counter];
-	}
+		execution_command = my_job_package.my_profile.run_commands[command_counter].command_to_run + " " + my_ip_address + " " + my_port_string + " ";
 
-	MyDebugPrint("Launching \"%s\" %i times\n", execution_command, my_job_package.number_of_processes);
+		for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
+		{
+			execution_command += job_code[counter];
+		}
 
-	for (counter = 0; counter < my_job_package.number_of_processes; counter++)
-	{
-		wxExecute(execution_command);
+
+		for (process_counter = 0; process_counter < my_job_package.my_profile.run_commands[command_counter].number_of_copies; process_counter++)
+		{
+			MyDebugPrint("Launching \"%s\"\n", execution_command);
+			if (wxExecute(execution_command) == -1)
+			{
+				SendError("Error Launching Slave Process :-\n(" + execution_command + ")\n");
+			}
+		}
+
 	}
 
 	// now we wait for the connections - this is taken care of as server events..
 
 }
+
+void JobControlApp::SendError(wxString error_to_send)
+{
+	SETUP_SOCKET_CODES
+
+	// send the error message flag
+
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	gui_socket->WriteMsg(socket_i_have_an_error, SOCKET_CODE_SIZE);
+	SendwxStringToSocket(&error_to_send, gui_socket);
+
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
 
 void JobControlApp::SetupServer()
 {
@@ -226,8 +259,8 @@ void JobControlApp::SetupServer()
 
 		  	  Bind(wxEVT_SOCKET,wxSocketEventHandler( JobControlApp::OnServerEvent), this,  SERVER_ID);
 
-			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
-			  my_ip_address = buffer_address.IPAddress();
+			  //buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
+			  //my_ip_address = buffer_address.IPAddress();
 			  my_port_string = wxString::Format("%hi", my_port);
 
 
@@ -330,6 +363,9 @@ void JobControlApp::OnServerEvent(wxSocketEvent& event)
 				sock->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
 				sock->Notify(true);
 
+				number_of_slaves_already_connected++;
+				SendNumberofConnections();
+
 
 			}
 			else  // we have a master, tell this slave who it's master is.
@@ -341,6 +377,9 @@ void JobControlApp::OnServerEvent(wxSocketEvent& event)
 				// that should be the end of our interactions with the slave
 				// it should disconnect itself, we won't even bother
 				// setting up events for it..
+
+				number_of_slaves_already_connected++;
+				SendNumberofConnections();
 			}
 		}
 	}
@@ -391,6 +430,34 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 			  my_job_package.SendJobPackage(sock);
 
 		  }
+		  else
+		  if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+		  {
+			 wxString error_message;
+			 error_message = ReceivewxStringFromSocket(sock);
+
+			 // send the error message up the chain..
+
+			 SendError(error_message);
+		 }
+		 else
+		 if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
+		 {
+			 // which job is finished?
+
+			 int finished_job;
+			 sock->ReadMsg(&finished_job, 4);
+
+			 // send the info to the gui
+
+			 SendJobFinished(finished_job);
+		 }
+		 else
+		 if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
+		 {
+			 SendAllJobsFinished();
+		 }
+
 
 
 	      // Enable input events again.
@@ -414,6 +481,41 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 }
 
+void JobControlApp::SendJobFinished(int job_number)
+{
+	SETUP_SOCKET_CODES
+
+	// get the next job..
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	gui_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
+	// send the job number of the current job..
+	gui_socket->WriteMsg(&job_number, 4);
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
+
+void JobControlApp::SendAllJobsFinished()
+{
+		SETUP_SOCKET_CODES
+
+	// get the next job..
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	gui_socket->WriteMsg(socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+}
+
+void JobControlApp::SendNumberofConnections()
+{
+	SETUP_SOCKET_CODES
+
+	// get the next job..
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	gui_socket->WriteMsg(socket_number_of_connections, SOCKET_CODE_SIZE);
+	// send the job number of the current job..
+	gui_socket->WriteMsg(&number_of_slaves_already_connected, 4);
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
 
 void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 {
@@ -466,7 +568,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 		  {
 			  // receive the job details..
 
-			 // MyDebugPrint("JOB CONTROL : Receiving Job Package");
+			  MyDebugPrint("JOB CONTROL : Receiving Job Package");
 			  my_job_package.ReceiveJobPackage(sock);
 			  MyDebugPrint("JOB CONTROL : Job Package Received, launching slaves");
 

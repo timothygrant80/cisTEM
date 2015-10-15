@@ -121,6 +121,33 @@ void RunProfile::RemoveCommand(int number_to_remove)
 	number_of_run_commands--;
 }
 
+void RunProfile::RemoveAll()
+{
+	number_of_run_commands = 0;
+}
+
+long RunProfile::ReturnTotalJobs()
+{
+	long total_jobs = 0;
+
+	for (long counter = 0; counter < number_of_run_commands; counter++)
+	{
+		total_jobs += run_commands[counter].number_of_copies;
+	}
+
+	return total_jobs;
+
+}
+
+void RunProfile::SubstituteExecutableName(wxString executable_name)
+{
+	for (long counter = 0; counter < number_of_run_commands; counter++)
+	{
+		run_commands[counter].command_to_run.Replace("$command", executable_name);
+	}
+}
+
+
 RunProfile & RunProfile::operator = (const RunProfile &t)
 {
    // Check for self assignment
@@ -290,6 +317,23 @@ void RunProfileManager::RemoveAllProfiles()
 		run_profiles = new RunProfile[number_allocated];
 	}
 
+}
+
+wxString RunProfileManager::ReturnProfileName(long wanted_profile)
+{
+	return run_profiles[wanted_profile].name;
+}
+
+long RunProfileManager::ReturnTotalJobs(long wanted_profile)
+{
+	long total_jobs = 0;
+
+	for (long counter = 0; counter < run_profiles[wanted_profile].number_of_run_commands; counter++)
+	{
+		total_jobs += run_profiles[wanted_profile].run_commands[counter].number_of_copies;
+	}
+
+	return total_jobs;
 }
 
 

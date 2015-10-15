@@ -14,6 +14,9 @@ inline bool DoesFileExist(std::string filename)
     return false;
 };
 
+wxString ReturnIPAddress();
+wxString ReturnIPAddressFromSocket(wxSocketBase *socket);
+
 void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);
 wxString ReceivewxStringFromSocket(wxSocketBase *socket);
 

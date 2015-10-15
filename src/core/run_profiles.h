@@ -31,6 +31,9 @@ public:
 	void AddCommand(RunCommand wanted_command);
 	void AddCommand(wxString wanted_command, int wanted_number_of_copies);
 	void RemoveCommand(int number_to_remove);
+	void RemoveAll();
+	long ReturnTotalJobs();
+	void SubstituteExecutableName(wxString executable_name);
 
 	RunProfile & operator = (const RunProfile &t);
 	RunProfile & operator = (const RunProfile *t);
@@ -54,6 +57,10 @@ public:
 
 	RunProfile * ReturnLastProfilePointer();
 	RunProfile * ReturnProfilePointer(int wanted_profile);
+
+	wxString ReturnProfileName(long wanted_profile);
+	long ReturnTotalJobs(long wanted_profile);
+
 
 	RunProfileManager();
 	~RunProfileManager();

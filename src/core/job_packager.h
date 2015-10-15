@@ -56,7 +56,10 @@ class RunJob {
 
 public:
 
+	int job_number;
 	int number_of_arguments;
+
+	bool has_been_run;
 	RunArgument *arguments;
 
 	RunJob();
@@ -76,23 +79,23 @@ class JobPackage {
 
 public :
 
-	int number_of_processes;
 	int number_of_jobs;
 	int number_of_added_jobs;
-	std::string command_to_run;
 
+	RunProfile my_profile;
 	RunJob *jobs;
 
-	JobPackage(std::string wanted_command_to_run, int wanted_number_of_processes, int wanted_number_of_independant_jobs);
+	JobPackage(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
 	JobPackage();
 	~JobPackage();
 
-	void Reset(std::string wanted_command_to_run, int wanted_number_of_processes, int wanted_number_of_jobs);
+	void Reset(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
 	void AddJob(const char *format, ...);
 	void SendJobPackage(wxSocketBase *socket);
 	void ReceiveJobPackage(wxSocketBase *socket);
 
 	long ReturnEncodedByteTransferSize();
+	int ReturnNumberOfJobsRemaining();
 
 };
 

@@ -40,6 +40,7 @@ class JobPanel;
 #include <wx/tglbtn.h>
 #include <wx/checkbox.h>
 #include <wx/spinctrl.h>
+#include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
@@ -199,6 +200,46 @@ class MovieImportDialog : public wxDialog
 		
 		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
 		~MovieImportDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ImageImportDialog
+///////////////////////////////////////////////////////////////////////////////
+class ImageImportDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxListCtrl* PathListCtrl;
+		wxButton* m_button10;
+		wxButton* m_button11;
+		wxButton* ClearButton;
+		wxStaticLine* m_staticline7;
+		wxStaticText* m_staticText19;
+		wxComboBox* VoltageCombo;
+		wxStaticText* m_staticText20;
+		wxTextCtrl* PixelSizeText;
+		wxStaticText* m_staticText21;
+		wxTextCtrl* CsText;
+		wxStaticLine* m_staticline8;
+		wxButton* m_button13;
+		wxButton* ImportButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
+		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+		~ImageImportDialog();
 	
 };
 
@@ -379,7 +420,7 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
 		wxComboBox* GroupComboBox;
-		wxToggleButton* m_toggleBtn2;
+		wxToggleButton* ExpertToggleButton;
 		wxStaticLine* m_staticline10;
 		wxPanel* ExpertPanel;
 		wxStaticText* m_staticText43;
@@ -403,24 +444,34 @@ class AlignMoviesPanel : public JobPanel
 		wxSpinCtrl* horizontal_mask_spinctrl;
 		wxStaticText* m_staticText51;
 		wxSpinCtrl* vertical_mask_spinctrl;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
 		wxPanel* GraphPanel;
 		wxBoxSizer* GraphSizer;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
 		wxStaticLine* m_staticline11;
-		wxComboBox* m_comboBox3;
-		wxGauge* m_gauge4;
+		wxPanel* ProgressPanel;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxButton* CancelAlignmentButton;
+		wxButton* FinishButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		wxComboBox* RunProfileComboBox;
 		wxButton* StartAlignmentButton;
-		wxStaticText* m_staticText52;
-		wxTextCtrl* m_textCtrl7;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartAlignmentClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnStartAlignmentButtonUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		
-		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 869,566 ), long style = wxTAB_TRAVERSAL ); 
+		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,653 ), long style = wxTAB_TRAVERSAL ); 
 		~AlignMoviesPanel();
 	
 };

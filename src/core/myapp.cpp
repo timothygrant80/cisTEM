@@ -11,6 +11,7 @@ bool MyApp::OnInit()
 	// Bind the thread events
 
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_SENDERROR, &MyApp::OnThreadSendError, this);
 
 
 	// Connect to the controller program..
@@ -151,6 +152,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  // I have to send my ip address to the controller..
 
+		    	  my_ip_address = ReturnIPAddressFromSocket(sock);
+
 		    	  SendwxStringToSocket(&my_ip_address, sock);
 		    	  SendwxStringToSocket(&my_port_string, sock);
 
@@ -186,9 +189,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 				    	  // allocate space for socket pointers..
 						  number_of_connected_slaves = 0;
-						  slave_sockets = new wxSocketBase*[my_job_package.number_of_processes];
-
-
+						  slave_sockets = new wxSocketBase*[my_job_package.my_profile.ReturnTotalJobs()];
 		    	 	  }
 		    	  }
 		    	  else
@@ -279,11 +280,6 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 }
 
-void MyApp::DoCalculation()
-{
-	MyDebugPrintWithDetails("This should never be called - derive a new class for yourself!");
-}
-
 
 void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 {
@@ -360,6 +356,35 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	}
 }
 
+void MyApp::SendJobFinished(int job_number)
+{
+	MyDebugAssertTrue(i_am_the_master == true, "SendJobFinished called by a slave!");
+
+	SETUP_SOCKET_CODES
+
+	// get the next job..
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	controller_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
+	// send the job number of the current job..
+	controller_socket->WriteMsg(&job_number, 4);
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+
+}
+
+void MyApp::SendAllJobsFinished()
+{
+	MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
+
+	SETUP_SOCKET_CODES
+
+	// get the next job..
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	controller_socket->WriteMsg(socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+}
+
 void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 {
 	SETUP_SOCKET_CODES
@@ -392,8 +417,52 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			 if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 				 MyDebugPrint("JOB MASTER : SEND NEXT JOB");
-		    	  SendNextJobTo(sock);
+
+		    	 int finished_job_number;
+		    	 sock->ReadMsg(&finished_job_number, 4);
+
+		    	 SendNextJobTo(sock);
+
+		    	 // Send info that the job has finished..
+
+		    	 if (finished_job_number != -1)
+		    	 {
+		    		 SendJobFinished(finished_job_number);
+		    		 number_of_finished_jobs++;
+		    		 my_job_package.jobs[finished_job_number].has_been_run = true;
+
+		    		 if (number_of_finished_jobs == my_job_package.number_of_jobs)
+		    		 {
+		    			 SendAllJobsFinished();
+
+		    			 if (my_job_package.ReturnNumberOfJobsRemaining() != 0)
+		    			 {
+		    				 SendError("All jobs should be finished, but job package is not empty.");
+		    			 }
+
+		    		   	  	  // time to die!
+
+		    			 	 controller_socket->Destroy();
+		    			 	 ExitMainLoop();
+
+		    		 }
+		    	 }
 			 }
+			 else
+			 if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+			 {
+				 // got an error message..
+				 MyDebugPrint("JOB MASTER : Error Message");
+				wxString error_message;
+
+				error_message = ReceivewxStringFromSocket(sock);
+
+				// send the error message up the chain..
+
+				SocketSendError(error_message);
+			 }
+
+
 
 			 // Enable input events again.
 
@@ -448,10 +517,14 @@ void MyApp::SetupServer()
 
 		  Bind(wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnServerEvent), this, SERVER_ID);
 
+		  my_port_string = wxString::Format("%hi", my_port);
+/*
 		  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
 		  my_ip_address = buffer_address.IPAddress();
-		  my_port_string = wxString::Format("%hi", my_port);
 
+
+
+*/
 
 		  break;
 		}
@@ -584,6 +657,8 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 is_connected = true;
 				 MyDebugPrint("JOB SLAVE : Requesting job");
 				 controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
+				 int no_job = -1;
+				 controller_socket->WriteMsg(&no_job, 4);
 
 			 }
 			 else
@@ -652,7 +727,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 }
 
-void MyApp::OnThreadComplete(wxThreadEvent&)
+void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 {
 	SETUP_SOCKET_CODES
 
@@ -665,34 +740,65 @@ void MyApp::OnThreadComplete(wxThreadEvent&)
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 	controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
+	// send the job number of the current job..
+	controller_socket->WriteMsg(&my_current_job.job_number, 4);
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+}
+
+void MyApp::OnThreadSendError(wxThreadEvent& my_event)
+{
+	SocketSendError(my_event.GetString());
+	//MyDebugPrint("ThreadSendError");
+}
+
+void MyApp::SocketSendError(wxString error_to_send)
+{
+	SETUP_SOCKET_CODES
+
+	// send the error message flag
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	controller_socket->WriteMsg(socket_i_have_an_error, SOCKET_CODE_SIZE);
+
+	SendwxStringToSocket(&error_to_send, controller_socket);
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
 
 
+void MyApp::SendError(wxString error_to_send)
+{
+	if (work_thread != NULL)
+	{
+		work_thread->QueueError(error_to_send);
+	}
+	else MyDebugPrint("SendError with null work thread!")
+}
+
 // Main execution in this thread..
 
 wxThread::ExitCode CalculateThread::Entry()
 {
-    //while (!TestDestroy())
-    //{
-     //   // ... do a bit of work...
-      //  wxQueueEvent(main_thread_pointer, new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_UPDATE));
-    //}
+	bool success = main_thread_pointer->DoCalculation(); // This should be overrided per app..
 
-	MyDebugPrint("In Entry");
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
 
-	main_thread_pointer->DoCalculation(); // This should be overrided per app..
+	if (success == true) my_thread_event->SetInt(1);
+	else my_thread_event->SetInt(0);
 
-    // Finished.
+	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-    // signal the event handler that this thread is going to be destroyed
-    // NOTE: here we assume that using the m_pHandler pointer is safe,
-    //       (in this case this is assured by the MyFrame destructor)
-
-	wxQueueEvent(main_thread_pointer, new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED));
 
     return (wxThread::ExitCode)0;     // success
+}
+
+void  CalculateThread::QueueError(wxString error_to_queue)
+{
+	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SENDERROR);
+	test_event->SetString(error_to_queue);
+
+	wxQueueEvent(main_thread_pointer, test_event);
 }
 
 CalculateThread::~CalculateThread()

@@ -8,10 +8,12 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	long job_counter;
 	long argument_counter;
 	long byte_counter;
+	long command_counter;
 
 	int length_of_string;
 	int number_of_arguments;
 	int temp_int;
+	int temp_job_number;
 	float temp_float;
 	std::string temp_string;
 
@@ -19,10 +21,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 
 	// first work out how long the character array needs to be..
 
-	length_of_string = command_to_run.length();
-
-	long transfer_size = 4 + 4 + 4 + length_of_string; // number of jobs + number_of_processes + length_of_string + string_contents.
-	transfer_size += ReturnEncodedByteTransferSize(); // all the job info.
+	long transfer_size = ReturnEncodedByteTransferSize();
 
 	// allocate a character array for the jobs..
 
@@ -37,32 +36,55 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 transfer_buffer[2] = char_pointer[2];
 	 transfer_buffer[3] = char_pointer[3];
 
-	 // number_of_processes
+	 // number_of_run_commands
 
-	 char_pointer = (unsigned char*)&number_of_processes;
+	 char_pointer = (unsigned char*)& my_profile.number_of_run_commands;
 
 	 transfer_buffer[4] = char_pointer[0];
 	 transfer_buffer[5] = char_pointer[1];
 	 transfer_buffer[6] = char_pointer[2];
 	 transfer_buffer[7] = char_pointer[3];
 
-	 // length of command string
+	 // now add each run_command
 
-	 char_pointer = (unsigned char*)&length_of_string;
+	 byte_counter = 8;
 
-	 transfer_buffer[8] = char_pointer[0];
-	 transfer_buffer[9] = char_pointer[1];
-	 transfer_buffer[10] = char_pointer[2];
-	 transfer_buffer[11] = char_pointer[3];
-
-	 // copy the string..
-
-	 byte_counter = 12;
-
-	 for (counter = 0; counter < length_of_string; counter++)
+	 for (command_counter = 0; command_counter < my_profile.number_of_run_commands; command_counter++)
 	 {
-		 transfer_buffer[byte_counter] = command_to_run[counter];
+		 length_of_string = my_profile.run_commands[command_counter].command_to_run.Length();
+
+		 char_pointer = (unsigned char*)&length_of_string;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
 		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
+		 // now the contents of the command..
+
+		 for (counter = 0; counter < length_of_string; counter++)
+		 {
+			 transfer_buffer[byte_counter] = static_cast <char> (my_profile.run_commands[command_counter].command_to_run[counter]);
+			 byte_counter++;
+		 }
+
+		 // number of copies..
+
+		 char_pointer = (unsigned char*) &my_profile.run_commands[command_counter].number_of_copies;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
 	 }
 
 	 // now append all the job info..
@@ -70,6 +92,20 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 
 	 for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
 	 {
+		 // job_number for this job
+
+		 char_pointer = (unsigned char*)&jobs[job_counter].job_number;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
+
 		 // add number of arguments for this job
 
 		 char_pointer = (unsigned char*)&jobs[job_counter].number_of_arguments;
@@ -93,7 +129,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 			 {
 				 // set the descriptor byte
 
-				 transfer_buffer[byte_counter] = (unsigned char)INTEGER;
+				 transfer_buffer[byte_counter] = INTEGER;
 				 byte_counter++;
 
 				 // set the value of the integer..
@@ -115,7 +151,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 			 {
 				 // set the descriptor byte
 
-				 transfer_buffer[byte_counter] = (unsigned char)FLOAT;
+				 transfer_buffer[byte_counter] = FLOAT;
 				 byte_counter++;
 
 				 // set the value of the float..
@@ -137,7 +173,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 			 {
 				 // set the descriptor byte
 
-				 transfer_buffer[byte_counter] = (unsigned char)BOOL;
+				 transfer_buffer[byte_counter] = BOOL;
 				 byte_counter++;
 
 				 // set the value of the bool..
@@ -150,7 +186,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 			 {
 				 // set the descriptor byte
 
-				 transfer_buffer[byte_counter] = (unsigned char)TEXT;
+				 transfer_buffer[byte_counter] = TEXT;
  				 byte_counter++;
 
  				 // add the length of the string..
@@ -176,6 +212,11 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 					 transfer_buffer[byte_counter] = temp_string[counter];
 					 byte_counter++;
 				 }
+			 }
+			 else
+			 {
+				 MyPrintWithDetails("Unknown Argument Type!");
+				 abort();
 			 }
 
 		 }
@@ -208,6 +249,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 
     		 // now send the whole buffer..
 
+    		 MyDebugPrint("doing socket write");
     		 socket->WriteMsg(transfer_buffer, transfer_size);
 
 
@@ -236,6 +278,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 	SETUP_SOCKET_CODES
 
 	long counter;
+	long command_counter;
 	long job_counter;
 	long argument_counter;
 	long byte_counter;
@@ -243,15 +286,23 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	int wanted_number_of_jobs;
 	int wanted_number_of_processes;
+	int number_of_run_commands;
+	int number_of_copies;
 	std::string wanted_command_to_run;
 
 	int length_of_string;
 	int number_of_arguments;
+	int temp_job_number;
 	int temp_int;
 	float temp_float;
 	std::string temp_string;
 
 	unsigned char* char_pointer;
+
+	RunProfile temp_run_profile;
+	wxString temp_wxstring;
+
+
 
 	// disable events on the socket..
 	socket->SetNotify(wxSOCKET_LOST_FLAG);
@@ -266,6 +317,8 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	socket->ReadMsg(char_pointer, 8);
 
+	MyDebugPrint("Package is %li bytes long", transfer_size);
+
 	// allocate an array..
 
 	unsigned char *transfer_buffer = new unsigned char[transfer_size];
@@ -274,11 +327,14 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	socket->ReadMsg(transfer_buffer, transfer_size);
 
+	MyDebugPrint("Received package, decoding job...");
+
     // restore socket events..
     socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 
 	// now we need to decode the buffer
+
 
     // number of jobs
     char_pointer = (unsigned char*)&wanted_number_of_jobs;
@@ -287,38 +343,78 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
     char_pointer[2] = transfer_buffer[2];
     char_pointer[3] = transfer_buffer[3];
 
-    // number of processes
-    char_pointer = (unsigned char*)&wanted_number_of_processes;
+    MyDebugPrint("There are %i jobs", wanted_number_of_jobs);
+
+    // number of run commands
+    char_pointer = (unsigned char*)&number_of_run_commands;
     char_pointer[0] = transfer_buffer[4];
     char_pointer[1] = transfer_buffer[5];
     char_pointer[2] = transfer_buffer[6];
     char_pointer[3] = transfer_buffer[7];
 
-    // length of command string
-    char_pointer = (unsigned char*)&length_of_string;
-    char_pointer[0] = transfer_buffer[8];
-    char_pointer[1] = transfer_buffer[9];
-    char_pointer[2] = transfer_buffer[10];
-    char_pointer[3] = transfer_buffer[11];
+    MyDebugPrint("There are %i commands", number_of_run_commands);
 
-    // fill the string..
+    byte_counter = 8;
 
-    wanted_command_to_run.clear();
 
-    byte_counter = 12;
-
-	for (counter = 0; counter < length_of_string; counter++)
+	for (command_counter = 0; command_counter < number_of_run_commands; command_counter++)
 	{
-		wanted_command_to_run += transfer_buffer[byte_counter];
-		byte_counter++;
-	}
+		 char_pointer = (unsigned char*)&length_of_string;
+
+		 char_pointer[0] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[1] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[2] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+		 byte_counter++;
+
+		 temp_wxstring = "";
+
+		 // now the contents of the command..
+
+		 for (counter = 0; counter < length_of_string; counter++)
+		 {
+			 temp_wxstring += transfer_buffer[byte_counter];
+			 byte_counter++;
+		 }
+
+		 // number of copies..
+
+		 char_pointer = (unsigned char*)&number_of_copies;
+
+ 		 char_pointer[0] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[1] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[2] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+
+ 		 // add the command.
+
+ 		 temp_run_profile.AddCommand(temp_wxstring, number_of_copies);
+	 }
 
 	// now we need to loop over all the jobs..
 
-	Reset(wanted_command_to_run, wanted_number_of_processes, wanted_number_of_jobs);
+	Reset(temp_run_profile, "", wanted_number_of_jobs);
 
 	for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
 	{
+		 char_pointer = (unsigned char*)&temp_job_number;
+
+		 char_pointer[0] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[1] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[2] = transfer_buffer[byte_counter];
+		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+		 byte_counter++;
+
 		 // How many arguments are there for this job
 
 		 char_pointer = (unsigned char*)&temp_int;
@@ -334,6 +430,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 		 // reset the job..
 		 jobs[job_counter].Reset(temp_int);
+		 jobs[job_counter].job_number = temp_job_number;
 
 		 // for this job we loop over all arguments
 
@@ -428,10 +525,17 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 					 byte_counter++;
 				 }
 			  }
+			 else
+			 {
+				 MyPrintWithDetails("Unknown Argument Type!");
+				 abort();
+			 }
 
 			}
 
 		}
+
+	MyDebugPrint("Job Decoded");
 
 	// delete the buffer
 	delete [] transfer_buffer;
@@ -441,6 +545,17 @@ long JobPackage::ReturnEncodedByteTransferSize()
 {
 	long byte_size = 0;
 	long counter;
+
+	// size of the profile..
+
+	byte_size += 8; // number_of_jobs and number_of_run_commands
+
+	for (counter = 0; counter < my_profile.number_of_run_commands; counter++)
+	{
+		byte_size += 4; // length_of_current_command;
+		byte_size += my_profile.run_commands[counter].command_to_run.Length(); // actual text;
+		byte_size += 4; // number_of_copies;
+	}
 
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
@@ -452,15 +567,13 @@ long JobPackage::ReturnEncodedByteTransferSize()
 
 }
 
-JobPackage::JobPackage(std::string wanted_command_to_run, int wanted_number_of_processes, int wanted_number_of_jobs)
+JobPackage::JobPackage(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs)
 {
-	Reset(wanted_command_to_run, wanted_number_of_processes, wanted_number_of_jobs);
+	Reset(wanted_profile, wanted_executable_name, wanted_number_of_jobs);
 }
 
 JobPackage::JobPackage()
 {
-	command_to_run.clear();
-	number_of_processes = 0;
 	number_of_jobs = 0;
 	number_of_added_jobs = 0;
 
@@ -488,7 +601,7 @@ JobPackage::~JobPackage()
 
 }
 
-void JobPackage::Reset(std::string wanted_command_to_run, int wanted_number_of_processes, int wanted_number_of_jobs)
+void JobPackage::Reset(RunProfile wanted_profile, wxString wanted_executable_name,int wanted_number_of_jobs)
 {
 	if (number_of_jobs > 0)
 	{
@@ -496,20 +609,17 @@ void JobPackage::Reset(std::string wanted_command_to_run, int wanted_number_of_p
 		else delete [] jobs;
 	}
 
-	command_to_run = wanted_command_to_run;
-	number_of_processes = wanted_number_of_processes;
 	number_of_jobs = wanted_number_of_jobs;
 	number_of_added_jobs = 0;
-
-	// this check makes sense to me, but no doubt will be the cause of some impossible to find bug in the future
-
-	if (number_of_processes > number_of_jobs) number_of_processes = number_of_jobs;
 
 	// memory allocation..
 
 	if (number_of_jobs == 1) jobs = new RunJob;
 	else
 	jobs = new RunJob[number_of_jobs];
+
+	my_profile = wanted_profile;
+	my_profile.SubstituteExecutableName(wanted_executable_name);
 
 }
 
@@ -520,6 +630,7 @@ void JobPackage::AddJob(const char *format, ...)
 	va_list args;
 	va_start(args, format);
 
+	jobs[number_of_added_jobs].job_number = number_of_added_jobs;
 	jobs[number_of_added_jobs].SetArguments(format, args);
 
 	va_end(args);
@@ -527,8 +638,23 @@ void JobPackage::AddJob(const char *format, ...)
 	number_of_added_jobs++;
 }
 
+int JobPackage::ReturnNumberOfJobsRemaining()
+{
+	int number_remaining = 0;
+
+	for (long counter = 0; counter < number_of_jobs; counter++)
+	{
+		if (jobs[counter].has_been_run == false) number_remaining++;
+	}
+
+	return number_remaining;
+
+}
+
 RunJob::RunJob()
 {
+	job_number = -1;
+	has_been_run = false;
 	number_of_arguments = 0;
 	arguments = NULL;
 }
@@ -560,6 +686,27 @@ void RunJob::SendJob(wxSocketBase *socket)
 
 	unsigned char *transfer_buffer = new unsigned char[transfer_size];
 
+	// job_number
+
+	 char_pointer = (unsigned char*)&job_number;
+
+	 transfer_buffer[0] = char_pointer[0];
+	 transfer_buffer[1] = char_pointer[1];
+	 transfer_buffer[2] = char_pointer[2];
+	 transfer_buffer[3] = char_pointer[3];
+
+
+	// number of arguments..
+
+	 char_pointer = (unsigned char*)&number_of_arguments;
+
+	 transfer_buffer[4] = char_pointer[0];
+	 transfer_buffer[5] = char_pointer[1];
+	 transfer_buffer[6] = char_pointer[2];
+	 transfer_buffer[7] = char_pointer[3];
+
+	 byte_counter = 8;
+
 	for (argument_counter = 0; argument_counter < number_of_arguments; argument_counter++)
 	{
 		// ok, what is this argument..
@@ -568,7 +715,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 		{
 			 // set the descriptor byte
 
-			 transfer_buffer[byte_counter] = (unsigned char)INTEGER;
+			 transfer_buffer[byte_counter] = INTEGER;
 			 byte_counter++;
 
 			 // set the value of the integer..
@@ -590,7 +737,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 		 {
 			 // set the descriptor byte
 
-			 transfer_buffer[byte_counter] = (unsigned char)FLOAT;
+			 transfer_buffer[byte_counter] = FLOAT;
 			 byte_counter++;
 
 			 // set the value of the float..
@@ -612,7 +759,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 		 {
 			 // set the descriptor byte
 
-			 transfer_buffer[byte_counter] = (unsigned char)BOOL;
+			 transfer_buffer[byte_counter] = BOOL;
 			 byte_counter++;
 
 			 // set the value of the bool..
@@ -625,7 +772,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 		 {
 			 // set the descriptor byte
 
-			 transfer_buffer[byte_counter] = (unsigned char)TEXT;
+			 transfer_buffer[byte_counter] = TEXT;
 			 byte_counter++;
 
 			 // add the length of the string..
@@ -651,6 +798,11 @@ void RunJob::SendJob(wxSocketBase *socket)
 				 transfer_buffer[byte_counter] = temp_string[counter];
 				 byte_counter++;
 			 }
+		 }
+		 else
+		 {
+			 MyPrintWithDetails("Unrecognized argument!");
+			 abort();
 		 }
 
 	 }
@@ -719,6 +871,7 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 	int length_of_string;
 	int number_of_arguments;
 	int temp_int;
+	int temp_job_number;
 	float temp_float;
 	std::string temp_string;
 
@@ -752,9 +905,22 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 
     byte_counter = 0;
 
+    // job id
+
+	char_pointer = (unsigned char*)&temp_job_number;
+	char_pointer[0] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[1] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[2] = transfer_buffer[byte_counter];
+	byte_counter++;
+	char_pointer[3] = transfer_buffer[byte_counter];
+	byte_counter++;
+
+
     // How many arguments are there for this job
 
-	char_pointer = (unsigned char*)&temp_int;
+	char_pointer = (unsigned char*)&number_of_arguments;
 	char_pointer[0] = transfer_buffer[byte_counter];
 	byte_counter++;
 	char_pointer[1] = transfer_buffer[byte_counter];
@@ -765,7 +931,9 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 	byte_counter++;
 
 	// reset the job..
-	Reset(temp_int);
+	Reset(number_of_arguments);
+	job_number = temp_job_number;
+
 
 	// for this job we loop over all arguments
 
@@ -856,6 +1024,11 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 				 byte_counter++;
 			 }
 		  }
+		 else
+		 {
+			 MyDebugPrint("Unknown Argument!!");
+			 abort();
+		 }
 	}
 
 	// delete the buffer
@@ -929,6 +1102,9 @@ void RunJob::Reset(int wanted_number_of_arguments)
 	if (number_of_arguments == 1) arguments = new RunArgument;
 	else arguments = new RunArgument[number_of_arguments];
 
+	job_number = -1;
+	has_been_run = false;
+
 
 }
 
@@ -942,7 +1118,7 @@ long RunJob::ReturnEncodedByteTransferSize()
 		byte_size += arguments[counter].ReturnEncodedByteTransferSize();
 	}
 
-	return byte_size + 4; // argument bytes, plus 4 bytes for the number of arguments
+	return byte_size + 8; // argument bytes, + 4 bytes for the number of arguments + 4 bytes for job_number
 
 
 }

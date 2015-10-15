@@ -2,6 +2,7 @@
 #define SOCKET_ID 101
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
 
 class MyApp; // So CalculateThread class knows about it
 
@@ -13,10 +14,13 @@ class CalculateThread : public wxThread
     	CalculateThread(MyApp *handler) : wxThread(wxTHREAD_DETACHED) { main_thread_pointer = handler; }
     	~CalculateThread();
 
+    	MyApp *main_thread_pointer;
+    	void QueueError(wxString error_to_queue);
+
 	protected:
 
     	virtual ExitCode Entry();
-    	MyApp *main_thread_pointer;
+
 };
 
 
@@ -57,23 +61,32 @@ MyApp : public wxAppConsole
 
 		wxSocketBase **slave_sockets;  // POINTER TO POINTER..
 
-		virtual void DoCalculation();
+		virtual bool DoCalculation() = 0;
 
-		private:
+		void SendError(wxString error_message);
+
+
+
 
 		 CalculateThread *work_thread;
+		private:
 
-		 void SetupServer();
+		void SendJobFinished(int job_number);
+		void SendAllJobsFinished();
+		void SocketSendError(wxString error_message);
 
-		 void SendNextJobTo(wxSocketBase *socket);
+		void SetupServer();
 
-		 void OnOriginalSocketEvent(wxSocketEvent& event);
-		 void OnMasterSocketEvent(wxSocketEvent& event);
-		 void OnSlaveSocketEvent(wxSocketEvent& event);
-		 void OnControllerSocketEvent(wxSocketEvent& event);
+		void SendNextJobTo(wxSocketBase *socket);
+
+		void OnOriginalSocketEvent(wxSocketEvent& event);
+		void OnMasterSocketEvent(wxSocketEvent& event);
+		void OnSlaveSocketEvent(wxSocketEvent& event);
+		void OnControllerSocketEvent(wxSocketEvent& event);
 
 
-		 void OnServerEvent(wxSocketEvent& event);
-		 void OnThreadComplete(wxThreadEvent&);
+		void OnServerEvent(wxSocketEvent& event);
+		void OnThreadComplete(wxThreadEvent& my_event);
+		void OnThreadSendError(wxThreadEvent& my_event);
 };
 

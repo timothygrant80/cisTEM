@@ -10,6 +10,8 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 		bool show_expert_options;
 		long my_job_id;
 		JobPackage my_job_package;
+		bool running_job;
+
 
 public:
 		/** Constructor */
@@ -27,11 +29,21 @@ public:
 		// methods
 
 		void OnExpertOptionsToggle( wxCommandEvent& event );
-		void OnStartAlignmentButtonUpdateUI( wxUpdateUIEvent& event );
+		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();
+		void FillRunProfileComboBox();
 		void StartAlignmentClick( wxCommandEvent& event );
+		void FinishButtonClick( wxCommandEvent& event );
+		void TerminateButtonClick( wxCommandEvent& event );
+		void Refresh();
+		void SetInfo();
+
+		void WriteInfoText(wxString text_to_write);
+		void WriteErrorText(wxString text_to_write);
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);
+
+
 };
 
 #endif // __AlignMoviesPanel__

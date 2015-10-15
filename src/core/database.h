@@ -50,6 +50,10 @@ public :
 	void AddNextMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
 	void EndMovieAssetInsert();
 
+	void BeginImageAssetInsert();
+	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
+	void EndImageAssetInsert();
+
 	// Convenience select functions...
 
 	void BeginAllMovieAssetsSelect();
@@ -59,6 +63,14 @@ public :
 	void BeginAllMovieGroupsSelect();
 	AssetGroup GetNextMovieGroup();
 	void EndAllMovieGroupsSelect();
+
+	void BeginAllImageAssetsSelect();
+	ImageAsset GetNextImageAsset();
+	void EndAllImageAssetsSelect();
+
+	void BeginAllImageGroupsSelect();
+	AssetGroup GetNextImageGroup();
+	void EndAllImageGroupsSelect();
 
 	void BeginAllRunProfilesSelect();
 	RunProfile GetNextRunProfile();

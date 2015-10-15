@@ -199,7 +199,8 @@ bool Database::CreateAllTables()
 	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiirrrrriiriiiii", "ALIGNMENT_NUMBER", "DATETIME_OF_RUN", "MOVIE_ASSET_ID", "ALIGNMENT_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
-	success = CreateTable("IMAGE_ASSETS", "ptiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	success = CreateTable("IMAGE_ASSETS", "ptiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("ESTIMATED_IMAGE_CTF_PARAMETERS", "piirrrrirrrrrrirrrrrr", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "SPECTRUM_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE");
 
 	return success;
@@ -469,6 +470,23 @@ void Database::EndMovieAssetInsert()
 	EndBatchInsert();
 }
 
+
+void Database::BeginImageAssetInsert()
+{
+	BeginBatchInsert("IMAGE_ASSETS", 9, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+}
+
+void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+{
+	AddToBatchInsert("itiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
+}
+
+void Database::EndImageAssetInsert()
+{
+	EndBatchInsert();
+}
+
+
 void Database::BeginBatchSelect(const char *select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -560,6 +578,17 @@ void Database::BeginAllMovieGroupsSelect()
 	BeginBatchSelect("SELECT * FROM MOVIE_GROUP_LIST;");
 }
 
+void Database::BeginAllImageAssetsSelect()
+{
+	BeginBatchSelect("SELECT * FROM IMAGE_ASSETS;");
+}
+
+void Database::BeginAllImageGroupsSelect()
+{
+	BeginBatchSelect("SELECT * FROM IMAGE_GROUP_LIST;");
+}
+
+
 void Database::BeginAllRunProfilesSelect()
 {
 	BeginBatchSelect("SELECT * FROM RUN_PROFILES;");
@@ -627,6 +656,38 @@ AssetGroup Database::GetNextMovieGroup()
 	return temp_group;
 }
 
+AssetGroup Database::GetNextImageGroup()
+{
+	AssetGroup temp_group;
+	int group_table_number;
+	int return_code;
+	wxString group_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("iti", &temp_group.id, &temp_group.name, &group_table_number);
+
+	// now we fill from the specific group table.
+
+	group_sql_select_command = wxString::Format("SELECT * FROM IMAGE_GROUP_%i", group_table_number);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
+			return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+	return temp_group;
+}
+
+
 
 MovieAsset Database::GetNextMovieAsset()
 {
@@ -637,12 +698,33 @@ MovieAsset Database::GetNextMovieAsset()
 	return temp_asset;
 }
 
+
+ImageAsset Database::GetNextImageAsset()
+{
+	ImageAsset temp_asset;
+
+	GetFromBatchSelect("ifiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
+	return temp_asset;
+}
+
+
 void Database::EndAllMovieGroupsSelect()
 {
 	EndBatchSelect();
 }
 
 void Database::EndAllMovieAssetsSelect()
+{
+	EndBatchSelect();
+
+}
+
+void Database::EndAllImageGroupsSelect()
+{
+	EndBatchSelect();
+}
+
+void Database::EndAllImageAssetsSelect()
 {
 	EndBatchSelect();
 

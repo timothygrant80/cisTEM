@@ -472,8 +472,13 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 		 case wxSOCKET_LOST:
 		 {
+			 if (number_of_dispatched_jobs < my_job_package.number_of_jobs)
+			 {
+				 SocketSendError("Error: A slave has disconnected before all jobs are finished.");
+			 }
 
 		     wxPrintf("JOB Master : a slave socket Disconnected!!\n");
+
 		     sock->Destroy();
 		     //ExitMainLoop();
 

@@ -34,6 +34,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/database.cpp \
                        core/project.cpp \
                        core/job_packager.cpp \
+                       core/job_tracker.cpp \
                        core/run_profiles.cpp \
                        core/myapp.cpp
 

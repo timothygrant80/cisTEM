@@ -1,9 +1,18 @@
+typedef struct Peak {
+  float x;
+  float y;
+  float z;
+  float value;
+} Peak;
+
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
 #include <cstring>
 #include <cstdarg>
+#include <cfloat>
+#include <complex.h>
 #include <fftw3.h>
 #include <sqlite3.h>
 #include <wx/wx.h>
@@ -23,7 +32,7 @@
 #include "database.h"
 #include "project.h"
 #include "job_packager.h"
+#include "job_tracker.h"
 #include "myapp.h"
-
 
 

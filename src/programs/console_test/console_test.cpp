@@ -5,249 +5,320 @@
 #include "wx/socket.h"
 
 #include "../../core/core_headers.h"
-#include "../../core/socket_codes.h"
 
-#define SERVER_ID 100
-#define SOCKET_ID 101
+// embedded images..
 
-SETUP_SOCKET_CODES
+#include "hiv_image_80x80x1.cpp"
+#include "hiv_images_shift_noise_80x80x10.cpp"
+#include "sine_128x128x1.cpp"
+
+#define PrintResult(result)	PrintResultSlave(result, __LINE__);
+
+
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+#define ANSI_UNDERLINE     "\e[4m"
+#define ANSI_UNDERLINE_OFF "\e[24m"
+#define ANSI_BLINK_SLOW "\x1b[5m"
+#define ANSI_BLINK_OFF "\x1b[25m"
+
+
+
+
+
+
 
 class
 MyTestApp : public wxAppConsole
 {
+	wxString hiv_image_80x80x1_filename;
+	wxString hiv_images_80x80x10_filename;
+	wxString sine_wave_128x128x1_filename;
 
 	public:
 		virtual bool OnInit();
 
-		wxSocketServer *m_server;
+		void TestMRCFunctions();
+		void TestFFTFunctions();
+		void TestScalingAndSizingFunctions();
 
-
-		bool            m_busy;
-		bool 			is_connected;
-
-		int             m_numClients;
-		int             m_number_watching;
-
-		wxSocketBase *FirstSocket;
-		wxSocketBase *SecondSocket;
-		wxSocketBase *ThirdSocket;
-
-		bool firstsocketisconnected;
-		bool secondsocketisconnected;
-		bool thirdsocketisconnected;
-
-		void OnServerEvent(wxSocketEvent& event);
-		void OnSocketEvent(wxSocketEvent& event);
-
-
+		void BeginTest(const char *test_name);
+		void PrintTitle(const char *title);
+		void PrintResultSlave( bool passed, int line);
+		void WriteEmbeddedFiles();
+		void WriteEmbeddedArray(const char *filename, const unsigned char *array, long length);
 };
 
 
 IMPLEMENT_APP(MyTestApp)
 
-
 bool MyTestApp::OnInit()
 {
+	wxPrintf("\n\n\n     **   ");
+	wxPrintf(ANSI_UNDERLINE "ProjectX Library Tester" ANSI_UNDERLINE_OFF);
+	wxPrintf("   **\n");
 
-	wxIPV4address addr;
-	addr.Service(3000);
+	//wxPrintf("")
 
-	m_server = new wxSocketServer(addr);
+	WriteEmbeddedFiles();
+	wxPrintf("\n");
 
-	// We use Ok() here to see if the server is really listening
-	if (! m_server->Ok())
+	// Do tests..
+
+	//PrintTitle("Basic I/O Functions");
+
+	TestMRCFunctions();
+	TestFFTFunctions();
+	TestScalingAndSizingFunctions();
+
+
+	wxPrintf("\n\n\n");
+	return false;
+}
+
+void MyTestApp::TestScalingAndSizingFunctions()
+{
+	bool test_passed = true;
+
+	BeginTest("Image::ClipInto");
+
+	MRCFile input_file(hiv_images_80x80x10_filename.ToStdString(), false);
+	Image test_image;
+	Image clipped_image;
+
+	// test real space clipping..
+
+	clipped_image.Allocate(160,160,1);
+
+	test_image.ReadSlice(&input_file, 1);
+	test_image.ClipInto(&clipped_image, 0);
+
+	//wxPrintf("value = %f\n", clipped_image.ReturnRealPixelValue(119,119));
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(40,40, 0), -0.340068) == false) test_passed = false;
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(80,80, 0), 1.819805) == false) test_passed = false;
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(119,119, 0), 0.637069) == false) test_passed = false;
+
+
+	// test Fourier space clipping
+
+	test_image.ForwardFFT();
+	test_image.ClipInto(&clipped_image, 0);
+	clipped_image.BackwardFFT();
+	MRCFile output("test.mrc", true);
+	clipped_image.WriteSlice(&output, 1);
+
+
+	PrintResult(test_passed);
+
+
+}
+
+void MyTestApp::TestMRCFunctions()
+{
+	bool test_passed = true;
+
+	BeginTest("MRCFile::OpenFile");
+
+	MRCFile input_file(hiv_images_80x80x10_filename.ToStdString(), false);
+
+	// check dimensions..
+
+	if (input_file.ReturnNumberOfSlices() != 10) test_passed = false;
+	if (input_file.ReturnXSize() != 80) test_passed = false;
+	if (input_file.ReturnYSize() != 80) test_passed = false;
+	if (input_file.ReturnZSize() != 10) test_passed = false;
+
+	PrintResult(test_passed);
+
+	test_passed = true;
+	BeginTest("Image::ReadSlice");
+
+	Image test_image;
+	test_image.ReadSlice(&input_file, 1);
+
+	// check dimensions and type
+
+	if (test_image.is_in_real_space == false) test_passed = false;
+	if (test_image.logical_x_dimension != 80) test_passed = false;
+	if (test_image.logical_y_dimension != 80) test_passed = false;
+	if (test_image.logical_z_dimension != 1) test_passed = false;
+
+	// check first and last pixel...
+
+	test_passed = DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068);
+	test_passed = DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069);
+
+
+	PrintResult(true);
+}
+
+void MyTestApp::TestFFTFunctions()
+{
+	bool test_passed = true;
+	long counter;
+
+	BeginTest("Image::ForwardFFT");
+
+	MRCFile input_file(sine_wave_128x128x1_filename.ToStdString(), false);
+
+	// make an image that is all 1..
+
+	Image test_image;
+	test_image.Allocate(64,64,1);
+	test_image.SetToConstant(1);
+
+	// ForwardFFT
+
+	test_image.ForwardFFT();
+
+	// first pixel should be 1,0
+
+	if (DoublesAreAlmostTheSame(creal(test_image.complex_values[0]), 1) == false || DoublesAreAlmostTheSame(cimag(test_image.complex_values[0]), 0) == false) test_passed = false;
+
+	// if we set this to 0,0 - all remaining pixels should now be 0
+
+	test_image.complex_values[0] = 0 + 0 * I;
+
+	for (counter = 0; counter < test_image.real_memory_allocated / 2; counter++)
 	{
-		wxPrintf("Could not listen at the specified port !\n\n");
-		return false;
+		if (DoublesAreAlmostTheSame(creal(test_image.complex_values[counter]), 0) == false || DoublesAreAlmostTheSame(cimag(test_image.complex_values[counter]), 0) == false) test_passed = false;
+	}
+
+	// sine wave
+
+	test_image.ReadSlice(&input_file, 1);
+	test_image.ForwardFFT();
+
+	// now one pixel should be set, and the rest should be 0..
+
+	if (DoublesAreAlmostTheSame(creal(test_image.complex_values[20]), 0) == false || DoublesAreAlmostTheSame(cimag(test_image.complex_values[20]), -5) == false)
+	{
+		test_passed = false;
+	}
+
+	// set it to 0, then everything should be zero..
+
+	test_image.complex_values[20] = 0 + 0 * I;
+
+	for (counter = 0; counter < test_image.real_memory_allocated / 2; counter++)
+	{
+		if (creal(test_image.complex_values[counter]) >  0.000001 || cimag(test_image.complex_values[counter]) > 0.000001)
+		{
+			test_passed = false;
+		}
+	}
+
+	PrintResult(test_passed);
+
+	// Backward FFT
+
+	test_passed = true;
+	BeginTest("Image::BackwardFFT");
+
+	test_image.Allocate(64,64,1, false);
+	test_image.SetToConstant(0.0);
+	test_image.complex_values[0] = 1 + 0 * I;
+	test_image.BackwardFFT();
+	//test_image.RemoveFFTWPadding();
+
+	/*
+	for (counter = 0; counter < test_image.logical_x_dimension * test_image.logical_y_dimension; counter++)
+	{
+		if (DoublesAreAlmostTheSame(test_image.real_values[counter], 1.0) == false)
+		{
+			test_passed = false;
+			wxPrintf("pixel %li = %f\n", counter, test_image.real_values[counter]);
+		}
+
+	}*/
+
+	//test_image.AddFFTWPadding();
+
+	PrintResult(test_passed);
+
+}
+
+
+
+void MyTestApp::BeginTest(const char *test_name)
+{
+	int length = strlen(test_name);
+	int blank_space = 40 - length;
+	wxPrintf("Testing %s ", test_name);
+
+	for (int counter = 0; counter < blank_space; counter++)
+	{
+		wxPrintf(" ");
+	}
+
+	wxPrintf(": ");
+}
+
+void MyTestApp::PrintResultSlave(bool passed, int line)
+{
+
+	if (passed == true)
+	{
+		wxPrintf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
 	}
 	else
 	{
-		wxPrintf("Server listening.\n\n");
+		wxPrintf(ANSI_COLOR_RED ANSI_BLINK_SLOW "FAILED! (Line : %i)" ANSI_BLINK_OFF ANSI_COLOR_RESET, line);
 	}
 
-	// Setup the event handler and subscribe to connection events
-
-	m_server->SetEventHandler(*this, SERVER_ID);
-	m_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
-	m_server->Notify(true);
-
-	this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyTestApp::OnServerEvent) );
-	this->Connect(SOCKET_ID, wxEVT_SOCKET, wxSocketEventHandler( MyTestApp::OnSocketEvent) );
-
-	m_busy = false;
-	m_numClients = 0;
-	m_number_watching = 0;
-
-	return true;
+	wxPrintf("\n");
 }
 
-
-void MyTestApp::OnServerEvent(wxSocketEvent& event)
+void MyTestApp::PrintTitle(const char *title)
 {
-	  wxString s = _("OnServerEvent: ");
-	  wxSocketBase *sock = NULL;
-
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_CONNECTION : s.Append(_("wxSOCKET_CONNECTION\n")); break;
-	    default                  : s.Append(_("Unexpected event !\n")); break;
-	  }
-
-	  wxPrintf(s);
-
-	  if (m_numClients < 3)
-	  {
-		  // we have space for another
-
-	      // Accept new connection if there is one in the pending
-	      // connections queue, else exit. We use Accept(false) for
-	      // non-blocking accept (although if we got here, there
-	      // should ALWAYS be a pending connection).
-
-	      sock = m_server->Accept(false);
-	      sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
-
-	      // request identification..
-	    	  wxPrintf(" Requesting identification...\n");
-
-   	  	      sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
-   	  	      wxPrintf(" Waiting for reply...\n");
-  	  	      sock->WaitForRead(5);
-
-
-   	  	      if (sock->IsData() == true)
-   	  	      {
-   	  	    	  	   sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-	    	  	      if (memcmp(socket_input_buffer, socket_identification, sizeof(socket_input_buffer)) != 0)
-	    	  	      {
-	    	  	    	 wxPrintf(" Incorrect MSG - Exiting\n\n");
-	    	  	       	 // incorrect identification - close the connection..
-	    	  	       	 sock->Destroy();
-	    	  	       	 sock = NULL;
-	    	  	      }
-	    	  	      else
-	    	  	      {	  wxPrintf(" Correct Identification\n");
-
-	    	  	    	  sock->SetEventHandler(*this, SOCKET_ID);
-	    	  	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
-	    	  	    	  sock->Notify(true);
-	    	  	      }
-   	  	      }
-   	  	      else
-   	  	      {
-	    	   	   wxPrintf(" ...Read Timeout \n\n");
-	    	     // time out - close the connection
-	    	   	   sock->Destroy();
-	    	   	   sock = NULL;
-	    	  }
-
-
-	  }
-
-
-/*
-	  if (sock)
-	  {
-	   	    // fill the first free connection..
-
-	   	  if (firstsocketisconnected == false)
-	   	  {
-	   		  FirstSocket = sock;
-	   		  wxPrintf("\n   **   New Connection Accepted  on Socket #1 **\n");
-	   		  m_numClients++;
-	   		  firstsocketisconnected = true;
-	   	  }
-	   	  else
-	   	  if (secondsocketisconnected == false)
-	   	  {
-	   		  SecondSocket = sock;
-	   		  wxPrintf("\n   **   New Connection Accepted  on Socket #2 **\n");
-	   		  m_numClients++;
-	   		  secondsocketisconnected = true;
-	   	  }
-	   	  else
-	   	  if (thirdsocketisconnected == false)
-	   	  {
-	   		  ThirdSocket = sock;
-	   		  wxPrintf("\n   **   New Connection Accepted  on Socket #3 **\n");
-	   		  m_numClients++;
-	   		  thirdsocketisconnected = true;
-	   	  }
-	   	  else
-	   	  {
-	   		wxPrintf("\n   **   Error: Can't find a free socket, though i think there should be one?   **\n");
-
-	   	  }
-
-	  }
-	  else
-	  {
-		  wxPrintf("\n   **   Error: couldn't accept a new connection, maybe I have 3 connected already?   **\n");
-	    return;
-	  }
-
-*/
-
-
-	  //UpdateStatusBar();
+	wxPrintf("\n");
+	wxPrintf(ANSI_UNDERLINE "%s" ANSI_UNDERLINE_OFF, title);
+	wxPrintf("\n\n");
 }
 
-void MyTestApp::OnSocketEvent(wxSocketEvent& event)
+void MyTestApp::WriteEmbeddedFiles()
 {
-  wxString s = _("OnSocketEvent: ");
-  wxSocketBase *sock = event.GetSocket();
+	wxString temp_directory = wxFileName::GetTempDir();
+	wxPrintf("\nWriting out embedded test files to '%s'...", temp_directory);
+	fflush(stdout);
 
-  // First, print a message
-  switch(event.GetSocketEvent())
-  {
-    case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-    case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-    default             : s.Append(_("Unexpected event !\n")); break;
-  }
+	hiv_image_80x80x1_filename = temp_directory + "/hiv_image_80x80x1.mrc";
+	hiv_images_80x80x10_filename = temp_directory + "/hiv_images_shift_noise_80x80x10.mrc";
+	sine_wave_128x128x1_filename = temp_directory + "/sine_wave_128x128x1.mrc";
 
-  //m_text->AppendText(s);
+	WriteEmbeddedArray(hiv_image_80x80x1_filename, hiv_image_80x80x1_array, sizeof(hiv_image_80x80x1_array));
+	WriteEmbeddedArray(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
+	WriteEmbeddedArray(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array));
+	WriteEmbeddedArray(sine_wave_128x128x1_filename, sine_128x128x1_array, sizeof(sine_128x128x1_array));
 
-  wxPrintf(s);
+	wxPrintf("done!\n");
 
-  // Now we process the event
-  switch(event.GetSocketEvent())
-  {
-    case wxSOCKET_INPUT:
-    {
-      // We disable input events, so that the test doesn't trigger
-      // wxSocketEvent again.
-      sock->SetNotify(wxSOCKET_LOST_FLAG);
-/*
-      // Which test are we going to run?
 
-      switch (c)
-      {
-        case 0xBE:  wxPrintf("0xBE\n\n"); break;//Test1(sock); break;
-        case 0xCE:  wxPrintf("0xCE\n\n"); break;//Test2(sock); break;
-        case 0xDE:  wxPrintf("0xDE\n\n");break;//Test3(sock); break;
-        default:
-          wxPrintf("Unknown test id received from client\n\n");
-      }
-
-*/
-      // Enable input events again.
-
-      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-      break;
-    }
-
-    case wxSOCKET_LOST:
-    {
-        //m_numClients--;
-
-        //wxPrintf("Socket Disconnected!!\n");
-        sock->Destroy();
-
-        break;
-    }
-    default: ;
-  }
 }
+
+void MyTestApp::WriteEmbeddedArray(const char *filename, const unsigned char *array, long length)
+{
+
+	FILE *output_file = NULL;
+	output_file = fopen(filename, "wb+");
+
+	if (output_file == NULL)
+	{
+		wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
+		abort();
+
+	}
+
+	 fwrite (array , sizeof(unsigned char), length, output_file);
+
+	 fclose(output_file);
+
+
+}
+
 

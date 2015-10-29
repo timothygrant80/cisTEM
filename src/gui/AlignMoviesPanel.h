@@ -9,7 +9,11 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 
 		bool show_expert_options;
 		long my_job_id;
+
+
 		JobPackage my_job_package;
+		JobTracker my_job_tracker;
+
 		bool running_job;
 
 
@@ -37,9 +41,12 @@ public:
 		void TerminateButtonClick( wxCommandEvent& event );
 		void Refresh();
 		void SetInfo();
+		void OnInfoURL(wxTextUrlEvent& event);
 
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
+
+		void UpdateProgressBar();
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);
 

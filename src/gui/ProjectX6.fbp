@@ -743,7 +743,7 @@
                 </object>
             </object>
         </object>
-        <object class="Panel" expanded="0">
+        <object class="Panel" expanded="1">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
             <property name="bg"></property>
@@ -795,7 +795,7 @@
             <event name="OnSetFocus"></event>
             <event name="OnSize"></event>
             <event name="OnUpdateUI"></event>
-            <object class="wxBoxSizer" expanded="0">
+            <object class="wxBoxSizer" expanded="1">
                 <property name="minimum_size"></property>
                 <property name="name">bSizer12</property>
                 <property name="orient">wxHORIZONTAL</property>
@@ -12975,7 +12975,7 @@
                                             <event name="OnText"></event>
                                             <event name="OnTextEnter"></event>
                                             <event name="OnTextMaxLen"></event>
-                                            <event name="OnTextURL"></event>
+                                            <event name="OnTextURL">OnInfoURL</event>
                                             <event name="OnUpdateUI"></event>
                                         </object>
                                     </object>

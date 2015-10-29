@@ -23,5 +23,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		double ReturnAssetPixelSize(long wanted_asset);
+
 };
 

@@ -7,6 +7,8 @@
 class Image {
 
 
+public:
+
 	int 		 logical_x_dimension;							// !< Logical (X) dimensions of the image., Note that this does not necessarily correspond to memory allocation dimensions (ie physical dimensions).
 	int 		 logical_y_dimension;							// !< Logical (Y) dimensions of the image., Note that this does not necessarily correspond to memory allocation dimensions (ie physical dimensions).
 	int 		 logical_z_dimension;							// !< Logical (Z) dimensions of the image., Note that this does not necessarily correspond to memory allocation dimensions (ie physical dimensions).
@@ -46,6 +48,8 @@ class Image {
 	int			 logical_lower_bound_real_y;					// !<  In each dimension, the lower bound of the real image's logical addresses
 	int			 logical_lower_bound_real_z;					// !<  In each dimension, the lower bound of the real image's logical addresses
 
+	int          max_array_value;
+
 	long         real_memory_allocated;							// !<  Number of floats allocated in real space;
 
 
@@ -62,7 +66,6 @@ class Image {
 	fftwf_plan	 plan_bwd;										// !< FFTW plan for the image (bwd)
 	bool      	 planned;										// !< Whether the plan has been setup by/for FFTW
 
-public:
 	// Methods
 
 	Image();
@@ -72,9 +75,32 @@ public:
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
 	void Deallocate();
 
+	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	{
+		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range", wanted_x, wanted_y, wanted_z);
+		return (((logical_x_dimension + 2) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + 2) * wanted_y) + wanted_x;
+
+	}
+
+	inline float ReturnRealPixelFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	{
+		return real_values[ReturnReal1DAddressFromPhysicalCoord(wanted_x, wanted_y, wanted_z)];
+	};
+
+
+	int ReturnFourier1DAddressFromPhysicalAddress(int wanted_x, int wanted_y, int wanted_z);
+	int ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z);
+	fftw_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value = 0.0);
+
+	bool HasSameDimensionsAs(Image *other_image);
+
 	void SetLogicalDimensions(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1);
 	void UpdateLoopingAndAddressing();
 	void UpdatePhysicalAddressOfBoxCenter();
+
+	int ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index);
+	int ReturnFourierLogicalCoordGivenPhysicalCoord_Y(int physical_index);
+	int ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index);
 
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
@@ -85,13 +111,27 @@ public:
 	void AddFFTWPadding();
 	void RemoveFFTWPadding();
 
-	inline void ReadSlice(MRCFile *input_file, long slice_to_read) {ReadSlices(input_file, slice_to_read, slice_to_read);}; //!> \brief Read a a slice from disk..(this just calls ReadSlices)
+	inline void ReadSlice(MRCFile *input_file, long slice_to_read) { ReadSlices(input_file, slice_to_read, slice_to_read);}; //!> \brief Read a a slice from disk..(this just calls ReadSlices)
 	void ReadSlices(MRCFile *input_file, long start_slice, long end_slice);
 
-	inline void WriteSlice(MRCFile *input_file, long slice_to_write) {WriteSlices(input_file, slice_to_write, slice_to_write);}
+	inline void WriteSlice(MRCFile *input_file, long slice_to_write) { WriteSlices(input_file, slice_to_write, slice_to_write);}
 	void WriteSlices(MRCFile *input_file, long start_slice, long end_slice);
 
+	void SetToConstant(float wanted_value);
+	void ClipInto(Image *other_image, float wanted_padding_value = 0);
+	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
+	void CopyFrom(Image *other_image);
+	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift);
 
+	void AddImage(Image *other_image);
+	void SubtractImage(Image *other_image);
+	void ApplyBFactor(float bfactor);
+	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
+	void CalculateCrossCorrelationImageWith(Image *other_image);
+	void SwapRealSpaceQuadrants();
+
+	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
+	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 };
 
 

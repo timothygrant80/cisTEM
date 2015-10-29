@@ -74,6 +74,24 @@ AlignMoviesPanel( parent )
 
 }
 
+void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event)
+{
+	 const wxMouseEvent& ev = event.GetMouseEvent();
+
+	 // filter out mouse moves, too many of them
+	 if ( ev.Moving() ) return;
+
+	 long start = event.GetURLStart();
+
+	 wxTextAttr my_style;
+
+	 InfoText->GetStyle(start, my_style);
+
+	 // Launch the URL
+
+	 wxLaunchDefaultBrowser(my_style.GetURL());
+}
+
 void MyAlignMoviesPanel::SetInfo()
 {
 	#include "icons/dlp_alignment.cpp"
@@ -211,27 +229,70 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Brilot, A.F., Chen, J.Z., Cheng, A., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Henderson, R., Grigorieff, N.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637. doi:10.1016/j.jsb.2012.02.003"));
+	InfoText->WriteText(wxT(" 2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637. "));
+	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2012.02.003");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/j.jsb.2012.02.003"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
 	InfoText->Newline();
+	InfoText->Newline();
+
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Campbell, M.G., Cheng, A., Brilot, A.F., Moeller, A., Lyumkis, D., Veesler, D., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Grigorieff, N.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8. doi:10.1016/j.str.2012.08.026"));
+	InfoText->WriteText(wxT(" 2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8. "));
+	InfoText->BeginURL("http://dx.doi.org/10.1016/j.str.2012.08.026");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/j.str.2012.08.026"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
 	InfoText->Newline();
+	InfoText->Newline();
+
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. doi:10.7554/eLife.06980"));
+	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. "));
+	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.06980");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.7554/eLife.06980"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
 	InfoText->Newline();
+	InfoText->Newline();
+
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. doi:10.1038/nmeth.2472"));
+	InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. "));
+	InfoText->BeginURL("http://dx.doi.org/10.1038/nmeth.2472");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1038/nmeth.2472"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
 	InfoText->Newline();
+	InfoText->Newline();
+
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Scheres, S.H.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. doi:10.7554/eLife.03665"));
+	InfoText->WriteText(wxT(" Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. "));
+	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.03665");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.7554/eLife.03665"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
 	InfoText->Newline();
 
 	InfoText->EndSuppressUndo();
@@ -366,7 +427,10 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int horizontal_mask;
 	int vertical_mask;
 
+	float current_pixel_size;
+
 	std::string current_filename;
+	wxString output_filename;
 
 	// read the options form the gui..
 
@@ -428,8 +492,14 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		// Horizontal mask size in pixels (int)
 		// Vertical mask size in pixels (int)
 
+		// OUTPUT FILENAME, MUST BE SET PROPERLY
+
+		output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		output_filename.Replace(".mrc", "_ali.mrc", false);
+
 		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
-		my_job_package.AddJob("sffbbfifbii", current_filename.c_str(), float(minimum_shift), float(maximum_shift), should_dose_filter, should_restore_power, float(termination_threshold), max_iterations, float(bfactor), should_mask_central_cross, horizontal_mask, vertical_mask);
+		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		my_job_package.AddJob("ssfffbbfifbii", current_filename.c_str(), output_filename.ToUTF8().data(), current_pixel_size, float(minimum_shift), float(maximum_shift), should_dose_filter, should_restore_power, float(termination_threshold), max_iterations, float(bfactor), should_mask_central_cross, horizontal_mask, vertical_mask);
 	}
 
 	// launch a controller
@@ -453,6 +523,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		Layout();
 
 		running_job = true;
+		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
 
 	}
 	ProgressBar->Pulse();
@@ -489,7 +560,7 @@ void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
 
 void MyAlignMoviesPanel::WriteInfoText(wxString text_to_write)
 {
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
 	output_textctrl->AppendText(text_to_write);
 
 	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
@@ -559,7 +630,9 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 	 		 int finished_job;
 	 		 sock->ReadMsg(&finished_job, 4);
+	 		 my_job_tracker.MarkJobFinished();
 
+	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 	 		 //WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
 	 	  }
 	      else
@@ -569,6 +642,8 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 			  int number_of_connections;
               sock->ReadMsg(&number_of_connections, 4);
+
+              my_job_tracker.AddConnection();
 
               ProgressBar->Pulse();
 
@@ -608,4 +683,13 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	    default: ;
 	  }
 
+}
+
+
+void MyAlignMoviesPanel::UpdateProgressBar()
+{
+	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
+	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
+
+	TimeRemainingText->SetLabel(wxString::Format("Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }

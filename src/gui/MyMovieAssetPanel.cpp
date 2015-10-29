@@ -90,6 +90,10 @@ void  MyMovieAssetPanel::RemoveAllFromDatabase()
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE MOVIE_GROUP_LIST");
 	main_frame->current_project.database.CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 
+	main_frame->current_project.database.ExecuteSQL("DROP TABLE MOVIE_ASSETS");
+	main_frame->current_project.database.CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+
+
 }
 
 void MyMovieAssetPanel::RemoveAllGroupMembersFromDatabase(int wanted_group_id)
@@ -189,4 +193,9 @@ void MyMovieAssetPanel::ImportAssetClick( wxCommandEvent& event )
 	MyMovieImportDialog *import_dialog = new MyMovieImportDialog(this);
 	import_dialog->ShowModal();
 
+}
+
+double MyMovieAssetPanel::ReturnAssetPixelSize(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->pixel_size;
 }

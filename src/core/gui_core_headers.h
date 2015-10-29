@@ -32,6 +32,7 @@
 #include <wx/dir.h>
 #include <wx/progdlg.h>
 #include <wx/richtext/richtextctrl.h>
+#include <wx/richtext/richtextstyles.h>
 
 #include "../gui/job_panel.h"
 #include "gui_job_controller.h"

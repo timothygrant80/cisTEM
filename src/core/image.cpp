@@ -52,12 +52,61 @@ Image::Image()
 	plan_bwd = NULL;
 
 	planned = false;
-};
+}
+
+Image::Image( const Image &other_image) // copy contructor
+{
+	 *this = other_image;
+}
 
 Image::~Image()
 {
 	Deallocate();
 }
+
+
+
+Image & Image::operator = (const Image &other_image)
+{
+	*this = &other_image;
+	return *this;
+}
+
+Image & Image::operator = (const Image *other_image)
+{
+   // Check for self assignment
+   if(this != other_image)
+   {
+		MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+
+		if (is_in_memory == true)
+		{
+
+			if (logical_x_dimension != other_image->logical_x_dimension || logical_y_dimension != other_image->logical_y_dimension || logical_z_dimension != other_image->logical_z_dimension)
+			{
+				Deallocate();
+				Allocate(other_image->logical_x_dimension, other_image->logical_y_dimension, other_image->logical_z_dimension, other_image->is_in_real_space);
+			}
+		}
+		else
+		{
+			Allocate(other_image->logical_x_dimension, other_image->logical_y_dimension, other_image->logical_z_dimension, other_image->is_in_real_space);
+		}
+
+		// by here the memory allocation should be ok..
+
+		is_in_real_space = other_image->is_in_real_space;
+		object_is_centred_in_box = other_image->object_is_centred_in_box;
+
+		for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			real_values[pixel_counter] = other_image->real_values[pixel_counter];
+		}
+   }
+
+   return *this;
+}
+
 
 
 //!>  \brief  Deallocate all the memory.  The idea is to keep this safe in the case that something isn't
@@ -101,7 +150,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 			// everything is already done..
 
 			is_in_real_space = should_be_in_real_space;
-			wxPrintf("returning\n");
+//			wxPrintf("returning\n");
 
 			return;
 		}
@@ -137,13 +186,13 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
     {
     	if (logical_z_dimension > 1)
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_x_dimension, logical_y_dimension, logical_z_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_x_dimension, logical_y_dimension, logical_z_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
+    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
     	}
     	else
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_x_dimension, logical_y_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_x_dimension, logical_y_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
+    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
 
     	}
 
@@ -366,6 +415,8 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 {
 
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
+	MyDebugAssertTrue(start_slice > 0, "Start slice is less than 0, the first slice is 1!");
+	MyDebugAssertTrue(end_slice <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");
 	MyDebugAssertTrue(input_file->my_file.is_open(), "MRCFile not open!");
 
 
@@ -383,6 +434,7 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 	// We should be set up - so read in the correct values.
 	// AT THE MOMENT, WE CAN ONLY READ REAL SPACE IMAGES, SO OVERRIDE THIS!!!!!
 
+	is_in_real_space = true;
 
 
 	input_file->ReadSlicesFromDisk(start_slice, end_slice, real_values);
@@ -405,7 +457,7 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 	if (start_slice == 1) // if the start slice is one, we set the header to match the image
 	{
 		input_file->SetXSize(logical_x_dimension);
-		input_file->SetYSize(logical_x_dimension);
+		input_file->SetYSize(logical_y_dimension);
 
 		if (end_slice > input_file->ReturnNumberOfSlices())
 		{
@@ -428,16 +480,42 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 
 	MyDebugAssertTrue(logical_x_dimension == input_file->ReturnXSize() || logical_y_dimension == input_file->ReturnYSize(), "Image dimensions and file dimensions differ!");
 
-	// check the allocations..
+	// if the image is complex.. make a temp image and transform it..
 
 	int number_of_slices = (end_slice - start_slice) + 1;
 
-	RemoveFFTWPadding();
+	if (is_in_real_space == false)
+	{
+		Image temp_image;
+		temp_image.CopyFrom(this);
+		temp_image.BackwardFFT();
+		temp_image.RemoveFFTWPadding();
+		input_file->WriteSlicesToDisk(start_slice, end_slice, temp_image.real_values);
 
-	input_file->WriteSlicesToDisk(start_slice, end_slice, real_values);
+	}
+	else // real space
+	{
+		RemoveFFTWPadding();
+		input_file->WriteSlicesToDisk(start_slice, end_slice, real_values);
+		AddFFTWPadding(); // to go back
+	}
+}
 
-	AddFFTWPadding(); // to go back
+void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write)
+{
+	MyDebugAssertTrue(slice_to_write >0, "Slice is less than 1, first slice is 1");
+	MRCFile output_file(filename, false);
+	WriteSlice(&output_file, slice_to_write);
+}
 
+void Image::QuickAndDirtyReadSlice(std::string filename, long slice_to_read)
+{
+	MRCFile input_file(filename, false);
+
+	MyDebugAssertTrue(slice_to_read <= input_file.ReturnNumberOfSlices(), "End slices is greater than number of slices in the file!");
+	MyDebugAssertTrue(slice_to_read >0, "Slice is less than 1, first slice is 1");
+
+	ReadSlice(&input_file, slice_to_read);
 }
 
 //!> \brief Take a contiguous set of values, and add the FFTW padding.
@@ -678,36 +756,85 @@ void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_
 	ClipInto(&temp_image, wanted_padding_value);
 
 	CopyFrom(&temp_image);
+	//Consume(&temp_image);
 }
 
 void Image::CopyFrom(Image *other_image)
+{
+	*this = other_image;
+}
+
+void Image::CopyLoopingAndAddressingFrom(Image *other_image)
+{
+	object_is_centred_in_box = other_image->object_is_centred_in_box;
+	logical_x_dimension = other_image->logical_x_dimension;
+	logical_y_dimension = other_image->logical_y_dimension;
+	logical_z_dimension = other_image->logical_z_dimension;
+
+	physical_upper_bound_complex_x = other_image->physical_upper_bound_complex_x;
+	physical_upper_bound_complex_y = other_image->physical_upper_bound_complex_y;
+	physical_upper_bound_complex_z = other_image->physical_upper_bound_complex_z;
+
+	physical_address_of_box_center_x = other_image->physical_address_of_box_center_x;
+	physical_address_of_box_center_y = other_image->physical_address_of_box_center_y;
+	physical_address_of_box_center_z = other_image->physical_address_of_box_center_z;
+
+	physical_index_of_first_negative_frequency_x = other_image->physical_index_of_first_negative_frequency_x;
+	physical_index_of_first_negative_frequency_y = other_image->physical_index_of_first_negative_frequency_y;
+	physical_index_of_first_negative_frequency_z = other_image->physical_index_of_first_negative_frequency_z;
+
+	fourier_voxel_size_x = other_image->fourier_voxel_size_x;
+	fourier_voxel_size_y = other_image->fourier_voxel_size_y;
+	fourier_voxel_size_z = other_image->fourier_voxel_size_z;
+
+	logical_upper_bound_complex_x = other_image->logical_upper_bound_complex_x;
+	logical_upper_bound_complex_y = other_image->logical_upper_bound_complex_y;
+	logical_upper_bound_complex_z = other_image->logical_upper_bound_complex_z;
+
+	logical_lower_bound_complex_x = other_image->logical_lower_bound_complex_x;
+	logical_lower_bound_complex_y = other_image->logical_lower_bound_complex_y;
+	logical_lower_bound_complex_z = other_image->logical_lower_bound_complex_z;
+
+	logical_upper_bound_real_x = other_image->logical_upper_bound_complex_x;
+	logical_upper_bound_real_y = other_image->logical_upper_bound_complex_y;
+	logical_upper_bound_real_z = other_image->logical_upper_bound_complex_z;
+
+	logical_lower_bound_real_x = other_image->logical_lower_bound_complex_x;
+	logical_lower_bound_real_y = other_image->logical_lower_bound_complex_y;
+	logical_lower_bound_real_z = other_image->logical_lower_bound_complex_z;
+}
+
+void Image::Consume(Image *other_image) // copy the parameters then directly steal the memory of another image, leaving it an empty shell
 {
 	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
 
 	if (is_in_memory == true)
 	{
-
-		if (logical_x_dimension != other_image->logical_x_dimension || logical_y_dimension != other_image->logical_y_dimension || logical_z_dimension != other_image->logical_z_dimension)
-		{
-			Deallocate();
-			Allocate(other_image->logical_x_dimension, other_image->logical_y_dimension, other_image->logical_z_dimension, other_image->is_in_real_space);
-		}
+		Deallocate();
 	}
-	else
-	{
-		Allocate(other_image->logical_x_dimension, other_image->logical_y_dimension, other_image->logical_z_dimension, other_image->is_in_real_space);
-	}
-
-	// by here the memory allocation should be ok..
 
 	is_in_real_space = other_image->is_in_real_space;
-	object_is_centred_in_box = other_image->object_is_centred_in_box;
+	real_memory_allocated = other_image->real_memory_allocated;
+	CopyLoopingAndAddressingFrom(other_image);
 
-	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
-	{
-		real_values[pixel_counter] = other_image->real_values[pixel_counter];
-	}
+	real_values = other_image->real_values;
+	complex_values = other_image->complex_values;
+	is_in_memory = other_image->is_in_memory;
+
+	plan_fwd = other_image->plan_fwd;
+	plan_bwd = other_image->plan_bwd;
+	planned = other_image->planned;
+
+	other_image->real_values = NULL;
+	other_image->complex_values = NULL;
+	other_image->is_in_memory = false;
+
+	other_image->plan_fwd = NULL;
+	other_image->plan_bwd = NULL;
+	other_image->planned = false;
+
 }
+
 
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift)
 {
@@ -738,25 +865,26 @@ void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_
 		need_to_fft = true;
 	}
 
-	for (k=0; k < physical_upper_bound_complex_z; k++)
+	for (k=0; k <= physical_upper_bound_complex_z; k++)
 	{
 		k_logical = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k);
 		phase_z = ReturnPhaseFromShift(wanted_z_shift, k_logical, logical_z_dimension);
 
-		for (j = 0; j < physical_upper_bound_complex_y; j++)
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
 		{
 			j_logical = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
 			phase_y = ReturnPhaseFromShift(wanted_y_shift, j_logical, logical_y_dimension);
-		}
 
-		for (i = 0; i < physical_upper_bound_complex_x; i++)
-		{
-			phase_x = ReturnPhaseFromShift(wanted_x_shift, i, logical_x_dimension);
-			total_phase_shift = Return3DPhaseFromIndividualDimensions(phase_x, phase_y, phase_z);
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
 
-			complex_values[pixel_counter] *= total_phase_shift;
+				phase_x = ReturnPhaseFromShift(wanted_x_shift, i, logical_x_dimension);
 
-			pixel_counter++;
+				total_phase_shift = Return3DPhaseFromIndividualDimensions(phase_x, phase_y, phase_z);
+				complex_values[pixel_counter] *= total_phase_shift;
+
+				pixel_counter++;
+			}
 		}
 	}
 
@@ -783,17 +911,17 @@ void Image::ApplyBFactor(float bfactor) // add real space and windows later, pro
 	float filter_value;
 	//float frequency;
 
-	for (k = 0; k < logical_z_dimension; k++)
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
 	{
-		z_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * pow(fourier_voxel_size_z,2);
+		z_coord = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
 
-		for (j = 0; j < logical_y_dimension; j++)
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
 		{
-			y_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * pow(fourier_voxel_size_y, 2);
+			y_coord = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
 
-			for (i = 0; i < physical_upper_bound_complex_x; i++)
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
 			{
-				x_coord = i * pow(fourier_voxel_size_x, 2);
+				x_coord = pow(i * fourier_voxel_size_x, 2);
 
 				// compute squared radius, in units of reciprocal pixels
 
@@ -823,20 +951,20 @@ void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 		ForwardFFT();
 	}
 
-	for (pixel_counter = 0, logical_y_dimension; pixel_counter++;)
+	for (pixel_counter = logical_lower_bound_complex_y; pixel_counter <= logical_upper_bound_complex_y; pixel_counter++)
 	{
-		for (width_counter = 0; width_counter < vertical_half_width; width_counter++)
+		for (width_counter = -(horizontal_half_width - 1); width_counter <= (horizontal_half_width - 1); width_counter++)
 		{
-			complex_values[width_counter + (pixel_counter * physical_upper_bound_complex_x)] = 0.0 + 0.0 * I;
+			complex_values[ReturnFourier1DAddressFromLogicalCoord(width_counter, pixel_counter, 0)] = 0.0 + 0.0 * I;
 		}
 	}
 
 
-	for (pixel_counter = 0; pixel_counter < physical_upper_bound_complex_x; pixel_counter++)
+	for (pixel_counter = 0; pixel_counter <= logical_upper_bound_complex_x; pixel_counter++)
 	{
-		for (width_counter = -width_counter; width_counter <  vertical_half_width; width_counter++)
+		for (width_counter = -(vertical_half_width - 1); width_counter <=  (vertical_half_width - 1); width_counter++)
 		{
-			complex_values[ReturnFourier1DAddressFromPhysicalAddress(pixel_counter, logical_y_dimension / 2 + width_counter, 1)] = 0.0 + 0.0 * I;
+			complex_values[ReturnFourier1DAddressFromLogicalCoord(pixel_counter, width_counter, 0)] = 0.0 + 0.0 * I;
 
 		}
 	}
@@ -859,7 +987,6 @@ void Image::SwapRealSpaceQuadrants()
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
 	bool must_fft = false;
-	long pixel_counter;
 
 	float x_shift_to_apply;
 	float y_shift_to_apply;
@@ -871,39 +998,39 @@ void Image::SwapRealSpaceQuadrants()
 		ForwardFFT();
 	}
 
-	if (object_is_centred_in_box)
+	if (object_is_centred_in_box == true)
 	{
-		x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
-		y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
-		z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
+		x_shift_to_apply = float(physical_address_of_box_center_x);
+		y_shift_to_apply = float(physical_address_of_box_center_y);
+		z_shift_to_apply = float(physical_address_of_box_center_z);
 	}
 	else
 	{
 		if (IsEven(logical_x_dimension) == true)
 		{
-			x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
+			x_shift_to_apply = float(physical_address_of_box_center_x);
 		}
 		else
 		{
-			x_shift_to_apply = float(physical_address_of_box_center_x);
+			x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
 		}
 
 		if (IsEven(logical_y_dimension) == true)
 		{
-			y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
+			y_shift_to_apply = float(physical_address_of_box_center_y);
 		}
 		else
 		{
-			y_shift_to_apply = float(physical_address_of_box_center_y);
+			y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
 		}
 
 		if (IsEven(logical_z_dimension) == true)
 		{
-			z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
+			z_shift_to_apply = float(physical_address_of_box_center_z);
 		}
 		else
 		{
-			z_shift_to_apply = float(physical_address_of_box_center_z);
+			z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
 		}
 	}
 
@@ -930,7 +1057,7 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == other_image->is_in_real_space, "Images are in different spaces");
-	MyDebugAssertTrue(HasSameDimensionsAs(other_image) == false, "Images are in different spaces");
+	MyDebugAssertTrue(HasSameDimensionsAs(other_image) == true, "Images are different sizes");
 
 	long pixel_counter;
 	bool must_fft = false;
@@ -966,15 +1093,15 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted_max_radius)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(is_in_real_space == false, "Image not in real space");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
 
 	int k;
 	int j;
 	int i;
 
-	int z;
-	int y;
-	int x;
+	float z;
+	float y;
+	float x;
 
 	long pixel_counter = 0;
 
@@ -998,11 +1125,16 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 	if (wanted_min_radius > 0.0 && wanted_min_radius < 1.0 && wanted_max_radius > 0.0 && wanted_max_radius < 1.0) radii_are_fractional = true;
 	else radii_are_fractional = false;
 
+	wanted_min_radius = pow(wanted_min_radius, 2);
+	wanted_max_radius = pow(wanted_max_radius, 2);
+
 	if (radii_are_fractional == true)
 	{
 		inv_max_radius_sq_x = 1.0 / pow(physical_address_of_box_center_x, 2);
 		inv_max_radius_sq_y = 1.0 / pow(physical_address_of_box_center_y, 2);
-		inv_max_radius_sq_z = 1.0 / pow(physical_address_of_box_center_z, 2);
+
+		if (logical_z_dimension == 1) inv_max_radius_sq_z = 0;
+		else inv_max_radius_sq_z = 1.0 / pow(physical_address_of_box_center_z, 2);
 
 		for (k = 0; k < logical_z_dimension; k++)
 			{
@@ -1018,7 +1150,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 						distance_from_origin = x + y + z;
 
-						if (distance_from_origin > wanted_min_radius && distance_from_origin < wanted_max_radius)
+						if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
 						{
 							if (real_values[pixel_counter] > found_peak.value)
 							{
@@ -1030,8 +1162,13 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 						}
 
+						//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+						//wxPrintf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
+
 						pixel_counter++;
 					}
+
+					pixel_counter+=2;
 				}
 
 
@@ -1053,19 +1190,24 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 					distance_from_origin = x + y + z;
 
-					if (distance_from_origin > wanted_min_radius && distance_from_origin < wanted_max_radius)
+					if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
 					{
 						if (real_values[pixel_counter] > found_peak.value)
 						{
+
 							found_peak.value = real_values[pixel_counter];
 							found_peak.x = i - physical_address_of_box_center_x;
 							found_peak.y = j - physical_address_of_box_center_y;
 							found_peak.z = k - physical_address_of_box_center_z;
+							//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+							//wxPrintf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
 						}
 					}
 
 					pixel_counter++;
 				}
+
+				pixel_counter+=2;
 			}
 		}
 	}
@@ -1076,11 +1218,119 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(is_in_real_space == false, "Image not in real space");
-	MyDebugAssertTrue(logical_z_dimension != 1, "Only 2D images supported for now");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D images supported for now");
+
+	Peak integer_peak;
+	Peak found_peak;
+
+	int best_x;
+	int best_y;
+	int x_counter;
+	int y_counter;
+	int current_x;
+	int current_y;
+
+	float average_of_square = 0.0;
+	float scale_factor;
+	float scaled_square[3][3];
+
+	float coefficient_one;
+	float coefficient_two;
+	float coefficient_three;
+	float coefficient_four;
+	float coefficient_five;
+	float coefficient_six;
+	float denominator;
+
+	float x_max;
+	float y_max;
+
+
+
+	integer_peak = FindPeakWithIntegerCoordinates(wanted_min_radius, wanted_max_radius);
+
+	//wxPrintf("Integer Peak = %f, %f\n", integer_peak.x, integer_peak.y);
+
+	best_x = integer_peak.x + physical_address_of_box_center_x;
+	best_y = integer_peak.y + physical_address_of_box_center_y;
+
+	for (y_counter = -1; y_counter <= 1; y_counter++)
+	{
+		for (x_counter = -1; x_counter <= 1; x_counter++)
+		{
+			current_x = best_x + x_counter;
+			current_y = best_y + y_counter;
+
+			if (current_x < 0 || current_x >= logical_x_dimension || current_y < 0 || current_y >= logical_y_dimension) scaled_square[x_counter + 1][y_counter + 1] = 0.0;
+			else scaled_square[x_counter + 1][y_counter + 1] = ReturnRealPixelFromPhysicalCoord(current_x, current_y , 0);
+
+			average_of_square += scaled_square[x_counter + 1][y_counter + 1];
+		}
+	}
+
+	average_of_square /= 9.0;
+
+	if (average_of_square != 0.0) scale_factor = 1.0 / average_of_square;
+	else scale_factor = 1.0;
+
+	for (y_counter = 0; y_counter <  3; y_counter++)
+	{
+		for (x_counter = 0; x_counter < 3; x_counter++)
+		{
+			scaled_square[x_counter][y_counter]  *= scale_factor;
+		}
+	}
+
+    coefficient_one = (26.0e0 * scaled_square[0][0] - scaled_square[0][1] + 2.0e0 * scaled_square[0][2] - scaled_square[1][0] - 19.0e0 * scaled_square[1][1] - 7.0e0 * scaled_square[1][2] + 2.0e0 * scaled_square[2][0] - 7.0e0 * scaled_square[2][1] + 14.0e0 * scaled_square[2][2]) / 9.0e0;
+    coefficient_two = ( 8.0e0 * scaled_square[0][0] - 8.0e0 * scaled_square[0][1] + 5.0e0 * scaled_square[1][0] - 8.0e0 * scaled_square[1][1] + 3.0e0 * scaled_square[1][2] + 2.0e0 * scaled_square[2][0] - 8.0e0 * scaled_square[2][1] + 6.0e0 * scaled_square[2][2]) / (-1.0e0 * 6.0e0);
+    coefficient_three = (scaled_square[0][0] - 2.0e0 * scaled_square[0][1] + scaled_square[0][2] + scaled_square[1][0] - 2.0e0 * scaled_square[1][1] + scaled_square[1][2] + scaled_square[2][0] - 2.0e0 * scaled_square[2][1] + scaled_square[2][2]) / 6.0e0;
+    coefficient_four = (8.0e0 * scaled_square[0][0] + 5.0e0 * scaled_square[0][1] + 2.0e0 * scaled_square[0][2] - 8.0e0 * scaled_square[1][0] - 8.0e0 * scaled_square[1][1] - 8.0e0 * scaled_square[1][2] + 3.0e0 * scaled_square[2][1] + 6.0e0 * scaled_square[2][2]) / (-1.0e0 * 6.0e0);
+    coefficient_five = (scaled_square[0][0] - scaled_square[0][2] - scaled_square[2][0] + scaled_square[2][2]) / 4.0e0;
+    coefficient_six = (scaled_square[0][0] + scaled_square[0][1] + scaled_square[0][2] - 2.0e0 * scaled_square[1][0] - 2.0e0 * scaled_square[1][1] - 2.0e0 * scaled_square[1][2] + scaled_square[2][0] + scaled_square[2][1] + scaled_square[2][2]) / 6.0e0;
+    denominator = 4.0e0 * coefficient_three * coefficient_six - pow(coefficient_five, 2);
+
+    if (denominator == 0.0) found_peak = integer_peak;
+    else
+    {
+    	y_max = (coefficient_four * coefficient_five - 2.0e0 * coefficient_two * coefficient_six) / denominator;
+    	x_max = (coefficient_two * coefficient_five - 2.0e0 * coefficient_four * coefficient_three) / denominator;
+
+        y_max = y_max - 2.0e0;
+        x_max = x_max - 2.0e0;
+
+        if (y_max > 1.05e0 || y_max < -1.05e0) y_max = 0.0e0;
+
+        if (x_max > 1.05e0 || x_max < -1.05e0) x_max = 0.0e0;
+
+        found_peak = integer_peak;
+
+        found_peak.x += x_max;
+        found_peak.y += y_max;
+
+        found_peak.value = 4.0e0 * coefficient_one * coefficient_three * coefficient_six - coefficient_one * pow(coefficient_five,2) - pow(coefficient_two,2) * coefficient_six + coefficient_two * coefficient_four*coefficient_five - pow(coefficient_four,2) * coefficient_three;
+        found_peak.value = found_peak.value * average_of_square / denominator;
+
+        if (fabs((found_peak.value - integer_peak.value) / (found_peak.value + integer_peak.value)) > 0.15) found_peak.value = integer_peak.value;
+    }
+
+	//wxPrintf("%f %f %f %f\n", integer_peak.x, integer_peak.y, found_peak.x, found_peak.y);
+    return found_peak;
+}
+
+
+/*
+Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D images supported for now");
 
 	int x;
 	int y;
+
+	int current_x;
+	int current_y;
 
 	float ImportantSquare[3][3];
 
@@ -1104,7 +1354,12 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
 	{
 		for (x = 0; x <= 2; x++)
 		{
-			ImportantSquare[x][y] = ReturnRealPixelFromPhysicalCoord(integer_peak.x - 2 + x, integer_peak.y - 2 + x, 0);
+			current_x = integer_peak.x + physical_address_of_box_center_x - 1 + x;
+			current_y = integer_peak.y + physical_address_of_box_center_y - 1 + y;
+
+			if (current_x < 0 || current_x >= logical_x_dimension || current_y < 0 || current_y >= logical_y_dimension) ImportantSquare[x][y] = 0.0;
+			else ImportantSquare[x][y] = ReturnRealPixelFromPhysicalCoord(current_x, current_y , 0);
+
 			average += ImportantSquare[x][y];
 		}
 	}
@@ -1143,11 +1398,12 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
 	    ymax-= 2.;
 	    xmax-= 2.;
 
-	    if (ymax > 1.0 || ymax < -1.0) ymax = 0.0;
-	    if (xmax > 1.0 || xmax < -1.0) xmax = 0.0;
+	    if (ymax > 1.05 || ymax < -1.05) ymax = 0.0;
+	    if (xmax > 1.05 || xmax < -1.05) xmax = 0.0;
 
+	    found_peak.x = integer_peak.x + xmax;
 	    found_peak.y = integer_peak.y + ymax;
-	    found_peak.x = integer_peak.y + xmax;
+
 
 	    found_peak.value = 4.*c1*c3*c6 - c1*c5*c5 - c2*c2*c6 + c2*c4*c5 - c4*c4*c3;
 	    found_peak.value *= (average / denomin);
@@ -1157,9 +1413,9 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
     }
 
     return found_peak;
-}
+}*/
 
-inline int Image::ReturnFourier1DAddressFromPhysicalAddress(int wanted_x, int wanted_y, int wanted_z)
+inline int Image::ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 {
 	MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address out of bounds!" )
 	return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
@@ -1218,10 +1474,10 @@ inline int Image::ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wante
 		}
 	}
 
-	return ReturnFourier1DAddressFromPhysicalAddress(physical_x_address, physical_y_address, physical_z_address);
+	return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
 }
 
-inline fftw_complex Image::ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
+fftw_complex Image::ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
 {
 	if (wanted_x < logical_lower_bound_complex_x || wanted_x > logical_upper_bound_complex_x || wanted_y < logical_lower_bound_complex_y ||wanted_y > logical_upper_bound_complex_y || wanted_z < logical_lower_bound_complex_z || wanted_z > logical_upper_bound_complex_z)
 	{

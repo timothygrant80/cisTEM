@@ -169,6 +169,8 @@ void MRCHeader::BlankHeader()
 		labels[counter]					= ' ';
 	}
 
+	bytes_per_pixel = 4;
+
 }
 
 void MRCHeader::SetLocalMachineStamp()

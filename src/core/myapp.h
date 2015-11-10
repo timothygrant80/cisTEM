@@ -44,6 +44,8 @@ MyApp : public wxAppConsole
 		wxString my_ip_address;
 		wxString my_port_string;
 
+		bool is_running_locally;
+
 		wxSocketServer *socket_server;
 
 		bool i_am_the_master;
@@ -62,10 +64,9 @@ MyApp : public wxAppConsole
 		wxSocketBase **slave_sockets;  // POINTER TO POINTER..
 
 		virtual bool DoCalculation() = 0;
+		virtual void DoInteractiveUserInput() {wxPrintf("\n Error: This program cannot be run interactively..\n\n"); exit(0);}
 
 		void SendError(wxString error_message);
-
-
 
 
 		 CalculateThread *work_thread;

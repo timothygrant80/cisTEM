@@ -7,6 +7,7 @@ UnBlurApp : public MyApp
 	public:
 
 	bool DoCalculation();
+	void DoInteractiveUserInput();
 
 	private:
 
@@ -15,6 +16,98 @@ UnBlurApp : public MyApp
 void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, float *x_shifts, float *y_shifts);
 
 IMPLEMENT_APP(UnBlurApp)
+
+// override the DoInteractiveUserInput
+
+void UnBlurApp::DoInteractiveUserInput()
+{
+	std::string input_filename;
+	std::string output_filename;
+	float original_pixel_size;
+	float minimum_shift_in_angstroms;
+	float maximum_shift_in_angstroms;
+	bool should_dose_filter = true;
+	bool should_restore_power = true;
+	float termination_threshold_in_angstroms;
+	int max_iterations;
+	float bfactor_in_angstroms;
+	bool should_mask_central_cross = true;
+	int horizontal_mask_size;
+	int vertical_mask_size;
+	float exposure_per_frame;
+	float acceleration_voltage;
+	float pre_exposure_amount;
+
+	bool set_expert_options;
+
+	 UserInput *my_input = new UserInput("Unblur", 1.0);
+
+	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );
+	 output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
+	 original_pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
+	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "YES");
+
+	 if (should_dose_filter == true)
+	 {
+		 exposure_per_frame = my_input->GetFloatFromUser("Exposure per frame (e/A^2)", "Exposure per frame, in electrons per square Angstrom", "1.0", 0.0);
+		 acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (kV)", "Acceleration voltage during imaging", "300.0");
+	 	 pre_exposure_amount = my_input->GetFloatFromUser("Pre-exposure amount (e/A^2)", "Amount of pre-exposure prior to the first frame, in electrons per square Angstrom", "0.0", 0.0);
+	 }
+	 else
+	 {
+	 	 exposure_per_frame = 0.0;
+	 	 acceleration_voltage = 0.0;
+	 	 pre_exposure_amount = 0.0;
+	 }
+
+	 set_expert_options = my_input->GetYesNoFromUser("Set Expert Options?", "Set these for more control, hopefully not needed", "NO");
+
+	 if (set_expert_options == true)
+	 {
+	 	 minimum_shift_in_angstroms = my_input->GetFloatFromUser("Minimum shift for initial search (A)", "Initial search will be limited to between the inner and outer radii.", "2.0", 0.0);
+	 	 maximum_shift_in_angstroms = my_input->GetFloatFromUser("Outer radius shift limit (A)", "The maximum shift of each alignment step will be limited to this value.", "80.0", minimum_shift_in_angstroms);
+	 	 bfactor_in_angstroms = my_input->GetFloatFromUser("B-factor to apply to images (A^2)", "This B-Factor will be used to filter the reference prior to alignment", "1500", 0.0);
+	 	 vertical_mask_size = my_input->GetIntFromUser("Half-width of vertical Fourier mask", "The vertical line mask will be twice this size. The central cross mask helps\nreduce problems by line artefacts from the detector", "1", 1);
+	 	 horizontal_mask_size = my_input->GetIntFromUser("Half-width of horizontal Fourier mask", "The horizontal line mask will be twice this size. The central cross mask helps\nreduce problems by line artefacts from the detector", "1", 1);
+	 	 termination_threshold_in_angstroms = my_input->GetFloatFromUser("Termination shift threshold (A)", "Alignment will iterate until the maximum shift is below this value", "1", 0.0);
+	 	 max_iterations = my_input->GetIntFromUser("Maximum number of iterations", "Alignment will stop at this number, even if the threshold shift is not reached", "20", 0);
+
+	 	 if (should_dose_filter == true)
+	 	 {
+	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "YES");
+	 	 }
+ 	 }
+ 	 else
+ 	 {
+ 		 minimum_shift_in_angstroms = original_pixel_size + 0.001;
+ 		 maximum_shift_in_angstroms = 100.0;
+ 		 bfactor_in_angstroms = 1500.0;
+ 		 vertical_mask_size = 1;
+ 		 horizontal_mask_size = 1;
+ 		 termination_threshold_in_angstroms = original_pixel_size / 2;
+ 		 max_iterations = 20;
+ 		 should_restore_power = true;
+ 	 }
+
+	 delete my_input;
+
+	 my_current_job.Reset(13);
+	 my_current_job.ManualSetArguments("ttfffbbfifbii",  input_filename.c_str(),
+			 	 	 	 	 	 	 	 	 	 	 	 output_filename.c_str(),
+														 original_pixel_size,
+														 minimum_shift_in_angstroms,
+														 maximum_shift_in_angstroms,
+														 should_dose_filter,
+														 should_restore_power,
+														 termination_threshold_in_angstroms,
+														 max_iterations,
+														 bfactor_in_angstroms,
+														 should_mask_central_cross,
+														 horizontal_mask_size,
+														 vertical_mask_size);
+
+
+}
 
 // overide the do calculation method which will be what is actually run..
 
@@ -48,7 +141,10 @@ bool UnBlurApp::DoCalculation()
 	int         horizontal_mask_size				= my_current_job.arguments[11].ReturnIntegerArgument();
 	int         vertical_mask_size					= my_current_job.arguments[12].ReturnIntegerArgument();
 
-	unitless_bfactor = bfactor_in_angstoms / pow(pixel_size, 2);
+	//my_current_job.PrintAllArguments();
+
+	unitless_bfactor = bfactor_in_angstoms / pow(original_pixel_size, 2);
+
 
 	// The Files
 
@@ -64,8 +160,8 @@ bool UnBlurApp::DoCalculation()
 
 	// Arrays to hold the shifts..
 
-	float *x_shifts = new float(number_of_input_images);
-	float *y_shifts = new float(number_of_input_images);
+	float *x_shifts = new float[number_of_input_images];
+	float *y_shifts = new float[number_of_input_images];
 
 	// some quick checks..
 
@@ -94,8 +190,8 @@ bool UnBlurApp::DoCalculation()
 
 	// convert shifts to pixels..
 
-	min_shift_in_pixels = min_shift_in_pixels / pixel_size;
-	max_shift_in_pixels = min_shift_in_pixels / pixel_size;
+	min_shift_in_pixels = minumum_shift_in_angstroms / pixel_size;
+	max_shift_in_pixels = maximum_shift_in_angstroms / pixel_size;
 	termination_threshold_in_pixels = termination_threshold_in_angstoms / pixel_size;
 
 	if (min_shift_in_pixels <= 1) min_shift_in_pixels = 1;  // we always want to ignore the central peak initially.
@@ -104,7 +200,7 @@ bool UnBlurApp::DoCalculation()
 
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
-		image_stack[image_counter].ReadSlice(&input_file, image_counter);
+		image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
 		image_stack[image_counter].ForwardFFT(true);
 
 		if (pre_binning_factor > 1)
@@ -113,6 +209,9 @@ bool UnBlurApp::DoCalculation()
 			image_stack[image_counter].Resize(image_stack[image_counter].logical_x_dimension / pre_binning_factor, image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
 
 		}
+
+		x_shifts[image_counter] = 0.0;
+		y_shifts[image_counter] = 0.0;
 
 	}
 
@@ -123,6 +222,7 @@ bool UnBlurApp::DoCalculation()
 	// now do the actual refinement..
 
 	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+
 
 	// if we have been using pre-binning, we need to do a refinment on the unbinned data..
 
@@ -135,7 +235,7 @@ bool UnBlurApp::DoCalculation()
 			x_shifts[image_counter] *= pre_binning_factor;
 			y_shifts[image_counter] *= pre_binning_factor;
 
-			unbinned_image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 1.0);
+			unbinned_image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
 		}
 
 		// convert shifts to pixels with new pixel size..
@@ -180,6 +280,7 @@ bool UnBlurApp::DoCalculation()
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
 		sum_image.AddImage(&image_stack[image_counter]);
+		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
 	}
 
 	// now we just need to write out the final sum..
@@ -199,54 +300,47 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 	long image_counter;
 	long iteration_counter;
 
-	int number_of_middle_image;
+	int number_of_middle_image = number_of_images / 2;
 
-	float *current_x_shifts = new float(number_of_images);
-	float *current_y_shifts = new float(number_of_images);
+	float *current_x_shifts = new float[number_of_images];
+	float *current_y_shifts = new float[number_of_images];
+
+	float middle_image_x_shift;
+	float middle_image_y_shift;
 
 	float max_shift;
+	float total_shift;
 
 	Image sum_of_images;
 	Image sum_of_images_minus_current;
 
 	Peak my_peak;
 
+	Curve x_shifts_curve;
+	Curve y_shifts_curve;
+
 	sum_of_images.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
 	sum_of_images.SetToConstant(0.0);
 
 	sum_of_images_minus_current.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
 
-	// get the middle image
 
-	if (IsOdd(number_of_images))
-	{
-		number_of_middle_image = (number_of_images +1) / 2;
-	}
-	else
-	{
-		number_of_middle_image = number_of_images / 2 + 1;
-	}
 
 	// prepare the initial sum
 
 	for (image_counter = 0; image_counter < number_of_images; image_counter++)
 	{
 		sum_of_images.AddImage(&input_stack[image_counter]);
+		current_x_shifts[image_counter] = 0;
+		current_y_shifts[image_counter] = 0;
 	}
-
-	/* prepare smoothing curves
-
-    ! Prepare the smoothing curve
-    call x_shifts%Init(size(stack_of_images))
-    call y_shifts%Init(size(stack_of_images))
-
-    */
 
 	// perform the main alignment loop until we reach a max shift less than wanted, or max iterations
 
-	for (iteration_counter = 0; iteration_counter < max_iterations; iteration_counter++)
+	for (iteration_counter = 1; iteration_counter <= max_iterations; iteration_counter++)
 	{
-		max_shift = -std::numeric_limits<float>::max();
+		wxPrintf("Starting iteration number %li\n\n", iteration_counter);
+		max_shift = -FLT_MAX;
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
@@ -261,66 +355,68 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 				sum_of_images_minus_current.MaskCentralCross(width_of_vertical_line, width_of_horizontal_line);
 			}
 
-			// compute the cross correaltion function and find the peak
+			// compute the cross correlation function and find the peak
 
-			sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&input_stack[image_counter]);
-			my_peak = sum_of_images_minus_current.FindPeakWithParabolaFit(inner_radius_for_peak_search, outer_radius_for_peak_search);
+		    sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&input_stack[image_counter]);
+		    my_peak = sum_of_images_minus_current.FindPeakWithParabolaFit(inner_radius_for_peak_search, outer_radius_for_peak_search);
 
 			// update the shifts..
 
-			current_x_shifts[image_counter] += my_peak.x;
-			current_y_shifts[image_counter] += my_peak.y;
-
-			if (my_peak.x > max_shift) max_shift = my_peak.x;
-			if (my_peak.y > max_shift) max_shift = my_peak.y;
-
-			/*
-			 ! Apply [spline|polynomial|no] smoothing to the shifts
-        	 call x_shifts%ClearData()
-             call y_shifts%ClearData()
-             do image_counter=1, size(stack_of_images)
-               call x_shifts%AddPoint(real(image_counter), additional_shifts_x(image_counter))
-               call y_shifts%AddPoint(real(image_counter), additional_shifts_y(image_counter))
-             enddo
-
-
-        select case (smoothing_type)
-            case (spline)
-                call x_shifts%FitSplineToData()
-                call x_shifts%CopySplineModel(additional_shifts_x)
-                call y_shifts%FitSplineToData()
-                call y_shifts%CopySplineModel(additional_shifts_y)
-            case (no_smoothing)
-                call x_shifts%CopyYData(additional_shifts_x)
-                call y_shifts%CopyYData(additional_shifts_y)
-            case (polynomial)
-                order_of_polynomial = min(6,size(stack_of_images)-1)
-                call x_shifts%FitPolynomialToData(order_of_polynomial)
-                call x_shifts%CopyPolynomialModel(additional_shifts_x)
-                call y_shifts%FitPolynomialToData(order_of_polynomial)
-                call y_shifts%CopyPolynomialModel(additional_shifts_y)
-        end select
-
-			 */
-
-			// work out the maximum_x_shif
-
-
+			current_x_shifts[image_counter] = my_peak.x;
+			current_y_shifts[image_counter] = my_peak.y;
 		}
 
-		// subtract shift of the middle image from all images to keep things centred around it
+		// smooth the shifts
+
+		x_shifts_curve.ClearData();
+		y_shifts_curve.ClearData();
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
-			current_x_shifts[image_counter] -= current_x_shifts[number_of_middle_image];
-			current_y_shifts[image_counter] -= current_y_shifts[number_of_middle_image];
+			x_shifts_curve.AddPoint(image_counter, x_shifts[image_counter] + current_x_shifts[image_counter]);
+			y_shifts_curve.AddPoint(image_counter, y_shifts[image_counter] + current_y_shifts[image_counter]);
+
+			//wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
+		}
+
+
+		x_shifts_curve.FitSavitzkyGolayToData(5, 3);
+		y_shifts_curve.FitSavitzkyGolayToData(5, 3);
+
+		// copy them back..
+
+		for (image_counter = 0; image_counter < number_of_images; image_counter++)
+		{
+			current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
+			current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
+
+			total_shift = sqrt(pow(current_x_shifts[image_counter], 2) + pow(current_y_shifts[image_counter], 2));
+			if (total_shift > max_shift) max_shift = total_shift;
+			//wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+		}
+
+
+
+		// subtract shift of the middle image from all images to keep things centred around it
+
+		middle_image_x_shift = current_x_shifts[number_of_middle_image];
+		middle_image_y_shift = current_y_shifts[number_of_middle_image];
+
+		for (image_counter = 0; image_counter < number_of_images; image_counter++)
+		{
+			current_x_shifts[image_counter] -= middle_image_x_shift;
+			current_y_shifts[image_counter] -= middle_image_y_shift;
+
+			total_shift = sqrt(pow(current_x_shifts[image_counter], 2) + pow(current_y_shifts[image_counter], 2));
+			if (total_shift > max_shift) max_shift = total_shift;
+
 		}
 
 		// actually shift the images, also add the subtracted shifts to the overall shifts
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
-			input_stack[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 1.0);
+			input_stack[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 0.0);
 
 			x_shifts[image_counter] += current_x_shifts[image_counter];
 			y_shifts[image_counter] += current_y_shifts[image_counter];
@@ -330,6 +426,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 		if (iteration_counter >= max_iterations || max_shift <= max_shift_convergence_threshold)
 		{
+			wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 			delete [] current_x_shifts;
 			delete [] current_y_shifts;
 			return;

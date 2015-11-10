@@ -40,7 +40,7 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket);
 
 inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float dimension_size)
 {
-	return real_space_shift * distance_from_origin * 2.0e0 * PI / dimension_size;
+	return real_space_shift * distance_from_origin * 2.0 * PI / dimension_size;
 };
 
 inline fftw_complex Return3DPhaseFromIndividualDimensions( float phase_x, float phase_y, float phase_z)
@@ -55,3 +55,12 @@ inline bool DoublesAreAlmostTheSame(double a, double b)
 	return (fabs(a-b) < 0.000001);
 }
 
+inline bool InputIsATerminal()
+{
+   return isatty(fileno(stdin));
+};
+
+inline bool OutputIsAtTerminal()
+{
+    return isatty(fileno(stdout));
+};

@@ -48,7 +48,6 @@ public:
 	int			 logical_lower_bound_real_y;					// !<  In each dimension, the lower bound of the real image's logical addresses
 	int			 logical_lower_bound_real_z;					// !<  In each dimension, the lower bound of the real image's logical addresses
 
-	int          max_array_value;
 
 	long         real_memory_allocated;							// !<  Number of floats allocated in real space;
 
@@ -69,7 +68,11 @@ public:
 	// Methods
 
 	Image();
+	Image( const Image &other_image); // copy contructor
 	~Image();
+
+	Image & operator = (const Image &t);
+	Image & operator = (const Image *t);
 
 	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
@@ -84,11 +87,12 @@ public:
 
 	inline float ReturnRealPixelFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
+		MyDebugAssertTrue(is_in_real_space == true,  "Requested real pixel, but image is in Fourier space");
 		return real_values[ReturnReal1DAddressFromPhysicalCoord(wanted_x, wanted_y, wanted_z)];
 	};
 
 
-	int ReturnFourier1DAddressFromPhysicalAddress(int wanted_x, int wanted_y, int wanted_z);
+	int ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z);
 	int ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z);
 	fftw_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value = 0.0);
 
@@ -111,17 +115,22 @@ public:
 	void AddFFTWPadding();
 	void RemoveFFTWPadding();
 
-	inline void ReadSlice(MRCFile *input_file, long slice_to_read) { ReadSlices(input_file, slice_to_read, slice_to_read);}; //!> \brief Read a a slice from disk..(this just calls ReadSlices)
+	inline void ReadSlice(MRCFile *input_file, long slice_to_read) { MyDebugAssertTrue(slice_to_read > 0, "Start slice is 0, the first slice is 1!");	MyDebugAssertTrue(slice_to_read <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");ReadSlices(input_file, slice_to_read, slice_to_read);}; //!> \brief Read a a slice from disk..(this just calls ReadSlices)
 	void ReadSlices(MRCFile *input_file, long start_slice, long end_slice);
 
-	inline void WriteSlice(MRCFile *input_file, long slice_to_write) { WriteSlices(input_file, slice_to_write, slice_to_write);}
+	inline void WriteSlice(MRCFile *input_file, long slice_to_write) {  MyDebugAssertTrue(slice_to_write > 0, "Start slice is 0, the first slice is 1!"); WriteSlices(input_file, slice_to_write, slice_to_write);}
 	void WriteSlices(MRCFile *input_file, long start_slice, long end_slice);
+
+	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write);
+	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
 	void SetToConstant(float wanted_value);
 	void ClipInto(Image *other_image, float wanted_padding_value = 0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);
-	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift);
+	void CopyLoopingAndAddressingFrom(Image *other_image);
+	void Consume(Image *other_image);
+	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
 	void AddImage(Image *other_image);
 	void SubtractImage(Image *other_image);

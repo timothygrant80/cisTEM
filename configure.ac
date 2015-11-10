@@ -109,7 +109,7 @@ fi
 # Do FFTW3 Checks
 
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h. Please check your installation of FFTW3."))
-AC_CHECK_LIB(fftw3, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+AC_CHECK_LIB(fftw3, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
 
 # SQLITE 3 Checks
 

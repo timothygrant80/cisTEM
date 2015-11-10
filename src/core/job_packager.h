@@ -68,9 +68,11 @@ public:
 	void Reset(int wanted_number_of_arguments);
 	void Deallocate();
 	void SetArguments(const char *format, va_list args);
+	void ManualSetArguments(const char *format, ...);
 	long ReturnEncodedByteTransferSize();
 	void SendJob(wxSocketBase *socket);
 	void RecieveJob(wxSocketBase *socket);
+	void PrintAllArguments();
 
 
 };

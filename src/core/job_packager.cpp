@@ -1046,6 +1046,16 @@ void RunJob::Deallocate()
 	}
 }
 
+void RunJob::ManualSetArguments(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	SetArguments(format, args);
+
+	va_end(args);
+}
+
 void RunJob::SetArguments(const char *format, va_list args)
 {
 	Deallocate();
@@ -1106,6 +1116,37 @@ void RunJob::Reset(int wanted_number_of_arguments)
 	has_been_run = false;
 
 
+}
+
+void RunJob::PrintAllArguments()
+{
+	wxPrintf("\n\n");
+
+	for (int counter = 0; counter < number_of_arguments; counter++)
+	{
+		if (arguments[counter].type_of_argument == TEXT)
+		{
+			wxPrintf("Argument %3i is a string   : %s\n", counter, arguments[counter].ReturnStringArgument());
+		}
+		else
+		if (arguments[counter].type_of_argument == INTEGER)
+		{
+			wxPrintf("Argument %3i is an integer : %i\n", counter, arguments[counter].ReturnIntegerArgument());
+		}
+		else
+		if (arguments[counter].type_of_argument == FLOAT)
+		{
+			wxPrintf("Argument %3i is a float    : %f\n", counter, arguments[counter].ReturnFloatArgument());
+		}
+		else
+		if (arguments[counter].type_of_argument == BOOL)
+		{
+			wxPrintf("Argument %3i is a bool     : ", counter);
+
+			if (arguments[counter].ReturnBoolArgument() == true) wxPrintf("TRUE\n");
+			else wxPrintf("FALSE\n");
+		}
+	}
 }
 
 long RunJob::ReturnEncodedByteTransferSize()
@@ -1169,6 +1210,7 @@ void RunArgument::SetStringArgument(const char *wanted_text)
 	type_of_argument = TEXT;
 	string_argument = new std::string;
 	string_argument[0] = wanted_text;
+	is_allocated = true;
 }
 
 void RunArgument::SetIntArgument(int wanted_argument)
@@ -1178,6 +1220,7 @@ void RunArgument::SetIntArgument(int wanted_argument)
 	type_of_argument = INTEGER;
 	integer_argument = new int;
 	integer_argument[0] = wanted_argument;
+	is_allocated = true;
 }
 
 void RunArgument::SetFloatArgument(float wanted_argument)
@@ -1187,6 +1230,7 @@ void RunArgument::SetFloatArgument(float wanted_argument)
 	type_of_argument = FLOAT;
 	float_argument = new float;
 	float_argument[0] = wanted_argument;
+	is_allocated = true;
 }
 
 void RunArgument::SetBoolArgument(bool wanted_argument)
@@ -1196,6 +1240,7 @@ void RunArgument::SetBoolArgument(bool wanted_argument)
 	type_of_argument = BOOL;
 	bool_argument = new bool;
 	bool_argument[0] = wanted_argument;
+	is_allocated = true;
 }
 
 

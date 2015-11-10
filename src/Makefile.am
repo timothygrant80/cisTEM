@@ -26,8 +26,10 @@ bin_PROGRAMS = ProjectX unblur guix_job_control console_test
 
 
 libcore_a_SOURCES =    core/functions.cpp \
+                       core/userinput.cpp \
                        core/assets.cpp \
                        core/asset_group.cpp \
+                       core/curve.cpp \
                        core/image.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \

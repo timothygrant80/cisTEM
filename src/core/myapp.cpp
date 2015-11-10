@@ -3,6 +3,9 @@
 bool MyApp::OnInit()
 {
 
+	int parse_status;
+	int number_of_arguments;
+
 	number_of_dispatched_jobs = 0;
 	number_of_finished_jobs = 0;
 
@@ -19,9 +22,9 @@ bool MyApp::OnInit()
 
 	static const wxCmdLineEntryDesc command_line_descriptor[] =
 	{
-			{ wxCMD_LINE_PARAM, "a", "address", "gui_address", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY },
-			{ wxCMD_LINE_PARAM, "p", "port", "gui_port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_OPTION_MANDATORY },
-			{ wxCMD_LINE_PARAM, "j", "job_code", "job_code", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY },
+			{ wxCMD_LINE_PARAM, "a", "address", "gui_address", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
+			{ wxCMD_LINE_PARAM, "p", "port", "gui_port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL },
+			{ wxCMD_LINE_PARAM, "j", "job_code", "job_code", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
 			{ wxCMD_LINE_NONE }
 	};
 
@@ -29,31 +32,55 @@ bool MyApp::OnInit()
 	wxCmdLineParser command_line_parser( command_line_descriptor, argc, argv);
 
 	wxPrintf("\n");
-	if (command_line_parser.Parse(true) != 0)
+	parse_status = command_line_parser.Parse(true);
+	number_of_arguments = command_line_parser.GetParamCount();
+
+	if (parse_status != 0)
 	{
 		wxPrintf("\n\n");
-		exit(0);
+		return false;
+
 	}
+
+	// if we have no arguments run interactively.. if we have 3 continue as though we have network info, else error..
+
+	if (number_of_arguments == 0)
+	{
+		is_running_locally = true;
+		DoInteractiveUserInput();
+		DoCalculation();
+		return false;
+	}
+	else
+	if (number_of_arguments != 3)
+	{
+		command_line_parser.Usage();
+		wxPrintf("\n\n");
+		return false;
+	}
+
+	is_running_locally = false;
+
 
 	// get the address and port of the gui (should be command line options).
 
 
 	if (controller_address.Hostname(command_line_parser.GetParam(0)) == false)
 	{
-		MyDebugPrint(" Error: Address (%s) - not recognized as an IP or hostname\n\n", command_line_parser.GetParam(0));
+		MyPrintWithDetails(" Error: Address (%s) - not recognized as an IP or hostname\n\n", command_line_parser.GetParam(0));
 		exit(-1);
 	};
 
 	if (command_line_parser.GetParam(1).ToLong(&controller_port) == false)
 	{
-		MyDebugPrint(" Error: Port (%s) - not recognized as a port\n\n", command_line_parser.GetParam(1));
+		MyPrintWithDetails(" Error: Port (%s) - not recognized as a port\n\n", command_line_parser.GetParam(1));
 		exit(-1);
 	}
 
 	if (command_line_parser.GetParam(2).Len() != SOCKET_CODE_SIZE)
 	{
 		{
-			MyDebugPrint(" Error: Code (%s) - is the incorrect length(%i instead of %i)\n\n", command_line_parser.GetParam(2), command_line_parser.GetParam(2).Len(), SOCKET_CODE_SIZE);
+			MyPrintWithDetails(" Error: Code (%s) - is the incorrect length (%li instead of %i)\n\n", command_line_parser.GetParam(2), command_line_parser.GetParam(2).Len(), SOCKET_CODE_SIZE);
 			exit(-1);
 		}
 	}
@@ -774,6 +801,12 @@ void MyApp::SocketSendError(wxString error_to_send)
 
 void MyApp::SendError(wxString error_to_send)
 {
+	if (is_running_locally == true)
+	{
+		wxPrintf("\nError : %s\n", error_to_send);
+
+	}
+	else
 	if (work_thread != NULL)
 	{
 		work_thread->QueueError(error_to_send);

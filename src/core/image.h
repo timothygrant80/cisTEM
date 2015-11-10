@@ -51,6 +51,8 @@ public:
 
 	long         real_memory_allocated;							// !<  Number of floats allocated in real space;
 
+	int          padding_jump_value;                            // !<  The FFTW padding value, if odd this is 2, if even it is 1.  It is used in loops etc over real space.
+
 
 	// Arrays to hold voxel values
 
@@ -81,7 +83,8 @@ public:
 	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range", wanted_x, wanted_y, wanted_z);
-		return (((logical_x_dimension + 2) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + 2) * wanted_y) + wanted_x;
+
+		return (((logical_x_dimension + padding_jump_value) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + padding_jump_value) * wanted_y) + wanted_x;
 
 	}
 

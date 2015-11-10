@@ -272,6 +272,27 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	//wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
+	// test real space clipping smaller to odd..
+
+	test_image.ReadSlice(&input_file, 1);
+	clipped_image.Allocate(49,49,1);
+	test_image.ClipInto(&clipped_image, 0);
+
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.391899) == false) FailTest;
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(25, 25, 0), 1.689942) == false) FailTest;
+	if (DoublesAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(48, 48, 0), -1.773780) == false) FailTest;
+
+	// test fourier space flipping smaller to odd..
+
+	test_image.ForwardFFT();
+	test_image.ClipInto(&clipped_image, 0);
+
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
+
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	//wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
+	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
 	EndTest();
 

@@ -171,31 +171,6 @@ bool UnBlurApp::DoCalculation()
 		ExitMainLoop();
 	}
 
-	// if we are binning - choose a binning factor..
-
-	pre_binning_factor = int(myround(float(image_stack[0].logical_x_dimension) / 1024.0));
-	if (pre_binning_factor < 1) pre_binning_factor = 1;
-
-	// if we are going to be binning, we need to allocate the unbinned array..
-
-	if (pre_binning_factor > 1)
-	{
-		unbinned_image_stack = new Image[number_of_input_images];
-		pixel_size = original_pixel_size * pre_binning_factor;
-	}
-	else
-	{
-		pixel_size = original_pixel_size;
-	}
-
-	// convert shifts to pixels..
-
-	min_shift_in_pixels = minumum_shift_in_angstroms / pixel_size;
-	max_shift_in_pixels = maximum_shift_in_angstroms / pixel_size;
-	termination_threshold_in_pixels = termination_threshold_in_angstoms / pixel_size;
-
-	if (min_shift_in_pixels <= 1) min_shift_in_pixels = 1;  // we always want to ignore the central peak initially.
-
 	// Read in and FFT all the images..
 
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
@@ -215,6 +190,45 @@ bool UnBlurApp::DoCalculation()
 
 	}
 
+	// if we are binning - choose a binning factor..
+
+	pre_binning_factor = int(myround(10. / original_pixel_size));
+	if (pre_binning_factor < 1) pre_binning_factor = 1;
+
+	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
+
+	// if we are going to be binning, we need to allocate the unbinned array..
+
+	if (pre_binning_factor > 1)
+	{
+		unbinned_image_stack = new Image[number_of_input_images];
+		pixel_size = original_pixel_size * pre_binning_factor;
+	}
+	else
+	{
+		pixel_size = original_pixel_size;
+	}
+
+	// convert shifts to pixels..
+
+	min_shift_in_pixels = minumum_shift_in_angstroms / pixel_size;
+	max_shift_in_pixels = maximum_shift_in_angstroms / pixel_size;
+	termination_threshold_in_pixels = termination_threshold_in_angstoms / pixel_size;
+
+	if (min_shift_in_pixels <= 1.01) min_shift_in_pixels = 1.01;  // we always want to ignore the central peak initially.
+
+	if (pre_binning_factor > 1)
+	{
+		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		{
+			unbinned_image_stack[image_counter] = image_stack[image_counter];
+
+			image_stack[image_counter].Allocate(image_stack[image_counter].logical_x_dimension / pre_binning_factor, image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
+			unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+			image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
+		}
+	}
+
 	// do the initial refinement (only 1 round - with the min shift)
 
 	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
@@ -228,14 +242,20 @@ bool UnBlurApp::DoCalculation()
 
 	if (pre_binning_factor > 1)
 	{
-		// first adjust the shifts, then phase shift the original images
+		// we don't need the binned images anymore..
+
+		delete [] image_stack;
+		image_stack = unbinned_image_stack;
+		pixel_size = original_pixel_size;
+
+		// Adjust the shifts, then phase shift the original images
 
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
 			x_shifts[image_counter] *= pre_binning_factor;
 			y_shifts[image_counter] *= pre_binning_factor;
 
-			unbinned_image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+			image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
 		}
 
 		// convert shifts to pixels with new pixel size..
@@ -246,13 +266,11 @@ bool UnBlurApp::DoCalculation()
 
 		// do the refinement..
 
-		unblur_refine_alignment(unbinned_image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, original_pixel_size, x_shifts, y_shifts);
+		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, original_pixel_size, x_shifts, y_shifts);
 
 		// if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
 
-		delete [] image_stack;
-		image_stack = unbinned_image_stack;
-		pixel_size = original_pixel_size;
+
 
 	}
 
@@ -430,6 +448,11 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			delete [] current_x_shifts;
 			delete [] current_y_shifts;
 			return;
+		}
+		else
+		{
+			wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+
 		}
 
 		// going to be doing another round so we need to make the new sum..

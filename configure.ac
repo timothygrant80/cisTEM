@@ -20,10 +20,10 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 # set up initial flags
 
 if test "x$CXX" = "xicpc"; then
-		CXXFLAGS="-O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-		CPPFLAGS="-O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+		CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+		CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
 	else
-		CXXFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+		CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
 		CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 fi
 

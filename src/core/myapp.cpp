@@ -811,7 +811,10 @@ void MyApp::SendError(wxString error_to_send)
 	{
 		work_thread->QueueError(error_to_send);
 	}
-	else MyDebugPrint("SendError with null work thread!")
+	else
+	{
+		MyDebugPrint("SendError with null work thread!")
+	}
 }
 
 // Main execution in this thread..

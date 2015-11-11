@@ -168,10 +168,10 @@ void MyTestApp::TestAlignmentFunctions()
 	test_image.CalculateCrossCorrelationImageWith(&ref_image);
 	my_peak = test_image.FindPeakWithParabolaFit();
 
-	if (DoublesAreAlmostTheSame(my_peak.x, 7.295232) == false) FailTest;
-	if (DoublesAreAlmostTheSame(my_peak.y, 10.704828) == false) FailTest;
+	if (my_peak.x > 7.3 || my_peak. x < 7.29) FailTest;
+	if (my_peak.y > 10.70484 || my_peak.y < 10.70481) FailTest;
 	if (DoublesAreAlmostTheSame(my_peak.z, 0) == false) FailTest;
-	if (DoublesAreAlmostTheSame(my_peak.value, 0.993427) == false) FailTest;
+	if (my_peak.value > 0.99343 || my_peak.value < 0.99342) FailTest;
 
 	EndTest();
 }

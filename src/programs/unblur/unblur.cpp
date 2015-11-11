@@ -143,9 +143,6 @@ bool UnBlurApp::DoCalculation()
 
 	//my_current_job.PrintAllArguments();
 
-	unitless_bfactor = bfactor_in_angstoms / pow(original_pixel_size, 2);
-
-
 	// The Files
 
 	MRCFile input_file(input_filename, false);
@@ -178,13 +175,6 @@ bool UnBlurApp::DoCalculation()
 		image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
 		image_stack[image_counter].ForwardFFT(true);
 
-		if (pre_binning_factor > 1)
-		{
-			unbinned_image_stack[image_counter] = image_stack[image_counter];
-			image_stack[image_counter].Resize(image_stack[image_counter].logical_x_dimension / pre_binning_factor, image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
-
-		}
-
 		x_shifts[image_counter] = 0.0;
 		y_shifts[image_counter] = 0.0;
 
@@ -192,7 +182,7 @@ bool UnBlurApp::DoCalculation()
 
 	// if we are binning - choose a binning factor..
 
-	pre_binning_factor = int(myround(10. / original_pixel_size));
+	pre_binning_factor = int(myround(5. / original_pixel_size));
 	if (pre_binning_factor < 1) pre_binning_factor = 1;
 
 	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
@@ -215,17 +205,22 @@ bool UnBlurApp::DoCalculation()
 	max_shift_in_pixels = maximum_shift_in_angstroms / pixel_size;
 	termination_threshold_in_pixels = termination_threshold_in_angstoms / pixel_size;
 
+
+	// calculate the bfactor
+
+	unitless_bfactor = bfactor_in_angstoms / pow(pixel_size, 2);
+
 	if (min_shift_in_pixels <= 1.01) min_shift_in_pixels = 1.01;  // we always want to ignore the central peak initially.
+
+	if (termination_threshold_in_pixels < 1 && pre_binning_factor > 1) termination_threshold_in_pixels = 1;
 
 	if (pre_binning_factor > 1)
 	{
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
 			unbinned_image_stack[image_counter] = image_stack[image_counter];
-
-			image_stack[image_counter].Allocate(image_stack[image_counter].logical_x_dimension / pre_binning_factor, image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
-			unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
-			image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
+			image_stack[image_counter].Resize(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
+			//image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
 		}
 	}
 
@@ -258,11 +253,15 @@ bool UnBlurApp::DoCalculation()
 			image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
 		}
 
-		// convert shifts to pixels with new pixel size..
+		// convert parameters to pixels with new pixel size..
 
-		min_shift_in_pixels = min_shift_in_pixels / original_pixel_size;
-		max_shift_in_pixels = min_shift_in_pixels / original_pixel_size;
+		min_shift_in_pixels = minumum_shift_in_angstroms / original_pixel_size;
+		max_shift_in_pixels = maximum_shift_in_angstroms / original_pixel_size;
 		termination_threshold_in_pixels = termination_threshold_in_angstoms / original_pixel_size;
+
+		// recalculate the bfactor
+
+		unitless_bfactor = bfactor_in_angstoms / pow(original_pixel_size, 2);
 
 		// do the refinement..
 
@@ -407,10 +406,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		{
 			current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
 			current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
-
-			total_shift = sqrt(pow(current_x_shifts[image_counter], 2) + pow(current_y_shifts[image_counter], 2));
-			if (total_shift > max_shift) max_shift = total_shift;
-			//wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+			wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
 		}
 
 

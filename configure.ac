@@ -1,36 +1,33 @@
 AC_INIT(ProjectX, 0.1)
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
 
-CPPFLAGS=$CPPFLAGS
-CXXFLAGS=$CXFLAGS
-CFLAGS=$CFLAGS
+INPUT_CPPFLAGS="$CXXFLAGS"
+INPUT_CXXFLAGS="$CXXFLAGS"
 
+AC_PROG_CXX([icpc g++ gcc])
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
 AC_LANG(C++)
 
-#AC_ARG_VAR(MPICXX,[MPI C++ compiler command])
-#AC_CHECK_PROGS(MPICXX, mpic++ mpicxx mpiCC hcp mpxlC_r mpxlC mpCC cmpic++, $CXX)
+# don't let the AC_PROG_CXX set default flags, set them back to input..
 
-#MPI_CPPFLAGS="`$MPICXX -showme:compile`"
-#MPI_LIBS="`$MPICXX -showme:link`"
+CXXFLAGS="$INPUT_CXXFLAGS"
+CPPFLAGS="$INPUT_CPPFLAGS"
 
-CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE"
-CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE"
-   
+# set up initial flags
 
-AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
-  if test "$enableval" = yes; then
-  CPPFLAGS="-g -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
-  CXXFLAGS="-g -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DDEBUG"
-  fi
-  ])
+if test "x$CXX" = "xicpc"; then
+		CXXFLAGS="-O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+		CPPFLAGS="-O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+	else
+		CXXFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+		CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+fi
 
-#MPI_CPPFLAGS="$MPI_CPPFLAGS $CPPFLAGS"
-
+# wx-config 
 
 WXCONFIG=wx-config
 AC_ARG_WITH(wx-config,
@@ -41,6 +38,18 @@ AC_ARG_WITH(wx-config,
         WXCONFIG=$withval
     fi
 ])
+
+# debugmode
+
+
+AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
+  if test "$enableval" = yes; then
+  CPPFLAGS="-O2 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  CXXFLAGS="-O2 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  fi
+  ])
+
+# fftw
 
 AC_ARG_WITH(fftw-dir,
 [[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its 
@@ -53,6 +62,8 @@ AC_ARG_WITH(fftw-dir,
     fi
 ])
 
+#sqlite3-dir
+
 AC_ARG_WITH(sqlite3-dir,
 [[  --with-sqlite3-dir=DIR     Declare the root directory of sqlite3, if its
                           current location is not system accessible ]],
@@ -64,21 +75,19 @@ AC_ARG_WITH(sqlite3-dir,
     fi
 ])
 
-
-
 wxversion=0
 
 AC_DEFUN([WXTEST],
 [
-	AC_REQUIRE([AC_PROG_AWK])
-	AC_MSG_CHECKING([wxWidgets version])
-	if wxversion=`$WXCONFIG --version`; then
-		AC_MSG_RESULT([$wxversion])
-		AC_DEFINE_UNQUOTED([wx_is_available], 1, [Define to 1 if wx is available])
-	else
-		AC_MSG_RESULT([not found])
-		AC_DEFINE_UNQUOTED([wx_is_available], 0, [Define to 0 if wx is unavailable])
-	fi])
+        AC_REQUIRE([AC_PROG_AWK])
+        AC_MSG_CHECKING([wxWidgets version])
+        if wxversion=`$WXCONFIG --version`; then
+                AC_MSG_RESULT([$wxversion])
+                AC_DEFINE_UNQUOTED([wx_is_available], 1, [Define to 1 if wx is available])
+        else
+                AC_MSG_RESULT([not found])
+                AC_DEFINE_UNQUOTED([wx_is_available], 0, [Define to 0 if wx is unavailable])
+        fi])
 
 # Call WXTEST func
 WXTEST
@@ -86,67 +95,48 @@ WXTEST
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1 * 1000 + $2) * 1000 + $3;}'`
 if test -n "$vers" && test "$vers" -ge 3000000; then
-	WX_CPPFLAGS="`$WXCONFIG --cppflags`"
-	WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
-	WX_LIBS="`$WXCONFIG --libs richtext,std,aui`"
+        WX_CPPFLAGS="`$WXCONFIG --cppflags`"
+        WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
+        WX_LIBS="`$WXCONFIG --libs richtext,std,aui`"
 
-	WX_CPPFLAGS_BASE="`$WXCONFIG --cppflags base`"
-	WX_CXXFLAGS_BASE="`$WXCONFIG --cxxflags base | sed -e 's/-fno-exceptions//'`"
+        WX_CPPFLAGS_BASE="`$WXCONFIG --cppflags base`"
+        WX_CXXFLAGS_BASE="`$WXCONFIG --cxxflags base | sed -e 's/-fno-exceptions//'`"
         WX_LIBS_BASE="`$WXCONFIG --libs base,net`"
-	wx_is_available=1
+        wx_is_available=1
 else
-        AC_MSG_ERROR("wxWidgets version > 3.0.0 required.")
-	wx_is_available=0
+        AC_MSG_NOTICE("wxWidgets version > 3.0.0 required. wxWidgets disabled")
+        wx_is_available=0
 fi
-
-## Is this wx 3?
-#if test -n "$vers" && test "$vers" -ge 3000000; then
-#        WX_CPPFLAGS="$WX_CPPFLAGS -DWX_3"
-#        WX_CXXFLAGS="$WX_CXXFLAGS -DWX_3"
-#fi
-
 
 # Do FFTW3 Checks
 
-AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h. Please check your installation of FFTW3."))
-AC_CHECK_LIB(fftw3, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+# Check whether Intel's MKL is available. If not, link against FFTW.
+AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
+AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
+
+if test "x$HAVE_MKL" = "xyes"; then
+
+	AC_MSG_NOTICE(Will use Intel MKL rather than FFTW for fast Fourier transforms)
+	
+	if test "x$CXX" = "xicpc"; then
+		CPPFLAGS="$CPPFLAGS -mkl"
+		LIBS="$LIBS -mkl"
+	else
+       		LIBS="$LIBS -lmkl_rt"
+       		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+	fi
+else
+
+	AC_CHECK_LIB(fftw3f, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+
+fi
 
 # SQLITE 3 Checks
 
 AC_CHECK_HEADER(sqlite3.h, , AC_MSG_ERROR("Can't find sqlite3.h. Please check your installation of SQLITE3."))
 AC_CHECK_LIB(sqlite3, sqlite3_open, [LIBS="$LIBS -lsqlite3"],AC_MSG_ERROR("Can't find SQLITE3's libraries. Please check your installation of SQLITE3."))
 
-# MPI Checks..
-
-#lets see if we can compile a sample MPI program
-
-#ORIGINAL_LD_FLAGS=$LDFLAGS
-#ORIGINAL_CPPFLAGS=$CPPFLAGS
-#ORIGINAL_CXXFLAGS=$CXXFLAGS
-#ORIGINAL_LIBS=$LIBS
-
-#CXXFLAGS="$MPI_CPPFLAGS"
-#CPPFLAGS="$MPI_CPPFLAGS"
-#LIBS="$MPI_LIBS"
-
-#AC_MSG_CHECKING([mpi compilation])
-#AC_LINK_IFELSE(  [AC_LANG_PROGRAM([[#include <mpi.h>]],
-#                                    [[MPI_Finalize();]])],
-#                   [
-#                     AC_MSG_RESULT([passed])
-#                     MPI_COMPILER=1   
-#                     ORIGINAL_CPPFLAGS="$ORIGINAL_CPPFLAGS -DWITH_MPI"
-#                     ORIGINAL_CXXFLAGS="$ORIGINAL_CXXFLAGS -DWITH_MPI"
-#                   ],
-#                   [
-#                     AC_MSG_RESULT([failed])
-#                     MPI_COMPILER=0
-#                   ]
-#               )
-
-#CPPFLAGS="$ORIGINAL_CPPFLAGS"
-#CXXFLAGS="$ORIGINAL_CXXFLAGS"
-#LIBS="$ORIGINAL_LIBS"
+# make it so we can turn off gui
 
 #AC_ARG_ENABLE(textonly, [  --enable-textonly       Do not compile wxWidgets applications [[default=no]]],[
 #  if test "$enableval" = yes; then
@@ -155,34 +145,19 @@ AC_CHECK_LIB(sqlite3, sqlite3_open, [LIBS="$LIBS -lsqlite3"],AC_MSG_ERROR("Can't
 #  ])
 
 
-#if test "$MPI_COMPILER" = 0; then 
-
-#echo
-#echo "**    MPI not available, MPI programs will not be compiled **"
-#echo
-
-#fi
-
 #if test "$wx_is_available" = 0; then
 
 #echo
-#echo "**    WxWidgets not available, GUI programs will not be compiled **"
+#echo "**    WxWidgets not available, GUI program will not be compiled **"
 #echo
 
 #fi
 
-
-
-#AM_CONDITIONAL([COMPILE_MPI], test "$MPI_COMPILER" != 0)
 #AM_CONDITIONAL([WX_AVAILABLE], test "$wx_is_available" != 0)
-
-#AC_SUBST(MPI_COMPILER)
-#AC_SUBST(MPI_LIBS)
-#AC_SUBST(MPI_LDFLAGS)
-#AC_SUBST(MPI_CPPFLAGS)
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)
 AC_SUBST(WX_CPPFLAGS_BASE)
+
 
 AC_OUTPUT(Makefile src/Makefile)

@@ -167,11 +167,10 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 	if (IsEven(wanted_x_size) == true) real_memory_allocated =  wanted_x_size / 2 + 1;
 	else real_memory_allocated = (wanted_x_size - 1) / 2 + 1;
 
-
 	real_memory_allocated *= wanted_y_size * wanted_z_size; // other dimensions
 	real_memory_allocated *= 2; // room for complex
 
-	real_values = fftwf_alloc_real(real_memory_allocated);
+	real_values = (float *) fftwf_malloc(sizeof(float) * real_memory_allocated);
 	complex_values = (fftwf_complex*) real_values;  // Set the complex_values to point at the newly allocated real values;
 
 	is_in_memory = true;
@@ -227,19 +226,20 @@ void Image::SetLogicalDimensions(int wanted_x_size, int wanted_y_size, int wante
 
 void Image::UpdateLoopingAndAddressing()
 {
-	/*
+
 	physical_upper_bound_complex_x = logical_x_dimension / 2;
 	physical_upper_bound_complex_y = logical_y_dimension - 1;
-	physical_upper_bound_complex_z = logical_z_dimension - 1;*/
+	physical_upper_bound_complex_z = logical_z_dimension - 1;
 
+	/*
 	if (IsEven(logical_x_dimension) == true) physical_upper_bound_complex_x = logical_x_dimension / 2;
 	else physical_upper_bound_complex_x = (logical_x_dimension - 1) / 2;
 
 	physical_upper_bound_complex_y = logical_y_dimension - 1;
-	physical_upper_bound_complex_z = logical_z_dimension - 1;
+	physical_upper_bound_complex_z = logical_z_dimension - 1;*/
 
 	UpdatePhysicalAddressOfBoxCenter();
-
+/*
 	if (IsEven(logical_x_dimension) == true) physical_index_of_first_negative_frequency_x = logical_x_dimension / 2 + 1;
 	else physical_index_of_first_negative_frequency_x = ((logical_x_dimension + 3) / 2) - 1;
 
@@ -247,19 +247,19 @@ void Image::UpdateLoopingAndAddressing()
 	else physical_index_of_first_negative_frequency_y = ((logical_y_dimension + 3) / 2) - 1;
 
 	if (IsEven(logical_z_dimension) == true) physical_index_of_first_negative_frequency_z = logical_z_dimension / 2 + 1;
-	else physical_index_of_first_negative_frequency_z = ((logical_z_dimension + 3) / 2) - 1;
-	/*
+	else physical_index_of_first_negative_frequency_z = ((logical_z_dimension + 3) / 2) - 1;*/
+
 	physical_index_of_first_negative_frequency_x = logical_x_dimension / 2 + 1;
 	physical_index_of_first_negative_frequency_y = logical_y_dimension / 2 + 1;
 	physical_index_of_first_negative_frequency_z = logical_z_dimension / 2 + 1;
-	*/
+
 
     // Update the Fourier voxel size
 
 	fourier_voxel_size_x = 1.0 / double(logical_x_dimension);
 	fourier_voxel_size_y = 1.0 / double(logical_y_dimension);
 	fourier_voxel_size_z = 1.0 / double(logical_z_dimension);
-
+/*
 	if (IsEven(logical_x_dimension) == true)
 	{
 		logical_lower_bound_complex_x = -logical_x_dimension / 2;
@@ -289,11 +289,11 @@ void Image::UpdateLoopingAndAddressing()
 	    logical_upper_bound_complex_y =  (logical_y_dimension-1) / 2;
 	    logical_lower_bound_real_y    = -(logical_y_dimension-1) / 2;
 	    logical_upper_bound_real_y    =  (logical_y_dimension-1) / 2;
-	}
+	}*/
 
 
 
-/*
+
     logical_lower_bound_complex_x = -logical_x_dimension / 2;
     logical_upper_bound_complex_x =  logical_x_dimension / 2;
     logical_lower_bound_real_x    = -logical_x_dimension / 2;
@@ -307,7 +307,7 @@ void Image::UpdateLoopingAndAddressing()
     logical_lower_bound_complex_z = -logical_z_dimension / 2;
     logical_upper_bound_complex_z =  logical_z_dimension / 2;
     logical_lower_bound_real_z    = -logical_z_dimension / 2;
-    logical_upper_bound_real_z    =  logical_z_dimension / 2 - 1;*/
+    logical_upper_bound_real_z    =  logical_z_dimension / 2 - 1;
 /*
 	if (IsEven(logical_x_dimension) == true) physical_upper_bound_complex_x = logical_x_dimension / 2;
 	else physical_upper_bound_complex_x = (logical_x_dimension - 1) / 2;
@@ -394,6 +394,7 @@ void Image::UpdateLoopingAndAddressing()
 
 void Image::UpdatePhysicalAddressOfBoxCenter()
 {
+	/*
     if (IsEven(logical_x_dimension)) physical_address_of_box_center_x = logical_x_dimension / 2;
     else physical_address_of_box_center_x = (logical_x_dimension - 1) / 2;
 
@@ -402,7 +403,10 @@ void Image::UpdatePhysicalAddressOfBoxCenter()
 
     if (IsEven(logical_z_dimension)) physical_address_of_box_center_z = logical_z_dimension / 2;
     else physical_address_of_box_center_z = (logical_z_dimension - 1) / 2;
-
+*/
+	physical_address_of_box_center_x = logical_x_dimension / 2;
+	physical_address_of_box_center_y = logical_y_dimension / 2;
+	physical_address_of_box_center_z = logical_z_dimension / 2;
 }
 
 //!> \brief   Apply a forward FT to the Image object. The FT is scaled.

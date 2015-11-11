@@ -28,6 +28,6 @@
 #else
 #define MyDebugPrintWithDetails(...)
 #define MyDebugPrint(...)
-#define MyDebugAssertTrue(cond, msg)
-#define MyDebugAssertFalse(cond, msg)
+#define MyDebugAssertTrue(cond, msg, ...)
+#define MyDebugAssertFalse(cond, msg, ...)
 #endif

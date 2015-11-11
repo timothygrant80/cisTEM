@@ -14,18 +14,22 @@ UserInput::UserInput(const char *program_name, float program_version)
 UserInput::~UserInput()
 {
 
-    // we need to carry over any unused defaults!
-	if (defaults_file != 0 && new_defaults_file != 0) CarryOverDefaults();
+	if (input_is_a_tty == true)
+	{
 
-    if (defaults_file != 0) fclose(defaults_file);
+		// we need to carry over any unused defaults!
+		if (defaults_file != 0 && new_defaults_file != 0) CarryOverDefaults();
 
-    if (new_defaults_file != 0)
-    {
-      fclose(new_defaults_file);
-      remove(defaults_filename);
-      rename(new_defaults_filename, defaults_filename);
-      remove(new_defaults_filename);
-    }
+		if (defaults_file != 0) fclose(defaults_file);
+
+		if (new_defaults_file != 0)
+		{
+			fclose(new_defaults_file);
+			remove(defaults_filename);
+			rename(new_defaults_filename, defaults_filename);
+			remove(new_defaults_filename);
+		}
+	}
 }
 
 void UserInput::AskQuestion(const char *question_text, const char *help_text, const char *default_value, char *received_input)
@@ -409,6 +413,10 @@ void UserInput::DoGotInvalidAnswer()
 
 void UserInput::CarryOverDefaults()
 {
+	if (input_is_a_tty == true)
+	{
+
+
 	int file_check = 1;
 	int file_check_newfile = 1;
 	char current_label[1000];
@@ -477,6 +485,7 @@ void UserInput::CarryOverDefaults()
             fprintf(new_defaults_file, "%s:: %s\n", current_label, current_default);
             file_pos = ftell ( new_defaults_file );
   		}
+	}
 	}
 }
 

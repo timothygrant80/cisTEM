@@ -31,6 +31,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
                        core/image.cpp \
+                       core/electron_dose.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/database.cpp \

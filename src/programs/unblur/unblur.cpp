@@ -149,7 +149,7 @@ bool UnBlurApp::DoCalculation()
 	float       exposure_per_frame                  = my_current_job.arguments[14].ReturnFloatArgument();
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 
-	my_current_job.PrintAllArguments();
+	//my_current_job.PrintAllArguments();
 
 	// The Files
 

@@ -149,3 +149,13 @@ long GuiJobController::ReturnJobNumberFromJobCode(unsigned char *job_code)
 
 	return -1;
 }
+
+void GuiJobController::KillJob(int job_to_kill)
+{
+	if (job_list[job_to_kill].is_active == true)
+	{
+		if (job_list[job_to_kill].socket != NULL) job_list[job_to_kill].socket->Destroy();
+		job_list[job_to_kill].socket = NULL;
+		job_list[job_to_kill].is_active = false;
+	}
+}

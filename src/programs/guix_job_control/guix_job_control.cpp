@@ -512,6 +512,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	        wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
+	        abort();
 
 	        break;
 	    }
@@ -667,6 +668,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	        wxPrintf("JOB CONTROL : Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
+	        abort();
 
 	        break;
 	    }

@@ -46,6 +46,7 @@ public:
 	long FindFreeJobSlot();
 	long ReturnJobNumberFromJobCode(unsigned char *job_code);
 	void GenerateJobCode(unsigned char *job_code);
+	void KillJob(int job_to_kill);
 
 
 };

@@ -616,6 +616,18 @@ void MyAlignMoviesPanel::FinishButtonClick( wxCommandEvent& event )
 
 void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
 {
+	// kill the job, this will kill the socket to terminate downstream processes
+	// - this will have to be improved when clever network failure is incorporated
+
+	main_frame->job_controller.KillJob(my_job_id);
+
+	WriteInfoText("Terminated Job");
+	TimeRemainingText->SetLabel("Remaining : Terminated");
+	CancelAlignmentButton->Show(false);
+	FinishButton->Show(true);
+	ProgressPanel->Layout();
+			  //running_job = false;
+
 
 }
 

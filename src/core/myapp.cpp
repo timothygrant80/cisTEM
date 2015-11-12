@@ -304,6 +304,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 		        wxPrintf("JOB  : Socket Disconnected!!\n");
 		        sock->Destroy();
 		        ExitMainLoop();
+		        abort();
 
 		        break;
 		    }
@@ -362,6 +363,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	        wxPrintf("JOB CONTROL : Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
+	        abort();
 
 	        break;
 	    }
@@ -541,6 +543,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 		    			 controller_socket->Destroy();
 		    			 ExitMainLoop();
+		    			 abort();
 
 		    		 }
 		    	 }
@@ -577,7 +580,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 		     wxPrintf("JOB Master : a slave socket Disconnected!!\n");
 
 		     sock->Destroy();
-		     //ExitMainLoop();
+		     ExitMainLoop();
+		     abort();
 
 		     break;
 		  }
@@ -820,7 +824,10 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 		     wxPrintf("JOB  : Master Socket Disconnected!!\n");
 		     sock->Destroy();
+
+		     if (work_thread != NULL) work_thread->Delete();
 		     ExitMainLoop();
+		     abort();
 
 		     break;
 		  }

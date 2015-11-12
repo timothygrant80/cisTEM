@@ -44,8 +44,8 @@ AC_ARG_WITH(wx-config,
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
-  CXXFLAGS="-O2 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
   fi
   ])
 

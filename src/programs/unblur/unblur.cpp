@@ -23,20 +23,20 @@ void UnBlurApp::DoInteractiveUserInput()
 {
 	std::string input_filename;
 	std::string output_filename;
-	float original_pixel_size;
-	float minimum_shift_in_angstroms;
-	float maximum_shift_in_angstroms;
+	float original_pixel_size = 1;
+	float minimum_shift_in_angstroms = 2;
+	float maximum_shift_in_angstroms = 80;
 	bool should_dose_filter = true;
 	bool should_restore_power = true;
-	float termination_threshold_in_angstroms;
-	int max_iterations;
-	float bfactor_in_angstroms;
+	float termination_threshold_in_angstroms = 1;
+	int max_iterations = 20;
+	float bfactor_in_angstroms = 1500;
 	bool should_mask_central_cross = true;
-	int horizontal_mask_size;
-	int vertical_mask_size;
-	float exposure_per_frame;
-	float acceleration_voltage;
-	float pre_exposure_amount;
+	int horizontal_mask_size = 1;
+	int vertical_mask_size = 1;
+	float exposure_per_frame = 0.0;
+	float acceleration_voltage = 300.0;
+	float pre_exposure_amount = 0.0;
 
 	bool set_expert_options;
 
@@ -49,14 +49,14 @@ void UnBlurApp::DoInteractiveUserInput()
 
 	 if (should_dose_filter == true)
 	 {
-		 exposure_per_frame = my_input->GetFloatFromUser("Exposure per frame (e/A^2)", "Exposure per frame, in electrons per square Angstrom", "1.0", 0.0);
 		 acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (kV)", "Acceleration voltage during imaging", "300.0");
+		 exposure_per_frame = my_input->GetFloatFromUser("Exposure per frame (e/A^2)", "Exposure per frame, in electrons per square Angstrom", "1.0", 0.0);
 	 	 pre_exposure_amount = my_input->GetFloatFromUser("Pre-exposure amount (e/A^2)", "Amount of pre-exposure prior to the first frame, in electrons per square Angstrom", "0.0", 0.0);
 	 }
 	 else
 	 {
 	 	 exposure_per_frame = 0.0;
-	 	 acceleration_voltage = 0.0;
+	 	 acceleration_voltage = 300.0;
 	 	 pre_exposure_amount = 0.0;
 	 }
 
@@ -91,8 +91,8 @@ void UnBlurApp::DoInteractiveUserInput()
 
 	 delete my_input;
 
-	 my_current_job.Reset(13);
-	 my_current_job.ManualSetArguments("ttfffbbfifbii",  input_filename.c_str(),
+	 my_current_job.Reset(16);
+	 my_current_job.ManualSetArguments("ttfffbbfifbiifff",  input_filename.c_str(),
 			 	 	 	 	 	 	 	 	 	 	 	 output_filename.c_str(),
 														 original_pixel_size,
 														 minimum_shift_in_angstroms,
@@ -104,7 +104,10 @@ void UnBlurApp::DoInteractiveUserInput()
 														 bfactor_in_angstroms,
 														 should_mask_central_cross,
 														 horizontal_mask_size,
-														 vertical_mask_size);
+														 vertical_mask_size,
+														 acceleration_voltage,
+														 exposure_per_frame,
+														 pre_exposure_amount);
 
 
 }
@@ -115,6 +118,7 @@ bool UnBlurApp::DoCalculation()
 {
 	int pre_binning_factor;
 	long image_counter;
+	int pixel_counter;
 
 	float unitless_bfactor;
 
@@ -140,6 +144,9 @@ bool UnBlurApp::DoCalculation()
 	bool        should_mask_central_cross			= my_current_job.arguments[10].ReturnBoolArgument();
 	int         horizontal_mask_size				= my_current_job.arguments[11].ReturnIntegerArgument();
 	int         vertical_mask_size					= my_current_job.arguments[12].ReturnIntegerArgument();
+	float       acceleration_voltage				= my_current_job.arguments[13].ReturnFloatArgument();
+	float       exposure_per_frame                  = my_current_job.arguments[14].ReturnFloatArgument();
+	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 
 	//my_current_job.PrintAllArguments();
 
@@ -159,6 +166,15 @@ bool UnBlurApp::DoCalculation()
 
 	float *x_shifts = new float[number_of_input_images];
 	float *y_shifts = new float[number_of_input_images];
+
+	// Arrays to hold the 1D dose filter, and 1D restoration filter..
+
+	float *dose_filter;
+	float *dose_filter_sum_of_squares;
+
+	// Electron dose object for if dose filtering..
+
+	ElectronDose my_electron_dose(acceleration_voltage, original_pixel_size);
 
 	// some quick checks..
 
@@ -212,8 +228,6 @@ bool UnBlurApp::DoCalculation()
 
 	if (min_shift_in_pixels <= 1.01) min_shift_in_pixels = 1.01;  // we always want to ignore the central peak initially.
 
-	if (termination_threshold_in_pixels < 1 && pre_binning_factor > 1) termination_threshold_in_pixels = 1;
-
 	if (pre_binning_factor > 1)
 	{
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
@@ -222,6 +236,11 @@ bool UnBlurApp::DoCalculation()
 			image_stack[image_counter].Resize(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
 			//image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
 		}
+
+		// for the binned images, we don't want to insist on a super low termination factor.
+
+		if (termination_threshold_in_pixels < 1 && pre_binning_factor > 1) termination_threshold_in_pixels = 1;
+
 	}
 
 	// do the initial refinement (only 1 round - with the min shift)
@@ -275,21 +294,34 @@ bool UnBlurApp::DoCalculation()
 
 	// we should be finished with alignment, now we just need to make the final sum..
 
-	/*
-    ! Dose filtering
-    if (apply_dose_filter%value) then
-        do image_counter = 1,number_of_frames_per_movie%value
-            call my_electron_dose%ApplyDoseFilterToImage(image_stack(image_counter), &
-                                                         dose_start=((image_counter-1)*exposure_per_frame%value) &
-                                                                    + pre_exposure_amount%value, &
-                                                         dose_finish=(image_counter*exposure_per_frame%value) &
-                                                                    + pre_exposure_amount%value, &
-                                                         pixel_size=pixel_size%value)
-        enddo
-    endif
+	if (should_dose_filter == true)
+	{
+		// allocate arrays for the filter, and the sum of squares..
 
-    */
+		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
+		dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
 
+		for (pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++)
+		{
+			dose_filter[pixel_counter] = 0.0;
+			dose_filter_sum_of_squares[pixel_counter] = 0.0;
+		}
+
+		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		{
+			my_electron_dose.CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
+
+			// filter the image, and also calculate the sum of squares..
+
+			for (pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++)
+			{
+				image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
+				dose_filter_sum_of_squares[pixel_counter] += pow(dose_filter[pixel_counter], 2);
+
+				//if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
+			}
+		}
+	}
 
 	sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
 	sum_image.SetToConstant(0.0);
@@ -300,6 +332,19 @@ bool UnBlurApp::DoCalculation()
 		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
 	}
 
+	// if we are restoring the power - do it here..
+
+	if (should_dose_filter == true && should_restore_power == true)
+	{
+		for (pixel_counter = 0; pixel_counter < sum_image.real_memory_allocated / 2; pixel_counter++)
+		{
+			if (dose_filter_sum_of_squares[pixel_counter] != 0)
+			{
+				sum_image.complex_values[pixel_counter] /= sqrt(dose_filter_sum_of_squares[pixel_counter]);
+			}
+		}
+	}
+
 	// now we just need to write out the final sum..
 
 	sum_image.WriteSlice(&output_file, 1);
@@ -307,6 +352,12 @@ bool UnBlurApp::DoCalculation()
 	delete [] x_shifts;
 	delete [] y_shifts;
 	delete [] image_stack;
+
+	if (should_dose_filter == true)
+	{
+		delete [] dose_filter;
+		delete [] dose_filter_sum_of_squares;
+	}
 
 	return true;
 }

@@ -12,52 +12,84 @@ AlignMoviesPanel( parent )
 
 		// Create a mpFXYVector layer for the plot
 
-		mpFXYVector* vectorLayer = new mpFXYVector((""));
+		current_x_shift_vector_layer = new mpFXYVector((""));
+		current_y_shift_vector_layer = new mpFXYVector((""));
+		//average_shift_vector_layer = new mpFXYVector((""));
 
-	//	accumulated_dose_data.push_back(0);
-//		accumulated_dose_data.push_back(5);
-//		accumulated_dose_data.push_back(10);
-//		accumulated_dose_data.push_back(15);
-		//accumulated_dose_data.push_back(20);
 
-		//average_movement_data.push_back(10);
-		//average_movement_data.push_back(6);
-		//average_movement_data.push_back(4);
-		//average_movement_data.push_back(2);
-		//average_movement_data.push_back(1);
+		/*current_accumulated_dose_data.push_back(0);
+		current_accumulated_dose_data.push_back(5);
+		current_accumulated_dose_data.push_back(10);
+		current_accumulated_dose_data.push_back(15);
+		current_accumulated_dose_data.push_back(20);
 
-		vectorLayer->SetData(accumulated_dose_data, average_movement_data);
-		vectorLayer->SetContinuity(true);
+		current_movement_data.push_back(10);
+		current_movement_data.push_back(6);
+		current_movement_data.push_back(4);
+		current_movement_data.push_back(2);
+		current_movement_data.push_back(1);*/
+
 		wxPen vectorpen(*wxBLUE, 2, wxSOLID);
-		vectorLayer->SetPen(vectorpen);
-		vectorLayer->SetDrawOutsideMargins(false);
+		wxPen redvectorpen(*wxRED, 2, wxSOLID);
 
+		//current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
+		current_x_shift_vector_layer->SetContinuity(true);
+		current_x_shift_vector_layer->SetPen(vectorpen);
+		current_x_shift_vector_layer->SetDrawOutsideMargins(false);
+
+		current_y_shift_vector_layer->SetContinuity(true);
+		current_y_shift_vector_layer->SetPen(redvectorpen);
+		current_y_shift_vector_layer->SetDrawOutsideMargins(false);
+
+		//average_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
+		//average_shift_vector_layer->SetContinuity(true);
+		//average_shift_vector_layer->SetPen(vectorpen);
+		//average_shift_vector_layer->SetDrawOutsideMargins(false);
 
 		wxFont graphFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
-		plot_window = new mpWindow( GraphPanel, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
+		current_plot_window = new mpWindow( GraphPanel, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
+		//average_plot_window = new mpWindow( GraphPanel, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
 
-		mpScaleX* xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
-	    mpScaleY* yaxis = new mpScaleY(wxT("Average Movement (Å)"), mpALIGN_LEFT, true);
+		//mpScaleX* average_xaxis = new mpScaleX(wxT("Accum. Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
+	    //mpScaleY* average_yaxis = new mpScaleY(wxT("Average Movement (Å)"), mpALIGN_LEFT, true);
 
-	    xaxis->SetFont(graphFont);
-	    yaxis->SetFont(graphFont);
-	    xaxis->SetDrawOutsideMargins(false);
-	    yaxis->SetDrawOutsideMargins(false);
+	    mpScaleX* current_xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
+	    mpScaleY* current_yaxis = new mpScaleY(wxT("Shifts (Å)"), mpALIGN_LEFT, true);
 
-	    plot_window->SetMargins(30, 30, 60, 100);
+	   // legend = new mpInfoLegend(wxRect(400,30,100,50));
 
-	    plot_window->AddLayer(xaxis);
-	    plot_window->AddLayer(yaxis);
-		plot_window->AddLayer(vectorLayer);
+	   // average_xaxis->SetFont(graphFont);
+	    //average_yaxis->SetFont(graphFont);
+	    //average_xaxis->SetDrawOutsideMargins(false);
+	    //average_yaxis->SetDrawOutsideMargins(false);
+
+	    current_xaxis->SetFont(graphFont);
+	    current_yaxis->SetFont(graphFont);
+	    current_xaxis->SetDrawOutsideMargins(false);
+	    current_yaxis->SetDrawOutsideMargins(false);
+
+	    current_plot_window->SetMargins(30, 30, 60, 80);
+	    //average_plot_window->SetMargins(20, 40, 50, 50);
+
+	    current_plot_window->AddLayer(current_xaxis);
+	    current_plot_window->AddLayer(current_yaxis);
+		current_plot_window->AddLayer(current_x_shift_vector_layer);
+		current_plot_window->AddLayer(current_y_shift_vector_layer);
+		current_plot_window->AddLayer(legend);
 		//plot_window->AddLayer( nfo = new mpInfoCoords(wxRect(500,20,10,10), wxTRANSPARENT_BRUSH));
 
-	    GraphSizer->Add(plot_window, 1, wxEXPAND );
+	    //average_plot_window->AddLayer(average_xaxis);
+	    //average_plot_window->AddLayer(average_yaxis);
+		//average_plot_window->AddLayer(average_shift_vector_layer);
 
-	    plot_window->EnableDoubleBuffer(true);
+	    GraphSizer->Add(current_plot_window, 1, wxEXPAND );
+	  //  GraphSizer->Add(average_plot_window, 1, wxEXPAND );
+
+	    current_plot_window->EnableDoubleBuffer(true);
 //   	    plot_window->SetMPScrollbars(false);
-   	    plot_window->EnableMousePanZoom(false);
-	    plot_window->Fit();
+   	    current_plot_window->EnableMousePanZoom(false);
+	    current_plot_window->Fit();
 
 	    // Set variables
 
@@ -69,6 +101,8 @@ AlignMoviesPanel( parent )
 
 	    my_job_id = -1;
 	    running_job = false;
+
+	    graph_is_hidden = true;
 
 	    SetInfo();
 
@@ -429,6 +463,12 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	float current_pixel_size;
 
+	float current_acceleration_voltage;
+	float current_dose_per_frame;
+	float current_pre_exposure;
+
+	time_of_last_graph_update = 0;
+
 	std::string current_filename;
 	wxString output_filename;
 
@@ -499,7 +539,27 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
 		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		my_job_package.AddJob("ssfffbbfifbii", current_filename.c_str(), output_filename.ToUTF8().data(), current_pixel_size, float(minimum_shift), float(maximum_shift), should_dose_filter, should_restore_power, float(termination_threshold), max_iterations, float(bfactor), should_mask_central_cross, horizontal_mask, vertical_mask);
+		current_acceleration_voltage = movie_asset_panel->ReturnAssetAccelerationVoltage(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+
+
+		my_job_package.AddJob("ssfffbbfifbiifff",	current_filename.c_str(),
+													output_filename.ToUTF8().data(),
+													current_pixel_size,
+													float(minimum_shift),
+													float(maximum_shift),
+													should_dose_filter,
+													should_restore_power,
+													float(termination_threshold),
+													max_iterations,
+													float(bfactor),
+													should_mask_central_cross,
+													horizontal_mask,
+													vertical_mask,
+													current_acceleration_voltage,
+													current_dose_per_frame,
+													current_pre_exposure);
 	}
 
 	// launch a controller
@@ -516,7 +576,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		ExpertPanel->Show(false);
 		InfoPanel->Show(false);
 		OutputTextPanel->Show(true);
-		GraphPanel->Show(true);
+		//GraphPanel->Show(true);
 
 		ExpertToggleButton->Enable(false);
 		GroupComboBox->Enable(false);
@@ -542,6 +602,7 @@ void MyAlignMoviesPanel::FinishButtonClick( wxCommandEvent& event )
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
 	GraphPanel->Show(false);
+	graph_is_hidden = true;
 	InfoPanel->Show(true);
 
 	if (show_expert_options == true) ExpertPanel->Show(true);
@@ -635,6 +696,38 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 	 		 //WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
 	 	  }
+	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
+	 	  {
+	    	  int job_number;
+	    	  int result_size;
+	    	  char job_number_and_result_size[8];
+	    	  unsigned char *byte_pointer;
+	    	  float *result;
+
+	    	  sock->ReadMsg(job_number_and_result_size, 8);
+
+	    	  byte_pointer = (unsigned char*) &job_number;
+	    	  byte_pointer[0] = job_number_and_result_size[0];
+	    	  byte_pointer[1] = job_number_and_result_size[1];
+	    	  byte_pointer[2] = job_number_and_result_size[2];
+	    	  byte_pointer[3] = job_number_and_result_size[3];
+
+	    	  byte_pointer = (unsigned char*) &result_size;
+
+	    	  byte_pointer[0] = job_number_and_result_size[4];
+			  byte_pointer[1] = job_number_and_result_size[5];
+			  byte_pointer[2] = job_number_and_result_size[6];
+			  byte_pointer[3] = job_number_and_result_size[7];
+
+
+			  if (result_size > 0)
+			  {
+				 result = new float[result_size];
+				 sock->ReadMsg(result, result_size * 4); // *4 for float
+				 ProcessResult(result, result_size, job_number);
+				 delete [] result;
+			  }
+	 	  }
 	      else
 		  if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
 		  {
@@ -683,6 +776,60 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	    default: ;
 	  }
 
+}
+
+void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_number) // this will have to be overidden in the parent clas when i make it.
+{
+	int number_of_frames;
+	int frame_counter;
+
+	long current_time = time(NULL);
+
+
+	// mark the job as finished, update progress bar
+
+
+	float exposure_per_frame = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
+
+	// ok the result should be x-shifts, followed by y-shifts..
+	WriteInfoText(wxString::Format("Job #%i finished :-\n\n", job_number));
+
+	number_of_frames = result_size / 2;
+
+
+	if (current_time - time_of_last_graph_update > 1)
+	{
+		current_x_shift_vector_layer->Clear();
+		current_accumulated_dose_data.clear();
+		current_x_movement_data.clear();
+		current_y_movement_data.clear();
+
+		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
+		{
+			current_accumulated_dose_data.push_back(double(exposure_per_frame * frame_counter));
+			current_x_movement_data.push_back(double(result[frame_counter]));
+			current_y_movement_data.push_back(double(result[frame_counter + number_of_frames]));
+
+			//WriteInfoText(wxString::Format("Frame %i = %f, %f\n", frame_counter, result[frame_counter], result[frame_counter + number_of_frames]));
+		}
+
+		current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_x_movement_data);
+		current_y_shift_vector_layer->SetData(current_accumulated_dose_data, current_y_movement_data);
+		current_plot_window->Fit();
+		current_plot_window->UpdateAll();
+
+		if (graph_is_hidden == true)
+		{
+			GraphPanel->Show(true);
+			Layout();
+			graph_is_hidden = false;
+		}
+
+
+	}
+
+	my_job_tracker.MarkJobFinished();
+	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 }
 
 

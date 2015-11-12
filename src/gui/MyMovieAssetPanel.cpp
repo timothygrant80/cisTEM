@@ -199,3 +199,18 @@ double MyMovieAssetPanel::ReturnAssetPixelSize(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->pixel_size;
 }
+
+double MyMovieAssetPanel::ReturnAssetAccelerationVoltage(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->microscope_voltage;
+}
+
+double MyMovieAssetPanel::ReturnAssetDosePerFrame(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->dose_per_frame;
+}
+
+double MyMovieAssetPanel::ReturnAssetPreExposureAmount(long wanted_asset)
+{
+	return 0.0; // FIX THIS!
+}

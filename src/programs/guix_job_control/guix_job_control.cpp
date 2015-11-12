@@ -54,7 +54,10 @@ JobControlApp : public wxAppConsole
 	void OnMasterSocketEvent(wxSocketEvent& event);
 	void OnServerEvent(wxSocketEvent& event);
 	void SendError(wxString error_to_send);
+
 	void SendJobFinished(int job_number);
+	void SendJobResult(float *result, int result_size, int finished_job_number);
+
 	void SendAllJobsFinished();
 	void SendNumberofConnections();
 
@@ -441,6 +444,43 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 SendError(error_message);
 		 }
 		 else
+		 if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
+		 {
+			 // which job is finished and how big is the result..
+
+			 int job_number;
+			 int result_size;
+			 char job_number_and_result_size[8];
+			 unsigned char *byte_pointer;
+			 float *result;
+
+			 sock->ReadMsg(job_number_and_result_size, 8);
+
+			 byte_pointer = (unsigned char*) &job_number;
+			 byte_pointer[0] = job_number_and_result_size[0];
+			 byte_pointer[1] = job_number_and_result_size[1];
+			 byte_pointer[2] = job_number_and_result_size[2];
+			 byte_pointer[3] = job_number_and_result_size[3];
+
+			 byte_pointer = (unsigned char*) &result_size;
+
+			 byte_pointer[0] = job_number_and_result_size[4];
+			 byte_pointer[1] = job_number_and_result_size[5];
+			 byte_pointer[2] = job_number_and_result_size[6];
+			 byte_pointer[3] = job_number_and_result_size[7];
+
+			 // get result
+
+			 if (result_size > 0)
+			 {
+				 result = new float[result_size];
+				 sock->ReadMsg(result, result_size * 4);// *4 for float
+				 SendJobResult(result, result_size, job_number);
+				 delete [] result;
+			 }
+
+		 }
+		 else
 		 if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
 		 {
 			 // which job is finished?
@@ -490,6 +530,39 @@ void JobControlApp::SendJobFinished(int job_number)
 	gui_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
 	// send the job number of the current job..
 	gui_socket->WriteMsg(&job_number, 4);
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
+void JobControlApp::SendJobResult(float *result, int result_size, int finished_job_number)
+{
+	SETUP_SOCKET_CODES
+
+	char job_number_and_result_size[8];
+	unsigned char *byte_pointer;
+
+	byte_pointer = (unsigned char*) &finished_job_number;
+
+	job_number_and_result_size[0] = byte_pointer[0];
+	job_number_and_result_size[1] = byte_pointer[1];
+	job_number_and_result_size[2] = byte_pointer[2];
+	job_number_and_result_size[3] = byte_pointer[3];
+
+	byte_pointer = (unsigned char*) &result_size;
+
+	job_number_and_result_size[4] = byte_pointer[0];
+	job_number_and_result_size[5] = byte_pointer[1];
+	job_number_and_result_size[6] = byte_pointer[2];
+	job_number_and_result_size[7] = byte_pointer[3];
+
+
+	// sendjobresultcode
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	gui_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+
+	// send the job number of the current job and result_size;
+	gui_socket->WriteMsg(job_number_and_result_size, 8);
+	// send the result..
+	gui_socket->WriteMsg(result, result_size * 4); //*4 for float
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 

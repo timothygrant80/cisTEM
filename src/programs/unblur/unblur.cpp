@@ -9,6 +9,7 @@ UnBlurApp : public MyApp
 	bool DoCalculation();
 	void DoInteractiveUserInput();
 
+
 	private:
 
 };
@@ -148,7 +149,7 @@ bool UnBlurApp::DoCalculation()
 	float       exposure_per_frame                  = my_current_job.arguments[14].ReturnFloatArgument();
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 
-	//my_current_job.PrintAllArguments();
+	my_current_job.PrintAllArguments();
 
 	// The Files
 
@@ -349,6 +350,26 @@ bool UnBlurApp::DoCalculation()
 
 	sum_image.WriteSlice(&output_file, 1);
 
+	// fill the result array..
+
+	if (result_array != NULL)
+	{
+		delete [] result_array;
+
+	}
+
+	result_array = new float[number_of_input_images * 2];
+	result_array_size = number_of_input_images * 2;
+
+	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+	{
+		result_array[image_counter] = x_shifts[image_counter] * original_pixel_size;
+		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * original_pixel_size;
+
+		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+	}
+
+
 	delete [] x_shifts;
 	delete [] y_shifts;
 	delete [] image_stack;
@@ -512,10 +533,6 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		}
 
 	}
-
-	delete [] current_x_shifts;
-	delete [] current_y_shifts;
-
 }
 
 

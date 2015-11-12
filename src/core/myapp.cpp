@@ -9,6 +9,11 @@ bool MyApp::OnInit()
 	number_of_dispatched_jobs = 0;
 	number_of_finished_jobs = 0;
 
+	// blank the result array..
+
+	result_array = NULL;
+	result_array_size = 0;
+
 	long counter;
 
 	// Bind the thread events
@@ -389,7 +394,7 @@ void MyApp::SendJobFinished(int job_number)
 
 	SETUP_SOCKET_CODES
 
-	// get the next job..
+	// send job finished code
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 	controller_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
 	// send the job number of the current job..
@@ -397,6 +402,41 @@ void MyApp::SendJobFinished(int job_number)
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 
+}
+
+void MyApp::SendJobResult(float *result, int result_size, int finished_job_number)
+{
+	MyDebugAssertTrue(i_am_the_master == true, "SendJobResult called by a slave!");
+
+	SETUP_SOCKET_CODES
+
+	char job_number_and_result_size[8];
+	unsigned char *byte_pointer;
+
+	byte_pointer = (unsigned char*) &finished_job_number;
+
+	job_number_and_result_size[0] = byte_pointer[0];
+	job_number_and_result_size[1] = byte_pointer[1];
+	job_number_and_result_size[2] = byte_pointer[2];
+	job_number_and_result_size[3] = byte_pointer[3];
+
+	byte_pointer = (unsigned char*) &result_size;
+
+	job_number_and_result_size[4] = byte_pointer[0];
+	job_number_and_result_size[5] = byte_pointer[1];
+	job_number_and_result_size[6] = byte_pointer[2];
+	job_number_and_result_size[7] = byte_pointer[3];
+
+
+	// sendjobresultcode
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	controller_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+
+	// send the job number of the current job and result_size;
+	controller_socket->WriteMsg(job_number_and_result_size, 8);
+	// send the result..
+	controller_socket->WriteMsg(result, result_size * 4); // *4 for float
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 
 void MyApp::SendAllJobsFinished()
@@ -418,6 +458,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 	wxString s = _("JOB MASTER: OnSlaveSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
+
+	 float *result;
 
 	//MyDebugAssertTrue(sock == controller_socket, "Master Socket event from Non controller socket??");
 
@@ -445,16 +487,44 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			 {
 				 MyDebugPrint("JOB MASTER : SEND NEXT JOB");
 
+				 // get the job number..
 		    	 int finished_job_number;
+		    	 int result_size;
+
 		    	 sock->ReadMsg(&finished_job_number, 4);
+
+		    	 wxPrintf("finished_job_number = %i\n", finished_job_number);
+
+		    	 // if there is a result to send on, get it..
+
+		    	 sock->ReadMsg(&result_size, 4);
+
+		    	 wxPrintf("result_size = %i\n", result_size);
+
+
+		    	 if (result_size > 0)
+		    	 {
+		    		 result = new float[result_size];
+		    		 sock->ReadMsg(result, result_size * 4); // *4 for float
+		    	 }
+
 
 		    	 SendNextJobTo(sock);
 
-		    	 // Send info that the job has finished..
+		    	 // Send info that the job has finished, and if necessary the result..
 
 		    	 if (finished_job_number != -1)
 		    	 {
-		    		 SendJobFinished(finished_job_number);
+		    		 if (result_size > 0)
+		    		 {
+		    			 SendJobResult(result, result_size, finished_job_number);
+		    			 delete [] result;
+		    		 }
+		    		 else // just say job finished..
+		    		 {
+		    			 SendJobFinished(finished_job_number);
+		    		 }
+
 		    		 number_of_finished_jobs++;
 		    		 my_job_package.jobs[finished_job_number].has_been_run = true;
 
@@ -467,10 +537,10 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 		    				 SendError("All jobs should be finished, but job package is not empty.");
 		    			 }
 
-		    		   	  	  // time to die!
+		    		   	 // time to die!
 
-		    			 	 controller_socket->Destroy();
-		    			 	 ExitMainLoop();
+		    			 controller_socket->Destroy();
+		    			 ExitMainLoop();
 
 		    		 }
 		    	 }
@@ -691,6 +761,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
 				 int no_job = -1;
 				 controller_socket->WriteMsg(&no_job, 4);
+				 controller_socket->WriteMsg(&no_job, 4); // twice for result code
 
 			 }
 			 else
@@ -771,9 +842,20 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+
 	controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
+
 	// send the job number of the current job..
 	controller_socket->WriteMsg(&my_current_job.job_number, 4);
+	controller_socket->WriteMsg(&result_array_size, 4);
+
+	// if there is a result - send it to the gui..
+
+	if (result_array != NULL && result_array_size != 0)
+	{
+		controller_socket->WriteMsg(result_array, result_array_size * 4); // *4 for float
+	}
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }

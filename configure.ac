@@ -1,5 +1,5 @@
 AC_INIT(ProjectX, 0.1)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
 INPUT_CPPFLAGS="$CXXFLAGS"
@@ -39,8 +39,16 @@ AC_ARG_WITH(wx-config,
     fi
 ])
 
-# debugmode
+# MKL
 
+use_mkl=1
+
+AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
+  if test "$enableval" = no; then
+  	use_mkl=0
+  fi])
+
+# debugmode
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
@@ -65,7 +73,7 @@ AC_ARG_WITH(fftw-dir,
 #sqlite3-dir
 
 AC_ARG_WITH(sqlite3-dir,
-[[  --with-sqlite3-dir=DIR     Declare the root directory of sqlite3, if its
+[[  --with-sqlite3-dir=DIR  Declare the root directory of sqlite3, if its
                           current location is not system accessible ]],
 [
     if test "$withval" != "yes" -a "$withval" != ""; then
@@ -114,9 +122,13 @@ fi
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
 AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
 
+if test "x$use_mkl" = "x0"; then
+	HAVE_MKL="no"
+fi
+
 if test "x$HAVE_MKL" = "xyes"; then
 
-	AC_MSG_NOTICE(Will use Intel MKL rather than FFTW for fast Fourier transforms)
+	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
 	
 	if test "x$CXX" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl"
@@ -127,7 +139,8 @@ if test "x$HAVE_MKL" = "xyes"; then
 	fi
 else
 
-	AC_CHECK_LIB(fftw3f, fftw_import_wisdom_from_file, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+	AC_CHECK_LIB(fftw3f, fftwf_malloc, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
 
 fi
 

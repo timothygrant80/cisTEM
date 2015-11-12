@@ -34,6 +34,13 @@ MyApp : public wxAppConsole
 	public:
 		virtual bool OnInit();
 
+		// array for sending back the results - this may be better off being made into an object..
+
+		float *result_array;
+		int result_array_size;
+
+		// socket stuff
+
 		wxSocketClient *controller_socket;
 		bool 			is_connected;
 		bool            currently_running_a_job;
@@ -73,6 +80,7 @@ MyApp : public wxAppConsole
 		private:
 
 		void SendJobFinished(int job_number);
+		void SendJobResult(float *result, int result_size, int finished_job_number);
 		void SendAllJobsFinished();
 		void SocketSendError(wxString error_message);
 

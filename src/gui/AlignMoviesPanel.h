@@ -22,12 +22,22 @@ public:
 		MyAlignMoviesPanel( wxWindow* parent );
 	//// end generated class members
 
-		mpWindow        *plot_window;
+
+		std::vector<double> current_accumulated_dose_data;
+		std::vector<double> current_x_movement_data;
+		std::vector<double> current_y_movement_data;
+
+		mpWindow        *current_plot_window;
+		mpInfoLegend    *legend;
+
+		mpFXYVector* current_x_shift_vector_layer;
+		mpFXYVector* current_y_shift_vector_layer;
+
+		bool graph_is_hidden;
+
+		long time_of_last_graph_update;
+
 		//mpInfoCoords    *nfo;
-
-		std::vector<double> accumulated_dose_data;
-		std::vector<double> average_movement_data;
-
 
 
 		// methods
@@ -46,6 +56,7 @@ public:
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 
+		void ProcessResult(float *result, int result_size, int job_number);
 		void UpdateProgressBar();
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);

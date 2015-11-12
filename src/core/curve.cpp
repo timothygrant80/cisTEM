@@ -250,6 +250,7 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 	}
 
 	savitzky_golay_fit = new float[number_of_points];
+	have_savitzky_golay = true;
 
 	savitzky_golay_polynomial_order = wanted_polynomial_order;
 	savitzky_golay_window_size = wanted_window_size;

@@ -453,6 +453,7 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticLine* m_staticline11;
 		wxPanel* ProgressPanel;
 		wxGauge* ProgressBar;
+		wxStaticText* NumberConnectedText;
 		wxStaticText* TimeRemainingText;
 		wxButton* CancelAlignmentButton;
 		wxButton* FinishButton;

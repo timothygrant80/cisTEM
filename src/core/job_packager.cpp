@@ -45,9 +45,25 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 transfer_buffer[6] = char_pointer[2];
 	 transfer_buffer[7] = char_pointer[3];
 
-	 // now add each run_command
+	 // executable name
 
-	 byte_counter = 8;
+	 temp_int = my_profile.executable_name.Length();
+	 char_pointer = (unsigned char*)& temp_int;
+
+ 	 transfer_buffer[8] = char_pointer[0];
+ 	 transfer_buffer[9] = char_pointer[1];
+ 	 transfer_buffer[10] = char_pointer[2];
+ 	 transfer_buffer[11] = char_pointer[3];
+
+ 	 byte_counter = 12;
+
+ 	 for (counter = 0; counter < my_profile.executable_name.Length(); counter++)
+ 	 {
+ 		 transfer_buffer[byte_counter] = my_profile.executable_name.GetChar(counter);
+
+ 		 byte_counter++;
+ 	 }
+	 // now add each run_command
 
 	 for (command_counter = 0; command_counter < my_profile.number_of_run_commands; command_counter++)
 	 {
@@ -301,6 +317,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	RunProfile temp_run_profile;
 	wxString temp_wxstring;
+	wxString executable_name;
 
 
 
@@ -354,8 +371,25 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
     MyDebugPrint("There are %i commands", number_of_run_commands);
 
-    byte_counter = 8;
+    // executable name
 
+   	 char_pointer = (unsigned char*)& temp_int;
+   	 char_pointer[0] = transfer_buffer[8];
+   	 char_pointer[1] = transfer_buffer[9];
+   	 char_pointer[2] = transfer_buffer[10];
+   	 char_pointer[3] = transfer_buffer[11];
+
+   	 byte_counter = 12;
+
+   	 executable_name = "";
+
+     for (counter = 0; counter < temp_int; counter++)
+     {
+    	 executable_name += transfer_buffer[byte_counter];
+    	 byte_counter++;
+     }
+
+     // each run command
 
 	for (command_counter = 0; command_counter < number_of_run_commands; command_counter++)
 	{
@@ -400,7 +434,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	// now we need to loop over all the jobs..
 
-	Reset(temp_run_profile, "", wanted_number_of_jobs);
+	Reset(temp_run_profile, executable_name, wanted_number_of_jobs);
 
 	for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
 	{
@@ -550,6 +584,11 @@ long JobPackage::ReturnEncodedByteTransferSize()
 
 	byte_size += 8; // number_of_jobs and number_of_run_commands
 
+	// executable name
+
+	byte_size += 4; // length of string
+	byte_size += my_profile.executable_name.Length();
+
 	for (counter = 0; counter < my_profile.number_of_run_commands; counter++)
 	{
 		byte_size += 4; // length_of_current_command;
@@ -619,7 +658,9 @@ void JobPackage::Reset(RunProfile wanted_profile, wxString wanted_executable_nam
 	jobs = new RunJob[number_of_jobs];
 
 	my_profile = wanted_profile;
-	my_profile.SubstituteExecutableName(wanted_executable_name);
+	my_profile.executable_name = wanted_executable_name;
+
+	//my_profile.SubstituteExecutableName(wanted_executable_name);
 
 }
 

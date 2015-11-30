@@ -27,6 +27,23 @@ if test "x$CXX" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 fi
 
+# Static linking
+
+static_default="no"
+AC_ARG_ENABLE(static, [  --enable-static         Turn on static linking],[
+  if test "x$enable_static" = "xyes"; then
+        static_link=true
+  else
+        static_link=false
+  fi],[static_link=false])
+
+AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
+
+AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
+  if test "$enableval" = no; then
+        use_mkl=0
+  fi])
+
 # wx-config 
 
 WXCONFIG=wx-config
@@ -129,13 +146,20 @@ fi
 if test "x$HAVE_MKL" = "xyes"; then
 
 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
-	
-	if test "x$CXX" = "xicpc"; then
+
+	if test "xCXX=" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl"
-		LIBS="$LIBS -mkl"
+	fi
+	
+	if test "x$enable_static" = "xyes"; then
+	       	LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm "
 	else
-       		LIBS="$LIBS -lmkl_rt"
-       		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+		if test "x$CXX" = "xicpc"; then
+			LIBS="$LIBS -mkl"	
+		else
+	       		LIBS="$LIBS -lmkl_rt"
+       			LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+		fi
 	fi
 else
 

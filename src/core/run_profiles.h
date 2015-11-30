@@ -28,6 +28,8 @@ public:
 	wxString manager_command;
 	RunCommand *run_commands;
 
+	wxString executable_name;
+
 	void AddCommand(RunCommand wanted_command);
 	void AddCommand(wxString wanted_command, int wanted_number_of_copies);
 	void RemoveCommand(int number_to_remove);

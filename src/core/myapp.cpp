@@ -577,11 +577,11 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 				 SocketSendError("Error: A slave has disconnected before all jobs are finished.");
 			 }
 
-		     wxPrintf("JOB Master : a slave socket Disconnected!!\n");
+		     //wxPrintf("JOB Master : a slave socket Disconnected!!\n");
 
 		     sock->Destroy();
-		     ExitMainLoop();
-		     abort();
+		     //ExitMainLoop();
+		     //abort();
 
 		     break;
 		  }

@@ -76,7 +76,7 @@ AlignMoviesPanel( parent )
 	    current_plot_window->AddLayer(current_yaxis);
 		current_plot_window->AddLayer(current_x_shift_vector_layer);
 		current_plot_window->AddLayer(current_y_shift_vector_layer);
-		current_plot_window->AddLayer(legend);
+		//current_plot_window->AddLayer(legend);
 		//plot_window->AddLayer( nfo = new mpInfoCoords(wxRect(500,20,10,10), wxTRANSPARENT_BRUSH));
 
 	    //average_plot_window->AddLayer(average_xaxis);
@@ -443,7 +443,6 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	long counter;
 	long number_of_jobs = movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many movies in the selected group..
-	long number_of_processes = 2; // NEED TO DO THIS PROPERLY LATER
 
 	bool ok_number_conversion;
 
@@ -456,6 +455,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	double termination_threshold;
 	int max_iterations;
 	int bfactor;
+	int number_of_processes;
 
 	bool should_mask_central_cross;
 	int horizontal_mask;
@@ -568,6 +568,31 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
+		number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
+
+		if (number_of_processes >= 100000) length_of_process_number = 6;
+		else
+		if (number_of_processes >= 10000) length_of_process_number = 5;
+		else
+		if (number_of_processes >= 1000) length_of_process_number = 4;
+		else
+		if (number_of_processes >= 100) length_of_process_number = 3;
+		else
+		if (number_of_processes >= 10) length_of_process_number = 2;
+		else
+		length_of_process_number = 1;
+
+		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", 0, number_of_processes));
+		else
+		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", 0, number_of_processes));
+		else
+		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", 0, number_of_processes));
+		else
+		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", 0, number_of_processes));
+		else
+		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", 0, number_of_processes));
+		else
+		NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", 0, number_of_processes));
 
 		StartPanel->Show(false);
 		ProgressPanel->Show(true);
@@ -593,7 +618,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 void MyAlignMoviesPanel::FinishButtonClick( wxCommandEvent& event )
 {
 	ProgressBar->SetValue(0);
-	TimeRemainingText->SetLabel("Remaining : ???h:??m:??s");
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
     CancelAlignmentButton->Show(true);
 	FinishButton->Show(false);
 
@@ -622,7 +647,7 @@ void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
 	main_frame->job_controller.KillJob(my_job_id);
 
 	WriteInfoText("Terminated Job");
-	TimeRemainingText->SetLabel("Remaining : Terminated");
+	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
@@ -683,7 +708,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      {
 	    	  // send the job details..
 
-	    	  MyDebugPrint("Sending Job Details...");
+	    	  //wxPrintf("Sending Job Details...\n");
 	    	  my_job_package.SendJobPackage(sock);
 
 	      }
@@ -750,18 +775,34 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
               my_job_tracker.AddConnection();
 
-              ProgressBar->Pulse();
+              if (graph_is_hidden == true) ProgressBar->Pulse();
+
+              //WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
 
               // send the info to the gui
 
-		 	  if (number_of_connections == my_job_package.my_profile.ReturnTotalJobs()) WriteInfoText(wxString::Format("All %i jobs are running and connected.\n\n", number_of_connections));
+              int total_processes = my_job_package.my_profile.ReturnTotalJobs();
+
+		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.\n\n", number_of_connections));
+
+			  if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
+			  else
+			  if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
+		      else
+			  if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
+			  else
+			  if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
+			  else
+			  if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
+			  else
+		      NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
 		  }
 	      else
 		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		  {
 			  WriteInfoText("All Jobs have finished.");
 			  ProgressBar->SetValue(100);
-			  TimeRemainingText->SetLabel("Remaining : All Done!");
+			  TimeRemainingText->SetLabel("Time Remaining : All Done!");
 			  CancelAlignmentButton->Show(false);
 			  FinishButton->Show(true);
 			  ProgressPanel->Layout();
@@ -804,7 +845,7 @@ void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_
 	float exposure_per_frame = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
 
 	// ok the result should be x-shifts, followed by y-shifts..
-	WriteInfoText(wxString::Format("Job #%i finished :-\n\n", job_number));
+	//WriteInfoText(wxString::Format("Job #%i finished.", job_number));
 
 	number_of_frames = result_size / 2;
 
@@ -837,11 +878,23 @@ void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_
 			graph_is_hidden = false;
 		}
 
+		time_of_last_graph_update = current_time;
+
 
 	}
 
 	my_job_tracker.MarkJobFinished();
 	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+
+	if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
+	{
+		  WriteInfoText("All Jobs have finished.");
+		  ProgressBar->SetValue(100);
+		  TimeRemainingText->SetLabel("Time Remaining : All Done!");
+		  CancelAlignmentButton->Show(false);
+		  FinishButton->Show(true);
+		  ProgressPanel->Layout();
+	}
 }
 
 
@@ -850,5 +903,5 @@ void MyAlignMoviesPanel::UpdateProgressBar()
 	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
 
-	TimeRemainingText->SetLabel(wxString::Format("Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
+	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }

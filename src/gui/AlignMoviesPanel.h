@@ -10,6 +10,8 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 		bool show_expert_options;
 		long my_job_id;
 
+		int length_of_process_number;
+
 
 		JobPackage my_job_package;
 		JobTracker my_job_tracker;

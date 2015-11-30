@@ -222,7 +222,7 @@ MovieAssetList::MovieAssetList()
 
 MovieAssetList::~MovieAssetList()
 {	
-	delete [] assets;
+	delete [] reinterpret_cast < MovieAsset *> (assets);
 }
 
 void MovieAssetList::CheckMemory()
@@ -245,7 +245,7 @@ void MovieAssetList::CheckMemory()
 			buffer[counter].CopyFrom(& reinterpret_cast < MovieAsset *> (assets)[counter]);
 		}
 
-		delete [] assets;
+		delete [] reinterpret_cast < MovieAsset *> (assets);
 		assets = buffer;
 	}
 
@@ -325,7 +325,7 @@ void MovieAssetList::RemoveAll()
 
 	if (number_allocated > 100)
 	{
-		delete [] assets;
+		reinterpret_cast < MovieAsset *> (assets);
 		number_allocated = 100;
 		assets = new MovieAsset[number_allocated];
 	}

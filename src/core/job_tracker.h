@@ -6,6 +6,8 @@ typedef struct TimeRemaining {
 
 class JobTracker {
 
+public :
+
 	int total_number_of_jobs;
 	int total_running_processes;
 	int total_number_of_finished_jobs;
@@ -21,7 +23,7 @@ class JobTracker {
 	TimeRemaining old_time_remaining;
 	TimeRemaining time_remaining;
 
-	public :
+
 
 	JobTracker();
 	~JobTracker();

@@ -4,6 +4,7 @@ RunCommand::RunCommand()
 {
 	command_to_run = "";
 	number_of_copies = 0;
+
 }
 
 RunCommand::~RunCommand()
@@ -26,14 +27,18 @@ RunProfile::RunProfile()
 	run_commands = new RunCommand[5];
 	number_allocated = 5;
 
+	executable_name = "";
+
 }
 
 RunProfile::RunProfile( const RunProfile &obj) // copy contructor
 {
 	id = obj.id;
-	number_of_run_commands = obj.number_allocated;
+	number_of_run_commands = obj.number_of_run_commands;
 	manager_command = obj.manager_command;
 	number_allocated = obj.number_allocated;
+
+	executable_name = obj.executable_name;
 
 	run_commands = new RunCommand[number_allocated];
 
@@ -165,6 +170,7 @@ RunProfile & RunProfile::operator = (const RunProfile &t)
 	   this->name = t.name;
 	   this->number_of_run_commands = t.number_of_run_commands;
 	   this->manager_command = t.manager_command;
+	   this->executable_name = t.executable_name;
 
 	   for (long counter = 0; counter < t.number_of_run_commands; counter++)
 	   {
@@ -192,6 +198,7 @@ RunProfile & RunProfile::operator = (const RunProfile *t)
 	   this->name = t->name;
 	   this->number_of_run_commands = t->number_of_run_commands;
 	   this->manager_command = t->manager_command;
+	   this->executable_name = t->executable_name;
 
 	   for (long counter = 0; counter < t->number_of_run_commands; counter++)
 	   {

@@ -189,26 +189,29 @@ void JobControlApp::LaunchRemoteJob()
 	// for n processes (specified in the job package) we need to launch the specified command, along with our
 	// IP address, port and job code..
 
+	wxString executable;
 	wxString execution_command;
+
+	executable = my_job_package.my_profile.executable_name + " " + my_ip_address + " " + my_port_string + " ";
+	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
+	{
+		executable += job_code[counter];
+	}
 
 
 	for (command_counter = 0; command_counter < my_job_package.my_profile.number_of_run_commands; command_counter++)
 	{
-		execution_command = my_job_package.my_profile.run_commands[command_counter].command_to_run + " " + my_ip_address + " " + my_port_string + " ";
 
-		for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
-		{
-			execution_command += job_code[counter];
-		}
+		execution_command = my_job_package.my_profile.run_commands[command_counter].command_to_run;
+		execution_command.Replace("$command", executable);
 
+		execution_command += "&";
 
+		//SendError(execution_command);
 		for (process_counter = 0; process_counter < my_job_package.my_profile.run_commands[command_counter].number_of_copies; process_counter++)
 		{
-			MyDebugPrint("Launching \"%s\"\n", execution_command);
-			if (wxExecute(execution_command) == -1)
-			{
-				SendError("Error Launching Slave Process :-\n(" + execution_command + ")\n");
-			}
+			system(execution_command.ToUTF8().data());
+			wxMilliSleep(100);
 		}
 
 	}

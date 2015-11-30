@@ -146,12 +146,13 @@ fi
 if test "x$HAVE_MKL" = "xyes"; then
 
 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
+	
 
-	if test "xCXX=" = "xicpc"; then
+	if test "x$CXX=" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl"
 	fi
 	
-	if test "x$enable_static" = "xyes"; then
+	if test "x$static_link" = "xyes"; then
 	       	LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm "
 	else
 		if test "x$CXX" = "xicpc"; then

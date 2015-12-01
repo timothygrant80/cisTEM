@@ -254,8 +254,9 @@ void JobControlApp::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
+		socket_server->SetFlags(wxSOCKET_BLOCK);
 
-		if (	socket_server->Ok())
+		if (socket_server->Ok())
 		{
 			  // setup events for the socket server..
 
@@ -298,8 +299,8 @@ void JobControlApp::OnServerEvent(wxSocketEvent& event)
 	  // non-blocking accept (although if we got here, there
 	  // should ALWAYS be a pending connection).
 
-	  sock = socket_server->Accept(false);
-	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
+	  sock = socket_server->Accept();
+	  sock->SetFlags(wxSOCKET_BLOCK);//|wxSOCKET_BLOCK);
 
 	  // request identification..
 	  //MyDebugPrint(" Requesting identification...");
@@ -347,7 +348,7 @@ void JobControlApp::OnServerEvent(wxSocketEvent& event)
 					abort();
 				}
 
-				sock->WaitForRead(10);
+				sock->WaitForRead(20);
 				if (sock->IsData() == true)
 				{
 					master_port = ReceivewxStringFromSocket(sock);

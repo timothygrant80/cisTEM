@@ -51,6 +51,7 @@ void MyMainFrame::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
+		socket_server->SetFlags(wxSOCKET_WAITALL);
 
 		if (	socket_server->Ok())
 		{
@@ -177,7 +178,7 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
       // non-blocking accept (although if we got here, there
       // should ALWAYS be a pending connection).
 
-      sock = socket_server->Accept(false);
+      sock = socket_server->Accept();
 	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
 
 	  // request identification..
@@ -212,12 +213,10 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 
 	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
 	    	  //sock->SetEventHandler(*this, SOCKET_ID);
+	    	  // Tell the socket it is connected
+	    	  sock->WriteMsg(socket_you_are_connected, SOCKET_CODE_SIZE);
 	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
 	    	  sock->Notify(true);
-
-	    	  // Tell the socket it is connected
-
-	    	  sock->WriteMsg(socket_you_are_connected, SOCKET_CODE_SIZE);
 	      }
       }
       else

@@ -102,16 +102,12 @@ bool MyApp::OnInit()
 
 	// Attempt to connect to the controller..
 
-	MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 10 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
+	MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 30 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
 	controller_socket = new wxSocketClient();
 
 	// Setup the event handler and subscribe to most events
 
-	controller_socket->SetEventHandler(*this, SOCKET_ID);
-	controller_socket->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
-	controller_socket->Notify(true);
 	is_connected = false;
-
 
 	Bind(wxEVT_SOCKET,wxSocketEventHandler( MyApp::OnOriginalSocketEvent), this,  SOCKET_ID );
 
@@ -127,6 +123,11 @@ bool MyApp::OnInit()
 	}
 
 	MyDebugPrint(" JOB : Succeeded - Connection established!\n\n");
+
+	controller_socket->SetEventHandler(*this, SOCKET_ID);
+	controller_socket->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
+	controller_socket->Notify(true);
+
 	is_connected = true;
 
 	return true;
@@ -612,6 +613,7 @@ void MyApp::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
+		socket_server->SetFlags(wxSOCKET_BLOCK);
 
 		if (	socket_server->Ok())
 		{
@@ -662,7 +664,7 @@ void MyApp::OnServerEvent(wxSocketEvent& event) // this should only be called by
 	 // should ALWAYS be a pending connection).
 
 	 sock = socket_server->Accept(false);
-	 sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
+	 sock->SetFlags(wxSOCKET_BLOCK);//|wxSOCKET_BLOCK);
 
 	 // request identification..
 	 MyDebugPrint(" JOB MASTER : Requesting identification...");

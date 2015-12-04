@@ -138,6 +138,7 @@ public:
 	void AddImage(Image *other_image);
 	void SubtractImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
+	void ApplyCTF(CTF ctf_to_apply);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();

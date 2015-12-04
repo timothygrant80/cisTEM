@@ -29,6 +29,7 @@ typedef struct Peak {
 #include "mrc_header.h"
 #include "mrc_file.h"
 #include "curve.h"
+#include "ctf.h"
 #include "image.h"
 #include "electron_dose.h"
 #include "run_profiles.h"

@@ -957,6 +957,58 @@ void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_
 
 }
 
+void Image::ApplyCTF(CTF ctf_to_apply)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Volumes not supported");
+
+	int j;
+	int i;
+
+	long pixel_counter = 0;
+
+	float y_coord_sq;
+	float x_coord_sq;
+
+	float y_coord;
+	float x_coord;
+
+	float frequency_squared;
+	float azimuth;
+	float ctf_value;
+
+	wxPrintf("Entered ApplyCTF\n");
+
+	for (j = 0; j <= physical_upper_bound_complex_y; j++)
+	{
+		y_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y;
+		y_coord_sq = pow(y_coord, 2);
+
+		for (i = 0; i <= physical_upper_bound_complex_x; i++)
+		{
+			x_coord = i * fourier_voxel_size_x;
+			x_coord_sq = pow(x_coord, 2);
+
+			// Compute the azimuth
+			if ( i == 0 && j == 0 ) {
+				azimuth = 0.0;
+			} else {
+				azimuth = atan2(y_coord,x_coord);
+			}
+
+			// Compute the square of the frequency
+			frequency_squared = x_coord_sq + y_coord_sq;
+
+			ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth);
+
+			complex_values[pixel_counter] *= ctf_value;
+			pixel_counter++;
+		}
+	}
+
+}
+
 void Image::ApplyBFactor(float bfactor) // add real space and windows later, probably to an overloaded function
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");

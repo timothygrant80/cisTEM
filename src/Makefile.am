@@ -22,7 +22,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -39,7 +39,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
-                       core/myapp.cpp
+                       core/myapp.cpp \
+                       core/ctf.cpp
 
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -77,5 +78,15 @@ unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_LDFLAGS = $(WX_LIBS_BASE)
 unblur_LDADD = libcore.a
 
+applyctf_SOURCES = programs/applyctf/applyctf.cpp
+applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+applyctf_LDFLAGS = $(WX_LIBS_BASE)
+applyctf_LDADD = libcore.a
 
+ctffind_SOURCES = programs/ctffind/ctffind.cpp
+ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+ctffind_LDFLAGS = $(WX_LIBS_BASE)
+ctffind_LDADD = libcore.a
 

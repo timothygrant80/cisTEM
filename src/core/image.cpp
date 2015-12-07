@@ -710,6 +710,57 @@ int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index)
 }
 
 
+void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertTrue(amplitude_spectrum->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertTrue(HasSameDimensionsAs(amplitude_spectrum), "Images do not have same dimensions");
+	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
+
+	int ampl_addr_i;
+	int ampl_addr_j;
+	int image_addr_i;
+	int image_addr_j;
+	int i_mate;
+	int j_mate;
+
+	long address_in_amplitude_spectrum;
+	long address_in_self;
+
+	// Loop over the amplitude spectrum
+	for (ampl_addr_j = 0; ampl_addr_j < amplitude_spectrum->logical_y_dimension; ampl_addr_j++)
+	{
+		for (ampl_addr_i = 0; ampl_addr_i < amplitude_spectrum->logical_x_dimension; ampl_addr_i++)
+		{
+			address_in_self = ReturnFourier1DAddressFromLogicalCoord(ampl_addr_i-amplitude_spectrum->physical_address_of_box_center_x,ampl_addr_j-amplitude_spectrum->physical_address_of_box_center_y,0);
+			address_in_amplitude_spectrum = ReturnReal1DAddressFromPhysicalCoord(ampl_addr_i,ampl_addr_j,0);
+			amplitude_spectrum->real_values[address_in_amplitude_spectrum] = cabsf(complex_values[address_in_self]);
+		}
+	}
+
+	// Done
+	amplitude_spectrum->is_in_real_space = true;
+	amplitude_spectrum->object_is_centred_in_box = true;
+}
+
+void Image::Sine1D(int number_of_periods)
+{
+	int i;
+	int j;
+	float sine_value_i;
+	float sine_value_j;
+
+	for (j=0;j<logical_y_dimension;j++)
+	{
+		sine_value_j = sin(2*PI*(j-physical_address_of_box_center_y)*number_of_periods/logical_y_dimension);
+		for (i=0;i<logical_x_dimension;i++)
+		{
+			sine_value_i = sin(2*PI*(i-physical_address_of_box_center_x)*number_of_periods/logical_x_dimension);
+			real_values[ReturnReal1DAddressFromPhysicalCoord(i,j,0)] = sine_value_i + sine_value_j;
+		}
+	}
+}
+
 
 
 void Image::ClipInto(Image *other_image, float wanted_padding_value)

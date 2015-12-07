@@ -142,9 +142,13 @@ public:
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
+	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
 
 	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
+
+	// Test patterns
+	void Sine1D(int number_of_periods);
 };
 
 

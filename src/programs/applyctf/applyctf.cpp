@@ -64,7 +64,7 @@ void ApplyCTFApp::DoInteractiveUserInput()
 
 }
 
-// overide the do calculation method which will be what is actually run..
+// override the do calculation method which will be what is actually run..
 
 bool ApplyCTFApp::DoCalculation()
 {

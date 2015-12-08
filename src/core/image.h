@@ -143,6 +143,7 @@ public:
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
+	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 
 	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);

@@ -45,6 +45,7 @@ MyTestApp : public wxAppConsole
 		void TestFilterFunctions();
 		void TestAlignmentFunctions();
 		void TestImageArithmeticFunctions();
+		void TestSpectrumBoxConvolution();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -79,10 +80,30 @@ bool MyTestApp::OnInit()
 	TestScalingAndSizingFunctions();
 	TestFilterFunctions();
 	TestAlignmentFunctions();
+	TestSpectrumBoxConvolution();
 
 
 	wxPrintf("\n\n\n");
 	return false;
+}
+
+void MyTestApp::TestSpectrumBoxConvolution()
+{
+	BeginTest("Image::SpectrumBoxConvolution");
+
+	Image test_image;
+	Image output_image;
+
+	test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
+
+	output_image.Allocate(test_image.logical_x_dimension,test_image.logical_y_dimension,test_image.logical_z_dimension);
+	test_image.SpectrumBoxConvolution(&output_image,7,3);
+
+	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.048110) == false) FailTest;
+	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(40,40, 0), 1.634473) == false) FailTest;
+	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(79,79, 0),-0.048485) == false) FailTest;
+
+	EndTest();
 }
 
 void MyTestApp::TestImageArithmeticFunctions()

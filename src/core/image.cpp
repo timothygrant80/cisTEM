@@ -724,7 +724,7 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 	int i_mate;
 	int j_mate;
 
-	long address_in_amplitude_spectrum;
+	long address_in_amplitude_spectrum = 0;
 	long address_in_self;
 
 	// Loop over the amplitude spectrum
@@ -733,14 +733,246 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 		for (ampl_addr_i = 0; ampl_addr_i < amplitude_spectrum->logical_x_dimension; ampl_addr_i++)
 		{
 			address_in_self = ReturnFourier1DAddressFromLogicalCoord(ampl_addr_i-amplitude_spectrum->physical_address_of_box_center_x,ampl_addr_j-amplitude_spectrum->physical_address_of_box_center_y,0);
-			address_in_amplitude_spectrum = ReturnReal1DAddressFromPhysicalCoord(ampl_addr_i,ampl_addr_j,0);
 			amplitude_spectrum->real_values[address_in_amplitude_spectrum] = cabsf(complex_values[address_in_self]);
+			address_in_amplitude_spectrum++;
 		}
+		address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
 	}
 
 	// Done
 	amplitude_spectrum->is_in_real_space = true;
 	amplitude_spectrum->object_is_centred_in_box = true;
+}
+
+/*
+ * Real-space box convolution meant for 2D amplitude spectra
+ *
+ * This is adapted from the MSMOOTH subroutine from CTFFIND3, with a different wrap-around behaviour
+ */
+void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius)
+{
+	MyDebugAssertTrue(IsEven(box_size) == false,"Box size must be odd");
+	MyDebugAssertTrue(logical_z_dimension == 1,"Volumes not supported");
+	MyDebugAssertTrue(output_image->is_in_memory == true,"Output image not allocated");
+	MyDebugAssertTrue(HasSameDimensionsAs(output_image),"Output image does not have same dimensions as image");
+
+	// Variables
+	int half_box_size = (box_size-1)/2;
+	int cross_half_width_to_ignore = 1;
+	int i;
+	int i_friedel;
+	int i_sq;
+	int ii;
+	int ii_friedel;
+	int ii_sq;
+	int iii;
+	int j;
+	int j_friedel;
+	int j_sq;
+	int jj;
+	int jj_friedel;
+	int jj_sq;
+	int jjj;
+	float radius;
+	int num_voxels;
+	int m;
+	int l;
+
+	// Addresses
+	long address_within_output = 0;
+	long address_within_input;
+
+	// Loop over the output image. To save time, we only loop over one half of the image
+	for (j = 0; j < logical_y_dimension; j++)
+	{
+		j_friedel = 2 * physical_address_of_box_center_y - j;
+		j_sq = pow((j - physical_address_of_box_center_y),2);
+
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			i_friedel = 2 * physical_address_of_box_center_x - i;
+			i_sq = pow((i - physical_address_of_box_center_x),2);
+
+			//address_within_output = ReturnReal1DAddressFromPhysicalCoord(i,j,0);
+
+			radius = sqrt(float(i_sq+j_sq));
+
+			if ( radius <= minimum_radius )
+			{
+				output_image->real_values[address_within_output] = real_values[address_within_output];
+			}
+			else
+			{
+				output_image->real_values[address_within_output] = 0.0e0;
+				num_voxels = 0;
+
+				for ( m = - half_box_size; m <= half_box_size; m++)
+				{
+					jj = j + m;
+					if (jj < 0) { jj += logical_y_dimension; }
+					if (jj >= logical_y_dimension) { jj -= logical_y_dimension; }
+					jj_friedel = 2 * physical_address_of_box_center_y - jj;
+					jj_sq = pow((jj - physical_address_of_box_center_y),2);
+
+					for ( l = - half_box_size; l <= half_box_size; l++)
+					{
+						ii = i + l;
+						if (ii < 0) { ii += logical_x_dimension; }
+						if (ii >= logical_x_dimension) { ii -= logical_x_dimension; }
+						ii_friedel = 2 * physical_address_of_box_center_x - ii;
+						ii_sq = pow((ii - physical_address_of_box_center_x),2);
+
+						// Friedel or not?
+						if ( ii > physical_address_of_box_center_x)
+						{
+							iii = ii_friedel;
+							jjj = jj_friedel;
+							if (jjj > logical_y_dimension - 1 || iii > logical_x_dimension - 1) { continue; }
+						}
+						else
+						{
+							iii = ii;
+							jjj = jj;
+						}
+
+						// In central cross?
+						if ( abs(iii - physical_address_of_box_center_x) <= cross_half_width_to_ignore || abs(jjj - physical_address_of_box_center_y) <= cross_half_width_to_ignore ) { continue; }
+
+						address_within_input = ReturnReal1DAddressFromPhysicalCoord(iii,jjj,0);
+
+						if ( iii < logical_x_dimension && jjj < logical_y_dimension ) // it sometimes happens that we end up on Nyquist Friedel mates that we don't have (perhaps this can be fixed)
+						{
+							output_image->real_values[address_within_output] += real_values[address_within_input];
+						}
+						num_voxels++; // not sure why this is not within the if branch, like the addition itself - is this a bug?
+
+					}
+				} // end of loop over the box
+
+				if (num_voxels == 0)
+				{
+					output_image->real_values[address_within_output] = real_values[address_within_input];
+				}
+				else
+				{
+					output_image->real_values[address_within_output] /= float(num_voxels);
+				}
+			}
+
+			if (j_friedel < logical_y_dimension && i_friedel < logical_x_dimension)
+			{
+				output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,j_friedel,0)] = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,j,0)];
+			}
+			address_within_output++;
+		}
+		address_within_output += output_image->padding_jump_value;
+	}
+
+	// There are a few pixels that are not set by the logical above
+	for (i = physical_address_of_box_center_x + 1; i < logical_x_dimension; i++)
+	{
+		i_friedel = 2 * physical_address_of_box_center_x - i;
+		if (i > 511 || i_friedel > 511 || logical_y_dimension - 1 > 511) { MyDebugPrint("Bad values\n"); exit(-1); }
+		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,0,0)]                     = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,0,0)];
+		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension-1,0)] = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,logical_y_dimension - 1,0)];
+	}
+
+/*
+    if (.not. IsOdd(box_size)) call this_program%TerminateWithFatalError('Image::BoxConvolution','box_size must be odd')
+    half_box_size = (box_size-1)/2
+    if (self%IsAVolume()) call this_program%TerminateWithFatalError('Image::BoxConvolution','2D images only')
+
+    ! allocate output
+    call output_image%Allocate(self)
+
+    ! Cross half width
+    cross_half_width_to_ignore = max(min(6,int(self%GetLogicalDimension(1)/80.0)),2) ! how it was in versions 4.0.9(7?) - 4.0.15
+    cross_half_width_to_ignore = 1 ! in ctffind3 and ctffind4.0.0-4.0.6, this was set to 0
+
+    !
+    average_just_outside_minimum_radius = self%GetAverageOfValuesInRing(minimum_radius,minimum_radius+1.0)
+
+    !$omp   parallel default(shared) &
+    !$omp   private(i,j,ii,jj,m,l,i_friedel,j_friedel,num_voxels,radius,i_sq,j_sq,ii_friedel,jj_friedel,iii,jjj,ii_sq,jj_sq)
+
+    ! loop over output image. To save time, we only loop over one half of the image.
+    !$omp   do
+    do j=1,self%logical_dimensions(2)
+        j_friedel=2*self%physical_address_of_box_center(2)-j
+        j_sq = (j-self%physical_address_of_box_center(2))**2
+        do i=1,self%physical_address_of_box_center(1)
+            i_friedel=2*self%physical_address_of_box_center(1)-i
+            i_sq = (i-self%physical_address_of_box_center(1))**2
+            !
+            radius = sqrt(real(i_sq+j_sq))
+            !
+            if (radius .le. minimum_radius) then
+                output_image%real_values(i,j,1) = self%real_values(i,j,1)
+            else
+                output_image%real_values(i,j,1) = 0.0e0
+                num_voxels = 0
+                do m=-half_box_size,half_box_size
+                    jj = j+m
+                    if (jj .lt. 1) jj = jj + self%logical_dimensions(2)
+                    if (jj .gt. self%logical_dimensions(2)) jj = jj - self%logical_dimensions(2)
+                    jj_friedel = 2*self%physical_address_of_box_center(2)-jj
+                    jj_sq = (jj-self%physical_address_of_box_center(2))**2
+                    do l=-half_box_size,half_box_size
+                        ii = i+l
+                        if (ii .lt. 1) ii = ii + self%logical_dimensions(1)
+                        if (ii .gt. self%logical_dimensions(1)) ii = ii - self%logical_dimensions(1)
+                        ii_friedel = 2*self%physical_address_of_box_center(1)-ii
+                        ii_sq = (ii-self%physical_address_of_box_center(1))**2
+                        !
+                        radius = sqrt(real(ii_sq+jj_sq))
+                        !
+                        !if (radius .ge. minimum_radius) then
+                            !
+                            if (ii .gt. self%physical_address_of_box_center(1)) then
+                                iii = ii_friedel
+                                jjj = jj_friedel
+                                if (jjj .gt. self%logical_dimensions(2) .or. iii .gt. self%logical_dimensions(1)) cycle
+                            else
+                                iii = ii
+                                jjj = jj
+                            endif
+                            if (abs(iii - self%physical_address_of_box_center(1)) .le. cross_half_width_to_ignore .or. &
+                                abs(jjj - self%physical_address_of_box_center(2)) .le. cross_half_width_to_ignore) then
+                                cycle
+                            endif
+                            if (iii .le. self%logical_dimensions(1) .and. jjj .le. self%logical_dimensions(2)) then ! it sometimes happens that we end up on Nyquist Friedel mates that we don't have (perhaps this can be fixed)
+                                output_image%real_values(i,j,1) = output_image%real_values(i,j,1) &
+                                                                    + self%real_values(iii,jjj,1)
+                            endif
+                            num_voxels = num_voxels + 1
+                        !endif
+                    enddo
+                enddo
+                if (num_voxels .eq. 0) then
+                    output_image%real_values(i,j,1) = self%real_values(i,j,1)
+                else
+                    output_image%real_values(i,j,1) = output_image%real_values(i,j,1) / real(num_voxels)
+                endif
+            endif
+            if (j_friedel .lt. output_image%logical_dimensions(2)) then
+                output_image%real_values(i_friedel,j_friedel,1) = output_image%real_values(i,j,1)
+            endif
+        enddo
+    enddo
+    !$omp   end do
+
+
+    !$omp   end parallel
+
+    ! There are a few pixels that are not set by the logic above
+    output_image%real_values(output_image%physical_address_of_box_center(1)+1:output_image%logical_dimensions(1),1,1) = &
+    output_image%real_values(output_image%physical_address_of_box_center(1)-1:2:-1,1,1)
+    !
+    output_image%real_values(output_image%physical_address_of_box_center(1)+1:output_image%logical_dimensions(1), &
+                             output_image%logical_dimensions(2),1) = &
+    output_image%real_values(output_image%physical_address_of_box_center(1)-1:2:-1, &
+                             output_image%logical_dimensions(2),1)
+*/
 }
 
 void Image::Sine1D(int number_of_periods)
@@ -1028,8 +1260,6 @@ void Image::ApplyCTF(CTF ctf_to_apply)
 	float frequency_squared;
 	float azimuth;
 	float ctf_value;
-
-	wxPrintf("Entered ApplyCTF\n");
 
 	for (j = 0; j <= physical_upper_bound_complex_y; j++)
 	{

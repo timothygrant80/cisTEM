@@ -64,6 +64,134 @@ Image::~Image()
 	Deallocate();
 }
 
+void Image::CosineMask(float mask_radius, float mask_edge)
+{
+	int k;
+	int j;
+	int i;
+	int number_of_pixels;
+
+	float z;
+	float y;
+	float x;
+
+	long pixel_counter = 0;
+
+	float distance_from_center;
+	float mask_radius_plus_edge;
+	float distance_from_center_squared;
+	float mask_radius_squared;
+	float mask_radius_plus_edge_squared;
+	float edge;
+	float pixel_sum;
+
+	float frequency;
+	float frequency_squared;
+
+	mask_radius_plus_edge = mask_radius + mask_edge;
+
+	mask_radius_squared = pow(mask_radius, 2);
+	mask_radius_plus_edge_squared = pow(mask_radius_plus_edge, 2);
+
+	pixel_sum = 0.0;
+	number_of_pixels = 0;
+	if (is_in_real_space == true)
+	{
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = pow(k - physical_address_of_box_center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = pow(j - physical_address_of_box_center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = pow(i - physical_address_of_box_center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
+					{
+						pixel_sum += real_values[pixel_counter];
+						number_of_pixels++;
+					}
+
+					pixel_counter++;
+				}
+
+				pixel_counter+=padding_jump_value;
+			}
+		}
+		pixel_sum /= number_of_pixels;
+
+		pixel_counter = 0.0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = pow(k - physical_address_of_box_center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = pow(j - physical_address_of_box_center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = pow(i - physical_address_of_box_center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
+					{
+						distance_from_center = sqrt(distance_from_center_squared);
+						edge = (1.0 + cos(PI * (distance_from_center - mask_radius) / mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+					}
+					else
+					if (distance_from_center_squared >= mask_radius_plus_edge_squared) real_values[pixel_counter] = pixel_sum;
+
+					pixel_counter++;
+				}
+
+				pixel_counter+=padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k = 0; k <= physical_upper_bound_complex_z; k++)
+		{
+			z = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+			for (j = 0; j <= physical_upper_bound_complex_y; j++)
+			{
+				y = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+				for (i = 0; i <= physical_upper_bound_complex_x; i++)
+				{
+					x = pow(i * fourier_voxel_size_x, 2);
+
+					// compute squared radius, in units of reciprocal pixels
+
+					frequency_squared = x + y + z;
+
+					if (frequency_squared >= mask_radius_squared && frequency_squared <= mask_radius_plus_edge_squared)
+					{
+						frequency = sqrt(frequency_squared);
+						edge = (1.0 + cos(PI * (frequency - mask_radius) / mask_edge)) / 2.0;
+						complex_values[pixel_counter] *= edge;
+					}
+					else
+					if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
+
+					pixel_counter++;
+				}
+			}
+
+		}
+
+	}
+}
+
 
 
 Image & Image::operator = (const Image &other_image)

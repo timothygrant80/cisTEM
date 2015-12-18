@@ -80,6 +80,8 @@ public:
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
 	void Deallocate();
 
+	void CosineMask(float mask_radius, float mask_edge);
+
 	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range", wanted_x, wanted_y, wanted_z);

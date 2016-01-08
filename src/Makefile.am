@@ -40,7 +40,12 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
                        core/myapp.cpp \
-                       core/ctf.cpp
+                       core/empirical_distribution.cpp \
+                       core/ctf.cpp \
+                       core/numeric_text_file.cpp \
+                       core/progressbar.cpp \
+                       core/downhill_simplex.cpp \ 
+                       core/brute_force_search.cpp 
 
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

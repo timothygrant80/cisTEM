@@ -129,6 +129,7 @@ public:
 	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write);
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
+	bool IsConstant();
 	void SetToConstant(float wanted_value);
 	void ClipInto(Image *other_image, float wanted_padding_value = 0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
@@ -146,6 +147,20 @@ public:
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
+	void TaperEdges();
+	float ReturnAverageOfRealValues();
+	float ReturnMaximumValue(float inner_radius, float outer_radius);
+	void SetMaximumValue(float new_maximum_value);
+	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float average, float sigma, int cross_half_width);
+	void SetMaximumValueOnCentralCross(float maximum_value);
+	void ApplyMirrorAlongY();
+
+	float GetCorrelationWithCTF(CTF ctf);
+
+	// Interpolation
+	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float x, float y, float interpolated_value);
+
+
 
 	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);

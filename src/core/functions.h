@@ -64,3 +64,12 @@ inline bool OutputIsAtTerminal()
 {
     return isatty(fileno(stdout));
 };
+
+
+/*
+ *
+ * String manipulations
+ *
+ */
+std::string FilenameReplaceExtension(std::string filename, std::string new_extension);
+std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add);

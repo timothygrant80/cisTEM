@@ -46,9 +46,15 @@ public:
 				float pixel_size,
 				float additional_phase_shift);
 
+	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
+	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
 	//
 	float Evaluate(float squared_spatial_frequency, float azimuth);
 	float PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
 	float DefocusGivenAzimuth(float azimuth);
 	float WavelengthGivenAccelerationVoltage(float acceleration_voltage);
+	inline float GetLowestFrequencyForFitting() { return lowest_frequency_for_fitting; };
+	inline float GetHighestFrequencyForFitting() { return highest_frequency_for_fitting; };
+	inline float GetAstigmatismTolerance() { return astigmatism_tolerance; };
+	inline float GetAstigmatism(){ return defocus_1 - defocus_2; };
 };

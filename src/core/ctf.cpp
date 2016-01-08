@@ -53,6 +53,20 @@ void CTF::Init(	float wanted_acceleration_voltage, // keV
     precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
 }
 
+// Set the defocus and astigmatism angle, given in pixels and radians
+void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians)
+{
+	defocus_1 = wanted_defocus_1_pixels;
+	defocus_2 = wanted_defocus_2_pixels;
+	astigmatism_azimuth = wanted_astigmatism_angle_radians;
+}
+
+// Set the additional phase shift, given in radians
+void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
+{
+	additional_phase_shift = wanted_additional_phase_shift_radians;
+}
+
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 {
@@ -82,3 +96,4 @@ float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 {
 	return 12.26 / sqrt(1000.0 * acceleration_voltage + 0.9784 * pow(1000.0 * acceleration_voltage,2)/pow(10.0,6));
 }
+

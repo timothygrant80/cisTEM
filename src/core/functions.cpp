@@ -202,5 +202,19 @@ wxString ReturnIPAddressFromSocket(wxSocketBase *socket)
 
 }
 
+/*
+ *
+ * String manipulations
+ *
+ */
+std::string FilenameReplaceExtension(std::string filename, std::string new_extension)
+{
+	return filename.substr(0,filename.find_last_of('.'))+new_extension;
+}
+std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add)
+{
+	return filename.substr(0,filename.find_last_of('.')) + suffix_to_add + filename.substr(filename.find_last_of('.') + 1 , filename.length() - 1);
+}
+
 
 

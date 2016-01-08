@@ -592,7 +592,8 @@ inline void Image::DivideByConstant(float constant_to_divide_by)
 
 //!> \brief Multiply all voxels by a constant value
 
-inline void Image::MultiplyByConstant(float constant_to_multiply_by)
+//inline
+void Image::MultiplyByConstant(float constant_to_multiply_by)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -600,6 +601,16 @@ inline void Image::MultiplyByConstant(float constant_to_multiply_by)
 	{
 		real_values[pixel_counter] *= constant_to_multiply_by;
 	}
+}
+
+bool Image::IsConstant()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		if (real_values[pixel_counter] != real_values[0]) return false;
+	}
+	return true;
 }
 
 //!> \brief Read a set of slices from disk (FFTW padding is done automatically)
@@ -776,6 +787,274 @@ void Image::SetToConstant(float wanted_value)
 		real_values[pixel_counter] = wanted_value;
 	}
 }
+
+void Image::SetMaximumValue(float new_maximum_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	for (long address = 0; address < real_memory_allocated; address++)
+	{
+		real_values[address] = std::min(new_maximum_value,real_values[address]);
+	}
+}
+
+// Find the largest voxel value, only considering voxels which are at least a certain distance from the center and from the edge in each dimension
+float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimum_distance_from_edge)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	int i,j,k;
+	int i_dist_from_center, j_dist_from_center, k_dist_from_center;
+	float maximum_value = - std::numeric_limits<float>::max();
+	const int last_acceptable_address_x = logical_x_dimension - minimum_distance_from_edge - 1;
+	const int last_acceptable_address_y = logical_y_dimension - minimum_distance_from_edge - 1;
+	const int last_acceptable_address_z = logical_z_dimension - minimum_distance_from_edge - 1;
+	long address = 0;
+
+
+	for (k=0;k<logical_z_dimension;k++)
+	{
+		if (logical_z_dimension > 1)
+		{
+			k_dist_from_center = abs(k - physical_address_of_box_center_z);
+			if (k_dist_from_center < minimum_distance_from_center || k < minimum_distance_from_edge || k > last_acceptable_address_z)
+			{
+				address += logical_y_dimension * (logical_x_dimension + padding_jump_value);
+				continue;
+			}
+		}
+		for (j=0;j<logical_y_dimension;j++)
+		{
+			j_dist_from_center = abs(j - physical_address_of_box_center_y);
+			if (j_dist_from_center < minimum_distance_from_center || j < minimum_distance_from_edge || j > last_acceptable_address_y)
+			{
+				address += logical_x_dimension + padding_jump_value;
+				continue;
+			}
+			for (i=0;i<logical_x_dimension;i++)
+			{
+				i_dist_from_center = abs(i - physical_address_of_box_center_x);
+				if (i_dist_from_center < minimum_distance_from_center || i < minimum_distance_from_edge || i > last_acceptable_address_x)
+				{
+					address++;
+					continue;
+				}
+
+				maximum_value = std::max(maximum_value,real_values[address]);
+				address++;
+			}
+		}
+	}
+}
+
+float Image::ReturnAverageOfRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	double sum = 0.0;
+	long number_of_voxels = 0;
+	long address = 0;
+	int		x;
+	int		y;
+	int 	z;
+
+	for (z=0;z<logical_z_dimension;z++)
+	{
+		for (y=0;y<logical_y_dimension;y++)
+		{
+			for (x=0;x<logical_x_dimension;x++)
+			{
+				sum += real_values[address];
+				//
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+
+	return sum / (logical_x_dimension * logical_y_dimension * logical_z_dimension);
+}
+
+void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float average, float sigma, int cross_half_width)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(maximum_radius > minimum_radius,"Maximum radius must be greater than minimum radius");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
+	// Private variables
+	int i, j;
+	float x_sq, y_sq, rad_sq;
+	EmpiricalDistribution my_distribution(false);
+	float min_rad_sq = pow(minimum_radius,2);
+	float max_rad_sq = pow(maximum_radius,2);
+	float cross_half_width_sq = pow(cross_half_width,2);
+	long address = -1;
+
+	for (j=0;j<logical_y_dimension;j++)
+	{
+		y_sq = pow(j-physical_address_of_box_center_y,2);
+		if (y_sq <= cross_half_width_sq)
+		{
+			address += logical_x_dimension + padding_jump_value;
+			continue;
+		}
+		for (i=0;i<logical_x_dimension;i++)
+		{
+			address++;
+			x_sq = pow(i-physical_address_of_box_center_x,2);
+			if (x_sq <= cross_half_width_sq) continue;
+			rad_sq = x_sq + y_sq;
+			if (rad_sq > min_rad_sq && rad_sq < max_rad_sq)
+			{
+				my_distribution.AddSampleValue(real_values[address]);
+			}
+
+		}
+		address += padding_jump_value;
+	}
+	average = my_distribution.GetSampleMean();
+	sigma = sqrt(my_distribution.GetSampleVariance());
+}
+
+void Image::SetMaximumValueOnCentralCross(float maximum_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
+	int i,j;
+	long address = 0;
+
+	for (j=0;j<logical_y_dimension;j++)
+	{
+		for (i=0;i<logical_x_dimension;i++)
+		{
+			if (j==physical_address_of_box_center_y || i==physical_address_of_box_center_x)
+			{
+				real_values[address] = std::min(maximum_value,real_values[address]);
+			}
+			address++;
+		}
+	}
+
+}
+
+float Image::GetCorrelationWithCTF(CTF ctf)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+	MyDebugAssertTrue(ctf.GetLowestFrequencyForFitting() > 0, "Will not work with lowest frequency for fitting of 0.");
+
+	// Local variables
+	double 			cross_product = 0.0;
+	double 			norm_image = 0.0;
+	double 			norm_ctf = 0.0;
+	long			number_of_values = 0;
+	int 			i,j;
+	float 			i_logi, j_logi;
+	float			i_logi_sq, j_logi_sq;
+	const float		inverse_logical_x_dimension = 1.0 / float(logical_x_dimension);
+	const float 	inverse_logical_y_dimension = 1.0 / float(logical_y_dimension);
+	float			current_spatial_frequency_squared;
+	const float		lowest_freq = pow(ctf.GetLowestFrequencyForFitting(),2);
+	const float		highest_freq = pow(ctf.GetHighestFrequencyForFitting(),2);
+	long			address = 0;
+	float			current_azimuth;
+	float			current_ctf_value;
+	const int		central_cross_half_width = 10;
+	float			astigmatism_penalty;
+
+	// Loop over half of the image (ignore Friedel mates)
+	for (j=0;j<logical_y_dimension;j++)
+	{
+		j_logi = float(i-physical_address_of_box_center_y)*inverse_logical_y_dimension;
+		j_logi_sq = pow(j_logi,2);
+		for (i=0;i<physical_address_of_box_center_x;i++)
+		{
+			i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
+			i_logi_sq = pow(i_logi,2);
+
+			// Where are we?
+			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+
+			if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
+			{
+				current_azimuth = atan2(j_logi,i_logi);
+				current_ctf_value = abs(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
+				// accumulate results
+				if ( i < physical_address_of_box_center_x - central_cross_half_width && (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width))
+				{
+					number_of_values++;
+					cross_product += real_values[address] * current_ctf_value;
+					norm_image    += pow(real_values[address],2);
+					norm_ctf      += pow(current_ctf_value,2);
+				}
+
+			} // end of test whether within min,max frequency range
+
+			// We're going to the next pixel
+			address++;
+		}
+		// We're going to the next line
+		address += padding_jump_value;
+	}
+
+	// Compute the penalty due to astigmatism
+	if (ctf.GetAstigmatismTolerance() > 0.0)
+	{
+		astigmatism_penalty = pow(ctf.GetAstigmatism(),2) * 0.5 / pow(ctf.GetAstigmatismTolerance(),2) / float(number_of_values);
+	}
+	else
+	{
+		astigmatism_penalty = 0.0;
+	}
+
+
+	// The final score
+	return cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty;
+}
+
+void Image::ApplyMirrorAlongY()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
+	int i,j;
+	long address = 0;
+	int j_dist;
+	float temp_value;
+
+	for (j = 1; j < physical_address_of_box_center_y; j++)
+	{
+		j_dist = 2 * ( physical_address_of_box_center_y - j ) * (logical_x_dimension + padding_jump_value);
+
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			temp_value = real_values[address];
+			real_values[address] = real_values[address+j_dist];
+			real_values[address+j_dist] = temp_value;
+			address++;
+		}
+		address += padding_jump_value;
+	}
+
+	// The column j=0 is undefined, we set it to the average of the values that were there before the mirror operation was applied
+	temp_value = 0;
+	for (i=0 ; i < logical_x_dimension; i++) {
+		temp_value += real_values[i];
+	}
+	temp_value /= float(logical_x_dimension);
+	for (i=0 ; i < logical_x_dimension; i++) {
+		real_values[i] = temp_value;
+	}
+}
+
 
 void Image::AddImage(Image *other_image)
 {
@@ -1004,104 +1283,272 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,0,0)]                     = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,0,0)];
 		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension-1,0)] = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,logical_y_dimension - 1,0)];
 	}
-
-/*
-    if (.not. IsOdd(box_size)) call this_program%TerminateWithFatalError('Image::BoxConvolution','box_size must be odd')
-    half_box_size = (box_size-1)/2
-    if (self%IsAVolume()) call this_program%TerminateWithFatalError('Image::BoxConvolution','2D images only')
-
-    ! allocate output
-    call output_image%Allocate(self)
-
-    ! Cross half width
-    cross_half_width_to_ignore = max(min(6,int(self%GetLogicalDimension(1)/80.0)),2) ! how it was in versions 4.0.9(7?) - 4.0.15
-    cross_half_width_to_ignore = 1 ! in ctffind3 and ctffind4.0.0-4.0.6, this was set to 0
-
-    !
-    average_just_outside_minimum_radius = self%GetAverageOfValuesInRing(minimum_radius,minimum_radius+1.0)
-
-    !$omp   parallel default(shared) &
-    !$omp   private(i,j,ii,jj,m,l,i_friedel,j_friedel,num_voxels,radius,i_sq,j_sq,ii_friedel,jj_friedel,iii,jjj,ii_sq,jj_sq)
-
-    ! loop over output image. To save time, we only loop over one half of the image.
-    !$omp   do
-    do j=1,self%logical_dimensions(2)
-        j_friedel=2*self%physical_address_of_box_center(2)-j
-        j_sq = (j-self%physical_address_of_box_center(2))**2
-        do i=1,self%physical_address_of_box_center(1)
-            i_friedel=2*self%physical_address_of_box_center(1)-i
-            i_sq = (i-self%physical_address_of_box_center(1))**2
-            !
-            radius = sqrt(real(i_sq+j_sq))
-            !
-            if (radius .le. minimum_radius) then
-                output_image%real_values(i,j,1) = self%real_values(i,j,1)
-            else
-                output_image%real_values(i,j,1) = 0.0e0
-                num_voxels = 0
-                do m=-half_box_size,half_box_size
-                    jj = j+m
-                    if (jj .lt. 1) jj = jj + self%logical_dimensions(2)
-                    if (jj .gt. self%logical_dimensions(2)) jj = jj - self%logical_dimensions(2)
-                    jj_friedel = 2*self%physical_address_of_box_center(2)-jj
-                    jj_sq = (jj-self%physical_address_of_box_center(2))**2
-                    do l=-half_box_size,half_box_size
-                        ii = i+l
-                        if (ii .lt. 1) ii = ii + self%logical_dimensions(1)
-                        if (ii .gt. self%logical_dimensions(1)) ii = ii - self%logical_dimensions(1)
-                        ii_friedel = 2*self%physical_address_of_box_center(1)-ii
-                        ii_sq = (ii-self%physical_address_of_box_center(1))**2
-                        !
-                        radius = sqrt(real(ii_sq+jj_sq))
-                        !
-                        !if (radius .ge. minimum_radius) then
-                            !
-                            if (ii .gt. self%physical_address_of_box_center(1)) then
-                                iii = ii_friedel
-                                jjj = jj_friedel
-                                if (jjj .gt. self%logical_dimensions(2) .or. iii .gt. self%logical_dimensions(1)) cycle
-                            else
-                                iii = ii
-                                jjj = jj
-                            endif
-                            if (abs(iii - self%physical_address_of_box_center(1)) .le. cross_half_width_to_ignore .or. &
-                                abs(jjj - self%physical_address_of_box_center(2)) .le. cross_half_width_to_ignore) then
-                                cycle
-                            endif
-                            if (iii .le. self%logical_dimensions(1) .and. jjj .le. self%logical_dimensions(2)) then ! it sometimes happens that we end up on Nyquist Friedel mates that we don't have (perhaps this can be fixed)
-                                output_image%real_values(i,j,1) = output_image%real_values(i,j,1) &
-                                                                    + self%real_values(iii,jjj,1)
-                            endif
-                            num_voxels = num_voxels + 1
-                        !endif
-                    enddo
-                enddo
-                if (num_voxels .eq. 0) then
-                    output_image%real_values(i,j,1) = self%real_values(i,j,1)
-                else
-                    output_image%real_values(i,j,1) = output_image%real_values(i,j,1) / real(num_voxels)
-                endif
-            endif
-            if (j_friedel .lt. output_image%logical_dimensions(2)) then
-                output_image%real_values(i_friedel,j_friedel,1) = output_image%real_values(i,j,1)
-            endif
-        enddo
-    enddo
-    !$omp   end do
-
-
-    !$omp   end parallel
-
-    ! There are a few pixels that are not set by the logic above
-    output_image%real_values(output_image%physical_address_of_box_center(1)+1:output_image%logical_dimensions(1),1,1) = &
-    output_image%real_values(output_image%physical_address_of_box_center(1)-1:2:-1,1,1)
-    !
-    output_image%real_values(output_image%physical_address_of_box_center(1)+1:output_image%logical_dimensions(1), &
-                             output_image%logical_dimensions(2),1) = &
-    output_image%real_values(output_image%physical_address_of_box_center(1)-1:2:-1, &
-                             output_image%logical_dimensions(2),1)
-*/
 }
+
+// Taper edges of image so that there are no sharp discontinuities in real space
+// This is a re-implementation of the MRC program taperedgek.for (Richard Henderson, 1987)
+void Image::TaperEdges()
+{
+	MyDebugAssertTrue(is_in_memory,"Image not in memory");
+	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
+
+	// Private variables
+	const int				averaging_strip_width_x	=	100;
+	const int				averaging_strip_width_y	=	100;
+	const int				averaging_strip_width_z =   100;
+	const int				tapering_strip_width_x	=	500;
+	const int				tapering_strip_width_y	=	500;
+	const int				tapering_strip_width_z	=	500;
+	const int				smoothing_half_width_x	=	1;
+	const int				smoothing_half_width_y	=	1;
+	const int				smoothing_half_width_z	=	1;
+	int						current_dimension;
+	int						number_of_dimensions;
+	int						second_dimension;
+	int						third_dimension;
+	int						logical_current_dimension;
+	int						logical_second_dimension;
+	int						logical_third_dimension;
+	int						current_tapering_strip_width;
+	int						i,j,k;
+	int						j_shift,k_shift;
+	int						jj,kk;
+	int						number_of_values_in_running_average;
+	long					address;
+	int						smoothing_half_width_third_dimension;
+	int						smoothing_half_width_second_dimension;
+	// 2D arrays
+	float					*average_for_current_edge_start = NULL;
+	float					*average_for_current_edge_finish = NULL;
+	float					*average_for_current_edge_average = NULL;
+	float					*smooth_average_for_current_edge_start = NULL;
+	float					*smooth_average_for_current_edge_finish = NULL;
+
+	// Start work
+
+
+	// Check dimensions of image are OK
+	if (logical_x_dimension < 2 * tapering_strip_width_x || logical_y_dimension < 2 * tapering_strip_width_y)
+	{
+		MyPrintWithDetails("X,Y dimensions of input inmage are too small: %i %i\n", logical_x_dimension,logical_y_dimension);
+		abort();
+	}
+	if (logical_z_dimension > 1 && logical_z_dimension < 2 * tapering_strip_width_z)
+	{
+		MyPrintWithDetails("Z dimension is too small: %i\n",logical_z_dimension);
+		abort();
+	}
+
+
+	for (current_dimension=1; current_dimension <= number_of_dimensions; current_dimension++)
+	{
+		switch(current_dimension)
+		{
+		case(1):
+			second_dimension = 2;
+			third_dimension = 3;
+			logical_current_dimension = logical_x_dimension;
+			logical_second_dimension = logical_y_dimension;
+			logical_third_dimension = logical_z_dimension;
+			current_tapering_strip_width = tapering_strip_width_x;
+			smoothing_half_width_second_dimension = smoothing_half_width_y;
+			smoothing_half_width_third_dimension = smoothing_half_width_z;
+			break;
+		case(2):
+			second_dimension = 1;
+			third_dimension = 3;
+			logical_current_dimension = logical_y_dimension;
+			logical_second_dimension = logical_x_dimension;
+			logical_third_dimension = logical_z_dimension;
+			current_tapering_strip_width = tapering_strip_width_y;
+			smoothing_half_width_second_dimension = smoothing_half_width_x;
+			smoothing_half_width_third_dimension = smoothing_half_width_z;
+			break;
+		case(3):
+			second_dimension = 1;
+			third_dimension = 2;
+			logical_current_dimension = logical_z_dimension;
+			logical_second_dimension = logical_x_dimension;
+			logical_third_dimension = logical_y_dimension;
+			current_tapering_strip_width = tapering_strip_width_z;
+			smoothing_half_width_second_dimension = smoothing_half_width_x;
+			smoothing_half_width_third_dimension = smoothing_half_width_y;
+			break;
+		}
+
+		// Allocate memory
+		if (average_for_current_edge_start != NULL) {
+			delete [] average_for_current_edge_start;
+			delete [] average_for_current_edge_finish;
+			delete [] average_for_current_edge_average;
+			delete [] smooth_average_for_current_edge_start;
+			delete [] smooth_average_for_current_edge_finish;
+		}
+		average_for_current_edge_start 			= new float[logical_second_dimension*logical_third_dimension];
+		average_for_current_edge_finish 		= new float[logical_second_dimension*logical_third_dimension];
+		average_for_current_edge_average 		= new float[logical_second_dimension*logical_third_dimension];
+		smooth_average_for_current_edge_start	= new float[logical_second_dimension*logical_third_dimension];
+		smooth_average_for_current_edge_finish	= new float[logical_second_dimension*logical_third_dimension];
+
+		// Initialise memory
+		for(i=0;i<logical_second_dimension*logical_third_dimension;i++)
+		{
+			average_for_current_edge_start[i] = 0.0;
+			average_for_current_edge_finish[i] = 0.0;
+			average_for_current_edge_average[i] = 0.0;
+			smooth_average_for_current_edge_start[i] = 0.0;
+			smooth_average_for_current_edge_finish[i] = 0.0;
+		}
+
+		/*
+		 * Deal with X=0 and X=logical_x_dimension edges
+		 */
+		i = 1;
+		for (k=1;k<=logical_third_dimension;k++)
+		{
+			for (j=1;j<=logical_second_dimension;j++)
+			{
+				switch(current_dimension)
+				{
+				case(1):
+						for (i=1;i<=averaging_strip_width_x;i++)
+						{
+							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension-i+1,j-1,k-1)];
+						}
+						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_x);
+						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_x);
+						break;
+				case(2):
+						for (i=1;i<=averaging_strip_width_y;i++)
+						{
+							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,logical_y_dimension-i+1,k-1)];
+						}
+						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_y);
+						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_y);
+						break;
+				case(3):
+						for (i=1;i<=averaging_strip_width_z;i++)
+						{
+							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,logical_z_dimension-i+1)];
+						}
+						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_z);
+						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_z);
+						break;
+				}
+			}
+		}
+	}
+
+	for (address=0;address<logical_second_dimension*logical_third_dimension;address++)
+	{
+		average_for_current_edge_average[address] = 0.5 * ( average_for_current_edge_finish[address] - average_for_current_edge_start[address]);
+		average_for_current_edge_start[address] -= average_for_current_edge_average[address];
+		average_for_current_edge_finish[address] -= average_for_current_edge_average[address];
+	}
+
+	// Apply smoothing parallel to edge in the form of a running average
+	for (k=1;k<=logical_third_dimension;k++)
+	{
+		for (j=1;j<=logical_second_dimension;j++)
+		{
+			number_of_values_in_running_average = 0;
+			// Loop over neighbourhood of non-smooth arrays
+			for (k_shift=-smoothing_half_width_third_dimension;k_shift<=smoothing_half_width_third_dimension;k_shift++)
+			{
+				kk = k+k_shift;
+				if (kk < 1 || kk > logical_third_dimension) continue;
+				for (j_shift=-smoothing_half_width_second_dimension;j_shift<=smoothing_half_width_second_dimension;j_shift++)
+				{
+					jj = j+j_shift;
+					if (jj<1 || jj > logical_second_dimension) continue;
+					number_of_values_in_running_average++;
+
+					smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_start [(jj-1)+(kk-1)*logical_second_dimension];
+					smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_finish[(jj-1)+(kk-1)*logical_second_dimension];
+				}
+			}
+			// Now we can compute the average
+			smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
+			smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
+		}
+	}
+
+	// Taper the image
+	for (i=1;i<=logical_current_dimension;i++)
+	{
+		if (i<=current_tapering_strip_width)
+		{
+			switch(current_dimension)
+			{
+			case(1):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			case(2):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			case(3):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			}
+		}
+		else if(i >= logical_current_dimension - current_tapering_strip_width+1)
+		{
+			switch(current_dimension)
+			{
+			case(1):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			case(2):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			case(3):
+					for (k=1;k<=logical_third_dimension;k++)
+					{
+						for (j=1;j<=logical_second_dimension;j++)
+						{
+							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+						}
+					}
+					break;
+			}
+		}
+	}
+
+}
+
 
 void Image::Sine1D(int number_of_periods)
 {
@@ -1120,7 +1567,6 @@ void Image::Sine1D(int number_of_periods)
 		}
 	}
 }
-
 
 
 void Image::ClipInto(Image *other_image, float wanted_padding_value)
@@ -1221,6 +1667,30 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value)
 	}
 
 }
+
+// Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)
+void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float x, float y, float interpolated_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Not for volumes");
+	MyDebugAssertTrue(is_in_real_space, "Need to be in real space");
+
+	const int i_start = int(x);
+	const int j_start = int(y);
+	const float x_dist = x - float(i_start);
+	const float y_dist = y - float(j_start);
+	const float x_dist_m = 1.0 - x_dist;
+	const float y_dist_m = 1.0 - y_dist;
+
+	const int address_1 = j_start * (logical_x_dimension + padding_jump_value) + i_start;
+	const int address_2 = address_1 + logical_x_dimension + padding_jump_value;
+
+	interpolated_value =    x_dist_m * y_dist_m * real_values[address_1]
+						+	x_dist   * y_dist_m * real_values[address_1 + 1]
+						+   x_dist_m * y_dist   * real_values[address_2]
+						+   x_dist   * y_dist   * real_values[address_2 + 1];
+}
+
 
 void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value)
 {

@@ -1,7 +1,7 @@
 #include "../../core/core_headers.h"
 
 class
-UnBlurApp : public MyApp
+CtffindApp : public MyApp
 {
 
 	public:
@@ -14,373 +14,781 @@ UnBlurApp : public MyApp
 
 };
 
-IMPLEMENT_APP(UnBlurApp)
+class ImageCTFComparison
+{
+public:
+	Image 	img;		// Usually an amplitude spectrum
+	CTF		ctf;
+	float	pixel_size;
+	bool	find_phase_shift;
+};
+
+// This is the function which will be minimised
+float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[] )
+{
+	ImageCTFComparison *comparison_object = reinterpret_cast < ImageCTFComparison *> (scoring_parameters);
+
+	CTF my_ctf = comparison_object->ctf;
+	my_ctf.SetDefocus(array_of_values[0],array_of_values[1],array_of_values[2]);
+	if (comparison_object->find_phase_shift)
+	{
+		my_ctf.SetAdditionalPhaseShift(array_of_values[3]);
+	}
+
+	// Evaluate the function
+	return - comparison_object->img.GetCorrelationWithCTF(my_ctf);
+}
+
+float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius);
+
+IMPLEMENT_APP(CtffindApp)
 
 // override the DoInteractiveUserInput
 
-void UnBlurApp::DoInteractiveUserInput()
+void CtffindApp::DoInteractiveUserInput()
 {
+
+	float lowest_allowest_minimum_resolution = 50.0;
+
 	std::string input_filename;
-	std::string output_filename;
-	float original_pixel_size = 1;
-	float minimum_shift_in_angstroms = 2;
-	float maximum_shift_in_angstroms = 80;
-	bool should_dose_filter = true;
-	bool should_restore_power = true;
-	float termination_threshold_in_angstroms = 1;
-	int max_iterations = 20;
-	float bfactor_in_angstroms = 1500;
-	bool should_mask_central_cross = true;
-	int horizontal_mask_size = 1;
-	int vertical_mask_size = 1;
-	float exposure_per_frame = 0.0;
-	float acceleration_voltage = 300.0;
-	float pre_exposure_amount = 0.0;
+	bool input_is_a_movie;
+	int number_of_frames_to_average;
+	std::string output_diagnostic_filename;
+	float pixel_size;
+	float acceleration_voltage;
+	float spherical_aberration;
+	float amplitude_contrast;
+	int box_size;
+	float minimum_resolution;
+	float maximum_resolution;
+	float minimum_defocus;
+	float maximum_defocus;
+	float defocus_search_step;
+	float astigmatism_tolerance;
+	bool find_additional_phase_shift;
+	float minimum_additional_phase_shift;
+	float maximum_additional_phase_shift;
+	float additional_phase_shift_search_step;
 
-	bool set_expert_options;
+	UserInput *my_input = new UserInput("Ctffind", 0.0);
 
-	 UserInput *my_input = new UserInput("Unblur", 1.0);
+	input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
-	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );
-	 output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
-	 original_pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
-	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "YES");
+	MRCFile input_file(input_filename,false);
+	if (input_file.ReturnZSize() > 1)
+	{
+		input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","no");
+	}
+	else
+	{
+		input_is_a_movie = false;
+	}
 
-	 if (should_dose_filter == true)
-	 {
-		 acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (kV)", "Acceleration voltage during imaging", "300.0");
-		 exposure_per_frame = my_input->GetFloatFromUser("Exposure per frame (e/A^2)", "Exposure per frame, in electrons per square Angstrom", "1.0", 0.0);
-	 	 pre_exposure_amount = my_input->GetFloatFromUser("Pre-exposure amount (e/A^2)", "Amount of pre-exposure prior to the first frame, in electrons per square Angstrom", "0.0", 0.0);
-	 }
-	 else
-	 {
-	 	 exposure_per_frame = 0.0;
-	 	 acceleration_voltage = 300.0;
-	 	 pre_exposure_amount = 0.0;
-	 }
+	if (input_is_a_movie)
+	{
+		number_of_frames_to_average = my_input->GetIntFromUser("Number of frames to average together","If the number of electrons per frame is too low, there may be strong artefacts in the estimated power spectrum. This can be alleviated by averaging frames with each other in real space before computing their Fourier transforms","1");
+	}
+	else
+	{
+		number_of_frames_to_average = 1;
+	}
 
-	 set_expert_options = my_input->GetYesNoFromUser("Set Expert Options?", "Set these for more control, hopefully not needed", "NO");
+	output_diagnostic_filename	= my_input->GetFilenameFromUser("Output diagnostic image file name","Will contain the experimental power spectrum and the best CTF fit","diagnostic_output.mrc",false);
+	pixel_size 					= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0,9999999.99);
+	acceleration_voltage 		= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0,99999999.99);
+	spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.7",0.0,999999999.99);
+	amplitude_contrast 			= my_input->GetFloatFromUser("Amplitude contrast","Fraction of amplitude contrast","0.07",0.0,1.0);
+	box_size 					= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128,9999999);
+	minimum_resolution 			= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowest_minimum_resolution);
+	maximum_resolution 			= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
+	minimum_defocus 			= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0",-999999.99,999999999.99);
+	maximum_defocus 			= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus,9999999999.99);
+	defocus_search_step 		= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0,99999999999.99);
+	astigmatism_tolerance 		= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms; set to negative to remove this restraint","100.0");
+	find_additional_phase_shift = my_input->GetYesNoFromUser("Find additional phase shift?","Input micrograph was recorded using a phase plate with variable phase shift, which you want to find","no");
 
-	 if (set_expert_options == true)
-	 {
-	 	 minimum_shift_in_angstroms = my_input->GetFloatFromUser("Minimum shift for initial search (A)", "Initial search will be limited to between the inner and outer radii.", "2.0", 0.0);
-	 	 maximum_shift_in_angstroms = my_input->GetFloatFromUser("Outer radius shift limit (A)", "The maximum shift of each alignment step will be limited to this value.", "80.0", minimum_shift_in_angstroms);
-	 	 bfactor_in_angstroms = my_input->GetFloatFromUser("B-factor to apply to images (A^2)", "This B-Factor will be used to filter the reference prior to alignment", "1500", 0.0);
-	 	 vertical_mask_size = my_input->GetIntFromUser("Half-width of vertical Fourier mask", "The vertical line mask will be twice this size. The central cross mask helps\nreduce problems by line artefacts from the detector", "1", 1);
-	 	 horizontal_mask_size = my_input->GetIntFromUser("Half-width of horizontal Fourier mask", "The horizontal line mask will be twice this size. The central cross mask helps\nreduce problems by line artefacts from the detector", "1", 1);
-	 	 termination_threshold_in_angstroms = my_input->GetFloatFromUser("Termination shift threshold (A)", "Alignment will iterate until the maximum shift is below this value", "1", 0.0);
-	 	 max_iterations = my_input->GetIntFromUser("Maximum number of iterations", "Alignment will stop at this number, even if the threshold shift is not reached", "20", 0);
+	if (find_additional_phase_shift)
+	{
+		minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
+		maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",minimum_additional_phase_shift,3.15);
+		additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.001,maximum_additional_phase_shift-minimum_additional_phase_shift);
+	}
+	else
+	{
+		minimum_additional_phase_shift = 0.0;
+		maximum_additional_phase_shift = 0.0;
+		additional_phase_shift_search_step = 0.0;
+	}
 
-	 	 if (should_dose_filter == true)
-	 	 {
-	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "YES");
-	 	 }
- 	 }
- 	 else
- 	 {
- 		 minimum_shift_in_angstroms = original_pixel_size + 0.001;
- 		 maximum_shift_in_angstroms = 100.0;
- 		 bfactor_in_angstroms = 1500.0;
- 		 vertical_mask_size = 1;
- 		 horizontal_mask_size = 1;
- 		 termination_threshold_in_angstroms = original_pixel_size / 2;
- 		 max_iterations = 20;
- 		 should_restore_power = true;
- 	 }
 
-	 delete my_input;
+	delete my_input;
 
-	 my_current_job.Reset(16);
-	 my_current_job.ManualSetArguments("ttfffbbfifbiifff",  input_filename.c_str(),
-			 	 	 	 	 	 	 	 	 	 	 	 output_filename.c_str(),
-														 original_pixel_size,
-														 minimum_shift_in_angstroms,
-														 maximum_shift_in_angstroms,
-														 should_dose_filter,
-														 should_restore_power,
-														 termination_threshold_in_angstroms,
-														 max_iterations,
-														 bfactor_in_angstroms,
-														 should_mask_central_cross,
-														 horizontal_mask_size,
-														 vertical_mask_size,
-														 acceleration_voltage,
-														 exposure_per_frame,
-														 pre_exposure_amount);
+	my_current_job.Reset(19);
+	my_current_job.ManualSetArguments("tbitffffiffffffbfff",	input_filename.c_str(),
+													 	 	 	input_is_a_movie,
+																number_of_frames_to_average,
+																output_diagnostic_filename.c_str(),
+																pixel_size,
+																acceleration_voltage,
+																spherical_aberration,
+																amplitude_contrast,
+																box_size,
+																minimum_resolution,
+																maximum_resolution,
+																minimum_defocus,
+																maximum_defocus,
+																defocus_search_step,
+																astigmatism_tolerance,
+																find_additional_phase_shift,
+																minimum_additional_phase_shift,
+																maximum_additional_phase_shift,
+																additional_phase_shift_search_step);
 
 
 }
 
-// overide the do calculation method which will be what is actually run..
 
-bool UnBlurApp::DoCalculation()
+
+// override the do calculation method which will be what is actually run..
+
+bool CtffindApp::DoCalculation()
 {
-	int pre_binning_factor;
-	long image_counter;
-	int pixel_counter;
 
-	float unitless_bfactor;
-
-	float pixel_size;
-	float min_shift_in_pixels;
-	float max_shift_in_pixels;
-	float termination_threshold_in_pixels;
-
-	Image sum_image;
-
-	// get the arguments for this job..
+	// Arguments for this job
 
 	std::string input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
-	std::string output_filename 					= my_current_job.arguments[1].ReturnStringArgument();
-	float       original_pixel_size					= my_current_job.arguments[2].ReturnFloatArgument();
-	float 		minumum_shift_in_angstroms			= my_current_job.arguments[3].ReturnFloatArgument();
-	float 		maximum_shift_in_angstroms			= my_current_job.arguments[4].ReturnFloatArgument();
-	bool 		should_dose_filter					= my_current_job.arguments[5].ReturnBoolArgument();
-	bool        should_restore_power				= my_current_job.arguments[6].ReturnBoolArgument();
-	float 		termination_threshold_in_angstoms	= my_current_job.arguments[7].ReturnFloatArgument();
-	int         max_iterations						= my_current_job.arguments[8].ReturnIntegerArgument();
-	float 		bfactor_in_angstoms					= my_current_job.arguments[9].ReturnFloatArgument();
-	bool        should_mask_central_cross			= my_current_job.arguments[10].ReturnBoolArgument();
-	int         horizontal_mask_size				= my_current_job.arguments[11].ReturnIntegerArgument();
-	int         vertical_mask_size					= my_current_job.arguments[12].ReturnIntegerArgument();
-	float       acceleration_voltage				= my_current_job.arguments[13].ReturnFloatArgument();
-	float       exposure_per_frame                  = my_current_job.arguments[14].ReturnFloatArgument();
-	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
+	bool        input_is_a_movie 					= my_current_job.arguments[1].ReturnBoolArgument();
+	int         number_of_frames_to_average			= my_current_job.arguments[2].ReturnIntegerArgument();
+	std::string output_diagnostic_filename			= my_current_job.arguments[3].ReturnStringArgument();
+	float 		pixel_size							= my_current_job.arguments[4].ReturnFloatArgument();
+	float 		acceleration_voltage				= my_current_job.arguments[5].ReturnFloatArgument();
+	float       spherical_aberration				= my_current_job.arguments[6].ReturnFloatArgument();
+	float 		amplitude_contrast					= my_current_job.arguments[7].ReturnFloatArgument();
+	int         box_size							= my_current_job.arguments[8].ReturnIntegerArgument();
+	float 		minimum_resolution					= my_current_job.arguments[9].ReturnFloatArgument();
+	float       maximum_resolution					= my_current_job.arguments[10].ReturnFloatArgument();
+	float       minimum_defocus						= my_current_job.arguments[11].ReturnFloatArgument();
+	float       maximum_defocus						= my_current_job.arguments[12].ReturnFloatArgument();
+	float       defocus_search_step					= my_current_job.arguments[13].ReturnFloatArgument();
+	float       astigmatism_tolerance               = my_current_job.arguments[14].ReturnFloatArgument();
+	bool       	find_additional_phase_shift         = my_current_job.arguments[15].ReturnBoolArgument();
+	float  		minimum_additional_phase_shift		= my_current_job.arguments[16].ReturnFloatArgument();
+	float		maximum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
+	float		additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
 
-	//my_current_job.PrintAllArguments();
+	// These variables will be set by command-line options
+	const bool		old_school_input = false;
+	const bool		amplitude_spectrum_input = false;
+	const bool		filtered_amplitude_spectrum_input = false;
 
-	// The Files
+	/*
+	 *  Scoring function
+	 */
+	float MyFunction(float []);
 
-	MRCFile input_file(input_filename, false);
-	MRCFile output_file(output_filename, true);
+	// Other variables
+	int					number_of_movie_frames;
+	int         		number_of_micrographs;
+	MRCFile				input_file(input_filename,false);
+	Image				average_spectrum;
+	wxString			output_text_fn;
+	ProgressBar			*my_progress_bar;
+	NumericTextFile		*output_text;
+	int					current_micrograph_number;
+	int					number_of_tiles_used;
+	Image 				current_power_spectrum;
+	int					current_first_frame_within_average;
+	int					current_frame_within_average;
+	int					current_input_location;
+	Image				current_input_image;
+	Image				current_input_image_square;
+	int					micrograph_square_dimension;
+	Image				temp_image;
+	Image				resampled_power_spectrum;
+	bool				resampling_is_necessary;
+	CTF					current_ctf;
+	float				average, sigma;
+	int					convolution_box_size;
+	ImageCTFComparison	comparison_object;
+	float 				estimated_astigmatism_angle;
+	float				bf_halfrange[4];
+	float				bf_midpoint[4];
+	float				bf_stepsize[4];
+	float				cg_starting_point[4];
+	float				cg_accuracy[4];
+	int 				number_of_search_dimensions;
+	BruteForceSearch   	brute_force_search;
 
-	long number_of_input_images = input_file.ReturnNumberOfSlices();
-
-	// Arrays to hold the input images
-
-	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
-	Image *image_stack = new Image[number_of_input_images];
-
-	// Arrays to hold the shifts..
-
-	float *x_shifts = new float[number_of_input_images];
-	float *y_shifts = new float[number_of_input_images];
-
-	// Arrays to hold the 1D dose filter, and 1D restoration filter..
-
-	float *dose_filter;
-	float *dose_filter_sum_of_squares;
-
-	// Electron dose object for if dose filtering..
-
-	ElectronDose my_electron_dose(acceleration_voltage, original_pixel_size);
-
-	// some quick checks..
-
-	if (number_of_input_images <= 2)
+	// Some argument checking
+	if (minimum_resolution < maximum_resolution)
 	{
-		SendError(wxString::Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
+		SendError(wxString::Format("Error: Minimum resolution (%f) higher than maximum resolution (%f). Terminating.", minimum_resolution,maximum_resolution));
+		ExitMainLoop();
+	}
+	if (minimum_defocus > maximum_defocus)
+	{
+		SendError(wxString::Format("Minimum defocus must be less than maximum defocus. Terminating."));
 		ExitMainLoop();
 	}
 
-	// Read in and FFT all the images..
-
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+	// How many micrographs are we dealing with
+	if (input_is_a_movie)
 	{
-		image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
-		image_stack[image_counter].ForwardFFT(true);
-
-		x_shifts[image_counter] = 0.0;
-		y_shifts[image_counter] = 0.0;
-
-	}
-
-	// if we are binning - choose a binning factor..
-
-	pre_binning_factor = int(myround(5. / original_pixel_size));
-	if (pre_binning_factor < 1) pre_binning_factor = 1;
-
-	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
-
-	// if we are going to be binning, we need to allocate the unbinned array..
-
-	if (pre_binning_factor > 1)
-	{
-		unbinned_image_stack = new Image[number_of_input_images];
-		pixel_size = original_pixel_size * pre_binning_factor;
+		// We only support 1 movie per file
+		number_of_movie_frames = input_file.ReturnZSize();
+		number_of_micrographs = 1;
 	}
 	else
 	{
-		pixel_size = original_pixel_size;
+		number_of_movie_frames = 1;
+		number_of_micrographs = input_file.ReturnZSize();
 	}
 
-	// convert shifts to pixels..
-
-	min_shift_in_pixels = minumum_shift_in_angstroms / pixel_size;
-	max_shift_in_pixels = maximum_shift_in_angstroms / pixel_size;
-	termination_threshold_in_pixels = termination_threshold_in_angstoms / pixel_size;
-
-
-	// calculate the bfactor
-
-	unitless_bfactor = bfactor_in_angstoms / pow(pixel_size, 2);
-
-	if (min_shift_in_pixels <= 1.01) min_shift_in_pixels = 1.01;  // we always want to ignore the central peak initially.
-
-	if (pre_binning_factor > 1)
+	if (is_running_locally)
 	{
-		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		// Print out information about input file
+		// (Not implemented yet)
+		MyPrintWithDetails("TODO: print information about input file\n");
+
+		// Prepare the output text file
+		output_text_fn = FilenameReplaceExtension(output_diagnostic_filename,"txt");
+		output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
+
+		// Print header to the output text file
+		output_text->WriteCommentLine("# Output from CTFFind version %s run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined().ToStdString());
+		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename,number_of_micrographs);
+		output_text->WriteCommentLine("# Pixel size: %f0.3 Angstroms ; acceleration voltage: %f0.1 keV ; spherical aberration: %0.1 mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %f0.1 Angstroms ; max. res.: %f0.1 Angstroms ; min. def.: %f0.1 um; max. def. %f0.1 um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
+		output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
+
+		// Prepare a text file with 1D rotational average spectra
+		output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString(),"_avrot");
+
+		if (! old_school_input && number_of_micrographs > 1)
 		{
-			unbinned_image_stack[image_counter] = image_stack[image_counter];
-			image_stack[image_counter].Resize(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
-			//image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
+			wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
+			wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
+			my_progress_bar = new ProgressBar(number_of_micrographs);
 		}
-
-		// for the binned images, we don't want to insist on a super low termination factor.
-
-		if (termination_threshold_in_pixels < 1 && pre_binning_factor > 1) termination_threshold_in_pixels = 1;
-
 	}
 
-	// do the initial refinement (only 1 round - with the min shift)
 
-//	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+	// Prepare the average spectrum image
+	average_spectrum.Allocate(box_size,box_size,true);
 
-	// now do the actual refinement..
-
-//	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
-
-
-	// if we have been using pre-binning, we need to do a refinment on the unbinned data..
-
-	if (pre_binning_factor > 1)
+	// Loop over micrographs
+	for (current_micrograph_number=1; current_micrograph_number <= number_of_micrographs; current_micrograph_number++)
 	{
-		// we don't need the binned images anymore..
+		if (old_school_input || number_of_micrographs == 1) wxPrintf("Working on micrograph %i of %i\n", current_micrograph_number, number_of_micrographs);
 
-		delete [] image_stack;
-		image_stack = unbinned_image_stack;
-		pixel_size = original_pixel_size;
+		number_of_tiles_used = 0;
+		average_spectrum.SetToConstant(0.0);
+		average_spectrum.is_in_real_space = true;
 
-		// Adjust the shifts, then phase shift the original images
-
-		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		if (amplitude_spectrum_input || filtered_amplitude_spectrum_input)
 		{
-			x_shifts[image_counter] *= pre_binning_factor;
-			y_shifts[image_counter] *= pre_binning_factor;
-
-			image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+			current_power_spectrum.ReadSlice(&input_file,current_micrograph_number);
+			current_power_spectrum.ForwardFFT();
+			average_spectrum.Allocate(box_size,box_size,1,false);
+			current_power_spectrum.ClipInto(&average_spectrum);
+			average_spectrum.BackwardFFT();
 		}
-
-		// convert parameters to pixels with new pixel size..
-
-		min_shift_in_pixels = minumum_shift_in_angstroms / original_pixel_size;
-		max_shift_in_pixels = maximum_shift_in_angstroms / original_pixel_size;
-		termination_threshold_in_pixels = termination_threshold_in_angstoms / original_pixel_size;
-
-		// recalculate the bfactor
-
-		unitless_bfactor = bfactor_in_angstoms / pow(original_pixel_size, 2);
-
-		// do the refinement..
-
-//		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, original_pixel_size, x_shifts, y_shifts);
-
-		// if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
-
-
-
-	}
-
-	// we should be finished with alignment, now we just need to make the final sum..
-
-	if (should_dose_filter == true)
-	{
-		// allocate arrays for the filter, and the sum of squares..
-
-		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
-		dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-
-		for (pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++)
+		else
 		{
-			dose_filter[pixel_counter] = 0.0;
-			dose_filter_sum_of_squares[pixel_counter] = 0.0;
-		}
-
-		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
-		{
-			my_electron_dose.CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
-
-			// filter the image, and also calculate the sum of squares..
-
-			for (pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++)
+			for (current_first_frame_within_average = 1; current_first_frame_within_average <= number_of_movie_frames; current_first_frame_within_average += number_of_frames_to_average)
 			{
-				image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
-				dose_filter_sum_of_squares[pixel_counter] += pow(dose_filter[pixel_counter], 2);
+				for (current_frame_within_average = 1; current_frame_within_average <= number_of_movie_frames; current_frame_within_average++)
+				{
+					current_input_location = current_first_frame_within_average + number_of_movie_frames * (current_micrograph_number-1) + (current_frame_within_average-1);
+					if (current_input_location > number_of_movie_frames * current_micrograph_number) continue;
+					current_input_image.ReadSlice(&input_file,current_input_location);
+					if (current_input_image.IsConstant())
+					{
+						SendError(wxString::Format("Error: location %i of input file %s is blank",current_input_location, input_filename));
+						ExitMainLoop();
+					}
+					// Make the image square
+					micrograph_square_dimension = std::max(current_input_image.logical_x_dimension,current_input_image.logical_y_dimension);
+					if (IsOdd((micrograph_square_dimension))) micrograph_square_dimension++;
+					if (current_input_image.logical_x_dimension != micrograph_square_dimension || current_input_image.logical_y_dimension != micrograph_square_dimension)
+					{
+						current_input_image_square.Allocate(micrograph_square_dimension,micrograph_square_dimension,true);
+						current_input_image.ClipInto(&current_input_image_square,current_input_image.ReturnAverageOfRealValues());
+						current_input_image.Consume(&current_input_image_square);
+					}
+					//
+					if (current_frame_within_average == 1)
+					{
+						temp_image.Allocate(current_input_image.logical_x_dimension,current_input_image.logical_y_dimension,true);
+						temp_image.SetToConstant(0.0);
+					}
+					temp_image.AddImage(&current_input_image);
+				} // end of loop over frames to average together
+				current_input_image.Consume(&temp_image);
 
-				//if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
-			}
-		}
-	}
+				// Taper the edges of the micrograph in real space, to lessen Gibbs artefacts
+				current_input_image.TaperEdges();
 
-	sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-	sum_image.SetToConstant(0.0);
+				number_of_tiles_used++;
 
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
-	{
-		sum_image.AddImage(&image_stack[image_counter]);
-		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
-	}
+				// Compute the amplitude spectrum
+				current_power_spectrum.Allocate(current_input_image.logical_x_dimension,current_input_image.logical_y_dimension,true);
+				current_input_image.ForwardFFT(false);
+				current_input_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
 
-	// if we are restoring the power - do it here..
+				current_power_spectrum.QuickAndDirtyWriteSlice("dbg_spec_before_resampling.mrc",1);
 
-	if (should_dose_filter == true && should_restore_power == true)
-	{
-		for (pixel_counter = 0; pixel_counter < sum_image.real_memory_allocated / 2; pixel_counter++)
-		{
-			if (dose_filter_sum_of_squares[pixel_counter] != 0)
+				// Set origin of amplitude spectrum to 0.0
+				current_power_spectrum.real_values[current_power_spectrum.ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum.physical_address_of_box_center_x,current_power_spectrum.physical_address_of_box_center_y,current_power_spectrum.physical_address_of_box_center_z)] = 0.0;
+
+				// Resample the amplitude spectrum
+				resampling_is_necessary = current_power_spectrum.logical_x_dimension != box_size || current_power_spectrum.logical_y_dimension != box_size;
+				if (resampling_is_necessary)
+				{
+					current_power_spectrum.ForwardFFT(false);
+					resampled_power_spectrum.Allocate(box_size,box_size,1,false);
+					current_power_spectrum.ClipInto(&resampled_power_spectrum);
+					resampled_power_spectrum.BackwardFFT();
+				}
+				else
+				{
+					resampled_power_spectrum = current_power_spectrum;
+				}
+
+				average_spectrum.AddImage(&resampled_power_spectrum);
+			} // end of loop over movie frames
+
+			// We need to take care of the scaling of the FFTs, as well as the averaging of tiles
+			if (resampling_is_necessary)
 			{
-				sum_image.complex_values[pixel_counter] /= sqrt(dose_filter_sum_of_squares[pixel_counter]);
+				average_spectrum.MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image.logical_x_dimension * current_input_image.logical_y_dimension * current_power_spectrum.logical_x_dimension * current_power_spectrum.logical_y_dimension ) );
 			}
+			else
+			{
+				average_spectrum.MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image.logical_x_dimension * current_input_image.logical_y_dimension ) );
+			}
+
+		} // end of test of whether we were given amplitude spectra on input
+
+
+		average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
+
+
+		// Filter the amplitude spectrum, remove backtround
+		if (! filtered_amplitude_spectrum_input)
+		{
+			// Try to weaken cross artefacts
+			average_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum.logical_x_dimension)*pixel_size/minimum_resolution,float(average_spectrum.logical_x_dimension),average,sigma,12);
+			average_spectrum.SetMaximumValueOnCentralCross(average+10.0*sigma);
+
+			average_spectrum.QuickAndDirtyReadSlice("dbg_average_spectrum_before_conv.mrc",1);
+
+			// Compute low-pass filtered version of the spectrum
+			convolution_box_size = int( float(average_spectrum.logical_x_dimension) * pixel_size / minimum_resolution * sqrt(2.0) );
+			if (IsEven(convolution_box_size)) convolution_box_size++;
+			current_power_spectrum.Allocate(average_spectrum.logical_x_dimension,average_spectrum.logical_y_dimension,true);
+			average_spectrum.SpectrumBoxConvolution(&current_power_spectrum,convolution_box_size,float(average_spectrum.logical_x_dimension)*pixel_size/minimum_resolution);
+
+			current_power_spectrum.QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
+
+			// POTENTIAL OPTIMIZATION: do not store the convoluted spectrum as a separate image - just subtract one convoluted pixel at a time from the image
+
+			// Subtract low-pass-filtered spectrum from the spectrum. This should remove the background slope.
+			average_spectrum.SubtractImage(&current_power_spectrum);
+
+			average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
+
+			// Threshold high values
+			average_spectrum.SetMaximumValue(average_spectrum.ReturnMaximumValue(3,3));
 		}
-	}
 
-	// now we just need to write out the final sum..
-
-	sum_image.WriteSlice(&output_file, 1);
-
-	// fill the result array..
-
-	if (result_array != NULL)
-	{
-		delete [] result_array;
-
-	}
-
-	result_array = new float[number_of_input_images * 2];
-	result_array_size = number_of_input_images * 2;
-
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
-	{
-		result_array[image_counter] = x_shifts[image_counter] * original_pixel_size;
-		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * original_pixel_size;
-
-		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
-	}
+		// We now have a spectrum which we can use to fit CTFs
+		average_spectrum.QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
 
 
-	delete [] x_shifts;
-	delete [] y_shifts;
-	delete [] image_stack;
+		// Set up the CTF object
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size,minimum_additional_phase_shift);
+		current_ctf.SetDefocus(minimum_defocus/pixel_size,minimum_defocus/pixel_size,0.0);
+		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
-	if (should_dose_filter == true)
-	{
-		delete [] dose_filter;
-		delete [] dose_filter_sum_of_squares;
-	}
+		// Set up the comparison object
+		comparison_object.ctf = current_ctf;
+		comparison_object.img = average_spectrum;
+		comparison_object.pixel_size = pixel_size;
+		comparison_object.find_phase_shift = find_additional_phase_shift;
+
+		if (old_school_input)
+		{
+			wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
+		}
+
+		// Let's look for the astigmatism angle first
+		temp_image = average_spectrum;
+		temp_image.ApplyMirrorAlongY();
+		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(&average_spectrum,&temp_image,1,45.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+
+		// We can now look for the defocus value
+		bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus);
+		bf_halfrange[1] = bf_halfrange[0];
+		bf_halfrange[2] = 0.0;
+		bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
+
+		bf_midpoint[0] = minimum_defocus + bf_halfrange[0];
+		bf_midpoint[1] = bf_midpoint[0];
+		bf_midpoint[2] = estimated_astigmatism_angle;
+		bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
+
+		bf_stepsize[0] = defocus_search_step;
+		bf_stepsize[1] = bf_stepsize[0];
+		bf_stepsize[2] = 0.0;
+		bf_stepsize[3] = additional_phase_shift_search_step;
+
+		if (find_additional_phase_shift)
+		{
+			number_of_search_dimensions = 4;
+		}
+		else
+		{
+			number_of_search_dimensions = 3;
+		}
+
+		// Actually run the BF search
+		brute_force_search.Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
+		brute_force_search.Run();
+
+	} // End of loop over micrographs
+
+
+
+
+/*
+
+
+        ! Actually run the BF search
+        if (find_additional_phase_shift%value) then
+            number_of_search_dimensions = 4
+        else
+            number_of_search_dimensions = 3
+        endif
+#ifdef _OPENMP
+        if (.not. allocated(bf_param_array)) allocate(bf_param_array(omp_get_max_threads()))
+#else
+        if (.not. allocated(bf_param_array)) allocate(bf_param_array(1))
+#endif
+        bf_param_array = c_loc(comparison_object)
+        call brute_force_search%Init(ctffind_objective_function,bf_param_array,number_of_search_dimensions,    &
+                                     bf_midpoint(1:number_of_search_dimensions), &
+                                     bf_halfrange(1:number_of_search_dimensions), &
+                                     bf_stepsize(1:number_of_search_dimensions), &
+                                     print_progress_bar=number_of_micrographs .eq. 1)
+        call brute_force_search%Run()
+        cg_starting_point = brute_force_search%GetBestValues()
+
+        ! Remember the results of the search
+        call current_ctf%SetDefocus(real(cg_starting_point(1))/pixel_size%value, &
+                                    real(cg_starting_point(2))/pixel_size%value, &
+                                    convert(real(cg_starting_point(3)),degrees,radians))
+        if (find_additional_phase_shift%value) then
+            call current_ctf%SetAdditionalPhaseShift(real(cg_starting_point(4)))
+        endif
+        call current_ctf%EnforceConvention()
+
+        ! Print out results of brute force search
+        if (old_school_input .or. debug) then
+            write(*,'(a)')  '      DFMID1      DFMID2      ANGAST          CC'
+            write(*,'(3(f12.2),f12.5,a)')   current_ctf%GetDefocus1InAngstroms(pixel_size%value), &
+                                            current_ctf%GetDefocus2InAngstroms(pixel_size%value), &
+                                            current_ctf%GetAstigmatismAzimuthInDegrees(), &
+                                            -brute_force_search%GetBestScore(), &
+                                             '  '
+            if (debug) write(*,'(a,f0.3,a,f0.2,a)') '**debug(ctffind): found the following phase shift: ', &
+                                                    current_ctf%GetAdditionalPhaseShift(), &
+                                                    ' (', current_ctf%GetAdditionalPhaseShift()/3.1415,' pi)'
+        endif
+
+        ! Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
+        if (old_school_input .or. debug) then
+            write(*,'(/a)') ' REFINING CTF PARAMETERS...'
+            write(*,'(a)')  '      DFMID1      DFMID2      ANGAST          CC'
+        endif
+        if (find_additional_phase_shift%value) then
+            cg_accuracy = [100.0d0,100.0d0,0.5d0,0.05d0]
+        else
+            cg_accuracy = [100.0d0,100.0d0,0.5d0]
+        endif
+        call conjugate_gradient%Init(number_of_search_dimensions,ctffind_objective_function,c_loc(comparison_object), &
+                                    cg_starting_point, &
+                                    cg_accuracy)
+        call conjugate_gradient%Run()
+
+        ! Remember the results of the refinement
+        cg_starting_point = conjugate_gradient%GetBestValues()
+        call current_ctf%SetDefocus(real(cg_starting_point(1))/pixel_size%value, &
+                                    real(cg_starting_point(2))/pixel_size%value, &
+                                    convert(real(cg_starting_point(3)),degrees,radians))
+        if (find_additional_phase_shift%value) then
+            call current_ctf%SetAdditionalPhaseShift(real(cg_starting_point(4)))
+        endif
+        call current_ctf%EnforceConvention()
+
+
+        ! Print results out to the terminal
+        if (old_school_input .or. debug) then
+            write(*,'(3(f12.2),f12.5,a/)')   current_ctf%GetDefocus1InAngstroms(pixel_size%value),              &
+                                            current_ctf%GetDefocus2InAngstroms(pixel_size%value),               &
+                                            current_ctf%GetAstigmatismAzimuthInDegrees(),                       &
+                                            -conjugate_gradient%GetBestScore(),                                 &
+                                            '  Final Values'
+            if (debug) write(*,'(a,f0.3,a,f0.2,a)') '**debug(ctffind): found the following phase shift: ', &
+                                                    current_ctf%GetAdditionalPhaseShift(), &
+                                                    ' (', current_ctf%GetAdditionalPhaseShift()/3.1415,' pi)'
+        endif
+
+
+        ! Generate diagnostic image
+        current_output_location = current_micrograph_number
+        call average_spectrum%AddConstant((-1.0)*average_spectrum%GetAverageOfValuesOnEdges())
+        call average_spectrum%ComputeAverageAndSigmaOfValuesInSpectrum(                                         &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,2)          &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            max(current_ctf%GetHighestFrequencyForFitting(),    &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,3))         &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            average,sigma)
+        call average_spectrum%ApplyCircularMask(5.0,inverse=.true.)
+        call average_spectrum%SetMaximumValueOnCentralCross(average)
+        call average_spectrum%SetMinimumAndMaximumValue(average-4.0*sigma,average+4.0*sigma)
+        call average_spectrum%ComputeAverageAndSigmaOfValuesInSpectrum(                                         &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,2)          &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            max(current_ctf%GetHighestFrequencyForFitting(),    &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,3))         &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            average,sigma)
+        call average_spectrum%AddConstant(-1.0*average)
+        call average_spectrum%MultiplyByConstant(1.0e0/sigma)
+        call average_spectrum%AddConstant(average)
+        call average_spectrum%Compute1DRotationalAverage(rotational_average)
+        if (debug) then
+            call average_spectrum%WriteToDisk('dbg_average_spectrum_before_rescaling.mrc')
+        endif
+        if (compute_extra_stats .or. boost_ring_contrast) then
+            call average_spectrum%ComputeRotationalAverageOfPowerSpectrum( &
+                                                                          current_ctf,spatial_frequency,            &
+                                                                          rotational_average_astig,                 &
+                                                                          rotational_average_astig_fit,             &
+                                                                          frc_of_fit,frc_of_fit_sigma,              &
+                                                                          rescale_input=boost_ring_contrast,        &
+                                                                          squared_ctf_was_fit=fit_squared_ctf)
+        endif
+
+        call average_spectrum%ComputeAverageAndSigmaOfValuesInSpectrum(                                         &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,2)          &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            max(current_ctf%GetHighestFrequencyForFitting(),    &
+                                                            current_ctf%ComputeFrequencyOfAZero(0.0,3))         &
+                                                            *average_spectrum%GetLogicalDimension(1),           &
+                                                            average,sigma)
+
+        call average_spectrum%SetMinimumAndMaximumValue(average-1.0*sigma,average+2.0*sigma)
+        if (debug) call average_spectrum%WriteToDisk('dbg_average_spectrum_before_overlay.mrc')
+        call average_spectrum%OverlayCTF(current_ctf,squared_ctf=fit_squared_ctf)
+        call average_spectrum%WriteToDisk(output_diagnostic_filename%value,current_output_location)
+
+        ! Until what frequency were CTF rings detected?
+        if (compute_extra_stats) then
+            do last_bin_with_good_fit=2,size(frc_of_fit)
+                if ( (count(frc_of_fit(1:last_bin_with_good_fit-1) .gt. 0.20d0) .gt. 3 .and. &
+                           (frc_of_fit(last_bin_with_good_fit) .le. 0.2d0)) .or. &
+                     (count(frc_of_fit(1:last_bin_with_good_fit-1) .gt. frc_significance_threshold) .gt. 3 .and. &
+                                    ((frc_of_fit(last_bin_with_good_fit) .lt. frc_significance_threshold &
+                                    .and. rotational_average_astig(last_bin_with_good_fit) .gt. 2.0d0) &
+                                .or. (frc_of_fit(last_bin_with_good_fit) .lt. frc_significance_threshold &
+                                    .and. rotational_average_astig(last_bin_with_good_fit) .lt. -2.0d0))&
+                                                                                    )) then
+                    ! last_bin_with_good_fit will now be set to point to the last frequencies at which Thon rings were still well fit
+                    exit
+                endif
+            enddo
+            last_bin_with_good_fit = min(last_bin_with_good_fit,size(frc_of_fit))
+        else
+            last_bin_with_good_fit = 1
+        endif
+
+        ! Print more detailled results to terminal
+        if (number_of_micrographs .eq. 1) then
+            write(*,'(a,f0.2,1x,a,1x,f0.2,a)')  'Estimated defocus values        : ', &
+                                            current_ctf%GetDefocus1InAngstroms(pixel_size%value), ',', &
+                                            current_ctf%GetDefocus2InAngstroms(pixel_size%value), ' Angstroms'
+            write(*,'(a,f0.2,a)')               'Estimated azimuth of astigmatism: ', &
+                                            current_ctf%GetAstigmatismAzimuthInDegrees(), ' degrees'
+            if (find_additional_phase_shift%value) then
+                write(*,'(a,f0.3,a,f0.2,a)')    'Additional phase shift          : ', &
+                                                    current_ctf%GetAdditionalPhaseShift(), &
+                                                    ' (', current_ctf%GetAdditionalPhaseShift()/3.1415,' pi)'
+            endif
+            write(*,'(a,f0.5)')                 'Score                           : ', &
+                                            -conjugate_gradient%GetBestScore()
+            if (compute_extra_stats) then
+                write(*,'(a,f0.1,a)')               'Thon rings with good fit up to  : ', &
+                                                pixel_size%value/spatial_frequency(last_bin_with_good_fit), ' Angstroms'
+            endif
+        endif
+
+
+        ! Write out results to summary file
+        values_to_write_out(1) = real(current_micrograph_number)
+        values_to_write_out(2:4) = current_ctf%GetDefocusParametersInAngstromsAndDegrees(pixel_size%value)
+        values_to_write_out(5) = current_ctf%GetAdditionalPhaseShift()
+        values_to_write_out(6) = -conjugate_gradient%GetBestScore()
+        if (compute_extra_stats) then
+            values_to_write_out(7) = pixel_size%value/spatial_frequency(last_bin_with_good_fit)
+        else
+            values_to_write_out(7) = 0.0
+        endif
+        call output_text%WriteDataLine(values_to_write_out)
+
+
+
+        ! Write avrot
+        ! \todo Add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections - see
+        !!
+        if (compute_extra_stats) then
+            if (output_text_avrot%number_of_data_lines .eq. 0) then
+                call output_text_avrot%Init(output_text_fn,OPEN_TO_WRITE,size(rotational_average))
+                call output_text_avrot%WriteCommentLine(comment_lines(1))
+                call output_text_avrot%WriteCommentLine(comment_lines(2))
+                call output_text_avrot%WriteCommentLine(comment_lines(3))
+                call output_text_avrot%WriteCommentLine(comment_lines(4))
+                call output_text_avrot%WriteCommentLine('6 lines per micrograph: #1 - spatial frequency (1/pixels); '//&
+                                                 '#2 - 1D rotational average of spectrum (assuming no astigmatism); '//&
+                                                 '#3 - 1D rotational average of spectrum; #4 - CTF fit; '//&
+                                                 '#5 - cross-correlation between spectrum and CTF fit; '//&
+                                                 '#6 - 2sigma of expected cross correlation of noise')
+            endif
+            call output_text_avrot%WriteDataLine(real(spatial_frequency))
+            call output_text_avrot%WriteDataLine(real(rotational_average))
+            call output_text_avrot%WriteDataLine(real(rotational_average_astig))
+            call output_text_avrot%WriteDataLine(real(rotational_average_astig_fit))
+            call output_text_avrot%WriteDataLine(real(frc_of_fit))
+            call output_text_avrot%WriteDataLine(real(frc_of_fit_sigma))
+        endif
+
+        ! Mark progress
+        if (.not. old_school_input .and. number_of_micrographs .gt. 1) then
+            call my_progress_bar%Update(current_micrograph_number)
+        endif
+
+    enddo ! end of loop over micrographs
+
+    if (.not. old_school_input .and. number_of_micrographs .gt. 1) then
+        call my_progress_bar%Finish()
+    endif
+
+    ! Tell the user where the outputs are
+    write(*,'(/2a)')'Summary of results                          : ', trim(adjustl(output_text%filename))
+    write(*,'(2a)') 'Diagnostic images                           : ', trim(adjustl(output_diagnostic_filename%value))
+    if (compute_extra_stats) then
+        write(*,'(2a)') 'Detailled results, including 1D fit profiles: ', trim(adjustl(output_text_avrot%filename))
+        write(*,'(2a)') 'Use this command to plot 1D fit profiles    : ctffind_plot_results.sh ', &
+                                                                      trim(adjustl(output_text_avrot%filename))
+    endif
+
+
+
+ */
+
 
 	return true;
 }
 
+// Align rotationally a (stack) of image(s) against another image. Return the rotation angle that gives the best normalised cross-correlation.
+float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius)
+{
+	MyDebugAssertTrue(self[0].is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(self[0].is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(self[0].logical_z_dimension == 1, "Meant for images, not volumes");
+	MyDebugAssertTrue(other_image[0].is_in_memory, "Memory not allocated - other_image");
+	MyDebugAssertTrue(other_image[0].is_in_real_space, "Not in real space - other_image");
+	MyDebugAssertTrue(other_image[0].logical_z_dimension == 1, "Meant for images, not volumes - other_image");
+	MyDebugAssertTrue(self[0].HasSameDimensionsAs(&other_image[0]),"Images and reference images do not have same dimensions.");
 
+	// Local variables
+	const float minimum_radius_sq = pow(minimum_radius,2);
+	const float maximum_radius_sq = pow(maximum_radius,2);
+	const float inverse_logical_x_dimension = 1.0 / float(self[0].logical_x_dimension);
+	const float inverse_logical_y_dimension = 1.0 / float(self[0].logical_y_dimension);
+	float best_cc = - std::numeric_limits<float>::max();
+	float best_rotation = - std::numeric_limits<float>::max();
+	float current_rotation = - search_half_range;
+	float current_rotation_rad;
+	EmpiricalDistribution cc_numerator_dist(false);
+	EmpiricalDistribution cc_denom_self_dist(false);
+	EmpiricalDistribution cc_denom_other_dist(false);
+	int current_image;
+	int i, i_logi;
+	float i_logi_frac, ii_phys;
+	int j, j_logi;
+	float j_logi_frac, jj_phys;
+	float current_interpolated_value;
+	long address_in_other_image;
+	float current_cc;
+
+
+
+	// Loop over possible rotations
+	while ( current_rotation < search_half_range + search_step_size )
+	{
+		current_rotation_rad = current_rotation / 180.0 * PI;
+		cc_numerator_dist.Reset();
+		cc_denom_self_dist.Reset();
+		cc_denom_other_dist.Reset();
+		// Loop over the array of images
+		for (current_image=0; current_image < number_of_images; current_image++)
+		{
+			// Loop over the other (reference) image
+			address_in_other_image = 0;
+			for (j=0; j < other_image[0].logical_y_dimension; j++)
+			{
+				j_logi = j - other_image[0].physical_address_of_box_center_y;
+				j_logi_frac = pow(j_logi * inverse_logical_y_dimension,2);
+				for (i=0; i < other_image[0].logical_x_dimension; i++)
+				{
+					i_logi = i - other_image[0].physical_address_of_box_center_x;
+					i_logi_frac = pow(i_logi * inverse_logical_x_dimension,2) + j_logi_frac;
+
+					if (i_logi_frac >= minimum_radius_sq && i_logi_frac <= maximum_radius_sq)
+					{
+						// We do ccw rotation to go from other_image (reference) to self (input image)
+						ii_phys = i_logi * cos(current_rotation_rad) - j_logi * sin(current_rotation_rad) + self[0].physical_address_of_box_center_x;
+						jj_phys = j_logi * sin(current_rotation_rad) + j_logi * cos(current_rotation_rad) + self[0].physical_address_of_box_center_y;
+						//
+						if (floor(ii_phys) > 0 && ceil(ii_phys) < self[0].logical_x_dimension && floor(jj_phys) > 0 && ceil(jj_phys) < self[0].logical_y_dimension ) // potential optimization: we have to compute the floor and ceiling in the interpolation routine. Is it not worth doing the bounds checking in the interpolation routine somehow?
+						{
+							self[0].GetRealValueByLinearInterpolationNoBoundsCheckImage(ii_phys,jj_phys,current_interpolated_value);
+							cc_numerator_dist.AddSampleValue(current_interpolated_value * other_image[current_image].real_values[address_in_other_image]);
+							cc_denom_other_dist.AddSampleValue(pow(other_image[0].real_values[address_in_other_image],2)); // potential optimization: since other_image is not being rotated, we should only need to compute this quantity once, not for every potential rotation
+							cc_denom_self_dist.AddSampleValue(pow(current_interpolated_value,2));
+						}
+					}
+					address_in_other_image++;
+				} // i
+				address_in_other_image += other_image[0].padding_jump_value;
+			} // end of loop over other (reference) image
+		} // end of loop over array of images
+
+		current_cc = cc_numerator_dist.GetSampleSum() / sqrt(cc_denom_other_dist.GetSampleSum()*cc_denom_self_dist.GetSampleSum());
+
+		if (current_cc > best_cc)
+		{
+			best_cc = current_cc;
+			best_rotation = current_rotation;
+		}
+
+		// Increment the rotation
+		current_rotation += search_step_size;
+
+	} // end of loop over rotations
+}
 
 

@@ -125,7 +125,13 @@ am_libcore_a_OBJECTS = core/libcore_a-functions.$(OBJEXT) \
 	core/libcore_a-job_packager.$(OBJEXT) \
 	core/libcore_a-job_tracker.$(OBJEXT) \
 	core/libcore_a-run_profiles.$(OBJEXT) \
-	core/libcore_a-myapp.$(OBJEXT) core/libcore_a-ctf.$(OBJEXT)
+	core/libcore_a-myapp.$(OBJEXT) \
+	core/libcore_a-empirical_distribution.$(OBJEXT) \
+	core/libcore_a-ctf.$(OBJEXT) \
+	core/libcore_a-numeric_text_file.$(OBJEXT) \
+	core/libcore_a-progressbar.$(OBJEXT) \
+	core/libcore_a-downhill_simplex.$(OBJEXT) \
+	core/libcore_a-brute_force_search.$(OBJEXT)
 libcore_a_OBJECTS = $(am_libcore_a_OBJECTS)
 libguicore_a_AR = $(AR) $(ARFLAGS)
 libguicore_a_LIBADD =
@@ -420,7 +426,12 @@ libcore_a_SOURCES = core/functions.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
                        core/myapp.cpp \
-                       core/ctf.cpp
+                       core/empirical_distribution.cpp \
+                       core/ctf.cpp \
+                       core/numeric_text_file.cpp \
+                       core/progressbar.cpp \
+                       core/downhill_simplex.cpp \
+                       core/brute_force_search.cpp 
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -529,7 +540,17 @@ core/libcore_a-run_profiles.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-myapp.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-empirical_distribution.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-ctf.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-numeric_text_file.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-progressbar.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-downhill_simplex.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-brute_force_search.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 
 libcore.a: $(libcore_a_OBJECTS) $(libcore_a_DEPENDENCIES) $(EXTRA_libcore_a_DEPENDENCIES) 
@@ -721,10 +742,13 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-asset_group.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-assets.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-brute_force_search.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-ctf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-curve.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-database.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-downhill_simplex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-electron_dose.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-empirical_distribution.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-functions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-job_packager.Po@am__quote@
@@ -732,6 +756,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-mrc_file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-mrc_header.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-myapp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-numeric_text_file.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-progressbar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-project.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-run_profiles.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-userinput.Po@am__quote@
@@ -991,6 +1017,20 @@ core/libcore_a-myapp.obj: core/myapp.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-myapp.obj `if test -f 'core/myapp.cpp'; then $(CYGPATH_W) 'core/myapp.cpp'; else $(CYGPATH_W) '$(srcdir)/core/myapp.cpp'; fi`
 
+core/libcore_a-empirical_distribution.o: core/empirical_distribution.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-empirical_distribution.o -MD -MP -MF core/$(DEPDIR)/libcore_a-empirical_distribution.Tpo -c -o core/libcore_a-empirical_distribution.o `test -f 'core/empirical_distribution.cpp' || echo '$(srcdir)/'`core/empirical_distribution.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-empirical_distribution.Tpo core/$(DEPDIR)/libcore_a-empirical_distribution.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/empirical_distribution.cpp' object='core/libcore_a-empirical_distribution.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-empirical_distribution.o `test -f 'core/empirical_distribution.cpp' || echo '$(srcdir)/'`core/empirical_distribution.cpp
+
+core/libcore_a-empirical_distribution.obj: core/empirical_distribution.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-empirical_distribution.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-empirical_distribution.Tpo -c -o core/libcore_a-empirical_distribution.obj `if test -f 'core/empirical_distribution.cpp'; then $(CYGPATH_W) 'core/empirical_distribution.cpp'; else $(CYGPATH_W) '$(srcdir)/core/empirical_distribution.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-empirical_distribution.Tpo core/$(DEPDIR)/libcore_a-empirical_distribution.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/empirical_distribution.cpp' object='core/libcore_a-empirical_distribution.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-empirical_distribution.obj `if test -f 'core/empirical_distribution.cpp'; then $(CYGPATH_W) 'core/empirical_distribution.cpp'; else $(CYGPATH_W) '$(srcdir)/core/empirical_distribution.cpp'; fi`
+
 core/libcore_a-ctf.o: core/ctf.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-ctf.o -MD -MP -MF core/$(DEPDIR)/libcore_a-ctf.Tpo -c -o core/libcore_a-ctf.o `test -f 'core/ctf.cpp' || echo '$(srcdir)/'`core/ctf.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-ctf.Tpo core/$(DEPDIR)/libcore_a-ctf.Po
@@ -1004,6 +1044,62 @@ core/libcore_a-ctf.obj: core/ctf.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/ctf.cpp' object='core/libcore_a-ctf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-ctf.obj `if test -f 'core/ctf.cpp'; then $(CYGPATH_W) 'core/ctf.cpp'; else $(CYGPATH_W) '$(srcdir)/core/ctf.cpp'; fi`
+
+core/libcore_a-numeric_text_file.o: core/numeric_text_file.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-numeric_text_file.o -MD -MP -MF core/$(DEPDIR)/libcore_a-numeric_text_file.Tpo -c -o core/libcore_a-numeric_text_file.o `test -f 'core/numeric_text_file.cpp' || echo '$(srcdir)/'`core/numeric_text_file.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-numeric_text_file.Tpo core/$(DEPDIR)/libcore_a-numeric_text_file.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/numeric_text_file.cpp' object='core/libcore_a-numeric_text_file.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-numeric_text_file.o `test -f 'core/numeric_text_file.cpp' || echo '$(srcdir)/'`core/numeric_text_file.cpp
+
+core/libcore_a-numeric_text_file.obj: core/numeric_text_file.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-numeric_text_file.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-numeric_text_file.Tpo -c -o core/libcore_a-numeric_text_file.obj `if test -f 'core/numeric_text_file.cpp'; then $(CYGPATH_W) 'core/numeric_text_file.cpp'; else $(CYGPATH_W) '$(srcdir)/core/numeric_text_file.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-numeric_text_file.Tpo core/$(DEPDIR)/libcore_a-numeric_text_file.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/numeric_text_file.cpp' object='core/libcore_a-numeric_text_file.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-numeric_text_file.obj `if test -f 'core/numeric_text_file.cpp'; then $(CYGPATH_W) 'core/numeric_text_file.cpp'; else $(CYGPATH_W) '$(srcdir)/core/numeric_text_file.cpp'; fi`
+
+core/libcore_a-progressbar.o: core/progressbar.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-progressbar.o -MD -MP -MF core/$(DEPDIR)/libcore_a-progressbar.Tpo -c -o core/libcore_a-progressbar.o `test -f 'core/progressbar.cpp' || echo '$(srcdir)/'`core/progressbar.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-progressbar.Tpo core/$(DEPDIR)/libcore_a-progressbar.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/progressbar.cpp' object='core/libcore_a-progressbar.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-progressbar.o `test -f 'core/progressbar.cpp' || echo '$(srcdir)/'`core/progressbar.cpp
+
+core/libcore_a-progressbar.obj: core/progressbar.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-progressbar.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-progressbar.Tpo -c -o core/libcore_a-progressbar.obj `if test -f 'core/progressbar.cpp'; then $(CYGPATH_W) 'core/progressbar.cpp'; else $(CYGPATH_W) '$(srcdir)/core/progressbar.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-progressbar.Tpo core/$(DEPDIR)/libcore_a-progressbar.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/progressbar.cpp' object='core/libcore_a-progressbar.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-progressbar.obj `if test -f 'core/progressbar.cpp'; then $(CYGPATH_W) 'core/progressbar.cpp'; else $(CYGPATH_W) '$(srcdir)/core/progressbar.cpp'; fi`
+
+core/libcore_a-downhill_simplex.o: core/downhill_simplex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-downhill_simplex.o -MD -MP -MF core/$(DEPDIR)/libcore_a-downhill_simplex.Tpo -c -o core/libcore_a-downhill_simplex.o `test -f 'core/downhill_simplex.cpp' || echo '$(srcdir)/'`core/downhill_simplex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-downhill_simplex.Tpo core/$(DEPDIR)/libcore_a-downhill_simplex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/downhill_simplex.cpp' object='core/libcore_a-downhill_simplex.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-downhill_simplex.o `test -f 'core/downhill_simplex.cpp' || echo '$(srcdir)/'`core/downhill_simplex.cpp
+
+core/libcore_a-downhill_simplex.obj: core/downhill_simplex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-downhill_simplex.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-downhill_simplex.Tpo -c -o core/libcore_a-downhill_simplex.obj `if test -f 'core/downhill_simplex.cpp'; then $(CYGPATH_W) 'core/downhill_simplex.cpp'; else $(CYGPATH_W) '$(srcdir)/core/downhill_simplex.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-downhill_simplex.Tpo core/$(DEPDIR)/libcore_a-downhill_simplex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/downhill_simplex.cpp' object='core/libcore_a-downhill_simplex.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-downhill_simplex.obj `if test -f 'core/downhill_simplex.cpp'; then $(CYGPATH_W) 'core/downhill_simplex.cpp'; else $(CYGPATH_W) '$(srcdir)/core/downhill_simplex.cpp'; fi`
+
+core/libcore_a-brute_force_search.o: core/brute_force_search.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-brute_force_search.o -MD -MP -MF core/$(DEPDIR)/libcore_a-brute_force_search.Tpo -c -o core/libcore_a-brute_force_search.o `test -f 'core/brute_force_search.cpp' || echo '$(srcdir)/'`core/brute_force_search.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-brute_force_search.Tpo core/$(DEPDIR)/libcore_a-brute_force_search.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/brute_force_search.cpp' object='core/libcore_a-brute_force_search.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-brute_force_search.o `test -f 'core/brute_force_search.cpp' || echo '$(srcdir)/'`core/brute_force_search.cpp
+
+core/libcore_a-brute_force_search.obj: core/brute_force_search.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-brute_force_search.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-brute_force_search.Tpo -c -o core/libcore_a-brute_force_search.obj `if test -f 'core/brute_force_search.cpp'; then $(CYGPATH_W) 'core/brute_force_search.cpp'; else $(CYGPATH_W) '$(srcdir)/core/brute_force_search.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-brute_force_search.Tpo core/$(DEPDIR)/libcore_a-brute_force_search.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/brute_force_search.cpp' object='core/libcore_a-brute_force_search.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-brute_force_search.obj `if test -f 'core/brute_force_search.cpp'; then $(CYGPATH_W) 'core/brute_force_search.cpp'; else $(CYGPATH_W) '$(srcdir)/core/brute_force_search.cpp'; fi`
 
 core/libguicore_a-gui_job_controller.o: core/gui_job_controller.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguicore_a_CPPFLAGS) $(CPPFLAGS) $(libguicore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libguicore_a-gui_job_controller.o -MD -MP -MF core/$(DEPDIR)/libguicore_a-gui_job_controller.Tpo -c -o core/libguicore_a-gui_job_controller.o `test -f 'core/gui_job_controller.cpp' || echo '$(srcdir)/'`core/gui_job_controller.cpp

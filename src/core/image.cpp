@@ -18,7 +18,7 @@ Image::Image()
 	physical_address_of_box_center_y = 0;
 	physical_address_of_box_center_z = 0;
 
-	physical_index_of_first_negative_frequency_x = 0;
+	//physical_index_of_first_negative_frequency_x = 0;
 	physical_index_of_first_negative_frequency_y = 0;
 	physical_index_of_first_negative_frequency_z = 0;
 
@@ -359,25 +359,10 @@ void Image::UpdateLoopingAndAddressing()
 	physical_upper_bound_complex_y = logical_y_dimension - 1;
 	physical_upper_bound_complex_z = logical_z_dimension - 1;
 
-	/*
-	if (IsEven(logical_x_dimension) == true) physical_upper_bound_complex_x = logical_x_dimension / 2;
-	else physical_upper_bound_complex_x = (logical_x_dimension - 1) / 2;
-
-	physical_upper_bound_complex_y = logical_y_dimension - 1;
-	physical_upper_bound_complex_z = logical_z_dimension - 1;*/
-
 	UpdatePhysicalAddressOfBoxCenter();
-/*
-	if (IsEven(logical_x_dimension) == true) physical_index_of_first_negative_frequency_x = logical_x_dimension / 2 + 1;
-	else physical_index_of_first_negative_frequency_x = ((logical_x_dimension + 3) / 2) - 1;
 
-	if (IsEven(logical_y_dimension) == true) physical_index_of_first_negative_frequency_y = logical_y_dimension / 2 + 1;
-	else physical_index_of_first_negative_frequency_y = ((logical_y_dimension + 3) / 2) - 1;
 
-	if (IsEven(logical_z_dimension) == true) physical_index_of_first_negative_frequency_z = logical_z_dimension / 2 + 1;
-	else physical_index_of_first_negative_frequency_z = ((logical_z_dimension + 3) / 2) - 1;*/
-
-	physical_index_of_first_negative_frequency_x = logical_x_dimension / 2 + 1;
+	//physical_index_of_first_negative_frequency_x = logical_x_dimension / 2 + 1;
 	physical_index_of_first_negative_frequency_y = logical_y_dimension / 2 + 1;
 	physical_index_of_first_negative_frequency_z = logical_z_dimension / 2 + 1;
 
@@ -387,7 +372,8 @@ void Image::UpdateLoopingAndAddressing()
 	fourier_voxel_size_x = 1.0 / double(logical_x_dimension);
 	fourier_voxel_size_y = 1.0 / double(logical_y_dimension);
 	fourier_voxel_size_z = 1.0 / double(logical_z_dimension);
-/*
+
+	// Logical bounds
 	if (IsEven(logical_x_dimension) == true)
 	{
 		logical_lower_bound_complex_x = -logical_x_dimension / 2;
@@ -417,94 +403,14 @@ void Image::UpdateLoopingAndAddressing()
 	    logical_upper_bound_complex_y =  (logical_y_dimension-1) / 2;
 	    logical_lower_bound_real_y    = -(logical_y_dimension-1) / 2;
 	    logical_upper_bound_real_y    =  (logical_y_dimension-1) / 2;
-	}*/
-
-
-
-
-    logical_lower_bound_complex_x = -logical_x_dimension / 2;
-    logical_upper_bound_complex_x =  logical_x_dimension / 2;
-    logical_lower_bound_real_x    = -logical_x_dimension / 2;
-    logical_upper_bound_real_x    =  logical_x_dimension / 2 - 1;
-
-    logical_lower_bound_complex_y = -logical_y_dimension / 2;
-    logical_upper_bound_complex_y =  logical_y_dimension / 2;
-    logical_lower_bound_real_y    = -logical_y_dimension / 2;
-    logical_upper_bound_real_y    =  logical_y_dimension / 2 - 1;
-
-    logical_lower_bound_complex_z = -logical_z_dimension / 2;
-    logical_upper_bound_complex_z =  logical_z_dimension / 2;
-    logical_lower_bound_real_z    = -logical_z_dimension / 2;
-    logical_upper_bound_real_z    =  logical_z_dimension / 2 - 1;
-/*
-	if (IsEven(logical_x_dimension) == true) physical_upper_bound_complex_x = logical_x_dimension / 2;
-	else physical_upper_bound_complex_x = (logical_x_dimension - 1) / 2;
-
-	physical_upper_bound_complex_y = logical_y_dimension - 1;
-	physical_upper_bound_complex_z = logical_z_dimension - 1;
-
-	UpdatePhysicalAddressOfBoxCenter();
-
-    // In each dimension, the physical index of the first pixel which stores negative frequencies
-    // Note that we never actually store negative frequencies for the first dimension. However, it is sometimes useful
-    // to pretend as though we did (for example when generating real-space images of CTFs).
-/*
-	if (IsEven(logical_x_dimension) == true) physical_index_of_first_negative_frequency_x = (logical_x_dimension / 2 + 2) - 1;
-	else physical_index_of_first_negative_frequency_x = ((logical_x_dimension + 3) / 2) - 1;
-
-	if (IsEven(logical_y_dimension) == true) physical_index_of_first_negative_frequency_y = (logical_y_dimension / 2 + 2) - 1;
-	else physical_index_of_first_negative_frequency_y = ((logical_y_dimension + 3) / 2) - 1;
-
-	if (IsEven(logical_z_dimension) == true) physical_index_of_first_negative_frequency_z = (logical_z_dimension / 2 + 2) - 1;
-	else physical_index_of_first_negative_frequency_z = ((logical_z_dimension + 3) / 2) - 1;/
-
-	physical_index_of_first_negative_frequency_x = logical_x_dimension / 2;
-	physical_index_of_first_negative_frequency_y = logical_y_dimension / 2;
-	physical_index_of_first_negative_frequency_z = logical_z_dimension / 2;
-
-    // Update the Fourier voxel size
-
-	fourier_voxel_size_x = 1.0 / float(logical_x_dimension);
-	fourier_voxel_size_y = 1.0 / float(logical_y_dimension);
-	fourier_voxel_size_z = 1.0 / float(logical_z_dimension);
-
-    // Update the bounds of the logical addresses
-
-	if (IsEven(logical_x_dimension) == true)
-	{
-        logical_lower_bound_complex_x = -logical_x_dimension / 2;
-        logical_upper_bound_complex_x =  logical_x_dimension / 2;
-        logical_lower_bound_real_x    = -logical_x_dimension / 2;
-        logical_upper_bound_real_x    =  logical_x_dimension / 2 - 1;
-	}
-	else
-	{
-        logical_lower_bound_complex_x = -(logical_x_dimension - 1) / 2;
-        logical_upper_bound_complex_y = (logical_x_dimension - 1) / 2;
-	}
-
-	if (IsEven(logical_y_dimension) == true)
-	{
-        logical_lower_bound_complex_y = -logical_y_dimension / 2;
-        logical_upper_bound_complex_y =  logical_y_dimension /2 - 1;
-        logical_lower_bound_real_y    = -logical_y_dimension / 2;
-        logical_upper_bound_real_y    =  logical_y_dimension / 2 - 1;
-
-	}
-	else
-	{
-		logical_lower_bound_complex_y = -(logical_y_dimension - 1) / 2;
-		logical_upper_bound_complex_y =  (logical_y_dimension - 1) / 2;
-		logical_lower_bound_real_y    = -(logical_y_dimension - 1) / 2;
-		logical_upper_bound_real_y    =  (logical_y_dimension - 1) / 2;
 	}
 
 	if (IsEven(logical_z_dimension) == true)
 	{
-        logical_lower_bound_complex_z = -logical_z_dimension / 2;
-        logical_upper_bound_complex_z =  logical_z_dimension / 2 - 1;
-        logical_lower_bound_real_z    = -logical_z_dimension / 2;
-        logical_upper_bound_real_z    =  logical_z_dimension / 2 - 1;
+		logical_lower_bound_complex_z = -logical_z_dimension / 2;
+		logical_upper_bound_complex_z =  logical_z_dimension / 2 - 1;
+		logical_lower_bound_real_z    = -logical_z_dimension / 2;
+		logical_upper_bound_real_z    =  logical_z_dimension / 2 - 1;
 
 	}
 	else
@@ -514,8 +420,6 @@ void Image::UpdateLoopingAndAddressing()
 		logical_lower_bound_real_z    = -(logical_z_dimension - 1) / 2;
 		logical_upper_bound_real_z    =  (logical_z_dimension - 1) / 2;
 	}
-
-	max_array_value = (logical_x_dimension * logical_y_dimension * logical_z_dimension) - 1;*/
 }
 
 //!>  \brief  Returns the physical address of the image origin
@@ -943,6 +847,7 @@ void Image::SetMaximumValueOnCentralCross(float maximum_value)
 
 }
 
+// The image is assumed to be an amplitude spectrum, which we want to correlate with a set of CTF parameters
 float Image::GetCorrelationWithCTF(CTF ctf)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -969,23 +874,29 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	const int		central_cross_half_width = 10;
 	float			astigmatism_penalty;
 
+	Image			debug_image;
+
+	debug_image.Allocate(logical_x_dimension,logical_y_dimension,true);
+	debug_image.SetToConstant(0.0);
+
 	// Loop over half of the image (ignore Friedel mates)
 	for (j=0;j<logical_y_dimension;j++)
 	{
-		j_logi = float(i-physical_address_of_box_center_y)*inverse_logical_y_dimension;
-		j_logi_sq = pow(j_logi,2);
+		j_logi = float(j-physical_address_of_box_center_y)*inverse_logical_y_dimension;
+		j_logi_sq = powf(j_logi,2.0);
 		for (i=0;i<physical_address_of_box_center_x;i++)
 		{
 			i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
-			i_logi_sq = pow(i_logi,2);
+			i_logi_sq = powf(i_logi,2.0);
 
 			// Where are we?
 			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
 
 			if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
 			{
-				current_azimuth = atan2(j_logi,i_logi);
-				current_ctf_value = abs(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
+				current_azimuth = atan2f(j_logi,i_logi);
+				current_ctf_value = fabsf(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
+				debug_image.real_values[address] = current_ctf_value;
 				// accumulate results
 				if ( i < physical_address_of_box_center_x - central_cross_half_width && (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width))
 				{
@@ -1001,7 +912,7 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 			address++;
 		}
 		// We're going to the next line
-		address += padding_jump_value;
+		address += padding_jump_value + physical_address_of_box_center_x;
 	}
 
 	// Compute the penalty due to astigmatism
@@ -1014,6 +925,9 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 		astigmatism_penalty = 0.0;
 	}
 
+	//MyDebugPrint("Defocus (%6.1f,%6.1f,%5.1f) gives score %g / sqrt(%g * %g) - %g = %g",ctf.GetDefocus1(),ctf.GetDefocus2(),ctf.GetAstigmatismAzimuth(),cross_product,norm_image,norm_ctf,astigmatism_penalty,cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty);
+	debug_image.QuickAndDirtyWriteSlice("dbg_scoring_ctf.mrc",1);
+	QuickAndDirtyWriteSlice("dbg_scoring_this.mrc",1);
 
 	// The final score
 	return cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty;
@@ -1026,7 +940,7 @@ void Image::ApplyMirrorAlongY()
 	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
 
 	int i,j;
-	long address = 0;
+	long address = logical_x_dimension + padding_jump_value;
 	int j_dist;
 	float temp_value;
 
@@ -1084,7 +998,8 @@ int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index)
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(physical_index <= physical_upper_bound_complex_x, "index out of bounds");
 
-    if (physical_index >= physical_index_of_first_negative_frequency_x)
+    //if (physical_index >= physical_index_of_first_negative_frequency_x)
+    if (physical_index > physical_address_of_box_center_x)
     {
     	 return physical_index - logical_x_dimension;
     }
@@ -1669,7 +1584,7 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value)
 }
 
 // Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)
-void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float x, float y, float interpolated_value)
+void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(logical_z_dimension == 1, "Not for volumes");
@@ -1685,10 +1600,14 @@ void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float x, float y
 	const int address_1 = j_start * (logical_x_dimension + padding_jump_value) + i_start;
 	const int address_2 = address_1 + logical_x_dimension + padding_jump_value;
 
+	MyDebugAssertTrue(address_1+1 <= real_memory_allocated && address_1 >= 0,"Out of bounds, address 1\n");
+	MyDebugAssertTrue(address_2+1 <= real_memory_allocated && address_2 >= 0,"Out of bounds, address 2\n");
+
 	interpolated_value =    x_dist_m * y_dist_m * real_values[address_1]
 						+	x_dist   * y_dist_m * real_values[address_1 + 1]
 						+   x_dist_m * y_dist   * real_values[address_2]
 						+   x_dist   * y_dist   * real_values[address_2 + 1];
+
 }
 
 
@@ -1725,7 +1644,7 @@ void Image::CopyLoopingAndAddressingFrom(Image *other_image)
 	physical_address_of_box_center_y = other_image->physical_address_of_box_center_y;
 	physical_address_of_box_center_z = other_image->physical_address_of_box_center_z;
 
-	physical_index_of_first_negative_frequency_x = other_image->physical_index_of_first_negative_frequency_x;
+	//physical_index_of_first_negative_frequency_x = other_image->physical_index_of_first_negative_frequency_x;
 	physical_index_of_first_negative_frequency_y = other_image->physical_index_of_first_negative_frequency_y;
 	physical_index_of_first_negative_frequency_z = other_image->physical_index_of_first_negative_frequency_z;
 

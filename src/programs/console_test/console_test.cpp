@@ -46,6 +46,7 @@ MyTestApp : public wxAppConsole
 		void TestAlignmentFunctions();
 		void TestImageArithmeticFunctions();
 		void TestSpectrumBoxConvolution();
+		void TestImageLoopingAndAddressing();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -81,10 +82,90 @@ bool MyTestApp::OnInit()
 	TestFilterFunctions();
 	TestAlignmentFunctions();
 	TestSpectrumBoxConvolution();
+	TestImageLoopingAndAddressing();
 
 
 	wxPrintf("\n\n\n");
 	return false;
+}
+
+void MyTestApp::TestImageLoopingAndAddressing()
+{
+	BeginTest("Image::LoopingAndAddressing");
+
+	Image test_image;
+
+	//
+	// Even
+	//
+	test_image.Allocate(4,4,4,true);
+
+	if (test_image.physical_upper_bound_complex_x != 2) FailTest;
+	if (test_image.physical_upper_bound_complex_y != 3) FailTest;
+	if (test_image.physical_upper_bound_complex_z != 3) FailTest;
+
+	if (test_image.physical_address_of_box_center_x != 2) FailTest;
+	if (test_image.physical_address_of_box_center_y != 2) FailTest;
+	if (test_image.physical_address_of_box_center_z != 2) FailTest;
+
+	if (test_image.physical_index_of_first_negative_frequency_y != 3) FailTest;
+	if (test_image.physical_index_of_first_negative_frequency_z != 3) FailTest;
+
+	if (test_image.logical_upper_bound_complex_x != 2) FailTest;
+	if (test_image.logical_upper_bound_complex_y != 1) FailTest;
+	if (test_image.logical_upper_bound_complex_z != 1) FailTest;
+
+	if (test_image.logical_lower_bound_complex_x != -2) FailTest;
+	if (test_image.logical_lower_bound_complex_y != -2) FailTest;
+	if (test_image.logical_lower_bound_complex_z != -2) FailTest;
+
+	if (test_image.logical_upper_bound_real_x != 1) FailTest;
+	if (test_image.logical_upper_bound_real_y != 1) FailTest;
+	if (test_image.logical_upper_bound_real_z != 1) FailTest;
+
+	if (test_image.logical_lower_bound_real_x != -2) FailTest;
+	if (test_image.logical_lower_bound_real_y != -2) FailTest;
+	if (test_image.logical_lower_bound_real_z != -2) FailTest;
+
+	if (test_image.padding_jump_value != 2) FailTest;
+
+	//
+	// Odd
+	//
+	test_image.Allocate(5,5,5,true);
+
+	if (test_image.physical_upper_bound_complex_x != 2) FailTest;
+	if (test_image.physical_upper_bound_complex_y != 4) FailTest;
+	if (test_image.physical_upper_bound_complex_z != 4) FailTest;
+
+	if (test_image.physical_address_of_box_center_x != 2) FailTest;
+	if (test_image.physical_address_of_box_center_y != 2) FailTest;
+	if (test_image.physical_address_of_box_center_z != 2) FailTest;
+
+	if (test_image.physical_index_of_first_negative_frequency_y != 3) FailTest;
+	if (test_image.physical_index_of_first_negative_frequency_z != 3) FailTest;
+
+	if (test_image.logical_upper_bound_complex_x != 2) FailTest;
+	if (test_image.logical_upper_bound_complex_y != 2) FailTest;
+	if (test_image.logical_upper_bound_complex_z != 2) FailTest;
+
+	if (test_image.logical_lower_bound_complex_x != -2) FailTest;
+	if (test_image.logical_lower_bound_complex_y != -2) FailTest;
+	if (test_image.logical_lower_bound_complex_z != -2) FailTest;
+
+	if (test_image.logical_upper_bound_real_x != 2) FailTest;
+	if (test_image.logical_upper_bound_real_y != 2) FailTest;
+	if (test_image.logical_upper_bound_real_z != 2) FailTest;
+
+	if (test_image.logical_lower_bound_real_x != -2) FailTest;
+	if (test_image.logical_lower_bound_real_y != -2) FailTest;
+	if (test_image.logical_lower_bound_real_z != -2) FailTest;
+
+
+	if (test_image.padding_jump_value != 1) FailTest;
+
+	EndTest();
+
 }
 
 void MyTestApp::TestSpectrumBoxConvolution()

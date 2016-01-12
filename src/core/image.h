@@ -24,7 +24,7 @@ public:
 	int      	 physical_address_of_box_center_y;				// !< In each dimension, the address of the pixel at the origin
 	int      	 physical_address_of_box_center_z;				// !< In each dimension, the address of the pixel at the origin
 
-	int			 physical_index_of_first_negative_frequency_x;	// !<  In each dimension, the physical index of the first pixel which stores negative frequencies
+	//int			 physical_index_of_first_negative_frequency_x;	// !<  In each dimension, the physical index of the first pixel which stores negative frequencies
 	int			 physical_index_of_first_negative_frequency_y;	// !<  In each dimension, the physical index of the first pixel which stores negative frequencies
 	int			 physical_index_of_first_negative_frequency_z;	// !<  In each dimension, the physical index of the first pixel which stores negative frequencies
 
@@ -158,7 +158,7 @@ public:
 	float GetCorrelationWithCTF(CTF ctf);
 
 	// Interpolation
-	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float x, float y, float interpolated_value);
+	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value);
 
 
 

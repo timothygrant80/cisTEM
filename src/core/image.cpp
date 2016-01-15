@@ -42,6 +42,8 @@ Image::Image()
 	logical_lower_bound_real_y = 0;
 	logical_lower_bound_real_z = 0;
 
+	insert_into_which_reconstruction = 0;
+
 	real_values = NULL;
 	complex_values = NULL;
 
@@ -54,7 +56,7 @@ Image::Image()
 	planned = false;
 }
 
-Image::Image( const Image &other_image) // copy contructor
+Image::Image( const Image &other_image) // copy constructor
 {
 	 *this = other_image;
 }
@@ -64,16 +66,109 @@ Image::~Image()
 	Deallocate();
 }
 
+
+void Image::AddByLinearInterpolationReal(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate, float &wanted_physical_z_coordinate, float &wanted_value)
+{
+	int i;
+	int j;
+	int k;
+	int int_x_coordinate;
+	int int_y_coordinate;
+	int int_z_coordinate;
+
+	long physical_coord;
+
+	float weight_x;
+	float weight_y;
+	float weight_z;
+
+	MyDebugAssertTrue(is_in_real_space == true, "Error: attempting REAL insertion into COMPLEX image");
+	MyDebugAssertTrue(wanted_physical_x_coordinate >= 0 && wanted_physical_x_coordinate <= logical_x_dimension, "Error: attempting insertion outside image X boundaries");
+	MyDebugAssertTrue(wanted_physical_y_coordinate >= 0 && wanted_physical_y_coordinate <= logical_y_dimension, "Error: attempting insertion outside image Y boundaries");
+	MyDebugAssertTrue(wanted_physical_z_coordinate >= 0 && wanted_physical_z_coordinate <= logical_z_dimension, "Error: attempting insertion outside image Z boundaries");
+
+	int_x_coordinate = int(wanted_physical_x_coordinate);
+	int_y_coordinate = int(wanted_physical_y_coordinate);
+	int_z_coordinate = int(wanted_physical_z_coordinate);
+
+	for (k = int_z_coordinate; k <= int_z_coordinate + 1; k++)
+	{
+		weight_z = (1.0 - fabs(wanted_physical_z_coordinate - k));
+		for (j = int_y_coordinate; j <= int_y_coordinate + 1; j++)
+		{
+			weight_y = (1.0 - fabs(wanted_physical_y_coordinate - j));
+			for (i = int_x_coordinate; i <= int_x_coordinate + 1; i++)
+			{
+				weight_x = (1.0 - fabs(wanted_physical_x_coordinate - i));
+				physical_coord = ReturnReal1DAddressFromPhysicalCoord(i, j, k);
+				real_values[physical_coord] = real_values[physical_coord] + wanted_value * weight_x * weight_y * weight_z;
+			}
+		}
+	}
+}
+
+void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, fftwf_complex &wanted_value)
+{
+	int i;
+	int j;
+	int int_x_coordinate;
+	int int_y_coordinate;
+
+	long physical_coord;
+
+	float weight_y;
+	float weight;
+
+	fftwf_complex conjugate;
+
+	MyDebugAssertTrue(is_in_real_space != true, "Error: attempting COMPLEX insertion into REAL image");
+
+	int_x_coordinate = int(floor(wanted_logical_x_coordinate));
+	int_y_coordinate = int(floor(wanted_logical_y_coordinate));
+
+	for (j = int_y_coordinate; j <= int_y_coordinate + 1; j++)
+	{
+		weight_y = (1.0 - fabs(wanted_logical_y_coordinate - j));
+		for (i = int_x_coordinate; i <= int_x_coordinate + 1; i++)
+		{
+			if (i >= logical_lower_bound_complex_x && i <= logical_upper_bound_complex_x
+			 && j >= logical_lower_bound_complex_y && j <= logical_upper_bound_complex_y)
+			{
+				weight = weight_y * (1.0 - fabs(wanted_logical_x_coordinate - i));
+				physical_coord = ReturnFourier1DAddressFromLogicalCoord(i, j, 0);
+				if (i < 0)
+				{
+					conjugate = conjf(wanted_value);
+					complex_values[physical_coord] = complex_values[physical_coord] + conjugate * weight;
+				}
+				else
+				if (i == 0 && j != logical_lower_bound_complex_y && j != 0)
+				{
+					complex_values[physical_coord] = complex_values[physical_coord] + wanted_value * weight;
+					physical_coord = ReturnFourier1DAddressFromLogicalCoord(i, -j, 0);
+					conjugate = conjf(wanted_value);
+					complex_values[physical_coord] = complex_values[physical_coord] + conjugate * weight;
+				}
+				else
+				{
+					complex_values[physical_coord] = complex_values[physical_coord] + wanted_value * weight;
+				}
+			}
+		}
+	}
+}
+
+
 void Image::CosineMask(float mask_radius, float mask_edge)
 {
-	int k;
-	int j;
 	int i;
+	int j;
+	int k;
 	int number_of_pixels;
 
-	float z;
-	float y;
 	float x;
+	float y;
+	float z;
 
 	long pixel_counter = 0;
 
@@ -116,10 +211,8 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 						pixel_sum += real_values[pixel_counter];
 						number_of_pixels++;
 					}
-
 					pixel_counter++;
 				}
-
 				pixel_counter+=padding_jump_value;
 			}
 		}
@@ -151,7 +244,6 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 
 					pixel_counter++;
 				}
-
 				pixel_counter+=padding_jump_value;
 			}
 		}
@@ -186,9 +278,7 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 					pixel_counter++;
 				}
 			}
-
 		}
-
 	}
 }
 
@@ -543,7 +633,7 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 	// AT THE MOMENT, WE CAN ONLY READ REAL SPACE IMAGES, SO OVERRIDE THIS!!!!!
 
 	is_in_real_space = true;
-
+	object_is_centred_in_box = true;
 
 	input_file->ReadSlicesFromDisk(start_slice, end_slice, real_values);
 
@@ -678,8 +768,6 @@ void Image::RemoveFFTWPadding()
 			current_read_position +=padding_jump_value;
 		}
 	}
-
-
 }
 
 void Image::SetToConstant(float wanted_value)
@@ -1363,7 +1451,7 @@ void Image::TaperEdges()
 	// Check dimensions of image are OK
 	if (logical_x_dimension < 2 * tapering_strip_width_x || logical_y_dimension < 2 * tapering_strip_width_y)
 	{
-		MyPrintWithDetails("X,Y dimensions of input inmage are too small: %i %i\n", logical_x_dimension,logical_y_dimension);
+		MyPrintWithDetails("X,Y dimensions of input image are too small: %i %i\n", logical_x_dimension,logical_y_dimension);
 		abort();
 	}
 	if (logical_z_dimension > 1 && logical_z_dimension < 2 * tapering_strip_width_z)
@@ -1727,7 +1815,6 @@ void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float 
 						+   x_dist   * y_dist   * real_values[address_2 + 1];
 
 }
-
 
 void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value)
 {
@@ -2448,75 +2535,7 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
     return found_peak;
 }*/
 
-inline int Image::ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
-{
-	MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address out of bounds!" )
-	return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
-}
 
-inline int Image::ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
-{
-	MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Coord out of bounds!")
 
-	int physical_x_address;
-	int physical_y_address;
-	int physical_z_address;
-
-	if (wanted_x >= 0)
-	{
-		physical_x_address = wanted_x;
-
-		if (wanted_y >= 0)
-		{
-			physical_y_address = wanted_y;
-		}
-		else
-		{
-			physical_y_address = logical_y_dimension + wanted_y;
-		}
-
-		if (wanted_z >= 0)
-		{
-			physical_z_address = wanted_z;
-		}
-		else
-		{
-			physical_z_address = logical_z_dimension + wanted_z;
-		}
-	}
-	else
-	{
-		physical_x_address = -wanted_x;
-
-		if (wanted_y > 0)
-		{
-			physical_y_address = logical_y_dimension - wanted_y;
-		}
-		else
-		{
-			physical_y_address = -wanted_y;
-		}
-
-		if (wanted_z > 0)
-		{
-			physical_z_address = logical_z_dimension - wanted_z;
-		}
-		else
-		{
-			physical_z_address = -wanted_z;
-		}
-	}
-
-	return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
-}
-
-fftw_complex Image::ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
-{
-	if (wanted_x < logical_lower_bound_complex_x || wanted_x > logical_upper_bound_complex_x || wanted_y < logical_lower_bound_complex_y ||wanted_y > logical_upper_bound_complex_y || wanted_z < logical_lower_bound_complex_z || wanted_z > logical_upper_bound_complex_z)
-	{
-		return out_of_bounds_value;
-	}
-	else return complex_values[ReturnFourier1DAddressFromLogicalCoord(wanted_x, wanted_y, wanted_z)];
-}
 
 

@@ -53,6 +53,7 @@ public:
 
 	int          padding_jump_value;                            // !<  The FFTW padding value, if odd this is 2, if even it is 1.  It is used in loops etc over real space.
 
+	int			 insert_into_which_reconstruction;				// !<  Determines which reconstruction the image will be inserted into (for FSC calculation).
 
 	// Arrays to hold voxel values
 
@@ -70,7 +71,7 @@ public:
 	// Methods
 
 	Image();
-	Image( const Image &other_image); // copy contructor
+	Image( const Image &other_image); // copy constructor
 	~Image();
 
 	Image & operator = (const Image &t);
@@ -80,6 +81,8 @@ public:
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
 	void Deallocate();
 
+	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
+	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
 	void CosineMask(float mask_radius, float mask_edge);
 
 	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
@@ -88,7 +91,7 @@ public:
 
 		return (((logical_x_dimension + padding_jump_value) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + padding_jump_value) * wanted_y) + wanted_x;
 
-	}
+	};
 
 	inline float ReturnRealPixelFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
@@ -97,9 +100,76 @@ public:
 	};
 
 
-	int ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z);
-	int ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z);
-	fftw_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value = 0.0);
+	inline int ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	{
+		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address out of bounds!" )
+		return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
+	};
+
+	inline int ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	{
+		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Coord out of bounds!")
+
+		int physical_x_address;
+		int physical_y_address;
+		int physical_z_address;
+
+		if (wanted_x >= 0)
+		{
+			physical_x_address = wanted_x;
+
+			if (wanted_y >= 0)
+			{
+				physical_y_address = wanted_y;
+			}
+			else
+			{
+				physical_y_address = logical_y_dimension + wanted_y;
+			}
+
+			if (wanted_z >= 0)
+			{
+				physical_z_address = wanted_z;
+			}
+			else
+			{
+				physical_z_address = logical_z_dimension + wanted_z;
+			}
+		}
+		else
+		{
+			physical_x_address = -wanted_x;
+
+			if (wanted_y > 0)
+			{
+				physical_y_address = logical_y_dimension - wanted_y;
+			}
+			else
+			{
+				physical_y_address = -wanted_y;
+			}
+
+			if (wanted_z > 0)
+			{
+				physical_z_address = logical_z_dimension - wanted_z;
+			}
+			else
+			{
+				physical_z_address = -wanted_z;
+			}
+		}
+
+		return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
+	};
+
+	fftw_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
+	{
+		if (wanted_x < logical_lower_bound_complex_x || wanted_x > logical_upper_bound_complex_x || wanted_y < logical_lower_bound_complex_y ||wanted_y > logical_upper_bound_complex_y || wanted_z < logical_lower_bound_complex_z || wanted_z > logical_upper_bound_complex_z)
+		{
+			return out_of_bounds_value;
+		}
+		else return complex_values[ReturnFourier1DAddressFromLogicalCoord(wanted_x, wanted_y, wanted_z)];
+	};
 
 	bool HasSameDimensionsAs(Image *other_image);
 

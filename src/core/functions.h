@@ -14,6 +14,15 @@ inline bool DoesFileExist(std::string filename)
     return false;
 };
 
+inline float rad_2_deg(float radians)
+{
+  return radians / (PI / 180.);
+}
+
+inline float deg_2_rad(float degrees)
+{
+  return degrees * PI / 180.;
+}
 
 inline double myround(double a)
 {

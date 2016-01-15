@@ -22,20 +22,23 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind niko_test
 
 
 libcore_a_SOURCES =    core/functions.cpp \
                        core/userinput.cpp \
+                       core/angles_and_shifts.cpp \
                        core/assets.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
                        core/image.cpp \
                        core/electron_dose.cpp \
+                       core/matrix.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/database.cpp \
                        core/project.cpp \
+                       core/reconstruct_3d.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
@@ -44,7 +47,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/ctf.cpp \
                        core/numeric_text_file.cpp \
                        core/progressbar.cpp \
-                       core/downhill_simplex.cpp \ 
+                       core/downhill_simplex.cpp \
                        core/brute_force_search.cpp \
                        core/va04.cpp \
                        core/conjugate_gradient.cpp
@@ -96,4 +99,10 @@ ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
 ctffind_LDADD = libcore.a
+
+niko_test_SOURCES = programs/niko_test/niko_test.cpp
+niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_LDFLAGS = $(WX_LIBS_BASE)
+niko_test_LDADD = libcore.a
 

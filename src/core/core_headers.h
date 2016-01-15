@@ -14,6 +14,7 @@ typedef struct Peak {
 #include <cfloat>
 #include <complex.h>
 #include <fftw3.h>
+#include <math.h>
 #include <sqlite3.h>
 #include <wx/wx.h>
 #include <wx/socket.h>
@@ -28,10 +29,13 @@ typedef struct Peak {
 #include "functions.h"
 #include "mrc_header.h"
 #include "mrc_file.h"
+#include "matrix.h"
 #include "curve.h"
 #include "ctf.h"
+#include "angles_and_shifts.h"
 #include "empirical_distribution.h"
 #include "image.h"
+#include "reconstruct_3d.h"
 #include "electron_dose.h"
 #include "run_profiles.h"
 #include "database.h"
@@ -44,5 +48,3 @@ typedef struct Peak {
 #include "brute_force_search.h"
 #include "conjugate_gradient.h"
 #include "myapp.h"
-
-

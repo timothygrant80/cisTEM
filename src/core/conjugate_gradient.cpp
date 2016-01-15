@@ -52,24 +52,12 @@ void ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, flo
 	MyDebugPrint("Starting score = %f\n",best_score);
 }
 
-void ConjugateGradient::GetBestValues(float *best_values_returned)
-{
-	for (int dim_counter=0; dim_counter < n; dim_counter++)
-	{
-		best_values_returned[dim_counter] = best_values[dim_counter];
-	}
-}
-
-void ConjugateGradient::GetBestScore(float best_score_returned)
-{
-	best_score_returned = best_score;
-}
-
 void ConjugateGradient::Run()
 {
 	int iprint = 0;
 	int icon = 1;
 	int maxit = 50;
+	int va04_success = 0;
 
-	// call va04a(self,iprint,icon,maxit)
+	va04_success = va04a_(&n,e,&escale,&num_function_calls,target_function,parameters,&best_score,&iprint,&icon,&maxit,best_values);
 }

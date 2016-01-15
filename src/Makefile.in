@@ -131,7 +131,9 @@ am_libcore_a_OBJECTS = core/libcore_a-functions.$(OBJEXT) \
 	core/libcore_a-numeric_text_file.$(OBJEXT) \
 	core/libcore_a-progressbar.$(OBJEXT) \
 	core/libcore_a-downhill_simplex.$(OBJEXT) \
-	core/libcore_a-brute_force_search.$(OBJEXT)
+	core/libcore_a-brute_force_search.$(OBJEXT) \
+	core/libcore_a-va04.$(OBJEXT) \
+	core/libcore_a-conjugate_gradient.$(OBJEXT)
 libcore_a_OBJECTS = $(am_libcore_a_OBJECTS)
 libguicore_a_AR = $(AR) $(ARFLAGS)
 libguicore_a_LIBADD =
@@ -431,7 +433,9 @@ libcore_a_SOURCES = core/functions.cpp \
                        core/numeric_text_file.cpp \
                        core/progressbar.cpp \
                        core/downhill_simplex.cpp \
-                       core/brute_force_search.cpp 
+                       core/brute_force_search.cpp \
+                       core/va04.cpp \
+                       core/conjugate_gradient.cpp
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -551,6 +555,10 @@ core/libcore_a-progressbar.$(OBJEXT): core/$(am__dirstamp) \
 core/libcore_a-downhill_simplex.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-brute_force_search.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-va04.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-conjugate_gradient.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 
 libcore.a: $(libcore_a_OBJECTS) $(libcore_a_DEPENDENCIES) $(EXTRA_libcore_a_DEPENDENCIES) 
@@ -743,6 +751,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-asset_group.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-assets.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-brute_force_search.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-conjugate_gradient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-ctf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-curve.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-database.Po@am__quote@
@@ -761,6 +770,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-project.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-run_profiles.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-userinput.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-va04.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libguicore_a-gui_job_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@gui/$(DEPDIR)/ProjectX-AlignMoviesPanel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@gui/$(DEPDIR)/ProjectX-ErrorDialog.Po@am__quote@
@@ -1100,6 +1110,34 @@ core/libcore_a-brute_force_search.obj: core/brute_force_search.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/brute_force_search.cpp' object='core/libcore_a-brute_force_search.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-brute_force_search.obj `if test -f 'core/brute_force_search.cpp'; then $(CYGPATH_W) 'core/brute_force_search.cpp'; else $(CYGPATH_W) '$(srcdir)/core/brute_force_search.cpp'; fi`
+
+core/libcore_a-va04.o: core/va04.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-va04.o -MD -MP -MF core/$(DEPDIR)/libcore_a-va04.Tpo -c -o core/libcore_a-va04.o `test -f 'core/va04.cpp' || echo '$(srcdir)/'`core/va04.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-va04.Tpo core/$(DEPDIR)/libcore_a-va04.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/va04.cpp' object='core/libcore_a-va04.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-va04.o `test -f 'core/va04.cpp' || echo '$(srcdir)/'`core/va04.cpp
+
+core/libcore_a-va04.obj: core/va04.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-va04.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-va04.Tpo -c -o core/libcore_a-va04.obj `if test -f 'core/va04.cpp'; then $(CYGPATH_W) 'core/va04.cpp'; else $(CYGPATH_W) '$(srcdir)/core/va04.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-va04.Tpo core/$(DEPDIR)/libcore_a-va04.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/va04.cpp' object='core/libcore_a-va04.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-va04.obj `if test -f 'core/va04.cpp'; then $(CYGPATH_W) 'core/va04.cpp'; else $(CYGPATH_W) '$(srcdir)/core/va04.cpp'; fi`
+
+core/libcore_a-conjugate_gradient.o: core/conjugate_gradient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-conjugate_gradient.o -MD -MP -MF core/$(DEPDIR)/libcore_a-conjugate_gradient.Tpo -c -o core/libcore_a-conjugate_gradient.o `test -f 'core/conjugate_gradient.cpp' || echo '$(srcdir)/'`core/conjugate_gradient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-conjugate_gradient.Tpo core/$(DEPDIR)/libcore_a-conjugate_gradient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/conjugate_gradient.cpp' object='core/libcore_a-conjugate_gradient.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-conjugate_gradient.o `test -f 'core/conjugate_gradient.cpp' || echo '$(srcdir)/'`core/conjugate_gradient.cpp
+
+core/libcore_a-conjugate_gradient.obj: core/conjugate_gradient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-conjugate_gradient.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-conjugate_gradient.Tpo -c -o core/libcore_a-conjugate_gradient.obj `if test -f 'core/conjugate_gradient.cpp'; then $(CYGPATH_W) 'core/conjugate_gradient.cpp'; else $(CYGPATH_W) '$(srcdir)/core/conjugate_gradient.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-conjugate_gradient.Tpo core/$(DEPDIR)/libcore_a-conjugate_gradient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/conjugate_gradient.cpp' object='core/libcore_a-conjugate_gradient.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-conjugate_gradient.obj `if test -f 'core/conjugate_gradient.cpp'; then $(CYGPATH_W) 'core/conjugate_gradient.cpp'; else $(CYGPATH_W) '$(srcdir)/core/conjugate_gradient.cpp'; fi`
 
 core/libguicore_a-gui_job_controller.o: core/gui_job_controller.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguicore_a_CPPFLAGS) $(CPPFLAGS) $(libguicore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libguicore_a-gui_job_controller.o -MD -MP -MF core/$(DEPDIR)/libguicore_a-gui_job_controller.Tpo -c -o core/libguicore_a-gui_job_controller.o `test -f 'core/gui_job_controller.cpp' || echo '$(srcdir)/'`core/gui_job_controller.cpp

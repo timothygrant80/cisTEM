@@ -113,6 +113,7 @@ public:
 
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
+	void AddConstant(float constant_to_add);
 
 	void ForwardFFT(bool should_scale = true);
 	void BackwardFFT();
@@ -149,9 +150,10 @@ public:
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
 	float ReturnAverageOfRealValues();
+	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);
-	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float average, float sigma, int cross_half_width);
+	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width);
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();
 

@@ -24,6 +24,8 @@ public:
 	// Methods
 	void Init(float (*function_to_minimize)(void* parameters, float []), void *parameters, int num_dim, float starting_value[], float half_range[], float step_size[], bool minimise_at_every_step, bool print_progress_bar );
 	void Run();
-	void IncrementCurrentValues(float *current_values, bool search_is_now_completed);
+	void IncrementCurrentValues(float *current_values, bool &search_is_now_completed);
+	float GetBestValue(int index);
+	inline float GetBestScore() {return best_score;};
 
 };

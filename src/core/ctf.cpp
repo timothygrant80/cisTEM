@@ -20,6 +20,22 @@ CTF::CTF()
 	squared_wavelength = 0;
 }
 
+CTF::CTF(		float wanted_acceleration_voltage, // keV
+				float wanted_spherical_aberration, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1, // um
+				float wanted_defocus_2, //um
+				float wanted_astigmatism_azimuth, // degrees
+				float wanted_lowest_frequency_for_fitting, // 1/A
+				float wanted_highest_frequency_for_fitting, // 1/A
+				float wanted_astigmatism_tolerance, // A. Set to negative to indicate no restraint on astigmatism.
+				float pixel_size, // A
+				float wanted_additional_phase_shift )// rad
+{
+	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1,wanted_defocus_2,wanted_astigmatism_azimuth,wanted_lowest_frequency_for_fitting,wanted_highest_frequency_for_fitting,wanted_astigmatism_tolerance,pixel_size,wanted_additional_phase_shift);
+}
+
+
 CTF::~CTF()
 {
 	// Nothing to do
@@ -52,6 +68,8 @@ void CTF::Init(	float wanted_acceleration_voltage, // keV
     astigmatism_tolerance = wanted_astigmatism_tolerance / pixel_size;
     precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
 }
+
+
 
 // Set the defocus and astigmatism angle, given in pixels and radians
 void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians)
@@ -95,5 +113,19 @@ float CTF::DefocusGivenAzimuth(float azimuth)
 float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 {
 	return 12.26 / sqrt(1000.0 * acceleration_voltage + 0.9784 * pow(1000.0 * acceleration_voltage,2)/pow(10.0,6));
+}
+
+// Enforce the convention that df1 > df2 and -90 < angast < 90
+void CTF::EnforceConvention() {
+	float defocus_tmp;
+
+	if ( defocus_1 < defocus_2 )
+	{
+		defocus_tmp = defocus_2;
+		defocus_2 = defocus_1;
+		defocus_1 = defocus_tmp;
+		astigmatism_azimuth += PI*0.5;
+	}
+	astigmatism_azimuth -= PI * round(astigmatism_azimuth/PI);
 }
 

@@ -57,4 +57,9 @@ public:
 	inline float GetHighestFrequencyForFitting() { return highest_frequency_for_fitting; };
 	inline float GetAstigmatismTolerance() { return astigmatism_tolerance; };
 	inline float GetAstigmatism(){ return defocus_1 - defocus_2; };
+	void EnforceConvention();
+	inline float GetDefocus1() { return defocus_1; };
+	inline float GetDefocus2() { return defocus_2; };
+	inline float GetAstigmatismAzimuth() { return astigmatism_azimuth; };
+	inline float GetAdditionalPhaseShift() { return additional_phase_shift; };
 };

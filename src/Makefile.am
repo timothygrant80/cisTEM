@@ -45,7 +45,9 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/numeric_text_file.cpp \
                        core/progressbar.cpp \
                        core/downhill_simplex.cpp \ 
-                       core/brute_force_search.cpp 
+                       core/brute_force_search.cpp \
+                       core/va04.cpp \
+                       core/conjugate_gradient.cpp
 
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

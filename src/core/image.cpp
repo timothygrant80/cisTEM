@@ -692,6 +692,16 @@ void Image::SetToConstant(float wanted_value)
 	}
 }
 
+void Image::AddConstant(float wanted_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] += wanted_value;
+	}
+}
+
 void Image::SetMaximumValue(float new_maximum_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -700,6 +710,50 @@ void Image::SetMaximumValue(float new_maximum_value)
 	for (long address = 0; address < real_memory_allocated; address++)
 	{
 		real_values[address] = std::min(new_maximum_value,real_values[address]);
+	}
+}
+
+float Image::ReturnAverageOfRealValuesOnEdges()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Not implemented for volumes yet, sorry");
+
+	double sum;
+	long number_of_pixels;
+	int pixel_counter;
+	int line_counter;
+	int plane_counter;
+	long address;
+
+
+	sum = 0.0;
+	number_of_pixels = 0;
+	pixel_counter = 0;
+	line_counter = 0;
+	plane_counter = 0;
+	address = 0;
+
+	if (logical_z_dimension == 1)
+	{
+		// Two-dimensional image
+		for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
+		{
+			sum += real_values[address];
+			address++;
+		}
+		address += padding_jump_value;
+		for (line_counter=1; line_counter < logical_y_dimension-1; line_counter++)
+		{
+			sum += real_values[address];
+			address += logical_x_dimension-1;
+			sum += real_values[address];
+			address += padding_jump_value;
+		}
+		for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
+		{
+			sum += real_values[address];
+			address += logical_x_dimension-1;
+		}
 	}
 }
 
@@ -782,7 +836,7 @@ float Image::ReturnAverageOfRealValues()
 	return sum / (logical_x_dimension * logical_y_dimension * logical_z_dimension);
 }
 
-void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float average, float sigma, int cross_half_width)
+void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -793,14 +847,14 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 	int i, j;
 	float x_sq, y_sq, rad_sq;
 	EmpiricalDistribution my_distribution(false);
-	float min_rad_sq = pow(minimum_radius,2);
-	float max_rad_sq = pow(maximum_radius,2);
+	float min_rad_sq = powf(minimum_radius,2);
+	float max_rad_sq = powf(maximum_radius,2);
 	float cross_half_width_sq = pow(cross_half_width,2);
 	long address = -1;
 
 	for (j=0;j<logical_y_dimension;j++)
 	{
-		y_sq = pow(j-physical_address_of_box_center_y,2);
+		y_sq = powf(j-physical_address_of_box_center_y,2);
 		if (y_sq <= cross_half_width_sq)
 		{
 			address += logical_x_dimension + padding_jump_value;
@@ -809,7 +863,7 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 		for (i=0;i<logical_x_dimension;i++)
 		{
 			address++;
-			x_sq = pow(i-physical_address_of_box_center_x,2);
+			x_sq = powf(i-physical_address_of_box_center_x,2);
 			if (x_sq <= cross_half_width_sq) continue;
 			rad_sq = x_sq + y_sq;
 			if (rad_sq > min_rad_sq && rad_sq < max_rad_sq)
@@ -821,7 +875,9 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 		address += padding_jump_value;
 	}
 	average = my_distribution.GetSampleMean();
-	sigma = sqrt(my_distribution.GetSampleVariance());
+	sigma = sqrtf(my_distribution.GetSampleVariance());
+
+	MyDebugPrint("Average = %g  Sigma = %g",average,sigma);
 }
 
 void Image::SetMaximumValueOnCentralCross(float maximum_value)
@@ -843,6 +899,7 @@ void Image::SetMaximumValueOnCentralCross(float maximum_value)
 			}
 			address++;
 		}
+		address += padding_jump_value;
 	}
 
 }
@@ -875,6 +932,7 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	float			astigmatism_penalty;
 
 	Image			debug_image;
+	static int      loc_in_debug_image = 0;
 
 	debug_image.Allocate(logical_x_dimension,logical_y_dimension,true);
 	debug_image.SetToConstant(0.0);
@@ -883,11 +941,11 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	for (j=0;j<logical_y_dimension;j++)
 	{
 		j_logi = float(j-physical_address_of_box_center_y)*inverse_logical_y_dimension;
-		j_logi_sq = powf(j_logi,2.0);
+		j_logi_sq = pow(j_logi,2);
 		for (i=0;i<physical_address_of_box_center_x;i++)
 		{
 			i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
-			i_logi_sq = powf(i_logi,2.0);
+			i_logi_sq = pow(i_logi,2);
 
 			// Where are we?
 			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
@@ -926,7 +984,8 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	}
 
 	//MyDebugPrint("Defocus (%6.1f,%6.1f,%5.1f) gives score %g / sqrt(%g * %g) - %g = %g",ctf.GetDefocus1(),ctf.GetDefocus2(),ctf.GetAstigmatismAzimuth(),cross_product,norm_image,norm_ctf,astigmatism_penalty,cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty);
-	debug_image.QuickAndDirtyWriteSlice("dbg_scoring_ctf.mrc",1);
+	loc_in_debug_image++;
+	debug_image.QuickAndDirtyWriteSlice("dbg_scoring_ctf.mrc",loc_in_debug_image);
 	QuickAndDirtyWriteSlice("dbg_scoring_this.mrc",1);
 
 	// The final score
@@ -1781,7 +1840,7 @@ void Image::ApplyCTF(CTF ctf_to_apply)
 	for (j = 0; j <= physical_upper_bound_complex_y; j++)
 	{
 		y_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y;
-		y_coord_sq = pow(y_coord, 2);
+		y_coord_sq = powf(y_coord, 2.0);
 
 		for (i = 0; i <= physical_upper_bound_complex_x; i++)
 		{
@@ -1792,7 +1851,7 @@ void Image::ApplyCTF(CTF ctf_to_apply)
 			if ( i == 0 && j == 0 ) {
 				azimuth = 0.0;
 			} else {
-				azimuth = atan2(y_coord,x_coord);
+				azimuth = atan2f(y_coord,x_coord);
 			}
 
 			// Compute the square of the frequency

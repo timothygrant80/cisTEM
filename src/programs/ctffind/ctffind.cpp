@@ -35,6 +35,8 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		my_ctf.SetAdditionalPhaseShift(array_of_values[3]);
 	}
 
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f D2 = %6.2f, Ast = %5.2f, Score = %g",array_of_values[0],array_of_values[1],array_of_values[2],- comparison_object->img.GetCorrelationWithCTF(my_ctf));
+
 	// Evaluate the function
 	return - comparison_object->img.GetCorrelationWithCTF(my_ctf);
 }
@@ -217,7 +219,10 @@ bool CtffindApp::DoCalculation()
 	float				cg_starting_point[4];
 	float				cg_accuracy[4];
 	int 				number_of_search_dimensions;
-	BruteForceSearch   	brute_force_search;
+	BruteForceSearch   	*brute_force_search;
+	int					counter;
+	ConjugateGradient   *conjugate_gradient_minimizer;
+	int 				current_output_location;
 
 	// Some argument checking
 	if (minimum_resolution < maximum_resolution)
@@ -374,14 +379,14 @@ bool CtffindApp::DoCalculation()
 		average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
 
 
-		// Filter the amplitude spectrum, remove backtround
+		// Filter the amplitude spectrum, remove background
 		if (! filtered_amplitude_spectrum_input)
 		{
 			// Try to weaken cross artefacts
 			average_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum.logical_x_dimension)*pixel_size/minimum_resolution,float(average_spectrum.logical_x_dimension),average,sigma,12);
 			average_spectrum.SetMaximumValueOnCentralCross(average+10.0*sigma);
 
-			average_spectrum.QuickAndDirtyReadSlice("dbg_average_spectrum_before_conv.mrc",1);
+			average_spectrum.QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
 			convolution_box_size = int( float(average_spectrum.logical_x_dimension) * pixel_size / minimum_resolution * sqrt(2.0) );
@@ -411,6 +416,7 @@ bool CtffindApp::DoCalculation()
 		current_ctf.SetDefocus(minimum_defocus/pixel_size,minimum_defocus/pixel_size,0.0);
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
+
 		// Set up the comparison object
 		comparison_object.ctf = current_ctf;
 		comparison_object.img = average_spectrum;
@@ -422,23 +428,28 @@ bool CtffindApp::DoCalculation()
 			wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
 		}
 
+
 		// Let's look for the astigmatism angle first
 		temp_image = average_spectrum;
 		temp_image.ApplyMirrorAlongY();
-		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(&average_spectrum,&temp_image,1,45.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+		temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
+		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(&average_spectrum,&temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+
+		MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
+
 
 		// We can now look for the defocus value
-		bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus);
+		bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size;
 		bf_halfrange[1] = bf_halfrange[0];
 		bf_halfrange[2] = 0.0;
 		bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
 
-		bf_midpoint[0] = minimum_defocus + bf_halfrange[0];
+		bf_midpoint[0] = minimum_defocus/pixel_size + bf_halfrange[0];
 		bf_midpoint[1] = bf_midpoint[0];
-		bf_midpoint[2] = estimated_astigmatism_angle;
+		bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
 		bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
 
-		bf_stepsize[0] = defocus_search_step;
+		bf_stepsize[0] = defocus_search_step/pixel_size;
 		bf_stepsize[1] = bf_stepsize[0];
 		bf_stepsize[2] = 0.0;
 		bf_stepsize[3] = additional_phase_shift_search_step;
@@ -453,8 +464,76 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Actually run the BF search
-		brute_force_search.Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
-		brute_force_search.Run();
+		brute_force_search = new BruteForceSearch();
+		brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
+		brute_force_search->Run();
+
+		// The end point of the BF search is the beginning of the CG search
+		for (counter=0;counter<number_of_search_dimensions;counter++)
+		{
+			cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+		}
+
+		//
+		current_ctf.SetDefocus(cg_starting_point[0]*pixel_size,cg_starting_point[1]*pixel_size,cg_starting_point[2]);
+		if (find_additional_phase_shift)
+		{
+			current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+		}
+		current_ctf.EnforceConvention();
+
+		// Print out the results of brute force search
+		if (old_school_input || DEBUG)
+		{
+			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-brute_force_search->GetBestScore());
+			if (DEBUG)
+			{
+				MyDebugPrint("Found the following phase shift: %g\n", current_ctf.GetAdditionalPhaseShift());
+			}
+		}
+
+		// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
+		if (old_school_input || DEBUG)
+		{
+			wxPrintf("\nREFINING CTF PARAMETERS...\n");
+			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+		}
+		cg_accuracy[0] = 100.0;
+		cg_accuracy[1] = 100.0;
+		cg_accuracy[2] = 0.5;
+		cg_accuracy[3] = 0.05;
+		conjugate_gradient_minimizer = new ConjugateGradient();
+		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+		conjugate_gradient_minimizer->Run();
+
+		// Remember the results of the refinement
+		for (counter=0;counter<number_of_search_dimensions;counter++)
+		{
+			cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
+		}
+		current_ctf.SetDefocus(cg_starting_point[0]/pixel_size,cg_starting_point[1]/pixel_size,cg_starting_point[2]/180.0*PI);
+		if (find_additional_phase_shift)
+		{
+			current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+		}
+		current_ctf.EnforceConvention();
+
+		// Print results to the terminal
+		if (old_school_input || DEBUG)
+		{
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
+			if (DEBUG)
+			{
+				MyDebugPrint("Found the following phase shift: %g\n", current_ctf.GetAdditionalPhaseShift());
+			}
+		}
+
+		// Generate diagnostic image
+		current_output_location = current_micrograph_number;
+		average_spectrum.AddConstant(-1.0 * average_spectrum.ReturnAverageOfRealValuesOnEdges());
+
+
 
 	} // End of loop over micrographs
 
@@ -462,88 +541,6 @@ bool CtffindApp::DoCalculation()
 
 
 /*
-
-
-        ! Actually run the BF search
-        if (find_additional_phase_shift%value) then
-            number_of_search_dimensions = 4
-        else
-            number_of_search_dimensions = 3
-        endif
-#ifdef _OPENMP
-        if (.not. allocated(bf_param_array)) allocate(bf_param_array(omp_get_max_threads()))
-#else
-        if (.not. allocated(bf_param_array)) allocate(bf_param_array(1))
-#endif
-        bf_param_array = c_loc(comparison_object)
-        call brute_force_search%Init(ctffind_objective_function,bf_param_array,number_of_search_dimensions,    &
-                                     bf_midpoint(1:number_of_search_dimensions), &
-                                     bf_halfrange(1:number_of_search_dimensions), &
-                                     bf_stepsize(1:number_of_search_dimensions), &
-                                     print_progress_bar=number_of_micrographs .eq. 1)
-        call brute_force_search%Run()
-        cg_starting_point = brute_force_search%GetBestValues()
-
-        ! Remember the results of the search
-        call current_ctf%SetDefocus(real(cg_starting_point(1))/pixel_size%value, &
-                                    real(cg_starting_point(2))/pixel_size%value, &
-                                    convert(real(cg_starting_point(3)),degrees,radians))
-        if (find_additional_phase_shift%value) then
-            call current_ctf%SetAdditionalPhaseShift(real(cg_starting_point(4)))
-        endif
-        call current_ctf%EnforceConvention()
-
-        ! Print out results of brute force search
-        if (old_school_input .or. debug) then
-            write(*,'(a)')  '      DFMID1      DFMID2      ANGAST          CC'
-            write(*,'(3(f12.2),f12.5,a)')   current_ctf%GetDefocus1InAngstroms(pixel_size%value), &
-                                            current_ctf%GetDefocus2InAngstroms(pixel_size%value), &
-                                            current_ctf%GetAstigmatismAzimuthInDegrees(), &
-                                            -brute_force_search%GetBestScore(), &
-                                             '  '
-            if (debug) write(*,'(a,f0.3,a,f0.2,a)') '**debug(ctffind): found the following phase shift: ', &
-                                                    current_ctf%GetAdditionalPhaseShift(), &
-                                                    ' (', current_ctf%GetAdditionalPhaseShift()/3.1415,' pi)'
-        endif
-
-        ! Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
-        if (old_school_input .or. debug) then
-            write(*,'(/a)') ' REFINING CTF PARAMETERS...'
-            write(*,'(a)')  '      DFMID1      DFMID2      ANGAST          CC'
-        endif
-        if (find_additional_phase_shift%value) then
-            cg_accuracy = [100.0d0,100.0d0,0.5d0,0.05d0]
-        else
-            cg_accuracy = [100.0d0,100.0d0,0.5d0]
-        endif
-        call conjugate_gradient%Init(number_of_search_dimensions,ctffind_objective_function,c_loc(comparison_object), &
-                                    cg_starting_point, &
-                                    cg_accuracy)
-        call conjugate_gradient%Run()
-
-        ! Remember the results of the refinement
-        cg_starting_point = conjugate_gradient%GetBestValues()
-        call current_ctf%SetDefocus(real(cg_starting_point(1))/pixel_size%value, &
-                                    real(cg_starting_point(2))/pixel_size%value, &
-                                    convert(real(cg_starting_point(3)),degrees,radians))
-        if (find_additional_phase_shift%value) then
-            call current_ctf%SetAdditionalPhaseShift(real(cg_starting_point(4)))
-        endif
-        call current_ctf%EnforceConvention()
-
-
-        ! Print results out to the terminal
-        if (old_school_input .or. debug) then
-            write(*,'(3(f12.2),f12.5,a/)')   current_ctf%GetDefocus1InAngstroms(pixel_size%value),              &
-                                            current_ctf%GetDefocus2InAngstroms(pixel_size%value),               &
-                                            current_ctf%GetAstigmatismAzimuthInDegrees(),                       &
-                                            -conjugate_gradient%GetBestScore(),                                 &
-                                            '  Final Values'
-            if (debug) write(*,'(a,f0.3,a,f0.2,a)') '**debug(ctffind): found the following phase shift: ', &
-                                                    current_ctf%GetAdditionalPhaseShift(), &
-                                                    ' (', current_ctf%GetAdditionalPhaseShift()/3.1415,' pi)'
-        endif
-
 
         ! Generate diagnostic image
         current_output_location = current_micrograph_number
@@ -739,6 +736,7 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 	// Loop over possible rotations
 	while ( current_rotation < search_half_range + search_step_size )
 	{
+
 		current_rotation_rad = current_rotation / 180.0 * PI;
 		cc_numerator_dist.Reset();
 		cc_denom_self_dist.Reset();
@@ -760,12 +758,13 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 					if (i_logi_frac >= minimum_radius_sq && i_logi_frac <= maximum_radius_sq)
 					{
 						// We do ccw rotation to go from other_image (reference) to self (input image)
-						ii_phys = i_logi * cos(current_rotation_rad) - j_logi * sin(current_rotation_rad) + self[0].physical_address_of_box_center_x;
-						jj_phys = j_logi * sin(current_rotation_rad) + j_logi * cos(current_rotation_rad) + self[0].physical_address_of_box_center_y;
+						ii_phys = i_logi * cos(current_rotation_rad) - j_logi * sin(current_rotation_rad) + self[0].physical_address_of_box_center_x ;
+						jj_phys = i_logi * sin(current_rotation_rad) + j_logi * cos(current_rotation_rad) + self[0].physical_address_of_box_center_y ;
 						//
-						if (floor(ii_phys) > 0 && ceil(ii_phys) < self[0].logical_x_dimension && floor(jj_phys) > 0 && ceil(jj_phys) < self[0].logical_y_dimension ) // potential optimization: we have to compute the floor and ceiling in the interpolation routine. Is it not worth doing the bounds checking in the interpolation routine somehow?
+						if (int(ii_phys) > 0 && int(ii_phys)+1 < self[0].logical_x_dimension && int(jj_phys) > 0 && int(jj_phys)+1 < self[0].logical_y_dimension ) // potential optimization: we have to compute the floor and ceiling in the interpolation routine. Is it not worth doing the bounds checking in the interpolation routine somehow?
 						{
 							self[0].GetRealValueByLinearInterpolationNoBoundsCheckImage(ii_phys,jj_phys,current_interpolated_value);
+							//MyDebugPrint("%g %g\n",current_interpolated_value,other_image[0].real_values[address_in_other_image]);
 							cc_numerator_dist.AddSampleValue(current_interpolated_value * other_image[current_image].real_values[address_in_other_image]);
 							cc_denom_other_dist.AddSampleValue(pow(other_image[0].real_values[address_in_other_image],2)); // potential optimization: since other_image is not being rotated, we should only need to compute this quantity once, not for every potential rotation
 							cc_denom_self_dist.AddSampleValue(pow(current_interpolated_value,2));
@@ -779,6 +778,7 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 
 		current_cc = cc_numerator_dist.GetSampleSum() / sqrt(cc_denom_other_dist.GetSampleSum()*cc_denom_self_dist.GetSampleSum());
 
+
 		if (current_cc > best_cc)
 		{
 			best_cc = current_cc;
@@ -789,6 +789,8 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 		current_rotation += search_step_size;
 
 	} // end of loop over rotations
+
+	return best_rotation;
 }
 
 

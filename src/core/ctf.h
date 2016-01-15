@@ -58,6 +58,7 @@ public:
 	inline float GetHighestFrequencyForFitting() { return highest_frequency_for_fitting; };
 	inline float GetAstigmatismTolerance() { return astigmatism_tolerance; };
 	inline float GetAstigmatism(){ return defocus_1 - defocus_2; };
+	bool IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus = 100.0);
 	void EnforceConvention();
 	inline float GetDefocus1() { return defocus_1; };
 	inline float GetDefocus2() { return defocus_2; };

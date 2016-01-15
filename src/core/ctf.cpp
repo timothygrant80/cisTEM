@@ -151,6 +151,31 @@ float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 	return 12.26 / sqrt(1000.0 * acceleration_voltage + 0.9784 * pow(1000.0 * acceleration_voltage,2)/pow(10.0,6));
 }
 
+
+// Compare two CTF objects and return true if they are within a specified defocus tolerance
+bool CTF::IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus)
+{
+	float delta;
+
+	if (fabs(this->spherical_aberration - wanted_ctf->spherical_aberration) > 0.01) return false;
+	if (fabs(this->wavelength - wanted_ctf->wavelength) > 0.0001) return false;
+	if (fabs(this->amplitude_contrast - wanted_ctf->amplitude_contrast) > 0.0001) return false;
+	if (fabs(this->defocus_1 - wanted_ctf->defocus_1) > delta_defocus) return false;
+	if (fabs(this->defocus_2 - wanted_ctf->defocus_2) > delta_defocus) return false;
+
+	delta = fabs(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
+	delta = fmod(delta, 2.0 * PI);
+// 0.0277 = 5/180 (5 deg tolerance)
+	if (delta > 0.0277) return false;
+
+	delta = fabs(this->astigmatism_azimuth - wanted_ctf->astigmatism_azimuth);
+	delta = fmod(delta, PI);
+// 0.0277 = 5/180 (5 deg tolerance)
+	if (delta > 0.0277) return false;
+
+	return true;
+}
+
 // Enforce the convention that df1 > df2 and -90 < angast < 90
 void CTF::EnforceConvention() {
 	float defocus_tmp;
@@ -164,4 +189,5 @@ void CTF::EnforceConvention() {
 	}
 	astigmatism_azimuth -= PI * round(astigmatism_azimuth/PI);
 }
+
 

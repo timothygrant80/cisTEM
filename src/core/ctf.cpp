@@ -18,13 +18,14 @@ CTF::CTF()
 	//
 	precomputed_amplitude_contrast_term = 0;
 	squared_wavelength = 0;
+	cubed_wavelength = 0;
 }
 
 CTF::CTF(		float wanted_acceleration_voltage, // keV
 				float wanted_spherical_aberration, // mm
 				float wanted_amplitude_contrast,
-				float wanted_defocus_1, // um
-				float wanted_defocus_2, //um
+				float wanted_defocus_1, // A
+				float wanted_defocus_2, //A
 				float wanted_astigmatism_azimuth, // degrees
 				float wanted_lowest_frequency_for_fitting, // 1/A
 				float wanted_highest_frequency_for_fitting, // 1/A
@@ -45,8 +46,8 @@ CTF::~CTF()
 void CTF::Init(	float wanted_acceleration_voltage, // keV
 				float wanted_spherical_aberration, // mm
 				float wanted_amplitude_contrast,
-				float wanted_defocus_1, // um
-				float wanted_defocus_2, //um
+				float wanted_defocus_1, // A
+				float wanted_defocus_2, //A
 				float wanted_astigmatism_azimuth, // degrees
 				float wanted_lowest_frequency_for_fitting, // 1/A
 				float wanted_highest_frequency_for_fitting, // 1/A
@@ -57,10 +58,11 @@ void CTF::Init(	float wanted_acceleration_voltage, // keV
 {
     wavelength = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage) / pixel_size;
     squared_wavelength = pow(wavelength,2);
+    cubed_wavelength = pow(wavelength,3);
     spherical_aberration = wanted_spherical_aberration * 10000000.0 / pixel_size;
     amplitude_contrast = wanted_amplitude_contrast;
-    defocus_1 = wanted_defocus_1 * 10000.0 / pixel_size;
-    defocus_2 = wanted_defocus_2 * 10000.0 / pixel_size;
+    defocus_1 = wanted_defocus_1 / pixel_size;
+    defocus_2 = wanted_defocus_2 / pixel_size;
     astigmatism_azimuth = wanted_astigmatism_azimuth / 180.0 * PI;
     additional_phase_shift = wanted_additional_phase_shift;
     lowest_frequency_for_fitting = wanted_lowest_frequency_for_fitting * pixel_size;
@@ -69,6 +71,40 @@ void CTF::Init(	float wanted_acceleration_voltage, // keV
     precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
 }
 
+int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth)
+{
+	return floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
+}
+
+// Compute the frequency of the Nth zero of the CTF
+float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
+{
+	float phase_shift = which_zero * PI;
+	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
+}
+
+float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth)
+{
+	const float a = -0.5 * PI * cubed_wavelength * spherical_aberration;
+	const float b = PI * wavelength * DefocusGivenAzimuth(azimuth);
+	const float c = additional_phase_shift + precomputed_amplitude_contrast_term;
+
+	const float solution_one = ( -b + sqrt(pow(b,2) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+	const float solution_two = ( -b - sqrt(pow(b,2) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+
+	if ( solution_one > 0 && solution_two > 0 )
+	{
+		MyDebugPrintWithDetails("Oops, I don't know which solution to select");
+	}
+	else if ( solution_one > 0 )
+	{
+		return solution_one;
+	}
+	else
+	{
+		return solution_two;
+	}
+}
 
 
 // Set the defocus and astigmatism angle, given in pixels and radians

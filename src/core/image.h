@@ -153,7 +153,7 @@ public:
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);
-	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width);
+	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();
 

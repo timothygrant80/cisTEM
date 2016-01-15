@@ -16,6 +16,7 @@ private:
 	// Precomputed terms to make evaluations faster
 	float precomputed_amplitude_contrast_term;
 	float squared_wavelength;
+	float cubed_wavelength;
 
 public:
 
@@ -62,4 +63,7 @@ public:
 	inline float GetDefocus2() { return defocus_2; };
 	inline float GetAstigmatismAzimuth() { return astigmatism_azimuth; };
 	inline float GetAdditionalPhaseShift() { return additional_phase_shift; };
+	int ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
+	float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);
+	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth);
 };

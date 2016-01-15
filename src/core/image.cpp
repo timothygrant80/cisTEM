@@ -83,7 +83,7 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 	float mask_radius_squared;
 	float mask_radius_plus_edge_squared;
 	float edge;
-	float pixel_sum;
+	double pixel_sum;
 
 	float frequency;
 	float frequency_squared;
@@ -736,25 +736,84 @@ float Image::ReturnAverageOfRealValuesOnEdges()
 	if (logical_z_dimension == 1)
 	{
 		// Two-dimensional image
+
+		// First line
 		for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
 		{
 			sum += real_values[address];
 			address++;
 		}
+		number_of_pixels += logical_x_dimension;
 		address += padding_jump_value;
+		// Other lines
 		for (line_counter=1; line_counter < logical_y_dimension-1; line_counter++)
 		{
 			sum += real_values[address];
 			address += logical_x_dimension-1;
 			sum += real_values[address];
 			address += padding_jump_value;
+			number_of_pixels += 2;
 		}
+		// Last line
 		for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
 		{
 			sum += real_values[address];
-			address += logical_x_dimension-1;
+			address++;
+		}
+		number_of_pixels += logical_x_dimension;
+
+	}
+	else
+	{
+		// Three-dimensional volume
+
+		// First plane
+		for (line_counter=0; line_counter < logical_y_dimension; line_counter++)
+		{
+			for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
+			{
+				sum += real_values[address];
+				address++;
+			}
+			address += padding_jump_value;
+		}
+		number_of_pixels += logical_x_dimension * logical_y_dimension;
+		// Other planes
+		for (line_counter=0; line_counter< logical_y_dimension; line_counter++)
+		{
+			if (line_counter == 0 || line_counter == logical_y_dimension-1)
+			{
+				// First and last line of that section
+				for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
+				{
+					sum += real_values[address];
+					address++;
+				}
+				address += padding_jump_value;
+				number_of_pixels += logical_x_dimension;
+			}
+			else
+			{
+				// All other lines (only count first and last pixel)
+				sum += real_values[address];
+				address += logical_x_dimension-1;
+				sum += real_values[address];
+				address += padding_jump_value;
+				number_of_pixels += 2;
+			}
+		}
+		// Last plane
+		for (line_counter=0; line_counter < logical_y_dimension; line_counter++)
+		{
+			for (pixel_counter=0; pixel_counter < logical_x_dimension; pixel_counter++)
+			{
+				sum += real_values[address];
+				address++;
+			}
+			address += padding_jump_value;
 		}
 	}
+	return sum/float(number_of_pixels);
 }
 
 // Find the largest voxel value, only considering voxels which are at least a certain distance from the center and from the edge in each dimension

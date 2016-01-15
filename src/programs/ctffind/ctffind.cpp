@@ -532,7 +532,9 @@ bool CtffindApp::DoCalculation()
 		// Generate diagnostic image
 		current_output_location = current_micrograph_number;
 		average_spectrum.AddConstant(-1.0 * average_spectrum.ReturnAverageOfRealValuesOnEdges());
-
+		average_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0))*average_spectrum.logical_x_dimension,
+															      	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum.logical_x_dimension,
+																	average,sigma);
 
 
 	} // End of loop over micrographs

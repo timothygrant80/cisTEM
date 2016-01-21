@@ -123,6 +123,7 @@ void MyMovieAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *w
 
 void MyMovieAssetPanel::ImportAllFromDatabase()
 {
+	int counter;
 	MovieAsset temp_asset;
 	AssetGroup temp_group;
 
@@ -148,6 +149,14 @@ void MyMovieAssetPanel::ImportAllFromDatabase()
 	while (main_frame->current_project.database.last_return_code == SQLITE_ROW)
 	{
 		temp_group = main_frame->current_project.database.GetNextMovieGroup();
+
+		// the members of this group are referenced by movie id's, we need to translate this to array position..
+
+		for (counter = 0; counter < temp_group.number_of_members; counter++)
+		{
+			temp_group.members[counter] = all_assets_list->ReturnArrayPositionFromID(temp_group.members[counter]);
+		}
+
 		all_groups_list->AddGroup(&temp_group);
 		if (temp_group.id > current_group_number) current_group_number = temp_group.id;
 	}
@@ -208,6 +217,13 @@ double MyMovieAssetPanel::ReturnAssetAccelerationVoltage(long wanted_asset)
 double MyMovieAssetPanel::ReturnAssetDosePerFrame(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->dose_per_frame;
+
+}
+
+
+int MyMovieAssetPanel::ReturnAssetID(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_id;
 }
 
 double MyMovieAssetPanel::ReturnAssetPreExposureAmount(long wanted_asset)

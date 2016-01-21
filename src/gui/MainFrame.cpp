@@ -44,7 +44,8 @@ void MyMainFrame::SetupServer()
 		if (current_port == END_PORT)
 		{
 			wxPrintf("JOB CONTROL : Could not find a valid port !\n\n");
-			abort();
+			Destroy();
+			return;
 		}
 
 		my_port = current_port;
@@ -53,7 +54,7 @@ void MyMainFrame::SetupServer()
 		socket_server = new wxSocketServer(my_address);
 		socket_server->SetFlags(wxSOCKET_WAITALL);
 
-		if (	socket_server->Ok())
+		if ( socket_server->IsOk())
 		{
 			  // setup events for the socket server..
 
@@ -68,12 +69,12 @@ void MyMainFrame::SetupServer()
 			  my_ip_address = ReturnIPAddress();
 			  my_port_string = wxString::Format("%hi", my_port);
 
-
-
-
 			  break;
 		}
-		else socket_server->Destroy();
+		else
+		{
+			socket_server->Destroy();
+		}
 	}
 
 }
@@ -198,7 +199,7 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 
   	      if (current_job == -1)
   	      {
-  	    	  MyDebugPrint(" Unknown JOB ID - Closing Connection\n");
+  	    	  MyDebugPrint(" GUI : Unknown JOB ID - Closing Connection\n");
 
   	    	  // incorrect identification - close the connection..
 	    	  sock->Destroy();

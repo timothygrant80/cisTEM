@@ -36,6 +36,13 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 transfer_buffer[2] = char_pointer[2];
 	 transfer_buffer[3] = char_pointer[3];
 
+	 ///////////////////////////////////////
+
+	 // RUN PROFILE
+
+	 //////////////////////////////////////
+
+
 	 // number_of_run_commands
 
 	 char_pointer = (unsigned char*)& my_profile.number_of_run_commands;
@@ -63,6 +70,48 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 
  		 byte_counter++;
  	 }
+
+ 	 // gui_address
+
+ 	 temp_int = my_profile.gui_address.Length();
+ 	 char_pointer = (unsigned char*)& temp_int;
+
+ 	 transfer_buffer[byte_counter] = char_pointer[0];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[1];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[2];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[3];
+ 	 byte_counter++;
+
+ 	 for (counter = 0; counter < my_profile.gui_address.Length(); counter++)
+ 	 {
+ 		 transfer_buffer[byte_counter] = my_profile.gui_address.GetChar(counter);
+ 		 byte_counter++;
+ 	 }
+
+ 	 // controller_address
+
+  	 temp_int = my_profile.controller_address.Length();
+ 	 char_pointer = (unsigned char*)& temp_int;
+
+ 	 transfer_buffer[byte_counter] = char_pointer[0];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[1];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[2];
+ 	 byte_counter++;
+ 	 transfer_buffer[byte_counter] = char_pointer[3];
+ 	 byte_counter++;
+
+ 	 for (counter = 0; counter < my_profile.controller_address.Length(); counter++)
+ 	 {
+ 		 transfer_buffer[byte_counter] = my_profile.controller_address.GetChar(counter);
+ 		 byte_counter++;
+ 	 }
+
+
 	 // now add each run_command
 
 	 for (command_counter = 0; command_counter < my_profile.number_of_run_commands; command_counter++)
@@ -101,9 +150,28 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 		 transfer_buffer[byte_counter] = char_pointer[3];
 		 byte_counter++;
 
+		 // delay time in ms..
+
+		 char_pointer = (unsigned char*) &my_profile.run_commands[command_counter].delay_time_in_ms;
+
+ 		 transfer_buffer[byte_counter] = char_pointer[0];
+ 		 byte_counter++;
+ 		 transfer_buffer[byte_counter] = char_pointer[1];
+ 		 byte_counter++;
+ 		 transfer_buffer[byte_counter] = char_pointer[2];
+ 		 byte_counter++;
+ 		 transfer_buffer[byte_counter] = char_pointer[3];
+ 		 byte_counter++;
+
 	 }
 
 	 // now append all the job info..
+
+	 ///////////////////
+
+	 // END RUN PROFILE
+
+	 //////////////////////
 
 
 	 for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
@@ -304,6 +372,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 	int wanted_number_of_processes;
 	int number_of_run_commands;
 	int number_of_copies;
+	int delay_in_ms;
 	std::string wanted_command_to_run;
 
 	int length_of_string;
@@ -318,6 +387,8 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 	RunProfile temp_run_profile;
 	wxString temp_wxstring;
 	wxString executable_name;
+	wxString gui_address;
+	wxString controller_address;
 
 
 
@@ -344,7 +415,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	socket->ReadMsg(transfer_buffer, transfer_size);
 
-	MyDebugPrint("Received package, decoding job...");
+	//MyDebugPrint("Received package, decoding job...");
 
     // restore socket events..
     socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -360,7 +431,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
     char_pointer[2] = transfer_buffer[2];
     char_pointer[3] = transfer_buffer[3];
 
-    MyDebugPrint("There are %i jobs", wanted_number_of_jobs);
+    //MyDebugPrint("There are %i jobs", wanted_number_of_jobs);
 
     // number of run commands
     char_pointer = (unsigned char*)&number_of_run_commands;
@@ -369,7 +440,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
     char_pointer[2] = transfer_buffer[6];
     char_pointer[3] = transfer_buffer[7];
 
-    MyDebugPrint("There are %i commands", number_of_run_commands);
+    //MyDebugPrint("There are %i commands", number_of_run_commands);
 
     // executable name
 
@@ -388,6 +459,47 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
     	 executable_name += transfer_buffer[byte_counter];
     	 byte_counter++;
      }
+
+     // gui address
+
+     char_pointer = (unsigned char*)& temp_int;
+     char_pointer[0] = transfer_buffer[byte_counter];
+     byte_counter++;
+     char_pointer[1] = transfer_buffer[byte_counter];
+     byte_counter++;
+     char_pointer[2] = transfer_buffer[byte_counter];
+     byte_counter++;
+     char_pointer[3] = transfer_buffer[byte_counter];
+   	 byte_counter++;
+
+   	 gui_address = "";
+
+      for (counter = 0; counter < temp_int; counter++)
+      {
+     	 gui_address += transfer_buffer[byte_counter];
+     	 byte_counter++;
+      }
+
+      // controller address
+
+      char_pointer = (unsigned char*)& temp_int;
+      char_pointer[0] = transfer_buffer[byte_counter];
+      byte_counter++;
+      char_pointer[1] = transfer_buffer[byte_counter];
+      byte_counter++;
+      char_pointer[2] = transfer_buffer[byte_counter];
+      byte_counter++;
+      char_pointer[3] = transfer_buffer[byte_counter];
+      byte_counter++;
+
+      controller_address = "";
+
+      for (counter = 0; counter < temp_int; counter++)
+      {
+    	  controller_address += transfer_buffer[byte_counter];
+    	  byte_counter++;
+      }
+
 
      // each run command
 
@@ -427,12 +539,28 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 		 char_pointer[3] = transfer_buffer[byte_counter];
  		 byte_counter++;
 
+ 		 // delay_in_ms..
+
+		 char_pointer = (unsigned char*)&delay_in_ms;
+
+ 		 char_pointer[0] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[1] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[2] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+
  		 // add the command.
 
- 		 temp_run_profile.AddCommand(temp_wxstring, number_of_copies);
+ 		 temp_run_profile.AddCommand(temp_wxstring, number_of_copies, delay_in_ms);
 	 }
 
 	// now we need to loop over all the jobs..
+
+	temp_run_profile.gui_address = gui_address;
+	temp_run_profile.controller_address = controller_address;
 
 	Reset(temp_run_profile, executable_name, wanted_number_of_jobs);
 
@@ -589,11 +717,23 @@ long JobPackage::ReturnEncodedByteTransferSize()
 	byte_size += 4; // length of string
 	byte_size += my_profile.executable_name.Length();
 
+	// gui_address
+
+	byte_size += 4;
+	byte_size += my_profile.gui_address.Length();
+
+	// controller address
+
+	byte_size += 4;
+	byte_size += my_profile.controller_address.Length();
+
+
 	for (counter = 0; counter < my_profile.number_of_run_commands; counter++)
 	{
 		byte_size += 4; // length_of_current_command;
 		byte_size += my_profile.run_commands[counter].command_to_run.Length(); // actual text;
 		byte_size += 4; // number_of_copies;
+		byte_size += 4; // delay time in ms
 	}
 
 	for (counter = 0; counter < number_of_jobs; counter++)
@@ -1284,7 +1424,136 @@ void RunArgument::SetBoolArgument(bool wanted_argument)
 	is_allocated = true;
 }
 
+JobResult::JobResult()
+{
+	job_number = -1;
+	result_size = 0;
+	result_data = NULL;
 
+}
+
+JobResult::JobResult(int wanted_result_size, float *wanted_result_data)
+{
+	SetResult(wanted_result_size, wanted_result_data);
+
+}
+
+JobResult::~JobResult()
+{
+	if (result_size != 0 &&  result_data != NULL)
+	{
+		delete [] result_data;
+	}
+}
+
+void JobResult::SetResult(int wanted_result_size, float *wanted_result_data)
+{
+	if (result_size != 0 || result_data != NULL)
+	{
+		delete [] result_data;
+	}
+
+	result_size = wanted_result_size;
+	result_data = new float[result_size];
+
+	for (int counter = 0; counter < result_size; counter++)
+	{
+		result_data[counter] = wanted_result_data[counter];
+	}
+}
+
+void JobResult::SendToSocket(wxSocketBase *wanted_socket)
+{
+	char job_number_and_result_size[8];
+	unsigned char *byte_pointer;
+
+	byte_pointer = (unsigned char*) &job_number;
+
+	job_number_and_result_size[0] = byte_pointer[0];
+	job_number_and_result_size[1] = byte_pointer[1];
+	job_number_and_result_size[2] = byte_pointer[2];
+	job_number_and_result_size[3] = byte_pointer[3];
+
+	byte_pointer = (unsigned char*) &result_size;
+
+	job_number_and_result_size[4] = byte_pointer[0];
+	job_number_and_result_size[5] = byte_pointer[1];
+	job_number_and_result_size[6] = byte_pointer[2];
+	job_number_and_result_size[7] = byte_pointer[3];
+
+	wanted_socket->WriteMsg(&job_number_and_result_size, 8);
+
+	if (result_size > 0)
+	{
+		wanted_socket->WriteMsg(result_data, result_size * 4);
+	}
+
+}
+
+void JobResult::ReceiveFromSocket(wxSocketBase *wanted_socket)
+{
+
+	 char job_number_and_result_size[8];
+	 int new_result_size;
+	 unsigned char *byte_pointer;
+
+	 wanted_socket->ReadMsg(job_number_and_result_size, 8);
+
+	 byte_pointer = (unsigned char*) &job_number;
+	 byte_pointer[0] = job_number_and_result_size[0];
+	 byte_pointer[1] = job_number_and_result_size[1];
+	 byte_pointer[2] = job_number_and_result_size[2];
+	 byte_pointer[3] = job_number_and_result_size[3];
+
+	 byte_pointer = (unsigned char*) &new_result_size;
+
+	 byte_pointer[0] = job_number_and_result_size[4];
+	 byte_pointer[1] = job_number_and_result_size[5];
+	 byte_pointer[2] = job_number_and_result_size[6];
+	 byte_pointer[3] = job_number_and_result_size[7];
+
+	 if (new_result_size != result_size)
+	 {
+		if (result_size != 0 && result_data != NULL)
+		{
+			delete [] result_data;
+		}
+
+		result_size = new_result_size;
+
+		if (result_size == 0)
+		{
+			result_data = NULL;
+		}
+		else result_data = new float[new_result_size];
+
+	 }
+
+	 if (result_size > 0)
+	 {
+		wanted_socket->ReadMsg(result_data, result_size * 4);
+	 }
+
+
+}
+
+JobResult & JobResult::operator = (const JobResult *other_result)
+{
+	  // Check for self assignment
+	   if(this != other_result)
+	   {
+		   SetResult(other_result->result_size, other_result->result_data);
+	   }
+
+	   return *this;
+}
+
+JobResult & JobResult::operator = (const JobResult &other_result)
+{
+	*this = &other_result;
+	return *this;
+
+}
 
 
 

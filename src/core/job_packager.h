@@ -101,3 +101,25 @@ public :
 
 };
 
+class JobResult
+{
+
+public:
+
+	int job_number;
+	int result_size;
+	float *result_data;
+
+	JobResult();
+	JobResult(int wanted_result_size, float *wanted_result_data);
+	~JobResult();
+
+	JobResult & operator = (const JobResult &other_result);
+	JobResult & operator = (const JobResult *other_result);
+
+	void SetResult(int wanted_result_size, float *wanted_result_data);
+	void SendToSocket(wxSocketBase *wanted_socket);
+	void ReceiveFromSocket(wxSocketBase *wanted_socket);
+
+};
+

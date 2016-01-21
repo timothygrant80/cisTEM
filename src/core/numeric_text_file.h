@@ -7,9 +7,12 @@ class NumericTextFile {
         private:
 
                 void Init();
-                FILE *text_file;
-                char text_filename[410];
+                wxString text_filename;
                 long access_type;
+                wxFileInputStream *input_file_stream;
+                wxTextInputStream *input_text_stream;
+                wxFileOutputStream *output_file_stream;
+                wxTextOutputStream *output_text_stream;
 
 	public:
 
@@ -21,19 +24,19 @@ class NumericTextFile {
 
 		// data
 
-		long number_of_lines;
-		long records_per_line;
+		int number_of_lines;
+		int records_per_line;
 
 		// Methods
 
-        void Open(wxString Filename, long wanted_access_type);
+        void Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
         void Close();
         void Rewind();
         void Flush();
-        std::string ReturnFilename();
+        wxString ReturnFilename();
 
-		long ReadLine(double *data_array);
-        void WriteLine(double *data_array);
+		void ReadLine(float *data_array);
+        void WriteLine(float *data_array);
         void WriteCommentLine(const char * format, ...);
 
 };

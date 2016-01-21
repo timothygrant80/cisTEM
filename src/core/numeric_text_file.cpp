@@ -8,52 +8,82 @@ NumericTextFile::NumericTextFile()
 
 NumericTextFile::NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line)
 {
-	strcpy(text_filename, Filename);
-	strcat(text_filename, ".plt");
-	access_type = wanted_access_type;
+	input_file_stream = NULL;
+	input_text_stream = NULL;
+	output_file_stream = NULL;
+	output_text_stream = NULL;
 
-	if (access_type == OPEN_TO_WRITE)
-	{
-		records_per_line = wanted_records_per_line;
-		if (records_per_line <= 0)
-		{
-			MyPrintWithDetails("NumericTextFile asked to OPEN_TO_WRITE, but with erroneous records per line\n");
-			abort();
-		}
-	}
-
+	Open(Filename, wanted_access_type, wanted_records_per_line);
 	Init();
 }
 
 NumericTextFile::~NumericTextFile()
 {
-	if (text_file != 0)
-	{
-		fclose(text_file);
-	}
+	Close();
 }
 
-void NumericTextFile::Open(wxString Filename, long wanted_access_type)
+void NumericTextFile::Open(wxString Filename, long wanted_access_type, long wanted_records_per_line)
 {
-	if (text_file != 0)
+	access_type = wanted_access_type;
+	records_per_line = wanted_records_per_line;
+	text_filename = Filename;
+
+	if (access_type == OPEN_TO_READ)
 	{
-		MyPrintWithDetails("File already Open\n");
+		if (input_file_stream != NULL)
+		{
+			if (input_file_stream->GetFile()->IsOpened() == true)
+			{
+				MyPrintWithDetails("File already Open\n");
+				abort();
+			}
+
+		}
+	}
+	else
+	if (access_type == OPEN_TO_WRITE)
+	{
+		records_per_line = wanted_records_per_line;
+
+		if (records_per_line <= 0)
+		{
+			MyPrintWithDetails("NumericTextFile asked to OPEN_TO_WRITE, but with erroneous records per line\n");
+			abort();
+		}
+
+		if (output_file_stream != NULL)
+		{
+			if (output_file_stream->GetFile()->IsOpened() == true)
+			{
+				MyPrintWithDetails("File already Open\n");
+				abort();
+			}
+
+		}
+
+
+	}
+	else
+	{
+		MyPrintWithDetails("Unknown access type!\n");
 		abort();
 	}
 
-	strcpy(text_filename, Filename);
-	strcat(text_filename, ".plt");
-	access_type = wanted_access_type;
 
 	Init();
 }
 
 void NumericTextFile::Close()
 {
-	if (text_file != 0)
-	{
-		fclose(text_file);
-	}
+	if (input_file_stream != NULL) delete input_file_stream;
+	if (input_text_stream != NULL) delete input_text_stream;
+	if (output_file_stream != NULL) delete output_file_stream;
+	if (output_text_stream != NULL) delete output_text_stream;
+
+	input_file_stream = NULL;
+	input_text_stream = NULL;
+	output_file_stream = NULL;
+	output_text_stream = NULL;
 }
 
 void NumericTextFile::Init()
@@ -61,8 +91,16 @@ void NumericTextFile::Init()
 
 	if (access_type == OPEN_TO_READ)
 	{
-		text_file = fopen(text_filename, "rb");
-		if (text_file == 0)
+		wxString current_line;
+		wxString token;
+		double temp_double;
+		int current_records_per_line;
+		int old_records_per_line = -1;
+
+		input_file_stream = new wxFileInputStream(text_filename);
+		input_text_stream = new wxTextInputStream(*input_file_stream);
+
+		if (input_file_stream->IsOk() == false)
 		{
 			MyPrintWithDetails("Attempt to access %s for reading failed\n",text_filename);
 			abort();
@@ -70,153 +108,157 @@ void NumericTextFile::Init()
 
 		// work out the records per line and how many lines
 
-		float temp_float;
-		long pos_check;
-		long total_number_of_records = 0;
-
-		int c = 0;
-
-		records_per_line = 0;
-
-		// this now needs to be quite complicated in case there are extra spaces at the end of a line..
+		number_of_lines = 0;
 
 
-		while(c != '\n' && c != '\r' && c != 10 && c != 13)
+		while (input_file_stream->Eof() == false)
 		{
-			pos_check = 0;
-			do
+			current_line = input_text_stream->ReadLine();
+			current_line.Trim(false);
+
+			if (current_line.StartsWith("#") != true && current_line.StartsWith("C") != true && current_line.Length() > 0)
 			{
-				pos_check++;
-			} while ((c = fgetc(text_file)) == ' ');
+				number_of_lines++;
+				wxStringTokenizer tokenizer(current_line);
 
-			if (c == '\n' || c == '\r' || c == 10 || c == 13) break;
+				current_records_per_line = 0;
 
-			fseek(text_file, pos_check * -1, SEEK_CUR);
+				while ( tokenizer.HasMoreTokens() )
+				{
+				    token = tokenizer.GetNextToken();
 
-			pos_check = fscanf(text_file, "%f", &temp_float);
-			if (pos_check == 0)
-			{
-				if (feof(text_file)) break;
-				MyPrintWithDetails("File seems to contain non-numbers and therefore cannot be read\n");
-				abort();
+				    if (token.ToDouble(&temp_double) == false)
+				    {
+				    	MyPrintWithDetails("Failed on the following record : %s\n", token);
+				    	abort();
+				    }
+				    else
+				    {
+				    	current_records_per_line++;
+				    }
+				}
+
+				// we want to check records_per_line for consistency..
+
+				if (old_records_per_line != -1)
+				{
+					if (old_records_per_line != current_records_per_line)
+					{
+						MyPrintWithDetails("Different records per line found");
+						abort();
+					}
+				}
+
+				old_records_per_line = current_records_per_line;
+
+
 			}
-			if (pos_check != EOF) records_per_line++;
-			else break;
 		}
 
-		rewind(text_file);
+		records_per_line = current_records_per_line;
 
-		// this is a bit dodgy, i am going to assume that each line has the same number of records to make things easy here..
+		// rewind the file..
 
-		while (fscanf (text_file, "%f", &temp_float) != EOF)
-		{
-			total_number_of_records++;
-		}
-
-
-		// divide total number by number per line to get number of lines..
-
-		number_of_lines = total_number_of_records / records_per_line;
-
-		rewind(text_file);
+		Rewind();
 
 	}
 	else
-		if (access_type == OPEN_TO_WRITE)
+	if (access_type == OPEN_TO_WRITE)
+	{
+		// check if the file exists..
+
+		if (DoesFileExist(text_filename) == true)
 		{
-			text_file = fopen(text_filename, "w");
-			if (text_file == 0)
+			if (wxRemoveFile(text_filename) == false)
 			{
-				MyPrintWithDetails("Attempt to access %s for writing, failed.\n",text_filename);
-				abort();
+				MyDebugPrintWithDetails("Cannot remove already existing text file");
 			}
 		}
-		else
-			if (access_type == OPEN_TO_APPEND)
-			{
-				text_file = fopen(text_filename, "a");
-				if (text_file == 0)
-				{
-					MyPrintWithDetails("Attempt to access %s for appending, failed.\n",text_filename);
-					abort();
-				}
-			}
 
+		output_file_stream = new wxFileOutputStream(text_filename);
+		output_text_stream = new wxTextOutputStream(*output_file_stream);
+	}
 
 }
 
 void NumericTextFile::Rewind()
 {
-	if (text_file != 0)
+
+	if (access_type == OPEN_TO_READ)
 	{
-		rewind(text_file);
+		delete input_file_stream;
+		delete input_text_stream;
+
+		input_file_stream = new wxFileInputStream(text_filename);
+		input_text_stream = new wxTextInputStream(*input_file_stream);
+
 	}
+	else
+	output_file_stream->GetFile()->Seek(0);
 
 }
 
 void NumericTextFile::Flush()
 {
-	if (text_file !=0)
-	{
-		fflush(text_file);
-	}
+	if (access_type == OPEN_TO_READ) input_file_stream->GetFile()->Flush();
+	else
+	output_file_stream->GetFile()->Flush();
 }
 
-long NumericTextFile::ReadLine(double *data_array)
+void NumericTextFile::ReadLine(float *data_array)
 {
-
-	float temp_float;
-	long pos_check = 0;
-
-
 	if (access_type != OPEN_TO_READ)
 	{
-		MyPrintWithDetails("Attempt to read %s however access type is not READ\n",text_filename);
+		MyPrintWithDetails("Attempt to read from %s however access type is not READ\n",text_filename);
 		abort();
 	}
 
-	if (text_file == 0)
+	wxString current_line;
+	wxString token;
+	double temp_double;
+
+	while(input_file_stream->Eof() == false)
 	{
-		MyPrintWithDetails("Attempt to read %s however file is not open\n",text_filename);
-		abort();
+		current_line = input_text_stream->ReadLine();
+		current_line.Trim(false);
+
+		if (current_line.StartsWith("C") == false && current_line.StartsWith("#") == false && current_line.Length() != 0) break;
 	}
 
-	for (long counter = 1; counter <= records_per_line; counter++)
+	wxStringTokenizer tokenizer(current_line);
+
+	for (int counter = 0; counter < records_per_line; counter++ )
 	{
-		pos_check = fscanf (text_file, "%f", &temp_float);
-		if (pos_check == EOF) return pos_check;
+		token = tokenizer.GetNextToken();
 
-		data_array[counter - 1] = double(temp_float);
+		if (token.ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Failed on the following record : %s\n", token);
+	    	abort();
+		}
+		else
+		{
+			data_array[counter] = temp_double;
+
+		}
 	}
-
-	return pos_check;
-
 }
 
-void NumericTextFile::WriteLine(double *data_array)
+void NumericTextFile::WriteLine(float *data_array)
 {
-
-	float temp_float;
-
-	if (access_type == OPEN_TO_READ)
+	if (access_type != OPEN_TO_WRITE)
 	{
-		MyPrintWithDetails("Attempt to write to %s however access type is READ\n",text_filename);
+		MyPrintWithDetails("Attempt to read from %s however access type is not WRITE\n",text_filename);
 		abort();
 	}
 
-	if (text_file == 0)
+	for (int counter = 0; counter < records_per_line; counter++ )
 	{
-		MyPrintWithDetails("Attempt to read %s however file is not open\n");
-		abort();
+		output_text_stream->WriteDouble(data_array[counter]);
+		if (counter != records_per_line - 1) output_text_stream->WriteString(" ");
 	}
 
-	for (long counter = 1; counter <= records_per_line; counter++)
-	{
-		temp_float = float(data_array[counter - 1]);
-		fprintf (text_file, "%f ", temp_float);
-	}
-
-	fprintf(text_file, "\n");
+	output_text_stream->WriteString("\n");
 }
 
 void NumericTextFile::WriteCommentLine(const char * format, ...)
@@ -224,12 +266,28 @@ void NumericTextFile::WriteCommentLine(const char * format, ...)
 	va_list args;
 	va_start(args, format);
 
-	vfprintf(text_file, format, args);
+	wxString comment_string;
+	wxString buffer;
+
+
+	comment_string.PrintfV(format, args);
+
+	buffer = comment_string;
+	buffer.Trim(false);
+
+	if (buffer.StartsWith("#") == false && buffer.StartsWith("C") == false)
+	{
+		comment_string = "# " + comment_string;
+	}
+
+	output_text_stream->WriteString(comment_string);
+
+	if (comment_string.EndsWith("\n") == false) output_text_stream->WriteString("\n");
 
 	va_end(args);
 }
 
-std::string NumericTextFile::ReturnFilename()
+wxString NumericTextFile::ReturnFilename()
 {
 	return text_filename;
 }

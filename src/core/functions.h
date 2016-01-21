@@ -6,7 +6,7 @@ inline bool IsEven(int number_to_check)
 	  else return false;
 };
 
-inline bool DoesFileExist(std::string filename)
+inline bool DoesFileExist(wxString filename)
 {
     std::ifstream file_to_check (filename.c_str());
 

@@ -46,6 +46,7 @@ void MyRunProfilesPanel::FillCommandsBox()
 	CommandsListBox->ClearAll();
 	CommandsListBox->InsertColumn(0, "Command", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
 	CommandsListBox->InsertColumn(1, "No. Copies", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	CommandsListBox->InsertColumn(2, "Launch Delay (ms)", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
 
 	// Fill it from the run_profile_manager..
 
@@ -57,10 +58,37 @@ void MyRunProfilesPanel::FillCommandsBox()
 
 		ManagerTextCtrl->SetValue(buffer_profile.manager_command);
 
+		if (buffer_profile.gui_address == "")
+		{
+			GuiAddressStaticText->SetLabel("Automatic");
+			GuiAutoButton->Enable(false);
+
+		}
+		else
+		{
+			GuiAddressStaticText->SetLabel(buffer_profile.gui_address);
+			GuiAutoButton->Enable(true);
+
+		}
+
+		if (buffer_profile.controller_address == "")
+		{
+			ControllerAddressStaticText->SetLabel("Automatic");
+			ControllerAutoButton->Enable(false);
+
+		}
+		else
+		{
+			ControllerAddressStaticText->SetLabel(buffer_profile.controller_address);
+			ControllerAutoButton->Enable(true);
+
+		}
+
 		for (long counter = 0; counter < buffer_profile.number_of_run_commands; counter++)
 		{
 			CommandsListBox->InsertItem(counter, buffer_profile.run_commands[counter].command_to_run, counter);
 			CommandsListBox->SetItem(counter, 1, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].number_of_copies));
+			CommandsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].delay_time_in_ms));
 			total_number_of_jobs += buffer_profile.run_commands[counter].number_of_copies;
 		}
 
@@ -87,6 +115,8 @@ void MyRunProfilesPanel::FillCommandsBox()
 		CommandErrorStaticText->SetLabel("");
 		NumberProcessesStaticText->SetLabel("");
 		CommandsPanel->Enable(false);
+		ControllerAddressStaticText->SetLabel("");
+		GuiAddressStaticText->SetLabel("");
 	}
 
 	SizeCommandsColumns();
@@ -130,21 +160,24 @@ void MyRunProfilesPanel::SizeCommandsColumns()
 
 	int current_name_width;
 	int current_number_width;
+	int current_delay_width;
 
 	int remainder;
 
 	CommandsListBox->GetClientSize(&client_width, &client_height);
 	CommandsListBox->SetColumnWidth(0, -2);
 	CommandsListBox->SetColumnWidth(1, -2);
+	CommandsListBox->SetColumnWidth(2, -2);
 
 	old_commands_listbox_client_width = client_width;
 
 	current_name_width = CommandsListBox->GetColumnWidth(0);
 	current_number_width = CommandsListBox->GetColumnWidth(1);
+	current_delay_width = CommandsListBox->GetColumnWidth(2);
 
-	if (current_name_width + current_number_width < client_width)
+	if (current_name_width + current_number_width + current_delay_width < client_width)
 	{
-		remainder = client_width - current_number_width;
+		remainder = client_width - current_number_width - current_delay_width;
 		CommandsListBox->SetColumnWidth(0, remainder);
 	}
 }
@@ -293,6 +326,46 @@ void MyRunProfilesPanel::OnRemoveProfileClick( wxCommandEvent& event )
 	}
 }
 
+void MyRunProfilesPanel::GuiAddressAutoClick( wxCommandEvent& event )
+{
+	buffer_profile.gui_address = "";
+	FillCommandsBox();
+
+}
+
+void MyRunProfilesPanel::GuiAddressSpecifyClick( wxCommandEvent& event )
+{
+	wxTextEntryDialog temp_dialog(this, "Wanted GUI Address :-", "Set Address", buffer_profile.gui_address);
+
+	if (temp_dialog.ShowModal() == wxID_OK)
+	{
+		buffer_profile.gui_address = temp_dialog.GetValue();
+		FillCommandsBox();
+	}
+
+
+
+}
+
+void MyRunProfilesPanel::ControllerAddressAutoClick( wxCommandEvent& event )
+{
+	buffer_profile.controller_address = "";
+	FillCommandsBox();
+
+}
+
+void MyRunProfilesPanel::ControllerAddressSpecifyClick( wxCommandEvent& event )
+{
+	wxTextEntryDialog temp_dialog(this, "Wanted Controller Address :-", "Set Address", buffer_profile.controller_address);
+
+	if (temp_dialog.ShowModal() == wxID_OK)
+	{
+		buffer_profile.controller_address = temp_dialog.GetValue();
+		FillCommandsBox();
+	}
+
+}
+
 void MyRunProfilesPanel::CommandsSaveButtonClick( wxCommandEvent& event )
 {
 	// check the manager text..
@@ -389,7 +462,7 @@ void MyRunProfilesPanel::ManagerTextChanged( wxCommandEvent& event )
 
 void MyRunProfilesPanel::AddCommandButtonClick( wxCommandEvent& event )
 {
-	buffer_profile.AddCommand("$command", 1);
+	buffer_profile.AddCommand("$command", 1, 100);
 	FillCommandsBox();
 
 	SetSelectedCommand(buffer_profile.number_of_run_commands - 1);
@@ -437,6 +510,7 @@ void MyRunProfilesPanel::EditCommand()
 
 	add_dialog->CommandTextCtrl->SetValue(buffer_profile.run_commands[selected_command].command_to_run);
 	add_dialog->NumberCopiesSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].number_of_copies);
+	add_dialog->DelayTimeSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].delay_time_in_ms);
 	add_dialog->ShowModal();
 }
 

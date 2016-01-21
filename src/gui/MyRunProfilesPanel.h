@@ -36,6 +36,11 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void RemoveCommandButtonClick( wxCommandEvent& event );
 		void CommandsSaveButtonClick( wxCommandEvent& event );
 
+		void GuiAddressAutoClick( wxCommandEvent& event );
+		void GuiAddressSpecifyClick( wxCommandEvent& event );
+		void ControllerAddressAutoClick( wxCommandEvent& event );
+		void ControllerAddressSpecifyClick( wxCommandEvent& event );
+
 		void OnProfilesListItemActivated( wxListEvent& event );
 
 		void VetoInvalidMouse(  wxListCtrl *wanted_list, wxMouseEvent& event );

@@ -350,16 +350,10 @@ bool UnBlurApp::DoCalculation()
 
 	sum_image.WriteSlice(&output_file, 1);
 
-	// fill the result array..
+	// fill the result..
 
-	if (result_array != NULL)
-	{
-		delete [] result_array;
 
-	}
-
-	result_array = new float[number_of_input_images * 2];
-	result_array_size = number_of_input_images * 2;
+	float *result_array = new float[number_of_input_images * 2];
 
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
@@ -369,6 +363,9 @@ bool UnBlurApp::DoCalculation()
 		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 	}
 
+	my_result.SetResult(number_of_input_images * 2, result_array);
+
+	delete [] result_array;
 
 	delete [] x_shifts;
 	delete [] y_shifts;

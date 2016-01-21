@@ -344,6 +344,15 @@ class RunProfilesPanel : public wxPanel
 		wxStaticText* m_staticText36;
 		wxTextCtrl* ManagerTextCtrl;
 		wxStaticText* CommandErrorStaticText;
+		wxStaticText* m_staticText65;
+		wxStaticText* GuiAddressStaticText;
+		wxButton* GuiAutoButton;
+		wxButton* ControllerSpecifyButton;
+		wxStaticText* m_staticText67;
+		wxStaticText* ControllerAddressStaticText;
+		wxButton* ControllerAutoButton;
+		wxButton* m_button38;
+		wxStaticText* m_staticText70;
 		wxListCtrl* CommandsListBox;
 		wxButton* AddCommandButton;
 		wxButton* EditCommandButton;
@@ -362,6 +371,10 @@ class RunProfilesPanel : public wxPanel
 		virtual void OnRenameProfileClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveProfileClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ManagerTextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void GuiAddressAutoClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void GuiAddressSpecifyClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ControllerAddressAutoClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ControllerAddressSpecifyClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCommandDClick( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnCommandLeftDown( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnCommandsActivated( wxListEvent& event ) { event.Skip(); }
@@ -488,6 +501,7 @@ class AddRunCommandDialog : public wxDialog
 	protected:
 		wxStaticText* m_staticText45;
 		wxStaticText* m_staticText46;
+		wxStaticText* m_staticText58;
 		wxStaticText* ErrorStaticText;
 		wxStaticLine* m_staticline14;
 		wxButton* OKButton;
@@ -502,6 +516,7 @@ class AddRunCommandDialog : public wxDialog
 	public:
 		wxTextCtrl* CommandTextCtrl;
 		wxSpinCtrl* NumberCopiesSpinCtrl;
+		wxSpinCtrl* DelayTimeSpinCtrl;
 		
 		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~AddRunCommandDialog();

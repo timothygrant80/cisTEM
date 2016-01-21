@@ -39,6 +39,11 @@ public :
 
 	bool ExecuteSQL(const char *command);
 
+	// Get various id numbers..
+
+	int ReturnHighestAlignmentID();
+	int ReturnHighestAlignmentJobID();
+
 	//Convenience insertion functions..
 
 	//void AddSingleMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);

@@ -32,6 +32,55 @@ bool Database::ExecuteSQL(const char *command)
 	return true;
 }
 
+int Database::ReturnHighestAlignmentID()
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	int highest_alignment_number;
+
+	return_code = sqlite3_prepare_v2(sqlite_database, "SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST", 55, &current_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(current_statement);
+
+	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	highest_alignment_number = sqlite3_column_int(current_statement, 0);
+
+	sqlite3_finalize(current_statement);
+
+	return highest_alignment_number;
+}
+
+int Database::ReturnHighestAlignmentJobID()
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	int highest_alignment_number;
+
+	return_code = sqlite3_prepare_v2(sqlite_database, "SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST", 55, &current_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(current_statement);
+
+	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	highest_alignment_number = sqlite3_column_int(current_statement, 0);
+
+	sqlite3_finalize(current_statement);
+
+	return highest_alignment_number;
+}
 
 bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 {
@@ -195,10 +244,10 @@ bool Database::CreateAllTables()
 
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
 	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
-	success = CreateTable("RUN_PROFILES", "ptti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "COMMANDS_ID");
+	success = CreateTable("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID");
 	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiirrrrriiriiiii", "ALIGNMENT_NUMBER", "DATETIME_OF_RUN", "MOVIE_ASSET_ID", "ALIGNMENT_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiirrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE-EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 	success = CreateTable("IMAGE_ASSETS", "ptiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("ESTIMATED_IMAGE_CTF_PARAMETERS", "piirrrrirrrrrrirrrrrr", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "SPECTRUM_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE");
@@ -341,7 +390,7 @@ void Database::BeginBatchInsert(const char *table_name, int number_of_columns, .
 	va_list args;
 	va_start(args, number_of_columns);
 
-	sql_command = "BEGIN;";
+	sql_command = "BEGIN IMMEDIATE;";
 	last_return_code = sqlite3_exec(sqlite_database, sql_command.ToUTF8().data(), NULL, 0, &error_message);
 
 
@@ -602,7 +651,7 @@ RunProfile Database::GetNextRunProfile()
 	wxString profile_sql_select_command;
 	sqlite3_stmt *list_statement = NULL;
 
-	GetFromBatchSelect("itti", &temp_profile.id, &temp_profile.name, &temp_profile.manager_command, &profile_table_number);
+	GetFromBatchSelect("itttti", &temp_profile.id, &temp_profile.name, &temp_profile.manager_command, &temp_profile.gui_address, &temp_profile.controller_address, &profile_table_number);
 
 	// now we fill from the specific group table.
 
@@ -615,7 +664,7 @@ RunProfile Database::GetNextRunProfile()
 
 	while (  return_code == SQLITE_ROW)
 	{
-		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2));
+		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2), sqlite3_column_int(list_statement, 3));
 		return_code = sqlite3_step(list_statement);
 	}
 
@@ -739,13 +788,13 @@ void Database::EndAllRunProfilesSelect()
 bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 {
 
-	InsertOrReplace("RUN_PROFILES", "ptti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "COMMANDS_ID", profile_to_add->id, profile_to_add->name.ToUTF8().data(), profile_to_add->manager_command.ToUTF8().data(), profile_to_add->id);
+	InsertOrReplace("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID", profile_to_add->id, profile_to_add->name.ToUTF8().data(), profile_to_add->manager_command.ToUTF8().data(), profile_to_add->gui_address.ToUTF8().data(), profile_to_add->controller_address.ToUTF8().data(), profile_to_add->id);
 	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id));
-	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "pti", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES");
+	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "DELAY_TIME_IN_MS");
 
 	for (int counter = 0; counter < profile_to_add->number_of_run_commands; counter++)
 	{
-		InsertOrReplace(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "pti", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", counter, profile_to_add->run_commands[counter].command_to_run.ToUTF8().data(), profile_to_add->run_commands[counter].number_of_copies);
+		InsertOrReplace(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "DELAY_TIME_IN_MS", counter, profile_to_add->run_commands[counter].command_to_run.ToUTF8().data(), profile_to_add->run_commands[counter].number_of_copies, profile_to_add->run_commands[counter].delay_time_in_ms);
 	}
 }
 

@@ -27,6 +27,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		double ReturnAssetAccelerationVoltage(long wanted_asset);
 		double ReturnAssetDosePerFrame(long wanted_asset);
 		double ReturnAssetPreExposureAmount(long wanted_asset);
+		int ReturnAssetID(long wanted_asset);
 
 };
 

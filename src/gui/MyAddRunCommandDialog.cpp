@@ -37,7 +37,7 @@ void MyAddRunCommandDialog::ProcessResult()
 	}
 	else
 	{
-		if (my_parent->buffer_profile.run_commands[my_parent->selected_command].command_to_run == CommandTextCtrl->GetValue() && my_parent->buffer_profile.run_commands[my_parent->selected_command].number_of_copies == NumberCopiesSpinCtrl->GetValue())
+		if (my_parent->buffer_profile.run_commands[my_parent->selected_command].command_to_run == CommandTextCtrl->GetValue() && my_parent->buffer_profile.run_commands[my_parent->selected_command].number_of_copies == NumberCopiesSpinCtrl->GetValue() && my_parent->buffer_profile.run_commands[my_parent->selected_command].delay_time_in_ms == DelayTimeSpinCtrl->GetValue())
 		{
 			// nothing changed just exit..
 
@@ -49,6 +49,7 @@ void MyAddRunCommandDialog::ProcessResult()
 
 			my_parent->buffer_profile.run_commands[my_parent->selected_command].command_to_run = CommandTextCtrl->GetValue();
 			my_parent->buffer_profile.run_commands[my_parent->selected_command].number_of_copies = NumberCopiesSpinCtrl->GetValue();
+			my_parent->buffer_profile.run_commands[my_parent->selected_command].delay_time_in_ms = DelayTimeSpinCtrl->GetValue();
 			my_parent->FillCommandsBox();
 			my_parent->command_panel_has_changed = true;
 			Destroy();

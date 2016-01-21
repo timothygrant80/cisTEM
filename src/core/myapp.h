@@ -3,6 +3,7 @@
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
 
 class MyApp; // So CalculateThread class knows about it
 
@@ -16,6 +17,7 @@ class CalculateThread : public wxThread
 
     	MyApp *main_thread_pointer;
     	void QueueError(wxString error_to_queue);
+    	void QueueInfo(wxString info_to_queue);
 
 	protected:
 
@@ -31,13 +33,20 @@ class
 MyApp : public wxAppConsole
 {
 
+		wxTimer *connection_timer;
+		wxTimer *zombie_timer;
+		bool i_am_a_zombie;
+
+		void CheckForConnections();
+		void OnConnectionTimer(wxTimerEvent& event);
+		void OnZombieTimer(wxTimerEvent& event);
+
 	public:
 		virtual bool OnInit();
 
 		// array for sending back the results - this may be better off being made into an object..
 
-		float *result_array;
-		int result_array_size;
+		JobResult my_result;
 
 		// socket stuff
 
@@ -74,15 +83,18 @@ MyApp : public wxAppConsole
 		virtual void DoInteractiveUserInput() {wxPrintf("\n Error: This program cannot be run interactively..\n\n"); exit(0);}
 
 		void SendError(wxString error_message);
+		void SendInfo(wxString error_message);
 
 
 		 CalculateThread *work_thread;
 		private:
 
 		void SendJobFinished(int job_number);
-		void SendJobResult(float *result, int result_size, int finished_job_number);
+		void SendJobResult(JobResult *result);
 		void SendAllJobsFinished();
+
 		void SocketSendError(wxString error_message);
+		void SocketSendInfo(wxString info_message);
 
 		void SetupServer();
 
@@ -97,5 +109,6 @@ MyApp : public wxAppConsole
 		void OnServerEvent(wxSocketEvent& event);
 		void OnThreadComplete(wxThreadEvent& my_event);
 		void OnThreadSendError(wxThreadEvent& my_event);
+		void OnThreadSendInfo(wxThreadEvent& my_event);
 };
 

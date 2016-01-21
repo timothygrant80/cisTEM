@@ -100,6 +100,7 @@ public :
 	virtual MovieAsset * ReturnMovieAssetPointer(long wanted_asset);
 	virtual ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 	virtual int ReturnAssetID(long wanted_asset) = 0;
+	virtual int ReturnArrayPositionFromID(int wanted_id) = 0;
 
 	long ReturnNumberOfAssets();
 };
@@ -117,6 +118,7 @@ public:
 	MovieAsset * ReturnMovieAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	int ReturnArrayPositionFromID(int wanted_id);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
@@ -138,6 +140,7 @@ public:
 	ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	int ReturnArrayPositionFromID(int wanted_id);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);

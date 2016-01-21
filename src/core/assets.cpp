@@ -286,6 +286,17 @@ int MovieAssetList::ReturnAssetID(long wanted_asset)
 	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_id;
 }
 
+int MovieAssetList::ReturnArrayPositionFromID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <MovieAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+
 
 void MovieAssetList::AddAsset(Asset *asset_to_add)
 {
@@ -408,6 +419,17 @@ int ImageAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].asset_id;
 }
+
+int ImageAssetList::ReturnArrayPositionFromID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ImageAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
 
 
 void ImageAssetList::AddAsset(Asset *asset_to_add)

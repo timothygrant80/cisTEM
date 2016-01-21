@@ -18,6 +18,7 @@ public :
 	wxSocketBase *socket;
 
 	wxString launch_command;
+	wxString gui_address;
 
 	GuiJob();
 	GuiJob(JobPanel *wanted_parent_panel);
@@ -40,7 +41,7 @@ public:
 
 	GuiJobController();
 
-	long AddJob(JobPanel *wanted_parent_panel, wxString wanted_launch_command);
+	long AddJob(JobPanel *wanted_parent_panel, wxString wanted_launch_command, wxString wanted_gui_address);
 	//void LaunchJob(unsigned char *job_code,  wxString launch_command);
 	bool LaunchJob(GuiJob *job_to_launch);
 	long FindFreeJobSlot();

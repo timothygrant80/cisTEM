@@ -26,7 +26,7 @@ GuiJob::GuiJob(JobPanel *wanted_parent_panel)
 
 }
 
-long GuiJobController::AddJob(JobPanel *wanted_parent_panel, wxString wanted_launch_command)
+long GuiJobController::AddJob(JobPanel *wanted_parent_panel, wxString wanted_launch_command, wxString wanted_gui_address)
 {
 	// check if there is a free slot
 
@@ -43,6 +43,7 @@ long GuiJobController::AddJob(JobPanel *wanted_parent_panel, wxString wanted_lau
 	job_list[new_index].is_active = true;
 	job_list[new_index].parent_panel = wanted_parent_panel;
 	job_list[new_index].launch_command = wanted_launch_command;
+	job_list[new_index].gui_address = wanted_gui_address;
 
 	GenerateJobCode(job_list[new_index].job_code);
 
@@ -60,7 +61,14 @@ bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 	wxString execution_command;
 	wxString executable;
 
-	executable = "guix_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
+	if (job_to_launch->gui_address == "")
+	{
+		executable = "guix_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
+	}
+	else
+	{
+		executable = "guix_job_control " + job_to_launch->gui_address + " " + main_frame->my_port_string + " ";
+	}
 
 
 	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
@@ -158,9 +166,16 @@ long GuiJobController::ReturnJobNumberFromJobCode(unsigned char *job_code)
 
 void GuiJobController::KillJob(int job_to_kill)
 {
+	SETUP_SOCKET_CODES
+
 	if (job_list[job_to_kill].is_active == true)
 	{
-		if (job_list[job_to_kill].socket != NULL) job_list[job_to_kill].socket->Destroy();
+		if (job_list[job_to_kill].socket != NULL)
+		{
+			job_list[job_to_kill].socket->Notify(false);
+			job_list[job_to_kill].socket->WriteMsg(socket_time_to_die, SOCKET_CODE_SIZE);
+			job_list[job_to_kill].socket->Destroy();
+		}
 		job_list[job_to_kill].socket = NULL;
 		job_list[job_to_kill].is_active = false;
 	}

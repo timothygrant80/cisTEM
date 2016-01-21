@@ -4,6 +4,7 @@ RunCommand::RunCommand()
 {
 	command_to_run = "";
 	number_of_copies = 0;
+	delay_time_in_ms = 0;
 
 }
 
@@ -12,10 +13,11 @@ RunCommand::~RunCommand()
 
 }
 
-void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies)
+void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms)
 {
 	command_to_run = wanted_command;
 	number_of_copies = wanted_number_of_copies;
+	delay_time_in_ms = wanted_delay_time_in_ms;
 }
 
 RunProfile::RunProfile()
@@ -28,6 +30,8 @@ RunProfile::RunProfile()
 	number_allocated = 5;
 
 	executable_name = "";
+	gui_address = "";
+	controller_address = "";
 
 }
 
@@ -39,6 +43,9 @@ RunProfile::RunProfile( const RunProfile &obj) // copy contructor
 	number_allocated = obj.number_allocated;
 
 	executable_name = obj.executable_name;
+
+	gui_address = obj.gui_address;
+	controller_address = obj.controller_address;
 
 	run_commands = new RunCommand[number_allocated];
 
@@ -83,7 +90,7 @@ void RunProfile::AddCommand(RunCommand wanted_command)
 	number_of_run_commands++;
 }
 
-void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies)
+void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms)
 {
 	// check we have enough memory
 
@@ -111,6 +118,7 @@ void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies
 
 	run_commands[number_of_run_commands].command_to_run = wanted_command;
 	run_commands[number_of_run_commands].number_of_copies = wanted_number_of_copies;
+	run_commands[number_of_run_commands].delay_time_in_ms = wanted_delay_time_in_ms;
 	number_of_run_commands++;
 }
 
@@ -171,6 +179,8 @@ RunProfile & RunProfile::operator = (const RunProfile &t)
 	   this->number_of_run_commands = t.number_of_run_commands;
 	   this->manager_command = t.manager_command;
 	   this->executable_name = t.executable_name;
+	   this->gui_address = t.gui_address;
+	   this->controller_address = t.controller_address;
 
 	   for (long counter = 0; counter < t.number_of_run_commands; counter++)
 	   {
@@ -199,6 +209,8 @@ RunProfile & RunProfile::operator = (const RunProfile *t)
 	   this->number_of_run_commands = t->number_of_run_commands;
 	   this->manager_command = t->manager_command;
 	   this->executable_name = t->executable_name;
+	   this->gui_address = t->gui_address;
+	   this->controller_address = t->controller_address;
 
 	   for (long counter = 0; counter < t->number_of_run_commands; counter++)
 	   {
@@ -284,6 +296,8 @@ void RunProfileManager::AddBlankProfile()
 	run_profiles[number_of_run_profiles].name = "New Profile";
 	run_profiles[number_of_run_profiles].number_of_run_commands = 0;
 	run_profiles[number_of_run_profiles].manager_command = "$command";
+	run_profiles[number_of_run_profiles].gui_address = "";
+	run_profiles[number_of_run_profiles].controller_address = "";
 
 	number_of_run_profiles++;
 

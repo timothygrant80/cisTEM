@@ -6,8 +6,9 @@ public:
 
 	wxString command_to_run;
 	int number_of_copies;
+	int delay_time_in_ms;
 
-	void SetCommand(wxString wanted_command, int wanted_number_of_copies);
+	void SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms);
 };
 
 class RunProfile {
@@ -26,12 +27,16 @@ public:
 
 	wxString name;
 	wxString manager_command;
+
+	wxString gui_address;
+	wxString controller_address;
+
 	RunCommand *run_commands;
 
 	wxString executable_name;
 
 	void AddCommand(RunCommand wanted_command);
-	void AddCommand(wxString wanted_command, int wanted_number_of_copies);
+	void AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms);
 	void RemoveCommand(int number_to_remove);
 	void RemoveAll();
 	long ReturnTotalJobs();

@@ -41,9 +41,12 @@ public:
 
 		//mpInfoCoords    *nfo;
 
+		JobResult *buffered_results;
+
 
 		// methods
 
+		void WriteResultToDataBase();
 		void OnExpertOptionsToggle( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();
@@ -58,7 +61,7 @@ public:
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 
-		void ProcessResult(float *result, int result_size, int job_number);
+		void ProcessResult(JobResult *result_to_process);
 		void UpdateProgressBar();
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);

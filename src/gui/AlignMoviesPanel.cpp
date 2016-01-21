@@ -10,6 +10,8 @@ MyAlignMoviesPanel::MyAlignMoviesPanel( wxWindow* parent )
 AlignMoviesPanel( parent )
 {
 
+		buffered_results = NULL;
+
 		// Create a mpFXYVector layer for the plot
 
 		current_x_shift_vector_layer = new mpFXYVector((""));
@@ -424,6 +426,14 @@ void MyAlignMoviesPanel::Refresh()
 
 void MyAlignMoviesPanel::FillRunProfileComboBox()
 {
+	int old_selection = 0;
+
+	// get the current selection..
+
+	if (RunProfileComboBox->GetCount() > 0) old_selection = RunProfileComboBox->GetSelection();
+
+	// refresh..
+
 	RunProfileComboBox->Freeze();
 	RunProfileComboBox->Clear();
 
@@ -432,13 +442,21 @@ void MyAlignMoviesPanel::FillRunProfileComboBox()
 		RunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
 	}
 
-	if (RunProfileComboBox->GetCount() > 0) RunProfileComboBox->SetSelection(0);
+	if (RunProfileComboBox->GetCount() > 0)
+	{
+		if (RunProfileComboBox->GetCount() >= old_selection) RunProfileComboBox->SetSelection(old_selection);
+		else RunProfileComboBox->SetSelection(0);
+
+	}
 	RunProfileComboBox->Thaw();
 
 }
 
 void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 {
+
+	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
+
 	// Package the job details..
 
 	long counter;
@@ -512,6 +530,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	vertical_mask = vertical_mask_spinctrl->GetValue();
 
+	// allocate space for the buffered results..
+
+	buffered_results = new JobResult[number_of_jobs];
 
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
 
@@ -564,7 +585,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	// launch a controller
 
-	my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command);
+	my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].gui_address);
 
 	if (my_job_id != -1)
 	{
@@ -644,6 +665,7 @@ void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
 	// kill the job, this will kill the socket to terminate downstream processes
 	// - this will have to be improved when clever network failure is incorporated
 
+
 	main_frame->job_controller.KillJob(my_job_id);
 
 	WriteInfoText("Terminated Job");
@@ -651,6 +673,12 @@ void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
+
+	if (buffered_results != NULL)
+	{
+		delete [] buffered_results;
+		buffered_results = NULL;
+	}
 			  //running_job = false;
 
 
@@ -722,6 +750,15 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
    			  WriteErrorText(error_message);
     	  }
 	      else
+	      if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
+	      {
+
+	    	  wxString info_message;
+   			  info_message = ReceivewxStringFromSocket(sock);
+
+   			  WriteInfoText(info_message);
+    	  }
+	      else
 	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {
 	 		 // which job is finished?
@@ -735,34 +772,12 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	 	  }
 	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {
-	    	  int job_number;
-	    	  int result_size;
-	    	  char job_number_and_result_size[8];
-	    	  unsigned char *byte_pointer;
-	    	  float *result;
+	    	  JobResult temp_result;
+	    	  temp_result.ReceiveFromSocket(sock);
 
-	    	  sock->ReadMsg(job_number_and_result_size, 8);
-
-	    	  byte_pointer = (unsigned char*) &job_number;
-	    	  byte_pointer[0] = job_number_and_result_size[0];
-	    	  byte_pointer[1] = job_number_and_result_size[1];
-	    	  byte_pointer[2] = job_number_and_result_size[2];
-	    	  byte_pointer[3] = job_number_and_result_size[3];
-
-	    	  byte_pointer = (unsigned char*) &result_size;
-
-	    	  byte_pointer[0] = job_number_and_result_size[4];
-			  byte_pointer[1] = job_number_and_result_size[5];
-			  byte_pointer[2] = job_number_and_result_size[6];
-			  byte_pointer[3] = job_number_and_result_size[7];
-
-
-			  if (result_size > 0)
+			  if (temp_result.result_size > 0)
 			  {
-				 result = new float[result_size];
-				 sock->ReadMsg(result, result_size * 4); // *4 for float
-				 ProcessResult(result, result_size, job_number);
-				 delete [] result;
+				 ProcessResult(&temp_result);
 			  }
 	 	  }
 	      else
@@ -783,7 +798,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
               int total_processes = my_job_package.my_profile.ReturnTotalJobs();
 
-		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.\n\n", number_of_connections));
+		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
 
 			  if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
 			  else
@@ -800,13 +815,13 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      else
 		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		  {
-			  WriteInfoText("All Jobs have finished.");
+			/*  WriteInfoText("All Jobs have finished.");
 			  ProgressBar->SetValue(100);
 			  TimeRemainingText->SetLabel("Time Remaining : All Done!");
 			  CancelAlignmentButton->Show(false);
 			  FinishButton->Show(true);
 			  ProgressPanel->Layout();
-			  //running_job = false;
+			  //running_job = false;*/
 
 		  }
 
@@ -831,7 +846,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 }
 
-void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_number) // this will have to be overidden in the parent clas when i make it.
+void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
 {
 	int number_of_frames;
 	int frame_counter;
@@ -842,12 +857,12 @@ void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_
 	// mark the job as finished, update progress bar
 
 
-	float exposure_per_frame = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
+	float exposure_per_frame = my_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
 
 	// ok the result should be x-shifts, followed by y-shifts..
 	//WriteInfoText(wxString::Format("Job #%i finished.", job_number));
 
-	number_of_frames = result_size / 2;
+	number_of_frames = result_to_process->result_size / 2;
 
 
 	if (current_time - time_of_last_graph_update > 1)
@@ -860,8 +875,8 @@ void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_
 		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
 		{
 			current_accumulated_dose_data.push_back(double(exposure_per_frame * frame_counter));
-			current_x_movement_data.push_back(double(result[frame_counter]));
-			current_y_movement_data.push_back(double(result[frame_counter + number_of_frames]));
+			current_x_movement_data.push_back(double(result_to_process->result_data[frame_counter]));
+			current_y_movement_data.push_back(double(result_to_process->result_data[frame_counter + number_of_frames]));
 
 			//WriteInfoText(wxString::Format("Frame %i = %f, %f\n", frame_counter, result[frame_counter], result[frame_counter + number_of_frames]));
 		}
@@ -886,15 +901,100 @@ void  MyAlignMoviesPanel::ProcessResult(float *result, int result_size, int job_
 	my_job_tracker.MarkJobFinished();
 	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
+	// store the results..
+
+	buffered_results[result_to_process->job_number] = result_to_process;
+
 	if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
 	{
-		  WriteInfoText("All Jobs have finished.");
-		  ProgressBar->SetValue(100);
-		  TimeRemainingText->SetLabel("Time Remaining : All Done!");
-		  CancelAlignmentButton->Show(false);
-		  FinishButton->Show(true);
-		  ProgressPanel->Layout();
+		// job has really finished, so we can write to the database...
+
+		WriteResultToDataBase();
+
+		if (buffered_results != NULL)
+		{
+			delete [] buffered_results;
+			buffered_results = NULL;
+		}
+
+		WriteInfoText("All Jobs have finished.");
+		ProgressBar->SetValue(100);
+		TimeRemainingText->SetLabel("Time Remaining : All Done!");
+		CancelAlignmentButton->Show(false);
+		FinishButton->Show(true);
+		ProgressPanel->Layout();
 	}
+
+
+}
+
+void MyAlignMoviesPanel::WriteResultToDataBase()
+{
+
+	long counter;
+	int frame_counter;
+	wxString current_table_name;
+
+	// find the current highest alignment number in the database, then increment by one
+
+	int starting_alignment_id = main_frame->current_project.database.ReturnHighestAlignmentID();
+	int alignment_id = starting_alignment_id + 1;
+	int alignment_job_id =  main_frame->current_project.database.ReturnHighestAlignmentJobID() + 1;
+
+	// loop over all the jobs, and add them..
+
+	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 18, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+
+	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
+	{
+		main_frame->current_project.database.AddToBatchInsert("iiiirrrrrriiriiiii", alignment_id,
+				                                                                    (unsigned long int) time(NULL),
+																					alignment_job_id,
+																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)),
+																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
+																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
+																					my_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
+																					my_job_package.jobs[counter].arguments[15].ReturnFloatArgument(), // current_pre_exposure
+																					my_job_package.jobs[counter].arguments[3].ReturnFloatArgument(), // min shift
+																					my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // max shift
+																					my_job_package.jobs[counter].arguments[5].ReturnBoolArgument(), // should dose filter
+																					my_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
+																					my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
+																					my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
+																					my_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // bfactor
+																					my_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
+																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
+																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument() // vertical mask
+																					);
+
+		alignment_id++;
+
+
+	}
+
+	main_frame->current_project.database.EndBatchInsert();
+
+	// now need to add the results of the job..
+
+	alignment_id = starting_alignment_id + 1;
+
+	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
+	{
+		current_table_name = wxString::Format("MOVIE_ALIGNMENT_PARAMETERS_%i", alignment_id);
+		main_frame->current_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
+		main_frame->current_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
+
+		for (frame_counter = 0; frame_counter < buffered_results[counter].result_size / 2; frame_counter++)
+		{
+			main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter +  buffered_results[counter].result_size / 2]);
+		}
+
+		main_frame->current_project.database.EndBatchInsert();
+		alignment_id++;
+
+	}
+
+
 }
 
 
@@ -905,3 +1005,5 @@ void MyAlignMoviesPanel::UpdateProgressBar()
 
 	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }
+
+

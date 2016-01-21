@@ -21,6 +21,9 @@ typedef struct Peak {
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
+#include <wx/wfstream.h>
+#include <wx/tokenzr.h>
+#include <wx/txtstrm.h>
 #include "defines.h"
 #include "assets.h"
 #include "asset_group.h"

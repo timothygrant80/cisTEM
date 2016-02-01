@@ -292,6 +292,32 @@ int UserInput::GetIntFromUser(const char * my_text, const char * help_text, cons
   }
 }
 
+std::string UserInput::GetStringFromUser(const char * my_text, const char * help_text, const char * wanted_default_value)
+{
+
+	char input[1000];
+	char default_value[1000];
+
+
+	GetDefault(my_text, wanted_default_value, default_value);
+
+	while (1==1)
+	{
+		AskQuestion(my_text, help_text, default_value, input);
+
+		if (input[0] != 0 && input[0] != '?')
+		{
+			DoGotValidAnswer(my_text, input);
+			std::string my_string(input);
+			return my_string;
+		}
+
+		DoGotInvalidAnswer();
+
+	}
+
+}
+
 std::string UserInput::GetFilenameFromUser(const char * my_text, const char * help_text, const char * wanted_default_value, bool must_exist)
 {
 

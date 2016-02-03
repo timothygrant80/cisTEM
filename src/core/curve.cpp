@@ -159,6 +159,50 @@ Curve & Curve::operator = (const Curve &other_curve)
 
 }
 
+// Added by Niko, has never been tested
+float Curve::ReturnLinearInterpolation(float wanted_x_value)
+{
+	MyDebugAssertTrue(number_of_points == 0, "No points to interpolate")
+
+	int closest_x_below;
+	int closest_x_above;
+
+	float closest_distance_below = std::numeric_limits<float>::max();
+	float closest_distance_above = std::numeric_limits<float>::max();
+	float distance;
+
+	for (int i = 0; i < number_of_points; i++)
+	{
+		distance = fabs(data_x[i] - wanted_x_value);
+		if (data_x[i] <= wanted_x_value && distance < closest_distance_below)
+		{
+			closest_x_below = i;
+			closest_distance_below = distance;
+		}
+		if (data_x[i] >= wanted_x_value && distance < closest_distance_above)
+		{
+			closest_x_above = i;
+			closest_distance_above = distance;
+		}
+	}
+
+	// wanted_x_value is outside range. Assign closest value
+	if (closest_x_below == closest_x_above) return data_y[closest_x_below];
+
+	// Otherwise, return interpolated value
+	distance = data_x[closest_x_above] - data_x[closest_x_below];
+	if (distance == 0) return (data_y[closest_x_below] + data_y[closest_x_above]) / 2.0;
+	return ((distance - closest_distance_above) * data_y[closest_x_above] + (distance - closest_distance_below) * data_y[closest_x_below]) / distance;
+}
+
+void Curve::PrintToStandardOut()
+{
+	for (int i = 0; i < number_of_points; i++)
+	{
+		wxPrintf("%f,%f\n",data_x[i],data_y[i]);
+	}
+}
+
 void Curve::CopyFrom(Curve *other_curve)
 {
 	*this = other_curve;

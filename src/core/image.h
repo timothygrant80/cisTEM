@@ -81,9 +81,13 @@ public:
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
 	void Deallocate();
 
+	int ReturnSmallestLogicalDimension();
+	int ReturnLargestLogicalDimension();
+	void OptimalFilter(Curve &FSC);
+	float Correct3D(float mask_radius = 0.0);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
-	void CosineMask(float mask_radius, float mask_edge);
+	float CosineMask(float wanted_mask_radius, float wanted_mask_edge);
 
 	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{

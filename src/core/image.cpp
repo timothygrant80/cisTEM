@@ -58,6 +58,7 @@ Image::Image()
 
 Image::Image( const Image &other_image) // copy constructor
 {
+	MyDebugPrint("Warning: copying an image object");
 	 *this = other_image;
 }
 
@@ -66,6 +67,150 @@ Image::~Image()
 	Deallocate();
 }
 
+
+int Image::ReturnSmallestLogicalDimension()
+{
+	if (logical_z_dimension == 1)
+	{
+		return std::min(logical_x_dimension, logical_y_dimension);
+	}
+	else
+	{
+		int temp_int;
+		temp_int = std::min(logical_x_dimension, logical_y_dimension);
+		return std::min(temp_int, logical_z_dimension);
+	}
+}
+
+
+int Image::ReturnLargestLogicalDimension()
+{
+	if (logical_z_dimension == 1)
+	{
+		return std::max(logical_x_dimension, logical_y_dimension);
+	}
+	else
+	{
+		int temp_int;
+		temp_int = std::max(logical_x_dimension, logical_y_dimension);
+		return std::max(temp_int, logical_z_dimension);
+	}
+}
+
+void Image::OptimalFilter(Curve &FSC)
+{
+	MyDebugAssertTrue(is_in_real_space == false, "reconstruction to filter not in Fourier space");
+	MyDebugAssertTrue(FSC.number_of_points != 0, "FSC curve not calculated");
+
+	int i;
+	int j;
+	int k;
+	int bin;
+	int number_of_bins2;
+
+	float x;
+	float y;
+	float z;
+	float frequency;
+	float frequency_squared;
+
+	long pixel_counter = 0;
+
+	number_of_bins2 = 2 * (FSC.number_of_points - 1);
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x = pow(i * fourier_voxel_size_x, 2);
+				frequency_squared = x + y + z;
+
+				if (frequency_squared <= 0.25)
+				{
+					// compute radius, in units of physical Fourier pixels
+					bin = int(sqrtf(frequency_squared) * number_of_bins2);
+
+					if (bin != 0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabs(FSC.data_y[bin])) / fabs(FSC.data_y[bin]));
+				}
+				else
+				{
+					complex_values[pixel_counter] = 0.0;
+				}
+				pixel_counter++;
+			}
+		}
+	}
+}
+
+float Image::Correct3D(float mask_radius)
+{
+	MyDebugAssertTrue(is_in_real_space == true, "reconstruction to correct not in real space");
+
+	int i;
+	int j;
+	int k;
+	int int_x_coordinate;
+	int int_y_coordinate;
+	int int_z_coordinate;
+
+	float x;
+	float y;
+	float z;
+	float distance_from_center_squared;
+	float mask_radius_squared = pow(mask_radius,2);
+	double pixel_sum;
+
+	long pixel_counter = 0;
+
+	float weight;
+	float weight_y;
+	float weight_z;
+	float scale_x = PI / logical_x_dimension;
+	float scale_y = PI / logical_y_dimension;
+	float scale_z = PI / logical_z_dimension;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		int_z_coordinate = k - physical_address_of_box_center_z;
+		z = pow(int_z_coordinate, 2);
+		weight_z = sinc(float(int_z_coordinate) * scale_z);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			int_y_coordinate = j - physical_address_of_box_center_y;
+			y = pow(int_y_coordinate, 2);
+			weight_y = sinc(float(int_y_coordinate) * scale_y);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				int_x_coordinate = i - physical_address_of_box_center_x;
+				x = pow(int_x_coordinate, 2);
+
+				weight = pow(sinc(float(int_x_coordinate) * scale_x) * weight_y * weight_z,2);
+
+				real_values[pixel_counter] /= weight;
+
+				distance_from_center_squared = x + y + z;
+
+				if (distance_from_center_squared <= mask_radius_squared)
+				{
+					pixel_sum += weight;
+				}
+
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	if (pixel_sum == 0.0) return 0.0;
+	return pixel_sum / (4.0 / 3.0 * PI * pow(mask_radius,3));
+}
 
 void Image::AddByLinearInterpolationReal(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate, float &wanted_physical_z_coordinate, float &wanted_value)
 {
@@ -159,7 +304,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 }
 
 
-void Image::CosineMask(float mask_radius, float mask_edge)
+float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge)
 {
 	int i;
 	int j;
@@ -175,6 +320,7 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 	float distance_from_center;
 	float mask_radius_plus_edge;
 	float distance_from_center_squared;
+	float mask_radius;
 	float mask_radius_squared;
 	float mask_radius_plus_edge_squared;
 	float edge;
@@ -183,7 +329,11 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 	float frequency;
 	float frequency_squared;
 
-	mask_radius_plus_edge = mask_radius + mask_edge;
+	double mask_volume = 0.0;
+
+	mask_radius = wanted_mask_radius - wanted_mask_edge / 2;
+	if (mask_radius < 0.0) mask_radius = 0.0;
+	mask_radius_plus_edge = mask_radius + wanted_mask_edge;
 
 	mask_radius_squared = pow(mask_radius, 2);
 	mask_radius_plus_edge_squared = pow(mask_radius_plus_edge, 2);
@@ -213,7 +363,7 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 					}
 					pixel_counter++;
 				}
-				pixel_counter+=padding_jump_value;
+				pixel_counter += padding_jump_value;
 			}
 		}
 		pixel_sum /= number_of_pixels;
@@ -235,16 +385,21 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 
 					if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
 					{
-						distance_from_center = sqrt(distance_from_center_squared);
-						edge = (1.0 + cos(PI * (distance_from_center - mask_radius) / mask_edge)) / 2.0;
+						distance_from_center = sqrtf(distance_from_center_squared);
+						edge = (1.0 + cos(PI * (distance_from_center - mask_radius) / wanted_mask_edge)) / 2.0;
 						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+						mask_volume += pow(edge,2);
 					}
 					else
-					if (distance_from_center_squared >= mask_radius_plus_edge_squared) real_values[pixel_counter] = pixel_sum;
+						if (distance_from_center_squared >= mask_radius_plus_edge_squared) real_values[pixel_counter] = pixel_sum;
+					else
+					{
+						mask_volume += 1.0;
+					}
 
 					pixel_counter++;
 				}
-				pixel_counter+=padding_jump_value;
+				pixel_counter += padding_jump_value;
 			}
 		}
 	}
@@ -268,8 +423,8 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 
 					if (frequency_squared >= mask_radius_squared && frequency_squared <= mask_radius_plus_edge_squared)
 					{
-						frequency = sqrt(frequency_squared);
-						edge = (1.0 + cos(PI * (frequency - mask_radius) / mask_edge)) / 2.0;
+						frequency = sqrtf(frequency_squared);
+						edge = (1.0 + cos(PI * (frequency - mask_radius) / wanted_mask_edge)) / 2.0;
 						complex_values[pixel_counter] *= edge;
 					}
 					else
@@ -280,6 +435,8 @@ void Image::CosineMask(float mask_radius, float mask_edge)
 			}
 		}
 	}
+
+	return float(mask_volume);
 }
 
 

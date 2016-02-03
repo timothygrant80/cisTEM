@@ -1,5 +1,29 @@
 bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_of_images);
 
+inline void ZeroIntArray(int *array_to_zero, int size_of_array)
+{
+	for (int counter = 0; counter < size_of_array; counter++)
+	{
+		array_to_zero[counter] = 0;
+	}
+};
+
+inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
+{
+	for (int counter = 0; counter < size_of_array; counter++)
+	{
+		array_to_zero[counter] = 0.0;
+	}
+};
+
+inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
+{
+	for (int counter = 0; counter < size_of_array; counter++)
+	{
+		array_to_zero[counter] = 0.0;
+	}
+};
+
 inline bool IsEven(int number_to_check)
 {
 	  if ( number_to_check % 2== 0 ) return true;
@@ -22,6 +46,14 @@ inline float rad_2_deg(float radians)
 inline float deg_2_rad(float degrees)
 {
   return degrees * PI / 180.;
+}
+
+inline float sinc(float radians)
+{
+	if (radians == 0.0) return 1.0;
+	if (radians >= 0.01) return sinf(radians) / radians;
+	float temp_float = radians * radians;
+	return 1.0 - temp_float / 6.0 + temp_float * temp_float / 120.0;
 }
 
 inline double myround(double a)

@@ -1,5 +1,10 @@
 #include "core_headers.h"
 
+MRCFile::MRCFile()
+{
+
+}
+
 MRCFile::MRCFile(std::string filename, bool overwrite)
 {
 	OpenFile(filename, overwrite);
@@ -13,8 +18,11 @@ MRCFile::~MRCFile()
 
 void MRCFile::CloseFile()
 {
-	if (rewrite_header_on_close == true) WriteHeader();
-	if (my_file.is_open()) my_file.close();
+	if (my_file.is_open())
+	{
+		if (rewrite_header_on_close == true) WriteHeader();
+		my_file.close();
+	}
 }
 
 void MRCFile::OpenFile(std::string filename, bool overwrite)

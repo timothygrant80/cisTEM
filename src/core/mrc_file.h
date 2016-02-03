@@ -10,6 +10,7 @@ class MRCFile {
 
 	bool rewrite_header_on_close;
 
+	MRCFile();
 	MRCFile(std::string filename, bool overwrite = false);
 	~MRCFile();
 

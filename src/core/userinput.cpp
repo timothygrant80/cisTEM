@@ -318,6 +318,109 @@ std::string UserInput::GetStringFromUser(const char * my_text, const char * help
 
 }
 
+std::string UserInput::GetSymmetryFromUser(const char * my_text, const char * help_text, const char * wanted_default_value)
+{
+	char input[1000];
+	char default_value[1000];
+
+
+	GetDefault(my_text, wanted_default_value, default_value);
+
+	while (1==1)
+	{
+		AskQuestion(my_text, help_text, default_value, input);
+
+
+
+		if (input[0] != 0 && input[0] != '?')
+		{
+			wxString supplied_input = input;
+			wxChar   symmetry_type;
+			long     symmetry_number;
+
+			if (supplied_input.Length() < 1)
+			{
+				if (output_is_a_tty == true)
+				{
+					MyPrintfRed("\nError: Must specify symmetry symbol!\n\n");
+				}
+				else
+				{
+					wxPrintf("\nError: Must specify symmetry symbol!\n\n");
+				}
+			}
+			else
+			{
+				symmetry_type = supplied_input.Capitalize()[0];
+
+				if (supplied_input.Length() == 1)
+				{
+					symmetry_number = 0;
+				}
+				else
+				{
+					if (! supplied_input.Mid(1).ToLong(&symmetry_number))
+					{
+						symmetry_number = -1;
+						if (output_is_a_tty == true)
+						{
+							MyPrintfRed("\nError: Unrecognized symmetry number!\n\n");
+						}
+						else
+						{
+							wxPrintf("\nError: Unrecognized symmetry number!\n\n");
+						}
+					}
+				}
+
+				if (symmetry_number >= 0)
+				{
+					if ((symmetry_type == 'C' || symmetry_type == 'D') && symmetry_number > 0)
+					{
+						DoGotValidAnswer(my_text, input);
+						std::string my_string(input);
+						return my_string;
+
+					}
+
+					if ((symmetry_type == 'T' || symmetry_type == 'O') && symmetry_number == 0)
+					{
+						DoGotValidAnswer(my_text, input);
+						std::string my_string(input);
+						return my_string;
+					}
+
+					if (symmetry_type == 'I' && (symmetry_number < 3))
+					{
+						DoGotValidAnswer(my_text, input);
+						std::string my_string(input);
+						return my_string;
+					}
+
+					if (output_is_a_tty == true)
+					{
+						MyPrintfRed("\nError: Unrecognized symmetry!\n\n");
+					}
+					else
+					{
+						wxPrintf("\nError: Unrecognized symmetry!\n\n");
+					}
+
+
+				}
+
+			}
+
+
+		}
+
+
+
+	}
+
+	DoGotInvalidAnswer();
+}
+
 std::string UserInput::GetFilenameFromUser(const char * my_text, const char * help_text, const char * wanted_default_value, bool must_exist)
 {
 

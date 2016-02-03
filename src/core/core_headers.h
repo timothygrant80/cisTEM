@@ -5,6 +5,7 @@ typedef struct Peak {
   float value;
 } Peak;
 
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -33,12 +34,15 @@ typedef struct Peak {
 #include "mrc_header.h"
 #include "mrc_file.h"
 #include "matrix.h"
+#include "symmetry_matrix.h"
 #include "curve.h"
 #include "ctf.h"
 #include "angles_and_shifts.h"
 #include "empirical_distribution.h"
 #include "image.h"
+#include "resolution_statistics.h"
 #include "reconstruct_3d.h"
+#include "reconstructed_volume.h"
 #include "electron_dose.h"
 #include "run_profiles.h"
 #include "database.h"

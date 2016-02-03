@@ -180,3 +180,16 @@ void RotationMatrix::SetToConstant(float constant)
 	this->m[2][2] = constant;
 }
 
+void RotationMatrix::SetToValues(float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22)
+{
+	this->m[0][0] = m00;
+	this->m[1][0] = m10;
+	this->m[2][0] = m20;
+	this->m[0][1] = m01;
+	this->m[1][1] = m11;
+	this->m[2][1] = m21;
+	this->m[0][2] = m02;
+	this->m[1][2] = m12;
+	this->m[2][2] = m22;
+}
+

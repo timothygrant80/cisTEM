@@ -18,6 +18,6 @@ private:
 	float 			euler_phi;		// in degrees
 	float 			euler_theta;	// in degrees
 	float 			euler_psi;		// in degrees
-	float			shift_x;		//
-	float			shift_y;		//
+	float			shift_x;		// in Angstrom
+	float			shift_y;		// in Angstrom
 };

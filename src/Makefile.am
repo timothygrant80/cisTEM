@@ -22,7 +22,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind niko_test
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind reconstruct3d niko_test
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -34,11 +34,14 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/image.cpp \
                        core/electron_dose.cpp \
                        core/matrix.cpp \
+                       core/symmetry_matrix.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/database.cpp \
                        core/project.cpp \
                        core/reconstruct_3d.cpp \
+                       core/reconstructed_volume.cpp \
+                       core/resolution_statistics.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
@@ -99,6 +102,12 @@ ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
 ctffind_LDADD = libcore.a
+
+reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
+reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+reconstruct3d_LDFLAGS = $(WX_LIBS_BASE)
+reconstruct3d_LDADD = libcore.a
 
 niko_test_SOURCES = programs/niko_test/niko_test.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)

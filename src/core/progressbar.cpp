@@ -112,7 +112,7 @@ void ProgressBar::Update(long current_tick)
 
 			if (hours_remaining > 999)
 			{
-				wxPrintf("999:99:99    \r");
+				wxPrintf("999h:99m:99s               \r");
 			}
 			else
 			{
@@ -132,7 +132,7 @@ void ProgressBar::Update(long current_tick)
 
 				//if (seconds_remaining < 10) cout << "0";
 				//cout << seconds_remaining;
-				wxPrintf("%02lis  \r", seconds_remaining);
+				wxPrintf("%02lis                 \r", seconds_remaining);
 				fflush(stdout);
 
 				// we are done so flush and CR!

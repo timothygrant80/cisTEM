@@ -29,6 +29,8 @@ public:
 	Curve & operator = (const Curve &other_curve);
 	Curve & operator = (const Curve *other_curve);
 
+	float ReturnLinearInterpolation(float wanted_x_value);
+	void PrintToStandardOut();
 	void CopyFrom(Curve *other_curve);
 	void ClearData();
 	void AddPoint(float x_value, float y_value);

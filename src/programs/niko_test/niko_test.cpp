@@ -30,10 +30,11 @@ void NikoTestApp::DoInteractiveUserInput()
 bool NikoTestApp::DoCalculation()
 {
 
+	/*
 	Image input_image;
 	Image output_3d;
 	float padding = 1.0;
-	double temp_double[50];
+	float temp_double[50];
 
 	MRCFile input_file("stack.mrc", false);
 	NumericTextFile my_par_file("input", OPEN_TO_READ);
@@ -42,7 +43,7 @@ bool NikoTestApp::DoCalculation()
 
 //	MRCFile output_2d("test2d.mrc", true);
 
-	Reconstruct3d my_reconstruction(input_file.ReturnXSize() * padding, input_file.ReturnYSize() * padding, input_file.ReturnXSize() * padding);
+	//Reconstruct3d my_reconstruction(input_file.ReturnXSize() * padding, input_file.ReturnYSize() * padding, input_file.ReturnXSize() * padding);
 
 	for (int current_image = 1; current_image <= input_file.ReturnNumberOfSlices(); current_image++)
 //	for (int current_image = 1; current_image <= 100; current_image++)
@@ -70,14 +71,14 @@ bool NikoTestApp::DoCalculation()
 		{
 			wxPrintf("Working on image %i, %f, %f, %f, %f, %f, %f, %f, %f\n", current_image, temp_double[1], temp_double[2], temp_double[3], temp_double[4], temp_double[5], temp_double[8], temp_double[9], temp_double[10]);
 		}
-		my_reconstruction.InsertSlice(input_image, my_ctf, my_parameters);
+		//my_reconstruction.InsertSlice(input_image, my_ctf, my_parameters);
 //		my_reconstruction.InsertSlice(input_image, my_parameters);
 	}
 
 //	input_image.QuickAndDirtyReadSlice("test.mrc", 1);
 
 
-	my_reconstruction.FinalizeSimple(output_3d);
+	//my_reconstruction.FinalizeSimple(output_3d);
 //	output_3d = my_reconstruction.image_reconstruction;
 //	output_3d = my_reconstruction.ctf_reconstruction;
 	output_3d.SwapRealSpaceQuadrants();
@@ -89,6 +90,8 @@ bool NikoTestApp::DoCalculation()
 	output_3d.CosineMask(170.0/3.28, 5.0);
 	MRCFile output_file("test3d.mrc", true);
 	output_3d.WriteSlices(&output_file,1,output_3d.logical_z_dimension);
+
+	*/
 
 	return true;
 }

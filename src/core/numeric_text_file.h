@@ -37,6 +37,7 @@ class NumericTextFile {
 
 		void ReadLine(float *data_array);
         void WriteLine(float *data_array);
+        void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
 
 };

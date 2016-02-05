@@ -26,18 +26,16 @@ bool MyApp::OnInit()
 
 
 	// Connect to the controller program..
+
+
 	// set up the parameters for passing the gui address..
+	command_line_parser.SetCmdLine(argc,argv);
+	command_line_parser.AddParam("controller_address",wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL);
+	command_line_parser.AddParam("controller_port",wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL);
+	command_line_parser.AddParam("job_code",wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL);
 
-	static const wxCmdLineEntryDesc command_line_descriptor[] =
-	{
-			{ wxCMD_LINE_PARAM, "a", "address", "controller_address", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
-			{ wxCMD_LINE_PARAM, "p", "port", "controller_port", wxCMD_LINE_VAL_NUMBER, wxCMD_LINE_PARAM_OPTIONAL },
-			{ wxCMD_LINE_PARAM, "j", "job_code", "job_code", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
-			{ wxCMD_LINE_NONE }
-	};
-
-
-	wxCmdLineParser command_line_parser( command_line_descriptor, argc, argv);
+	// Let the app add options
+	AddCommandLineOptions();
 
 	//wxPrintf("\n");
 	parse_status = command_line_parser.Parse(true);
@@ -148,6 +146,12 @@ bool MyApp::OnInit()
 	// go into the event loop
 
 	return true;
+}
+
+// Placeholder (to be overridden) function to add options to the command line
+void MyApp::AddCommandLineOptions( )
+{
+	return;
 }
 
 void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)

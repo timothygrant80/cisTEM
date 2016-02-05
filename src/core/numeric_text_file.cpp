@@ -14,7 +14,6 @@ NumericTextFile::NumericTextFile(wxString Filename, long wanted_access_type, lon
 	output_text_stream = NULL;
 
 	Open(Filename, wanted_access_type, wanted_records_per_line);
-	Init();
 }
 
 NumericTextFile::~NumericTextFile()
@@ -77,8 +76,9 @@ void NumericTextFile::Close()
 {
 	if (input_file_stream != NULL) delete input_file_stream;
 	if (input_text_stream != NULL) delete input_text_stream;
-	if (output_file_stream != NULL) delete output_file_stream;
 	if (output_text_stream != NULL) delete output_text_stream;
+	if (output_file_stream != NULL) delete output_file_stream;
+
 
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -245,6 +245,23 @@ void NumericTextFile::ReadLine(float *data_array)
 }
 
 void NumericTextFile::WriteLine(float *data_array)
+{
+	if (access_type != OPEN_TO_WRITE)
+	{
+		MyPrintWithDetails("Attempt to read from %s however access type is not WRITE\n",text_filename);
+		abort();
+	}
+
+	for (int counter = 0; counter < records_per_line; counter++ )
+	{
+		output_text_stream->WriteDouble(data_array[counter]);
+		if (counter != records_per_line - 1) output_text_stream->WriteString(" ");
+	}
+
+	output_text_stream->WriteString("\n");
+}
+
+void NumericTextFile::WriteLine(double *data_array)
 {
 	if (access_type != OPEN_TO_WRITE)
 	{

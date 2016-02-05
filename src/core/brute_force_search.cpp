@@ -23,11 +23,11 @@ BruteForceSearch::~BruteForceSearch()
 	//
 	if (is_in_memory)
 	{
-		delete starting_value;
-		delete best_value;
-		delete half_range;
-		delete step_size;
-		delete dimension_at_max;
+		delete [] starting_value;
+		delete [] best_value;
+		delete [] half_range;
+		delete [] step_size;
+		delete [] dimension_at_max;
 		is_in_memory = false;
 	}
 }
@@ -69,14 +69,12 @@ void BruteForceSearch::Init(float (*function_to_minimize)(void* parameters, floa
 	// we will start at lowest value for each dimension, then go in step sizes, until we get to upper limit.
 	// we will also do extra iterations for the starting value and the upper limit
 	num_iterations = 0;
-	MyDebugPrint("About to count iterations");
 	while (true)
 	{
 		IncrementCurrentValues(current_values,search_done);
 		if (search_done) { break; }
 		num_iterations++;
 	}
-	MyDebugPrint("Done counting iterations: %i",num_iterations);
 
 	//
 	target_function = function_to_minimize;
@@ -169,7 +167,6 @@ void BruteForceSearch::Run()
 	// The starting values and the corresponding score
 	best_score = target_function(parameters,starting_value);
 	for (i=0;i<number_of_dimensions;i++) { best_value[i] = starting_value[i]; }
-	MyDebugPrint("Score on input: %f\n",best_score);
 
 	// The starting point for the brute-force search
 	for (i=0; i<number_of_dimensions;i++)

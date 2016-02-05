@@ -304,7 +304,8 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 }
 
 
-float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge)
+// Apply a cosine-edge mask. By default, pixels on the outside of the mask radius are flattened. If invert=true, the pixels near the center are flattened.
+float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert)
 {
 	int i;
 	int j;
@@ -387,14 +388,39 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge)
 					{
 						distance_from_center = sqrtf(distance_from_center_squared);
 						edge = (1.0 + cos(PI * (distance_from_center - mask_radius) / wanted_mask_edge)) / 2.0;
-						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
-						mask_volume += pow(edge,2);
+						if (invert)
+						{
+							real_values[pixel_counter] = real_values[pixel_counter] * (1.0 - edge) + edge * pixel_sum;
+							mask_volume += pow(1.0 - edge,2);
+						}
+						else
+						{
+							real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+							mask_volume += pow(edge,2);
+						}
 					}
 					else
-						if (distance_from_center_squared >= mask_radius_plus_edge_squared) real_values[pixel_counter] = pixel_sum;
+					if (invert)
+					{
+						if (distance_from_center_squared <= mask_radius) 
+						{
+							real_values[pixel_counter] = pixel_sum;
+						}
+						else
+						{
+							mask_volume += 1.0;
+						}
+					}
 					else
 					{
-						mask_volume += 1.0;
+						if (distance_from_center_squared >= mask_radius_plus_edge_squared) 
+						{
+							real_values[pixel_counter] = pixel_sum;
+						}
+						else
+						{
+							mask_volume += 1.0;
+						}
 					}
 
 					pixel_counter++;
@@ -425,17 +451,32 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge)
 					{
 						frequency = sqrtf(frequency_squared);
 						edge = (1.0 + cos(PI * (frequency - mask_radius) / wanted_mask_edge)) / 2.0;
-						complex_values[pixel_counter] *= edge;
+						if (invert)
+						{
+							complex_values[pixel_counter] *= (1.0 - edge);
+						}
+						else
+						{
+							complex_values[pixel_counter] *= edge;
+						}
+					}
+					if (invert)
+					{
+						if (frequency_squared <= mask_radius) complex_values[pixel_counter] = 0.0;
 					}
 					else
-					if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
+					{
+						if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
+					}
 
 					pixel_counter++;
 				}
 			}
-		}
-	}
 
+		}
+
+	}
+	
 	return float(mask_volume);
 }
 
@@ -446,6 +487,7 @@ Image & Image::operator = (const Image &other_image)
 	*this = &other_image;
 	return *this;
 }
+
 
 Image & Image::operator = (const Image *other_image)
 {
@@ -688,6 +730,30 @@ void Image::UpdatePhysicalAddressOfBoxCenter()
 	physical_address_of_box_center_z = logical_z_dimension / 2;
 }
 
+
+// Work out whether a given Fourier component has a Hermitian mate which is also described explicitely by the FFTW
+bool Image::FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z)
+{
+	bool explicit_mate;
+
+	explicit_mate = physical_index_x == 0 && ! ( physical_index_y == 0 && physical_index_x == 0);
+
+	// We assume that the Y dimension is the non-flat one
+	if (IsEven(logical_y_dimension))
+	{
+		explicit_mate = explicit_mate && physical_index_y != physical_index_of_first_negative_frequency_y-1;
+	}
+
+	if (logical_z_dimension > 1)
+	{
+		if (IsEven(logical_z_dimension))
+		{
+			explicit_mate = explicit_mate && physical_index_z != physical_index_of_first_negative_frequency_z - 1;
+		}
+	}
+}
+
+
 //!> \brief   Apply a forward FT to the Image object. The FT is scaled.
 //   The DC component is at (self%DIM(1)/2+1,self%DIM(2)/2+1,self%DIM(3)/2+1) (assuming even dimensions) or at (1,1,1) by default.
 //
@@ -730,7 +796,7 @@ void Image::BackwardFFT()
 
 //!> \brief Divide all voxels by a constant value (this is actually done as a multiplication by the inverse)
 
-inline void Image::DivideByConstant(float constant_to_divide_by)
+void Image::DivideByConstant(float constant_to_divide_by)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -958,6 +1024,54 @@ void Image::SetMaximumValue(float new_maximum_value)
 	}
 }
 
+void Image::SetMinimumAndMaximumValues(float new_minimum_value, float new_maximum_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	for (long address = 0; address < real_memory_allocated; address++)
+	{
+		real_values[address] = std::max(std::min(new_maximum_value,real_values[address]),new_minimum_value);
+	}
+}
+
+int Image::ReturnMaximumDiagonalRadius()
+{
+	if (is_in_real_space)
+	{
+		return sqrt(pow(physical_address_of_box_center_x,2)+pow(physical_address_of_box_center_y,2)+pow(physical_address_of_box_center_z,2));
+	}
+	else
+	{
+		return sqrt(pow(logical_upper_bound_complex_x * fourier_voxel_size_x , 2) + pow(logical_upper_bound_complex_y * fourier_voxel_size_y , 2) + pow(logical_upper_bound_complex_z * fourier_voxel_size_z , 2) );
+	}
+}
+
+/*
+!>  \brief  return the maximum radius possible along a diagonal
+pure function GetMaximumDiagonalRadius(self)  result(maximum_radius)
+
+    ! Arguments
+
+    class(image),   intent(in)  ::  self
+
+    ! Variables
+
+    real                        ::  maximum_radius  !<  In pixels (real-space) or reciprocal pixels (Fourier space)
+
+    ! Start work
+    if (self%IsInRealSpace()) then
+        maximum_radius = sqrt(real(sum((self%physical_address_of_box_center-1)**2)))
+    else
+        maximum_radius = sqrt(  (self%logical_upper_bound_complex(1)*self%fourier_voxel_size(1))**2 &
+                            +   (self%logical_upper_bound_complex(2)*self%fourier_voxel_size(2))**2 &
+                            +   (self%logical_upper_bound_complex(3)*self%fourier_voxel_size(3))**2)
+    endif
+
+
+end function GetMaximumDiagonalRadius
+*/
+
 float Image::ReturnAverageOfRealValuesOnEdges()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -1107,8 +1221,11 @@ float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimu
 				maximum_value = std::max(maximum_value,real_values[address]);
 				address++;
 			}
+			address += padding_jump_value;
 		}
 	}
+
+	return maximum_value;
 }
 
 float Image::ReturnAverageOfRealValues()
@@ -1140,6 +1257,7 @@ float Image::ReturnAverageOfRealValues()
 	return sum / (logical_x_dimension * logical_y_dimension * logical_z_dimension);
 }
 
+
 void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -1151,9 +1269,9 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 	int i, j;
 	float x_sq, y_sq, rad_sq;
 	EmpiricalDistribution my_distribution(false);
-	float min_rad_sq = powf(minimum_radius,2);
-	float max_rad_sq = powf(maximum_radius,2);
-	float cross_half_width_sq = pow(cross_half_width,2);
+	const float min_rad_sq = powf(minimum_radius,2);
+	const float max_rad_sq = powf(maximum_radius,2);
+	const float cross_half_width_sq = pow(cross_half_width,2);
 	long address = -1;
 
 	for (j=0;j<logical_y_dimension;j++)
@@ -1181,8 +1299,8 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 	average = my_distribution.GetSampleMean();
 	sigma = sqrtf(my_distribution.GetSampleVariance());
 
-	MyDebugPrint("Average = %g  Sigma = %g",average,sigma);
 }
+
 
 void Image::SetMaximumValueOnCentralCross(float maximum_value)
 {
@@ -1235,12 +1353,6 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	const int		central_cross_half_width = 10;
 	float			astigmatism_penalty;
 
-	Image			debug_image;
-	static int      loc_in_debug_image = 0;
-
-	debug_image.Allocate(logical_x_dimension,logical_y_dimension,true);
-	debug_image.SetToConstant(0.0);
-
 	// Loop over half of the image (ignore Friedel mates)
 	for (j=0;j<logical_y_dimension;j++)
 	{
@@ -1258,7 +1370,6 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 			{
 				current_azimuth = atan2f(j_logi,i_logi);
 				current_ctf_value = fabsf(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
-				debug_image.real_values[address] = current_ctf_value;
 				// accumulate results
 				if ( i < physical_address_of_box_center_x - central_cross_half_width && (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width))
 				{
@@ -1286,11 +1397,6 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	{
 		astigmatism_penalty = 0.0;
 	}
-
-	//MyDebugPrint("Defocus (%6.1f,%6.1f,%5.1f) gives score %g / sqrt(%g * %g) - %g = %g",ctf.GetDefocus1(),ctf.GetDefocus2(),ctf.GetAstigmatismAzimuth(),cross_product,norm_image,norm_ctf,astigmatism_penalty,cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty);
-	loc_in_debug_image++;
-	debug_image.QuickAndDirtyWriteSlice("dbg_scoring_ctf.mrc",loc_in_debug_image);
-	QuickAndDirtyWriteSlice("dbg_scoring_this.mrc",1);
 
 	// The final score
 	return cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty;
@@ -1392,6 +1498,107 @@ int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index)
     	 return physical_index - logical_z_dimension;
     }
     else return physical_index;
+}
+
+//  \brief  Compute the 1D rotational average
+//          Each bin is 1 pixel wide and there are as many bins as fit in the diagonal of the image
+//          If the image is in Fourier space, compute the average of amplitudes.
+//			It is assumed that the average array has already been allocated with number_of_bins elements.
+//			The first element will be the value at the center/origin of the image.
+void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
+{
+
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	int i;
+	int j;
+	int k;
+	int i_logi;
+	int j_logi;
+	int k_logi;
+	float rad;
+	double number_of_values[number_of_bins];
+	long address;
+
+	// Initialise
+	for (i=0;i<number_of_bins;i++)
+	{
+		average[i] = 0.0;
+		number_of_values[i] = 0.0;
+	}
+	address = 0;
+
+
+	//
+	if (is_in_real_space)
+	{
+		for (k=0;k<logical_z_dimension;k++)
+		{
+			k_logi = pow((k-physical_address_of_box_center_z),2);
+			for (j=0;j<logical_y_dimension;j++)
+			{
+				j_logi = pow((j-physical_address_of_box_center_y),2) + k_logi;
+				for (i=0;i<logical_x_dimension;i++)
+				{
+					i_logi = pow((i-physical_address_of_box_center_x),2) + j_logi;
+					//
+					rad = sqrt(float(i_logi));
+					//
+					MyDebugAssertTrue(int(rad)+1 < number_of_bins,"Bad radius: %f",rad);
+					average[int(rad)  ] += (int(rad)-rad+1.0) * real_values[address];
+					average[int(rad)+1] += (rad-int(rad)    ) * real_values[address];
+					//
+					number_of_values[int(rad)  ] += (rad-int(rad)    );
+					number_of_values[int(rad)+1] += (int(rad)-rad+1.0);
+
+					// Increment the address
+					address ++;
+				}
+				// End of the line in real space
+				address += padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k=0;k<logical_z_dimension;k++)
+		{
+			k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k),2);
+			for (j=0;j<logical_y_dimension;j++)
+			{
+				j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j),2) + k_logi;
+				for (i=0;i<physical_upper_bound_complex_x;i++)
+				{
+					i_logi = pow(i,2) + j_logi;
+					//
+					if (FourierComponentHasExplicitHermitianMate(i,j,k)) continue;
+					rad = sqrt(float(i_logi));
+					//
+					average[int(rad)  ] += (rad-int(rad)    ) * cabs(complex_values[address]);
+					average[int(rad)+1] += (int(rad)-rad+1.0) * cabs(complex_values[address]);
+					//
+					number_of_values[int(rad)  ] += (rad-int(rad)    );
+					number_of_values[int(rad)+1] += (int(rad)-rad+1.0);
+
+					// Increment the address
+					address ++;
+				}
+			}
+		}
+	}
+
+	// Do the actual averaging
+	for (i=0;i<number_of_bins;i++)
+	{
+		if (number_of_values[i] > 0.0)
+		{
+			average[i] /= number_of_values[i];
+		}
+		else
+		{
+			average[i] = 0.0;
+		}
+	}
 }
 
 
@@ -1557,12 +1764,14 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 	for (i = physical_address_of_box_center_x + 1; i < logical_x_dimension; i++)
 	{
 		i_friedel = 2 * physical_address_of_box_center_x - i;
-		if (i > 511 || i_friedel > 511 || logical_y_dimension - 1 > 511) { MyDebugPrint("Bad values\n"); exit(-1); }
 		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,0,0)]                     = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,0,0)];
 		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension-1,0)] = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,logical_y_dimension - 1,0)];
 	}
 }
 
+
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
 // Taper edges of image so that there are no sharp discontinuities in real space
 // This is a re-implementation of the MRC program taperedgek.for (Richard Henderson, 1987)
 void Image::TaperEdges()
@@ -1615,6 +1824,15 @@ void Image::TaperEdges()
 	{
 		MyPrintWithDetails("Z dimension is too small: %i\n",logical_z_dimension);
 		abort();
+	}
+
+	if ( logical_z_dimension > 1 )
+	{
+		number_of_dimensions = 3;
+	}
+	else
+	{
+		number_of_dimensions = 2;
 	}
 
 
@@ -1692,7 +1910,7 @@ void Image::TaperEdges()
 						for (i=1;i<=averaging_strip_width_x;i++)
 						{
 							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)];
-							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension-i+1,j-1,k-1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension-i,j-1,k-1)];
 						}
 						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_x);
 						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_x);
@@ -1701,7 +1919,7 @@ void Image::TaperEdges()
 						for (i=1;i<=averaging_strip_width_y;i++)
 						{
 							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)];
-							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,logical_y_dimension-i+1,k-1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,logical_y_dimension-i,k-1)];
 						}
 						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_y);
 						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_y);
@@ -1710,7 +1928,7 @@ void Image::TaperEdges()
 						for (i=1;i<=averaging_strip_width_z;i++)
 						{
 							average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)];
-							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,logical_z_dimension-i+1)];
+							average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,logical_z_dimension-i)];
 						}
 						average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_z);
 						average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension]  /= float(averaging_strip_width_z);
@@ -1718,114 +1936,124 @@ void Image::TaperEdges()
 				}
 			}
 		}
-	}
 
-	for (address=0;address<logical_second_dimension*logical_third_dimension;address++)
-	{
-		average_for_current_edge_average[address] = 0.5 * ( average_for_current_edge_finish[address] - average_for_current_edge_start[address]);
-		average_for_current_edge_start[address] -= average_for_current_edge_average[address];
-		average_for_current_edge_finish[address] -= average_for_current_edge_average[address];
-	}
-
-	// Apply smoothing parallel to edge in the form of a running average
-	for (k=1;k<=logical_third_dimension;k++)
-	{
-		for (j=1;j<=logical_second_dimension;j++)
+		for (address=0;address<logical_second_dimension*logical_third_dimension;address++)
 		{
-			number_of_values_in_running_average = 0;
-			// Loop over neighbourhood of non-smooth arrays
-			for (k_shift=-smoothing_half_width_third_dimension;k_shift<=smoothing_half_width_third_dimension;k_shift++)
-			{
-				kk = k+k_shift;
-				if (kk < 1 || kk > logical_third_dimension) continue;
-				for (j_shift=-smoothing_half_width_second_dimension;j_shift<=smoothing_half_width_second_dimension;j_shift++)
-				{
-					jj = j+j_shift;
-					if (jj<1 || jj > logical_second_dimension) continue;
-					number_of_values_in_running_average++;
+			average_for_current_edge_average[address] = 0.5 * ( average_for_current_edge_finish[address] - average_for_current_edge_start[address]);
+			average_for_current_edge_start[address] -= average_for_current_edge_average[address];
+			average_for_current_edge_finish[address] -= average_for_current_edge_average[address];
+		}
 
-					smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_start [(jj-1)+(kk-1)*logical_second_dimension];
-					smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_finish[(jj-1)+(kk-1)*logical_second_dimension];
+		// Apply smoothing parallel to edge in the form of a running average
+		for (k=1;k<=logical_third_dimension;k++)
+		{
+			for (j=1;j<=logical_second_dimension;j++)
+			{
+				number_of_values_in_running_average = 0;
+				// Loop over neighbourhood of non-smooth arrays
+				for (k_shift=-smoothing_half_width_third_dimension;k_shift<=smoothing_half_width_third_dimension;k_shift++)
+				{
+					kk = k+k_shift;
+					if (kk < 1 || kk > logical_third_dimension) continue;
+					for (j_shift=-smoothing_half_width_second_dimension;j_shift<=smoothing_half_width_second_dimension;j_shift++)
+					{
+						jj = j+j_shift;
+						if (jj<1 || jj > logical_second_dimension) continue;
+						number_of_values_in_running_average++;
+
+						smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_start [(jj-1)+(kk-1)*logical_second_dimension];
+						smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] += average_for_current_edge_finish[(jj-1)+(kk-1)*logical_second_dimension];
+					}
+				}
+				// Now we can compute the average
+				smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
+				smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
+			}
+		}
+
+		// Taper the image
+		for (i=1;i<=logical_current_dimension;i++)
+		{
+			if (i<=current_tapering_strip_width)
+			{
+				switch(current_dimension)
+				{
+				case(1):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+							}
+						}
+						break;
+				case(2):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+							}
+						}
+						break;
+				case(3):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
+							}
+						}
+						break;
 				}
 			}
-			// Now we can compute the average
-			smooth_average_for_current_edge_start [(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
-			smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] /= float(number_of_values_in_running_average);
+			else if(i >= logical_current_dimension - current_tapering_strip_width+1)
+			{
+				switch(current_dimension)
+				{
+				case(1):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+							}
+						}
+						break;
+				case(2):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+							}
+						}
+						break;
+				case(3):
+						for (k=1;k<=logical_third_dimension;k++)
+						{
+							for (j=1;j<=logical_second_dimension;j++)
+							{
+								real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
+							}
+						}
+						break;
+				}
+			}
 		}
-	}
 
-	// Taper the image
-	for (i=1;i<=logical_current_dimension;i++)
-	{
-		if (i<=current_tapering_strip_width)
-		{
-			switch(current_dimension)
-			{
-			case(1):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			case(2):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			case(3):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_start[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width-i+1) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			}
-		}
-		else if(i >= logical_current_dimension - current_tapering_strip_width+1)
-		{
-			switch(current_dimension)
-			{
-			case(1):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(i-1,j-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			case(2):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,i-1,k-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			case(3):
-					for (k=1;k<=logical_third_dimension;k++)
-					{
-						for (j=1;j<=logical_second_dimension;j++)
-						{
-							real_values[ReturnReal1DAddressFromPhysicalCoord(j-1,k-1,i-1)] -= smooth_average_for_current_edge_finish[(j-1)+(k-1)*logical_second_dimension] * float(current_tapering_strip_width+i-logical_current_dimension) / float(current_tapering_strip_width);
-						}
-					}
-					break;
-			}
-		}
-	}
+	} // end of loop over dimensions
+
+	// Cleanup
+	delete [] average_for_current_edge_start;
+	delete []average_for_current_edge_finish;
+	delete [] average_for_current_edge_average;
+	delete [] smooth_average_for_current_edge_start;
+	delete [] smooth_average_for_current_edge_finish;
+
 
 }
+//#pragma GCC pop_options
 
 
 void Image::Sine1D(int number_of_periods)
@@ -1972,6 +2200,7 @@ void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float 
 						+   x_dist   * y_dist   * real_values[address_2 + 1];
 
 }
+
 
 void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value)
 {
@@ -2691,7 +2920,6 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
 
     return found_peak;
 }*/
-
 
 
 

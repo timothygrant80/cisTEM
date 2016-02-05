@@ -92,7 +92,8 @@ build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = ProjectX$(EXEEXT) unblur$(EXEEXT) \
 	guix_job_control$(EXEEXT) console_test$(EXEEXT) \
-	applyctf$(EXEEXT) ctffind$(EXEEXT)
+	applyctf$(EXEEXT) ctffind$(EXEEXT) reconstruct3d$(EXEEXT) \
+	niko_test$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -114,14 +115,20 @@ libcore_a_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_libcore_a_OBJECTS = core/libcore_a-functions.$(OBJEXT) \
 	core/libcore_a-userinput.$(OBJEXT) \
+	core/libcore_a-angles_and_shifts.$(OBJEXT) \
 	core/libcore_a-assets.$(OBJEXT) \
 	core/libcore_a-asset_group.$(OBJEXT) \
 	core/libcore_a-curve.$(OBJEXT) core/libcore_a-image.$(OBJEXT) \
 	core/libcore_a-electron_dose.$(OBJEXT) \
+	core/libcore_a-matrix.$(OBJEXT) \
+	core/libcore_a-symmetry_matrix.$(OBJEXT) \
 	core/libcore_a-mrc_file.$(OBJEXT) \
 	core/libcore_a-mrc_header.$(OBJEXT) \
 	core/libcore_a-database.$(OBJEXT) \
 	core/libcore_a-project.$(OBJEXT) \
+	core/libcore_a-reconstruct_3d.$(OBJEXT) \
+	core/libcore_a-reconstructed_volume.$(OBJEXT) \
+	core/libcore_a-resolution_statistics.$(OBJEXT) \
 	core/libcore_a-job_packager.$(OBJEXT) \
 	core/libcore_a-job_tracker.$(OBJEXT) \
 	core/libcore_a-run_profiles.$(OBJEXT) \
@@ -192,6 +199,21 @@ guix_job_control_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(guix_job_control_CXXFLAGS) $(CXXFLAGS) \
 	$(guix_job_control_LDFLAGS) $(LDFLAGS) -o $@
+am_niko_test_OBJECTS =  \
+	programs/niko_test/niko_test-niko_test.$(OBJEXT)
+niko_test_OBJECTS = $(am_niko_test_OBJECTS)
+niko_test_DEPENDENCIES = libcore.a
+niko_test_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(niko_test_CXXFLAGS) \
+	$(CXXFLAGS) $(niko_test_LDFLAGS) $(LDFLAGS) -o $@
+am_reconstruct3d_OBJECTS =  \
+	programs/reconstruct3d/reconstruct3d-reconstruct3d.$(OBJEXT)
+reconstruct3d_OBJECTS = $(am_reconstruct3d_OBJECTS)
+reconstruct3d_DEPENDENCIES = libcore.a
+reconstruct3d_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(reconstruct3d_CXXFLAGS) $(CXXFLAGS) $(reconstruct3d_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_unblur_OBJECTS = programs/unblur/unblur-unblur.$(OBJEXT)
 unblur_OBJECTS = $(am_unblur_OBJECTS)
 unblur_DEPENDENCIES = libcore.a
@@ -235,11 +257,13 @@ am__v_CXXLD_1 =
 SOURCES = $(libcore_a_SOURCES) $(libguicore_a_SOURCES) \
 	$(ProjectX_SOURCES) $(applyctf_SOURCES) \
 	$(console_test_SOURCES) $(ctffind_SOURCES) \
-	$(guix_job_control_SOURCES) $(unblur_SOURCES)
+	$(guix_job_control_SOURCES) $(niko_test_SOURCES) \
+	$(reconstruct3d_SOURCES) $(unblur_SOURCES)
 DIST_SOURCES = $(libcore_a_SOURCES) $(libguicore_a_SOURCES) \
 	$(ProjectX_SOURCES) $(applyctf_SOURCES) \
 	$(console_test_SOURCES) $(ctffind_SOURCES) \
-	$(guix_job_control_SOURCES) $(unblur_SOURCES)
+	$(guix_job_control_SOURCES) $(niko_test_SOURCES) \
+	$(reconstruct3d_SOURCES) $(unblur_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -415,15 +439,21 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 libcore_a_SOURCES = core/functions.cpp \
                        core/userinput.cpp \
+                       core/angles_and_shifts.cpp \
                        core/assets.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
                        core/image.cpp \
                        core/electron_dose.cpp \
+                       core/matrix.cpp \
+                       core/symmetry_matrix.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/database.cpp \
                        core/project.cpp \
+                       core/reconstruct_3d.cpp \
+                       core/reconstructed_volume.cpp \
+                       core/resolution_statistics.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
@@ -472,6 +502,16 @@ ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
 ctffind_LDADD = libcore.a
+reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
+reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+reconstruct3d_LDFLAGS = $(WX_LIBS_BASE)
+reconstruct3d_LDADD = libcore.a
+niko_test_SOURCES = programs/niko_test/niko_test.cpp
+niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_LDFLAGS = $(WX_LIBS_BASE)
+niko_test_LDADD = libcore.a
 all: all-am
 
 .SUFFIXES:
@@ -518,6 +558,8 @@ core/libcore_a-functions.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-userinput.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-angles_and_shifts.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-assets.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-asset_group.$(OBJEXT): core/$(am__dirstamp) \
@@ -528,6 +570,10 @@ core/libcore_a-image.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-electron_dose.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-matrix.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-symmetry_matrix.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-mrc_file.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-mrc_header.$(OBJEXT): core/$(am__dirstamp) \
@@ -535,6 +581,12 @@ core/libcore_a-mrc_header.$(OBJEXT): core/$(am__dirstamp) \
 core/libcore_a-database.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-project.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-reconstruct_3d.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-reconstructed_volume.$(OBJEXT): core/$(am__dirstamp) \
+	core/$(DEPDIR)/$(am__dirstamp)
+core/libcore_a-resolution_statistics.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
 core/libcore_a-job_packager.$(OBJEXT): core/$(am__dirstamp) \
 	core/$(DEPDIR)/$(am__dirstamp)
@@ -720,6 +772,32 @@ programs/guix_job_control/guix_job_control-guix_job_control.$(OBJEXT):  \
 guix_job_control$(EXEEXT): $(guix_job_control_OBJECTS) $(guix_job_control_DEPENDENCIES) $(EXTRA_guix_job_control_DEPENDENCIES) 
 	@rm -f guix_job_control$(EXEEXT)
 	$(AM_V_CXXLD)$(guix_job_control_LINK) $(guix_job_control_OBJECTS) $(guix_job_control_LDADD) $(LIBS)
+programs/niko_test/$(am__dirstamp):
+	@$(MKDIR_P) programs/niko_test
+	@: > programs/niko_test/$(am__dirstamp)
+programs/niko_test/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) programs/niko_test/$(DEPDIR)
+	@: > programs/niko_test/$(DEPDIR)/$(am__dirstamp)
+programs/niko_test/niko_test-niko_test.$(OBJEXT):  \
+	programs/niko_test/$(am__dirstamp) \
+	programs/niko_test/$(DEPDIR)/$(am__dirstamp)
+
+niko_test$(EXEEXT): $(niko_test_OBJECTS) $(niko_test_DEPENDENCIES) $(EXTRA_niko_test_DEPENDENCIES) 
+	@rm -f niko_test$(EXEEXT)
+	$(AM_V_CXXLD)$(niko_test_LINK) $(niko_test_OBJECTS) $(niko_test_LDADD) $(LIBS)
+programs/reconstruct3d/$(am__dirstamp):
+	@$(MKDIR_P) programs/reconstruct3d
+	@: > programs/reconstruct3d/$(am__dirstamp)
+programs/reconstruct3d/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) programs/reconstruct3d/$(DEPDIR)
+	@: > programs/reconstruct3d/$(DEPDIR)/$(am__dirstamp)
+programs/reconstruct3d/reconstruct3d-reconstruct3d.$(OBJEXT):  \
+	programs/reconstruct3d/$(am__dirstamp) \
+	programs/reconstruct3d/$(DEPDIR)/$(am__dirstamp)
+
+reconstruct3d$(EXEEXT): $(reconstruct3d_OBJECTS) $(reconstruct3d_DEPENDENCIES) $(EXTRA_reconstruct3d_DEPENDENCIES) 
+	@rm -f reconstruct3d$(EXEEXT)
+	$(AM_V_CXXLD)$(reconstruct3d_LINK) $(reconstruct3d_OBJECTS) $(reconstruct3d_LDADD) $(LIBS)
 programs/unblur/$(am__dirstamp):
 	@$(MKDIR_P) programs/unblur
 	@: > programs/unblur/$(am__dirstamp)
@@ -742,12 +820,15 @@ mostlyclean-compile:
 	-rm -f programs/console_test/*.$(OBJEXT)
 	-rm -f programs/ctffind/*.$(OBJEXT)
 	-rm -f programs/guix_job_control/*.$(OBJEXT)
+	-rm -f programs/niko_test/*.$(OBJEXT)
 	-rm -f programs/projectx/*.$(OBJEXT)
+	-rm -f programs/reconstruct3d/*.$(OBJEXT)
 	-rm -f programs/unblur/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-angles_and_shifts.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-asset_group.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-assets.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-brute_force_search.Po@am__quote@
@@ -762,13 +843,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-job_packager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-job_tracker.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-mrc_file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-mrc_header.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-myapp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-numeric_text_file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-progressbar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-project.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-reconstruct_3d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-reconstructed_volume.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-resolution_statistics.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-run_profiles.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-symmetry_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-userinput.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libcore_a-va04.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@core/$(DEPDIR)/libguicore_a-gui_job_controller.Po@am__quote@
@@ -790,7 +876,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@programs/console_test/$(DEPDIR)/console_test-console_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@programs/ctffind/$(DEPDIR)/ctffind-ctffind.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@programs/guix_job_control/$(DEPDIR)/guix_job_control-guix_job_control.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@programs/niko_test/$(DEPDIR)/niko_test-niko_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@programs/projectx/$(DEPDIR)/ProjectX-projectx.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@programs/unblur/$(DEPDIR)/unblur-unblur.Po@am__quote@
 
 .cpp.o:
@@ -844,6 +932,20 @@ core/libcore_a-userinput.obj: core/userinput.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/userinput.cpp' object='core/libcore_a-userinput.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-userinput.obj `if test -f 'core/userinput.cpp'; then $(CYGPATH_W) 'core/userinput.cpp'; else $(CYGPATH_W) '$(srcdir)/core/userinput.cpp'; fi`
+
+core/libcore_a-angles_and_shifts.o: core/angles_and_shifts.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-angles_and_shifts.o -MD -MP -MF core/$(DEPDIR)/libcore_a-angles_and_shifts.Tpo -c -o core/libcore_a-angles_and_shifts.o `test -f 'core/angles_and_shifts.cpp' || echo '$(srcdir)/'`core/angles_and_shifts.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-angles_and_shifts.Tpo core/$(DEPDIR)/libcore_a-angles_and_shifts.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/angles_and_shifts.cpp' object='core/libcore_a-angles_and_shifts.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-angles_and_shifts.o `test -f 'core/angles_and_shifts.cpp' || echo '$(srcdir)/'`core/angles_and_shifts.cpp
+
+core/libcore_a-angles_and_shifts.obj: core/angles_and_shifts.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-angles_and_shifts.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-angles_and_shifts.Tpo -c -o core/libcore_a-angles_and_shifts.obj `if test -f 'core/angles_and_shifts.cpp'; then $(CYGPATH_W) 'core/angles_and_shifts.cpp'; else $(CYGPATH_W) '$(srcdir)/core/angles_and_shifts.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-angles_and_shifts.Tpo core/$(DEPDIR)/libcore_a-angles_and_shifts.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/angles_and_shifts.cpp' object='core/libcore_a-angles_and_shifts.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-angles_and_shifts.obj `if test -f 'core/angles_and_shifts.cpp'; then $(CYGPATH_W) 'core/angles_and_shifts.cpp'; else $(CYGPATH_W) '$(srcdir)/core/angles_and_shifts.cpp'; fi`
 
 core/libcore_a-assets.o: core/assets.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-assets.o -MD -MP -MF core/$(DEPDIR)/libcore_a-assets.Tpo -c -o core/libcore_a-assets.o `test -f 'core/assets.cpp' || echo '$(srcdir)/'`core/assets.cpp
@@ -915,6 +1017,34 @@ core/libcore_a-electron_dose.obj: core/electron_dose.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-electron_dose.obj `if test -f 'core/electron_dose.cpp'; then $(CYGPATH_W) 'core/electron_dose.cpp'; else $(CYGPATH_W) '$(srcdir)/core/electron_dose.cpp'; fi`
 
+core/libcore_a-matrix.o: core/matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-matrix.o -MD -MP -MF core/$(DEPDIR)/libcore_a-matrix.Tpo -c -o core/libcore_a-matrix.o `test -f 'core/matrix.cpp' || echo '$(srcdir)/'`core/matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-matrix.Tpo core/$(DEPDIR)/libcore_a-matrix.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/matrix.cpp' object='core/libcore_a-matrix.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-matrix.o `test -f 'core/matrix.cpp' || echo '$(srcdir)/'`core/matrix.cpp
+
+core/libcore_a-matrix.obj: core/matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-matrix.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-matrix.Tpo -c -o core/libcore_a-matrix.obj `if test -f 'core/matrix.cpp'; then $(CYGPATH_W) 'core/matrix.cpp'; else $(CYGPATH_W) '$(srcdir)/core/matrix.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-matrix.Tpo core/$(DEPDIR)/libcore_a-matrix.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/matrix.cpp' object='core/libcore_a-matrix.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-matrix.obj `if test -f 'core/matrix.cpp'; then $(CYGPATH_W) 'core/matrix.cpp'; else $(CYGPATH_W) '$(srcdir)/core/matrix.cpp'; fi`
+
+core/libcore_a-symmetry_matrix.o: core/symmetry_matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-symmetry_matrix.o -MD -MP -MF core/$(DEPDIR)/libcore_a-symmetry_matrix.Tpo -c -o core/libcore_a-symmetry_matrix.o `test -f 'core/symmetry_matrix.cpp' || echo '$(srcdir)/'`core/symmetry_matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-symmetry_matrix.Tpo core/$(DEPDIR)/libcore_a-symmetry_matrix.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/symmetry_matrix.cpp' object='core/libcore_a-symmetry_matrix.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-symmetry_matrix.o `test -f 'core/symmetry_matrix.cpp' || echo '$(srcdir)/'`core/symmetry_matrix.cpp
+
+core/libcore_a-symmetry_matrix.obj: core/symmetry_matrix.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-symmetry_matrix.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-symmetry_matrix.Tpo -c -o core/libcore_a-symmetry_matrix.obj `if test -f 'core/symmetry_matrix.cpp'; then $(CYGPATH_W) 'core/symmetry_matrix.cpp'; else $(CYGPATH_W) '$(srcdir)/core/symmetry_matrix.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-symmetry_matrix.Tpo core/$(DEPDIR)/libcore_a-symmetry_matrix.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/symmetry_matrix.cpp' object='core/libcore_a-symmetry_matrix.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-symmetry_matrix.obj `if test -f 'core/symmetry_matrix.cpp'; then $(CYGPATH_W) 'core/symmetry_matrix.cpp'; else $(CYGPATH_W) '$(srcdir)/core/symmetry_matrix.cpp'; fi`
+
 core/libcore_a-mrc_file.o: core/mrc_file.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-mrc_file.o -MD -MP -MF core/$(DEPDIR)/libcore_a-mrc_file.Tpo -c -o core/libcore_a-mrc_file.o `test -f 'core/mrc_file.cpp' || echo '$(srcdir)/'`core/mrc_file.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-mrc_file.Tpo core/$(DEPDIR)/libcore_a-mrc_file.Po
@@ -970,6 +1100,48 @@ core/libcore_a-project.obj: core/project.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/project.cpp' object='core/libcore_a-project.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-project.obj `if test -f 'core/project.cpp'; then $(CYGPATH_W) 'core/project.cpp'; else $(CYGPATH_W) '$(srcdir)/core/project.cpp'; fi`
+
+core/libcore_a-reconstruct_3d.o: core/reconstruct_3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-reconstruct_3d.o -MD -MP -MF core/$(DEPDIR)/libcore_a-reconstruct_3d.Tpo -c -o core/libcore_a-reconstruct_3d.o `test -f 'core/reconstruct_3d.cpp' || echo '$(srcdir)/'`core/reconstruct_3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-reconstruct_3d.Tpo core/$(DEPDIR)/libcore_a-reconstruct_3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/reconstruct_3d.cpp' object='core/libcore_a-reconstruct_3d.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-reconstruct_3d.o `test -f 'core/reconstruct_3d.cpp' || echo '$(srcdir)/'`core/reconstruct_3d.cpp
+
+core/libcore_a-reconstruct_3d.obj: core/reconstruct_3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-reconstruct_3d.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-reconstruct_3d.Tpo -c -o core/libcore_a-reconstruct_3d.obj `if test -f 'core/reconstruct_3d.cpp'; then $(CYGPATH_W) 'core/reconstruct_3d.cpp'; else $(CYGPATH_W) '$(srcdir)/core/reconstruct_3d.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-reconstruct_3d.Tpo core/$(DEPDIR)/libcore_a-reconstruct_3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/reconstruct_3d.cpp' object='core/libcore_a-reconstruct_3d.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-reconstruct_3d.obj `if test -f 'core/reconstruct_3d.cpp'; then $(CYGPATH_W) 'core/reconstruct_3d.cpp'; else $(CYGPATH_W) '$(srcdir)/core/reconstruct_3d.cpp'; fi`
+
+core/libcore_a-reconstructed_volume.o: core/reconstructed_volume.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-reconstructed_volume.o -MD -MP -MF core/$(DEPDIR)/libcore_a-reconstructed_volume.Tpo -c -o core/libcore_a-reconstructed_volume.o `test -f 'core/reconstructed_volume.cpp' || echo '$(srcdir)/'`core/reconstructed_volume.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-reconstructed_volume.Tpo core/$(DEPDIR)/libcore_a-reconstructed_volume.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/reconstructed_volume.cpp' object='core/libcore_a-reconstructed_volume.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-reconstructed_volume.o `test -f 'core/reconstructed_volume.cpp' || echo '$(srcdir)/'`core/reconstructed_volume.cpp
+
+core/libcore_a-reconstructed_volume.obj: core/reconstructed_volume.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-reconstructed_volume.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-reconstructed_volume.Tpo -c -o core/libcore_a-reconstructed_volume.obj `if test -f 'core/reconstructed_volume.cpp'; then $(CYGPATH_W) 'core/reconstructed_volume.cpp'; else $(CYGPATH_W) '$(srcdir)/core/reconstructed_volume.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-reconstructed_volume.Tpo core/$(DEPDIR)/libcore_a-reconstructed_volume.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/reconstructed_volume.cpp' object='core/libcore_a-reconstructed_volume.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-reconstructed_volume.obj `if test -f 'core/reconstructed_volume.cpp'; then $(CYGPATH_W) 'core/reconstructed_volume.cpp'; else $(CYGPATH_W) '$(srcdir)/core/reconstructed_volume.cpp'; fi`
+
+core/libcore_a-resolution_statistics.o: core/resolution_statistics.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-resolution_statistics.o -MD -MP -MF core/$(DEPDIR)/libcore_a-resolution_statistics.Tpo -c -o core/libcore_a-resolution_statistics.o `test -f 'core/resolution_statistics.cpp' || echo '$(srcdir)/'`core/resolution_statistics.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-resolution_statistics.Tpo core/$(DEPDIR)/libcore_a-resolution_statistics.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/resolution_statistics.cpp' object='core/libcore_a-resolution_statistics.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-resolution_statistics.o `test -f 'core/resolution_statistics.cpp' || echo '$(srcdir)/'`core/resolution_statistics.cpp
+
+core/libcore_a-resolution_statistics.obj: core/resolution_statistics.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-resolution_statistics.obj -MD -MP -MF core/$(DEPDIR)/libcore_a-resolution_statistics.Tpo -c -o core/libcore_a-resolution_statistics.obj `if test -f 'core/resolution_statistics.cpp'; then $(CYGPATH_W) 'core/resolution_statistics.cpp'; else $(CYGPATH_W) '$(srcdir)/core/resolution_statistics.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) core/$(DEPDIR)/libcore_a-resolution_statistics.Tpo core/$(DEPDIR)/libcore_a-resolution_statistics.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='core/resolution_statistics.cpp' object='core/libcore_a-resolution_statistics.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -c -o core/libcore_a-resolution_statistics.obj `if test -f 'core/resolution_statistics.cpp'; then $(CYGPATH_W) 'core/resolution_statistics.cpp'; else $(CYGPATH_W) '$(srcdir)/core/resolution_statistics.cpp'; fi`
 
 core/libcore_a-job_packager.o: core/job_packager.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libcore_a_CPPFLAGS) $(CPPFLAGS) $(libcore_a_CXXFLAGS) $(CXXFLAGS) -MT core/libcore_a-job_packager.o -MD -MP -MF core/$(DEPDIR)/libcore_a-job_packager.Tpo -c -o core/libcore_a-job_packager.o `test -f 'core/job_packager.cpp' || echo '$(srcdir)/'`core/job_packager.cpp
@@ -1419,6 +1591,34 @@ programs/guix_job_control/guix_job_control-guix_job_control.obj: programs/guix_j
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(guix_job_control_CPPFLAGS) $(CPPFLAGS) $(guix_job_control_CXXFLAGS) $(CXXFLAGS) -c -o programs/guix_job_control/guix_job_control-guix_job_control.obj `if test -f 'programs/guix_job_control/guix_job_control.cpp'; then $(CYGPATH_W) 'programs/guix_job_control/guix_job_control.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/guix_job_control/guix_job_control.cpp'; fi`
 
+programs/niko_test/niko_test-niko_test.o: programs/niko_test/niko_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(niko_test_CPPFLAGS) $(CPPFLAGS) $(niko_test_CXXFLAGS) $(CXXFLAGS) -MT programs/niko_test/niko_test-niko_test.o -MD -MP -MF programs/niko_test/$(DEPDIR)/niko_test-niko_test.Tpo -c -o programs/niko_test/niko_test-niko_test.o `test -f 'programs/niko_test/niko_test.cpp' || echo '$(srcdir)/'`programs/niko_test/niko_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) programs/niko_test/$(DEPDIR)/niko_test-niko_test.Tpo programs/niko_test/$(DEPDIR)/niko_test-niko_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='programs/niko_test/niko_test.cpp' object='programs/niko_test/niko_test-niko_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(niko_test_CPPFLAGS) $(CPPFLAGS) $(niko_test_CXXFLAGS) $(CXXFLAGS) -c -o programs/niko_test/niko_test-niko_test.o `test -f 'programs/niko_test/niko_test.cpp' || echo '$(srcdir)/'`programs/niko_test/niko_test.cpp
+
+programs/niko_test/niko_test-niko_test.obj: programs/niko_test/niko_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(niko_test_CPPFLAGS) $(CPPFLAGS) $(niko_test_CXXFLAGS) $(CXXFLAGS) -MT programs/niko_test/niko_test-niko_test.obj -MD -MP -MF programs/niko_test/$(DEPDIR)/niko_test-niko_test.Tpo -c -o programs/niko_test/niko_test-niko_test.obj `if test -f 'programs/niko_test/niko_test.cpp'; then $(CYGPATH_W) 'programs/niko_test/niko_test.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/niko_test/niko_test.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) programs/niko_test/$(DEPDIR)/niko_test-niko_test.Tpo programs/niko_test/$(DEPDIR)/niko_test-niko_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='programs/niko_test/niko_test.cpp' object='programs/niko_test/niko_test-niko_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(niko_test_CPPFLAGS) $(CPPFLAGS) $(niko_test_CXXFLAGS) $(CXXFLAGS) -c -o programs/niko_test/niko_test-niko_test.obj `if test -f 'programs/niko_test/niko_test.cpp'; then $(CYGPATH_W) 'programs/niko_test/niko_test.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/niko_test/niko_test.cpp'; fi`
+
+programs/reconstruct3d/reconstruct3d-reconstruct3d.o: programs/reconstruct3d/reconstruct3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(reconstruct3d_CPPFLAGS) $(CPPFLAGS) $(reconstruct3d_CXXFLAGS) $(CXXFLAGS) -MT programs/reconstruct3d/reconstruct3d-reconstruct3d.o -MD -MP -MF programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Tpo -c -o programs/reconstruct3d/reconstruct3d-reconstruct3d.o `test -f 'programs/reconstruct3d/reconstruct3d.cpp' || echo '$(srcdir)/'`programs/reconstruct3d/reconstruct3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Tpo programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='programs/reconstruct3d/reconstruct3d.cpp' object='programs/reconstruct3d/reconstruct3d-reconstruct3d.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(reconstruct3d_CPPFLAGS) $(CPPFLAGS) $(reconstruct3d_CXXFLAGS) $(CXXFLAGS) -c -o programs/reconstruct3d/reconstruct3d-reconstruct3d.o `test -f 'programs/reconstruct3d/reconstruct3d.cpp' || echo '$(srcdir)/'`programs/reconstruct3d/reconstruct3d.cpp
+
+programs/reconstruct3d/reconstruct3d-reconstruct3d.obj: programs/reconstruct3d/reconstruct3d.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(reconstruct3d_CPPFLAGS) $(CPPFLAGS) $(reconstruct3d_CXXFLAGS) $(CXXFLAGS) -MT programs/reconstruct3d/reconstruct3d-reconstruct3d.obj -MD -MP -MF programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Tpo -c -o programs/reconstruct3d/reconstruct3d-reconstruct3d.obj `if test -f 'programs/reconstruct3d/reconstruct3d.cpp'; then $(CYGPATH_W) 'programs/reconstruct3d/reconstruct3d.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/reconstruct3d/reconstruct3d.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Tpo programs/reconstruct3d/$(DEPDIR)/reconstruct3d-reconstruct3d.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='programs/reconstruct3d/reconstruct3d.cpp' object='programs/reconstruct3d/reconstruct3d-reconstruct3d.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(reconstruct3d_CPPFLAGS) $(CPPFLAGS) $(reconstruct3d_CXXFLAGS) $(CXXFLAGS) -c -o programs/reconstruct3d/reconstruct3d-reconstruct3d.obj `if test -f 'programs/reconstruct3d/reconstruct3d.cpp'; then $(CYGPATH_W) 'programs/reconstruct3d/reconstruct3d.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/reconstruct3d/reconstruct3d.cpp'; fi`
+
 programs/unblur/unblur-unblur.o: programs/unblur/unblur.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(unblur_CPPFLAGS) $(CPPFLAGS) $(unblur_CXXFLAGS) $(CXXFLAGS) -MT programs/unblur/unblur-unblur.o -MD -MP -MF programs/unblur/$(DEPDIR)/unblur-unblur.Tpo -c -o programs/unblur/unblur-unblur.o `test -f 'programs/unblur/unblur.cpp' || echo '$(srcdir)/'`programs/unblur/unblur.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) programs/unblur/$(DEPDIR)/unblur-unblur.Tpo programs/unblur/$(DEPDIR)/unblur-unblur.Po
@@ -1566,8 +1766,12 @@ distclean-generic:
 	-rm -f programs/ctffind/$(am__dirstamp)
 	-rm -f programs/guix_job_control/$(DEPDIR)/$(am__dirstamp)
 	-rm -f programs/guix_job_control/$(am__dirstamp)
+	-rm -f programs/niko_test/$(DEPDIR)/$(am__dirstamp)
+	-rm -f programs/niko_test/$(am__dirstamp)
 	-rm -f programs/projectx/$(DEPDIR)/$(am__dirstamp)
 	-rm -f programs/projectx/$(am__dirstamp)
+	-rm -f programs/reconstruct3d/$(DEPDIR)/$(am__dirstamp)
+	-rm -f programs/reconstruct3d/$(am__dirstamp)
 	-rm -f programs/unblur/$(DEPDIR)/$(am__dirstamp)
 	-rm -f programs/unblur/$(am__dirstamp)
 
@@ -1580,7 +1784,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool \
 	clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf core/$(DEPDIR) gui/$(DEPDIR) programs/applyctf/$(DEPDIR) programs/console_test/$(DEPDIR) programs/ctffind/$(DEPDIR) programs/guix_job_control/$(DEPDIR) programs/projectx/$(DEPDIR) programs/unblur/$(DEPDIR)
+	-rm -rf core/$(DEPDIR) gui/$(DEPDIR) programs/applyctf/$(DEPDIR) programs/console_test/$(DEPDIR) programs/ctffind/$(DEPDIR) programs/guix_job_control/$(DEPDIR) programs/niko_test/$(DEPDIR) programs/projectx/$(DEPDIR) programs/reconstruct3d/$(DEPDIR) programs/unblur/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1626,7 +1830,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf core/$(DEPDIR) gui/$(DEPDIR) programs/applyctf/$(DEPDIR) programs/console_test/$(DEPDIR) programs/ctffind/$(DEPDIR) programs/guix_job_control/$(DEPDIR) programs/projectx/$(DEPDIR) programs/unblur/$(DEPDIR)
+	-rm -rf core/$(DEPDIR) gui/$(DEPDIR) programs/applyctf/$(DEPDIR) programs/console_test/$(DEPDIR) programs/ctffind/$(DEPDIR) programs/guix_job_control/$(DEPDIR) programs/niko_test/$(DEPDIR) programs/projectx/$(DEPDIR) programs/reconstruct3d/$(DEPDIR) programs/unblur/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -87,11 +87,11 @@ public:
 	float Correct3D(float mask_radius = 0.0);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
-	float CosineMask(float wanted_mask_radius, float wanted_mask_edge);
+	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
 
 	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
-		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range", wanted_x, wanted_y, wanted_z);
+		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range (%i-%i, %i-%i, %i-%i)", wanted_x, wanted_y, wanted_z,0,logical_x_dimension-1,0,logical_y_dimension-1,0,logical_z_dimension-1);
 
 		return (((logical_x_dimension + padding_jump_value) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + padding_jump_value) * wanted_y) + wanted_x;
 
@@ -185,6 +185,10 @@ public:
 	int ReturnFourierLogicalCoordGivenPhysicalCoord_Y(int physical_index);
 	int ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index);
 
+	int ReturnMaximumDiagonalRadius();
+
+	bool FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
+
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void AddConstant(float constant_to_add);
@@ -221,12 +225,14 @@ public:
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
+	void Compute1DRotationalAverage(double average[], int number_of_bins);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
 	float ReturnAverageOfRealValues();
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);
+	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);
 	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();

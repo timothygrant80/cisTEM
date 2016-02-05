@@ -19,6 +19,79 @@ MRCHeader::~MRCHeader()
 	delete [] buffer;
 }
 
+
+void MRCHeader::PrintInfo()
+{
+	char *current_label = new char[81];
+	int char_counter;
+
+	// Work out pixel size
+	float pixel_size[3];
+	if (cell_a_x[0] == 0.0)
+	{
+		pixel_size[0] = 0.0;
+	}
+	else
+	{
+		pixel_size[0] = cell_a_x[0] / mx[0];
+	}
+	if (cell_a_y[0] == 0.0)
+	{
+		pixel_size[1] = 0.0;
+	}
+	else
+	{
+		pixel_size[1] = cell_a_y[0] / my[0];
+	}
+	if (cell_a_z[0] == 0.0)
+	{
+		pixel_size[2] = 0.0;
+	}
+	else
+	{
+		pixel_size[2] = cell_a_z[0] / mz[0];
+	}
+
+	// Start printing
+	wxPrintf("Number of columns, rows, sections: %i, %i, %i\n",nx[0],ny[0],nz[0]);
+	wxPrintf("MRC data mode: %i\n",mode[0]);
+	wxPrintf("Bit depth: %i\n",bytes_per_pixel * 8);
+	wxPrintf("Pixel size: %0.3f %0.3f %0.3f\n",pixel_size[0],pixel_size[1],pixel_size[2]);
+	wxPrintf("Bytes in symmetry header: %i\n",symmetry_data_bytes[0]);
+	for (int label_counter=0; label_counter < number_of_labels_used[0]; label_counter++)
+	{
+		for (char_counter=0;char_counter < 80; char_counter++)
+		{
+			current_label[char_counter] = labels[label_counter*80+char_counter];
+		}
+		current_label[80] = NULL;
+		wxPrintf("Label %i : %s\n",label_counter+1,current_label);
+	}
+
+	delete [] current_label;
+}
+
+
+float MRCHeader::ReturnPixelSize()
+{
+	if (cell_a_x[0] == 0.0)
+	{
+		return 0.0;
+	}
+	else
+	{
+		return cell_a_x[0] / mx[0];
+	}
+}
+
+void MRCHeader::SetPixelSize(float wanted_pixel_size)
+{
+	cell_a_x[0] = wanted_pixel_size * mx[0];
+	cell_a_y[0] = wanted_pixel_size * my[0];
+	cell_a_z[0] = wanted_pixel_size * mz[0];
+}
+
+
 //!>  \brief  Setup the pointers so that they point to the correct place in the buffer
 //
 
@@ -76,19 +149,57 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 	{
 		case 0:
 			bytes_per_pixel = 1;
+			pixel_data_are_signed = true; // Note that MRC mode 0 is sometimes signed, sometimes not signed. TODO: sort this out by checking the imodStamp header
+			pixel_data_are_of_type = Byte;
+			pixel_data_are_complex = false;
 		break;
 
 		case 1:
 			bytes_per_pixel = 2;
+			pixel_data_are_signed = true;
+			pixel_data_are_of_type = Float;
+			pixel_data_are_complex = false;
 		break;
 
 		case 2:
 			bytes_per_pixel = 4;
+			pixel_data_are_signed = true;
+			pixel_data_are_of_type = Byte;
+			pixel_data_are_complex = false;
 		break;
+
+		case 3:
+			bytes_per_pixel = 2;
+			pixel_data_are_signed = true;
+			pixel_data_are_of_type = Integer;
+			pixel_data_are_complex = true;
+		break;
+
+		case 4:
+			bytes_per_pixel = 4;
+			pixel_data_are_signed = true;
+			pixel_data_are_of_type = Float;
+			pixel_data_are_complex = true;
+		break;
+
+		case 5:
+			bytes_per_pixel = 1;
+			pixel_data_are_signed = false;
+			pixel_data_are_of_type = Byte;
+			pixel_data_are_complex = false;
+		break;
+
+		case 6:
+			bytes_per_pixel = 2;
+			pixel_data_are_signed = false;
+			pixel_data_are_of_type = Integer;
+			pixel_data_are_complex = false;
+		break;
+
 
 		default:
 		{
-			printf("Error: Complex MRC files not currently supported!!\n");
+			MyPrintfRed("Error: mode %i MRC files not currently supported\n",mode[0]);
 			abort();
 		}
 		break;

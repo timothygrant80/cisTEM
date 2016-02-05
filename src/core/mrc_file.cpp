@@ -25,7 +25,7 @@ void MRCFile::CloseFile()
 	}
 }
 
-void MRCFile::OpenFile(std::string filename, bool overwrite)
+void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 {
 	MyDebugAssertFalse(my_file.is_open(), "File Already Open!");
 
@@ -35,18 +35,18 @@ void MRCFile::OpenFile(std::string filename, bool overwrite)
 	// if it isn't, then we need to know if the file already exists..
 
 	if (overwrite == true) file_already_exists = false;
-	else file_already_exists = DoesFileExist(filename);
+	else file_already_exists = DoesFileExist(wanted_filename);
 
 
 	// Now open it, truncating to 0 if it doesn't already exist, or we specified overwrite
 
 	if (file_already_exists == true)
 	{
-		my_file.open(filename.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+		my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 
 		if (my_file.is_open() == false)
 		{
-			printf("Opening of file %s failed!! - Exiting..\n\n", filename.c_str());
+			printf("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
 			abort();
 		}
 
@@ -57,11 +57,11 @@ void MRCFile::OpenFile(std::string filename, bool overwrite)
 	}
 	else
 	{
-		my_file.open(filename.c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+		my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
 
 		if (my_file.is_open() == false)
 		{
-			printf("Opening of file %s failed!! - Exiting..\n\n", filename.c_str());
+			printf("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
 			abort();
 		}
 
@@ -71,6 +71,20 @@ void MRCFile::OpenFile(std::string filename, bool overwrite)
 	}
 
 	rewrite_header_on_close = false;
+
+	filename = wanted_filename;
+}
+
+void MRCFile::PrintInfo()
+{
+	wxPrintf("\nSummary information for file %s\n",filename);
+	my_header.PrintInfo();
+	wxPrintf("\n");
+}
+
+void MRCFile::SetPixelSize(float wanted_pixel_size)
+{
+	my_header.SetPixelSize(wanted_pixel_size);
 }
 
 void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array)
@@ -126,7 +140,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		default:
 		{
-			printf("Error: Complex MRC files not currently supported!!\n");
+			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.mode[0]);
 			abort();
 		}
 		break;
@@ -189,7 +203,7 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 
 		default:
 		{
-			printf("Error: Complex MRC files not currently supported!!\n");
+			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.mode[0]);
 			abort();
 		}
 		break;

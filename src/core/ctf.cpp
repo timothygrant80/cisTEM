@@ -24,17 +24,30 @@ CTF::CTF()
 CTF::CTF(		float wanted_acceleration_voltage, // keV
 				float wanted_spherical_aberration, // mm
 				float wanted_amplitude_contrast,
-				float wanted_defocus_1, // A
-				float wanted_defocus_2, //A
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
 				float wanted_astigmatism_azimuth, // degrees
 				float wanted_lowest_frequency_for_fitting, // 1/A
 				float wanted_highest_frequency_for_fitting, // 1/A
 				float wanted_astigmatism_tolerance, // A. Set to negative to indicate no restraint on astigmatism.
 				float pixel_size, // A
-				float wanted_additional_phase_shift )// rad
+				float wanted_additional_phase_shift_in_radians )// rad
 {
-	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1,wanted_defocus_2,wanted_astigmatism_azimuth,wanted_lowest_frequency_for_fitting,wanted_highest_frequency_for_fitting,wanted_astigmatism_tolerance,pixel_size,wanted_additional_phase_shift);
+	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,wanted_lowest_frequency_for_fitting,wanted_highest_frequency_for_fitting,wanted_astigmatism_tolerance,pixel_size,wanted_additional_phase_shift_in_radians);
 }
+
+CTF::CTF(		float wanted_acceleration_voltage, // keV
+				float wanted_spherical_aberration, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth, // degrees
+				float pixel_size, // A
+				float wanted_additional_phase_shift_in_radians )// rad
+{
+	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,0.0,1.0/(2.0*pixel_size),-10.0,pixel_size,wanted_additional_phase_shift_in_radians);
+}
+
 
 
 CTF::~CTF()
@@ -43,31 +56,31 @@ CTF::~CTF()
 }
 
 // Initialise a CTF object
-void CTF::Init(	float wanted_acceleration_voltage, // keV
-				float wanted_spherical_aberration, // mm
+void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
+				float wanted_spherical_aberration_in_mm, // mm
 				float wanted_amplitude_contrast,
-				float wanted_defocus_1, // A
-				float wanted_defocus_2, //A
-				float wanted_astigmatism_azimuth, // degrees
-				float wanted_lowest_frequency_for_fitting, // 1/A
-				float wanted_highest_frequency_for_fitting, // 1/A
-				float wanted_astigmatism_tolerance, // A. Set to negative to indicate no restraint on astigmatism.
-				float pixel_size, // A
-				float wanted_additional_phase_shift // rad
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth_in_degrees, // degrees
+				float wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms, // 1/A
+				float wanted_highest_frequency_for_fitting_in_reciprocal_angstroms, // 1/A
+				float wanted_astigmatism_tolerance_in_angstroms, // A. Set to negative to indicate no restraint on astigmatism.
+				float pixel_size_in_angstroms, // A
+				float wanted_additional_phase_shift_in_radians // rad
 				)
 {
-    wavelength = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage) / pixel_size;
+    wavelength = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
     squared_wavelength = pow(wavelength,2);
     cubed_wavelength = pow(wavelength,3);
-    spherical_aberration = wanted_spherical_aberration * 10000000.0 / pixel_size;
+    spherical_aberration = wanted_spherical_aberration_in_mm * 10000000.0 / pixel_size_in_angstroms;
     amplitude_contrast = wanted_amplitude_contrast;
-    defocus_1 = wanted_defocus_1 / pixel_size;
-    defocus_2 = wanted_defocus_2 / pixel_size;
-    astigmatism_azimuth = wanted_astigmatism_azimuth / 180.0 * PI;
-    additional_phase_shift = wanted_additional_phase_shift;
-    lowest_frequency_for_fitting = wanted_lowest_frequency_for_fitting * pixel_size;
-    highest_frequency_for_fitting = wanted_highest_frequency_for_fitting * pixel_size;
-    astigmatism_tolerance = wanted_astigmatism_tolerance / pixel_size;
+    defocus_1 = wanted_defocus_1_in_angstroms / pixel_size_in_angstroms;
+    defocus_2 = wanted_defocus_2_in_angstroms / pixel_size_in_angstroms;
+    astigmatism_azimuth = wanted_astigmatism_azimuth_in_degrees / 180.0 * PI;
+    additional_phase_shift = wanted_additional_phase_shift_in_radians;
+    lowest_frequency_for_fitting = wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
+    highest_frequency_for_fitting = wanted_highest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
+    astigmatism_tolerance = wanted_astigmatism_tolerance_in_angstroms / pixel_size_in_angstroms;
     precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
 }
 
@@ -89,20 +102,25 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 	const float b = PI * wavelength * DefocusGivenAzimuth(azimuth);
 	const float c = additional_phase_shift + precomputed_amplitude_contrast_term;
 
-	const float solution_one = ( -b + sqrt(pow(b,2) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
-	const float solution_two = ( -b - sqrt(pow(b,2) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+	const float solution_one = ( -b + sqrtf(powf(b,2.0) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+	const float solution_two = ( -b - sqrtf(powf(b,2.0) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+
 
 	if ( solution_one > 0 && solution_two > 0 )
 	{
-		MyDebugPrintWithDetails("Oops, I don't know which solution to select");
+		//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
+		return solution_one;
 	}
 	else if ( solution_one > 0 )
 	{
 		return solution_one;
 	}
+	else if ( solution_two > 0 )
+		return solution_two;
 	else
 	{
-		return solution_two;
+		MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation");
+		abort;
 	}
 }
 

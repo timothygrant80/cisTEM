@@ -33,19 +33,29 @@ public:
 				float astigmatism_tolerance,
 				float pixel_size,
 				float additional_phase_shift);
+
+	CTF(		float wanted_acceleration_voltage, // keV
+				float wanted_spherical_aberration, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth, // degrees
+				float pixel_size, // A
+				float wanted_additional_phase_shift_in_radians );// rad
+
 	~CTF();
 
-	void Init(	float acceleration_voltage,
-				float spherical_aberration,
-				float amplitude_contrast,
-				float defocus_1,
-				float defocus_2,
-				float astigmatism_azimuth,
-				float lowest_frequency_for_fitting,
-				float highest_frequency_for_fitting,
-				float astigmatism_tolerance,
-				float pixel_size,
-				float additional_phase_shift);
+	void Init(	float wanted_acceleration_voltage_in_kV, // keV
+				float wanted_spherical_aberration_in_mm, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth_in_degrees, // degrees
+				float wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms, // 1/A
+				float wanted_highest_frequency_for_fitting_in_reciprocal_angstroms, // 1/A
+				float wanted_astigmatism_tolerance_in_angstroms, // A. Set to negative to indicate no restraint on astigmatism.
+				float pixel_size_in_angstroms, // A
+				float wanted_additional_phase_shift_in_radians); //rad
 
 	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);

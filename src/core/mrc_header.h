@@ -45,6 +45,9 @@
 	Data records follow.
 */
 
+//
+enum MRCDataTypes { Byte, Integer, Float };
+
 class MRCHeader {
 
 	char	*buffer; 	// !< The true byte data
@@ -91,6 +94,9 @@ class MRCHeader {
 	// some extra info..
 
 	int bytes_per_pixel;
+	bool pixel_data_are_signed;
+	int pixel_data_are_of_type;
+	bool pixel_data_are_complex;
 
 	// methods
 
@@ -103,5 +109,10 @@ class MRCHeader {
 	void BlankHeader();
 
 	void SetLocalMachineStamp();
+
+	void PrintInfo();
+
+	float ReturnPixelSize();
+	void SetPixelSize(float wanted_pixel_size);
 
 };

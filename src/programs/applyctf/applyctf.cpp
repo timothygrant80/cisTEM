@@ -42,8 +42,8 @@ void ApplyCTFApp::DoInteractiveUserInput()
 	acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (keV)", "Acceleration voltage, in keV", "300.0", 0.0,500.0);
 	spherical_aberration = my_input->GetFloatFromUser("Spherical aberration (mm)","Objective lens spherical aberration","2.7",0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast","Fraction of total contrast attributed to amplitude contrast","0.07",0.0);
-	defocus_1 = my_input->GetFloatFromUser("Underfocus 1 (um)","In micrometers, the objective lens underfocus along the first axis","1.2");
-	defocus_2 = my_input->GetFloatFromUser("Underfocus 2 (um)","In micrometers, the objective lens underfocus along the second axis","1.2");
+	defocus_1 = my_input->GetFloatFromUser("Underfocus 1 (A)","In Angstroms, the objective lens underfocus along the first axis","1.2");
+	defocus_2 = my_input->GetFloatFromUser("Underfocus 2 (A)","In Angstroms, the objective lens underfocus along the second axis","1.2");
 	astigmatism_angle = my_input->GetFloatFromUser("Astigmatism angle","Angle between the first axis and the x axis of the image","0.0");
 	additional_phase_shift = my_input->GetFloatFromUser("Additional phase shift (rad)","Additional phase shift relative to undiffracted beam, as introduced for example by a phase plate","0.0");
 

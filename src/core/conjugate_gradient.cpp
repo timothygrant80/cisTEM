@@ -17,8 +17,8 @@ ConjugateGradient::~ConjugateGradient()
 {
 	if (is_in_memory)
 	{
-		delete best_values;
-		delete e;
+		delete [] best_values;
+		delete [] e;
 		is_in_memory = false;
 	}
 }
@@ -35,6 +35,7 @@ void ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, flo
 	n 					= 	num_dim;
 	best_values 		=	new float[n];
 	e					=	new float[n];
+	is_in_memory		=	true;
 
 	// Initialise values
 	escale = 100.0;
@@ -49,7 +50,6 @@ void ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, flo
 
 	// Call the target function to find out our starting score
 	best_score = target_function(parameters,starting_value);
-	MyDebugPrint("Starting score = %f\n",best_score);
 }
 
 void ConjugateGradient::Run()

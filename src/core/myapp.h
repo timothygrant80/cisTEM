@@ -19,6 +19,7 @@ class CalculateThread : public wxThread
     	void QueueError(wxString error_to_queue);
     	void QueueInfo(wxString info_to_queue);
 
+
 	protected:
 
     	virtual ExitCode Entry();
@@ -79,8 +80,11 @@ MyApp : public wxAppConsole
 
 		wxSocketBase **slave_sockets;  // POINTER TO POINTER..
 
+		wxCmdLineParser command_line_parser;
+
 		virtual bool DoCalculation() = 0;
 		virtual void DoInteractiveUserInput() {wxPrintf("\n Error: This program cannot be run interactively..\n\n"); exit(0);}
+		virtual void AddCommandLineOptions();
 
 		void SendError(wxString error_message);
 		void SendInfo(wxString error_message);

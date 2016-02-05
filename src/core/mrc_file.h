@@ -7,6 +7,7 @@ class MRCFile {
 
 	std::fstream my_file;
 	MRCHeader my_header;
+	wxString filename;
 
 	bool rewrite_header_on_close;
 
@@ -37,6 +38,10 @@ class MRCFile {
 	void WriteSlicesToDisk(int start_slice, int end_slice, float *input_array);
 
 	inline void WriteHeader() {my_header.WriteHeader(&my_file);};
+
+	void PrintInfo();
+
+	void SetPixelSize(float wanted_pixel_size);
 
 };
 

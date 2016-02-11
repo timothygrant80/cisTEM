@@ -84,9 +84,12 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
     precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
 }
 
+// Eq 11 of Rohou & Grigorieff (2015)
 int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth)
 {
-	return floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
+	int number_of_extrema = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
+	//MyDebugAssertTrue(number_of_extrema >= 0,"Bad number of extrema: %i (rounded from %f, phase shift = %f)\n",number_of_extrema, 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5,PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth));
+	return abs(number_of_extrema);
 }
 
 // Compute the frequency of the Nth zero of the CTF
@@ -96,33 +99,48 @@ float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
 float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth)
 {
 	const float a = -0.5 * PI * cubed_wavelength * spherical_aberration;
 	const float b = PI * wavelength * DefocusGivenAzimuth(azimuth);
 	const float c = additional_phase_shift + precomputed_amplitude_contrast_term;
-
-	const float solution_one = ( -b + sqrtf(powf(b,2.0) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
-	const float solution_two = ( -b - sqrtf(powf(b,2.0) - 4.0 * a * (c-phase_shift))) / (2.0 * a);
+	const float det = powf(b,2.0) - 4.0 * a * (c-phase_shift);
 
 
-	if ( solution_one > 0 && solution_two > 0 )
+	if (det < 0.0)
 	{
-		//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
-		return solution_one;
+		//MyPrintWithDetails("Ooops, negative determinant\n");
+		//abort();
+		return 0.0;
 	}
-	else if ( solution_one > 0 )
-	{
-		return solution_one;
-	}
-	else if ( solution_two > 0 )
-		return solution_two;
 	else
 	{
-		MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation");
-		abort;
+		const float solution_one = ( -b + sqrtf(det)) / (2.0 * a);
+		const float solution_two = ( -b - sqrtf(det)) / (2.0 * a);
+
+		if ( solution_one > 0 && solution_two > 0 )
+		{
+			//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
+			return solution_one;
+		}
+		else if ( solution_one > 0 )
+		{
+			return solution_one;
+		}
+		else if ( solution_two > 0 )
+			return solution_two;
+		else
+		{
+			MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation");
+			abort();
+		}
 	}
+
+
 }
+//#pragma GCC pop_options
 
 
 // Set the defocus and astigmatism angle, given in pixels and radians
@@ -154,6 +172,7 @@ taking the sine of the returned phase shift.
 */
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth)
 {
+	MyDebugAssertTrue(squared_spatial_frequency >= 0.0,"Bad squared spatial frequency: %f", squared_spatial_frequency);
 	return PI * wavelength * squared_spatial_frequency * ( DefocusGivenAzimuth(azimuth) - 0.5 * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
 }
 

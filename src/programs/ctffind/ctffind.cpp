@@ -24,6 +24,16 @@ public:
 	bool	find_phase_shift;
 };
 
+class CurveCTFComparison
+{
+public:
+	float	*curve;	// Usually the 1D rotational average of the amplitude spectrum of an image
+	int		number_of_bins;
+	float	reciprocal_pixel_size; // In reciprocal pixels
+	CTF		ctf;
+	bool 	find_phase_shift;
+};
+
 // This is the function which will be minimised
 float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[] )
 {
@@ -41,6 +51,61 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 	// Evaluate the function
 	return - comparison_object->img.GetCorrelationWithCTF(my_ctf);
 }
+
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
+// This is the function which will be minimised when dealing with 1D fitting
+float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_values[] )
+{
+	CurveCTFComparison *comparison_object = reinterpret_cast < CurveCTFComparison *> (scoring_parameters);
+
+	CTF my_ctf = comparison_object->ctf;
+	my_ctf.SetDefocus(array_of_values[0],array_of_values[0],0.0);
+	if (comparison_object->find_phase_shift)
+	{
+		my_ctf.SetAdditionalPhaseShift(array_of_values[1]);
+	}
+
+	// Compute the cross-correlation
+	double cross_product = 0.0;
+	double norm_curve = 0.0;
+	double norm_ctf = 0.0;
+	int number_of_values = 0;
+	int bin_counter;
+	float current_spatial_frequency_squared;
+	const float lowest_freq = pow(my_ctf.GetLowestFrequencyForFitting(),2);
+	const float highest_freq = pow(my_ctf.GetHighestFrequencyForFitting(),2);
+	float current_ctf_value;
+
+	for ( bin_counter = 0 ; bin_counter < comparison_object->number_of_bins; bin_counter ++ )
+	{
+		current_spatial_frequency_squared = pow(float(bin_counter)*comparison_object->reciprocal_pixel_size,2);
+		if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
+		{
+			current_ctf_value = fabsf(my_ctf.Evaluate(current_spatial_frequency_squared,0.0));
+			MyDebugAssertTrue(current_ctf_value >= -1.0 && current_ctf_value <= 1.0,"Bad ctf value: %f",current_ctf_value);
+			number_of_values++;
+			cross_product += comparison_object->curve[bin_counter] * current_ctf_value;
+			norm_curve += pow(comparison_object->curve[bin_counter],2);
+			norm_ctf += pow(current_ctf_value,2);
+		}
+	}
+
+	MyDebugAssertTrue(norm_ctf > 0.0,"Bad norm_ctf: %f\n", norm_ctf);
+	MyDebugAssertTrue(norm_curve > 0.0,"Bad norm_curve: %f\n", norm_curve);
+
+	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f, Score = %g",array_of_values[0], - cross_product / sqrtf(norm_ctf * norm_curve));
+
+	// Note, we are not properly normalizing the cross correlation coefficient. For our
+	// purposes this should be OK, since the average power of the theoretical CTF should not
+	// change much with defocus. At least I hope so.
+	return - cross_product / sqrtf(norm_ctf * norm_curve);
+
+
+}
+
+//#pragma GCC pop_options
 
 float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius);
 void ComputeImagesWithNumberOfExtremaAndCTFValues(CTF *ctf, Image *number_of_extrema, Image *ctf_values);
@@ -314,11 +379,15 @@ bool CtffindApp::DoCalculation()
 	float		additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
 
 	// These variables will be set by command-line options
-	const bool		old_school_input = command_line_parser.FoundSwitch("old-school-input");
+	const bool		old_school_input = true; //command_line_parser.FoundSwitch("old-school-input");
 	const bool		amplitude_spectrum_input = command_line_parser.FoundSwitch("amplitude-spectrum-input");
 	const bool		filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
 	const bool 		compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
 	const bool		boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
+
+	// If the expected astigmatism is less than this value, we will do the initial search in 1D
+	const float		maximum_expected_astigmatism_for_1D_search = 1000.0;
+
 
 	/*
 	 *  Scoring function
@@ -349,7 +418,8 @@ bool CtffindApp::DoCalculation()
 	CTF					current_ctf;
 	float				average, sigma;
 	int					convolution_box_size;
-	ImageCTFComparison	comparison_object;
+	ImageCTFComparison	comparison_object_2D;
+	CurveCTFComparison	comparison_object_1D;
 	float 				estimated_astigmatism_angle;
 	float				bf_halfrange[4];
 	float				bf_midpoint[4];
@@ -374,7 +444,8 @@ bool CtffindApp::DoCalculation()
 	double				*fit_frc_sigma = NULL;
 	MRCFile				output_diagnostic_file(output_diagnostic_filename,true);
 	int					last_bin_with_good_fit;
-	double 				*values_to_write_out = new double[7];;
+	double 				*values_to_write_out = new double[7];
+	float				best_score_after_initial_phase;
 
 
 
@@ -407,27 +478,27 @@ bool CtffindApp::DoCalculation()
 	{
 		// Print out information about input file
 		input_file.PrintInfo();
-	}
 
-	// Prepare the output text file
-	output_text_fn = FilenameReplaceExtension(output_diagnostic_filename,"txt");
-	output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
+		// Prepare the output text file
+		output_text_fn = FilenameReplaceExtension(output_diagnostic_filename,"txt");
+		output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
 
-	// Print header to the output text file
-	output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
-	output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-	output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
-	output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
-	output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
+		// Print header to the output text file
+		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
+		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
+		output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
 
-	// Prepare a text file with 1D rotational average spectra
-	output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString(),"_avrot");
+		// Prepare a text file with 1D rotational average spectra
+		output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString(),"_avrot");
 
-	if (! old_school_input && number_of_micrographs > 1 && is_running_locally)
-	{
-		wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
-		wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
-		my_progress_bar = new ProgressBar(number_of_micrographs);
+		if (! old_school_input && number_of_micrographs > 1 && is_running_locally)
+		{
+			wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
+			wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
+			my_progress_bar = new ProgressBar(number_of_micrographs);
+		}
 	}
 
 
@@ -550,7 +621,7 @@ bool CtffindApp::DoCalculation()
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
 			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
 
-			current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
+			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
 
 			// POTENTIAL OPTIMIZATION: do not store the convoluted spectrum as a separate image - just subtract one convoluted pixel at a time from the image
 
@@ -573,76 +644,186 @@ bool CtffindApp::DoCalculation()
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
 
-		// Set up the comparison object
-		comparison_object.ctf = current_ctf;
-		comparison_object.img = average_spectrum;
-		comparison_object.pixel_size = pixel_size;
-		comparison_object.find_phase_shift = find_additional_phase_shift;
-
-		if (is_running_locally && old_school_input)
+		/*
+		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
+		 */
+		if (astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search && astigmatism_tolerance > 0.0)
 		{
-			wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
-		}
+
+			// 1D rotational average
+			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
+			rotational_average = new double[number_of_bins_in_1d_spectra];
+			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_bins_in_1d_spectra);
 
 
-		// Let's look for the astigmatism angle first
-		temp_image->CopyFrom(average_spectrum);
-		temp_image->ApplyMirrorAlongY();
-		//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
 
-		//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
+			comparison_object_1D.ctf = current_ctf;
+			comparison_object_1D.curve = new float[number_of_bins_in_1d_spectra];
+			for (counter=0; counter < number_of_bins_in_1d_spectra; counter++)
+			{
+				comparison_object_1D.curve[counter] = rotational_average[counter];
+			}
+			comparison_object_1D.find_phase_shift = find_additional_phase_shift;
+			comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
+			comparison_object_1D.reciprocal_pixel_size = average_spectrum->fourier_voxel_size_x;
+
+			// We can now look for the defocus value
+			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size;
+			bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift - minimum_additional_phase_shift);
+
+			bf_midpoint[0] = minimum_defocus / pixel_size + bf_halfrange[0];
+			bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[1];
+
+			bf_stepsize[0] = defocus_search_step / pixel_size;
+			bf_stepsize[1] = additional_phase_shift_search_step;
+
+			if (find_additional_phase_shift)
+			{
+				number_of_search_dimensions = 2;
+			}
+			else
+			{
+				number_of_search_dimensions = 1;
+			}
+
+			// Actually run the BF search
+			brute_force_search = new BruteForceSearch();
+			brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,true);
+			brute_force_search->Run();
+
+			// We can now do a local optimization
+			// The end point of the BF search is the beginning of the CG search
+			for (counter=0;counter<number_of_search_dimensions;counter++)
+			{
+				cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+			}
+			cg_accuracy[0] = 100.0;
+			cg_accuracy[1] = 0.05;
+			conjugate_gradient_minimizer = new ConjugateGradient();
+			conjugate_gradient_minimizer->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+			conjugate_gradient_minimizer->Run();
+			for (counter=0;counter<number_of_search_dimensions;counter++)
+			{
+				cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
+			}
+			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0],0.0);
+			if (find_additional_phase_shift)
+			{
+				current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+			}
+
+			// Remember the best score so far
+			best_score_after_initial_phase = - conjugate_gradient_minimizer->GetBestScore();
+
+			// Set up the 2D comparison object, which we will soon need
+			comparison_object_2D.ctf = current_ctf;
+			comparison_object_2D.img = average_spectrum;
+			comparison_object_2D.pixel_size = pixel_size;
+			comparison_object_2D.find_phase_shift = find_additional_phase_shift;
+
+			// Set up the starting point for the 2D conjugate gradient minimization
+			cg_starting_point[0] = current_ctf.GetDefocus1();
+			cg_starting_point[1] = current_ctf.GetDefocus2();
+			cg_starting_point[2] = 0.0; // We could run the mirror trick to get a better starting point - just not sure whether worth it
+			if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
+			if (find_additional_phase_shift)
+			{
+				number_of_search_dimensions = 4;
+			}
+			else
+			{
+				number_of_search_dimensions = 3;
+			}
 
 
-		// We can now look for the defocus value
-		bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size;
-		bf_halfrange[1] = bf_halfrange[0];
-		bf_halfrange[2] = 0.0;
-		bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
 
-		bf_midpoint[0] = minimum_defocus/pixel_size + bf_halfrange[0];
-		bf_midpoint[1] = bf_midpoint[0];
-		bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
-		bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
-
-		bf_stepsize[0] = defocus_search_step/pixel_size;
-		bf_stepsize[1] = bf_stepsize[0];
-		bf_stepsize[2] = 0.0;
-		bf_stepsize[3] = additional_phase_shift_search_step;
-
-		if (find_additional_phase_shift)
-		{
-			number_of_search_dimensions = 4;
+			// Cleanup
+			delete [] rotational_average;
+			delete conjugate_gradient_minimizer;
+			delete brute_force_search;
+			delete [] comparison_object_1D.curve;
 		}
 		else
 		{
-			number_of_search_dimensions = 3;
-		}
 
-		// Actually run the BF search
-		brute_force_search = new BruteForceSearch();
-		brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,true);
-		brute_force_search->Run();
+			// Set up the comparison object
+			comparison_object_2D.ctf = current_ctf;
+			comparison_object_2D.img = average_spectrum;
+			comparison_object_2D.pixel_size = pixel_size;
+			comparison_object_2D.find_phase_shift = find_additional_phase_shift;
 
-		// The end point of the BF search is the beginning of the CG search
-		for (counter=0;counter<number_of_search_dimensions;counter++)
-		{
-			cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
-		}
+			if (is_running_locally && old_school_input)
+			{
+				wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
+			}
 
-		//
-		current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
-		if (find_additional_phase_shift)
-		{
-			current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
-		}
-		current_ctf.EnforceConvention();
+
+			// Let's look for the astigmatism angle first
+			temp_image->CopyFrom(average_spectrum);
+			temp_image->ApplyMirrorAlongY();
+			//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
+			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+
+			//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
+
+
+			// We can now look for the defocus value
+			bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size;
+			bf_halfrange[1] = bf_halfrange[0];
+			bf_halfrange[2] = 0.0;
+			bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
+
+			bf_midpoint[0] = minimum_defocus/pixel_size + bf_halfrange[0];
+			bf_midpoint[1] = bf_midpoint[0];
+			bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
+			bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
+
+			bf_stepsize[0] = defocus_search_step/pixel_size;
+			bf_stepsize[1] = bf_stepsize[0];
+			bf_stepsize[2] = 0.0;
+			bf_stepsize[3] = additional_phase_shift_search_step;
+
+			if (find_additional_phase_shift)
+			{
+				number_of_search_dimensions = 4;
+			}
+			else
+			{
+				number_of_search_dimensions = 3;
+			}
+
+			// Actually run the BF search
+			brute_force_search = new BruteForceSearch();
+			brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,true);
+			brute_force_search->Run();
+
+			// The end point of the BF search is the beginning of the CG search
+			for (counter=0;counter<number_of_search_dimensions;counter++)
+			{
+				cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+			}
+
+			//
+			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
+			if (find_additional_phase_shift)
+			{
+				current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+			}
+			current_ctf.EnforceConvention();
+
+			// Remember the best score so far
+			best_score_after_initial_phase = - brute_force_search->GetBestScore();
+
+			delete brute_force_search;
+
+		} // end of test for whether expected astigmatism is low enough to do 1D search
+
 
 		// Print out the results of brute force search
 		if (is_running_locally && old_school_input)
 		{
 			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-brute_force_search->GetBestScore());
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,best_score_after_initial_phase);
 		}
 
 		// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
@@ -656,7 +837,7 @@ bool CtffindApp::DoCalculation()
 		cg_accuracy[2] = 0.5;
 		cg_accuracy[3] = 0.05;
 		conjugate_gradient_minimizer = new ConjugateGradient();
-		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,&comparison_object,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
 		wxPrintf("\n");
 		conjugate_gradient_minimizer->Run();
 		wxPrintf("\n");
@@ -815,10 +996,6 @@ bool CtffindApp::DoCalculation()
 				if (last_bin_without_aliasing != 0)
 				{
 					wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size / spatial_frequency[last_bin_without_aliasing]);
-					if ( spatial_frequency[last_bin_without_aliasing] < current_ctf.GetHighestFrequencyForFitting() )
-					{
-						MyPrintfRed("Warning: CTF aliasing occured within your CTF fitting range. Consider computing a larger spectrum (current size = %i).\n",box_size);
-					}
 				}
 				else
 				{
@@ -827,50 +1004,66 @@ bool CtffindApp::DoCalculation()
 			}
 		}
 
-		// Write out results to a summary file
-		values_to_write_out[0] = current_micrograph_number;
-		values_to_write_out[1] = current_ctf.GetDefocus1() * pixel_size;
-		values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size;
-		values_to_write_out[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;
-		values_to_write_out[4] = current_ctf.GetAdditionalPhaseShift();
-		values_to_write_out[5] = - conjugate_gradient_minimizer->GetBestScore();
-		if (compute_extra_stats)
+		// Warn the user if significant aliasing occured within the fit range
+		if (compute_extra_stats && last_bin_without_aliasing != 0 && spatial_frequency[last_bin_without_aliasing] < current_ctf.GetHighestFrequencyForFitting())
 		{
-			values_to_write_out[6] = pixel_size / spatial_frequency[last_bin_with_good_fit];
-		}
-		else
-		{
-			values_to_write_out[6] = 0.0;
-		}
-		output_text->WriteLine(values_to_write_out);
-
-		// Write out avrot
-		// TODO: add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections
-		if (compute_extra_stats)
-		{
-			if (current_micrograph_number == 1)
+			if (is_running_locally && number_of_micrographs == 1)
 			{
-				output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
-				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
-				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
-				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
-				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/pixels); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
+				MyPrintfRed("Warning: CTF aliasing occurred within your CTF fitting range. Consider computing a larger spectrum (current size = %i).\n",box_size);
 			}
-			output_text_avrot->WriteLine(spatial_frequency);
-			output_text_avrot->WriteLine(rotational_average);
-			output_text_avrot->WriteLine(rotational_average_astig);
-			output_text_avrot->WriteLine(rotational_average_astig_fit);
-			output_text_avrot->WriteLine(fit_frc);
-			output_text_avrot->WriteLine(fit_frc_sigma);
+			else
+			{
+				SendInfo(wxString::Format("Warning: for image %s, CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,box_size));
+			}
 		}
 
-		if (! old_school_input && number_of_micrographs > 1) my_progress_bar->Update(current_micrograph_number);
 
+		if (is_running_locally)
+		{
+			// Write out results to a summary file
+			values_to_write_out[0] = current_micrograph_number;
+			values_to_write_out[1] = current_ctf.GetDefocus1() * pixel_size;
+			values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size;
+			values_to_write_out[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;
+			values_to_write_out[4] = current_ctf.GetAdditionalPhaseShift();
+			values_to_write_out[5] = - conjugate_gradient_minimizer->GetBestScore();
+			if (compute_extra_stats)
+			{
+				values_to_write_out[6] = pixel_size / spatial_frequency[last_bin_with_good_fit];
+			}
+			else
+			{
+				values_to_write_out[6] = 0.0;
+			}
+			output_text->WriteLine(values_to_write_out);
+
+			// Write out avrot
+			// TODO: add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections
+			if (compute_extra_stats)
+			{
+				if (current_micrograph_number == 1)
+				{
+					output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
+					output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+					output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
+					output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+					output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
+					output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/pixels); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
+				}
+				output_text_avrot->WriteLine(spatial_frequency);
+				output_text_avrot->WriteLine(rotational_average);
+				output_text_avrot->WriteLine(rotational_average_astig);
+				output_text_avrot->WriteLine(rotational_average_astig_fit);
+				output_text_avrot->WriteLine(fit_frc);
+				output_text_avrot->WriteLine(fit_frc_sigma);
+			}
+
+			if (! old_school_input && number_of_micrographs > 1) my_progress_bar->Update(current_micrograph_number);
+		}
 
 	} // End of loop over micrographs
 
-	if (! old_school_input && number_of_micrographs > 1) delete my_progress_bar;
+	if (is_running_locally && ! old_school_input && number_of_micrographs > 1) delete my_progress_bar;
 
 	// Tell the user where the outputs are
 	if (is_running_locally)
@@ -897,7 +1090,7 @@ bool CtffindApp::DoCalculation()
 	delete number_of_extrema_image;
 	delete ctf_values_image;
 	delete [] values_to_write_out;
-	delete output_text;
+	if (is_running_locally) delete output_text;
 	if (compute_extra_stats)
 	{
 		delete [] rotational_average;
@@ -908,10 +1101,9 @@ bool CtffindApp::DoCalculation()
 		delete [] ctf_values_profile;
 		delete [] fit_frc;
 		delete [] fit_frc_sigma;
-		delete output_text_avrot;
+		if (is_running_locally) delete output_text_avrot;
 	}
 	delete conjugate_gradient_minimizer;
-	delete brute_force_search;
 
 	// Return
 	return true;
@@ -941,6 +1133,8 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 			for (i=bin_of_previous_extremum;i<bin_counter;i++)
 			{
 				half_window_width[i] = std::max(minimum_window_half_width,int(1.5 * float(bin_counter - bin_of_previous_extremum + 1)));
+				half_window_width[i] = std::min(half_window_width[i],number_of_bins/2 - 1);
+				MyDebugAssertTrue(half_window_width[i] < number_of_bins/2,"Bad half window width: %i. Number of bins: %i\n",half_window_width[i],number_of_bins);
 			}
 			bin_of_previous_extremum = bin_counter;
 		}

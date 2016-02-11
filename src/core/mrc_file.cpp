@@ -138,6 +138,18 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 			my_file.read((char*)output_array, records_to_read * 4);
 		break;
 
+		case 6:
+		{
+			int *temp_int_array = new int [records_to_read];
+			my_file.read((char*)temp_int_array, records_to_read * 4);
+			for (long counter = 0; counter < records_to_read; counter++)
+			{
+				output_array[counter] = float(temp_int_array[counter]);
+			}
+			delete [] temp_int_array;
+		}
+		break;
+
 		default:
 		{
 			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.mode[0]);

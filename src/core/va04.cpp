@@ -81,7 +81,8 @@ ES\002,10x,\002F =\002,e21.14/(5e24.14))";
     /* Local variables */
     static real a, b, d__;
     static integer i__, j, k;
-    static real w[40], da, db, fa, dd, fb, fc, dc, di, fi, dl;
+// work array w must have at least dimension n * (n + 3)
+    static real w[130], da, db, fa, dd, fb, fc, dc, di, fi, dl;
     static integer jj;
     static real fp;
     static integer is;

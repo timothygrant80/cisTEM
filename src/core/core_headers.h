@@ -31,6 +31,7 @@ typedef struct Peak {
 #include "socket_codes.h"
 #include "userinput.h"
 #include "functions.h"
+#include "randomnumbergenerator.h"
 #include "mrc_header.h"
 #include "mrc_file.h"
 #include "matrix.h"
@@ -38,6 +39,7 @@ typedef struct Peak {
 #include "curve.h"
 #include "ctf.h"
 #include "angles_and_shifts.h"
+#include "parameter_constraints.h"
 #include "empirical_distribution.h"
 #include "image.h"
 #include "resolution_statistics.h"
@@ -55,3 +57,5 @@ typedef struct Peak {
 #include "brute_force_search.h"
 #include "conjugate_gradient.h"
 #include "myapp.h"
+
+extern RandomNumberGenerator global_random_number_generator;

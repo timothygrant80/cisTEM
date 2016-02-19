@@ -15,17 +15,27 @@ ReconstructedVolume::ReconstructedVolume()
 //	abort();
 }
 
-void ReconstructedVolume::Init(Reconstruct3d &image_reconstruction, float wanted_pixel_size)
+void ReconstructedVolume::InitWithReconstruct3D(Reconstruct3D &image_reconstruction, float wanted_pixel_size)
 {
 	density_map.Allocate(image_reconstruction.logical_x_dimension, image_reconstruction.logical_y_dimension, image_reconstruction.logical_z_dimension, false);
 	density_map.object_is_centred_in_box = false;
 	pixel_size = wanted_pixel_size;
-//	symmetry = symmetry;
+	symmetry_matrices.Init(image_reconstruction.symmetry_matrices.symmetry_symbol);
 	statistics.Init(wanted_pixel_size);
 	has_been_initialized = true;
 }
 
-void ReconstructedVolume::Calculate3DSimple(Reconstruct3d &reconstruction)
+void ReconstructedVolume::InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, wxString wanted_symmetry_symbol)
+{
+	density_map.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, false);
+	density_map.object_is_centred_in_box = false;
+	pixel_size = wanted_pixel_size;
+	symmetry_matrices.Init(wanted_symmetry_symbol);
+	statistics.Init(wanted_pixel_size);
+	has_been_initialized = true;
+}
+
+void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 {
 	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");
 
@@ -52,8 +62,8 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3d &reconstruction)
 //						reconstruction.ctf_reconstruction[pixel_counter], reconstruction.weights_reconstruction[pixel_counter], reconstruction.number_of_measurements[pixel_counter]);
 //					}
 
-					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 1.0)
-																		/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
+					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 1.0);
+//																		/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
 				}
 				else
 				{
@@ -65,7 +75,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3d &reconstruction)
 	}
 }
 
-void ReconstructedVolume::Calculate3DOptimal(Reconstruct3d &reconstruction, float pssnr_correction_factor)
+void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, float pssnr_correction_factor)
 {
 	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");
 	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
@@ -99,17 +109,17 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3d &reconstruction, floa
 
 	for (k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++)
 	{
-		z = pow(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * reconstruction.image_reconstruction.fourier_voxel_size_z, 2);
+		z = powf(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * reconstruction.image_reconstruction.fourier_voxel_size_z, 2);
 
 		for (j = 0; j <= reconstruction.image_reconstruction.physical_upper_bound_complex_y; j++)
 		{
-			y = pow(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * reconstruction.image_reconstruction.fourier_voxel_size_y, 2);
+			y = powf(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * reconstruction.image_reconstruction.fourier_voxel_size_y, 2);
 
 			for (i = 0; i <= reconstruction.image_reconstruction.physical_upper_bound_complex_x; i++)
 			{
 				if (reconstruction.ctf_reconstruction[pixel_counter] != 0.0)
 				{
-					x = pow(i * reconstruction.image_reconstruction.fourier_voxel_size_x, 2);
+					x = powf(i * reconstruction.image_reconstruction.fourier_voxel_size_x, 2);
 					frequency_squared = x + y + z;
 
 // compute radius, in units of physical Fourier pixels
@@ -119,8 +129,8 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3d &reconstruction, floa
 					{
 //						if (bin == 50) wxPrintf("n = %i, ctf_sum = %g, pssnr = %g\n", reconstruction.number_of_measurements[pixel_counter], reconstruction.ctf_reconstruction[pixel_counter], statistics.part_SSNR.data_y[bin]);
 						density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter]
-									/(reconstruction.ctf_reconstruction[pixel_counter] + wiener_constant[bin])
-									/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
+									/(reconstruction.ctf_reconstruction[pixel_counter] + wiener_constant[bin]);
+//									/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
 					}
 					else
 					{
@@ -153,7 +163,7 @@ float ReconstructedVolume::Correct3D(float mask_radius)
 
 void ReconstructedVolume::OptimalFilter()
 {
-	density_map.OptimalFilter(statistics.part_FSC);
+	density_map.OptimalFilterFSC(statistics.part_FSC);
 	was_corrected = true;
 }
 
@@ -161,13 +171,73 @@ void ReconstructedVolume::PrintStatistics()
 {
 	MyDebugAssertTrue(has_statistics, "Resolution statistics have not been fully calculated");
 
-	int number_of_bins = int(statistics.FSC.number_of_points / sqrtf(3.0));
-	wxPrintf("                                             Sqrt       Sqrt  \n");
-	wxPrintf(" NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
+	int number_of_bins = density_map.ReturnSmallestLogicalDimension() / 2 + 1;
+	wxPrintf("C                                             Sqrt       Sqrt  \n");
+	wxPrintf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
 	for (int i = 1; i < number_of_bins; i++)
 	{
-		wxPrintf("%4i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n",i + 1, statistics.FSC.data_x[i], pixel_size / statistics.FSC.data_x[i],
+		wxPrintf("%5i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n",i + 1, statistics.FSC.data_x[i], pixel_size / statistics.FSC.data_x[i],
 															statistics.FSC.data_y[i], statistics.part_FSC.data_y[i],
-															sqrt(statistics.part_SSNR.data_y[i]), sqrt(statistics.rec_SSNR.data_y[i]));
+															sqrtf(statistics.part_SSNR.data_y[i]), sqrtf(statistics.rec_SSNR.data_y[i]));
 	}
+}
+
+void ReconstructedVolume::WriteStatisticsToFile(wxString output_file)
+{
+	MyDebugAssertTrue(has_statistics, "Resolution statistics have not been fully calculated");
+
+	int number_of_bins = density_map.ReturnSmallestLogicalDimension() / 2 + 1;
+	float temp_float[7];
+
+	NumericTextFile output_statistics_file(output_file, OPEN_TO_WRITE, 7);
+	output_statistics_file.WriteCommentLine("C        SHELL     RESOLUTION    RING_RADIUS            FSC       Part_FSC  Part_SSNR^0.5   Rec_SSNR^0.5");
+	for (int i = 1; i < number_of_bins; i++)
+	{
+		temp_float[0] = float(i+1);
+		temp_float[1] = statistics.FSC.data_x[i];
+		temp_float[2] = pixel_size / statistics.FSC.data_x[i];
+		temp_float[3] = statistics.FSC.data_y[i];
+		temp_float[4] = statistics.part_FSC.data_y[i];
+		temp_float[5] = sqrtf(statistics.part_SSNR.data_y[i]);
+		temp_float[6] = sqrtf(statistics.rec_SSNR.data_y[i]);
+
+		output_statistics_file.WriteLine(temp_float);
+	}
+}
+
+void ReconstructedVolume::ReadStatisticsFromFile(wxString input_file)
+{
+	int i;
+	float temp_float[10];
+	float reciprocal_resolution;
+	int number_of_bins2 = density_map.ReturnSmallestLogicalDimension();
+	int number_of_bins_extended = int((number_of_bins2 / 2 + 1) * sqrtf(3.0)) + 1;
+
+	NumericTextFile my_statistics(input_file, OPEN_TO_READ);
+
+	statistics.FSC.AddPoint(0.0, 1.0);
+	statistics.part_FSC.AddPoint(0.0, 1.0);
+	statistics.part_SSNR.AddPoint(0.0, 1000.0);
+	statistics.rec_SSNR.AddPoint(0.0, 1000.0);
+
+	for (i = 1; i <= my_statistics.number_of_lines; i++)
+	{
+		my_statistics.ReadLine(temp_float);
+		reciprocal_resolution = pixel_size / float(i) * float(number_of_bins2);
+		statistics.FSC.AddPoint(temp_float[1], temp_float[3]);
+		statistics.part_FSC.AddPoint(temp_float[1], temp_float[4]);
+		statistics.part_SSNR.AddPoint(temp_float[1], powf(temp_float[5],2));
+		statistics.rec_SSNR.AddPoint(temp_float[1], powf(temp_float[6],2));
+	}
+
+	for (i = my_statistics.number_of_lines + 1; i <= number_of_bins_extended; i++)
+	{
+		reciprocal_resolution = pixel_size / float(i) * float(number_of_bins2);
+		statistics.FSC.AddPoint(reciprocal_resolution, 0.0);
+		statistics.part_FSC.AddPoint(reciprocal_resolution, 0.0);
+		statistics.part_SSNR.AddPoint(reciprocal_resolution, 0.0);
+		statistics.rec_SSNR.AddPoint(reciprocal_resolution, 0.0);
+	}
+
+	has_statistics = true;
 }

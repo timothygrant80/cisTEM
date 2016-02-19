@@ -2,7 +2,7 @@
 
 MRCFile::MRCFile()
 {
-
+	rewrite_header_on_close = false;
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite)

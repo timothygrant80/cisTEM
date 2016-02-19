@@ -19,6 +19,8 @@ Curve::Curve()
 	polynomial_order = 0;
 	polynomial_coefficients = NULL;
 
+	savitzky_golay_polynomial_order = 0;
+	savitzky_golay_window_size = 0;
 }
 
 Curve::~Curve()

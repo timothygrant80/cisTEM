@@ -233,7 +233,7 @@ void NumericTextFile::ReadLine(float *data_array)
 
 		if (token.ToDouble(&temp_double) == false)
 		{
-			MyPrintWithDetails("Failed on the following record : %s\n", token);
+			MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.ToUTF8().data(), current_line.ToUTF8().data());
 	    	abort();
 		}
 		else
@@ -254,7 +254,8 @@ void NumericTextFile::WriteLine(float *data_array)
 
 	for (int counter = 0; counter < records_per_line; counter++ )
 	{
-		output_text_stream->WriteDouble(data_array[counter]);
+//		output_text_stream->WriteDouble(data_array[counter]);
+		output_text_stream->WriteString(wxString::Format("%14.5f",data_array[counter]));
 		if (counter != records_per_line - 1) output_text_stream->WriteString(" ");
 	}
 

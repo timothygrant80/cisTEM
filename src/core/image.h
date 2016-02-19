@@ -83,13 +83,25 @@ public:
 
 	int ReturnSmallestLogicalDimension();
 	int ReturnLargestLogicalDimension();
-	void OptimalFilter(Curve &FSC);
+	float GetWeightedCorrelationWithImage(Image &projection_image, float low_limit, float high_limit);
+	void MultiplyPixelWise(Image &other_image);
+	void AddGaussianNoise(float wanted_sigma_value = 1.0);
+	void Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
+	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0);
+	void Whiten();
+	void OptimalFilterBySNRImage(Image &SNR_image);
+	void MultiplyByWeightsCurve(Curve &weights);
+	void OptimalFilterSSNR(Curve &SSNR);
+	void OptimalFilterFSC(Curve &FSC);
 	float Correct3D(float mask_radius = 0.0);
+	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image);
+	fftwf_complex ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
+	void CalculateCTFImage(CTF &ctf_of_image);
 
-	inline int ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range (%i-%i, %i-%i, %i-%i)", wanted_x, wanted_y, wanted_z,0,logical_x_dimension-1,0,logical_y_dimension-1,0,logical_z_dimension-1);
 
@@ -104,15 +116,15 @@ public:
 	};
 
 
-	inline int ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address out of bounds!" )
 		return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
 	};
 
-	inline int ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
+	inline long ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
-		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Coord out of bounds!")
+		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Coord out of bounds! (%i, %i, %i)", wanted_x, wanted_y, wanted_z)
 
 		int physical_x_address;
 		int physical_y_address;
@@ -176,6 +188,15 @@ public:
 	};
 
 	bool HasSameDimensionsAs(Image *other_image);
+	inline bool IsCubic()
+	{
+		return (logical_x_dimension == logical_y_dimension && logical_x_dimension == logical_z_dimension);
+	}
+	inline bool IsSquare()
+	{
+		MyDebugAssertTrue(logical_z_dimension == 1, "Image is three-dimensional");
+		return (logical_x_dimension == logical_y_dimension);
+	}
 
 	void SetLogicalDimensions(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1);
 	void UpdateLoopingAndAddressing();
@@ -228,7 +249,7 @@ public:
 	void Compute1DRotationalAverage(double average[], int number_of_bins);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
-	float ReturnAverageOfRealValues();
+	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0);
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);

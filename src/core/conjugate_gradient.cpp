@@ -23,7 +23,7 @@ ConjugateGradient::~ConjugateGradient()
 	}
 }
 
-void ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, float []), void *parameters_to_pass, int num_dim, float starting_value[], float accuracy[] )
+float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, float []), void *parameters_to_pass, int num_dim, float starting_value[], float accuracy[] )
 {
 
 	// Copy pointers to the target function and the needed parameters
@@ -50,9 +50,13 @@ void ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, flo
 
 	// Call the target function to find out our starting score
 	best_score = target_function(parameters,starting_value);
+
+//	MyDebugPrint("Starting score = %f\n",best_score);
+	return best_score;
+
 }
 
-void ConjugateGradient::Run()
+float ConjugateGradient::Run()
 {
 	int iprint = 0;
 	int icon = 1;
@@ -60,4 +64,6 @@ void ConjugateGradient::Run()
 	int va04_success = 0;
 
 	va04_success = va04a_(&n,e,&escale,&num_function_calls,target_function,parameters,&best_score,&iprint,&icon,&maxit,best_values);
+
+	return best_score;
 }

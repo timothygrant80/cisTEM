@@ -19,10 +19,11 @@ public:
 	~ConjugateGradient();
 
 	// Methods
-	void Init(float (*function_to_minimize)(void* parameters, float []), void *parameters, int num_dim, float starting_value[], float accuracy[] );
-	void Run();
+	float Init(float (*function_to_minimize)(void* parameters, float []), void *parameters, int num_dim, float starting_value[], float accuracy[] );
+	float Run();
 	inline float GetBestValue(int index) { return best_values[index]; };
 	inline float GetBestScore() { return best_score; };
+	inline float *GetPointerToBestValues() { return best_values; };
 
 };
 

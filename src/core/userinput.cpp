@@ -129,7 +129,7 @@ void UserInput::Init(const char *program_name, float program_version)
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("         Version : %1.2f\n", program_version);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
-	wxPrintf("       Compliled : %s\n", __DATE__);
+	wxPrintf("       Compiled : %s\n", __DATE__);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("            Mode : ");
 
@@ -383,7 +383,14 @@ std::string UserInput::GetSymmetryFromUser(const char * my_text, const char * he
 
 					}
 
-					if ((symmetry_type == 'T' || symmetry_type == 'O') && symmetry_number == 0)
+					if (symmetry_type == 'T' && (symmetry_number < 3))
+					{
+						DoGotValidAnswer(my_text, input);
+						std::string my_string(input);
+						return my_string;
+					}
+
+					if (symmetry_type == 'O' && (symmetry_number == 0))
 					{
 						DoGotValidAnswer(my_text, input);
 						std::string my_string(input);

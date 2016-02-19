@@ -13,6 +13,12 @@ public:
 	void GenerateEulerMatrices(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi);
 	void Init(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x, float wanted_shift_y);
 
+	inline float ReturnPhiAngle() {return euler_phi;};
+	inline float ReturnThetaAngle() {return euler_theta;};
+	inline float ReturnPsiAngle() {return euler_psi;};
+	inline float ReturnShiftX() {return shift_x;};
+	inline float ReturnShiftY() {return shift_y;};
+
 private:
 
 	float 			euler_phi;		// in degrees

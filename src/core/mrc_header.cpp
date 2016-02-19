@@ -64,7 +64,7 @@ void MRCHeader::PrintInfo()
 		{
 			current_label[char_counter] = labels[label_counter*80+char_counter];
 		}
-		current_label[80] = NULL;
+		current_label[80] = 0;
 		wxPrintf("Label %i : %s\n",label_counter+1,current_label);
 	}
 

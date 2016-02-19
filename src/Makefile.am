@@ -22,12 +22,15 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf ctffind reconstruct3d niko_test
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d niko_test ctffind
 
 
 libcore_a_SOURCES =    core/functions.cpp \
+					   core/globals.cpp \
+					   core/randomnumbergenerator.cpp \
                        core/userinput.cpp \
                        core/angles_and_shifts.cpp \
+                       core/parameter_constraints.cpp \
                        core/assets.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
@@ -108,6 +111,12 @@ reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_LDFLAGS = $(WX_LIBS_BASE)
 reconstruct3d_LDADD = libcore.a
+
+project3d_SOURCES = programs/project3d/project3d.cpp
+project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+project3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+project3d_LDFLAGS = $(WX_LIBS_BASE)
+project3d_LDADD = libcore.a
 
 niko_test_SOURCES = programs/niko_test/niko_test.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)

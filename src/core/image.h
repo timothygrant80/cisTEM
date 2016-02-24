@@ -118,13 +118,13 @@ public:
 
 	inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
-		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address out of bounds!" )
+		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address (%i %i %i) out of bounds (%i to %i; %i to %i; %i to %i)!",wanted_x,wanted_y,wanted_z,0,physical_upper_bound_complex_x,0,physical_upper_bound_complex_y,0,physical_upper_bound_complex_z );
 		return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
 	};
 
 	inline long ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
-		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Coord out of bounds! (%i, %i, %i)", wanted_x, wanted_y, wanted_z)
+		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex_x && wanted_x <=logical_upper_bound_complex_x && wanted_y >= logical_lower_bound_complex_y && wanted_y <= logical_upper_bound_complex_y && wanted_z >= logical_lower_bound_complex_z && wanted_z <= logical_upper_bound_complex_z, "Logical coordinates (%i, %i, %i) are out of bounds (%i to %i ; %i to %i; %i to %i)\n", wanted_x, wanted_y, wanted_z, logical_lower_bound_complex_x, logical_upper_bound_complex_x, logical_lower_bound_complex_y, logical_upper_bound_complex_y, logical_lower_bound_complex_z, logical_upper_bound_complex_z)
 
 		int physical_x_address;
 		int physical_y_address;
@@ -226,6 +226,7 @@ public:
 	inline void WriteSlice(MRCFile *input_file, long slice_to_write) {  MyDebugAssertTrue(slice_to_write > 0, "Start slice is 0, the first slice is 1!"); WriteSlices(input_file, slice_to_write, slice_to_write);}
 	void WriteSlices(MRCFile *input_file, long start_slice, long end_slice);
 
+	void QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write);
 	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write);
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
@@ -246,6 +247,7 @@ public:
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
+	void ComputeAmplitudeSpectrum(Image *other_image);
 	void Compute1DRotationalAverage(double average[], int number_of_bins);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();

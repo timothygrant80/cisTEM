@@ -1669,6 +1669,14 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 	}
 }
 
+void Image::QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write)
+{
+	MyDebugAssertTrue(first_slice_to_write >0, "Slice is less than 1, first slice is 1");
+	MRCFile output_file(filename, false);
+	WriteSlices(&output_file,first_slice_to_write,last_slice_to_write);
+}
+
+
 void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write)
 {
 	MyDebugAssertTrue(slice_to_write >0, "Slice is less than 1, first slice is 1");
@@ -2383,6 +2391,47 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 	}
 }
 
+// The output image will be allocated to the correct dimensions (half-volume, a la FFTW)
+void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
+
+	//
+	int i,j,k;
+	long address_in_amplitude_spectrum = 0;
+	long address_in_self = 0;
+	const int spectrum_logical_dim_x = physical_upper_bound_complex_x + 1;
+	const int spectrum_logical_dim_y = physical_upper_bound_complex_y + 1;
+	const int spectrum_logical_dim_z = physical_upper_bound_complex_z + 1;
+
+
+	//
+	if (logical_z_dimension > 1)
+	{
+		amplitude_spectrum->Allocate(spectrum_logical_dim_x,spectrum_logical_dim_y,spectrum_logical_dim_z,true);
+	}
+	else
+	{
+		amplitude_spectrum->Allocate(spectrum_logical_dim_x,spectrum_logical_dim_y,true);
+	}
+
+	// Loop over the amplitude spectrum
+	for (k = 0; k < amplitude_spectrum->logical_z_dimension; k++)
+	{
+		for (j = 0; j < amplitude_spectrum->logical_y_dimension; j++)
+		{
+			for (i = 0; i < amplitude_spectrum->logical_x_dimension; i++)
+			{
+				address_in_self = ReturnFourier1DAddressFromPhysicalCoord(i,j,k);
+				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = cabsf(complex_values[address_in_self]);
+				address_in_amplitude_spectrum++;
+			}
+			address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
+		}
+	}
+}
+
 
 void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 {
@@ -2950,6 +2999,74 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value)
 
 			}
 		}
+
+
+		// When we are clipping into a larger volume in Fourier space, there is a half-plane (vol) or half-line (2D image) at Nyquist for which FFTW
+		// does not explicitly tell us the values. We need to fill them in.
+		if (logical_y_dimension < other_image->logical_y_dimension || logical_z_dimension < other_image->logical_z_dimension)
+		{
+			// For a 2D image
+			if (logical_z_dimension == 1)
+			{
+				jj = physical_index_of_first_negative_frequency_y;
+				for (ii = 0; ii <= physical_upper_bound_complex_x; ii++)
+				{
+					other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj,0)] = complex_values[ReturnFourier1DAddressFromPhysicalCoord(ii,jj,0)];
+				}
+			}
+			// For a 3D volume
+			else
+			{
+
+				// Deal with the positive Nyquist of the 2nd dimension
+				for (kk_logi = logical_lower_bound_complex_z; kk_logi <= logical_upper_bound_complex_z; kk_logi ++)
+				{
+					jj = physical_index_of_first_negative_frequency_y;
+					jj_logi = logical_lower_bound_complex_y;
+					for (ii = 0; ii <= physical_upper_bound_complex_x; ii++)
+					{
+						other_image->complex_values[other_image->ReturnFourier1DAddressFromLogicalCoord(ii,jj,kk_logi)] = complex_values[ReturnFourier1DAddressFromLogicalCoord(ii,jj_logi,kk_logi)];
+					}
+				}
+
+
+				// Deal with the positive Nyquist in the 3rd dimension
+				kk = physical_index_of_first_negative_frequency_z;
+				int kk_mirror = other_image->logical_z_dimension - physical_index_of_first_negative_frequency_z;
+				//wxPrintf("\nkk = %i; kk_mirror = %i\n",kk,kk_mirror);
+				int jj_mirror;
+				//wxPrintf("Will loop jj from %i to %i\n",1,physical_index_of_first_negative_frequency_y);
+				for (jj = 1; jj <= physical_index_of_first_negative_frequency_y; jj ++ )
+				{
+					//jj_mirror = other_image->logical_y_dimension - jj;
+					jj_mirror = jj;
+					for (ii = 0; ii <= physical_upper_bound_complex_x; ii++ )
+					{
+						//wxPrintf("(1) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
+						other_image->complex_values[other_image-> ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj_mirror,kk_mirror)];
+					}
+				}
+				//wxPrintf("Will loop jj from %i to %i\n", other_image->logical_y_dimension - physical_index_of_first_negative_frequency_y, other_image->logical_y_dimension - 1);
+				for (jj = other_image->logical_y_dimension - physical_index_of_first_negative_frequency_y; jj <= other_image->logical_y_dimension - 1; jj ++)
+				{
+					//jj_mirror = other_image->logical_y_dimension - jj;
+					jj_mirror = jj;
+					for (ii = 0; ii <= physical_upper_bound_complex_x; ii++ )
+					{
+						//wxPrintf("(2) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
+						other_image->complex_values[other_image-> ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj_mirror,kk_mirror)];
+					}
+				}
+				jj = 0;
+				for (ii = 0; ii <= physical_upper_bound_complex_x; ii++)
+				{
+					other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = other_image->complex_values[other_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk_mirror)];
+				}
+
+			}
+		}
+
+
 	}
 
 }

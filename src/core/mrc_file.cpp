@@ -46,8 +46,15 @@ void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 
 		if (my_file.is_open() == false)
 		{
-			printf("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
-			abort();
+			// Try without connecting the out (i.e. read only)
+			my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::binary);
+			
+			// If it still didn't work, we're buggered
+			if (my_file.is_open() == false)
+			{
+				MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
+				abort();
+			}
 		}
 
 		// read the header
@@ -61,7 +68,7 @@ void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 
 		if (my_file.is_open() == false)
 		{
-			printf("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
+			MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
 			abort();
 		}
 

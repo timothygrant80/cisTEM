@@ -50,6 +50,7 @@ MyTestApp : public wxAppConsole
 		void TestSpectrumBoxConvolution();
 		void TestImageLoopingAndAddressing();
 		void TestNumericTextFiles();
+		void TestClipIntoFourier();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -88,10 +89,221 @@ bool MyTestApp::OnInit()
 	TestSpectrumBoxConvolution();
 	TestImageLoopingAndAddressing();
 	TestNumericTextFiles();
+	TestClipIntoFourier();
 
 
 	wxPrintf("\n\n\n");
 	return false;
+}
+
+
+// A partial test for the ClipInto method, specifically when clipping a Fourier transform into
+// a larger volume
+void MyTestApp::TestClipIntoFourier()
+{
+	BeginTest("Image::ClipIntoFourier");
+
+	Image test_image_original;
+	Image test_image;
+	Image test_image_ampl;
+	Image big_image;
+	Image big_image_ampl;
+	int address;
+	int i,j,k;
+	int i_logi, j_logi, k_logi;
+	const float error_tolerance = 0.0001;
+	const bool write_files_out = false;
+
+
+	// Create a test image
+	test_image.Allocate(4,4,4,true);
+	address = 0;
+	for (k=0;k<4;k++)
+	{
+		for (j=0;j<4;j++)
+		{
+			for (i=0;i<4;i++)
+			{
+				test_image.real_values[address] = float(address);
+				address++;
+			}
+			address += test_image.padding_jump_value;
+		}
+	}
+	global_random_number_generator.SetSeed(0);
+	test_image.AddGaussianNoise(100.0);
+
+	// Keep a copy
+	test_image_original.CopyFrom(&test_image);
+
+	// Write test image to disk
+	if (write_files_out) test_image.QuickAndDirtyWriteSlices("dbg_start.mrc",1,4);
+
+	// Clip into a larger image when in Fourier space
+	big_image.Allocate(8,8,8,false);
+	test_image.ForwardFFT();
+	test_image.ComputeAmplitudeSpectrum(&test_image_ampl);
+	if (write_files_out) test_image_ampl.QuickAndDirtyWriteSlices("dbg_start_ampl.mrc",1,4);
+	test_image.ClipInto(&big_image);
+	big_image.ComputeAmplitudeSpectrum(&big_image_ampl);
+	if (write_files_out) big_image_ampl.QuickAndDirtyWriteSlices("dbg_big_ampl.mrc",1,8);
+
+	//wxPrintf("%f %f %f %f\n",cabsf(test_image.complex_values[2]),cabsf(big_image.complex_values[2]),test_image_ampl.real_values[2], big_image_ampl.real_values[2]);
+
+	// Do a few checks of the pixel amplitudes
+	if (abs(cabsf(test_image.complex_values[0]) - cabsf(big_image.complex_values[0])) > error_tolerance) FailTest;
+	if (abs(cabsf(test_image.complex_values[1]) - cabsf(big_image.complex_values[1])) > error_tolerance) FailTest;
+	if (abs(cabsf(test_image.complex_values[2]) - cabsf(big_image.complex_values[2])) > error_tolerance) FailTest;
+
+	for (k_logi = -2; k_logi <= 2; k_logi ++)
+	{
+		for (j_logi = -2; j_logi <= 2; j_logi ++)
+		{
+			for (i_logi = 0; i_logi <= 2; i_logi ++)
+			{
+				if (big_image.complex_values[big_image.ReturnFourier1DAddressFromLogicalCoord(i_logi,j_logi,k_logi)] == 0.0 )
+				{
+					wxPrintf("\nComplex pixel with logical coords %i %i %i was not set!\n",i_logi,j_logi,k_logi);
+					FailTest;
+				}
+			}
+		}
+	}
+
+	// Clip back into smaller image - should get back to where we started
+	big_image.BackwardFFT();
+	if (write_files_out) big_image.QuickAndDirtyWriteSlices("dbg_big_real_space.mrc",1,8);
+	big_image.ForwardFFT();
+	big_image.ClipInto(&test_image);
+	test_image.BackwardFFT();
+
+	// Write output image to disk
+	if (write_files_out) test_image.QuickAndDirtyWriteSlices("dbg_finish.mrc",1,4);
+
+	// Check we still have the same values
+	address = 0;
+	for (k=0;k<4;k++)
+	{
+		for (j=0;j<4;j++)
+		{
+			for (i=0;i<4;i++)
+			{
+				if (abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001)
+				{
+					wxPrintf("Voxel at address %i use to have value %f, now is %f\n",address, test_image_original.real_values[address],test_image.real_values[address]);
+					FailTest;
+				}
+				address++;
+			}
+			address += test_image.padding_jump_value;
+		}
+	}
+
+
+	/*
+	 *  Now test with odd dimensions into odd dimensions
+	 */
+	test_image.Allocate(5,5,5,true);
+	test_image.SetToConstant(0.0);
+	test_image.AddGaussianNoise(100.0);
+	test_image_original.CopyFrom(&test_image);
+	test_image.ForwardFFT();
+	big_image.Allocate(9,9,9,false);
+	test_image.ClipInto(&big_image);
+	big_image.BackwardFFT();
+	big_image.ForwardFFT();
+	big_image.ClipInto(&test_image);
+	test_image.BackwardFFT();
+	// Check we still have the same values
+	address = 0;
+	for (k=0;k<5;k++)
+	{
+		for (j=0;j<5;j++)
+		{
+			for (i=0;i<5;i++)
+			{
+				if (abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001)
+				{
+					wxPrintf("Voxel at address %i use to have value %f, now is %f\n",address, test_image_original.real_values[address],test_image.real_values[address]);
+					FailTest;
+				}
+				address++;
+			}
+			address += test_image.padding_jump_value;
+		}
+	}
+
+	/*
+	 *  Now test with odd dimensions into even dimensions
+	 */
+	test_image.Allocate(5,5,5,true);
+	test_image.SetToConstant(0.0);
+	test_image.AddGaussianNoise(100.0);
+	test_image_original.CopyFrom(&test_image);
+	test_image.ForwardFFT();
+	big_image.Allocate(8,8,8,false);
+	test_image.ClipInto(&big_image);
+	big_image.BackwardFFT();
+	big_image.ForwardFFT();
+	big_image.ClipInto(&test_image);
+	test_image.BackwardFFT();
+	// Check we still have the same values
+	address = 0;
+	for (k=0;k<5;k++)
+	{
+		for (j=0;j<5;j++)
+		{
+			for (i=0;i<5;i++)
+			{
+				if (abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001)
+				{
+					wxPrintf("Voxel at address %i use to have value %f, now is %f\n",address, test_image_original.real_values[address],test_image.real_values[address]);
+					FailTest;
+				}
+				address++;
+			}
+			address += test_image.padding_jump_value;
+		}
+	}
+
+	/*
+	 *  Now test with even dimensions into odd dimensions
+	 */
+	test_image.Allocate(4,4,4,true);
+	test_image.SetToConstant(0.0);
+	test_image.AddGaussianNoise(100.0);
+	test_image_original.CopyFrom(&test_image);
+	test_image.ForwardFFT();
+	big_image.Allocate(9,9,9,false);
+	test_image.ClipInto(&big_image);
+	big_image.BackwardFFT();
+	big_image.ForwardFFT();
+	big_image.ClipInto(&test_image);
+	test_image.BackwardFFT();
+	// Check we still have the same values
+	address = 0;
+	for (k=0;k<4;k++)
+	{
+		for (j=0;j<4;j++)
+		{
+			for (i=0;i<4;i++)
+			{
+				if (abs(test_image.real_values[address] - test_image_original.real_values[address]) > 0.001)
+				{
+					wxPrintf("Voxel at address %i use to have value %f, now is %f\n",address, test_image_original.real_values[address],test_image.real_values[address]);
+					FailTest;
+				}
+				address++;
+			}
+			address += test_image.padding_jump_value;
+		}
+	}
+
+
+
+
+
+	EndTest();
 }
 
 void MyTestApp::TestImageLoopingAndAddressing()

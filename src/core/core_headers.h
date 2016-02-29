@@ -34,6 +34,7 @@ typedef struct Peak {
 #include "randomnumbergenerator.h"
 #include "mrc_header.h"
 #include "mrc_file.h"
+#include "dm_file.h"
 #include "matrix.h"
 #include "symmetry_matrix.h"
 #include "curve.h"

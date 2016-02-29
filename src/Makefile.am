@@ -5,6 +5,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/image.h \
                  core/mrc_file.h \
                  core/mrc_header.h \
+                 core/dm_file.h \
                  gui/AlignMoviesPanel.h \
                  gui/ErrorDialog.h \
                  gui/MainFrame.h \
@@ -40,6 +41,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/symmetry_matrix.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
+                       core/dm_file.cpp \
                        core/database.cpp \
                        core/project.cpp \
                        core/reconstruct_3d.cpp \

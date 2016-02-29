@@ -150,7 +150,7 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 		case 0:
 			bytes_per_pixel = 1;
 			pixel_data_are_signed = true; // Note that MRC mode 0 is sometimes signed, sometimes not signed. TODO: sort this out by checking the imodStamp header
-			pixel_data_are_of_type = Byte;
+			pixel_data_are_of_type = MRCByte;
 			pixel_data_are_complex = false;
 		break;
 
@@ -164,35 +164,35 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 		case 2:
 			bytes_per_pixel = 4;
 			pixel_data_are_signed = true;
-			pixel_data_are_of_type = Byte;
+			pixel_data_are_of_type = MRCByte;
 			pixel_data_are_complex = false;
 		break;
 
 		case 3:
 			bytes_per_pixel = 2;
 			pixel_data_are_signed = true;
-			pixel_data_are_of_type = Integer;
+			pixel_data_are_of_type = MRCInteger;
 			pixel_data_are_complex = true;
 		break;
 
 		case 4:
 			bytes_per_pixel = 4;
 			pixel_data_are_signed = true;
-			pixel_data_are_of_type = Float;
+			pixel_data_are_of_type = MRCFloat;
 			pixel_data_are_complex = true;
 		break;
 
 		case 5:
 			bytes_per_pixel = 1;
 			pixel_data_are_signed = false;
-			pixel_data_are_of_type = Byte;
+			pixel_data_are_of_type = MRCByte;
 			pixel_data_are_complex = false;
 		break;
 
 		case 6:
 			bytes_per_pixel = 2;
 			pixel_data_are_signed = false;
-			pixel_data_are_of_type = Integer;
+			pixel_data_are_of_type = MRCInteger;
 			pixel_data_are_complex = false;
 		break;
 

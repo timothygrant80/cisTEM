@@ -46,7 +46,7 @@
 */
 
 //
-enum MRCDataTypes { Byte, Integer, Float };
+enum MRCDataTypes { MRCByte, MRCInteger, MRCFloat };
 
 class MRCHeader {
 

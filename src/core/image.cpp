@@ -1613,6 +1613,42 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 
 }
 
+//!> \brief Read a set of slices from disk (FFTW padding is done automatically)
+
+void Image::ReadSlices(DMFile *input_file, long start_slice, long end_slice)
+{
+
+	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
+	MyDebugAssertTrue(start_slice > 0, "Start slice is less than 0, the first slice is 1!");
+	MyDebugAssertTrue(end_slice <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");
+	MyDebugAssertTrue(start_slice == end_slice, "Can only read one slice at a time from DM files. Sorry.")
+
+
+	// check the allocations..
+
+	int number_of_slices = (end_slice - start_slice) + 1;
+
+	if (logical_x_dimension != input_file->sizeX() || logical_y_dimension != input_file->sizeY() || logical_z_dimension != number_of_slices || is_in_memory == false)
+	{
+		Deallocate();
+		Allocate(input_file->sizeX(), input_file->sizeY(), number_of_slices);
+
+	}
+
+	// We should be set up - so read in the correct values.
+	// AT THE MOMENT, WE CAN ONLY READ REAL SPACE IMAGES, SO OVERRIDE THIS!!!!!
+
+	is_in_real_space = true;
+	object_is_centred_in_box = true;
+
+	input_file->ReadSliceFromDisk(start_slice - 1, real_values); // DM indexes slices starting at 0
+
+	// we need to respace this to take into account the FFTW padding..
+
+	AddFFTWPadding();
+
+}
+
 //!> \brief Write a set of slices from disk (FFTW padding is done automatically)
 
 void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
@@ -1686,12 +1722,24 @@ void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write)
 
 void Image::QuickAndDirtyReadSlice(std::string filename, long slice_to_read)
 {
-	MRCFile input_file(filename, false);
 
-	MyDebugAssertTrue(slice_to_read <= input_file.ReturnNumberOfSlices(), "End slices is greater than number of slices in the file!");
-	MyDebugAssertTrue(slice_to_read >0, "Slice is less than 1, first slice is 1");
+	wxFileName wx_filename = wxString(filename);
+	wxString extension = wx_filename.GetExt();
+	//wxPrintf("(QuickAndDirtyReadSlice): found the following extension: %s",extension);
+	if (extension.Find("dm") == 0)
+	{
+		DMFile input_file(filename);
+		ReadSlices(&input_file,slice_to_read,slice_to_read);
+	}
+	else
+	{
+		MRCFile input_file(filename, false);
 
-	ReadSlice(&input_file, slice_to_read);
+		MyDebugAssertTrue(slice_to_read <= input_file.ReturnNumberOfSlices(), "End slices is greater than number of slices in the file!");
+		MyDebugAssertTrue(slice_to_read >0, "Slice is less than 1, first slice is 1");
+
+		ReadSlice(&input_file, slice_to_read);
+	}
 }
 
 //!> \brief Take a contiguous set of values, and add the FFTW padding.

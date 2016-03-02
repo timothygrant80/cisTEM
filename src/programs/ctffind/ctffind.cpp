@@ -123,7 +123,7 @@ IMPLEMENT_APP(CtffindApp)
 void CtffindApp::DoInteractiveUserInput()
 {
 
-	float lowest_allowest_minimum_resolution = 50.0;
+	float lowest_allowed_minimum_resolution = 50.0;
 
 	std::string input_filename;
 	bool input_is_a_movie;
@@ -139,6 +139,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float minimum_defocus;
 	float maximum_defocus;
 	float defocus_search_step;
+	bool restrain_astigmatism;
 	float astigmatism_tolerance;
 	bool find_additional_phase_shift;
 	float minimum_additional_phase_shift;
@@ -284,23 +285,31 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 
 		output_diagnostic_filename	= my_input->GetFilenameFromUser("Output diagnostic image file name","Will contain the experimental power spectrum and the best CTF fit","diagnostic_output.mrc",false);
-		pixel_size 					= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0,9999999.99);
-		acceleration_voltage 		= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0,99999999.99);
-		spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.7",0.0,999999999.99);
+		pixel_size 					= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0);
+		acceleration_voltage 		= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0);
+		spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.7",0.0);
 		amplitude_contrast 			= my_input->GetFloatFromUser("Amplitude contrast","Fraction of amplitude contrast","0.07",0.0,1.0);
-		box_size 					= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128,9999999);
-		minimum_resolution 			= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowest_minimum_resolution);
+		box_size 					= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128);
+		minimum_resolution 			= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowed_minimum_resolution);
 		maximum_resolution 			= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
-		minimum_defocus 			= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0",-999999.99,999999999.99);
-		maximum_defocus 			= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus,9999999999.99);
-		defocus_search_step 		= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0,99999999999.99);
-		astigmatism_tolerance 		= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms; set to negative to remove this restraint","100.0");
+		minimum_defocus 			= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
+		maximum_defocus 			= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
+		defocus_search_step 		= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0);
+		restrain_astigmatism		= my_input->GetYesNoFromUser("Restrain astigmatism","Answer yes if you expect low astigmatism and would like to penalise large astigmatisms during fitting","yes");
+		if (restrain_astigmatism)
+		{
+			astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms)","100.0");
+		}
+		else
+		{
+			astigmatism_tolerance 	= -100.0; // a negative value here signals that we don't want any restraint on astigmatism
+		}
 		find_additional_phase_shift = my_input->GetYesNoFromUser("Find additional phase shift?","Input micrograph was recorded using a phase plate with variable phase shift, which you want to find","no");
 
 		if (find_additional_phase_shift)
 		{
 			minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
-			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",minimum_additional_phase_shift,3.15);
+			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","3.15",minimum_additional_phase_shift,3.15);
 			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.001,maximum_additional_phase_shift-minimum_additional_phase_shift);
 		}
 		else
@@ -644,6 +653,28 @@ bool CtffindApp::DoCalculation()
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
 
+		// Set up the comparison object
+		comparison_object_2D.ctf = current_ctf;
+		comparison_object_2D.img = average_spectrum;
+		comparison_object_2D.pixel_size = pixel_size;
+		comparison_object_2D.find_phase_shift = find_additional_phase_shift;
+
+		if (is_running_locally && old_school_input)
+		{
+			wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
+		}
+
+
+		// Let's look for the astigmatism angle first
+		temp_image->CopyFrom(average_spectrum);
+		temp_image->ApplyMirrorAlongY();
+		//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
+		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+
+		//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
+
+
+
 		/*
 		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
 		 */
@@ -706,7 +737,7 @@ bool CtffindApp::DoCalculation()
 			{
 				cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
 			}
-			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0],0.0);
+			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0],estimated_astigmatism_angle);
 			if (find_additional_phase_shift)
 			{
 				current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
@@ -717,14 +748,14 @@ bool CtffindApp::DoCalculation()
 
 			// Set up the 2D comparison object, which we will soon need
 			comparison_object_2D.ctf = current_ctf;
-			comparison_object_2D.img = average_spectrum;
-			comparison_object_2D.pixel_size = pixel_size;
-			comparison_object_2D.find_phase_shift = find_additional_phase_shift;
+			//comparison_object_2D.img = average_spectrum;
+			//comparison_object_2D.pixel_size = pixel_size;
+			//comparison_object_2D.find_phase_shift = find_additional_phase_shift;
 
 			// Set up the starting point for the 2D conjugate gradient minimization
 			cg_starting_point[0] = current_ctf.GetDefocus1();
 			cg_starting_point[1] = current_ctf.GetDefocus2();
-			cg_starting_point[2] = 0.0; // We could run the mirror trick to get a better starting point - just not sure whether worth it
+			cg_starting_point[2] = estimated_astigmatism_angle; // We could run the mirror trick to get a better starting point - just not sure whether worth it
 			if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
 			if (find_additional_phase_shift)
 			{
@@ -745,26 +776,6 @@ bool CtffindApp::DoCalculation()
 		}
 		else
 		{
-
-			// Set up the comparison object
-			comparison_object_2D.ctf = current_ctf;
-			comparison_object_2D.img = average_spectrum;
-			comparison_object_2D.pixel_size = pixel_size;
-			comparison_object_2D.find_phase_shift = find_additional_phase_shift;
-
-			if (is_running_locally && old_school_input)
-			{
-				wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
-			}
-
-
-			// Let's look for the astigmatism angle first
-			temp_image->CopyFrom(average_spectrum);
-			temp_image->ApplyMirrorAlongY();
-			//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
-
-			//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
 
 
 			// We can now look for the defocus value

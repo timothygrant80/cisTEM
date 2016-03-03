@@ -154,9 +154,10 @@ bool Project3DApp::DoCalculation()
 		{
 			variance = final_image.ReturnVarianceOfRealValues();
 			final_image.AddGaussianNoise(sqrtf(variance / wanted_SNR));
+//			wxPrintf("sigma_signal = %f, sigma_noise = %f\n", sqrtf(variance), sqrtf(variance / wanted_SNR));
 		}
 		if (apply_mask) final_image.CosineMask(mask_radius / pixel_size, 6.0);
-		final_image.WriteSlice(&output_file, current_image);
+		final_image.WriteSlice(&output_file, int(temp_float[0] + 0.5));
 
 		my_progress->Update(current_image);
 	}

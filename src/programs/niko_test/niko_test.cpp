@@ -363,8 +363,9 @@ bool NikoTestApp::DoCalculation()
 //		particle_image.ReadSlice(&input_stack, current_image);
 //		particle_image.ForwardFFT();
 		input_image.ReadSlice(&input_stack, current_image);
-		input_image.ForwardFFT();
-		input_image.ClipInto(&particle_image);
+		input_image.ClipInto(&unbinned_image);
+		unbinned_image.ForwardFFT();
+		unbinned_image.ClipInto(&particle_image);
 //		input_image.QuickAndDirtyWriteSlice("input_image.mrc",1);
 //		particle_image.QuickAndDirtyWriteSlice("particle_image.mrc",1);
 //		exit(0);

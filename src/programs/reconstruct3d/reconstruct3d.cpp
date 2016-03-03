@@ -87,14 +87,9 @@ bool Reconstruct3DApp::DoCalculation()
 	float    score_bfactor_conversion			= my_current_job.arguments[12].ReturnFloatArgument();
 	wxString my_symmetry						= my_current_job.arguments[13].ReturnStringArgument();
 
-	Image input_image;
 	ReconstructedVolume output_3d;
 	ReconstructedVolume output_3d1;
 	ReconstructedVolume output_3d2;
-	float particle_weight;
-	float particle_score;
-	float image_sigma_noise;
-	float particle_occupancy;
 
 	int current_image;
 	float temp_float[50];
@@ -107,11 +102,10 @@ bool Reconstruct3DApp::DoCalculation()
 	MRCFile input_file(input_particle_stack.ToStdString(), false);
 	MRCFile output_file;
 	NumericTextFile my_par_file(input_parameter_file, OPEN_TO_READ);
-	AnglesAndShifts my_parameters;
-	CTF my_ctf;
 
 	Reconstruct3D my_reconstruction_1(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnXSize(), pixel_size, my_symmetry);
 	Reconstruct3D my_reconstruction_2(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnXSize(), pixel_size, my_symmetry);
+	Particle input_particle(input_file.ReturnXSize(), input_file.ReturnYSize());
 
 // Read whole parameter file to work out average image_sigma_noise and average score
 	for (current_image = 1; current_image <= my_par_file.number_of_lines; current_image++)
@@ -122,40 +116,43 @@ bool Reconstruct3DApp::DoCalculation()
 	}
 	average_sigma /= input_file.ReturnNumberOfSlices();
 	average_score /= input_file.ReturnNumberOfSlices();
-	wxPrintf("\nAverage sigma noise = %f, average score = %f\n\n", average_sigma, average_score);
+	wxPrintf("\nNumber of particles = %i, average sigma noise = %f, average score = %f\n\n", my_par_file.number_of_lines, average_sigma, average_score);
 	my_par_file.Rewind();
 
-	ProgressBar *my_progress = new ProgressBar(input_file.ReturnNumberOfSlices());
+	ProgressBar *my_progress = new ProgressBar(my_par_file.number_of_lines);
 	for (current_image = 1; current_image <= my_par_file.number_of_lines; current_image++)
 //	for (current_image = 1; current_image <= 10; current_image++)
 	{
-		input_image.ReadSlice(&input_file, current_image);
-
 		my_par_file.ReadLine(temp_float);
-		my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
-		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, 0.0);
+		input_particle.location_in_stack = int(temp_float[0] + 0.5);
 
-		particle_score = temp_float[14];
-		particle_occupancy = temp_float[11];
-		image_sigma_noise = temp_float[13];
-		if (image_sigma_noise <= 0.0) image_sigma_noise = average_sigma;
-		particle_weight = particle_occupancy / 100.0 / powf(image_sigma_noise,2);
+		input_particle.particle_image->ReadSlice(&input_file, input_particle.location_in_stack);
+		input_particle.pixel_size = pixel_size;
 
-		input_image.ForwardFFT();
+		input_particle.alignment_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
+		input_particle.ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, 0.0);
 
-		input_image.PhaseShift(-temp_float[4] / pixel_size, -temp_float[5] / pixel_size);
-		input_image.SwapRealSpaceQuadrants();
-
-		my_progress->Update(current_image);
+		input_particle.particle_score = temp_float[14];
+		input_particle.particle_occupancy = temp_float[11];
+		input_particle.sigma_noise = temp_float[13];
 		if (current_image % 2 == 0)
 		{
-			my_reconstruction_2.InsertSlice(input_image, my_ctf, my_parameters, particle_weight, particle_score, average_score, score_bfactor_conversion);
-	//		my_reconstruction_2.InsertSlice(input_image, my_parameters);
+			input_particle.insert_even = true;
 		}
 		else
 		{
-			my_reconstruction_1.InsertSlice(input_image, my_ctf, my_parameters, particle_weight, particle_score, average_score, score_bfactor_conversion);
-	//		my_reconstruction_1.InsertSlice(input_image, my_parameters);
+			input_particle.insert_even = false;
+		}
+		if (input_particle.sigma_noise <= 0.0) input_particle.sigma_noise = average_sigma;
+
+		my_progress->Update(current_image);
+		if (input_particle.insert_even)
+		{
+			my_reconstruction_2.InsertSliceWithCTF(input_particle, average_score, score_bfactor_conversion);
+		}
+		else
+		{
+			my_reconstruction_1.InsertSliceWithCTF(input_particle,  average_score, score_bfactor_conversion);
 		}
 	}
 	delete my_progress;
@@ -188,7 +185,7 @@ bool Reconstruct3DApp::DoCalculation()
 	output_3d.InitWithReconstruct3D(my_reconstruction_1, pixel_size);
 	output_3d.statistics.CalculateFSC(output_3d1.density_map, output_3d2.density_map);
 	output_3d.molecular_mass_in_kDa = molecular_mass_kDa;
-	output_3d.statistics.CalculateParticleFSCandSSNR(output_3d1.mask_volume_in_voxels, molecular_mass_kDa, pixel_size);
+	output_3d.statistics.CalculateParticleFSCandSSNR(output_3d1.mask_volume_in_voxels, molecular_mass_kDa);
 	output_3d.statistics.CalculateParticleSSNR(my_reconstruction_1.image_reconstruction, my_reconstruction_1.ctf_reconstruction);
 	output_3d.has_statistics = true;
 	output_3d.PrintStatistics();

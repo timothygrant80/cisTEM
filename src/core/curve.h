@@ -29,8 +29,11 @@ public:
 	Curve & operator = (const Curve &other_curve);
 	Curve & operator = (const Curve *other_curve);
 
-	float ReturnLinearInterpolation(float wanted_x_value);
+	void ResampleCurve(Curve *input_curve, int wanted_number_of_points);
+	float ReturnLinearInterpolationFromI(float wanted_i);
+	float ReturnLinearInterpolationFromX(float wanted_x_value);
 	void PrintToStandardOut();
+	void WriteToFile(wxString output_file);
 	void CopyFrom(Curve *other_curve);
 	void ClearData();
 	void AddPoint(float x_value, float y_value);

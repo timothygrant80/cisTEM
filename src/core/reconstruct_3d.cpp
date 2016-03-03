@@ -100,13 +100,24 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 	edge_terms_were_added = false;
 }
 
-void Reconstruct3D::InsertSlice(Image &image_to_insert, CTF &ctf_of_image, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion)
+void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float &average_score, float &score_bfactor_conversion)
 {
-	MyDebugAssertTrue(image_to_insert.logical_x_dimension == logical_x_dimension && image_to_insert.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
-	MyDebugAssertTrue(image_to_insert.logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
+	MyDebugAssertTrue(particle_to_insert.particle_image->logical_x_dimension == logical_x_dimension && particle_to_insert.particle_image->logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(particle_to_insert.particle_image->logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
 	MyDebugAssertTrue(image_reconstruction.is_in_memory, "Memory not allocated for image_reconstruction");
 	MyDebugAssertTrue(current_ctf_image.is_in_memory, "Memory not allocated for current_ctf_image");
-	MyDebugAssertTrue(image_to_insert.is_in_real_space == false, "image not in Fourier space");
+	MyDebugAssertTrue(particle_to_insert.particle_image->IsSquare(), "Image must be square");
+
+	float particle_weight;
+
+	if (particle_to_insert.particle_image->is_in_real_space == true)
+	{
+		particle_to_insert.particle_image->ForwardFFT();
+		particle_to_insert.particle_image->SwapRealSpaceQuadrants();
+	}
+
+	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
+	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	if (particle_weight > 0.0)
 	{
@@ -134,19 +145,19 @@ void Reconstruct3D::InsertSlice(Image &image_to_insert, CTF &ctf_of_image, Angle
 		float weight;
 		float score_bfactor_conversion4 = score_bfactor_conversion / powf(pixel_size,2) * 0.25;
 
-		if (ctf_of_image.IsAlmostEqualTo(&current_ctf) == false)
+		if (particle_to_insert.ctf_parameters.IsAlmostEqualTo(&current_ctf) == false)
 		// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 		{
-			current_ctf = ctf_of_image;
+			current_ctf = particle_to_insert.ctf_parameters;
 			current_ctf_image.CalculateCTFImage(current_ctf);
 		}
 
 	// Now insert into 3D arrays
-		for (j = image_to_insert.logical_lower_bound_complex_y; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-			for (i = 1; i <= image_to_insert.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 			{
 //				if (image_to_insert.ReturnFourierLogicalCoordGivenPhysicalCoord_X(i)==20 && image_to_insert.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j)==20)
 //				{
@@ -155,69 +166,79 @@ void Reconstruct3D::InsertSlice(Image &image_to_insert, CTF &ctf_of_image, Angle
 
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
-				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+				weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
 			}
 		}
 	// Now deal with special case of i = 0
-		for (j = 0; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+		for (j = 0; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-			weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
-			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+			weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
 		}
 
 		if (symmetry_matrices.number_of_matrices > 1)
 		{
 			for (k = 1; k < symmetry_matrices.number_of_matrices; k++)
 			{
-				for (j = image_to_insert.logical_lower_bound_complex_y; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
 					y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-					for (i = 1; i <= image_to_insert.logical_upper_bound_complex_x; i++)
+					for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+						weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
 	//					angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-						temp_matrix = symmetry_matrices.rot_mat[k] * angles_and_shifts_of_image.euler_matrix;
+						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-						pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
 					}
 				}
 			// Now deal with special case of i = 0
-				for (j = 0; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+				for (j = 0; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-					weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+					weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
 	//				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					temp_matrix = symmetry_matrices.rot_mat[k] * angles_and_shifts_of_image.euler_matrix;
+					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
 				}
 			}
 		}
 	}
 }
 
-void Reconstruct3D::InsertSlice(Image &image_to_insert, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion)
+void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float &average_score, float &score_bfactor_conversion)
 {
-	MyDebugAssertTrue(image_to_insert.logical_x_dimension == logical_x_dimension && image_to_insert.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
-	MyDebugAssertTrue(image_to_insert.logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
+	MyDebugAssertTrue(particle_to_insert.particle_image->logical_x_dimension == logical_x_dimension && particle_to_insert.particle_image->logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(particle_to_insert.particle_image->logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
 	MyDebugAssertTrue(image_reconstruction.is_in_memory, "Memory not allocated for image_reconstruction");
-	MyDebugAssertTrue(image_to_insert.is_in_real_space == false, "image not in Fourier space");
-	MyDebugAssertTrue(image_to_insert.IsSquare(), "Image must be square");
+	MyDebugAssertTrue(particle_to_insert.particle_image->IsSquare(), "Image must be square");
+
+	float particle_weight;
+
+	if (particle_to_insert.particle_image->is_in_real_space == true)
+	{
+		particle_to_insert.particle_image->ForwardFFT();
+		particle_to_insert.particle_image->SwapRealSpaceQuadrants();
+	}
+
+	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
+	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	if (particle_weight > 0.0)
 	{
@@ -246,64 +267,64 @@ void Reconstruct3D::InsertSlice(Image &image_to_insert, AnglesAndShifts &angles_
 
 		fftwf_complex ctf_value = 1.0;
 
-		for (j = image_to_insert.logical_lower_bound_complex_y; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-			for (i = 1; i <= image_to_insert.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
-				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], ctf_value, weight);
+				weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
 			}
 		}
 // Now deal with special case of i = 0
-		for (j = 0; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+		for (j = 0; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-			weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
-			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], ctf_value, weight);
+			weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
 		}
 
 		if (symmetry_matrices.number_of_matrices > 1)
 		{
 			for (k = 1; k < symmetry_matrices.number_of_matrices; k++)
 			{
-				for (j = image_to_insert.logical_lower_bound_complex_y; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
 					y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-					for (i = 1; i <= image_to_insert.logical_upper_bound_complex_x; i++)
+					for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+						weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
 //						angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-						temp_matrix = symmetry_matrices.rot_mat[k] * angles_and_shifts_of_image.euler_matrix;
+						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-						pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], ctf_value, weight);
+						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
 					}
 				}
 // Now deal with special case of i = 0
-				for (j = 0; j <= image_to_insert.logical_upper_bound_complex_y; j++)
+				for (j = 0; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
-					weight = particle_weight * expf((particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
+					weight = particle_weight * expf((particle_to_insert.particle_score - average_score) * score_bfactor_conversion4 * frequency_squared);
 //					angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					temp_matrix = symmetry_matrices.rot_mat[k] * angles_and_shifts_of_image.euler_matrix;
+					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					pixel_counter = image_to_insert.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, image_to_insert.complex_values[pixel_counter], ctf_value, weight);
+					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
 				}
 			}
 		}

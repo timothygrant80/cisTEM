@@ -35,6 +35,27 @@ void ReconstructedVolume::InitWithDimensions(int wanted_logical_x_dimension, int
 	has_been_initialized = true;
 }
 
+void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius, float mask_falloff, float resolution_limit, bool swap_quadrants)
+{
+	MyDebugAssertTrue(projection.logical_x_dimension == density_map.logical_x_dimension && projection.logical_y_dimension == density_map.logical_y_dimension, "Error: Images have different sizes");
+	MyDebugAssertTrue(CTF.logical_x_dimension == density_map.logical_x_dimension && CTF.logical_y_dimension == density_map.logical_y_dimension, "Error: CTF image has different size");
+	MyDebugAssertTrue(projection.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
+	MyDebugAssertTrue(projection.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(density_map.IsCubic(), "Image volume to project is not cubic");
+	MyDebugAssertTrue(! density_map.object_is_centred_in_box, "Image volume quadrants not swapped");
+
+	density_map.ExtractSlice(projection, angles_and_shifts_of_projection, resolution_limit);
+	projection.MultiplyPixelWise(CTF);
+	if (mask_radius > 0.0)
+	{
+		projection.BackwardFFT();
+		projection.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size);
+		projection.ForwardFFT();
+	}
+	projection.PhaseShift(angles_and_shifts_of_projection.ReturnShiftX() / pixel_size, angles_and_shifts_of_projection.ReturnShiftY() / pixel_size);
+	if (swap_quadrants) projection.SwapRealSpaceQuadrants();
+}
+
 void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 {
 	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");

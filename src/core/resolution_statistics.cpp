@@ -117,7 +117,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 	delete [] non_zero_count;
 }
 
-void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_kDa, float pixel_size)
+void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_kDa)
 {
 	MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve must be calculated first");
 

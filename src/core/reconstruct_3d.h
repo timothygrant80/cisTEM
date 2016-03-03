@@ -1,5 +1,7 @@
 /*  \brief  Reconstruct3D class (derived from Frealign Pinsert) */
 
+class Particle;
+
 class Reconstruct3D {
 
 public:
@@ -26,8 +28,10 @@ public:
 	~Reconstruct3D();							// destructor
 
 	void Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size);
-	void InsertSlice(Image &image_to_insert, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion);
-	void InsertSlice(Image &image_to_insert, CTF &ctf_of_image, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion);
+	void InsertSliceWithCTF(Particle &particle_to_insert, float &average_score, float &score_bfactor_conversion);
+	void InsertSliceNoCTF(Particle &particle_to_insert, float &average_score, float &score_bfactor_conversion);
+//	void InsertSlice(Image &image_to_insert, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion);
+//	void InsertSlice(Image &image_to_insert, CTF &ctf_of_image, AnglesAndShifts &angles_and_shifts_of_image, float &particle_weight, float &particle_score, float &average_score, float &score_bfactor_conversion);
 	void AddByLinearInterpolation(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, fftwf_complex &wanted_value, fftwf_complex &ctf_value, float wanted_weight);
 	void CompleteEdges();
 	Reconstruct3D operator + (const Reconstruct3D &other);

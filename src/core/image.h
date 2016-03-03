@@ -83,18 +83,24 @@ public:
 
 	int ReturnSmallestLogicalDimension();
 	int ReturnLargestLogicalDimension();
+	float ReturnSumOfSquares();
+	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
+	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
+	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
 	float GetWeightedCorrelationWithImage(Image &projection_image, float low_limit, float high_limit);
+	void PhaseFlipPixelWise(Image &other_image);
 	void MultiplyPixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
 	void Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
-	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0);
+	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	void WhitenTwo(Image &other_image);
 	void Whiten();
 	void OptimalFilterBySNRImage(Image &SNR_image);
 	void MultiplyByWeightsCurve(Curve &weights);
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
 	float Correct3D(float mask_radius = 0.0);
-	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image);
+	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0);
 	fftwf_complex ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
@@ -243,6 +249,7 @@ public:
 	void AddImage(Image *other_image);
 	void SubtractImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
+	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void CalculateCrossCorrelationImageWith(Image *other_image);

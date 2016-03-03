@@ -1,5 +1,13 @@
 bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_of_images);
 
+inline void ZeroBoolArray(bool *array_to_zero, int size_of_array)
+{
+	for (int counter = 0; counter < size_of_array; counter++)
+	{
+		array_to_zero[counter] = false;
+	}
+};
+
 inline void ZeroIntArray(int *array_to_zero, int size_of_array)
 {
 	for (int counter = 0; counter < size_of_array; counter++)

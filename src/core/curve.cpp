@@ -158,13 +158,47 @@ Curve & Curve::operator = (const Curve &other_curve)
 {
 	*this = &other_curve;
 	return *this;
-
 }
 
-// Added by Niko, has never been tested
-float Curve::ReturnLinearInterpolation(float wanted_x_value)
+void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 {
-	MyDebugAssertTrue(number_of_points == 0, "No points to interpolate")
+	MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");
+	MyDebugAssertTrue(wanted_number_of_points > 1, "wanted_number_of_points is smaller than 2");
+
+	Curve temp_curve;
+
+	float i_x;
+
+	for (int i = 0; i < wanted_number_of_points; i++)
+	{
+		i_x = float(i * number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
+		temp_curve.AddPoint(i_x, input_curve->ReturnLinearInterpolationFromI(i_x));
+	}
+
+	CopyFrom(&temp_curve);
+}
+
+float Curve::ReturnLinearInterpolationFromI(float wanted_i)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
+	MyDebugAssertTrue(wanted_i <= number_of_points - 1, "Index too high");
+	MyDebugAssertTrue(wanted_i >= 0, "Index too low");
+
+	int i = int(wanted_i);
+
+	float distance_below = wanted_i - i;
+	float distance_above = 1.0 - distance_below;
+	float distance;
+
+	if (distance_below == 0.0) return data_y[i];
+	if (distance_above == 0.0) return data_y[i + 1];
+
+	return (1.0 - distance_above) * data_y[i + 1] + (1.0 - distance_below) * data_y[i];
+}
+
+float Curve::ReturnLinearInterpolationFromX(float wanted_x_value)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
 
 	int closest_x_below;
 	int closest_x_above;
@@ -202,6 +236,23 @@ void Curve::PrintToStandardOut()
 	for (int i = 0; i < number_of_points; i++)
 	{
 		wxPrintf("%f,%f\n",data_x[i],data_y[i]);
+	}
+}
+
+void Curve::WriteToFile(wxString output_file)
+{
+	MyDebugAssertTrue(number_of_points > 0, "Curve is empty");
+
+	float temp_float[2];
+
+	NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
+	output_curve_file.WriteCommentLine("C            X              Y");
+	for (int i = 1; i < number_of_points; i++)
+	{
+		temp_float[0] = data_x[i];
+		temp_float[1] = data_y[i];
+
+		output_curve_file.WriteLine(temp_float);
 	}
 }
 

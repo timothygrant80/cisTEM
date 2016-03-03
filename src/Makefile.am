@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d niko_test ctffind
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -47,6 +47,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/reconstruct_3d.cpp \
                        core/reconstructed_volume.cpp \
                        core/resolution_statistics.cpp \
+                       core/particle.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
                        core/run_profiles.cpp \
@@ -119,6 +120,12 @@ project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 project3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 project3d_LDFLAGS = $(WX_LIBS_BASE)
 project3d_LDADD = libcore.a
+
+refine3d_SOURCES = programs/refine3d/refine3d.cpp
+refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+refine3d_LDFLAGS = $(WX_LIBS_BASE)
+refine3d_LDADD = libcore.a
 
 niko_test_SOURCES = programs/niko_test/niko_test.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)

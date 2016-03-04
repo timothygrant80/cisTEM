@@ -75,6 +75,16 @@ inline float myround(float a)
 	if (a > 0) return float(int(a + 0.5));	else return float(int(a - 0.5));
 };
 
+inline int myroundint(double a)
+{
+	if (a > 0) return int(a + 0.5); else return int(a - 0.5);
+};
+
+inline int myroundint(float a)
+{
+	if (a > 0) return int(a + 0.5);	else return int(a - 0.5);
+};
+
 inline bool IsOdd(int number)
 {
 	if ((number & 1) == 0) return false;

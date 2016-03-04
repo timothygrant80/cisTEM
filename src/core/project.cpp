@@ -70,7 +70,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
 	ctf_asset_directory = directory_string;
-	wxFileName::Mkdir(image_asset_directory.GetFullPath());
+	wxFileName::Mkdir(ctf_asset_directory.GetFullPath());
 
 	total_cpu_hours = 0;
 	total_jobs_run = 0;

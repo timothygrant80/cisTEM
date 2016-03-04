@@ -811,7 +811,7 @@ bool CtffindApp::DoCalculation()
 
 			// Actually run the BF search
 			brute_force_search = new BruteForceSearch();
-			brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,true);
+			brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,is_running_locally);
 			brute_force_search->Run();
 
 			// The end point of the BF search is the beginning of the CG search

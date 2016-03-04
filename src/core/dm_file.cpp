@@ -25,6 +25,7 @@ DMFile::DMFile(wxString wanted_filename)
 	keep = 0;
 	unsigned char *fake_pointer;
 	readDM(wanted_filename, fake_pointer, false);
+	filename = wanted_filename;
 }
 
 
@@ -50,7 +51,7 @@ void DMFile::ReadSliceFromDisk(int wanted_slice, float *output_array)
 
 
 	// Read data from disk
-	readDM("test.dm4",p,true,wanted_slice);
+	readDM(filename,p,true,wanted_slice);
 
 
 	// Apply mirror operation to achieve the same data layout as IMOD's dm2mrc

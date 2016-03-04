@@ -2,111 +2,32 @@
 #include "../core/gui_core_headers.h"
 
 extern MyMovieAssetPanel *movie_asset_panel;
+extern MyImageAssetPanel *image_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyMainFrame *main_frame;
 
 MyAlignMoviesPanel::MyAlignMoviesPanel( wxWindow* parent )
 :
 AlignMoviesPanel( parent )
 {
+	// Set variables
 
-		buffered_results = NULL;
+	buffered_results = NULL;
+	show_expert_options = false;
 
-		// Create a mpFXYVector layer for the plot
+	// Fill combo box..
 
-		current_x_shift_vector_layer = new mpFXYVector((""));
-		current_y_shift_vector_layer = new mpFXYVector((""));
-		//average_shift_vector_layer = new mpFXYVector((""));
+	FillGroupComboBox();
 
+	my_job_id = -1;
+	running_job = false;
 
-		/*current_accumulated_dose_data.push_back(0);
-		current_accumulated_dose_data.push_back(5);
-		current_accumulated_dose_data.push_back(10);
-		current_accumulated_dose_data.push_back(15);
-		current_accumulated_dose_data.push_back(20);
+	graph_is_hidden = true;
+	group_combo_is_dirty = false;
+	run_profiles_are_dirty = false;
 
-		current_movement_data.push_back(10);
-		current_movement_data.push_back(6);
-		current_movement_data.push_back(4);
-		current_movement_data.push_back(2);
-		current_movement_data.push_back(1);*/
-
-		wxPen vectorpen(*wxBLUE, 2, wxSOLID);
-		wxPen redvectorpen(*wxRED, 2, wxSOLID);
-
-		//current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
-		current_x_shift_vector_layer->SetContinuity(true);
-		current_x_shift_vector_layer->SetPen(vectorpen);
-		current_x_shift_vector_layer->SetDrawOutsideMargins(false);
-
-		current_y_shift_vector_layer->SetContinuity(true);
-		current_y_shift_vector_layer->SetPen(redvectorpen);
-		current_y_shift_vector_layer->SetDrawOutsideMargins(false);
-
-		//average_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
-		//average_shift_vector_layer->SetContinuity(true);
-		//average_shift_vector_layer->SetPen(vectorpen);
-		//average_shift_vector_layer->SetDrawOutsideMargins(false);
-
-		wxFont graphFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-
-		current_plot_window = new mpWindow( GraphPanel, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
-		//average_plot_window = new mpWindow( GraphPanel, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
-
-		//mpScaleX* average_xaxis = new mpScaleX(wxT("Accum. Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
-	    //mpScaleY* average_yaxis = new mpScaleY(wxT("Average Movement (Å)"), mpALIGN_LEFT, true);
-
-	    mpScaleX* current_xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
-	    mpScaleY* current_yaxis = new mpScaleY(wxT("Shifts (Å)"), mpALIGN_LEFT, true);
-
-	   // legend = new mpInfoLegend(wxRect(400,30,100,50));
-
-	   // average_xaxis->SetFont(graphFont);
-	    //average_yaxis->SetFont(graphFont);
-	    //average_xaxis->SetDrawOutsideMargins(false);
-	    //average_yaxis->SetDrawOutsideMargins(false);
-
-	    current_xaxis->SetFont(graphFont);
-	    current_yaxis->SetFont(graphFont);
-	    current_xaxis->SetDrawOutsideMargins(false);
-	    current_yaxis->SetDrawOutsideMargins(false);
-
-	    current_plot_window->SetMargins(30, 30, 60, 80);
-	    //average_plot_window->SetMargins(20, 40, 50, 50);
-
-	    current_plot_window->AddLayer(current_xaxis);
-	    current_plot_window->AddLayer(current_yaxis);
-		current_plot_window->AddLayer(current_x_shift_vector_layer);
-		current_plot_window->AddLayer(current_y_shift_vector_layer);
-		//current_plot_window->AddLayer(legend);
-		//plot_window->AddLayer( nfo = new mpInfoCoords(wxRect(500,20,10,10), wxTRANSPARENT_BRUSH));
-
-	    //average_plot_window->AddLayer(average_xaxis);
-	    //average_plot_window->AddLayer(average_yaxis);
-		//average_plot_window->AddLayer(average_shift_vector_layer);
-
-	    GraphSizer->Add(current_plot_window, 1, wxEXPAND );
-	  //  GraphSizer->Add(average_plot_window, 1, wxEXPAND );
-
-	    current_plot_window->EnableDoubleBuffer(true);
-//   	    plot_window->SetMPScrollbars(false);
-   	    current_plot_window->EnableMousePanZoom(false);
-	    current_plot_window->Fit();
-
-	    // Set variables
-
-	    show_expert_options = false;
-
-	    // Fill combo box..
-
-	    FillGroupComboBox();
-
-	    my_job_id = -1;
-	    running_job = false;
-
-	    graph_is_hidden = true;
-
-	    SetInfo();
+	SetInfo();
 
 }
 
@@ -394,6 +315,18 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			//StartAlignmentButton->SetLabel("Stop Job");
 			//StartAlignmentButton->Enable(true);
 		}
+
+		if (group_combo_is_dirty == true)
+		{
+			FillGroupComboBox();
+			group_combo_is_dirty = false;
+		}
+
+		if (run_profiles_are_dirty == true)
+		{
+			FillRunProfileComboBox();
+			run_profiles_are_dirty = false;
+		}
 	}
 
 
@@ -475,6 +408,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int bfactor;
 	int number_of_processes;
 
+	int current_asset_id;
+	int number_of_previous_alignments;
+
 	bool should_mask_central_cross;
 	int horizontal_mask;
 	int vertical_mask;
@@ -489,6 +425,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	std::string current_filename;
 	wxString output_filename;
+	wxFileName buffer_filename;
 
 	// read the options form the gui..
 
@@ -555,8 +492,16 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 		// OUTPUT FILENAME, MUST BE SET PROPERLY
 
-		output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		output_filename.Replace(".mrc", "_ali.mrc", false);
+		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		//output_filename.Replace(".mrc", "_ali.mrc", false);
+
+		current_asset_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		number_of_previous_alignments =  main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
+
+		output_filename = buffer_filename.GetName();
+		output_filename = main_frame->current_project.image_asset_directory.GetFullPath();
+		output_filename += wxString::Format("/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
 
 		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
 		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
@@ -867,24 +812,14 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 	if (current_time - time_of_last_graph_update > 1)
 	{
-		current_x_shift_vector_layer->Clear();
-		current_accumulated_dose_data.clear();
-		current_x_movement_data.clear();
-		current_y_movement_data.clear();
+		GraphPanel->Clear();
 
 		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
 		{
-			current_accumulated_dose_data.push_back(double(exposure_per_frame * frame_counter));
-			current_x_movement_data.push_back(double(result_to_process->result_data[frame_counter]));
-			current_y_movement_data.push_back(double(result_to_process->result_data[frame_counter + number_of_frames]));
-
-			//WriteInfoText(wxString::Format("Frame %i = %f, %f\n", frame_counter, result[frame_counter], result[frame_counter + number_of_frames]));
+			GraphPanel->AddPoint(exposure_per_frame * frame_counter, result_to_process->result_data[frame_counter], result_to_process->result_data[frame_counter + number_of_frames]);
 		}
 
-		current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_x_movement_data);
-		current_y_shift_vector_layer->SetData(current_accumulated_dose_data, current_y_movement_data);
-		current_plot_window->Fit();
-		current_plot_window->UpdateAll();
+		GraphPanel->Draw();
 
 		if (graph_is_hidden == true)
 		{
@@ -933,7 +868,11 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	long counter;
 	int frame_counter;
+	int array_location;
+	int parent_id;
+	bool have_errors = false;
 	wxString current_table_name;
+	ImageAsset temp_asset;
 
 	// find the current highest alignment number in the database, then increment by one
 
@@ -943,14 +882,16 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	// loop over all the jobs, and add them..
 
-	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 18, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 19, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 
+	wxDateTime now = wxDateTime::Now();
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		main_frame->current_project.database.AddToBatchInsert("iiiirrrrrriiriiiii", alignment_id,
-				                                                                    (unsigned long int) time(NULL),
+		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiii", alignment_id,
+				                                                                    (long int) now.GetAsDOS(),
 																					alignment_job_id,
 																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)),
+																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument(), // output_filename
 																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
 																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
 																					my_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
@@ -961,7 +902,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																					my_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
 																					my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
 																					my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
-																					my_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // bfactor
+																					int(my_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
 																					my_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
 																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
 																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument() // vertical mask
@@ -993,6 +934,85 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 		alignment_id++;
 
 	}
+
+	// now we need to add the resulting image files as image assets..
+
+	// for adding to the database..
+	main_frame->current_project.database.BeginImageAssetInsert();
+
+	MyErrorDialog *my_error = new MyErrorDialog(this);
+	alignment_id = starting_alignment_id + 1;
+
+	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
+	{
+			temp_asset.Update(my_job_package.jobs[counter].arguments[1].ReturnStringArgument());
+
+			if (temp_asset.is_valid == true)
+			{
+				parent_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
+
+				// is this image (or a previous version) already an asset?
+
+				if (array_location == -1) // we don't already have an asset from this movie..
+				{
+					temp_asset.asset_id = image_asset_panel->current_asset_number;
+					temp_asset.parent_id = parent_id;
+					temp_asset.alignment_id = alignment_id;
+					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
+					temp_asset.pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
+					temp_asset.position_in_stack = 1;
+					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+					image_asset_panel->AddAsset(&temp_asset);
+					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+
+
+				}
+				else
+				{// TODO:: Rewrite this to use return asset pointer..//
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].filename = my_job_package.jobs[counter].arguments[1].ReturnStringArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
+							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            my_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
+																											parent_id,
+																											alignment_id,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
+				}
+
+
+				image_asset_panel->current_asset_number++;
+			}
+			else
+			{
+				my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
+				have_errors = true;
+			}
+
+			alignment_id++;
+	}
+
+	main_frame->current_project.database.EndImageAssetInsert();
+
+	image_asset_panel->is_dirty = true;
+	movie_results_panel->is_dirty = true;
+
+
+	if (have_errors == true)
+	{
+		my_error->ShowModal();
+	}
+
+	my_error->Destroy();
 
 
 }

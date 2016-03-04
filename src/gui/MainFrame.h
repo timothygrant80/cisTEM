@@ -38,6 +38,12 @@ class MyMainFrame : public MainFrame
 
 		void OnServerEvent(wxSocketEvent& event);
 		void OnSocketEvent(wxSocketEvent& event);
+
+		void DirtyEverything();
+		void DirtyMovieGroups();
+		void DirtyImageGroups();
+		void DirtyRunProfiles();
+
 		//LaunchJob(JobPanel *parent_panel, )
 
 };

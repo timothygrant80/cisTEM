@@ -1,6 +1,6 @@
 #include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
-#include "../core/socket_codes.h"
+
 
 #define SERVER_ID 100
 #define SOCKET_ID 101
@@ -8,16 +8,19 @@
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
+extern MyFindCTFPanel *findctf_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+extern MyMovieAlignResultsPanel *movie_results_panel;
+
 
 MyMainFrame::MyMainFrame( wxWindow* parent )
 :
 MainFrame( parent )
 {
-	tree_root = AssetTree->AddRoot("Assets");
+//	tree_root = AssetTree->AddRoot("Assets");
 
 	// Add Movies..
-	movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
+	//movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
 	socket_server = NULL;
 
@@ -83,7 +86,7 @@ void MyMainFrame::SetupServer()
 void MyMainFrame::RecalculateAssetBrowser(void)
 {
 
-	wxTreeItemId current_group_branch;
+/*	wxTreeItemId current_group_branch;
 
 	unsigned long group_counter;
 	unsigned long asset_counter;
@@ -133,14 +136,14 @@ void MyMainFrame::RecalculateAssetBrowser(void)
 
 	if (movies_expanded == true) AssetTree->Expand(movie_branch);
 
-	AssetTree->Thaw();
+	AssetTree->Thaw();*/
 
 }
 
 
 void MyMainFrame::OnCollapseAll( wxCommandEvent& event )
 {
-	AssetTree->CollapseAll();
+	//AssetTree->CollapseAll();
 }
 
 void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
@@ -148,8 +151,36 @@ void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
 	// redo groups..
 
 	align_movies_panel->Refresh();
+	movie_results_panel->group_combo_is_dirty = true;
 
 }
+
+void MyMainFrame::DirtyEverything()
+{
+	DirtyMovieGroups();
+	DirtyImageGroups();
+	DirtyRunProfiles();
+}
+
+void MyMainFrame::DirtyMovieGroups()
+{
+	movie_asset_panel->is_dirty = true;
+	align_movies_panel->group_combo_is_dirty = true;
+	movie_results_panel->group_combo_is_dirty = true;
+}
+
+void MyMainFrame::DirtyImageGroups()
+{
+	image_asset_panel->is_dirty = true;
+	findctf_panel->group_combo_is_dirty = true;
+}
+
+void MyMainFrame::DirtyRunProfiles()
+{
+	align_movies_panel->run_profiles_are_dirty = true;
+	findctf_panel->run_profiles_are_dirty = true;
+}
+
 
 // SOCKETS
 
@@ -261,13 +292,21 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
+		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 5, this);
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
+		my_dialog->Update(1);
 		image_asset_panel->ImportAllFromDatabase();
+		my_dialog->Update(2);
 		run_profiles_panel->ImportAllFromDatabase();
-		align_movies_panel->Refresh();
-
+		my_dialog->Update(3);
+		//align_movies_panel->Refresh();
+		DirtyEverything();
+		my_dialog->Update(4);
+		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
+		my_dialog->Update(5);
+		my_dialog->Destroy();
 	}
 	else
 	{
@@ -292,6 +331,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	image_asset_panel->Reset();
 	RecalculateAssetBrowser();
 	run_profiles_panel->Reset();
+	movie_results_panel->Clear();
 
 
 	SetTitle("ProjectX");

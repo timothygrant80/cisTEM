@@ -6,6 +6,7 @@ class Asset {
 public :
 
 	int asset_id;
+	int parent_id;
 	wxFileName filename;
 	bool is_valid;
 
@@ -61,11 +62,10 @@ class ImageAsset : public Asset {
 	~ImageAsset();
 
 	int position_in_stack;
+	int alignment_id;
 
 	int x_size;
 	int y_size;
-
-	int parent_id;
 
 	double pixel_size;
 	double microscope_voltage;
@@ -101,6 +101,7 @@ public :
 	virtual ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 	virtual int ReturnAssetID(long wanted_asset) = 0;
 	virtual int ReturnArrayPositionFromID(int wanted_id) = 0;
+	virtual int ReturnArrayPositionFromParentID(int wanted_id) = 0;
 
 	long ReturnNumberOfAssets();
 };
@@ -119,6 +120,7 @@ public:
 
 	int ReturnAssetID(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
+	int ReturnArrayPositionFromParentID(int wanted_id);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
@@ -141,6 +143,7 @@ public:
 
 	int ReturnAssetID(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
+	int ReturnArrayPositionFromParentID(int wanted_id);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);

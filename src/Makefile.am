@@ -72,7 +72,7 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 
 
-ProjectX_SOURCES = programs/projectx/projectx.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp
+ProjectX_SOURCES = programs/projectx/projectx.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/UnblurResultsPanel.cpp gui/FindCTFPanel.cpp
 ProjectX_CXXFLAGS = $(WX_CPPFLAGS)
 ProjectX_CPPFLAGS = $(WX_CPPFLAGS)
 ProjectX_LDFLAGS = $(WX_LIBS)

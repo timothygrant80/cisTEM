@@ -41,6 +41,8 @@ void UnBlurApp::DoInteractiveUserInput()
 
 	bool set_expert_options;
 
+
+
 	 UserInput *my_input = new UserInput("Unblur", 1.0);
 
 	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );

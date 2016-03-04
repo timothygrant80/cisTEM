@@ -23,6 +23,7 @@ AssetParentPanel( parent )
 
 	bool should_veto_motion = true;
 	name_is_being_edited = false;
+	is_dirty = false;
 }
 
 MyAssetParentPanel::~MyAssetParentPanel()
@@ -64,6 +65,8 @@ void MyAssetParentPanel::CompletelyRemoveAsset(long wanted_asset)
 	// because we have shifted the asset list up, any item with a number greater than this item needs to be subtracted by 1
 
 	all_groups_list->ShiftMembersDueToAssetRemoval(wanted_asset);
+
+	DirtyGroups();
 }
 
 void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
@@ -156,6 +159,7 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 		FillContentsList();
 		main_frame->RecalculateAssetBrowser();
 		UpdateInfo();
+		DirtyGroups();
 	}
 
 	delete [] already_removed;
@@ -169,10 +173,19 @@ void MyAssetParentPanel::AddContentItemToGroup(long wanted_group, long wanted_co
 
 	long selected_asset = all_groups_list->ReturnGroupMember(selected_group, wanted_content_item);
 
-	if (all_groups_list->groups[wanted_group].FindMember(selected_asset) == -1)
+	AddArrayItemToGroup(wanted_group, selected_asset);
+}
+
+void MyAssetParentPanel::AddArrayItemToGroup(long wanted_group, long wanted_array_item)
+{
+	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
+	MyDebugAssertTrue(wanted_array_item >= 0 && wanted_array_item < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_array_item)
+
+	if (all_groups_list->groups[wanted_group].FindMember(wanted_array_item) == -1)
 	{
-		all_groups_list->groups[wanted_group].AddMember(selected_asset);
-		InsertGroupMemberToDatabase(wanted_group, selected_asset);
+		all_groups_list->groups[wanted_group].AddMember(wanted_array_item);
+		InsertGroupMemberToDatabase(wanted_group, all_groups_list->groups[wanted_group].number_of_members - 1);
+		DirtyGroups();
 	}
 }
 
@@ -258,6 +271,7 @@ void MyAssetParentPanel::RemoveAllAssetsClick( wxCommandEvent& event )
 		FillContentsList();
 		//CheckActiveButtons();
 		main_frame->RecalculateAssetBrowser();
+		DirtyGroups();
 	}
 }
 
@@ -295,6 +309,7 @@ void MyAssetParentPanel::NewGroupClick( wxCommandEvent& event )
 	}
 */
 	FillGroupList();
+	DirtyGroups();
 	//SetSelectedGroup(all_groups_list->ReturnNumberOfGroups() - 1);
 
 	main_frame->RecalculateAssetBrowser();
@@ -316,6 +331,7 @@ void MyAssetParentPanel::RemoveGroupClick( wxCommandEvent& event )
 	}
 
 	FillGroupList();
+	DirtyGroups();
 	main_frame->RecalculateAssetBrowser();
 }
 
@@ -374,6 +390,7 @@ void MyAssetParentPanel::SetGroupName(long wanted_group, wxString wanted_name)
 	{
 		all_groups_list->groups[wanted_group].name = wanted_name;
 		RenameGroupInDatabase(ReturnGroupID(wanted_group), wanted_name);
+		DirtyGroups();
 	}
 }
 
@@ -645,6 +662,22 @@ bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
 	else return true;
 }
 
+int MyAssetParentPanel::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	return all_assets_list->ReturnArrayPositionFromParentID(wanted_id);
+}
+
+int MyAssetParentPanel::ReturnArrayPositionFromAssetID(int wanted_id)
+{
+	return all_assets_list->ReturnArrayPositionFromID(wanted_id);
+}
+
+int MyAssetParentPanel::ReturnAssetID(int wanted_asset)
+{
+	return all_assets_list->ReturnAssetID(wanted_asset);
+}
+
+
 bool MyAssetParentPanel::DragOverGroups(wxCoord x, wxCoord y)
 {
 	const wxPoint drop_position(x, y);
@@ -698,6 +731,7 @@ void MyAssetParentPanel::Reset()
 	FillContentsList();
 	main_frame->RecalculateAssetBrowser();
 	UpdateInfo();
+	DirtyGroups();
 
 }
 
@@ -744,6 +778,14 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				if (ReturnNumberOfGroups() > 1) AddSelectedAssetButton->Enable(true);
 				else AddSelectedAssetButton->Enable(false);
 			}
+		}
+
+		if (is_dirty == true)
+		{
+			is_dirty = false;
+			FillGroupList();
+			FillContentsList();
+
 		}
 	}
 }

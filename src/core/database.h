@@ -33,16 +33,23 @@ public :
 	void AddToBatchInsert(const char *column_format, ...);
 	void EndBatchInsert();
 
-	void BeginBatchSelect(const char *select_command);
-	void GetFromBatchSelect(const char *column_format, ...);
+	bool BeginBatchSelect(const char *select_command);
+	bool GetFromBatchSelect(const char *column_format, ...);
 	void EndBatchSelect();
 
 	bool ExecuteSQL(const char *command);
+	int ReturnSingleIntFromSelectCommand(wxString select_command);
 
-	// Get various id numbers..
+	// Get various id numbers and counts
 
 	int ReturnHighestAlignmentID();
 	int ReturnHighestAlignmentJobID();
+	int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
+	int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
+
+	int ReturnNumberOfAlignmentJobs();
+
+	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
 
 	//Convenience insertion functions..
 
@@ -56,7 +63,7 @@ public :
 	void EndMovieAssetInsert();
 
 	void BeginImageAssetInsert();
-	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
+	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
 	void EndImageAssetInsert();
 
 	// Convenience select functions...

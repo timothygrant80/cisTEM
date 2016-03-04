@@ -2136,6 +2136,33 @@ int Image::ReturnMaximumDiagonalRadius()
 	}
 }
 
+void Image::GetMinMax(float &min_value, float &max_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Only real space supported");
+
+	min_value = FLT_MAX;
+	max_value = -FLT_MAX;
+
+	int i, j, k;
+	long address = 0;
+
+	for (k = 0; k < logical_z_dimension; k++)
+		{
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					if (real_values[address] < min_value) min_value = real_values[address];
+					if (real_values[address] > max_value) max_value = real_values[address];
+
+					address++;
+				}
+				address += padding_jump_value;
+			}
+		}
+}
+
 /*
 !>  \brief  return the maximum radius possible along a diagonal
 pure function GetMaximumDiagonalRadius(self)  result(maximum_radius)

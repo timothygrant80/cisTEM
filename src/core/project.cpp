@@ -20,6 +20,7 @@ Project::~Project()
 bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_project_directory, wxString wanted_project_name)
 {
 	int return_code;
+	wxString directory_string;
 
 
 	// is project already open?
@@ -31,16 +32,12 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	}
 
 
-	database.CreateNewDatabase(wanted_database_file);
-	database.CreateAllTables();
-
 	if (wanted_project_name.IsEmpty() == true)
 	{
 		MyDebugPrintWithDetails("Attempting to create a new project, but the project name is blank");
 		return false;
 	}
 
-	project_name = wanted_project_name;
 
 	if (wanted_project_directory.IsEmpty() == true)
 	{
@@ -48,7 +45,32 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 		return false;
 	}
 
+	database.CreateNewDatabase(wanted_database_file);
+	database.CreateAllTables();
+
+	project_name = wanted_project_name;
 	project_directory = wanted_project_directory;
+
+	// create sub folders..
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets";
+	wxFileName::Mkdir(directory_string);
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Movies";
+	movie_asset_directory = directory_string;
+	wxFileName::Mkdir(movie_asset_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Images";
+	image_asset_directory = directory_string;
+	wxFileName::Mkdir(image_asset_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/CTF";
+	ctf_asset_directory = directory_string;
+	wxFileName::Mkdir(image_asset_directory.GetFullPath());
 
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
@@ -65,6 +87,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 bool Project::OpenProjectFromFile(wxFileName file_to_open)
 {
 	bool success;
+	wxString directory_string;
 
 	// is project already open?
 
@@ -76,6 +99,18 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 
 	success = database.Open(file_to_open);
 	success = ReadMasterSettings();
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Movies";
+	movie_asset_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Images";
+	image_asset_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/CTF";
+	ctf_asset_directory = directory_string;
 
 	is_open = true;
 

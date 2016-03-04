@@ -14,8 +14,6 @@ protected:
 		bool name_is_being_edited;
 		bool should_veto_motion;
 
-		AssetGroupList *all_groups_list;
-		AssetList *all_assets_list;
 
 		virtual void ImportAssetClick( wxCommandEvent& event ) = 0;
 
@@ -44,11 +42,17 @@ protected:
 		virtual void RenameGroupInDatabase(int wanted_group_id, const char *wanted_name) = 0;
 		virtual void FillAssetSpecificContentsList() = 0;
 		virtual void ImportAllFromDatabase() = 0;
+		virtual void DirtyGroups() = 0;
 
 	public:
 
+		AssetGroupList *all_groups_list;
+		AssetList *all_assets_list;
+
 		int current_asset_number;
 		int current_group_number;
+
+		bool is_dirty;
 
 		MyAssetParentPanel( wxWindow* parent );
 		~MyAssetParentPanel();
@@ -63,6 +67,7 @@ protected:
 		void FillContentsList();
 		void AddAsset(Asset *asset_to_add);
 		void AddContentItemToGroup(long wanted_group, long wanted_content_item);
+		void AddArrayItemToGroup(long wanted_group, long wanted_array_item);
 
 		void OnGroupFocusChange( wxListEvent& event );
 		void OnContentsSelected( wxListEvent& event );
@@ -99,6 +104,12 @@ protected:
 		//void CheckActiveButtons();
 
 		bool IsFileAnAsset(wxFileName file_to_check);
+		int ReturnArrayPositionFromParentID(int wanted_id);
+		int ReturnArrayPositionFromAssetID(int wanted_id);
+		int ReturnAssetID(int wanted_asset);
+		int ReturnParentID(int wanted_asset);
+
+		virtual Asset* ReturnAssetPointer(long wanted_asset) = 0;
 
 
 		void Reset();

@@ -268,6 +268,8 @@ public:
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();
 
+	void GetMinMax(float &min_value, float &max_value);
+
 	float GetCorrelationWithCTF(CTF ctf);
 
 	// Interpolation

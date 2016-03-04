@@ -9,14 +9,11 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 
 		bool show_expert_options;
 		long my_job_id;
-
 		int length_of_process_number;
-
-
 		JobPackage my_job_package;
 		JobTracker my_job_tracker;
-
 		bool running_job;
+
 
 
 public:
@@ -24,25 +21,15 @@ public:
 		MyAlignMoviesPanel( wxWindow* parent );
 	//// end generated class members
 
-
-		std::vector<double> current_accumulated_dose_data;
-		std::vector<double> current_x_movement_data;
-		std::vector<double> current_y_movement_data;
-
-		mpWindow        *current_plot_window;
-		mpInfoLegend    *legend;
-
-		mpFXYVector* current_x_shift_vector_layer;
-		mpFXYVector* current_y_shift_vector_layer;
-
 		bool graph_is_hidden;
-
 		long time_of_last_graph_update;
 
 		//mpInfoCoords    *nfo;
 
 		JobResult *buffered_results;
 
+		bool group_combo_is_dirty;
+		bool run_profiles_are_dirty;
 
 		// methods
 

@@ -1,8 +1,9 @@
 class MyImageAssetPanel : public MyAssetParentPanel
 {
 
-	private:
+	protected:
 
+		void DirtyGroups() {main_frame->DirtyImageGroups();};
 
 	public:
 
@@ -22,6 +23,8 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		void ImportAllFromDatabase();
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
+
+		ImageAsset* ReturnAssetPointer(long wanted_asset);
 
 };
 

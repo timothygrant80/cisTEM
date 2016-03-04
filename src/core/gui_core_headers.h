@@ -21,6 +21,7 @@
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
 #include <wx/bitmap.h>
+#include <wx/rawbmp.h>
 #include <wx/image.h>
 #include <wx/icon.h>
 #include <wx/statbmp.h>
@@ -33,10 +34,17 @@
 #include <wx/progdlg.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/richtext/richtextstyles.h>
+#include <wx/datectrl.h>
+#include <wx/dateevt.h>
+#include <wx/dataview.h>
 
 #include "../gui/job_panel.h"
+#include "../gui/gui_functions.h"
+#include "../gui/ResultsDataViewListCtrl.h"
 #include "gui_job_controller.h"
 #include "../gui/mathplot.h"
+#include "../gui/my_controls.h"
+#include "../gui/UnblurResultsPanel.h"
 #include "../gui/ProjectX_gui.h"
 #include "../gui/MainFrame.h"
 #include "../gui/ErrorDialog.h"
@@ -44,9 +52,12 @@
 #include "../gui/MyMovieAssetPanel.h"
 #include "../gui/MyImageAssetPanel.h"
 #include "../gui/MovieImportDialog.h"
+#include "../gui/MyMovieFilterDialog.h"
 #include "../gui/MyImageImportDialog.h"
 #include "../gui/AlignMoviesPanel.h"
-#include "../gui/AlignMoviesPanel.h"
+#include "../gui/FindCTFPanel.h"
+#include "../gui/MyMovieAlignResultsPanel.h"
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
 #include "../gui/MyNewProjectWizard.h"
+

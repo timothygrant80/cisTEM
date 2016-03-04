@@ -32,15 +32,15 @@ bool Database::ExecuteSQL(const char *command)
 	return true;
 }
 
-int Database::ReturnHighestAlignmentID()
+int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	int return_code;
 	sqlite3_stmt *current_statement;
-	int highest_alignment_number;
+	int value;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, "SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST", 55, &current_statement, NULL);
+	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
 
 	return_code = sqlite3_step(current_statement);
@@ -50,36 +50,59 @@ int Database::ReturnHighestAlignmentID()
 		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
 	}
 
-	highest_alignment_number = sqlite3_column_int(current_statement, 0);
+	value = sqlite3_column_int(current_statement, 0);
 
 	sqlite3_finalize(current_statement);
 
-	return highest_alignment_number;
+	return value;
+}
+
+int Database::ReturnHighestAlignmentID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
+}
+
+int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID = %i", wanted_asset_id));
+}
+
+int Database::ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID = %i", wanted_asset_id));
 }
 
 int Database::ReturnHighestAlignmentJobID()
 {
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
+}
+
+int Database::ReturnNumberOfAlignmentJobs()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
+}
+
+void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs)
+{
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
-	int return_code;
-	sqlite3_stmt *current_statement;
-	int highest_alignment_number;
+	bool more_data;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, "SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST", 55, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+	more_data = BeginBatchSelect("SELECT DISTINCT ALIGNMENT_JOB_ID FROM MOVIE_ALIGNMENT_LIST") == true;
 
-	return_code = sqlite3_step(current_statement);
-
-	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	for (int counter = 0; counter < number_of_alignmnet_jobs; counter++)
 	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+		if (more_data == false)
+		{
+			MyPrintWithDetails("Unexpected end of select command");
+			abort();
+		}
+
+		more_data = GetFromBatchSelect("i", &alignment_job_ids[counter]);
+
 	}
 
-	highest_alignment_number = sqlite3_column_int(current_statement, 0);
-
-	sqlite3_finalize(current_statement);
-
-	return highest_alignment_number;
+	EndBatchSelect();
 }
 
 bool Database::CreateNewDatabase(wxFileName wanted_database_file)
@@ -229,9 +252,9 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 
     if( return_code != SQLITE_OK )
     {
-    	MyPrintWithDetails("SQL Error: %s\n", error_message);
+    	MyPrintWithDetails("SQL Error: %s\n%s", error_message, sql_command);
         sqlite3_free(error_message);
-        return false;
+        abort();
     }
 
     return true;
@@ -247,10 +270,10 @@ bool Database::CreateAllTables()
 	success = CreateTable("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID");
 	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiirrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE-EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
-	success = CreateTable("IMAGE_ASSETS", "ptiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	success = CreateTable("IMAGE_ASSETS", "ptiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	success = CreateTable("ESTIMATED_IMAGE_CTF_PARAMETERS", "piirrrrirrrrrrirrrrrr", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "SPECTRUM_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE");
+	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiirrrrirrrrririrrrrrrrrit", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "SCORE", "DETECTED_RING_RESOLUTION", "ADDITIONAL_PHASE_SHIFT", "OUTPUT_DIAGNOSTIC_FILE");
 
 	return success;
 }
@@ -400,7 +423,7 @@ void Database::BeginBatchInsert(const char *table_name, int number_of_columns, .
 		sqlite3_free(error_message);
 	}
 
-	sql_command = "INSERT INTO ";
+	sql_command = "INSERT OR REPLACE INTO ";
 	sql_command += table_name;
 	sql_command += " (";
 
@@ -455,6 +478,13 @@ void Database::AddToBatchInsert(const char *column_format, ...)
 		{
 			return_code = sqlite3_bind_int(batch_statement, argument_counter, va_arg(args, int));
 			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+		}
+		else
+		if (*column_format == 'l') // long
+		{
+			return_code = sqlite3_bind_int64(batch_statement, argument_counter, va_arg(args, long));
+			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
 		}
 		else
 		{
@@ -522,12 +552,12 @@ void Database::EndMovieAssetInsert()
 
 void Database::BeginImageAssetInsert()
 {
-	BeginBatchInsert("IMAGE_ASSETS", 9, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("IMAGE_ASSETS", 10, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 }
 
-void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
 {
-	AddToBatchInsert("itiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
+	AddToBatchInsert("itiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
 }
 
 void Database::EndImageAssetInsert()
@@ -536,7 +566,7 @@ void Database::EndImageAssetInsert()
 }
 
 
-void Database::BeginBatchSelect(const char *select_command)
+bool Database::BeginBatchSelect(const char *select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	MyDebugAssertTrue(in_batch_insert == false, "Starting batch select but already in batch insert mode");
@@ -547,20 +577,21 @@ void Database::BeginBatchSelect(const char *select_command)
 	int return_code;
 
 	return_code = sqlite3_prepare_v2(sqlite_database, select_command, strlen(select_command) + 1, &batch_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i, Command = %s\n", return_code, select_command );
 
 	last_return_code = sqlite3_step(batch_statement);
 
 	if (last_return_code != SQLITE_DONE && last_return_code != SQLITE_ROW)
 	{
 		MyPrintWithDetails("SQL Return Code: %i\n", last_return_code);
-		//return false;
 	}
 
+	if (last_return_code != SQLITE_DONE) return true;
+	else return false;
 	//return true;
 }
 
-void Database::GetFromBatchSelect(const char *column_format, ...)
+bool Database::GetFromBatchSelect(const char *column_format, ...)
 {
 
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -597,6 +628,11 @@ void Database::GetFromBatchSelect(const char *column_format, ...)
 			va_arg(args, int *)[0] = sqlite3_column_int(batch_statement, argument_counter);
 		}
 		else
+		if (*column_format == 'l') // long
+		{
+			va_arg(args, long *)[0] = sqlite3_column_int64(batch_statement, argument_counter);
+		}
+		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
 		}
@@ -608,6 +644,9 @@ void Database::GetFromBatchSelect(const char *column_format, ...)
 
 	last_return_code = sqlite3_step(batch_statement);
 	MyDebugAssertTrue(last_return_code == SQLITE_OK || last_return_code == SQLITE_ROW || last_return_code == SQLITE_DONE, "SQL error, return code : %i\n", last_return_code );
+
+	if (last_return_code == SQLITE_DONE) return false;
+	else return true;
 
 }
 
@@ -752,7 +791,7 @@ ImageAsset Database::GetNextImageAsset()
 {
 	ImageAsset temp_asset;
 
-	GetFromBatchSelect("ifiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
+	GetFromBatchSelect("ifiiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
 	return temp_asset;
 }
 

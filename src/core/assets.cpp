@@ -36,6 +36,7 @@ wxString Asset::ReturnShortNameString()
 MovieAsset::MovieAsset()
 {
 	asset_id = -1;
+	parent_id = -1;
 	position_in_stack = 1;
 	number_of_frames = 0;
 	x_size = 0;
@@ -126,6 +127,7 @@ ImageAsset::ImageAsset()
 {
 	asset_id = -1;
 	parent_id = -1;
+	alignment_id = -1;
 	position_in_stack = 1;
 	x_size = 0;
 	y_size = 0;
@@ -189,6 +191,7 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 	parent_id = casted_asset->parent_id;
 	x_size = casted_asset->x_size;
 	y_size = casted_asset->y_size;
+	alignment_id = casted_asset->alignment_id;
 
 	filename = casted_asset->filename;
 	pixel_size = casted_asset->pixel_size;
@@ -296,6 +299,15 @@ int MovieAssetList::ReturnArrayPositionFromID(int wanted_id)
 	return -1;
 }
 
+int MovieAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <MovieAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
 
 
 void MovieAssetList::AddAsset(Asset *asset_to_add)
@@ -379,7 +391,7 @@ void ImageAssetList::CheckMemory()
 			buffer[counter].CopyFrom(& reinterpret_cast < ImageAsset *> (assets)[counter]);
 		}
 
-		delete [] assets;
+		delete [] reinterpret_cast < ImageAsset *>  (assets);
 		assets = buffer;
 	}
 
@@ -430,6 +442,16 @@ int ImageAssetList::ReturnArrayPositionFromID(int wanted_id)
 	return -1;
 }
 
+int ImageAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ImageAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
 
 
 void ImageAssetList::AddAsset(Asset *asset_to_add)
@@ -467,7 +489,7 @@ void ImageAssetList::RemoveAll()
 
 	if (number_allocated > 100)
 	{
-		delete [] assets;
+		delete [] reinterpret_cast < ImageAsset *> (assets);
 		number_allocated = 100;
 		assets = new ImageAsset[number_allocated];
 	}

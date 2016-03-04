@@ -61,6 +61,11 @@ void MyMovieAssetPanel::UpdateInfo()
 
 }
 
+MovieAsset* MyMovieAssetPanel::ReturnAssetPointer(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset);
+}
+
 void MyMovieAssetPanel::RemoveAssetFromDatabase(long wanted_asset)
 {
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID=%i", all_assets_list->ReturnAssetID(wanted_asset)).ToUTF8().data());
@@ -217,6 +222,12 @@ double MyMovieAssetPanel::ReturnAssetAccelerationVoltage(long wanted_asset)
 double MyMovieAssetPanel::ReturnAssetDosePerFrame(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->dose_per_frame;
+
+}
+
+float MyMovieAssetPanel::ReturnAssetSphericalAbberation(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->spherical_aberration;
 
 }
 

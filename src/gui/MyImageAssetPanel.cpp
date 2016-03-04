@@ -7,21 +7,14 @@ MyAssetParentPanel( parent )
 {
 	Label0Title->SetLabel("Filename : ");
 	Label1Title->SetLabel("I.D. : ");
-	//Label2Title->SetLabel("No. Frames : ");
-	Label2Title->SetLabel("X Size : ");
-	Label3Title->SetLabel("Y Size : ");
-	Label4Title->SetLabel("Pixel Size : ");
-	//Label5Title->SetLabel("Total Exp. : ");
-	//Label7Title->SetLabel("Exp. Per Frame : ");
-	Label5Title->SetLabel("Voltage : ");
-	Label6Title->SetLabel("Cs : ");
-	Label7Title->SetLabel("");
-	Label8Title->SetLabel("");
+	Label2Title->SetLabel("Parent Movie I.D. : ");
+	Label3Title->SetLabel("Movie Alignment I.D. : ");
+	Label4Title->SetLabel("X Size : ");
+	Label5Title->SetLabel("Y Size : ");
+	Label6Title->SetLabel("Pixel Size : ");
+	Label7Title->SetLabel("Voltage : ");
+	Label8Title->SetLabel("Cs : ");
 	Label9Title->SetLabel("");
-
-	Label7Text->SetLabel("");
-	Label8Text->SetLabel("");
-	Label9Text->SetLabel("");
 
 	AssetTypeText->SetLabel("Images");
 
@@ -33,7 +26,6 @@ MyAssetParentPanel( parent )
 
 MyImageAssetPanel::~MyImageAssetPanel()
 {
-
 	delete all_assets_list;
 }
 
@@ -43,14 +35,14 @@ void MyImageAssetPanel::UpdateInfo()
 	{
 		Label0Text->SetLabel(all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->ReturnFullPathString());
 		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
-		//Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->number_of_frames));
-		Label2Text->SetLabel(wxString::Format(wxT("%i px"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
-		Label3Text->SetLabel(wxString::Format(wxT("%i px"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
-		Label4Text->SetLabel(wxString::Format(wxT("%.2f Å"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
-		//Label5Text->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->total_dose));
-		//Label7Text->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->dose_per_frame));
-		Label5Text->SetLabel(wxString::Format(wxT("%.2f kV"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->microscope_voltage));
-		Label6Text->SetLabel(wxString::Format(wxT("%.2f mm"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->spherical_aberration));
+		Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->parent_id));
+		Label3Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->alignment_id));
+		Label4Text->SetLabel(wxString::Format(wxT("%i px"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
+		Label5Text->SetLabel(wxString::Format(wxT("%i px"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
+		Label6Text->SetLabel(wxString::Format(wxT("%.2f Å"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
+		Label7Text->SetLabel(wxString::Format(wxT("%.2f kV"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->microscope_voltage));
+		Label8Text->SetLabel(wxString::Format(wxT("%.2f mm"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->spherical_aberration));
+		Label9Text->SetLabel("");
 	}
 	else
 	{
@@ -61,11 +53,16 @@ void MyImageAssetPanel::UpdateInfo()
 		Label4Text->SetLabel("-");
 		Label5Text->SetLabel("-");
 		Label6Text->SetLabel("-");
-		Label7Text->SetLabel("");
-		Label8Text->SetLabel("");
+		Label7Text->SetLabel("-");
+		Label8Text->SetLabel("-");
 		Label9Text->SetLabel("");
 	}
 
+}
+
+ImageAsset* MyImageAssetPanel::ReturnAssetPointer(long wanted_asset)
+{
+	return all_assets_list->ReturnImageAssetPointer(wanted_asset);
 }
 
 void MyImageAssetPanel::RemoveAssetFromDatabase(long wanted_asset)
@@ -175,26 +172,30 @@ void MyImageAssetPanel::FillAssetSpecificContentsList()
 
 		ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(1, "File", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(2, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(3, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(2, "Parent I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(3, "Align. I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(4, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(5, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		//ContentsListBox->InsertColumn(4, "No. frames", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(4, "Pixel size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(6, "Pixel size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		//ContentsListBox->InsertColumn(6, "Exp. per frame", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(5, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(6, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 
 
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
 		{
 			ContentsListBox->InsertItem(counter, wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->asset_id, counter));
 			ContentsListBox->SetItem(counter, 1, all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->ReturnShortNameString());
-			ContentsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->x_size));
-			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->y_size));
+			ContentsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->parent_id));
+			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->alignment_id));
+			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%i"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->x_size));
+			ContentsListBox->SetItem(counter, 5, wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->y_size));
 		//	ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->number_of_frames));
-			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%.3f"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->pixel_size));
+			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%.3f"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->pixel_size));
 //			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->dose_per_frame));
-			ContentsListBox->SetItem(counter, 5, wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->spherical_aberration));
-			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->microscope_voltage));
+			ContentsListBox->SetItem(counter, 7, wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->spherical_aberration));
+			ContentsListBox->SetItem(counter, 8, wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->microscope_voltage));
 
 
 		}

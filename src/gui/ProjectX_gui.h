@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Feb 20 2015)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -11,8 +11,10 @@
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 class JobPanel;
+class NumericTextCtrl;
+class ResultsDataViewListCtrl;
+class UnblurResultsPanel;
 
-#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -22,18 +24,18 @@ class JobPanel;
 #include <wx/string.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>
-#include <wx/treectrl.h>
-#include <wx/button.h>
-#include <wx/statbox.h>
-#include <wx/splitter.h>
 #include <wx/bitmap.h>
 #include <wx/image.h>
 #include <wx/icon.h>
 #include <wx/menu.h>
 #include <wx/frame.h>
 #include <wx/statline.h>
+#include <wx/radiobut.h>
+#include <wx/button.h>
+#include <wx/dataview.h>
 #include <wx/stattext.h>
 #include <wx/combobox.h>
+#include <wx/splitter.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
 #include <wx/statbmp.h>
@@ -42,6 +44,7 @@ class JobPanel;
 #include <wx/spinctrl.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
+#include <wx/scrolwin.h>
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
@@ -56,16 +59,12 @@ class MainFrame : public wxFrame
 	private:
 	
 	protected:
-		wxSplitterWindow* MainSplitter;
 		wxPanel* LeftPanel;
-		wxPanel* RightPanel;
-		wxButton* m_button12;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
-		virtual void OnCollapseAll( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileMenuUpdate( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFileNewProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
@@ -75,16 +74,89 @@ class MainFrame : public wxFrame
 	
 	public:
 		wxListbook* MenuBook;
-		wxTreeCtrl* AssetTree;
 		
-		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("ProjectX"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,800 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
+		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("ProjectX"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1366,768 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
 		
 		~MainFrame();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class MovieAlignResultsPanel
+///////////////////////////////////////////////////////////////////////////////
+class MovieAlignResultsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline25;
+		wxSplitterWindow* m_splitter4;
+		wxPanel* m_panel13;
+		wxRadioButton* AllMoviesButton;
+		wxRadioButton* ByFilterButton;
+		wxButton* FilterButton;
+		ResultsDataViewListCtrl* ResultDataView;
+		wxButton* PreviousButton;
+		wxButton* NextButton;
+		wxPanel* RightPanel;
+		wxFlexGridSizer* InfoSizer;
+		wxStaticText* m_staticText72;
+		wxStaticText* AlignmentIDStaticText;
+		wxStaticText* m_staticText74;
+		wxStaticText* DateOfRunStaticText;
+		wxStaticText* m_staticText93;
+		wxStaticText* TimeOfRunStaticText;
+		wxStaticText* m_staticText83;
+		wxStaticText* VoltageStaticText;
+		wxStaticText* m_staticText78;
+		wxStaticText* PixelSizeStaticText;
+		wxStaticText* m_staticText82;
+		wxStaticText* ExposureStaticText;
+		wxStaticText* m_staticText96;
+		wxStaticText* PreExposureStaticText;
+		wxStaticText* m_staticText85;
+		wxStaticText* MinShiftStaticText;
+		wxStaticText* m_staticText87;
+		wxStaticText* MaxShiftStaticText;
+		wxStaticText* m_staticText89;
+		wxStaticText* TerminationThresholdStaticText;
+		wxStaticText* m_staticText91;
+		wxStaticText* MaxIterationsStaticText;
+		wxStaticText* m_staticText79;
+		wxStaticText* BfactorStaticText;
+		wxStaticText* m_staticText95;
+		wxStaticText* ExposureFilterStaticText;
+		wxStaticText* m_staticText99;
+		wxStaticText* RestorePowerStaticText;
+		wxStaticText* m_staticText101;
+		wxStaticText* MaskCrossStaticText;
+		wxStaticText* m_staticText103;
+		wxStaticText* HorizontalMaskStaticText;
+		wxStaticText* m_staticText105;
+		wxStaticText* VerticalMaskStaticText;
+		UnblurResultsPanel* ResultPanel;
+		wxButton* AddToGroupButton;
+		wxComboBox* GroupComboBox;
 		
-		void MainSplitterOnIdle( wxIdleEvent& )
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		MovieAlignResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+		~MovieAlignResultsPanel();
+		
+		void m_splitter4OnIdle( wxIdleEvent& )
 		{
-			MainSplitter->SetSashPosition( 1000 );
-			MainSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MainFrame::MainSplitterOnIdle ), NULL, this );
+			m_splitter4->SetSashPosition( 500 );
+			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MovieAlignResultsPanel::m_splitter4OnIdle ), NULL, this );
 		}
 	
 };
@@ -126,6 +198,24 @@ class SettingsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ResultsPanel
+///////////////////////////////////////////////////////////////////////////////
+class ResultsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline3;
+	
+	public:
+		wxListbook* ResultsBook;
+		
+		ResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~ResultsPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class AssetsPanel
 ///////////////////////////////////////////////////////////////////////////////
 class AssetsPanel : public wxPanel 
@@ -133,7 +223,7 @@ class AssetsPanel : public wxPanel
 	private:
 	
 	protected:
-		wxStaticLine* m_staticline4;
+		wxStaticLine* m_staticline24;
 	
 	public:
 		wxListbook* AssetsBook;
@@ -459,8 +549,7 @@ class AlignMoviesPanel : public JobPanel
 		wxSpinCtrl* vertical_mask_spinctrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
-		wxPanel* GraphPanel;
-		wxBoxSizer* GraphSizer;
+		UnblurResultsPanel* GraphPanel;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
 		wxStaticLine* m_staticline11;
@@ -488,6 +577,91 @@ class AlignMoviesPanel : public JobPanel
 		
 		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,653 ), long style = wxTAB_TRAVERSAL ); 
 		~AlignMoviesPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class FindCTFPanel
+///////////////////////////////////////////////////////////////////////////////
+class FindCTFPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText21;
+		wxComboBox* GroupComboBox;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText202;
+		wxStaticText* m_staticText186;
+		wxRadioButton* MovieRadioButton;
+		wxRadioButton* ImageRadioButton;
+		wxStaticText* NoMovieFramesStaticText;
+		wxSpinCtrl* NoFramesToAverageSpinCtrl;
+		wxStaticText* m_staticText188;
+		wxSpinCtrl* BoxSizeSpinCtrl;
+		wxStaticText* m_staticText196;
+		NumericTextCtrl* AmplitudeContrastNumericCtrl;
+		wxStaticText* m_staticText201;
+		wxStaticText* m_staticText189;
+		NumericTextCtrl* MinResNumericCtrl;
+		wxStaticText* m_staticText190;
+		NumericTextCtrl* MaxResNumericCtrl;
+		wxStaticText* m_staticText191;
+		NumericTextCtrl* LowDefocusNumericCtrl;
+		wxStaticText* m_staticText192;
+		NumericTextCtrl* HighDefocusNumericCtrl;
+		wxStaticText* m_staticText194;
+		NumericTextCtrl* DefocusStepNumericCtrl;
+		wxCheckBox* RestrainAstigmatismCheckBox;
+		wxStaticText* ToleratedAstigmatismStaticText;
+		NumericTextCtrl* ToleratedAstigmatismNumericCtrl;
+		wxStaticText* m_staticText200;
+		wxCheckBox* AdditionalPhaseShiftCheckBox;
+		wxStaticText* MinPhaseShiftStaticText;
+		NumericTextCtrl* MinPhaseShiftNumericCtrl;
+		wxStaticText* MaxPhaseShiftStaticText;
+		NumericTextCtrl* MaxPhaseShiftNumericCtrl;
+		wxStaticText* PhaseShiftStepStaticText;
+		NumericTextCtrl* PhaseShiftStepNumericCtrl;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* ResultsPanel;
+		wxStaticText* m_staticText203;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxGauge* ProgressBar;
+		wxStaticText* NumberConnectedText;
+		wxStaticText* TimeRemainingText;
+		wxButton* CancelAlignmentButton;
+		wxButton* FinishButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		wxComboBox* RunProfileComboBox;
+		wxButton* StartEstimationButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMovieRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImageRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRestrainAstigmatismCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFindAdditionalPhaseCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		FindCTFPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+		~FindCTFPanel();
 	
 };
 
@@ -553,6 +727,37 @@ class NewProjectWizard : public wxWizard
 		NewProjectWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~NewProjectWizard();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class FilterDialog
+///////////////////////////////////////////////////////////////////////////////
+class FilterDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxBoxSizer* MainBoxSizer;
+		wxStaticText* m_staticText64;
+		wxStaticLine* m_staticline18;
+		wxBoxSizer* FilterBoxSizer;
+		wxStaticLine* m_staticline19;
+		wxGridSizer* SortSizer;
+		wxStaticLine* m_staticline21;
+		wxButton* CancelButton;
+		wxButton* FilterButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		wxStaticText* m_staticText81;
+		
+		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+		~FilterDialog();
 	
 };
 

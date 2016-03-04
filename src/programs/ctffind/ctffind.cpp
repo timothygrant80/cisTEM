@@ -365,10 +365,6 @@ void CtffindApp::AddCommandLineOptions()
 bool CtffindApp::DoCalculation()
 {
 
-
-	is_running_locally = false;
-	wxPrintf("DEBUG _ LOCALLY\n");
-
 	// Arguments for this job
 
 	std::string input_filename 						= my_current_job.arguments[0].ReturnStringArgument();

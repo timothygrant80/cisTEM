@@ -1099,30 +1099,30 @@ bool CtffindApp::DoCalculation()
 
 
 	// Send results back
-	float results_array[6];
+	float results_array[7];
 	results_array[0] = current_ctf.GetDefocus1() * pixel_size;				// Defocus 1 (Angstroms)
 	results_array[1] = current_ctf.GetDefocus2() * pixel_size;				// Defocus 2 (Angstroms)
-	results_array[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
-	results_array[4] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
-	results_array[5] = - conjugate_gradient_minimizer->GetBestScore();		// CTFFIND score
+	results_array[2] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
+	results_array[3] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
+	results_array[4] = - conjugate_gradient_minimizer->GetBestScore();		// CTFFIND score
 	if (last_bin_with_good_fit == 0)
 	{
-		results_array[6] = 0.0;															//	A value of 0.0 indicates that the calculation to determine the goodness of fit failed for some reason
+		results_array[5] = 0.0;															//	A value of 0.0 indicates that the calculation to determine the goodness of fit failed for some reason
 	}
 	else
 	{
-		results_array[6] = pixel_size / spatial_frequency[last_bin_with_good_fit];		//	The resolution (Angstroms) up to which Thon rings are well fit by the CTF
+		results_array[5] = pixel_size / spatial_frequency[last_bin_with_good_fit];		//	The resolution (Angstroms) up to which Thon rings are well fit by the CTF
 	}
 	if (last_bin_without_aliasing == 0)
 	{
-		results_array[7] = 0.0;															// 	A value of 0.0 indicates that no aliasing was detected
+		results_array[6] = 0.0;															// 	A value of 0.0 indicates that no aliasing was detected
 	}
 	else
 	{
-		results_array[7] = pixel_size / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
+		results_array[6] = pixel_size / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
 	}
 
-	my_result.SetResult(6,results_array);
+	my_result.SetResult(7,results_array);
 
 
 	// Cleanup

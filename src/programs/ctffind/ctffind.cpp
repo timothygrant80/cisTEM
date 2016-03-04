@@ -365,6 +365,10 @@ void CtffindApp::AddCommandLineOptions()
 bool CtffindApp::DoCalculation()
 {
 
+
+	is_running_locally = false;
+	wxPrintf("DEBUG _ LOCALLY\n");
+
 	// Arguments for this job
 
 	std::string input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
@@ -488,9 +492,13 @@ bool CtffindApp::DoCalculation()
 	{
 		// Print out information about input file
 		input_file.PrintInfo();
+	}
 
-		// Prepare the output text file
-		output_text_fn = FilenameReplaceExtension(output_diagnostic_filename,"txt");
+	// Prepare the output text file
+	output_text_fn = FilenameReplaceExtension(output_diagnostic_filename,"txt");
+
+	if (is_running_locally)
+	{
 		output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
 
 		// Print header to the output text file
@@ -499,17 +507,18 @@ bool CtffindApp::DoCalculation()
 		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
 		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
 		output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
-
-		// Prepare a text file with 1D rotational average spectra
-		output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString(),"_avrot");
-
-		if (! old_school_input && number_of_micrographs > 1 && is_running_locally)
-		{
-			wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
-			wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
-			my_progress_bar = new ProgressBar(number_of_micrographs);
-		}
 	}
+
+	// Prepare a text file with 1D rotational average spectra
+	output_text_fn = FilenameAddSuffix(output_text_fn.ToStdString(),"_avrot");
+
+	if (! old_school_input && number_of_micrographs > 1 && is_running_locally)
+	{
+		wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
+		wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
+		my_progress_bar = new ProgressBar(number_of_micrographs);
+	}
+
 
 
 

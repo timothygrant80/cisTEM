@@ -455,6 +455,7 @@ bool CtffindApp::DoCalculation()
 	int					last_bin_with_good_fit;
 	double 				*values_to_write_out = new double[7];
 	float				best_score_after_initial_phase;
+	int					last_bin_without_aliasing;
 
 
 
@@ -969,7 +970,7 @@ bool CtffindApp::DoCalculation()
 		MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
 
 		// At what resolution does CTF aliasing become problematic?
-		int last_bin_without_aliasing = 0;
+		last_bin_without_aliasing = 0;
 		if (compute_extra_stats)
 		{
 			int location_of_previous_extremum = 0;
@@ -1048,28 +1049,29 @@ bool CtffindApp::DoCalculation()
 			}
 			output_text->WriteLine(values_to_write_out);
 
-			// Write out avrot
-			// TODO: add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections
-			if (compute_extra_stats)
-			{
-				if (current_micrograph_number == 1)
-				{
-					output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
-					output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
-					output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-					output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
-					output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
-					output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/pixels); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
-				}
-				output_text_avrot->WriteLine(spatial_frequency);
-				output_text_avrot->WriteLine(rotational_average);
-				output_text_avrot->WriteLine(rotational_average_astig);
-				output_text_avrot->WriteLine(rotational_average_astig_fit);
-				output_text_avrot->WriteLine(fit_frc);
-				output_text_avrot->WriteLine(fit_frc_sigma);
-			}
 
-			if (! old_school_input && number_of_micrographs > 1) my_progress_bar->Update(current_micrograph_number);
+			if (! old_school_input && number_of_micrographs > 1 && is_running_locally) my_progress_bar->Update(current_micrograph_number);
+		}
+
+		// Write out avrot
+		// TODO: add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections
+		if (compute_extra_stats)
+		{
+			if (current_micrograph_number == 1)
+			{
+				output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
+				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
+				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
+				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/pixels); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
+			}
+			output_text_avrot->WriteLine(spatial_frequency);
+			output_text_avrot->WriteLine(rotational_average);
+			output_text_avrot->WriteLine(rotational_average_astig);
+			output_text_avrot->WriteLine(rotational_average_astig_fit);
+			output_text_avrot->WriteLine(fit_frc);
+			output_text_avrot->WriteLine(fit_frc_sigma);
 		}
 
 	} // End of loop over micrographs
@@ -1089,6 +1091,33 @@ bool CtffindApp::DoCalculation()
 
 		wxPrintf("\n\n");
 	}
+
+
+	// Send results back
+	float results_array[6];
+	results_array[0] = current_ctf.GetDefocus1() * pixel_size;				// Defocus 1 (Angstroms)
+	results_array[1] = current_ctf.GetDefocus2() * pixel_size;				// Defocus 2 (Angstroms)
+	results_array[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
+	results_array[4] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
+	results_array[5] = - conjugate_gradient_minimizer->GetBestScore();		// CTFFIND score
+	if (last_bin_with_good_fit == 0)
+	{
+		results_array[6] = 0.0;															//	A value of 0.0 indicates that the calculation to determine the goodness of fit failed for some reason
+	}
+	else
+	{
+		results_array[6] = pixel_size / spatial_frequency[last_bin_with_good_fit];		//	The resolution (Angstroms) up to which Thon rings are well fit by the CTF
+	}
+	if (last_bin_without_aliasing == 0)
+	{
+		results_array[7] = 0.0;															// 	A value of 0.0 indicates that no aliasing was detected
+	}
+	else
+	{
+		results_array[7] = pixel_size / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
+	}
+
+	my_result.SetResult(6,results_array);
 
 
 	// Cleanup
@@ -1115,6 +1144,8 @@ bool CtffindApp::DoCalculation()
 		if (is_running_locally) delete output_text_avrot;
 	}
 	delete conjugate_gradient_minimizer;
+
+
 
 	// Return
 	return true;

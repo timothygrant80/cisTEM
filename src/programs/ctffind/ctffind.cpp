@@ -542,7 +542,7 @@ bool CtffindApp::DoCalculation()
 		{
 			for (current_first_frame_within_average = 1; current_first_frame_within_average <= number_of_movie_frames; current_first_frame_within_average += number_of_frames_to_average)
 			{
-				for (current_frame_within_average = 1; current_frame_within_average <= number_of_movie_frames; current_frame_within_average++)
+				for (current_frame_within_average = 1; current_frame_within_average <= number_of_frames_to_average; current_frame_within_average++)
 				{
 					current_input_location = current_first_frame_within_average + number_of_movie_frames * (current_micrograph_number-1) + (current_frame_within_average-1);
 					if (current_input_location > number_of_movie_frames * current_micrograph_number) continue;

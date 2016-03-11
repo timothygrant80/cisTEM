@@ -220,7 +220,7 @@ bool Refine3DApp::DoCalculation()
 	float rotated_center_z;
 	float temp_float;
 	float psi;
-	float psi_step = angular_step / 5.0;
+	float psi_step;
 	wxDateTime my_time_in;
 	wxDateTime my_time_out;
 
@@ -262,13 +262,16 @@ bool Refine3DApp::DoCalculation()
 	fourier_size_z += 2;
 // The following line assumes that we have a cubic volume
 	binning_factor = float(input_3d.density_map.logical_x_dimension) / float(fourier_size_x);
-
 	if (binning_factor != 1.0 )
 	{
 		input_3d.density_map.Resize(fourier_size_x, fourier_size_y, fourier_size_z);
 		input_3d.pixel_size *= binning_factor;
 	}
 	pixel_size_binned = pixel_size * binning_factor;
+	if (angular_step <= 0) angular_step = 	180.0 * high_resolution_limit / PI / mask_radius;
+//	psi_step = angular_step / 5.0;
+	psi_step = rad_2_deg(pixel_size_binned / mask_radius);
+	wxPrintf("Angular step size = %f, in-plane = %f\n", angular_step, psi_step);
 
 	wxPrintf("\nBinning factor = %f, new pixel size = %f\n", binning_factor, pixel_size_binned);
 	input_3d.density_map.SwapRealSpaceQuadrants();
@@ -290,7 +293,7 @@ bool Refine3DApp::DoCalculation()
 		projection_cache[i].Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	}
 	my_time_in = wxDateTime::UNow();
-	wxPrintf("generating projection cache for %i projections\n", global_euler_search.number_of_search_positions);
+//	wxPrintf("generating projection cache for %i projections\n", global_euler_search.number_of_search_positions);
 	input_3d.density_map.GenerateReferenceProjections(projection_cache, global_euler_search);
 	my_time_out = wxDateTime::UNow(); wxPrintf("cache generated: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
 

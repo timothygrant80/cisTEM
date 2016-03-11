@@ -684,7 +684,7 @@ bool CtffindApp::DoCalculation()
 		/*
 		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
 		 */
-		if (astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search && astigmatism_tolerance > 0.0)
+		if (astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search || astigmatism_tolerance < 0.0)
 		{
 
 			// 1D rotational average

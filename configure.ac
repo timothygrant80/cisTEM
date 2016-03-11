@@ -20,8 +20,10 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 # set up initial flags
 
 if test "x$CXX" = "xicpc"; then
+	#CXXFLAGS="$CXXFLAGS -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+	#CPPFLAGS="$CPPFLAGS -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
 	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
@@ -147,6 +149,8 @@ if test "x$HAVE_MKL" = "xyes"; then
 
 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
 	
+	CXXFLAGS="$CXXFLAGS -DMKL"
+	CPPFLAGS="$CPPFLAGS -DMKL"
 
 	if test "x$CXX=" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl"

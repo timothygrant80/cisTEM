@@ -64,5 +64,8 @@ typedef struct Kernel2D {
 #include "conjugate_gradient.h"
 #include "euler_search.h"
 #include "myapp.h"
+#ifdef MKL
+#include <mkl.h>
+#endif
 
 extern RandomNumberGenerator global_random_number_generator;

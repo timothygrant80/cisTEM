@@ -225,7 +225,7 @@ void Particle::WeightBySSNR(Curve &SSNR)
 
 	int i;
 	Image *snr_image = new Image;
-	snr_image->Allocate(ctf_image->logical_x_dimension, ctf_image->logical_y_dimension, 1, false);
+	snr_image->Allocate(ctf_image->logical_x_dimension, ctf_image->logical_y_dimension, false);
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);

@@ -4,8 +4,10 @@
 
 */
 
-class Image {
+class ReconstructedVolume;
+class EulerSearch;
 
+class Image {
 
 public:
 
@@ -100,10 +102,23 @@ public:
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
 	float Correct3D(float mask_radius = 0.0);
+	void MirrorXFourier2D(Image &mirrored_image);
+	void MirrorYFourier2D(Image &mirrored_image);
+	void RotateQuadrants(Image &rotated_image, int quad_i);
+	void GenerateReferenceProjections(Image *projections, EulerSearch &parameters);
+	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
+	void RotateFourier2DDeleteIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
+	void RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_index);
+	void RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
+	Kernel2D ReturnLinearInterpolatedFourierKernel2D(float &x, float &y);
+	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, bool use_nearest_neighbor = false);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0);
+	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
+	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
+	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
 
@@ -276,7 +291,7 @@ public:
 	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value);
 
 
-
+	Peak FindPeakAtOriginFast2D(int wanted_max_1d_distance);
 	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 

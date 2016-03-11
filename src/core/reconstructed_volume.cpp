@@ -170,6 +170,12 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, floa
 	delete [] wiener_constant;
 }
 
+void ReconstructedVolume::CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge)
+{
+	mask_volume_in_voxels = density_map.CosineRingMask(wanted_inner_mask_radius, wanted_outer_mask_radius, wanted_mask_edge);
+	has_masked_applied = true;
+}
+
 void ReconstructedVolume::CosineMask(float wanted_mask_radius, float wanted_mask_edge)
 {
 	mask_volume_in_voxels = density_map.CosineMask(wanted_mask_radius, wanted_mask_edge);

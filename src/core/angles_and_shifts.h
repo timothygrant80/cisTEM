@@ -11,6 +11,7 @@ public:
 //	~AnglesAndShifts();							// destructor
 
 	void GenerateEulerMatrices(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi);
+	void GenerateRotationMatrix2D(float wanted_rotation_angle);
 	void Init(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x, float wanted_shift_y);
 
 	inline float ReturnPhiAngle() {return euler_phi;};

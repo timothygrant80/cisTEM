@@ -5,6 +5,10 @@ typedef struct Peak {
   float value;
 } Peak;
 
+typedef struct Kernel2D {
+  int   pixel_index[4];
+  float pixel_weight[4];
+} Kernel2D;
 
 #include <string>
 #include <iostream>
@@ -58,6 +62,7 @@ typedef struct Peak {
 #include "downhill_simplex.h"
 #include "brute_force_search.h"
 #include "conjugate_gradient.h"
+#include "euler_search.h"
 #include "myapp.h"
 
 extern RandomNumberGenerator global_random_number_generator;

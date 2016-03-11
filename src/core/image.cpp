@@ -332,10 +332,10 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, float low_
 	return sum3;
 }
 
-void Image::PhaseFlipPixelWise(Image &other_image)
+void Image::PhaseFlipPixelWise(Image &phase_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
-	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+	MyDebugAssertTrue(phase_image.is_in_memory, "Other image memory not allocated");
 
 	int i;
 	long pixel_counter;
@@ -344,14 +344,14 @@ void Image::PhaseFlipPixelWise(Image &other_image)
 	{
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 		{
-			if (other_image.real_values[pixel_counter] < 0.0) real_values[pixel_counter] = - real_values[pixel_counter];
+			if (phase_image.real_values[pixel_counter] < 0.0) real_values[pixel_counter] = - real_values[pixel_counter];
 		}
 	}
 	else
 	{
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 		{
-			if (crealf(other_image.complex_values[pixel_counter]) < 0.0) complex_values[pixel_counter] = - complex_values[pixel_counter];
+			if (crealf(phase_image.complex_values[pixel_counter]) < 0.0) complex_values[pixel_counter] = - complex_values[pixel_counter];
 		}
 	}
 }
@@ -899,6 +899,591 @@ float Image::Correct3D(float mask_radius)
 	return pixel_sum / (4.0 / 3.0 * PI * powf(mask_radius,3));
 }
 
+void Image::MirrorXFourier2D(Image &mirrored_image)
+{
+	MyDebugAssertTrue(mirrored_image.logical_z_dimension == 1, "Error: attempting to mirrored_image into 3D image");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to mirrored_image from 3D image");
+	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	MyDebugAssertTrue(mirrored_image.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(mirrored_image.logical_x_dimension == logical_x_dimension && mirrored_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+
+	int pixel_counter;
+	int mirrored_counter;
+	int x_counter;
+	int y_counter;
+	int fft_dim_x = physical_upper_bound_complex_x + 1;
+
+	x_counter = 0;
+	y_counter = 0;
+	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+	{
+		mirrored_counter = y_counter * fft_dim_x + x_counter;
+	//					correlation_map->complex_values[pixel_counter] = rotated_image->complex_values[mirrored_counter] * conjf(particle.particle_image->complex_values[pixel_counter]);
+	//					correlation_map->complex_values[pixel_counter] = conjf(rotated_image->complex_values[pixel_counter]);
+		mirrored_image.complex_values[pixel_counter] = complex_values[mirrored_counter];
+	//					wxPrintf("x_counter = %i, y_counter = %i; pixel_counter = %i, mirror_counter = %i\n", x_counter, y_counter, pixel_counter, mirrored_counter);
+		x_counter++;
+		if (x_counter >= fft_dim_x)
+		{
+			x_counter -= fft_dim_x;
+			y_counter--;
+			if (y_counter < 0) y_counter += logical_y_dimension;
+		}
+	}
+	mirrored_image.is_in_real_space = false;
+}
+
+void Image::MirrorYFourier2D(Image &mirrored_image)
+{
+	MyDebugAssertTrue(mirrored_image.logical_z_dimension == 1, "Error: attempting to mirrored_image into 3D image");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to mirrored_image from 3D image");
+	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	MyDebugAssertTrue(mirrored_image.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(mirrored_image.logical_x_dimension == logical_x_dimension && mirrored_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+
+	int pixel_counter;
+	int mirrored_counter;
+	int x_counter;
+	int y_counter;
+	int fft_dim_x = physical_upper_bound_complex_x + 1;
+
+	x_counter = 0;
+	y_counter = 0;
+	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+	{
+		mirrored_counter = y_counter * fft_dim_x + x_counter;
+		mirrored_image.complex_values[pixel_counter] = conjf(complex_values[mirrored_counter]);
+		x_counter++;
+		if (x_counter >= fft_dim_x)
+		{
+			x_counter -= fft_dim_x;
+			y_counter--;
+			if (y_counter < 0) y_counter += logical_y_dimension;
+		}
+	}
+	mirrored_image.is_in_real_space = false;
+}
+
+void Image::RotateQuadrants(Image &rotated_image, int quad_i)
+{
+	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
+	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
+	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(quad_i == 0 || quad_i == 90 || quad_i == 180 || quad_i == 270, "Selected rotation invalid");
+
+	int i;
+	int j;
+
+	long pixel_counter;
+	long pixel_counter2;
+
+	rotated_image.object_is_centred_in_box = object_is_centred_in_box;
+	rotated_image.is_in_real_space = false;
+
+	if (quad_i == 0)
+	{
+		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = complex_values[i];};
+		return;
+	}
+
+	if (quad_i == 180)
+	{
+		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = conjf(complex_values[i]);};
+		return;
+	}
+
+	if (quad_i == 90)
+	{
+		for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
+		{
+			for (i = 0; i <= logical_upper_bound_complex_x; i++)
+			{
+				pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+
+				if (i <= logical_upper_bound_complex_y)
+				{
+					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
+				}
+				else
+				{
+					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
+				}
+
+				if (j <= 0)
+				{
+					rotated_image.complex_values[pixel_counter2] = conjf(complex_values[pixel_counter]);
+				}
+				else
+				{
+					rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
+				}
+			}
+		}
+		return;
+	}
+
+	if (quad_i == 270)
+	{
+		for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
+		{
+			for (i = 0; i <= logical_upper_bound_complex_x; i++)
+			{
+				pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+
+				if (i <= logical_upper_bound_complex_y)
+				{
+					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
+				}
+				else
+				{
+					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
+				}
+
+				if (j <= 0)
+				{
+					rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
+				}
+				else
+				{
+					rotated_image.complex_values[pixel_counter2] = conjf(complex_values[pixel_counter]);
+				}
+			}
+		}
+		return;
+	}
+
+	rotated_image.is_in_real_space = false;
+}
+
+void Image::GenerateReferenceProjections(Image *projections, EulerSearch &parameters)
+{
+	int i;
+	AnglesAndShifts angles;
+
+	for (i = 0; i < parameters.number_of_search_positions; i++)
+	{
+		angles.Init(parameters.list_of_search_parameters[0][i], parameters.list_of_search_parameters[1][i], 0.0, 0.0, 0.0);
+		ExtractSlice(projections[i], angles, parameters.resolution_limit);
+	}
+}
+
+void Image::RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step)
+{
+	int psi_i;
+	float psi;
+	AnglesAndShifts angles;
+
+	psi_i = myroundint(psi_max / psi_step);
+	wxPrintf("psi_max = %f, psi_step = %f, psi_i = %i\n", psi_max, psi_step, psi_i);
+	kernel_index = new Kernel2D* [psi_i];									// dynamic array of pointers to float
+	psi_i = 0;
+	for (psi = 0.0; psi < psi_max; psi += psi_step)
+	{
+		kernel_index[psi_i] = new Kernel2D [real_memory_allocated / 2];		// each i-th pointer is now pointing to dynamic array (size number_of_positions) of actual float values
+		psi_i++;
+	}
+
+	psi_i = 0;
+	for (psi = 0.0; psi < psi_max; psi += psi_step)
+	{
+		angles.GenerateRotationMatrix2D(psi);
+		RotateFourier2DIndex(kernel_index[psi_i], angles);
+		psi_i++;
+	}
+}
+
+void Image::RotateFourier2DDeleteIndex(Kernel2D **&kernel_index, float psi_max, float psi_step)
+{
+	int psi_i = 0;
+	float psi;
+
+	for (psi = 0.0; psi < psi_max; psi += psi_step)
+	{
+		delete [] kernel_index[psi_i];				// delete inner arrays of floats
+		psi_i++;
+	}
+	delete [] kernel_index;							// delete array of pointers to float arrays
+
+	kernel_index = NULL;
+}
+
+void Image::RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_index)
+{
+	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
+	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
+	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(! object_is_centred_in_box, "Image volume quadrants not swapped");
+
+	int i;
+	int index;
+	float weight;
+	int pixel_counter;
+
+	for (pixel_counter = 0; pixel_counter < rotated_image.real_memory_allocated / 2; pixel_counter++)
+	{
+		rotated_image.complex_values[pixel_counter] = 0.0;
+		if (kernel_index[pixel_counter].pixel_index[0] != kernel_index[pixel_counter].pixel_index[3])
+		{
+			for (i = 0; i < 4; i++)
+			{
+				index = kernel_index[pixel_counter].pixel_index[i];
+				weight = kernel_index[pixel_counter].pixel_weight[i];
+				if (weight < 0.0)
+				{
+					rotated_image.complex_values[pixel_counter] -= conjf(complex_values[index]) * weight;
+				}
+				else
+				{
+					rotated_image.complex_values[pixel_counter] += complex_values[index] * weight;
+				}
+			}
+		}
+	}
+	rotated_image.is_in_real_space = false;
+}
+
+void Image::RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit, float padding_factor)
+{
+	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
+
+	int i;
+	int j;
+
+	int pixel_counter;
+	int pixel_counter2;
+
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+
+	float x_coordinate_3d;
+	float y_coordinate_3d;
+
+	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
+	float y_coord_sq;
+
+	Kernel2D null_kernel;
+
+	null_kernel.pixel_index[0] = 0;
+	null_kernel.pixel_index[1] = 0;
+	null_kernel.pixel_index[2] = 0;
+	null_kernel.pixel_index[3] = 0;
+	null_kernel.pixel_weight[0] = 0.0;
+	null_kernel.pixel_weight[1] = 0.0;
+	null_kernel.pixel_weight[2] = 0.0;
+	null_kernel.pixel_weight[3] = 0.0;
+
+	for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
+	{
+		y_coordinate_2d = j * padding_factor;
+		y_coord_sq = powf(y_coordinate_2d,2);
+		for (i = 1; i <= logical_upper_bound_complex_x; i++)
+		{
+			x_coordinate_2d = i * padding_factor;
+			pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+			if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
+			{
+				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+//				rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+				kernel_index[pixel_counter] = ReturnLinearInterpolatedFourierKernel2D(x_coordinate_3d, y_coordinate_3d);
+			}
+			else
+			{
+//				rotated_image.complex_values[pixel_counter] = 0.0;
+				kernel_index[pixel_counter] = null_kernel;
+			}
+		}
+	}
+// Now deal with special case of i = 0
+	for (j = 1; j <= logical_upper_bound_complex_y; j++)
+	{
+		y_coordinate_2d = j * padding_factor;
+		x_coordinate_2d = 0;
+		if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
+		{
+			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+			pixel_counter = ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+//			rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+			kernel_index[pixel_counter] = ReturnLinearInterpolatedFourierKernel2D(x_coordinate_3d, y_coordinate_3d);
+			pixel_counter2 = ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+//			rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+			kernel_index[pixel_counter2] = kernel_index[pixel_counter];
+			kernel_index[pixel_counter2].pixel_weight[0] = - kernel_index[pixel_counter2].pixel_weight[0];
+			kernel_index[pixel_counter2].pixel_weight[1] = - kernel_index[pixel_counter2].pixel_weight[1];
+			kernel_index[pixel_counter2].pixel_weight[2] = - kernel_index[pixel_counter2].pixel_weight[2];
+			kernel_index[pixel_counter2].pixel_weight[3] = - kernel_index[pixel_counter2].pixel_weight[3];
+		}
+		else
+		{
+			pixel_counter = ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+//			rotated_image.complex_values[pixel_counter] = 0.0;
+			kernel_index[pixel_counter] = null_kernel;
+			pixel_counter2 = ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+//			rotated_image.complex_values[pixel_counter2] = 0.0;
+			kernel_index[pixel_counter2] = null_kernel;
+		}
+	}
+// Deal with pixel at edge if image dimensions are even
+	if (-logical_lower_bound_complex_y != logical_upper_bound_complex_y)
+	{
+		y_coordinate_2d = logical_lower_bound_complex_y * padding_factor;
+		x_coordinate_2d = 0;
+		rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+		pixel_counter = ReturnFourier1DAddressFromLogicalCoord(0,logical_lower_bound_complex_y,0);
+//		rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+		kernel_index[pixel_counter] = ReturnLinearInterpolatedFourierKernel2D(x_coordinate_3d, y_coordinate_3d);
+	}
+
+// Set origin to zero to generate a projection with average set to zero
+//	rotated_image.complex_values[0] = 0.0;
+	kernel_index[0] = null_kernel;
+}
+
+Kernel2D Image::ReturnLinearInterpolatedFourierKernel2D(float &x, float &y)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
+
+//	fftwf_complex sum = 0.0;
+	int i;
+	int j;
+	int i_start;
+	int i_end;
+	int j_start;
+	int j_end;
+	int physical_y_address;
+	int jj;
+	int i_coeff = 0;
+	Kernel2D kernel;
+
+	float weight;
+	float y_dist;
+
+	kernel.pixel_index[0] = 0;
+	kernel.pixel_index[1] = 0;
+	kernel.pixel_index[2] = 0;
+	kernel.pixel_index[3] = 0;
+	kernel.pixel_weight[0] = 0.0;
+	kernel.pixel_weight[1] = 0.0;
+	kernel.pixel_weight[2] = 0.0;
+	kernel.pixel_weight[3] = 0.0;
+
+	if (x >= 0.0)
+	{
+		i_start = int(floorf(x));
+		i_end = i_start + 1;
+		if (i_end > logical_upper_bound_complex_x) return kernel;
+
+		j_start = int(floorf(y));
+		if (j_start < logical_lower_bound_complex_y) return kernel;
+		j_end = j_start + 1;
+		if (j_end > logical_upper_bound_complex_y) return kernel;
+
+		for (j = j_start; j <= j_end; j++)
+		{
+			if (j >= 0)
+			{
+				physical_y_address = j;
+			}
+			else
+			{
+				physical_y_address = logical_y_dimension + j;
+			}
+			jj = (physical_upper_bound_complex_x + 1) * physical_y_address;
+			y_dist = fabs(y - float(j));
+			for (i = i_start; i <= i_end; i++)
+			{
+				weight = (1.0 - fabs(x - float(i))) * (1.0 - y_dist);
+				kernel.pixel_index[i_coeff] = jj + i;
+				kernel.pixel_weight[i_coeff] = weight;
+				i_coeff++;
+//				sum = sum + complex_values[jj + i] * weight;
+			}
+		}
+	}
+	else
+	{
+		i_start = int(floorf(x));
+		if (i_start < logical_lower_bound_complex_x) return kernel;
+		i_end = i_start + 1;
+
+		j_start = int(floorf(y));
+		if (j_start < logical_lower_bound_complex_y) return kernel;
+		j_end = j_start + 1;
+		if (j_end > logical_upper_bound_complex_y) return kernel;
+
+		for (j = j_start; j <= j_end; j++)
+		{
+			if (j > 0)
+			{
+				physical_y_address = logical_y_dimension - j;
+			}
+			else
+			{
+				physical_y_address = -j;
+			}
+			jj = (physical_upper_bound_complex_x + 1) * physical_y_address;
+			y_dist = fabs(y - float(j));
+			for (i = i_start; i <= i_end; i++)
+			{
+				weight = (1.0 - fabs(x - float(i))) * (1.0 - y_dist);
+				weight = (1.0 - fabs(x - float(i))) * (1.0 - y_dist);
+				kernel.pixel_index[i_coeff] = jj - i;
+				kernel.pixel_weight[i_coeff] = - weight;
+				i_coeff++;
+//				sum = sum + conjf(complex_values[jj - i]) * weight;
+			}
+		}
+	}
+	return kernel;
+}
+
+void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit, bool use_nearest_neighbor)
+{
+	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
+	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
+	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(! object_is_centred_in_box, "Image volume quadrants not swapped");
+
+	int i;
+	int j;
+
+	long pixel_counter;
+	long pixel_counter2;
+
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+
+	float x_coordinate_3d;
+	float y_coordinate_3d;
+
+	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
+	float y_coord_sq;
+	float padding_factor = logical_x_dimension / rotated_image.logical_x_dimension;
+
+	rotated_image.object_is_centred_in_box = false;
+	rotated_image.is_in_real_space = false;
+//	image_to_extract.SetToConstant(0.0);
+
+	if (use_nearest_neighbor)
+	{
+		for (j = rotated_image.logical_lower_bound_complex_y; j <= rotated_image.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j * padding_factor;
+			y_coord_sq = powf(y_coordinate_2d,2);
+			for (i = 1; i <= rotated_image.logical_upper_bound_complex_x; i++)
+			{
+				x_coordinate_2d = i * padding_factor;
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
+				{
+					rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+					rotated_image.complex_values[pixel_counter] = ReturnNearestFourier2D(x_coordinate_3d, y_coordinate_3d);
+				}
+				else
+				{
+					rotated_image.complex_values[pixel_counter] = 0.0;
+				}
+			}
+		}
+	// Now deal with special case of i = 0
+		for (j = 1; j <= rotated_image.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j * padding_factor;
+			x_coordinate_2d = 0;
+			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
+			{
+				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				rotated_image.complex_values[pixel_counter] = ReturnNearestFourier2D(x_coordinate_3d, y_coordinate_3d);
+				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+			}
+			else
+			{
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				rotated_image.complex_values[pixel_counter] = 0.0;
+				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				rotated_image.complex_values[pixel_counter2] = 0.0;
+			}
+		}
+	// Deal with pixel at edge if image dimensions are even
+		if (-rotated_image.logical_lower_bound_complex_y != rotated_image.logical_upper_bound_complex_y)
+		{
+			y_coordinate_2d = rotated_image.logical_lower_bound_complex_y * padding_factor;
+			x_coordinate_2d = 0;
+			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+			pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,rotated_image.logical_lower_bound_complex_y,0);
+			rotated_image.complex_values[pixel_counter] = ReturnNearestFourier2D(x_coordinate_3d, y_coordinate_3d);
+		}
+	}
+	else
+	{
+		for (j = rotated_image.logical_lower_bound_complex_y; j <= rotated_image.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j * padding_factor;
+			y_coord_sq = powf(y_coordinate_2d,2);
+			for (i = 1; i <= rotated_image.logical_upper_bound_complex_x; i++)
+			{
+				x_coordinate_2d = i * padding_factor;
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
+				{
+					rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+					rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+				}
+				else
+				{
+					rotated_image.complex_values[pixel_counter] = 0.0;
+				}
+			}
+		}
+	// Now deal with special case of i = 0
+		for (j = 1; j <= rotated_image.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j * padding_factor;
+			x_coordinate_2d = 0;
+			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
+			{
+				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+			}
+			else
+			{
+				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				rotated_image.complex_values[pixel_counter] = 0.0;
+				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				rotated_image.complex_values[pixel_counter2] = 0.0;
+			}
+		}
+	// Deal with pixel at edge if image dimensions are even
+		if (-rotated_image.logical_lower_bound_complex_y != rotated_image.logical_upper_bound_complex_y)
+		{
+			y_coordinate_2d = rotated_image.logical_lower_bound_complex_y * padding_factor;
+			x_coordinate_2d = 0;
+			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
+			pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,rotated_image.logical_lower_bound_complex_y,0);
+			rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
+		}
+	}
+
+// Set origin to zero to generate a projection with average set to zero
+	rotated_image.complex_values[0] = 0.0;
+
+	rotated_image.is_in_real_space = false;
+}
+
 void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit)
 {
 	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
@@ -909,7 +1494,6 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 
 	int i;
 	int j;
-	int k;
 
 	long pixel_counter;
 	long pixel_counter2;
@@ -981,9 +1565,141 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 
 // Set origin to zero to generate a projection with average set to zero
 	image_to_extract.complex_values[0] = 0.0;
+
+	image_to_extract.is_in_real_space = false;
+}
+
+fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
+
+	int i_nearest;
+	int j_nearest;
+	int physical_y_address;
+
+	if (x >= 0.0)
+	{
+		i_nearest = myroundint(x);
+		if (i_nearest > logical_upper_bound_complex_x) return 0.0;
+
+		j_nearest = myroundint(y);
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0;
+
+		if (j_nearest >= 0)
+		{
+			physical_y_address = j_nearest;
+		}
+		else
+		{
+			physical_y_address = logical_y_dimension + j_nearest;
+		}
+		return complex_values[(physical_upper_bound_complex_x + 1) * physical_y_address + i_nearest];
+	}
+	else
+	{
+		i_nearest = myroundint(x);
+		if (i_nearest < logical_lower_bound_complex_x) return 0.0;
+
+		j_nearest = myroundint(y);
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0;
+
+		if (j_nearest > 0)
+		{
+			physical_y_address = logical_y_dimension - j_nearest;
+		}
+		else
+		{
+			physical_y_address = -j_nearest;
+		}
+		return conjf(complex_values[(physical_upper_bound_complex_x + 1) * physical_y_address - i_nearest]);
+	}
 }
 
 // Implementation of Frealign's ainterpo3ds
+fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
+
+	fftwf_complex sum = 0.0;
+	int i;
+	int j;
+	int i_start;
+	int i_end;
+	int j_start;
+	int j_end;
+	int physical_y_address;
+	int jj;
+
+	float weight;
+	float y_dist;
+
+	if (x >= 0.0)
+	{
+		i_start = int(floorf(x));
+		i_end = i_start + 1;
+		if (i_end > logical_upper_bound_complex_x) return 0.0;
+
+		j_start = int(floorf(y));
+		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		j_end = j_start + 1;
+		if (j_end > logical_upper_bound_complex_y) return 0.0;
+
+		for (j = j_start; j <= j_end; j++)
+		{
+			if (j >= 0)
+			{
+				physical_y_address = j;
+			}
+			else
+			{
+				physical_y_address = logical_y_dimension + j;
+			}
+			jj = (physical_upper_bound_complex_x + 1) * physical_y_address;
+			y_dist = fabs(y - float(j));
+			for (i = i_start; i <= i_end; i++)
+			{
+				weight = (1.0 - fabs(x - float(i))) * (1.0 - y_dist);
+				sum = sum + complex_values[jj + i] * weight;
+			}
+		}
+	}
+	else
+	{
+		i_start = int(floorf(x));
+		if (i_start < logical_lower_bound_complex_x) return 0.0;
+		i_end = i_start + 1;
+
+		j_start = int(floorf(y));
+		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		j_end = j_start + 1;
+		if (j_end > logical_upper_bound_complex_y) return 0.0;
+
+		for (j = j_start; j <= j_end; j++)
+		{
+			if (j > 0)
+			{
+				physical_y_address = logical_y_dimension - j;
+			}
+			else
+			{
+				physical_y_address = -j;
+			}
+			jj = (physical_upper_bound_complex_x + 1) * physical_y_address;
+			y_dist = fabs(y - float(j));
+			for (i = i_start; i <= i_end; i++)
+			{
+				weight = (1.0 - fabs(x - float(i))) * (1.0 - y_dist);
+				sum = sum + conjf(complex_values[jj - i]) * weight;
+			}
+		}
+	}
+	return sum;
+}
+
 fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &z)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -999,7 +1715,6 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	int j_end;
 	int k_start;
 	int k_end;
-	int physical_x_address;
 	int physical_y_address;
 	int physical_z_address;
 	int jj;
@@ -1244,9 +1959,296 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 }
 
 // Apply a cosine-edge mask. By default, pixels on the outside of the mask radius are flattened. If invert=true, the pixels near the center are flattened. This does not currently work when quadrants are swapped.
+float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge)
+{
+//	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
+	MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small");
+	MyDebugAssertTrue(wanted_inner_radius <= wanted_outer_radius, "Inner radius larger than outer radius");
+
+	int i;
+	int j;
+	int k;
+	int ii;
+	int jj;
+	int kk;
+	int outer_number_of_pixels;
+	int inner_number_of_pixels;
+
+	float x;
+	float y;
+	float z;
+
+	long pixel_counter = 0;
+
+	float distance_from_center;
+	float distance_from_center_squared;
+	float outer_mask_radius;
+	float outer_mask_radius_squared;
+	float outer_mask_radius_plus_edge;
+	float outer_mask_radius_plus_edge_squared;
+	float inner_mask_radius;
+	float inner_mask_radius_squared;
+	float inner_mask_radius_minus_edge;
+	float inner_mask_radius_minus_edge_squared;
+	float edge;
+	double outer_pixel_sum;
+	double inner_pixel_sum;
+
+	float frequency;
+	float frequency_squared;
+
+	double mask_volume = 0.0;
+
+	outer_mask_radius = wanted_outer_radius - wanted_mask_edge / 2;
+	if (outer_mask_radius < 0.0) outer_mask_radius = 0.0;
+	outer_mask_radius_plus_edge = outer_mask_radius + wanted_mask_edge;
+
+	outer_mask_radius_squared = powf(outer_mask_radius, 2);
+	outer_mask_radius_plus_edge_squared = powf(outer_mask_radius_plus_edge, 2);
+
+	inner_mask_radius = wanted_inner_radius + wanted_mask_edge / 2;
+	inner_mask_radius_minus_edge = inner_mask_radius - wanted_mask_edge;
+
+	inner_mask_radius_squared = powf(inner_mask_radius, 2);
+	inner_mask_radius_minus_edge_squared = powf(inner_mask_radius_minus_edge, 2);
+
+	outer_pixel_sum = 0.0;
+	outer_number_of_pixels = 0;
+	inner_pixel_sum = 0.0;
+	inner_number_of_pixels = 0;
+	if (is_in_real_space && object_is_centred_in_box)
+	{
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = powf(k - physical_address_of_box_center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = powf(j - physical_address_of_box_center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = powf(i - physical_address_of_box_center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= outer_mask_radius_squared && distance_from_center_squared <= outer_mask_radius_plus_edge_squared)
+					{
+						outer_pixel_sum += real_values[pixel_counter];
+						outer_number_of_pixels++;
+					}
+					if (distance_from_center_squared <= inner_mask_radius_squared && distance_from_center_squared >= inner_mask_radius_minus_edge_squared)
+					{
+						inner_pixel_sum += real_values[pixel_counter];
+						inner_number_of_pixels++;
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+		outer_pixel_sum /= outer_number_of_pixels;
+		inner_pixel_sum /= inner_number_of_pixels;
+
+		pixel_counter = 0.0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = powf(k - physical_address_of_box_center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = powf(j - physical_address_of_box_center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = powf(i - physical_address_of_box_center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= outer_mask_radius_squared && distance_from_center_squared <= outer_mask_radius_plus_edge_squared)
+					{
+						distance_from_center = sqrtf(distance_from_center_squared);
+						edge = (1.0 + cosf(PI * (distance_from_center - outer_mask_radius) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * outer_pixel_sum;
+						mask_volume += powf(edge,2);
+					}
+					else
+					if (distance_from_center_squared >= outer_mask_radius_plus_edge_squared)
+					{
+						real_values[pixel_counter] = outer_pixel_sum;
+					}
+					else
+					if (distance_from_center_squared <= inner_mask_radius_squared && distance_from_center_squared >= inner_mask_radius_minus_edge_squared)
+					{
+						distance_from_center = sqrtf(distance_from_center_squared);
+						edge = (1.0 + cosf(PI * (inner_mask_radius - distance_from_center) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * inner_pixel_sum;
+						mask_volume += powf(edge,2);
+					}
+					else
+					if (distance_from_center_squared <= inner_mask_radius_minus_edge_squared)
+					{
+						real_values[pixel_counter] = inner_pixel_sum;
+					}
+					else
+					{
+						mask_volume += 1.0;
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+	else
+	if (is_in_real_space)
+	{
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			kk = k;
+			if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
+			z = powf(kk, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				jj = j;
+				if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
+				y = powf(jj, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					ii = i;
+					if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
+					x = powf(ii, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= outer_mask_radius_squared && distance_from_center_squared <= outer_mask_radius_plus_edge_squared)
+					{
+						outer_pixel_sum += real_values[pixel_counter];
+						outer_number_of_pixels++;
+					}
+					if (distance_from_center_squared <= inner_mask_radius_squared && distance_from_center_squared >= inner_mask_radius_minus_edge_squared)
+					{
+						inner_pixel_sum += real_values[pixel_counter];
+						inner_number_of_pixels++;
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+		outer_pixel_sum /= outer_number_of_pixels;
+		inner_pixel_sum /= inner_number_of_pixels;
+
+		pixel_counter = 0.0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			kk = k;
+			if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
+			z = powf(kk, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				jj = j;
+				if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
+				y = powf(jj, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					ii = i;
+					if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
+					x = powf(ii, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared >= outer_mask_radius_squared && distance_from_center_squared <= outer_mask_radius_plus_edge_squared)
+					{
+						distance_from_center = sqrtf(distance_from_center_squared);
+						edge = (1.0 + cosf(PI * (distance_from_center - outer_mask_radius) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * outer_pixel_sum;
+						mask_volume += powf(edge,2);
+					}
+					else
+					if (distance_from_center_squared >= outer_mask_radius_plus_edge_squared)
+					{
+						real_values[pixel_counter] = outer_pixel_sum;
+					}
+					else
+					if (distance_from_center_squared <= inner_mask_radius_squared && distance_from_center_squared >= inner_mask_radius_minus_edge_squared)
+					{
+						distance_from_center = sqrtf(distance_from_center_squared);
+						edge = (1.0 + cosf(PI * (inner_mask_radius - distance_from_center) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * inner_pixel_sum;
+						mask_volume += powf(edge,2);
+					}
+					else
+					if (distance_from_center_squared <= inner_mask_radius_minus_edge_squared)
+					{
+						real_values[pixel_counter] = inner_pixel_sum;
+					}
+					else
+					{
+						mask_volume += 1.0;
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k = 0; k <= physical_upper_bound_complex_z; k++)
+		{
+			z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+			for (j = 0; j <= physical_upper_bound_complex_y; j++)
+			{
+				y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+				for (i = 0; i <= physical_upper_bound_complex_x; i++)
+				{
+					x = powf(i * fourier_voxel_size_x, 2);
+
+					// compute squared radius, in units of reciprocal pixels
+
+					frequency_squared = x + y + z;
+
+					if (frequency_squared >= outer_mask_radius_squared && frequency_squared <= outer_mask_radius_plus_edge_squared)
+					{
+						frequency = sqrtf(frequency_squared);
+						edge = (1.0 + cosf(PI * (frequency - outer_mask_radius) / wanted_mask_edge)) / 2.0;
+						complex_values[pixel_counter] *= edge;
+					}
+					if (frequency_squared <= inner_mask_radius_squared && frequency_squared >= inner_mask_radius_minus_edge_squared)
+					{
+						frequency = sqrtf(frequency_squared);
+						edge = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
+						complex_values[pixel_counter] *= edge;
+					}
+					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
+					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0;
+
+					pixel_counter++;
+				}
+			}
+
+		}
+
+	}
+
+	return float(mask_volume);
+}
+
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
+	MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small");
 
 	int i;
 	int j;
@@ -3904,6 +4906,92 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 
 }
 
+Peak Image::FindPeakAtOriginFast2D(int wanted_max_1d_distance)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+	MyDebugAssertTrue(! object_is_centred_in_box, "Peak centered in image");
+
+	int j;
+	int i;
+	int jj;
+	int pixel_counter;
+	int y_dim = logical_y_dimension + padding_jump_value;
+	int max_1d_distance = wanted_max_1d_distance;
+
+	if (max_1d_distance > physical_address_of_box_center_x) max_1d_distance = physical_address_of_box_center_x;
+
+	Peak found_peak;
+	found_peak.value = -FLT_MAX;
+	found_peak.x = 0.0;
+	found_peak.y = 0.0;
+	found_peak.z = 0.0;
+
+	for (j = 0; j <= max_1d_distance; j++)
+	{
+		jj = j * y_dim;
+		for (i = 0; i <= max_1d_distance; i++)
+		{
+			pixel_counter = jj + i;
+			if (real_values[pixel_counter] > found_peak.value)
+			{
+				found_peak.value = real_values[pixel_counter];
+				found_peak.x = i;
+				found_peak.y = j;
+			}
+		}
+	}
+
+	for (j = logical_y_dimension - max_1d_distance - 1; j <= logical_y_dimension - 1; j++)
+	{
+		jj = j * y_dim;
+		for (i = 0; i <= max_1d_distance; i++)
+		{
+			pixel_counter = jj + i;
+			if (real_values[pixel_counter] > found_peak.value)
+			{
+				found_peak.value = real_values[pixel_counter];
+				found_peak.x = i;
+				found_peak.y = j;
+			}
+		}
+	}
+
+	for (j = 0; j <= max_1d_distance; j++)
+	{
+		jj = j * y_dim;
+		for (i = logical_x_dimension - max_1d_distance - 1; i <= logical_x_dimension - 1; i++)
+		{
+			pixel_counter = jj + i;
+			if (real_values[pixel_counter] > found_peak.value)
+			{
+				found_peak.value = real_values[pixel_counter];
+				found_peak.x = i;
+				found_peak.y = j;
+			}
+		}
+	}
+
+	for (j = logical_y_dimension - max_1d_distance - 1; j <= logical_y_dimension - 1; j++)
+	{
+		jj = j * y_dim;
+		for (i = logical_x_dimension - max_1d_distance - 1; i <= logical_x_dimension - 1; i++)
+		{
+			pixel_counter = jj + i;
+			if (real_values[pixel_counter] > found_peak.value)
+			{
+				found_peak.value = real_values[pixel_counter];
+				found_peak.x = i;
+				found_peak.y = j;
+			}
+		}
+	}
+
+	if (found_peak.x > physical_address_of_box_center_x) found_peak.x -= logical_x_dimension;
+	if (found_peak.y > physical_address_of_box_center_y) found_peak.y -= logical_y_dimension;
+	return found_peak;
+}
+
 Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted_max_radius)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -3912,6 +5000,9 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 	int k;
 	int j;
 	int i;
+	int kk;
+	int jj;
+	int ii;
 
 	float z;
 	float y;
@@ -3936,31 +5027,73 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 	// if they are > 0.0 and < 1.0 then the radius will be interpreted as fraction, otherwise
 	// it is interpreted as absolute.
 
-	if (wanted_min_radius > 0.0 && wanted_min_radius < 1.0 && wanted_max_radius > 0.0 && wanted_max_radius < 1.0) radii_are_fractional = true;
+	if (wanted_min_radius >= 0.0 && wanted_min_radius < 1.0 && wanted_max_radius >= 0.0 && wanted_max_radius < 1.0) radii_are_fractional = true;
 	else radii_are_fractional = false;
 
 	wanted_min_radius = powf(wanted_min_radius, 2);
 	wanted_max_radius = powf(wanted_max_radius, 2);
 
-	if (radii_are_fractional == true)
+	if (object_is_centred_in_box)
 	{
-		inv_max_radius_sq_x = 1.0 / powf(physical_address_of_box_center_x, 2);
-		inv_max_radius_sq_y = 1.0 / powf(physical_address_of_box_center_y, 2);
+		if (radii_are_fractional == true)
+		{
+			inv_max_radius_sq_x = 1.0 / powf(physical_address_of_box_center_x, 2);
+			inv_max_radius_sq_y = 1.0 / powf(physical_address_of_box_center_y, 2);
 
-		if (logical_z_dimension == 1) inv_max_radius_sq_z = 0;
-		else inv_max_radius_sq_z = 1.0 / powf(physical_address_of_box_center_z, 2);
+			if (logical_z_dimension == 1) inv_max_radius_sq_z = 0;
+			else inv_max_radius_sq_z = 1.0 / powf(physical_address_of_box_center_z, 2);
 
-		for (k = 0; k < logical_z_dimension; k++)
+			for (k = 0; k < logical_z_dimension; k++)
+				{
+					z = powf(k - physical_address_of_box_center_z, 2) * inv_max_radius_sq_z;
+
+					for (j = 0; j < logical_y_dimension; j++)
+					{
+						y = powf(j - physical_address_of_box_center_y, 2) * inv_max_radius_sq_y;
+
+						for (i = 0; i < logical_x_dimension; i++)
+						{
+							x = powf(i - physical_address_of_box_center_x, 2) * inv_max_radius_sq_x;
+
+							distance_from_origin = x + y + z;
+
+							if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+							{
+								if (real_values[pixel_counter] > found_peak.value)
+								{
+									found_peak.value = real_values[pixel_counter];
+									found_peak.x = i - physical_address_of_box_center_x;
+									found_peak.y = j - physical_address_of_box_center_y;
+									found_peak.z = k - physical_address_of_box_center_z;
+								}
+
+							}
+
+							//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+							//wxPrintf("value %f, %f, %f (%f)\n", x, y, z, real_values[pixel_counter]);
+
+							pixel_counter++;
+						}
+
+						pixel_counter+=padding_jump_value;
+					}
+
+
+				}
+		}
+		else
+		{
+			for (k = 0; k < logical_z_dimension; k++)
 			{
-				z = powf(k - physical_address_of_box_center_z, 2) * inv_max_radius_sq_z;
+				z = powf(k - physical_address_of_box_center_z, 2);
 
 				for (j = 0; j < logical_y_dimension; j++)
 				{
-					y = powf(j - physical_address_of_box_center_y, 2) * inv_max_radius_sq_y;
+					y = powf(j - physical_address_of_box_center_y, 2);
 
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						x = powf(i - physical_address_of_box_center_x, 2) * inv_max_radius_sq_x;
+						x = powf(i - physical_address_of_box_center_x, 2);
 
 						distance_from_origin = x + y + z;
 
@@ -3972,8 +5105,58 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 								found_peak.x = i - physical_address_of_box_center_x;
 								found_peak.y = j - physical_address_of_box_center_y;
 								found_peak.z = k - physical_address_of_box_center_z;
+								//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
+								//wxPrintf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
 							}
+						}
 
+						pixel_counter++;
+					}
+
+					pixel_counter+=padding_jump_value;
+				}
+			}
+		}
+	}
+	else
+	{
+		if (radii_are_fractional == true)
+		{
+			inv_max_radius_sq_x = 1.0 / powf(physical_address_of_box_center_x, 2);
+			inv_max_radius_sq_y = 1.0 / powf(physical_address_of_box_center_y, 2);
+
+			if (logical_z_dimension == 1) inv_max_radius_sq_z = 0;
+			else inv_max_radius_sq_z = 1.0 / powf(physical_address_of_box_center_z, 2);
+
+			for (k = 0; k < logical_z_dimension; k++)
+			{
+				kk = k;
+				if (kk > physical_address_of_box_center_z) kk -= logical_z_dimension;
+				z = powf(float(kk), 2) * inv_max_radius_sq_z;
+
+				for (j = 0; j < logical_y_dimension; j++)
+				{
+					jj = j;
+					if (jj > physical_address_of_box_center_y) jj -= logical_y_dimension;
+					y = powf(float(jj), 2) * inv_max_radius_sq_y;
+
+					for (i = 0; i < logical_x_dimension; i++)
+					{
+						ii = i;
+						if (ii > physical_address_of_box_center_x) ii -= logical_x_dimension;
+						x = powf(float(ii), 2) * inv_max_radius_sq_x;
+
+						distance_from_origin = x + y + z;
+
+						if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+						{
+							if (real_values[pixel_counter] > found_peak.value)
+							{
+								found_peak.value = real_values[pixel_counter];
+								found_peak.x = ii;
+								found_peak.y = jj;
+								found_peak.z = kk;
+							}
 						}
 
 						//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
@@ -3984,44 +5167,46 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 					pixel_counter+=padding_jump_value;
 				}
-
-
 			}
-	}
-	else
-	{
-		for (k = 0; k < logical_z_dimension; k++)
+		}
+		else
 		{
-			z = powf(k - physical_address_of_box_center_z, 2);
-
-			for (j = 0; j < logical_y_dimension; j++)
+			for (k = 0; k < logical_z_dimension; k++)
 			{
-				y = powf(j - physical_address_of_box_center_y, 2);
+				kk = k;
+				if (kk > physical_address_of_box_center_z) kk -= logical_z_dimension;
+				z = powf(float(kk), 2);
 
-				for (i = 0; i < logical_x_dimension; i++)
+				for (j = 0; j < logical_y_dimension; j++)
 				{
-					x = powf(i - physical_address_of_box_center_x, 2);
+					jj = j;
+					if (jj > physical_address_of_box_center_y) jj -= logical_y_dimension;
+					y = powf(float(jj), 2);
 
-					distance_from_origin = x + y + z;
-
-					if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+					for (i = 0; i < logical_x_dimension; i++)
 					{
-						if (real_values[pixel_counter] > found_peak.value)
-						{
+						ii = i;
+						if (ii > physical_address_of_box_center_x) ii -= logical_x_dimension;
+						x = powf(float(ii), 2);
 
-							found_peak.value = real_values[pixel_counter];
-							found_peak.x = i - physical_address_of_box_center_x;
-							found_peak.y = j - physical_address_of_box_center_y;
-							found_peak.z = k - physical_address_of_box_center_z;
-							//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
-							//wxPrintf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
+						distance_from_origin = x + y + z;
+
+						if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+						{
+							if (real_values[pixel_counter] > found_peak.value)
+							{
+								found_peak.value = real_values[pixel_counter];
+								found_peak.x = ii;
+								found_peak.y = jj;
+								found_peak.z = kk;
+							}
 						}
+
+						pixel_counter++;
 					}
 
-					pixel_counter++;
+					pixel_counter+=padding_jump_value;
 				}
-
-				pixel_counter+=padding_jump_value;
 			}
 		}
 	}

@@ -28,6 +28,7 @@ public:
 	void Calculate3DSimple(Reconstruct3D &reconstruction);
 	void Calculate3DOptimal(Reconstruct3D &reconstruction, float pssnr_correction_factor = 1.0);
 	float Correct3D(float mask_radius = 0.0);
+	void CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge);
 	void CosineMask(float wanted_mask_radius, float wanted_mask_edge);
 	void OptimalFilter();
 	void PrintStatistics();

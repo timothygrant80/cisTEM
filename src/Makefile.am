@@ -59,7 +59,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/downhill_simplex.cpp \
                        core/brute_force_search.cpp \
                        core/va04.cpp \
-                       core/conjugate_gradient.cpp
+                       core/conjugate_gradient.cpp \
+                       core/euler_search.cpp
 
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

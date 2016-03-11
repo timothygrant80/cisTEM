@@ -139,7 +139,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float minimum_defocus;
 	float maximum_defocus;
 	float defocus_search_step;
-	bool restrain_astigmatism;
+	bool large_astigmatism_expected;
 	float astigmatism_tolerance;
 	bool find_additional_phase_shift;
 	float minimum_additional_phase_shift;
@@ -295,14 +295,14 @@ void CtffindApp::DoInteractiveUserInput()
 		minimum_defocus 			= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
 		maximum_defocus 			= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
 		defocus_search_step 		= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0);
-		restrain_astigmatism		= my_input->GetYesNoFromUser("Restrain astigmatism","Answer yes if you expect low astigmatism and would like to penalise large astigmatisms during fitting","yes");
-		if (restrain_astigmatism)
+		large_astigmatism_expected	= my_input->GetYesNoFromUser("Do you expect large astigmatism?","Answer yes if you expect high astigmatism. If you answer no, a restraint will be used during fitting to penalise large astigmatisms","no");
+		if (large_astigmatism_expected)
 		{
-			astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms)","100.0");
+			astigmatism_tolerance 	= -100.0; // a negative value here signals that we don't want any restraint on astigmatism
 		}
 		else
 		{
-			astigmatism_tolerance 	= -100.0; // a negative value here signals that we don't want any restraint on astigmatism
+			astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms)","100.0");
 		}
 		find_additional_phase_shift = my_input->GetYesNoFromUser("Find additional phase shift?","Input micrograph was recorded using a phase plate with variable phase shift, which you want to find","no");
 
@@ -684,7 +684,7 @@ bool CtffindApp::DoCalculation()
 		/*
 		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
 		 */
-		if (astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search || astigmatism_tolerance < 0.0)
+		if (astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search && astigmatism_tolerance > 0.0)
 		{
 
 			// 1D rotational average

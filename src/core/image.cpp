@@ -3974,13 +3974,15 @@ void Image::TaperEdges()
 	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
 
 	// Private variables
-	const int				averaging_strip_width_x	=	100;
-	const int				averaging_strip_width_y	=	100;
-	const int				averaging_strip_width_z =   100;
-	const int				tapering_strip_width_x	=	500;
-	const int				tapering_strip_width_y	=	500;
-	const int				tapering_strip_width_z	=	500;
-	const int				smoothing_half_width_x	=	1;
+	const float				fraction_averaging = 30.0;
+	const float				fraction_tapering  = 30.0;
+	const int				averaging_strip_width_x	=	int(logical_x_dimension/fraction_averaging); //100
+	const int				averaging_strip_width_y	=	int(logical_y_dimension/fraction_averaging);
+	const int				averaging_strip_width_z =   int(logical_z_dimension/fraction_averaging);
+	const int				tapering_strip_width_x	=	int(logical_x_dimension/fraction_tapering); //500
+	const int				tapering_strip_width_y	=	int(logical_y_dimension/fraction_tapering);
+	const int				tapering_strip_width_z	=	int(logical_z_dimension/fraction_tapering);
+	const int				smoothing_half_width_x	=	1; // 1
 	const int				smoothing_half_width_y	=	1;
 	const int				smoothing_half_width_z	=	1;
 	int						current_dimension;
@@ -4133,7 +4135,7 @@ void Image::TaperEdges()
 
 		for (address=0;address<logical_second_dimension*logical_third_dimension;address++)
 		{
-			average_for_current_edge_average[address] = 0.5 * ( average_for_current_edge_finish[address] - average_for_current_edge_start[address]);
+			average_for_current_edge_average[address] = 0.5 * ( average_for_current_edge_finish[address] + average_for_current_edge_start[address]);
 			average_for_current_edge_start[address] -= average_for_current_edge_average[address];
 			average_for_current_edge_finish[address] -= average_for_current_edge_average[address];
 		}

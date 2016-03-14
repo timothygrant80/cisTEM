@@ -36,7 +36,14 @@ void UserInput::AskQuestion(const char *question_text, const char *help_text, co
 {
 	 int current_length;
 	 char temp_string[1000];
+
+	 for (int i=0; i<1000;i++)
+	 {
+		 temp_string[i] = 0;
+	 }
+
 	 strcpy (temp_string, question_text);
+
 
 	 if (input_is_a_tty == true && default_value[0] != 0)
 	 {
@@ -174,6 +181,12 @@ float UserInput::GetFloatFromUser(const char * my_text, const char * help_text, 
   char default_value[1000];
   char input[1000];
 
+  for (int i=0; i<1000;i++)
+  {
+	  default_value[i] = 0;
+	  input[i] = 0;
+  }
+
   // Sort out the defaults..
 
   GetDefault(my_text, wanted_default_value, default_value);
@@ -236,6 +249,12 @@ int UserInput::GetIntFromUser(const char * my_text, const char * help_text, cons
   int my_int;
   char input[1000];
   char default_value[1000];
+
+  for (int i=0; i<1000;i++)
+  {
+	input[i] = 0;
+	default_value[i] = 0;
+  }
 
   GetDefault(my_text, wanted_default_value, default_value);
 
@@ -433,6 +452,10 @@ std::string UserInput::GetFilenameFromUser(const char * my_text, const char * he
 
 	char input[1000];
 	char default_value[1000];
+	for (int i=0; i<1000;i++)
+	{
+		default_value[i] = 0;
+	}
 
 
 	GetDefault(my_text, wanted_default_value, default_value);
@@ -489,9 +512,12 @@ void UserInput::GetDefault(const char *my_text, const char *default_default_valu
 		char label_temp[1000];
 		char current_label[1000];
 
-		current_label[0] = 0;
 		default_value[0] = 0;
-		label_temp[0] = 0;
+		for ( int i=0; i<1000;i++)
+		{
+			current_label[i] = 0;
+			label_temp[i] = 0;
+		}
 
 		rewind(defaults_file);
 
@@ -565,6 +591,16 @@ void UserInput::CarryOverDefaults()
 	bool is_present;
 
 	long file_pos;
+
+	for (int i=0; i<1000;i++)
+	{
+		current_label[i] = 0;
+		current_label_newfile[i] = 0;
+		current_default[i] = 0;
+		current_default_newfile[i] = 0;
+		label_temp[i] = 0;
+		label_temp_newfile[i] = 0;
+	}
 
 	rewind(defaults_file);
 	file_pos = ftell ( new_defaults_file );

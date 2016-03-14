@@ -150,6 +150,12 @@ bool UserInput::GetYesNoFromUser(const char * my_text, const char * help_text, c
   char input[1000];
   char default_value[1000];
 
+  for (int i=0; i<1000;i++)
+  {
+	  input[i] = 0;
+	  default_value[i] = 0;
+  }
+
   // Sort out the defaults..
   GetDefault(my_text, wanted_default_value, default_value);
 
@@ -317,6 +323,11 @@ std::string UserInput::GetStringFromUser(const char * my_text, const char * help
 	char input[1000];
 	char default_value[1000];
 
+	for (int i=0; i<1000;i++)
+	{
+		input[i] = 0;
+		default_value[i] = 0;
+	}
 
 	GetDefault(my_text, wanted_default_value, default_value);
 
@@ -341,6 +352,12 @@ std::string UserInput::GetSymmetryFromUser(const char * my_text, const char * he
 {
 	char input[1000];
 	char default_value[1000];
+
+	for (int i=0; i<1000;i++)
+	{
+		input[i] = 0;
+		default_value[i] = 0;
+	}
 
 
 	GetDefault(my_text, wanted_default_value, default_value);
@@ -454,6 +471,7 @@ std::string UserInput::GetFilenameFromUser(const char * my_text, const char * he
 	char default_value[1000];
 	for (int i=0; i<1000;i++)
 	{
+		input[i] = 0;
 		default_value[i] = 0;
 	}
 

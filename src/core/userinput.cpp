@@ -491,6 +491,7 @@ void UserInput::GetDefault(const char *my_text, const char *default_default_valu
 
 		current_label[0] = 0;
 		default_value[0] = 0;
+		label_temp[0] = 0;
 
 		rewind(defaults_file);
 

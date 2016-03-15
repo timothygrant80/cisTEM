@@ -445,6 +445,7 @@ bool CtffindApp::DoCalculation()
 	Image				*number_of_extrema_image = new Image();
 	Image				*ctf_values_image = new Image();
 	double				*spatial_frequency = NULL;
+	double				*spatial_frequency_in_reciprocal_angstroms = NULL;
 	double				*rotational_average_astig = NULL;
 	double				*rotational_average_astig_fit = NULL;
 	float				*number_of_extrema_profile = NULL;
@@ -635,6 +636,7 @@ bool CtffindApp::DoCalculation()
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
 			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
+			//average_spectrum->SpectrumBoxConvolutionFull2D(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
 
 			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
 
@@ -1073,14 +1075,20 @@ bool CtffindApp::DoCalculation()
 				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
 				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
 				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
-				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/pixels); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
+				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/Angstroms); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
 			}
-			output_text_avrot->WriteLine(spatial_frequency);
+			spatial_frequency_in_reciprocal_angstroms = new double[number_of_bins_in_1d_spectra];
+			for (counter=0; counter<number_of_bins_in_1d_spectra;counter++)
+			{
+				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] * pixel_size;
+			}
+			output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
 			output_text_avrot->WriteLine(rotational_average);
 			output_text_avrot->WriteLine(rotational_average_astig);
 			output_text_avrot->WriteLine(rotational_average_astig_fit);
 			output_text_avrot->WriteLine(fit_frc);
 			output_text_avrot->WriteLine(fit_frc_sigma);
+			delete [] spatial_frequency_in_reciprocal_angstroms;
 		}
 
 	} // End of loop over micrographs

@@ -987,7 +987,7 @@ bool CtffindApp::DoCalculation()
 		// Prepare output diagnostic image
 		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
-		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
 		if (compute_extra_stats) {
 			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
@@ -999,7 +999,7 @@ bool CtffindApp::DoCalculation()
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
 		OverlayCTF(average_spectrum, &current_ctf);
-		//average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
+		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 
 
 		// Print more detailed results to terminal

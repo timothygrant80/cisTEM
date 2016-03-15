@@ -636,7 +636,6 @@ bool CtffindApp::DoCalculation()
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
 			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
-			//average_spectrum->SpectrumBoxConvolutionFull2D(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
 
 			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
 

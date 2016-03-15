@@ -51,6 +51,7 @@ MyTestApp : public wxAppConsole
 		void TestImageLoopingAndAddressing();
 		void TestNumericTextFiles();
 		void TestClipIntoFourier();
+		void TestMaskCentralCross();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -90,6 +91,7 @@ bool MyTestApp::OnInit()
 	TestImageLoopingAndAddressing();
 	TestNumericTextFiles();
 	TestClipIntoFourier();
+	TestMaskCentralCross();
 
 
 	wxPrintf("\n\n\n");
@@ -397,9 +399,9 @@ void MyTestApp::TestSpectrumBoxConvolution()
 	output_image.Allocate(test_image.logical_x_dimension,test_image.logical_y_dimension,test_image.logical_z_dimension);
 	test_image.SpectrumBoxConvolution(&output_image,7,3);
 
-	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.048110) == false) FailTest;
+	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.049189) == false) FailTest;
 	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(40,40, 0), 1.634473) == false) FailTest;
-	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(79,79, 0),-0.048485) == false) FailTest;
+	if (DoublesAreAlmostTheSame(output_image.ReturnRealPixelFromPhysicalCoord(79,79, 0),-0.049189) == false) FailTest;
 
 	EndTest();
 }
@@ -615,13 +617,56 @@ void MyTestApp::TestFilterFunctions()
 	BeginTest("Image::MaskCentralCross");
 
 	test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString(), 1);
+	test_image.ForwardFFT();
 	test_image.MaskCentralCross(2,2);
+	test_image.BackwardFFT();
 	if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.256103) == false) FailTest;
 	if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(40,40, 0), 0.158577) == false) FailTest;
 	if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(79,79, 0), 0.682073) == false) FailTest;
 
 	EndTest();
 
+
+}
+
+void MyTestApp::TestMaskCentralCross()
+{
+	BeginTest("Image::MaskCentralCross");
+
+	Image my_image;
+
+	my_image.Allocate(128,128,1);
+	my_image.SetToConstant(1.0);
+	my_image.MaskCentralCross(3,3);
+
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,0,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(127,127,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,127,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(127,0,0),1.0)) FailTest;
+
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(67,67,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(67,61,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(61,61,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(61,67,0),1.0)) FailTest;
+
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,61,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,67,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(61,0,0),1.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(67,0,0),1.0)) FailTest;
+
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(66,66,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(66,62,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(62,62,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(62,66,0),0.0)) FailTest;
+
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,62,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(0,66,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(62,0,0),0.0)) FailTest;
+	if (! DoublesAreAlmostTheSame(my_image.ReturnRealPixelFromPhysicalCoord(66,0,0),0.0)) FailTest;
+
+
+
+	EndTest();
 
 }
 

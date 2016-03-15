@@ -3916,11 +3916,117 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 	amplitude_spectrum->object_is_centred_in_box = true;
 }
 
+
+
+
 /*
  * Real-space box convolution meant for 2D amplitude spectra
  *
- * This is adapted from the MSMOOTH subroutine from CTFFIND3, with a different wrap-around behaviour
+ * This is adapted from the MSMOOTH subroutine from CTFFIND3, with a different wrap-around behaviour.
+ * Also, in this version, we loop over the full 2D, rather than just half - this runs faster because less logic within the loop
  */
+void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius)
+{
+	MyDebugAssertTrue(IsEven(box_size) == false,"Box size must be odd");
+	MyDebugAssertTrue(logical_z_dimension == 1,"Volumes not supported");
+	MyDebugAssertTrue(output_image->is_in_memory == true,"Output image not allocated");
+	MyDebugAssertTrue(HasSameDimensionsAs(output_image),"Output image does not have same dimensions as image");
+
+	// Variables
+	const int half_box_size = (box_size-1)/2;
+	const int cross_half_width_to_ignore = 1;
+	int i;
+	int i_sq;
+	int ii;
+	int j;
+	int j_sq;
+	int jj;
+	int num_voxels;
+	int m;
+	int l;
+	const float minimum_radius_sq = pow(minimum_radius,2);
+	float radius_sq;
+	const int first_i_to_ignore = physical_address_of_box_center_x - cross_half_width_to_ignore;
+	const int last_i_to_ignore  = physical_address_of_box_center_x + cross_half_width_to_ignore;
+	const int first_j_to_ignore = physical_address_of_box_center_y - cross_half_width_to_ignore;
+	const int last_j_to_ignore  = physical_address_of_box_center_y + cross_half_width_to_ignore;
+
+	// Addresses
+	long address_within_output = 0;
+	long address_within_input;
+
+	// Loop over the output image
+	for (j = 0; j < logical_y_dimension; j++)
+	{
+		j_sq = pow((j - physical_address_of_box_center_y),2);
+
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			i_sq = pow((i - physical_address_of_box_center_x),2);
+
+			radius_sq = float(i_sq+j_sq);
+
+			if ( radius_sq <= minimum_radius_sq )
+			{
+				output_image->real_values[address_within_output] = real_values[address_within_output];
+			}
+			else
+			{
+				output_image->real_values[address_within_output] = 0.0e0;
+				num_voxels = 0;
+
+				for ( m = - half_box_size; m <= half_box_size; m++)
+				{
+					jj = j + m;
+					// wrap around
+					if (jj < 0) { jj += logical_y_dimension; }
+					if (jj >= logical_y_dimension) { jj -= logical_y_dimension; }
+
+					// In central cross?
+					//if ( abs(jj - physical_address_of_box_center_y) <= cross_half_width_to_ignore ) { continue; }
+					if ( jj >= first_j_to_ignore && jj <= last_j_to_ignore) { continue; }
+
+
+					for ( l = - half_box_size; l <= half_box_size; l++)
+					{
+						ii = i + l;
+						// wrap around
+						if (ii < 0) { ii += logical_x_dimension; }
+						if (ii >= logical_x_dimension) { ii -= logical_x_dimension; }
+
+						// In central cross?
+						//if ( abs(ii - physical_address_of_box_center_x) <= cross_half_width_to_ignore ) { continue; }
+						if ( ii >= first_i_to_ignore && ii <= last_i_to_ignore) { continue; }
+
+						address_within_input = ReturnReal1DAddressFromPhysicalCoord(ii,jj,0);
+
+						output_image->real_values[address_within_output] += real_values[address_within_input];
+						num_voxels++;
+
+					}
+				} // end of loop over the box
+
+				if (num_voxels == 0)
+				{
+					output_image->real_values[address_within_output] = real_values[address_within_input];
+				}
+				else
+				{
+					output_image->real_values[address_within_output] /= float(num_voxels);
+				}
+			}
+
+			address_within_output++;
+		}
+		address_within_output += output_image->padding_jump_value;
+	}
+
+}
+
+
+
+/*
+
 void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius)
 {
 	MyDebugAssertTrue(IsEven(box_size) == false,"Box size must be odd");
@@ -3954,7 +4060,7 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 	long address_within_output = 0;
 	long address_within_input;
 
-	// Loop over the output image. To save time, we only loop over one half of the image
+	// Loop over the output image. To save time, we only loop over one half of the image [BUG: actually this is looping over the full image!
 	for (j = 0; j < logical_y_dimension; j++)
 	{
 		j_friedel = 2 * physical_address_of_box_center_y - j;
@@ -4048,7 +4154,7 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 		output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension-1,0)] = output_image->real_values[ReturnReal1DAddressFromPhysicalCoord(i_friedel,logical_y_dimension - 1,0)];
 	}
 }
-
+*/
 
 //#pragma GCC push_options
 //#pragma GCC optimize ("O0")
@@ -4840,40 +4946,77 @@ void Image::ApplyBFactor(float bfactor) // add real space and windows later, pro
 	}
 }
 
+
+// If you set half_width to 1, only the central row or column of pixels will be masked. Half_width of 2 means 3 pixels will be masked.
 void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D currently supported");
+	MyDebugAssertTrue(vertical_half_width > 0 && horizontal_half_width > 0, "Half width must be greater than 0");
 
 	int pixel_counter;
 	int width_counter;
-	bool must_fft = false;
 
-	if (is_in_real_space == true)
-	{
-		must_fft = true;
-		ForwardFFT();
-	}
 
-	for (pixel_counter = logical_lower_bound_complex_y; pixel_counter <= logical_upper_bound_complex_y; pixel_counter++)
+	if (! is_in_real_space)
 	{
-		for (width_counter = -(horizontal_half_width - 1); width_counter <= (horizontal_half_width - 1); width_counter++)
+		for (pixel_counter = logical_lower_bound_complex_y; pixel_counter <= logical_upper_bound_complex_y; pixel_counter++)
 		{
-			complex_values[ReturnFourier1DAddressFromLogicalCoord(width_counter, pixel_counter, 0)] = 0.0 + 0.0 * I;
+			for (width_counter = -(horizontal_half_width - 1); width_counter <= (horizontal_half_width - 1); width_counter++)
+			{
+				complex_values[ReturnFourier1DAddressFromLogicalCoord(width_counter, pixel_counter, 0)] = 0.0 + 0.0 * I;
+			}
+		}
+
+
+		for (pixel_counter = 0; pixel_counter <= logical_upper_bound_complex_x; pixel_counter++)
+		{
+			for (width_counter = -(vertical_half_width - 1); width_counter <=  (vertical_half_width - 1); width_counter++)
+			{
+				complex_values[ReturnFourier1DAddressFromLogicalCoord(pixel_counter, width_counter, 0)] = 0.0 + 0.0 * I;
+
+			}
 		}
 	}
-
-
-	for (pixel_counter = 0; pixel_counter <= logical_upper_bound_complex_x; pixel_counter++)
+	else
 	{
-		for (width_counter = -(vertical_half_width - 1); width_counter <=  (vertical_half_width - 1); width_counter++)
-		{
-			complex_values[ReturnFourier1DAddressFromLogicalCoord(pixel_counter, width_counter, 0)] = 0.0 + 0.0 * I;
+		long address_x_start  = physical_address_of_box_center_x - (vertical_half_width - 1);
+		long address_x_finish = physical_address_of_box_center_x + (vertical_half_width - 1);
 
+		long address_y_start  = physical_address_of_box_center_y - (horizontal_half_width - 1);
+		long address_y_finish = physical_address_of_box_center_y + (horizontal_half_width - 1);
+
+		int y_counter;
+		int x_counter;
+
+		// Loop over lines
+		for (y_counter = 0; y_counter < logical_y_dimension; y_counter++)
+		{
+			for (x_counter = address_x_start; x_counter <= address_x_finish; x_counter++)
+			{
+				real_values[x_counter] = 0.0;
+			}
+			address_x_start  += logical_x_dimension + padding_jump_value;
+			address_x_finish += logical_x_dimension + padding_jump_value;
 		}
+
+
+		// Loop over columns
+		address_y_start  *= (logical_x_dimension + padding_jump_value);
+		address_y_finish *= (logical_y_dimension + padding_jump_value);
+		for (x_counter = 0; x_counter < logical_x_dimension; x_counter++)
+		{
+			for (y_counter = address_y_start; y_counter <= address_y_finish; y_counter += logical_x_dimension + padding_jump_value)
+			{
+				real_values[y_counter] = 0.0;
+			}
+			address_y_start  ++;
+			address_y_finish ++;
+		}
+
+
 	}
 
-	if (must_fft == true) BackwardFFT();
 
 }
 

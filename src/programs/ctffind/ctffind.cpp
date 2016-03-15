@@ -111,9 +111,9 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 void ComputeImagesWithNumberOfExtremaAndCTFValues(CTF *ctf, Image *number_of_extrema, Image *ctf_values);
 int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image *number_of_extrema, long address, Image *ctf_values, float ctf_values_profile[]);
 void ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[]);
-void OverlayCTFAndRenormalizeSpectrum( Image *spectrum, CTF *ctf);
+void OverlayCTF( Image *spectrum, CTF *ctf);
 void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[]);
-void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[] );
+void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit );
 
 
 IMPLEMENT_APP(CtffindApp)
@@ -884,7 +884,7 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0)) * average_spectrum->logical_x_dimension,
 															      	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
 																	average,sigma);
-		average_spectrum->CosineMask(5.0,0.0,true);
+		average_spectrum->CircleMask(5.0,true);
 		average_spectrum->SetMaximumValueOnCentralCross(average);
 		average_spectrum->SetMinimumAndMaximumValues(average - 4.0 * sigma, average + 4.0 * sigma);
 		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0)) * average_spectrum->logical_x_dimension,
@@ -920,20 +920,30 @@ bool CtffindApp::DoCalculation()
 
 			// Here, do FRC
 			ComputeFRCBetween1DSpectrumAndFit(number_of_bins_in_1d_spectra,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,fit_frc,fit_frc_sigma);
+
+			// At what bin does CTF aliasing become problematic?
+			last_bin_without_aliasing = 0;
+			int location_of_previous_extremum = 0;
+			for (counter=1;counter<number_of_bins_in_1d_spectra;counter++)
+			{
+				if (number_of_extrema_profile[counter]-number_of_extrema_profile[counter-1] >= 0.9)
+				{
+					// We just reached a new extremum
+					if (counter-location_of_previous_extremum < 4)
+					{
+						last_bin_without_aliasing = location_of_previous_extremum;
+						break;
+					}
+					/*else if (counter == number_of_bins_in_1d_spectra - 1)
+					{
+						last_bin_without_aliasing = number_of_bins_in_1d_spectra - 1;
+					}*/
+					location_of_previous_extremum = counter;
+				}
+			}
 		}
 
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc",1);
-
-		// Prepare output diagnostic image
-		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0))*average_spectrum->logical_x_dimension,
-																	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
-																	average,sigma);
-		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
-		average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
-		if (compute_extra_stats) RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile);
-		OverlayCTFAndRenormalizeSpectrum(average_spectrum, &current_ctf);
-		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 
 		// Until what frequency were CTF rings detected?
 		if (compute_extra_stats)
@@ -974,29 +984,23 @@ bool CtffindApp::DoCalculation()
 		}
 		MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
 
-		// At what resolution does CTF aliasing become problematic?
-		last_bin_without_aliasing = 0;
-		if (compute_extra_stats)
-		{
-			int location_of_previous_extremum = 0;
-			for (counter=1;counter<number_of_bins_in_1d_spectra;counter++)
-			{
-				if (number_of_extrema_profile[counter]-number_of_extrema_profile[counter-1] >= 0.9)
-				{
-					// We just reached a new extremum
-					if (counter-location_of_previous_extremum < 4)
-					{
-						last_bin_without_aliasing = location_of_previous_extremum;
-						break;
-					}
-					/*else if (counter == number_of_bins_in_1d_spectra - 1)
-					{
-						last_bin_without_aliasing = number_of_bins_in_1d_spectra - 1;
-					}*/
-					location_of_previous_extremum = counter;
-				}
-			}
+		// Prepare output diagnostic image
+		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
+		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
+		if (compute_extra_stats) {
+			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
+		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0))*average_spectrum->logical_x_dimension,
+																	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
+																	average,sigma);
+		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
+
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
+		OverlayCTF(average_spectrum, &current_ctf);
+		//average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
+
 
 		// Print more detailed results to terminal
 		if (is_running_locally && number_of_micrographs == 1)
@@ -1250,7 +1254,7 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 
 
 //
-void OverlayCTFAndRenormalizeSpectrum( Image *spectrum, CTF *ctf)
+void OverlayCTF( Image *spectrum, CTF *ctf)
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 
@@ -1304,8 +1308,10 @@ void OverlayCTFAndRenormalizeSpectrum( Image *spectrum, CTF *ctf)
 
 	//spectrum->QuickAndDirtyWriteSlice("dbg_spec_overlay_1.mrc",1);
 
+	/*
+
 	// We will renormalize the experimental part of the diagnostic image
-	target_sigma = sqrtf(values_in_rings.GetSampleVariance());
+	target_sigma = sqrtf(values_in_rings.GetSampleVariance()) ;
 
 
 	if (target_sigma > 0.0)
@@ -1337,6 +1343,7 @@ void OverlayCTFAndRenormalizeSpectrum( Image *spectrum, CTF *ctf)
 			address += spectrum->padding_jump_value;
 		}
 	}
+	*/
 
 	//spectrum->QuickAndDirtyWriteSlice("dbg_spec_overlay_final.mrc",1);
 }
@@ -1344,13 +1351,17 @@ void OverlayCTFAndRenormalizeSpectrum( Image *spectrum, CTF *ctf)
 
 // Rescale the spectrum and its 1D rotational avereage so that the peaks and troughs are at 0.0 and 1.0. The location of peaks and troughs are worked out
 // by parsing the suppilied 1D average_fit array
-void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[] )
+void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit )
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
+	MyDebugAssertTrue(number_of_bins > 1,"Bad number of bins: %i\n",number_of_bins);
 
 	//
 	const bool spectrum_is_blank = spectrum->IsConstant();
-	const int rescale_based_on_maximum_number = 2;
+	const int rescale_based_on_maximum_number = 2; // This peak will be used as a renormalization.
+	const int sg_width = 7;
+	const int sg_order = 2;
+	const bool rescale_peaks = true; // if this is false, only the background will be subtracted, the Thon rings "heights" will be unaffected
 	float background[number_of_bins];
 	float peak[number_of_bins];
 	int bin_counter;
@@ -1363,7 +1374,13 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 	bool actually_do_rescaling;
 	int chosen_bin;
 	long address;
+	int last_bin_to_rescale;
+	float min_scale_factor;
+	float scale_factor;
+	float rescale_peaks_to;
 
+	Curve *minima_curve = new Curve;
+	Curve *maxima_curve = new Curve;
 
 	// Initialise arrays and variables
 	for (bin_counter=0; bin_counter < number_of_bins; bin_counter++)
@@ -1403,6 +1420,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 					background[i] = average[location_of_previous_minimum] * float(bin_counter-i) / float(bin_counter-location_of_previous_minimum) + average[bin_counter] * float(i-location_of_previous_minimum) / float(bin_counter-location_of_previous_minimum);
 				}
 				location_of_previous_minimum = bin_counter;
+				minima_curve->AddPoint(spatial_frequency[bin_counter],average[bin_counter]);
 			}
 			if (at_a_maximum)
 			{
@@ -1415,6 +1433,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 					if (current_maximum_number == rescale_based_on_maximum_number) normalisation_bin_number = bin_counter;
 				}
 				location_of_previous_maximum = bin_counter;
+				maxima_curve->AddPoint(spatial_frequency[bin_counter],average[bin_counter]);
 			}
 			if (at_a_maximum && at_a_minimum)
 			{
@@ -1423,17 +1442,47 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 			}
 		}
 
+		// Fit the minima and maximum curves using Savitzky-Golay smoothing
+		if (maxima_curve->number_of_points >= sg_width) maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+		if (minima_curve->number_of_points >= sg_width) minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+
+		// Replace the background and peak envelopes with the smooth min/max curves
+		for (bin_counter=0;bin_counter<number_of_bins;bin_counter++)
+		{
+			if (minima_curve->number_of_points >= sg_width) background[bin_counter] =  minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+			if (maxima_curve->number_of_points >= sg_width) peak[bin_counter]       =  maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+		}
+
 		// Now that we have worked out a background and a peak envelope, let's do the actual rescaling
 		actually_do_rescaling = (peak[normalisation_bin_number] - background[normalisation_bin_number]) > 0.0;
+		if (last_bin_without_aliasing != 0)
+		{
+			last_bin_to_rescale = std::min(last_bin_with_good_fit,last_bin_without_aliasing);
+		}
+		else
+		{
+			last_bin_to_rescale = last_bin_with_good_fit;
+		}
 		if (actually_do_rescaling)
 		{
+			min_scale_factor = 0.2;
+			rescale_peaks_to = 0.75;
 			address = 0;
 			for (j=0;j<spectrum->logical_y_dimension;j++)
 			{
 				for (i=0;i<spectrum->logical_x_dimension;i++)
 				{
 					chosen_bin = ReturnSpectrumBinNumber(number_of_bins,number_of_extrema_profile,number_of_extrema, address, ctf_values, ctf_values_profile);
-					spectrum->real_values[address] = ( spectrum->real_values[address] - background[chosen_bin] )  / std::min(std::max(peak[chosen_bin]-background[chosen_bin],0.2f),5.0f);
+					if (chosen_bin <= last_bin_to_rescale)
+					{
+						spectrum->real_values[address] -= background[chosen_bin]; // This alone makes the spectrum look very nice already
+						if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[chosen_bin]-background[chosen_bin])) / rescale_peaks_to; // This is supposed to help "boost" weak Thon rings
+					}
+					else
+					{
+						spectrum->real_values[address] -= background[last_bin_to_rescale];
+						if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[last_bin_to_rescale]-background[last_bin_to_rescale])) / rescale_peaks_to;
+					}
 					//
 					address++;
 				}
@@ -1450,12 +1499,16 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 		{
 			for (bin_counter=0;bin_counter<number_of_bins;bin_counter++)
 			{
+
 				average[bin_counter] = (average[bin_counter] - background[bin_counter]) / (peak[normalisation_bin_number] - background[normalisation_bin_number]) * 0.95;
 				// We want peaks to reach at least 0.1
-				if ( ((peak[bin_counter] - background[bin_counter]) < 0.1) && (fabs(peak[bin_counter]-background[bin_counter]) > 0.000001) )
+				if ( ((peak[bin_counter] - background[bin_counter]) < 0.1) && (fabs(peak[bin_counter]-background[bin_counter]) > 0.000001) && bin_counter <= last_bin_without_aliasing)
 				{
 					average[bin_counter] = average[bin_counter] / (peak[bin_counter]-background[bin_counter]) * ( peak[normalisation_bin_number] - background[normalisation_bin_number] ) * 0.1;
 				}
+
+				//average[bin_counter] = maxima_curve.ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+
 			}
 		}
 		else
@@ -1465,6 +1518,10 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 
 
 	} // end of test of spectrum_is_blank
+
+	// Cleanup
+	delete minima_curve;
+	delete maxima_curve;
 
 }
 

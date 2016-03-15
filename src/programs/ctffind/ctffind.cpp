@@ -1080,7 +1080,7 @@ bool CtffindApp::DoCalculation()
 			spatial_frequency_in_reciprocal_angstroms = new double[number_of_bins_in_1d_spectra];
 			for (counter=0; counter<number_of_bins_in_1d_spectra;counter++)
 			{
-				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] * pixel_size;
+				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size;
 			}
 			output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
 			output_text_avrot->WriteLine(rotational_average);

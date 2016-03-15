@@ -15,12 +15,20 @@ Curve::Curve()
 
 	polynomial_fit = NULL; // allocate on fit..
 	savitzky_golay_fit = NULL;
+	savitzky_golay_coefficients = NULL;
 
 	polynomial_order = 0;
 	polynomial_coefficients = NULL;
 
 	savitzky_golay_polynomial_order = 0;
 	savitzky_golay_window_size = 0;
+}
+
+Curve::Curve( const Curve &other_curve) // copy constructor
+{
+	MyDebugPrint("Warning: copying a curve object");
+	 *this = other_curve;
+	 abort;
 }
 
 Curve::~Curve()
@@ -32,126 +40,167 @@ Curve::~Curve()
 	{
 		delete [] polynomial_fit;
 		delete [] polynomial_coefficients;
+
+		polynomial_fit = NULL;
+		have_polynomial = false;
 	}
 
 	if (have_savitzky_golay == true)
 	{
 		delete [] savitzky_golay_fit;
+		savitzky_golay_fit = NULL;
+		DeleteSavitzkyGolayCoefficients();
+		have_savitzky_golay = false;
+	}
+}
+
+void Curve::DeleteSavitzkyGolayCoefficients()
+{
+	MyDebugAssertTrue(savitzky_golay_coefficients != NULL, "Oops trying to deallocate coefficients when they are not allocated\n");
+	for (int pixel_counter = 0; pixel_counter < number_of_points; pixel_counter ++ )
+	{
+		if (savitzky_golay_coefficients[pixel_counter] != NULL)
+		{
+			delete  [] savitzky_golay_coefficients[pixel_counter]; 
+		}
+	}
+	delete [] savitzky_golay_coefficients;
+	savitzky_golay_coefficients = NULL;
+}
+
+void Curve::AllocateSavitzkyGolayCoefficients()
+{
+	MyDebugAssertTrue(savitzky_golay_coefficients == NULL,"Oops, trying to allocate coffecients when they are already allocated\n");
+	MyDebugAssertTrue(savitzky_golay_polynomial_order > 0, "Oops, looks like the SG polynomial order was not set properly\n");
+	savitzky_golay_coefficients = new float*[number_of_points];
+	for (int pixel_counter = 0; pixel_counter < number_of_points; pixel_counter ++ )
+	{
+		savitzky_golay_coefficients[pixel_counter] = new float[savitzky_golay_polynomial_order + 1];
 	}
 }
 
 Curve & Curve::operator = (const Curve *other_curve)
 {
-	  // Check for self assignment
-	   if(this != other_curve)
-	   {
-		   int counter;
+	// Check for self assignment
+	if(this != other_curve)
+	{
+		int counter;
 
-		   if (number_of_points != other_curve->number_of_points)
-		   {
-			   delete [] data_x;
-			   delete [] data_y;
+		if (number_of_points != other_curve->number_of_points)
+		{
+			delete [] data_x;
+			delete [] data_y;
 
-			   allocated_space_for_points = other_curve->allocated_space_for_points;
+			allocated_space_for_points = other_curve->allocated_space_for_points;
 
-			   data_x = new float[allocated_space_for_points];
-			   data_y = new float[allocated_space_for_points];
+			data_x = new float[allocated_space_for_points];
+			data_y = new float[allocated_space_for_points];
 
-			   polynomial_order = other_curve->polynomial_order;
+			polynomial_order = other_curve->polynomial_order;
+			savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
 
-			   if (have_polynomial == true)
-			   {
-				   delete [] polynomial_fit;
-				   delete [] polynomial_coefficients;
-			   }
+			if (have_polynomial == true)
+			{
+				delete [] polynomial_fit;
+				delete [] polynomial_coefficients;
+			}
 
-			   if (have_savitzky_golay == true)
-			   {
-				   delete [] savitzky_golay_fit;
-			   }
+			if (have_savitzky_golay == true)
+			{
+				delete [] savitzky_golay_fit;
+				DeleteSavitzkyGolayCoefficients();
+			}
 
-			   if (other_curve->have_polynomial == true)
-			   {
-				   polynomial_fit = new float[number_of_points];
-				   polynomial_coefficients = new float[polynomial_order];
-			   }
+			if (other_curve->have_polynomial == true)
+			{
+				polynomial_fit = new float[number_of_points];
+				polynomial_coefficients = new float[polynomial_order];
+			}
 
-			   if (other_curve->have_savitzky_golay == true)
-			   {
-				   savitzky_golay_fit = new float[number_of_points];
-			   }
-
-
-		   }
-		   else
-		   {
-			   polynomial_order = other_curve->polynomial_order;
-
-			   if (have_polynomial != other_curve->have_polynomial)
-			   {
-				   if (have_polynomial == true)
-				   {
-					   delete [] polynomial_coefficients;
-					   delete [] polynomial_fit;
-				   }
-				   else
-				   {
-					   polynomial_fit = new float[number_of_points];
-					   polynomial_coefficients = new float[polynomial_order];
-				   }
-
-			   }
-
-			   if (have_savitzky_golay != other_curve->have_savitzky_golay)
-			   {
-				   if (have_savitzky_golay == true)
-				   {
-					   delete [] savitzky_golay_fit;
-				   }
-				   else
-				   {
-					   savitzky_golay_fit = new float[number_of_points];
-				   }
-			   }
-		   }
+			if (other_curve->have_savitzky_golay == true)
+			{
+				savitzky_golay_fit = new float[number_of_points];
+				AllocateSavitzkyGolayCoefficients();
+			}
 
 
-		   number_of_points = other_curve->number_of_points;
-		   have_polynomial = other_curve->have_polynomial;
-		   have_savitzky_golay = other_curve->have_savitzky_golay;
-		   savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
-		   savitzky_golay_window_size = other_curve->savitzky_golay_window_size;
+		}
+		else
+		{
+			polynomial_order = other_curve->polynomial_order;
+			savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
 
-		   for (counter = 0; counter < number_of_points; counter++)
-		   {
-		      data_x[counter] = other_curve->data_x[counter];
-		      data_y[counter] = other_curve->data_y[counter];
-		   }
+			if (have_polynomial != other_curve->have_polynomial)
+			{
+				if (have_polynomial == true)
+				{
+					delete [] polynomial_coefficients;
+					delete [] polynomial_fit;
+				}
+				else
+				{
+					polynomial_fit = new float[number_of_points];
+					polynomial_coefficients = new float[polynomial_order];
+				}
 
-		   if (have_polynomial == true)
-		   {
-			   for (counter = 0; counter < number_of_points; counter++)
-			   {
-			      polynomial_fit[counter] = other_curve->polynomial_fit[counter];
-			   }
+			}
 
-			   for (counter = 0; counter < polynomial_order; counter++)
-			   {
-				   polynomial_coefficients[counter] = other_curve->polynomial_coefficients[counter];
-			   }
+			if (have_savitzky_golay != other_curve->have_savitzky_golay)
+			{
+				if (have_savitzky_golay == true)
+				{
+					delete [] savitzky_golay_fit;
+					DeleteSavitzkyGolayCoefficients();
+				}
+				else
+				{
+					savitzky_golay_fit = new float[number_of_points];
+					AllocateSavitzkyGolayCoefficients();
+				}
+			}
+		}
 
-		   }
 
-		   if (have_savitzky_golay == true)
-		   {
-			   for (counter = 0; counter < number_of_points; counter++)
-			   {
-			      savitzky_golay_fit[counter] = other_curve->savitzky_golay_fit[counter];
-			   }
-		   }
-	   }
+		number_of_points = other_curve->number_of_points;
+		have_polynomial = other_curve->have_polynomial;
+		have_savitzky_golay = other_curve->have_savitzky_golay;
+		savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
+		savitzky_golay_window_size = other_curve->savitzky_golay_window_size;
 
-	   return *this;
+		for (counter = 0; counter < number_of_points; counter++)
+		{
+			data_x[counter] = other_curve->data_x[counter];
+			data_y[counter] = other_curve->data_y[counter];
+		}
+
+		if (have_polynomial == true)
+		{
+			for (counter = 0; counter < number_of_points; counter++)
+			{
+				polynomial_fit[counter] = other_curve->polynomial_fit[counter];
+			}
+
+			for (counter = 0; counter < polynomial_order; counter++)
+			{
+				polynomial_coefficients[counter] = other_curve->polynomial_coefficients[counter];
+			}
+
+		}
+
+		if (have_savitzky_golay == true)
+		{
+			for (counter = 0; counter < number_of_points; counter++)
+			{
+				savitzky_golay_fit[counter] = other_curve->savitzky_golay_fit[counter];
+				for (int degree = 0; degree <= savitzky_golay_polynomial_order; degree++)
+				{
+					savitzky_golay_coefficients[counter][degree] = other_curve->savitzky_golay_coefficients[counter][degree];
+				}
+			}
+		}
+	}
+
+	return *this;
 }
 
 Curve & Curve::operator = (const Curve &other_curve)
@@ -321,13 +370,56 @@ void Curve::ClearData()
 	}
 }
 
+float Curve::ReturnSavitzkyGolayInterpolationFromX( float wanted_x )
+{
+	//MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points],"Wanted x (%f) outside of range (%f to %f)\n",wanted_x,data_x[0],data_x[number_of_points]);
+
+	// Find the nearest data point to the wanted_x
+	int index_of_nearest_point = ReturnIndexOfNearestPointFromX( wanted_x );
+
+	// Evaluate the polynomial defined at the nearest point.
+	// TODO: use a better algorithm to evaluate the poynomial, e.g. Horner, see Numerical Recipes
+	double y = savitzky_golay_coefficients[index_of_nearest_point][0];
+	for (int order = 1; order <= savitzky_golay_polynomial_order; order++)
+	{
+		y += pow(wanted_x,order) * savitzky_golay_coefficients[index_of_nearest_point][order];
+	}
+
+	return float(y);
+
+}
+
+int Curve::ReturnIndexOfNearestPointFromX( float wanted_x )
+{
+	//MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points],"Wanted x (%f) outside of range (%f to %f)\n",wanted_x,data_x[0],data_x[number_of_points]);
+
+	int index_of_nearest_point = 0;
+	int counter = 0;
+	float distance_to_current_point = wanted_x - data_x[counter];
+	float distance_to_nearest_point = distance_to_current_point;
+	for (counter = 1; counter < number_of_points; counter ++)
+	{
+		distance_to_current_point = wanted_x - data_x[counter];
+		if (fabs(distance_to_current_point) <= fabs(distance_to_nearest_point))
+		{
+			distance_to_nearest_point = distance_to_current_point;
+			index_of_nearest_point = counter;
+		}
+		else
+		{
+			break;
+		}
+	}
+	return index_of_nearest_point;
+}
+
 void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order)
 {
 	// make sure the window size is odd
 
 	MyDebugAssertTrue(IsOdd(wanted_window_size) == true, "Window must be odd!")
 	MyDebugAssertTrue(wanted_window_size < number_of_points, "Window size is larger than the number of points!");
-	MyDebugAssertTrue(polynomial_order < wanted_window_size, "polynomial order is larger than the window size!");
+	MyDebugAssertTrue(wanted_polynomial_order < wanted_window_size, "polynomial order is larger than the window size!");
 
 	int pixel_counter;
 	int polynomial_counter;
@@ -339,18 +431,28 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 	float *fit_array_x = new float[wanted_window_size];
 	float *fit_array_y = new float[wanted_window_size];
 	float *output_fit_array = new float[wanted_window_size];
-	float *coefficient_array = new float[wanted_polynomial_order];
+	//float *coefficients = new float[wanted_polynomial_order+1];
 
+	// Remember the polymomal order and the window size
+	savitzky_golay_polynomial_order = wanted_polynomial_order;
+	savitzky_golay_window_size = wanted_window_size;
+
+
+	// Allocate array of coefficient arrays, to be kept in memory for later use (e.g. for interpolation)
+	if (savitzky_golay_coefficients != NULL) {
+		DeleteSavitzkyGolayCoefficients();
+	}
+	// Allocate memory for smooth y values
 	if (have_savitzky_golay == true)
 	{
 		delete [] savitzky_golay_fit;
 	}
 
+	AllocateSavitzkyGolayCoefficients();
 	savitzky_golay_fit = new float[number_of_points];
 	have_savitzky_golay = true;
 
-	savitzky_golay_polynomial_order = wanted_polynomial_order;
-	savitzky_golay_window_size = wanted_window_size;
+
 
 	// loop over all the points..
 
@@ -366,7 +468,8 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 
 		// fit a polynomial to this data..
 
-		LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, coefficient_array);
+		LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[half_pixel + pixel_counter]);
+
 
 		// take the middle pixel, and put it into the output array..
 
@@ -385,21 +488,27 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 
 	// fit a polynomial to this data..
 
-	LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, coefficient_array);
+	LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[half_pixel - 1]);
 
 	// copy the required data back..
-
+	for (pixel_counter = 0; pixel_counter < half_pixel - 1; pixel_counter++)
+	{
+		for (polynomial_counter = 0; polynomial_counter <= savitzky_golay_polynomial_order; polynomial_counter ++)
+		{
+			savitzky_golay_coefficients[pixel_counter][polynomial_counter] = savitzky_golay_coefficients[half_pixel - 1][polynomial_counter];
+		}
+	}
 	for (polynomial_counter = 0; polynomial_counter < half_pixel; polynomial_counter++)
 	{
+		//savitzky_golay_coefficients[polynomial_counter] = savitzky_golay_coefficients[half_pixel - 1];
 		savitzky_golay_fit[polynomial_counter] = output_fit_array[polynomial_counter];
 	}
 
 
 	// now the end..
 
-	end_start = number_of_points - (wanted_window_size + 1);
+	end_start = number_of_points - wanted_window_size;
 	pixel_counter = 0;
-
 	for (polynomial_counter = end_start; polynomial_counter < number_of_points; polynomial_counter++)
 	{
 		fit_array_x[pixel_counter] = data_x[polynomial_counter];
@@ -412,14 +521,22 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 
 	// fit a polynomial to this data..
 
-	LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, coefficient_array);
+	LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[number_of_points - half_pixel]);
 
 	// copy the required data back..
 
-	pixel_counter = half_pixel + 1;
+	for (pixel_counter = number_of_points - half_pixel + 1; pixel_counter < number_of_points - 1; pixel_counter++)
+	{
+		for (polynomial_counter = 0; polynomial_counter <= savitzky_golay_polynomial_order; polynomial_counter ++)
+		{
+			savitzky_golay_coefficients[pixel_counter][polynomial_counter] = savitzky_golay_coefficients[number_of_points - half_pixel][polynomial_counter];
+		}
+	}
 
+	pixel_counter = half_pixel + 1;
 	for (polynomial_counter = number_of_points - half_pixel; polynomial_counter < number_of_points; polynomial_counter++)
 	{
+		//savitzky_golay_coefficients[polynomial_counter] = savitzky_golay_coefficients[number_of_points - half_pixel];
 		savitzky_golay_fit[polynomial_counter] = output_fit_array[pixel_counter];
 		pixel_counter++;
 	}
@@ -428,7 +545,6 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 	delete [] fit_array_x;
 	delete [] fit_array_y;
 	delete [] output_fit_array;
-	delete [] coefficient_array;
 }
 
 void Curve::FitPolynomialToData(int wanted_polynomial_order)
@@ -763,9 +879,14 @@ for (i = 0; i < number_of_points; i++)
 	//wxPrintf("After %i = %f\n", i, output_smoothed_curve[i]);
 }
 
-for (i = 0; i < order_of_polynomial; i++)
+// coefficient 0: constant
+// coefficient 1: linear
+// coefficient 2: square
+// coefficient 3: cube
+// ...
+for (i = 0; i <= order_of_polynomial; i++)
 {
-	output_coefficients[i] = c[i + 1];
+	output_coefficients[i] = c[i];
 }
 
 }

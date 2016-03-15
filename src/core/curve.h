@@ -17,6 +17,7 @@ public:
 
 	int savitzky_golay_window_size;
 	int savitzky_golay_polynomial_order;
+	float **savitzky_golay_coefficients;
 
 	int polynomial_order;
 	float *polynomial_coefficients;
@@ -25,6 +26,7 @@ public:
 	// Constructors, destructors
 	Curve();
 	~Curve();
+	Curve( const Curve &other_curve);
 
 	Curve & operator = (const Curve &other_curve);
 	Curve & operator = (const Curve *other_curve);
@@ -39,5 +41,9 @@ public:
 	void AddPoint(float x_value, float y_value);
 	void FitPolynomialToData(int wanted_polynomial_order = 6);
 	void FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order);
+	float ReturnSavitzkyGolayInterpolationFromX( float wanted_x );
+	int ReturnIndexOfNearestPointFromX( float wanted_x );
+	void DeleteSavitzkyGolayCoefficients();
+	void AllocateSavitzkyGolayCoefficients();
 	void CheckMemory();
 };

@@ -120,6 +120,7 @@ public:
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
+	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
 
 	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)

@@ -2245,6 +2245,92 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	return float(mask_volume);
 }
 
+void Image::CircleMask(float wanted_mask_radius, bool invert)
+{
+	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
+	MyDebugAssertTrue(object_is_centred_in_box,"Object not centered in box");
+
+	long pixel_counter;
+	int i,j,k;
+	float x,y,z;
+	float distance_from_center_squared;
+	const float wanted_mask_radius_squared = powf(wanted_mask_radius,2);
+	double average_value = 0.0;
+	long number_of_pixels = 0;
+
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = powf(k - physical_address_of_box_center_z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = powf(j - physical_address_of_box_center_y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = powf(i - physical_address_of_box_center_x, 2);
+
+				distance_from_center_squared = x + y + z;
+
+				if (abs(distance_from_center_squared-wanted_mask_radius_squared) <= 2.0)
+				{
+					number_of_pixels++;
+					average_value += real_values[pixel_counter];
+				}
+
+				pixel_counter++;
+
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	// Now we know what value to mask with
+	average_value /= float(number_of_pixels);
+
+	// Let's mask
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = powf(k - physical_address_of_box_center_z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = powf(j - physical_address_of_box_center_y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = powf(i - physical_address_of_box_center_x, 2);
+
+				distance_from_center_squared = x + y + z;
+
+				if (invert)
+				{
+					if ( distance_from_center_squared <= wanted_mask_radius_squared)
+					{
+						real_values[pixel_counter] = average_value;
+					}
+				}
+				else
+				{
+					if ( distance_from_center_squared > wanted_mask_radius_squared)
+					{
+						real_values[pixel_counter] = average_value;
+					}
+				}
+
+				pixel_counter++;
+
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+
+}
+
+
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");

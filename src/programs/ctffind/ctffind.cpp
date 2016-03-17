@@ -471,7 +471,7 @@ bool CtffindApp::DoCalculation()
 	bool        input_is_a_movie 					= my_current_job.arguments[1].ReturnBoolArgument();
 	int         number_of_frames_to_average			= my_current_job.arguments[2].ReturnIntegerArgument();
 	std::string output_diagnostic_filename			= my_current_job.arguments[3].ReturnStringArgument();
-	float 		pixel_size							= my_current_job.arguments[4].ReturnFloatArgument();
+	float 		pixel_size_of_input_image			= my_current_job.arguments[4].ReturnFloatArgument();
 	float 		acceleration_voltage				= my_current_job.arguments[5].ReturnFloatArgument();
 	float       spherical_aberration				= my_current_job.arguments[6].ReturnFloatArgument();
 	float 		amplitude_contrast					= my_current_job.arguments[7].ReturnFloatArgument();
@@ -493,6 +493,13 @@ bool CtffindApp::DoCalculation()
 	const bool		filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
 	const bool 		compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
 	const bool		boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
+
+	// Resampling of input images to ensure that the pixel size isn't too small
+	const bool		resample_if_pixel_too_small = true;
+	const float		target_nyquist_after_resampling = 2.8; // Angstroms
+	const float 	target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
+	float 			pixel_size_for_fitting = pixel_size_of_input_image;
+	int				temporary_box_size;
 
 	// If the expected astigmatism is less than this value, we will do the initial search in 1D
 	const float		maximum_expected_astigmatism_for_1D_search = 1000.0;
@@ -522,6 +529,7 @@ bool CtffindApp::DoCalculation()
 	Image				*current_input_image_square = new Image();
 	int					micrograph_square_dimension;
 	Image				*temp_image = new Image();
+	Image				*sum_image = new Image();
 	Image				*resampled_power_spectrum = new Image();
 	bool				resampling_is_necessary;
 	CTF					current_ctf;
@@ -601,7 +609,7 @@ bool CtffindApp::DoCalculation()
 		// Print header to the output text file
 		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
 		output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
 	}
@@ -665,15 +673,16 @@ bool CtffindApp::DoCalculation()
 					//
 					if (current_frame_within_average == 1)
 					{
-						temp_image->Allocate(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension,true);
-						temp_image->SetToConstant(0.0);
+						sum_image->Allocate(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension,true);
+						sum_image->SetToConstant(0.0);
 					}
-					temp_image->AddImage(current_input_image);
+					sum_image->AddImage(current_input_image);
 				} // end of loop over frames to average together
-				current_input_image->Consume(temp_image);
+				current_input_image->Consume(sum_image);
 
 				// Taper the edges of the micrograph in real space, to lessen Gibbs artefacts
-				current_input_image->TaperEdges();
+				// Introduces an artefact of its own, so it's not clear on balance whether tapering helps, especially with modern micrographs from good detectors
+				//current_input_image->TaperEdges();
 
 				number_of_tiles_used++;
 
@@ -688,17 +697,43 @@ bool CtffindApp::DoCalculation()
 				current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x,current_power_spectrum->physical_address_of_box_center_y,current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
 
 				// Resample the amplitude spectrum
-				resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
-				if (resampling_is_necessary)
+				if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
 				{
-					current_power_spectrum->ForwardFFT(false);
-					resampled_power_spectrum->Allocate(box_size,box_size,1,false);
-					current_power_spectrum->ClipInto(resampled_power_spectrum);
-					resampled_power_spectrum->BackwardFFT();
+					// The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
+					temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
+					if (IsOdd(temporary_box_size)) temporary_box_size++;
+					resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+					if (resampling_is_necessary)
+					{
+						current_power_spectrum->ForwardFFT(false);
+						resampled_power_spectrum->Allocate(temporary_box_size,temporary_box_size,1,false);
+						current_power_spectrum->ClipInto(resampled_power_spectrum);
+						resampled_power_spectrum->BackwardFFT();
+						temp_image->Allocate(box_size,box_size,1,true);
+						resampled_power_spectrum->ClipInto(temp_image);
+						resampled_power_spectrum->Consume(temp_image);
+					}
+					else
+					{
+						resampled_power_spectrum->CopyFrom(current_power_spectrum);
+					}
+					pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
 				}
 				else
 				{
-					resampled_power_spectrum->CopyFrom(current_power_spectrum);
+					// The regular way (the input pixel size was large enough)
+					resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+					if (resampling_is_necessary)
+					{
+						current_power_spectrum->ForwardFFT(false);
+						resampled_power_spectrum->Allocate(box_size,box_size,1,false);
+						current_power_spectrum->ClipInto(resampled_power_spectrum);
+						resampled_power_spectrum->BackwardFFT();
+					}
+					else
+					{
+						resampled_power_spectrum->CopyFrom(current_power_spectrum);
+					}
 				}
 
 				average_spectrum->AddImage(resampled_power_spectrum);
@@ -724,18 +759,18 @@ bool CtffindApp::DoCalculation()
 		if (! filtered_amplitude_spectrum_input)
 		{
 			// Try to weaken cross artefacts
-			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
 			average_spectrum->DivideByConstant(sigma);
 			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
 
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
-			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size / minimum_resolution * sqrt(2.0) );
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
 			if (IsEven(convolution_box_size)) convolution_box_size++;
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
-			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size/minimum_resolution);
+			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
 
 			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
 
@@ -755,15 +790,15 @@ bool CtffindApp::DoCalculation()
 
 
 		// Set up the CTF object
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size,minimum_additional_phase_shift);
-		current_ctf.SetDefocus(minimum_defocus/pixel_size,minimum_defocus/pixel_size,0.0);
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
+		current_ctf.SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
 
 		// Set up the comparison object
 		comparison_object_2D.ctf = current_ctf;
 		comparison_object_2D.img = average_spectrum;
-		comparison_object_2D.pixel_size = pixel_size;
+		comparison_object_2D.pixel_size = pixel_size_for_fitting;
 		comparison_object_2D.find_phase_shift = find_additional_phase_shift;
 
 		if (is_running_locally && old_school_input)
@@ -776,7 +811,7 @@ bool CtffindApp::DoCalculation()
 		temp_image->CopyFrom(average_spectrum);
 		temp_image->ApplyMirrorAlongY();
 		//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size/minimum_resolution,pixel_size/maximum_resolution);
+		estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/maximum_resolution);
 
 		//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
 
@@ -806,13 +841,13 @@ bool CtffindApp::DoCalculation()
 			comparison_object_1D.reciprocal_pixel_size = average_spectrum->fourier_voxel_size_x;
 
 			// We can now look for the defocus value
-			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size;
+			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size_for_fitting;
 			bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift - minimum_additional_phase_shift);
 
-			bf_midpoint[0] = minimum_defocus / pixel_size + bf_halfrange[0];
+			bf_midpoint[0] = minimum_defocus / pixel_size_for_fitting + bf_halfrange[0];
 			bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[1];
 
-			bf_stepsize[0] = defocus_search_step / pixel_size;
+			bf_stepsize[0] = defocus_search_step / pixel_size_for_fitting;
 			bf_stepsize[1] = additional_phase_shift_search_step;
 
 			if (find_additional_phase_shift)
@@ -856,7 +891,7 @@ bool CtffindApp::DoCalculation()
 			// Set up the 2D comparison object, which we will soon need
 			comparison_object_2D.ctf = current_ctf;
 			//comparison_object_2D.img = average_spectrum;
-			//comparison_object_2D.pixel_size = pixel_size;
+			//comparison_object_2D.pixel_size_of_input_image = pixel_size_of_input_image;
 			//comparison_object_2D.find_phase_shift = find_additional_phase_shift;
 
 			// Set up the starting point for the 2D conjugate gradient minimization
@@ -886,17 +921,17 @@ bool CtffindApp::DoCalculation()
 
 
 			// We can now look for the defocus value
-			bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size;
+			bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
 			bf_halfrange[1] = bf_halfrange[0];
 			bf_halfrange[2] = 0.0;
 			bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
 
-			bf_midpoint[0] = minimum_defocus/pixel_size + bf_halfrange[0];
+			bf_midpoint[0] = minimum_defocus/pixel_size_for_fitting + bf_halfrange[0];
 			bf_midpoint[1] = bf_midpoint[0];
 			bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
 			bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
 
-			bf_stepsize[0] = defocus_search_step/pixel_size;
+			bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
 			bf_stepsize[1] = bf_stepsize[0];
 			bf_stepsize[2] = 0.0;
 			bf_stepsize[3] = additional_phase_shift_search_step;
@@ -941,7 +976,7 @@ bool CtffindApp::DoCalculation()
 		if (is_running_locally && old_school_input)
 		{
 			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,best_score_after_initial_phase);
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,best_score_after_initial_phase);
 		}
 
 		// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
@@ -975,12 +1010,12 @@ bool CtffindApp::DoCalculation()
 		// Print results to the terminal
 		if (is_running_locally && old_school_input)
 		{
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
 			if (find_additional_phase_shift)
 			{
 				wxPrintf("Final phase shift = %0.3f radians\n",current_ctf.GetAdditionalPhaseShift());
 			}
-			wxPrintf("CTF aliasing apparent from %0.1f Angstroms",pixel_size / spatial_frequency[last_bin_without_aliasing]);
+			wxPrintf("CTF aliasing apparent from %0.1f Angstroms",pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
 		}
 
 		// Generate diagnostic image
@@ -1107,7 +1142,7 @@ bool CtffindApp::DoCalculation()
 		// Print more detailed results to terminal
 		if (is_running_locally && number_of_micrographs == 1)
 		{
-			wxPrintf("Estimated defocus values        : %0.2f,%0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
+			wxPrintf("Estimated defocus values        : %0.2f,%0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
 			if (find_additional_phase_shift)
 			{
 				wxPrintf("Additional phase shift          : %0.3f (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift());
@@ -1115,10 +1150,10 @@ bool CtffindApp::DoCalculation()
 			wxPrintf("Score                           : %0.5f\n", - conjugate_gradient_minimizer->GetBestScore());
 			if (compute_extra_stats)
 			{
-				wxPrintf("Thon rings with good fit up to  : %0.1f Angstroms\n",pixel_size / spatial_frequency[last_bin_with_good_fit]);
+				wxPrintf("Thon rings with good fit up to  : %0.1f Angstroms\n",pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit]);
 				if (last_bin_without_aliasing != 0)
 				{
-					wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size / spatial_frequency[last_bin_without_aliasing]);
+					wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
 				}
 				else
 				{
@@ -1145,14 +1180,14 @@ bool CtffindApp::DoCalculation()
 		{
 			// Write out results to a summary file
 			values_to_write_out[0] = current_micrograph_number;
-			values_to_write_out[1] = current_ctf.GetDefocus1() * pixel_size;
-			values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size;
+			values_to_write_out[1] = current_ctf.GetDefocus1() * pixel_size_for_fitting;
+			values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size_for_fitting;
 			values_to_write_out[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;
 			values_to_write_out[4] = current_ctf.GetAdditionalPhaseShift();
 			values_to_write_out[5] = - conjugate_gradient_minimizer->GetBestScore();
 			if (compute_extra_stats)
 			{
-				values_to_write_out[6] = pixel_size / spatial_frequency[last_bin_with_good_fit];
+				values_to_write_out[6] = pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit];
 			}
 			else
 			{
@@ -1173,14 +1208,14 @@ bool CtffindApp::DoCalculation()
 				output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
 				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size,acceleration_voltage,spherical_aberration,amplitude_contrast);
+				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %f0.2\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
 				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/Angstroms); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
 			}
 			spatial_frequency_in_reciprocal_angstroms = new double[number_of_bins_in_1d_spectra];
 			for (counter=0; counter<number_of_bins_in_1d_spectra;counter++)
 			{
-				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size;
+				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size_for_fitting;
 			}
 			output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
 			output_text_avrot->WriteLine(rotational_average);
@@ -1212,8 +1247,8 @@ bool CtffindApp::DoCalculation()
 
 	// Send results back
 	float results_array[7];
-	results_array[0] = current_ctf.GetDefocus1() * pixel_size;				// Defocus 1 (Angstroms)
-	results_array[1] = current_ctf.GetDefocus2() * pixel_size;				// Defocus 2 (Angstroms)
+	results_array[0] = current_ctf.GetDefocus1() * pixel_size_for_fitting;				// Defocus 1 (Angstroms)
+	results_array[1] = current_ctf.GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
 	results_array[2] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
 	results_array[3] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
 	results_array[4] = - conjugate_gradient_minimizer->GetBestScore();		// CTFFIND score
@@ -1223,7 +1258,7 @@ bool CtffindApp::DoCalculation()
 	}
 	else
 	{
-		results_array[5] = pixel_size / spatial_frequency[last_bin_with_good_fit];		//	The resolution (Angstroms) up to which Thon rings are well fit by the CTF
+		results_array[5] = pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit];		//	The resolution (Angstroms) up to which Thon rings are well fit by the CTF
 	}
 	if (last_bin_without_aliasing == 0)
 	{
@@ -1231,7 +1266,7 @@ bool CtffindApp::DoCalculation()
 	}
 	else
 	{
-		results_array[6] = pixel_size / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
+		results_array[6] = pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
 	}
 
 	my_result.SetResult(7,results_array);
@@ -1243,6 +1278,7 @@ bool CtffindApp::DoCalculation()
 	delete current_input_image;
 	delete current_input_image_square;
 	delete temp_image;
+	delete sum_image;
 	delete resampled_power_spectrum;
 	delete number_of_extrema_image;
 	delete ctf_values_image;
@@ -1469,7 +1505,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 	const int rescale_based_on_maximum_number = 2; // This peak will be used as a renormalization.
 	const int sg_width = 7;
 	const int sg_order = 2;
-	const bool rescale_peaks = true; // if this is false, only the background will be subtracted, the Thon rings "heights" will be unaffected
+	const bool rescale_peaks = false; // if this is false, only the background will be subtracted, the Thon rings "heights" will be unaffected
 	float background[number_of_bins];
 	float peak[number_of_bins];
 	int bin_counter;

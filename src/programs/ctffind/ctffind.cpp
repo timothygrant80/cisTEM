@@ -150,10 +150,11 @@ void CtffindApp::DoInteractiveUserInput()
 	double temp_double;
 	long temp_long;
 	float xmag, dstep;
-	const bool		old_school_input = command_line_parser.FoundSwitch("old-school-input");
+	const bool		old_school_input          = command_line_parser.FoundSwitch("old-school-input");
+	const bool 		old_school_input_ctffind4 = command_line_parser.FoundSwitch("old-school-input-ctffind4");
 
 
-	if (old_school_input)
+	if (old_school_input || old_school_input_ctffind4)
 	{
 		char buf[4096];
 		wxString my_string;
@@ -238,18 +239,6 @@ void CtffindApp::DoInteractiveUserInput()
 		// expects the ctffind3 behaviour, which is no restraint on astigmatism
 		if (astigmatism_tolerance == 0.0) astigmatism_tolerance = -100.0;
 
-		// Input file is normally initialised during the user interaction to work out whether it's a stack of movie frames
-		input_is_a_movie = false;
-		MRCFile input_file(input_filename,false);
-		if (input_file.ReturnZSize() > 1)
-		{
-			SendError("Input stakcs are only supported when using the modern user interface. Please start again without --old-school-input\n");
-			ExitMainLoop();
-		}
-		minimum_additional_phase_shift = 0.0;
-		maximum_additional_phase_shift = 0.0;
-		additional_phase_shift_search_step = 0.0;
-
 		// Output for old-school users
 		if (is_running_locally)
 		{
@@ -257,11 +246,121 @@ void CtffindApp::DoInteractiveUserInput()
 			wxPrintf("%5.1f%9.1f%8.2f%10.1f%9.3f\n\n",spherical_aberration,acceleration_voltage,amplitude_contrast,xmag,dstep);
 		}
 
-	}
+		// Extra lines of input
+		if (old_school_input_ctffind4)
+		{
+			// Line 5
+			std::cin.getline(buf,4096);
+			my_string = buf;
+			tokenizer.SetString(my_string,",");
+			if (tokenizer.CountTokens() != 2)
+			{
+				MyPrintfRed("Bad number of arguments (%i, expected %i) in line 5 of input\n",tokenizer.CountTokens(),2);
+				abort();
+			}
+			while (tokenizer.HasMoreTokens())
+			{
+				switch (tokenizer.GetPosition())
+				{
+					case 0: tokenizer.GetNextToken().ToDouble(&temp_double);
+							if (int(temp_double) != 0) {
+								input_is_a_movie = true;
+							}
+							else
+							{
+								input_is_a_movie = false;
+							}
+							break;
+					case 1: tokenizer.GetNextToken().ToDouble(&temp_double);
+							number_of_frames_to_average = 1;
+							if (input_is_a_movie) { number_of_frames_to_average = int(temp_double); }
+							break;
+				}
+			}
+
+			// Line 6
+			std::cin.getline(buf,4096);
+			my_string = buf;
+			tokenizer.SetString(my_string,",");
+			if (tokenizer.CountTokens() != 4)
+			{
+				MyPrintfRed("Bad number of arguments (%i, expected %i) in line 6 of input\n",tokenizer.CountTokens(),4);
+				abort();
+			}
+			while (tokenizer.HasMoreTokens())
+			{
+				switch (tokenizer.GetPosition())
+				{
+					case 0: tokenizer.GetNextToken().ToDouble(&temp_double);
+							if (int(temp_double) != 0) {
+								find_additional_phase_shift = true;
+							}
+							else
+							{
+								find_additional_phase_shift = false;
+							}
+							break;
+					case 1: tokenizer.GetNextToken().ToDouble(&temp_double);
+							minimum_additional_phase_shift = 0.0;
+							if (find_additional_phase_shift) { minimum_additional_phase_shift = float(temp_double); }
+							break;
+					case 2: tokenizer.GetNextToken().ToDouble(&temp_double);
+							maximum_additional_phase_shift = 0.0;
+							if (find_additional_phase_shift) { maximum_additional_phase_shift = float(temp_double); }
+							break;
+					case 3: tokenizer.GetNextToken().ToDouble(&temp_double);
+							additional_phase_shift_search_step = 0.0;
+							if (find_additional_phase_shift) { additional_phase_shift_search_step = float(temp_double); }
+							break;
+				}
+			}
+		} // end of old school ctffind4 input
+		else
+		{
+			input_is_a_movie = false;
+			find_additional_phase_shift = false;
+			minimum_additional_phase_shift = 0.0;
+			maximum_additional_phase_shift = 0.0;
+			additional_phase_shift_search_step = 0.0;
+		}
+
+		// Do some argument checking on movie processing option
+		MRCFile input_file(input_filename,false);
+		if (input_is_a_movie)
+		{
+			if (input_file.ReturnZSize() < number_of_frames_to_average)
+			{
+				SendError(wxString::Format("Input stack has %i images, so you cannot average %i frames together\n",input_file.ReturnZSize(),number_of_frames_to_average));
+				ExitMainLoop();
+			}
+		}
+		else
+		{
+			// We're not doing movie processing
+			if (input_file.ReturnZSize() > 1)
+			{
+				SendError("Input stacks are only supported --old-school-input-ctffind4 if doing movie processing\n");
+				ExitMainLoop();
+			}
+
+		}
+
+		if (find_additional_phase_shift)
+		{
+			if (minimum_additional_phase_shift > maximum_additional_phase_shift)
+			{
+				SendError(wxString::Format("Minimum phase shift (%f) cannot be greater than maximum phase shift (%f)\n",minimum_additional_phase_shift,maximum_additional_phase_shift));
+				ExitMainLoop();
+			}
+		}
+
+
+
+	} // end of test for old-school-input or old-school-input-ctffind4
 	else
 	{
 
-		UserInput *my_input = new UserInput("Ctffind", 0.0);
+		UserInput *my_input = new UserInput("Ctffind", "4.1.0");
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
@@ -353,6 +452,7 @@ void CtffindApp::DoInteractiveUserInput()
 void CtffindApp::AddCommandLineOptions()
 {
 	command_line_parser.AddLongSwitch("old-school-input","Pretend this is ctffind3 (for compatibility with old scripts and programs)");
+	command_line_parser.AddLongSwitch("old-school-input-ctffind4","Accept parameters from stdin, like ctffind3, but with extra lines for ctffind4-specific options (movie processing and phase shift estimation");
 	command_line_parser.AddLongSwitch("amplitude-spectrum-input","The input image is an amplitude spectrum, not a real-space image");
 	command_line_parser.AddLongSwitch("filtered-amplitude-spectrum-input","The input image is filtered (background-subtracted) amplitude spectrum");
 	command_line_parser.AddLongSwitch("fast","Skip computation of fit statistics as well as spectrum contrast enhancement");
@@ -388,7 +488,7 @@ bool CtffindApp::DoCalculation()
 	float		additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
 
 	// These variables will be set by command-line options
-	const bool		old_school_input = true; //command_line_parser.FoundSwitch("old-school-input");
+	const bool		old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
 	const bool		amplitude_spectrum_input = command_line_parser.FoundSwitch("amplitude-spectrum-input");
 	const bool		filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
 	const bool 		compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
@@ -876,6 +976,11 @@ bool CtffindApp::DoCalculation()
 		if (is_running_locally && old_school_input)
 		{
 			wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size,current_ctf.GetDefocus2()*pixel_size,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
+			if (find_additional_phase_shift)
+			{
+				wxPrintf("Final phase shift = %0.3f radians\n",current_ctf.GetAdditionalPhaseShift());
+			}
+			wxPrintf("CTF aliasing apparent from %0.1f Angstroms",pixel_size / spatial_frequency[last_bin_without_aliasing]);
 		}
 
 		// Generate diagnostic image
@@ -935,10 +1040,6 @@ bool CtffindApp::DoCalculation()
 						last_bin_without_aliasing = location_of_previous_extremum;
 						break;
 					}
-					/*else if (counter == number_of_bins_in_1d_spectra - 1)
-					{
-						last_bin_without_aliasing = number_of_bins_in_1d_spectra - 1;
-					}*/
 					location_of_previous_extremum = counter;
 				}
 			}
@@ -1513,9 +1614,6 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 				{
 					average[bin_counter] = average[bin_counter] / (peak[bin_counter]-background[bin_counter]) * ( peak[normalisation_bin_number] - background[normalisation_bin_number] ) * 0.1;
 				}
-
-				//average[bin_counter] = maxima_curve.ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
-
 			}
 		}
 		else

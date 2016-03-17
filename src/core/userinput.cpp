@@ -3,10 +3,15 @@
 UserInput::UserInput()
 {
   std::cout << "Warning, UserInput Class declared with no program name!" << std::endl << std::endl;
-  Init("default", 0.0);
+  Init("default", "0.0");
 }
 
 UserInput::UserInput(const char *program_name, float program_version)
+{
+	Init(program_name, wxString::Format("%0.2f",program_version));
+}
+
+UserInput::UserInput(const char *program_name, wxString program_version)
 {
 	Init(program_name, program_version);
 }
@@ -102,7 +107,7 @@ void UserInput::AskQuestion(const char *question_text, const char *help_text, co
 }
 
 
-void UserInput::Init(const char *program_name, float program_version)
+void UserInput::Init(const char *program_name, wxString program_version)
 {
 	int counter;
 
@@ -134,7 +139,7 @@ void UserInput::Init(const char *program_name, float program_version)
 
 	wxPrintf("        **   Welcome to %s   **\n\n", program_name);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
-	wxPrintf("         Version : %1.2f\n", program_version);
+	wxPrintf("         Version : %s\n", program_version);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("       Compiled : %s\n", __DATE__);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");

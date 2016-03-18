@@ -138,7 +138,7 @@ if test -n "$vers" && test "$vers" -ge 3000000; then
         WX_LIBS_BASE="`$WXCONFIG --libs base,net`"
         wx_is_available=1
 else
-        AC_MSG_NOTICE("wxWidgets version > 3.0.0 required. wxWidgets disabled")
+        AC_MSG_ERROR("wxWidgets version > 3.0.0 required.")
         wx_is_available=0
 fi
 

@@ -94,6 +94,7 @@ public:
 	void MultiplyPixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
 	void Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
+	void ReplaceOutliersWithMean(float maximum_n_sigmas);
 	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void WhitenTwo(Image &other_image);
 	void Whiten();

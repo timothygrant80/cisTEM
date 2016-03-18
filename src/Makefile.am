@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -133,4 +133,10 @@ niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_LDFLAGS = $(WX_LIBS_BASE)
 niko_test_LDADD = libcore.a
+
+remove_outlier_pixels_SOURCES = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
+remove_outlier_pixels_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+remove_outlier_pixels_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+remove_outlier_pixels_LDFLAGS = $(WX_LIBS_BASE)
+remove_outlier_pixels_LDADD = libcore.a
 

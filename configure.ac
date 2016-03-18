@@ -5,6 +5,7 @@ AC_CONFIG_MACRO_DIR([m4])
 INPUT_CPPFLAGS="$CXXFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
+AC_PROG_CC([icc gcc])
 AC_PROG_CXX([icpc g++ gcc])
 AC_PROG_CXX
 AC_PROG_INSTALL
@@ -35,6 +36,7 @@ static_default="no"
 AC_ARG_ENABLE(static, [  --enable-static         Turn on static linking],[
   if test "x$enable_static" = "xyes"; then
         static_link=true
+        #LDFLAGS="$LDFLAGS -static"
   else
         static_link=false
   fi],[static_link=false])
@@ -139,6 +141,7 @@ fi
 
 # Check whether Intel's MKL is available. If not, link against FFTW.
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
+#AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
 AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
 
 if test "x$use_mkl" = "x0"; then
@@ -158,6 +161,7 @@ if test "x$HAVE_MKL" = "xyes"; then
 	
 	if test "x$static_link" = "xyes"; then
 	       	LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm "
+	       	#LDFLAGS="$LDFLAGS -static"
 	else
 		if test "x$CXX" = "xicpc"; then
 			LIBS="$LIBS -mkl"	
@@ -172,11 +176,6 @@ else
 	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
 
 fi
-
-# SQLITE 3 Checks
-
-AC_CHECK_HEADER(sqlite3.h, , AC_MSG_ERROR("Can't find sqlite3.h. Please check your installation of SQLITE3."))
-AC_CHECK_LIB(sqlite3, sqlite3_open, [LIBS="$LIBS -lsqlite3"],AC_MSG_ERROR("Can't find SQLITE3's libraries. Please check your installation of SQLITE3."))
 
 # make it so we can turn off gui
 

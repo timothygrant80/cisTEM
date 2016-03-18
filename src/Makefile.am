@@ -42,6 +42,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/dm_file.cpp \
+                       core/sqlite/sqlite3.c \
                        core/database.cpp \
                        core/project.cpp \
                        core/reconstruct_3d.cpp \

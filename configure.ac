@@ -33,15 +33,20 @@ fi
 # Static linking
 
 static_default="no"
-AC_ARG_ENABLE(static, [  --enable-static         Turn on static linking],[
-  if test "x$enable_static" = "xyes"; then
-        static_link=true
-        #LDFLAGS="$LDFLAGS -static"
-  else
-        static_link=false
-  fi],[static_link=false])
+AC_ARG_ENABLE(static, [  --enable-static         Turn on static linking],[static_link=true],[static_link=false])
 
 AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
+
+
+# If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
+if test "x$static_link" = "xtrue"; then
+	if test "x$CXX" = "xicpc"; then
+		LDFLAGS="$LDFLAGS -static -static-intel"
+	else
+		LDFLAGS="$LDFLAGS -static"
+	fi
+fi
+
 
 AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
   if test "$enableval" = no; then
@@ -141,8 +146,8 @@ fi
 
 # Check whether Intel's MKL is available. If not, link against FFTW.
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
-#AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
-AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
+AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
+#AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
 
 if test "x$use_mkl" = "x0"; then
 	HAVE_MKL="no"
@@ -164,10 +169,10 @@ if test "x$HAVE_MKL" = "xyes"; then
 	       	#LDFLAGS="$LDFLAGS -static"
 	else
 		if test "x$CXX" = "xicpc"; then
-			LIBS="$LIBS -mkl"	
+			LIBS="$LIBS -mkl -lmkl_rt"	
 		else
-	       		LIBS="$LIBS -lmkl_rt"
-       			LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+       		LIBS="$LIBS -lmkl_rt"
+   			LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
 		fi
 	fi
 else

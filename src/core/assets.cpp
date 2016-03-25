@@ -151,6 +151,8 @@ ImageAsset::ImageAsset(wxString wanted_filename)
 	asset_id = -1;
 	position_in_stack = 1;
 	parent_id = -1;
+	alignment_id = -1;
+	ctf_estimation_id = -1;
 
 	x_size = 0;
 	y_size = 0;
@@ -192,6 +194,7 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 	x_size = casted_asset->x_size;
 	y_size = casted_asset->y_size;
 	alignment_id = casted_asset->alignment_id;
+	ctf_estimation_id = casted_asset->ctf_estimation_id;
 
 	filename = casted_asset->filename;
 	pixel_size = casted_asset->pixel_size;
@@ -199,6 +202,40 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 	spherical_aberration = casted_asset->spherical_aberration;
 	is_valid = casted_asset->is_valid;
 }
+
+// Particle Position Asset
+
+ParticlePositionAsset::ParticlePositionAsset()
+{
+	asset_id = -1;
+	parent_id = -1;
+	pick_job_id = -1;
+	x_position = -1;
+	y_position = -1;
+
+	filename = wxEmptyString;
+
+}
+
+ParticlePositionAsset::~ParticlePositionAsset()
+{
+	//Don't have to do anything for now
+}
+
+
+void ParticlePositionAsset::CopyFrom(Asset *other_asset)
+{
+	ParticlePositionAsset *casted_asset = reinterpret_cast < ParticlePositionAsset *> (other_asset);
+	asset_id = casted_asset->asset_id;
+	parent_id = casted_asset->parent_id;
+	pick_job_id = casted_asset->pick_job_id;
+	x_position = casted_asset->x_position;
+	y_position = casted_asset->y_position;
+}
+
+
+// Return Pointers
+
 
 MovieAsset * AssetList::ReturnMovieAssetPointer(long wanted_asset)
 {
@@ -211,6 +248,13 @@ ImageAsset * AssetList::ReturnImageAssetPointer(long wanted_asset)
 	MyPrintWithDetails("This should never be called!!");
 	abort();
 }
+
+ParticlePositionAsset * AssetList::ReturnParticlePositionAssetPointer(long wanted_asset)
+{
+	MyPrintWithDetails("This should never be called!!");
+	abort();
+}
+
 
 ////////////////////////Movie Asset List//////////////////
 
@@ -495,4 +539,126 @@ void ImageAssetList::RemoveAll()
 	}
 }
 
+// Particle Asset List
+
+ParticlePositionAssetList::ParticlePositionAssetList()
+{
+	number_of_assets = 0;
+	number_allocated = 15;
+	assets = new ParticlePositionAsset[15];
+
+}
+
+ParticlePositionAssetList::~ParticlePositionAssetList()
+{
+	delete [] assets;
+}
+
+
+void ParticlePositionAssetList::CheckMemory()
+{
+	ParticlePositionAsset *buffer;
+
+	// check we have enough memory
+
+	if (number_of_assets >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_of_assets < 10000) number_allocated *= 2;
+		else number_allocated += 10000;
+
+		buffer = new ParticlePositionAsset[number_allocated];
+
+		for (long counter = 0; counter < number_of_assets; counter++)
+		{
+			buffer[counter].CopyFrom(& reinterpret_cast < ParticlePositionAsset *> (assets)[counter]);
+		}
+
+		delete [] reinterpret_cast < ParticlePositionAsset *>  (assets);
+		assets = buffer;
+	}
+
+
+}
+
+Asset * ParticlePositionAssetList::ReturnAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset];
+}
+
+ParticlePositionAsset * ParticlePositionAssetList::ReturnParticlePositionAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset];
+}
+
+int ParticlePositionAssetList::ReturnAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset].asset_id;
+}
+
+int ParticlePositionAssetList::ReturnArrayPositionFromID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ParticlePositionAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+int ParticlePositionAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ParticlePositionAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+
+
+void ParticlePositionAssetList::AddAsset(Asset *asset_to_add)
+{
+	CheckMemory();
+
+	// Should be fine for memory, so just add one.
+
+	reinterpret_cast < ParticlePositionAsset *> (assets)[number_of_assets].CopyFrom(asset_to_add);
+	number_of_assets++;
+
+
+
+}
+
+void ParticlePositionAssetList::RemoveAsset(long number_to_remove)
+{
+	if (number_to_remove < 0 || number_to_remove >= number_of_assets)
+	{
+		wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+		exit(-1);
+	}
+
+	for (long counter = number_to_remove; counter < number_of_assets -1; counter++)
+	{
+		reinterpret_cast < ParticlePositionAsset *> (assets)[counter].CopyFrom(& reinterpret_cast < ParticlePositionAsset *> (assets)[counter + 1]);
+	}
+
+	number_of_assets--;
+}
+
+void ParticlePositionAssetList::RemoveAll()
+{
+	number_of_assets = 0;
+
+	if (number_allocated > 100)
+	{
+		delete [] reinterpret_cast < ParticlePositionAsset *> (assets);
+		number_allocated = 100;
+		assets = new ParticlePositionAsset[number_allocated];
+	}
+}
 

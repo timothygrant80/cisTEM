@@ -59,7 +59,12 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 
 int Database::ReturnHighestAlignmentID()
 {
-	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_ID) FROM ESTIMATED_CTF_PARAMETERS");
+}
+
+int Database::ReturnHighestFindCTFID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_ID) FROM ESTIMATED_CTF_PARAMETERS");
 }
 
 int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id)
@@ -77,9 +82,19 @@ int Database::ReturnHighestAlignmentJobID()
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
 }
 
+int Database::ReturnHighestFindCTFJobID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_JOB_ID) FROM ESTIMATED_CTF_PARAMETERS");
+}
+
 int Database::ReturnNumberOfAlignmentJobs()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
+}
+
+int Database::ReturnNumberOfCTFEstimationJobs()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT CTF_ESTIMATION_JOB_ID) FROM ESTIMATED_CTF_PARAMETERS");
 }
 
 void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs)
@@ -104,6 +119,30 @@ void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_align
 
 	EndBatchSelect();
 }
+
+void Database::GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	bool more_data;
+
+	more_data = BeginBatchSelect("SELECT DISTINCT CTF_ESTIMATION_JOB_ID FROM ESTIMATED_CTF_PARAMETERS") == true;
+
+	for (int counter = 0; counter < number_of_ctf_estimation_jobs; counter++)
+	{
+		if (more_data == false)
+		{
+			MyPrintWithDetails("Unexpected end of select command");
+			abort();
+		}
+
+		more_data = GetFromBatchSelect("i", &ctf_estimation_job_ids[counter]);
+
+	}
+
+	EndBatchSelect();
+}
+
 
 bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 {
@@ -271,10 +310,11 @@ bool Database::CreateAllTables()
 	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
-	success = CreateTable("IMAGE_ASSETS", "ptiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	success = CreateTable("IMAGE_ASSETS", "ptiiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiirrrrirrrrririrrrrrrrrit", "CTF_ESTIMATION_NUMBER", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "SCORE", "DETECTED_RING_RESOLUTION", "ADDITIONAL_PHASE_SHIFT", "OUTPUT_DIAGNOSTIC_FILE");
-
+	success = CreateTable("PARTICLE_POSITION_ASSETS", "piirr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");
+	success = CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrt", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE");
 	return success;
 }
 
@@ -363,7 +403,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	int return_code;
 	wxString sql_command = "select * from MASTER_SETTINGS;";
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), strlen(sql_command.ToUTF8().data()) + 1, &sqlite_statement, NULL);
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
 
 	return_code = sqlite3_step(sqlite_statement);
@@ -552,12 +592,12 @@ void Database::EndMovieAssetInsert()
 
 void Database::BeginImageAssetInsert()
 {
-	BeginBatchInsert("IMAGE_ASSETS", 10, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("IMAGE_ASSETS", 11, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 }
 
-void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
 {
-	AddToBatchInsert("itiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
+	AddToBatchInsert("itiiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
 }
 
 void Database::EndImageAssetInsert()
@@ -676,6 +716,17 @@ void Database::BeginAllImageGroupsSelect()
 	BeginBatchSelect("SELECT * FROM IMAGE_GROUP_LIST;");
 }
 
+void Database::BeginAllParticlePositionAssetsSelect()
+{
+	BeginBatchSelect("SELECT * FROM PARTICLE_POSITION_ASSETS;");
+}
+
+void Database::BeginAllParticlePositionGroupsSelect()
+{
+	BeginBatchSelect("SELECT * FROM PARTICLE_POSITION_GROUP_LIST;");
+}
+
+
 
 void Database::BeginAllRunProfilesSelect()
 {
@@ -775,6 +826,37 @@ AssetGroup Database::GetNextImageGroup()
 	return temp_group;
 }
 
+AssetGroup Database::GetNextParticlePositionGroup()
+{
+	AssetGroup temp_group;
+	int group_table_number;
+	int return_code;
+	wxString group_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("iti", &temp_group.id, &temp_group.name, &group_table_number);
+
+	// now we fill from the specific group table.
+
+	group_sql_select_command = wxString::Format("SELECT * FROM PARTICLE_POSITION_GROUP_%i", group_table_number);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
+			return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+	return temp_group;
+}
+
 
 
 MovieAsset Database::GetNextMovieAsset()
@@ -791,38 +873,17 @@ ImageAsset Database::GetNextImageAsset()
 {
 	ImageAsset temp_asset;
 
-	GetFromBatchSelect("ifiiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
+	GetFromBatchSelect("ifiiiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.ctf_estimation_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
 	return temp_asset;
 }
 
-
-void Database::EndAllMovieGroupsSelect()
+ParticlePositionAsset Database::GetNextParticlePositionAsset()
 {
-	EndBatchSelect();
+	ParticlePositionAsset temp_asset;
+	GetFromBatchSelect("iiirr", &temp_asset.asset_id, &temp_asset.parent_id, &temp_asset.pick_job_id, &temp_asset.x_position, &temp_asset.y_position);
+	return temp_asset;
 }
 
-void Database::EndAllMovieAssetsSelect()
-{
-	EndBatchSelect();
-
-}
-
-void Database::EndAllImageGroupsSelect()
-{
-	EndBatchSelect();
-}
-
-void Database::EndAllImageAssetsSelect()
-{
-	EndBatchSelect();
-
-}
-
-void Database::EndAllRunProfilesSelect()
-{
-	EndBatchSelect();
-
-}
 
 bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 {

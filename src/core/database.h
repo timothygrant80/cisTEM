@@ -44,12 +44,16 @@ public :
 
 	int ReturnHighestAlignmentID();
 	int ReturnHighestAlignmentJobID();
+	int ReturnHighestFindCTFID();
+	int ReturnHighestFindCTFJobID();
 	int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
 
 	int ReturnNumberOfAlignmentJobs();
+	int ReturnNumberOfCTFEstimationJobs();
 
 	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
+	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
 
 	//Convenience insertion functions..
 
@@ -63,29 +67,37 @@ public :
 	void EndMovieAssetInsert();
 
 	void BeginImageAssetInsert();
-	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
+	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
 	void EndImageAssetInsert();
 
 	// Convenience select functions...
 
 	void BeginAllMovieAssetsSelect();
 	MovieAsset GetNextMovieAsset();
-	void EndAllMovieAssetsSelect();
+	void EndAllMovieAssetsSelect(){EndBatchSelect();};
 
 	void BeginAllMovieGroupsSelect();
 	AssetGroup GetNextMovieGroup();
-	void EndAllMovieGroupsSelect();
+	void EndAllMovieGroupsSelect(){EndBatchSelect();};
 
 	void BeginAllImageAssetsSelect();
 	ImageAsset GetNextImageAsset();
-	void EndAllImageAssetsSelect();
+	void EndAllImageAssetsSelect(){EndBatchSelect();};
 
 	void BeginAllImageGroupsSelect();
 	AssetGroup GetNextImageGroup();
-	void EndAllImageGroupsSelect();
+	void EndAllImageGroupsSelect(){EndBatchSelect();};
+
+	void BeginAllParticlePositionAssetsSelect();
+	ParticlePositionAsset GetNextParticlePositionAsset();
+	void EndAllParticlePositionAssetsSelect() {EndBatchSelect();};
+
+	void BeginAllParticlePositionGroupsSelect();
+	AssetGroup GetNextParticlePositionGroup();
+	void EndAllParticlePositionGroupsSelect(){EndBatchSelect();};
 
 	void BeginAllRunProfilesSelect();
 	RunProfile GetNextRunProfile();
-	void EndAllRunProfilesSelect();
+	void EndAllRunProfilesSelect(){EndBatchSelect();};
 
 };

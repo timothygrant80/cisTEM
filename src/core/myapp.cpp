@@ -1008,6 +1008,7 @@ void MyApp::SendInfo(wxString info_to_send)
 wxThread::ExitCode CalculateThread::Entry()
 {
 	bool success = main_thread_pointer->DoCalculation(); // This should be overrided per app..
+	fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
 

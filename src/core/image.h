@@ -85,17 +85,20 @@ public:
 
 	int ReturnSmallestLogicalDimension();
 	int ReturnLargestLogicalDimension();
+	void SampleFFT(Image &sampled_image, int sample_rate);
 	float ReturnSumOfSquares();
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
-	float GetWeightedCorrelationWithImage(Image &projection_image, float low_limit, float high_limit);
+	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins);
 	void PhaseFlipPixelWise(Image &other_image);
+	void MultiplyPixelWiseReal(Image &other_image);
 	void MultiplyPixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
 	void Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
 	void ReplaceOutliersWithMean(float maximum_n_sigmas);
 	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	void ApplySqrtNFilter();
 	void WhitenTwo(Image &other_image);
 	void Whiten();
 	void OptimalFilterBySNRImage(Image &SNR_image);

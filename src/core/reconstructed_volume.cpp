@@ -45,7 +45,7 @@ void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, Ang
 	MyDebugAssertTrue(! density_map.object_is_centred_in_box, "Image volume quadrants not swapped");
 
 	density_map.ExtractSlice(projection, angles_and_shifts_of_projection, resolution_limit);
-	projection.MultiplyPixelWise(CTF);
+	projection.MultiplyPixelWiseReal(CTF);
 	if (mask_radius > 0.0)
 	{
 		projection.BackwardFFT();

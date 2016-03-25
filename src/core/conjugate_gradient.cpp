@@ -26,7 +26,9 @@ ConjugateGradient::~ConjugateGradient()
 float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, float []), void *parameters_to_pass, int num_dim, float starting_value[], float accuracy[] )
 {
 
-	// Copy pointers to the target function and the needed parameters
+	MyDebugAssertTrue(num_dim > 0,"Initializing conjugate gradient with zero dimensions");
+
+// Copy pointers to the target function and the needed parameters
 	target_function = function_to_minimize;
 	parameters = parameters_to_pass;
 

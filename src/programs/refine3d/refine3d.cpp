@@ -18,7 +18,6 @@ public:
 	Particle					*particle;
 	ReconstructedVolume			*reference_volume;
 	Image						*projection_image;
-	float						resolution_limit;
 };
 
 // This is the function which will be minimized
@@ -27,14 +26,12 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 	ImageProjectionComparison *comparison_object = reinterpret_cast < ImageProjectionComparison *> (scoring_parameters);
 	for (int i = 0; i < comparison_object->particle->number_of_parameters; i++) {comparison_object->particle->temp_float[i] = comparison_object->particle->input_parameters[i];}
 	comparison_object->particle->UnmapParameters(array_of_values);
-	comparison_object->resolution_limit = comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high;
 
 	comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
 			comparison_object->particle->alignment_parameters, comparison_object->particle->mask_radius, comparison_object->particle->mask_falloff,
-			comparison_object->resolution_limit, false);
+			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false);
 
-	return 	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image,
-			  comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_low, comparison_object->resolution_limit)
+	return 	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index)
 			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
 }
 
@@ -58,6 +55,10 @@ void Refine3DApp::DoInteractiveUserInput()
 	float		mask_radius = 100.0;
 	float		low_resolution_limit = 300.0;
 	float		high_resolution_limit = 8.0;
+	float		mask_radius_search = 0.0;
+	float		high_resolution_limit_search = 20.0;
+	float		angular_step = 5.0;
+	int			best_parameters_to_keep = 20;
 	float		padding = 1.0;
 	float		mask_center_2d_x = 100.0;
 	float		mask_center_2d_y = 100.0;
@@ -65,7 +66,7 @@ void Refine3DApp::DoInteractiveUserInput()
 	float		mask_radius_2d = 100.0;
 	wxString	my_symmetry = "C1";
 	bool		global_search = false;
-	float		angular_step = 5.0;
+	bool		local_refinement = true;
 	bool		refine_psi = true;
 	bool		refine_theta = true;
 	bool		refine_phi = true;
@@ -87,9 +88,13 @@ void Refine3DApp::DoInteractiveUserInput()
 	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
-	mask_radius = my_input->GetFloatFromUser("Mask radius (A)", "Radius of a circular mask to be applied to the input images", "100.0", 0.0);
+	mask_radius = my_input->GetFloatFromUser("Mask radius for refinement (A)", "Radius of a circular mask to be applied to the input images during refinement", "100.0", 0.0);
 	low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
 	high_resolution_limit = my_input->GetFloatFromUser("High resolution limit (A)", "High resolution limit of the data used for alignment in Angstroms", "8.0", 0.0);
+	mask_radius_search = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "100.0", 0.0);
+	high_resolution_limit_search = my_input->GetFloatFromUser("Approximate high resolution limit for search (A)", "High resolution limit of the data used in the global search in Angstroms", "20.0", 0.0);
+	angular_step = my_input->GetFloatFromUser("Angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
+	best_parameters_to_keep = my_input->GetFloatFromUser("Number of top hits to refine", "The number of best global search orientations to refine locally", "1", 20);
 	padding = my_input->GetFloatFromUser("Padding factor", "Factor determining how much the input volume is padded to improve projections", "1.0", 1.0);
 	my_symmetry = my_input->GetSymmetryFromUser("Particle symmetry", "The assumed symmetry of the particle to be reconstructed", "C1");
 	mask_center_2d_x = my_input->GetFloatFromUser("2D mask X coordinate (A)", "X coordinate of 2D mask center", "100.0", 0.0);
@@ -97,7 +102,7 @@ void Refine3DApp::DoInteractiveUserInput()
 	mask_center_2d_z = my_input->GetFloatFromUser("2D mask Z coordinate (A)", "Z coordinate of 2D mask center", "100.0", 0.0);
 	mask_radius_2d = my_input->GetFloatFromUser("2D mask radius (A)", "Radius of a circular mask to be used for likelihood calculation", "100.0", 0.0);
 	global_search = my_input->GetYesNoFromUser("Global search", "Should a global search be performed before local refinement?", "No");
-	angular_step = my_input->GetFloatFromUser("Angular step", "Angular step size for global grid search", "5.0", 0.0);
+	local_refinement = my_input->GetYesNoFromUser("Local refinement", "Should a local parameter refinement be performed?", "Yes");
 	refine_psi = my_input->GetYesNoFromUser("Refine Psi", "Should the Psi Euler angle be refined (parameter 1)?", "Yes");
 	refine_theta = my_input->GetYesNoFromUser("Refine Theta", "Should the Theta Euler angle be refined (parameter 2)?", "Yes");
 	refine_phi = my_input->GetYesNoFromUser("Refine Phi", "Should the Phi Euler angle be refined (parameter 3)?", "Yes");
@@ -108,28 +113,27 @@ void Refine3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(29);
-	my_current_job.ManualSetArguments("tttttttfffffffftffffbfbbbbbbb",	input_parameter_file.ToUTF8().data(),
-																		input_particle_images.ToUTF8().data(),
-																		input_reconstruction.ToUTF8().data(),
-																		input_reconstruction_statistics.ToUTF8().data(),
-																		ouput_matching_projections.ToUTF8().data(),
-																		ouput_parameter_file.ToUTF8().data(),
-																		ouput_shift_file.ToUTF8().data(),
-																		pixel_size,
-																		voltage_kV,
-																		spherical_aberration_mm,
-																		amplitude_contrast,
-																		mask_radius,
-																		low_resolution_limit,
-																		high_resolution_limit,
-																		padding,
-																		my_symmetry.ToUTF8().data(),
-																		mask_center_2d_x, mask_center_2d_y, mask_center_2d_z, mask_radius_2d,
-																		global_search, angular_step,
-																		refine_psi, refine_theta, refine_phi, refine_x, refine_y,
-																		calculate_matching_projections,
-																		apply_2D_masking);
+	my_current_job.Reset(33);
+	my_current_job.ManualSetArguments("tttttttffffffffffiftffffbbbbbbbbb",	input_parameter_file.ToUTF8().data(),
+																			input_particle_images.ToUTF8().data(),
+																			input_reconstruction.ToUTF8().data(),
+																			input_reconstruction_statistics.ToUTF8().data(),
+																			ouput_matching_projections.ToUTF8().data(),
+																			ouput_parameter_file.ToUTF8().data(),
+																			ouput_shift_file.ToUTF8().data(),
+																			pixel_size,
+																			voltage_kV,
+																			spherical_aberration_mm,
+																			amplitude_contrast,
+																			mask_radius, low_resolution_limit, high_resolution_limit,
+																			mask_radius_search, high_resolution_limit_search, angular_step, best_parameters_to_keep,
+																			padding,
+																			my_symmetry.ToUTF8().data(),
+																			mask_center_2d_x, mask_center_2d_y, mask_center_2d_z, mask_radius_2d,
+																			global_search, local_refinement,
+																			refine_psi, refine_theta, refine_phi, refine_x, refine_y,
+																			calculate_matching_projections,
+																			apply_2D_masking);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -137,6 +141,7 @@ void Refine3DApp::DoInteractiveUserInput()
 bool Refine3DApp::DoCalculation()
 {
 	Particle my_particle;
+	Particle search_particle;
 
 	wxString input_parameter_file 				= my_current_job.arguments[0].ReturnStringArgument();
 	wxString input_particle_images 				= my_current_job.arguments[1].ReturnStringArgument();
@@ -152,39 +157,47 @@ bool Refine3DApp::DoCalculation()
 	float    mask_radius						= my_current_job.arguments[11].ReturnFloatArgument();
 	float    low_resolution_limit				= my_current_job.arguments[12].ReturnFloatArgument();
 	float    high_resolution_limit				= my_current_job.arguments[13].ReturnFloatArgument();
-	float	 padding							= my_current_job.arguments[14].ReturnFloatArgument();
-	wxString my_symmetry						= my_current_job.arguments[15].ReturnStringArgument();
-	float	 mask_center_2d_x					= my_current_job.arguments[16].ReturnFloatArgument();
-	float	 mask_center_2d_y					= my_current_job.arguments[17].ReturnFloatArgument();
-	float	 mask_center_2d_z					= my_current_job.arguments[18].ReturnFloatArgument();
-	float	 mask_radius_2d						= my_current_job.arguments[19].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[20].ReturnBoolArgument();
-	float	 angular_step						= my_current_job.arguments[21].ReturnFloatArgument();
+	float    mask_radius_search					= my_current_job.arguments[14].ReturnFloatArgument();
+	float	 high_resolution_limit_search		= my_current_job.arguments[15].ReturnFloatArgument();
+	float	 angular_step						= my_current_job.arguments[16].ReturnFloatArgument();
+	int		 best_parameters_to_keep			= my_current_job.arguments[17].ReturnIntegerArgument();
+	float	 padding							= my_current_job.arguments[18].ReturnFloatArgument();
+	wxString my_symmetry						= my_current_job.arguments[19].ReturnStringArgument();
+	float	 mask_center_2d_x					= my_current_job.arguments[20].ReturnFloatArgument();
+	float	 mask_center_2d_y					= my_current_job.arguments[21].ReturnFloatArgument();
+	float	 mask_center_2d_z					= my_current_job.arguments[22].ReturnFloatArgument();
+	float	 mask_radius_2d						= my_current_job.arguments[23].ReturnFloatArgument();
+	bool	 global_search						= my_current_job.arguments[24].ReturnBoolArgument();
+	bool	 local_refinement					= my_current_job.arguments[25].ReturnBoolArgument();
 // Psi, Theta, Phi, ShiftX, ShiftY
-	my_particle.parameter_map[3]				= my_current_job.arguments[22].ReturnBoolArgument();
-	my_particle.parameter_map[2]				= my_current_job.arguments[23].ReturnBoolArgument();
-	my_particle.parameter_map[1]				= my_current_job.arguments[24].ReturnBoolArgument();
-	my_particle.parameter_map[4]				= my_current_job.arguments[25].ReturnBoolArgument();
-	my_particle.parameter_map[5]				= my_current_job.arguments[26].ReturnBoolArgument();
-	bool 	 calculate_matching_projections		= my_current_job.arguments[27].ReturnBoolArgument();
-	bool	 apply_2D_masking					= my_current_job.arguments[28].ReturnBoolArgument();
+	my_particle.parameter_map[3]				= my_current_job.arguments[26].ReturnBoolArgument();
+	my_particle.parameter_map[2]				= my_current_job.arguments[27].ReturnBoolArgument();
+	my_particle.parameter_map[1]				= my_current_job.arguments[28].ReturnBoolArgument();
+	my_particle.parameter_map[4]				= my_current_job.arguments[29].ReturnBoolArgument();
+	my_particle.parameter_map[5]				= my_current_job.arguments[30].ReturnBoolArgument();
+	bool 	 calculate_matching_projections		= my_current_job.arguments[31].ReturnBoolArgument();
+	bool	 apply_2D_masking					= my_current_job.arguments[32].ReturnBoolArgument();
 
 	my_particle.constraints_used[4] = true;		// Constraint for X shifts
 	my_particle.constraints_used[5] = true;		// Constraint for Y shifts
 
 	Image input_image;
-	Image ctf_image;
+//	Image ctf_image;
 	Image ctf_input_image;
 	Image projection_image;
+	Image search_projection_image;
 	Image unbinned_image;
 	Image final_image;
 	Image temp_image;
-	Image temp_image2;
+//	Image temp_image2;
+//	Image reference_3d_search;
 	Image *projection_cache = NULL;
 	CTF   my_ctf;
 	CTF   my_input_ctf;
 	Image snr_image;
+//	Curve particle_ssnr;
 	ReconstructedVolume			input_3d;
+	ReconstructedVolume			search_reference_3d;
 	ImageProjectionComparison	comparison_object;
 	ConjugateGradient			conjugate_gradient_minimizer;
 	EulerSearch					global_euler_search;
@@ -195,18 +208,22 @@ bool Refine3DApp::DoCalculation()
 	float particle_occupancy;
 
 	int i;
+	int j;
 	int psi_i;
 	int fourier_size_x, fourier_size_y, fourier_size_z;
 	int current_image;
-	int parameters_per_line = my_particle.number_of_parameters;
+//	int parameters_per_line = my_particle.number_of_parameters;
 	int number_of_independent_pixels;
-	float input_parameters[parameters_per_line];
-	float output_parameters[parameters_per_line];
-	float parameter_average[parameters_per_line];
-	float parameter_variance[parameters_per_line];
-	float cg_starting_point[parameters_per_line];
-	float cg_accuracy[parameters_per_line];
+	float input_parameters[my_particle.number_of_parameters];
+	float output_parameters[my_particle.number_of_parameters];
+	float search_parameters[my_particle.number_of_parameters];
+	float parameter_average[my_particle.number_of_parameters];
+	float parameter_variance[my_particle.number_of_parameters];
+	float cg_starting_point[my_particle.number_of_parameters];
+	float cg_accuracy[my_particle.number_of_parameters];
 	float binning_factor;
+	float binning_factor_search;
+	float pixel_size_search;
 	float mask_falloff = 20.0;
 	float alpha;
 	float sigma;
@@ -221,14 +238,18 @@ bool Refine3DApp::DoCalculation()
 	float temp_float;
 	float psi;
 	float psi_step;
+//	float best_parameters_to_keep = 20;
 	wxDateTime my_time_in;
 	wxDateTime my_time_out;
 
-	ZeroFloatArray(input_parameters, parameters_per_line);
-	ZeroFloatArray(output_parameters, parameters_per_line);
-	ZeroFloatArray(parameter_average, parameters_per_line);
-	ZeroFloatArray(cg_starting_point, parameters_per_line);
-	ZeroFloatArray(cg_accuracy, parameters_per_line);
+	ZeroFloatArray(input_parameters, my_particle.number_of_parameters);
+	ZeroFloatArray(output_parameters, my_particle.number_of_parameters);
+	ZeroFloatArray(search_parameters, my_particle.number_of_parameters);
+	ZeroFloatArray(parameter_average, my_particle.number_of_parameters);
+	ZeroFloatArray(parameter_variance, my_particle.number_of_parameters);
+	ZeroFloatArray(cg_starting_point, my_particle.number_of_parameters);
+	ZeroFloatArray(cg_accuracy, my_particle.number_of_parameters);
+
 	NumericTextFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	MRCFile input_file(input_reconstruction.ToStdString(), false);
@@ -237,10 +258,44 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score         Change");
 	NumericTextFile my_output_par_shifts_file(ouput_shift_file, OPEN_TO_WRITE, 15);
 	my_output_par_shifts_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score");
+
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, my_symmetry);
 	input_3d.ReadStatisticsFromFile(input_reconstruction_statistics);
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
 	MyDebugAssertTrue(input_3d.density_map.IsCubic(), "3D reference not cubic");
+
+	if (global_search)
+	{
+		search_reference_3d.InitWithDimensions(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, input_3d.density_map.logical_z_dimension, pixel_size, my_symmetry);
+//		search_reference_3d.density_map.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, input_3d.density_map.logical_z_dimension, false);
+		search_reference_3d.density_map.CopyFrom(&input_3d.density_map);
+		search_reference_3d.density_map.Correct3D();
+		search_reference_3d.density_map.ForwardFFT();
+		binning_factor_search = high_resolution_limit_search / pixel_size / 2.0;
+		fourier_size_x = ReturnClosestFactorizedLower(search_reference_3d.density_map.logical_x_dimension / binning_factor_search, 3, true);
+		fourier_size_y = ReturnClosestFactorizedLower(search_reference_3d.density_map.logical_y_dimension / binning_factor_search, 3, true);
+		fourier_size_z = ReturnClosestFactorizedLower(search_reference_3d.density_map.logical_z_dimension / binning_factor_search, 3, true);
+	// The following line assumes that we have a cubic volume
+		binning_factor_search = float(search_reference_3d.density_map.logical_x_dimension) / float(fourier_size_x);
+		if (binning_factor_search != 1.0 )
+		{
+			search_reference_3d.density_map.Resize(fourier_size_x, fourier_size_y, fourier_size_z);
+			search_reference_3d.pixel_size *= binning_factor_search;
+		}
+		search_reference_3d.density_map.SwapRealSpaceQuadrants();
+		search_particle.Allocate(search_reference_3d.density_map.logical_x_dimension, search_reference_3d.density_map.logical_y_dimension);
+//		for (i = 0; i < search_particle.number_of_parameters; i++) {search_particle.parameter_map[i] = my_particle.parameter_map[i];}
+//		for (i = 0; i < search_particle.number_of_parameters; i++) {search_particle.constraints_used[i] = my_particle.constraints_used[i];}
+		search_reference_3d.statistics.part_SSNR = input_3d.statistics.part_SSNR;
+		search_projection_image.Allocate(search_reference_3d.density_map.logical_x_dimension, search_reference_3d.density_map.logical_y_dimension, false);
+		pixel_size_search = pixel_size * binning_factor_search;
+		if (angular_step <= 0) angular_step = 360.0 * high_resolution_limit_search / PI / mask_radius;
+//		psi_step = angular_step / 5.0;
+		psi_step = rad_2_deg(pixel_size_search / mask_radius);
+		psi_step = 360.0 / int(360.0 / psi_step);
+//		psi_step = 1.0;
+		wxPrintf("\nBinning factor for search = %f, new pixel size = %f, resolution limit = %f\nAngular step size = %f, in-plane = %f\n", binning_factor_search, pixel_size_search, pixel_size_search * 2.0, angular_step, psi_step);
+	}
 
 	if (padding != 1.0)
 	{
@@ -268,34 +323,20 @@ bool Refine3DApp::DoCalculation()
 		input_3d.pixel_size *= binning_factor;
 	}
 	pixel_size_binned = pixel_size * binning_factor;
-	if (angular_step <= 0) angular_step = 	180.0 * high_resolution_limit / PI / mask_radius;
-//	psi_step = angular_step / 5.0;
-	psi_step = rad_2_deg(pixel_size_binned / mask_radius);
-	wxPrintf("Angular step size = %f, in-plane = %f\n", angular_step, psi_step);
+	wxPrintf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor, pixel_size_binned);
 
-	wxPrintf("\nBinning factor = %f, new pixel size = %f\n", binning_factor, pixel_size_binned);
 	input_3d.density_map.SwapRealSpaceQuadrants();
-	comparison_object.reference_volume = &input_3d;
+//	comparison_object.reference_volume = &input_3d;
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	my_particle.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension);
-	comparison_object.particle = &my_particle;
+//	comparison_object.particle = &my_particle;
 	ctf_input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
-	comparison_object.projection_image = &projection_image;
+//	comparison_object.projection_image = &projection_image;
 	projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	unbinned_image.Allocate(input_file.ReturnXSize() * padding, input_file.ReturnYSize() * padding, true);
 	final_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 	temp_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
-	global_euler_search.InitGrid(angular_step, psi_step, pixel_size_binned / high_resolution_limit, my_particle.parameter_map);
-	projection_image.RotateFourier2DGenerateIndex(kernel_index, 360.0, psi_step);
-	projection_cache = new Image [global_euler_search.number_of_search_positions];
-	for (i = 0; i < global_euler_search.number_of_search_positions; i++)
-	{
-		projection_cache[i].Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	}
-	my_time_in = wxDateTime::UNow();
-//	wxPrintf("generating projection cache for %i projections\n", global_euler_search.number_of_search_positions);
-	input_3d.density_map.GenerateReferenceProjections(projection_cache, global_euler_search);
-	my_time_out = wxDateTime::UNow(); wxPrintf("cache generated: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
+//	temp_image2.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 
 	mask_center_2d_x = mask_center_2d_x / pixel_size - input_image.physical_address_of_box_center_x;
 	mask_center_2d_y = mask_center_2d_y / pixel_size - input_image.physical_address_of_box_center_y;
@@ -306,29 +347,55 @@ bool Refine3DApp::DoCalculation()
 	for (current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++)
 	{
 		my_input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
-		for (i = 0; i < parameters_per_line; i++)
+		for (i = 0; i < my_particle.number_of_parameters; i++)
 		{
 			parameter_average[i] += input_parameters[i];
 			parameter_variance[i] += powf(input_parameters[i],2);
 		}
 	}
-	for (i = 0; i < parameters_per_line; i++)
+	for (i = 0; i < my_particle.number_of_parameters; i++)
 	{
 		parameter_average[i] /= my_input_par_file.number_of_lines;
 		parameter_variance[i] /= my_input_par_file.number_of_lines;
 		parameter_variance[i] -= powf(parameter_average[i],2);
+
+		if (parameter_variance[i] < 0.001) my_particle.constraints_used[i] = false;
 	}
 	my_particle.SetParameterStatistics(parameter_average, parameter_variance);
+
+	if (global_search)
+	{
+		for (i = 0; i < search_particle.number_of_parameters; i++) {search_particle.parameter_map[i] = my_particle.parameter_map[i];}
+		for (i = 0; i < search_particle.number_of_parameters; i++) {search_particle.constraints_used[i] = my_particle.constraints_used[i];}
+		search_particle.SetParameterStatistics(parameter_average, parameter_variance);
+
+		global_euler_search.InitGrid(angular_step, psi_step, pixel_size_search / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+//		my_input_par_file.Rewind();
+//		for (current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++)
+//		{
+//			my_input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
+//			global_euler_search.list_of_search_parameters[current_image - 1][0] = input_parameters[1];
+//			global_euler_search.list_of_search_parameters[current_image - 1][1] = input_parameters[2];
+//		}
+		projection_cache = new Image [global_euler_search.number_of_search_positions];
+		for (i = 0; i < global_euler_search.number_of_search_positions; i++)
+		{
+			projection_cache[i].Allocate(search_reference_3d.density_map.logical_x_dimension, search_reference_3d.density_map.logical_y_dimension, false);
+		}
+		search_projection_image.RotateFourier2DGenerateIndex(kernel_index, 360.0, psi_step);
+		search_reference_3d.density_map.GenerateReferenceProjections(projection_cache, global_euler_search);
+	}
+
 	wxPrintf("\nAverage sigma noise = %f, average score = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\nNumber of particles to refine = %i\n",
 			parameter_average[13], parameter_average[14], parameter_average[4], parameter_average[5], sqrtf(parameter_variance[4]), sqrtf(parameter_variance[5]), my_input_par_file.number_of_lines);
 	my_input_par_file.Rewind();
 
 	ProgressBar *my_progress = new ProgressBar(my_input_par_file.number_of_lines);
 	for (current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++)
-//	for (current_image = 1; current_image <= 100; current_image++)
+//	for (current_image = 1; current_image <= 10; current_image++)
 	{
 		my_input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
-		for (i = 0; i < parameters_per_line; i++) {output_parameters[i] = input_parameters[i];}
+		for (i = 0; i < my_particle.number_of_parameters; i++) {output_parameters[i] = input_parameters[i];}
 
 // Set up Particle object
 		my_particle.ResetImageFlags();
@@ -336,11 +403,11 @@ bool Refine3DApp::DoCalculation()
 		my_particle.mask_falloff = mask_falloff;
 		my_particle.filter_radius_low = low_resolution_limit;
 		my_particle.filter_radius_high = high_resolution_limit;
-// The following line would allow using particles with different pixel sizes
+		// The following line would allow using particles with different pixel sizes
 		my_particle.pixel_size = pixel_size_binned;
 		my_particle.sigma_noise = input_parameters[13] * sqrtf(pixel_size_binned / pixel_size);
 		my_particle.SetParameters(input_parameters);
-		my_particle.MapParameters(cg_starting_point);
+//		my_particle.MapParameters(cg_starting_point);
 		my_particle.MapParameterAccuracy(cg_accuracy);
 		my_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10]);
 
@@ -358,24 +425,95 @@ bool Refine3DApp::DoCalculation()
 		my_particle.CenterInCorner();
 		my_particle.WeightBySSNR(input_3d.statistics.part_SSNR);
 
-		if (my_particle.number_of_search_dimensions > 0)
+		if ((my_particle.number_of_search_dimensions > 0) && (global_search || local_refinement))
 		{
+			wxPrintf("starting refinement for particle %i\n", current_image);
 			if (global_search)
 			{
 				my_time_in = wxDateTime::UNow();
-				wxPrintf("starting global search for particle %i\n", current_image);
-				global_euler_search.Run(my_particle, input_3d.density_map, projection_cache, kernel_index);
+//				for (i = 0; i < search_particle.number_of_parameters; i++) {search_parameters[i] = input_parameters[i];}
+				search_particle.ResetImageFlags();
+				if (mask_radius_search == 0.0)
+				{
+					search_particle.mask_radius = search_particle.particle_image->logical_x_dimension / 2 * pixel_size_search - mask_falloff;
+				}
+				else
+				{
+					search_particle.mask_radius = mask_radius_search;
+				}
+				search_particle.mask_falloff = mask_falloff;
+				search_particle.filter_radius_low = low_resolution_limit;
+				search_particle.filter_radius_high = high_resolution_limit_search;
+				search_particle.pixel_size = pixel_size_search;
+				search_particle.sigma_noise = input_parameters[13] * sqrtf(pixel_size_search / pixel_size);
+//				search_particle.MapParameters(cg_starting_point);
+//				search_particle.MapParameterAccuracy(cg_accuracy);
+				search_particle.number_of_search_dimensions = my_particle.number_of_search_dimensions;
+				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10]);
+				temp_image.CopyFrom(&input_image);
+				temp_image.ForwardFFT();
+				temp_image.ClipInto(search_particle.particle_image);
+				search_particle.PhaseShiftInverse();
+				search_particle.CosineMask();
+				search_particle.PhaseShift();
+				search_particle.CenterInCorner();
+
+				search_particle.WeightBySSNR(search_reference_3d.statistics.part_SSNR);
+//				search_particle.particle_image->QuickAndDirtyWriteSlice("junk.mrc", 1);
+//				exit(0);
+				global_euler_search.Run(search_particle, search_reference_3d.density_map, projection_cache, kernel_index);
+//				search_particle.UnmapParametersToExternal(output_parameters, global_euler_search.list_of_best_parameters[0]);
+
+//				for (i = 1; i <= 6; i++) {output_parameters[i] = global_euler_search.list_of_best_parameters[0][i - 1];}
+//				wxPrintf("%i, %f, %f, %f\n",current_image, output_parameters[3], output_parameters[2], output_parameters[1]);
+				for (i = 0; i < search_particle.number_of_parameters; i++) {search_parameters[i] = input_parameters[i];}
+				search_particle.SetParameterConstraints(powf(parameter_average[13],2));
+				comparison_object.reference_volume = &search_reference_3d;
+				comparison_object.projection_image = &search_projection_image;
+				comparison_object.particle = &search_particle;
+				search_particle.SetIndexForWeightedCorrelation();
+				output_parameters[14] = - std::numeric_limits<float>::max();
+				for (i = 0; i < best_parameters_to_keep; i++)
+				{
+					for (j = 1; j <= 6; j++) {search_parameters[j] = global_euler_search.list_of_best_parameters[i][j - 1];}
+//					if (i == best_parameters_to_keep - 1) {for (j = 0; j < search_particle.number_of_parameters; j++) {search_parameters[j] = input_parameters[j];};}
+					search_particle.SetParameters(search_parameters);
+					search_particle.MapParameters(cg_starting_point);
+					search_particle.mask_radius = mask_radius;
+//					wxPrintf("i = %i, old score = %f, start = %f, %f, %f, %f, %f\n", i, global_euler_search.list_of_best_parameters[i][5], cg_starting_point[0],cg_starting_point[1],cg_starting_point[2],cg_starting_point[3],cg_starting_point[4]);
+					search_parameters[14] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, search_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
+					temp_float = - 100.0 * conjugate_gradient_minimizer.Run();
+//					wxPrintf("i = %i, old score = %f, new score = %f\n\n", i, search_parameters[14], temp_float);
+					if (temp_float > output_parameters[14])
+					{
+						wxPrintf("i = %i, old score = %f, new score = %f\n", i, search_parameters[14], temp_float);
+						search_particle.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues());
+						output_parameters[14] = temp_float;
+					}
+				}
+				my_particle.SetParameters(output_parameters);
 				my_time_out = wxDateTime::UNow(); wxPrintf("global search done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
 			}
 
-			my_particle.SetParameterConstraints(powf(parameter_average[13],2));
+			if (local_refinement)
+			{
+				my_time_in = wxDateTime::UNow();
+				comparison_object.reference_volume = &input_3d;
+				comparison_object.projection_image = &projection_image;
+				comparison_object.particle = &my_particle;
+				my_particle.SetIndexForWeightedCorrelation();
+				my_particle.MapParameters(cg_starting_point);
 
-			input_parameters[14] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, my_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
-			output_parameters[14] = - 100.0 * conjugate_gradient_minimizer.Run();
+				my_particle.SetParameterConstraints(powf(parameter_average[13],2));
 
-			my_particle.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues());
+				input_parameters[14] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, my_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
+				output_parameters[14] = - 100.0 * conjugate_gradient_minimizer.Run();
 
-			output_parameters[15] = output_parameters[14] - input_parameters[14];
+				my_particle.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues());
+
+				output_parameters[15] = output_parameters[14] - input_parameters[14];
+				my_time_out = wxDateTime::UNow(); wxPrintf("local refinement done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
+			}
 		}
 		else
 		{
@@ -390,10 +528,10 @@ bool Refine3DApp::DoCalculation()
 		unbinned_image.ClipInto(&final_image);
 		alpha = input_image.ReturnImageScale(final_image, mask_radius / pixel_size);
 		final_image.MultiplyByConstant(alpha);
-		temp_image2 = final_image;
-		temp_image2.PhaseFlipPixelWise(ctf_input_image);
+//		temp_image2.CopyFrom(&final_image);
+//		temp_image2.PhaseFlipPixelWise(ctf_input_image);
 
-		temp_image = input_image;
+		temp_image.CopyFrom(&input_image);
 		temp_image.PhaseFlipPixelWise(ctf_input_image);
 		temp_image.SubtractImage(&final_image);
 // Here one can whiten with an average noise power spectrum that can probably be approximated by the data power spectrum (assuming the signal is weak)
@@ -425,7 +563,7 @@ bool Refine3DApp::DoCalculation()
 		temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		temp_float = output_parameters[1]; output_parameters[1] = output_parameters[3]; output_parameters[3] = temp_float;
 		my_output_par_file.WriteLine(output_parameters);
-		for (i = 1; i < parameters_per_line; i++) {output_parameters[i] -= input_parameters[i];}
+		for (i = 1; i < my_particle.number_of_parameters; i++) {output_parameters[i] -= input_parameters[i];}
 		my_output_par_shifts_file.WriteLine(output_parameters);
 
 		if (calculate_matching_projections)
@@ -436,8 +574,12 @@ bool Refine3DApp::DoCalculation()
 		my_progress->Update(current_image);
 	}
 	delete my_progress;
-	delete [] projection_cache;
-	projection_image.RotateFourier2DDeleteIndex(kernel_index, 360.0, psi_step);
+//	delete global_euler_search;
+	if (global_search)
+	{
+		delete [] projection_cache;
+		search_projection_image.RotateFourier2DDeleteIndex(kernel_index, 360, psi_step);
+	}
 
 	return true;
 }

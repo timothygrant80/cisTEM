@@ -216,5 +216,112 @@ std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add)
 	return filename.substr(0,filename.find_last_of('.')) + suffix_to_add + filename.substr(filename.find_last_of('.'), filename.length() - 1);
 }
 
+int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even)
+{
+	int number;
+	int remainder = wanted_int;
+	int factor;
+	int temp_int;
 
+	if (enforce_even)
+	{
+		temp_int = wanted_int;
+		if (! IsEven(temp_int)) temp_int++;
+		for (number = temp_int; number < 10000 * wanted_int; number += 2)
+		{
+			remainder = number;
+			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)
+			{
+				temp_int = remainder % factor;
+				while (temp_int == 0)
+				{
+					remainder /= factor;
+					temp_int = remainder % factor;
+				}
+			}
+			if (remainder == 1) break;
+		}
+	}
+	else
+	{
+		for (number = wanted_int; number < 10000 * wanted_int; number++)
+		{
+			remainder = number;
+			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)
+			{
+				temp_int = remainder % factor;
+				while (temp_int == 0)
+				{
+					remainder /= factor;
+					temp_int = remainder % factor;
+				}
+			}
+			if (remainder == 1) break;
+		}
+	}
+	return number;
+}
 
+int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even)
+{
+	int number;
+	int remainder = wanted_int;
+	int factor;
+	int temp_int;
+
+	if (enforce_even)
+	{
+		temp_int = wanted_int;
+		if (! IsEven(temp_int)) temp_int--;
+		for (number = temp_int; number >= 2; number -= 2)
+		{
+			remainder = number;
+			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)
+			{
+				temp_int = remainder % factor;
+				while (temp_int == 0)
+				{
+					remainder /= factor;
+					temp_int = remainder % factor;
+				}
+			}
+			if (remainder == 1) break;
+		}
+	}
+	else
+	{
+		for (number = wanted_int; number >= 1; number--)
+		{
+			remainder = number;
+			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)
+			{
+				temp_int = remainder % factor;
+				while (temp_int == 0)
+				{
+					remainder /= factor;
+					temp_int = remainder % factor;
+				}
+			}
+			if (remainder == 1) break;
+		}
+	}
+	return number;
+}
+
+void Allocate2DFloatArray(float **&array, int dim1, int dim2)
+{
+	array = new float* [dim1];			// dynamic array of pointers to float
+	for (int i = 0; i < dim1; ++i)
+	{
+		array[i] = new float[dim2];		// each i-th pointer is now pointing to dynamic array (size number_of_positions) of actual float values
+	}
+}
+
+void Deallocate2DFloatArray(float **&array, int dim1)
+{
+	for (int i = 0; i < dim1; ++i)
+	{
+		delete [] array[i];				// each i-th pointer must be deleted first
+	}
+	delete [] array;					// now delete pointer array
+}

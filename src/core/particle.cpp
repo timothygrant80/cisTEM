@@ -31,6 +31,11 @@ Particle::~Particle()
 	{
 		delete ctf_image;
 	}
+
+	if (bin_index != NULL)
+	{
+		delete [] bin_index;
+	}
 }
 
 void Particle::Init()
@@ -93,6 +98,7 @@ void Particle::Init()
 	ZeroBoolArray(parameter_map, number_of_parameters);
 	ZeroBoolArray(constraints_used, number_of_parameters);
 	number_of_search_dimensions = 0;
+	bin_index = NULL;
 }
 
 void Particle::AllocateImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension)
@@ -216,6 +222,59 @@ void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, flo
 	ctf_image_calculated = true;
 }
 
+void Particle::SetIndexForWeightedCorrelation()
+{
+	MyDebugAssertTrue(particle_image->is_in_memory, "Image memory not allocated");
+
+	int i;
+	int j;
+	int k;
+	int bin;
+
+	float x;
+	float y;
+	float z;
+	float frequency;
+	float frequency_squared;
+
+	float low_limit2 = powf(pixel_size / filter_radius_low,2);
+	float high_limit2 = fminf(powf(pixel_size / filter_radius_high,2),0.25);
+
+	int number_of_bins = particle_image->ReturnLargestLogicalDimension() / 2 + 1;
+	int number_of_bins2 = 2 * (number_of_bins - 1);
+
+	long pixel_counter = 0;
+
+	if (bin_index != NULL) delete [] bin_index;
+	bin_index = new int [particle_image->real_memory_allocated / 2];
+
+	for (k = 0; k <= particle_image->physical_upper_bound_complex_z; k++)
+	{
+		z = powf(particle_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * particle_image->fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= particle_image->physical_upper_bound_complex_y; j++)
+		{
+			y = powf(particle_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * particle_image->fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= particle_image->physical_upper_bound_complex_x; i++)
+			{
+				x = powf(i * particle_image->fourier_voxel_size_x, 2);
+				frequency_squared = x + y + z;
+
+				if (frequency_squared >= low_limit2 && frequency_squared <= high_limit2)
+				{
+					bin_index[pixel_counter] = int(sqrtf(frequency_squared) * number_of_bins2);
+				}
+				else
+				{
+					bin_index[pixel_counter] = -1;
+				}
+				pixel_counter++;
+			}
+		}
+	}
+}
+
 void Particle::WeightBySSNR(Curve &SSNR)
 {
 	MyDebugAssertTrue(particle_image->is_in_memory, "Memory not allocated");
@@ -229,7 +288,7 @@ void Particle::WeightBySSNR(Curve &SSNR)
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);
-	for (i = 1; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
+	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
 	snr_image->MultiplyByWeightsCurve(SSNR);
 	particle_image->OptimalFilterBySNRImage(*snr_image);
 	is_ssnr_filtered = true;

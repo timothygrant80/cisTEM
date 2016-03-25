@@ -60,6 +60,7 @@ public:
 	bool						*parameter_map;
 	bool						*constraints_used;
 	int							number_of_search_dimensions;
+	int							*bin_index;
 
 	Particle();
 	Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
@@ -79,6 +80,7 @@ public:
 	void CenterInCorner();
 	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
 	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
+	void SetIndexForWeightedCorrelation();
 	void WeightBySSNR(Curve &SSNR);
 	void CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d);
 	void SetParameters(float *wanted_parameters);

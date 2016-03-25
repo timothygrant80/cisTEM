@@ -32,6 +32,12 @@ float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, fl
 	target_function = function_to_minimize;
 	parameters = parameters_to_pass;
 
+	if (is_in_memory)
+	{
+		delete [] best_values;
+		delete [] e;
+		is_in_memory = false;
+	}
 
 	// Allocate memory
 	n 					= 	num_dim;

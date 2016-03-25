@@ -74,11 +74,20 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 
 void NumericTextFile::Close()
 {
-	if (input_file_stream != NULL) delete input_file_stream;
 	if (input_text_stream != NULL) delete input_text_stream;
 	if (output_text_stream != NULL) delete output_text_stream;
-	if (output_file_stream != NULL) delete output_file_stream;
 
+	if (output_file_stream != NULL)
+	{
+		if (output_file_stream->GetFile()->IsOpened() == true) output_file_stream->GetFile()->Close();
+		delete output_file_stream;
+	}
+
+	if (input_file_stream != NULL)
+	{
+		if (input_file_stream->GetFile()->IsOpened() == true) input_file_stream->GetFile()->Close();
+		delete input_file_stream;
+	}
 
 	input_file_stream = NULL;
 	input_text_stream = NULL;

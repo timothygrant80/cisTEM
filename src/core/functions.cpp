@@ -155,6 +155,11 @@ wxString ReturnIPAddress()
 	    void * tmpAddrPtr=NULL;
         char addressBuffer[INET_ADDRSTRLEN];
 
+        for (int counter = 0; counter < INET_ADDRSTRLEN; counter++)
+        {
+        	addressBuffer[counter] = 0;
+        }
+
         wxString ip_address = "";
 
 	    getifaddrs(&ifAddrStruct);

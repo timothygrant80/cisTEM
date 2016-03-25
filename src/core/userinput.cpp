@@ -111,6 +111,22 @@ void UserInput::Init(const char *program_name, wxString program_version)
 {
 	int counter;
 
+    defaults_file = NULL;
+    new_defaults_file = NULL;
+
+	for (counter = 0; counter < 1000; counter++)
+	{
+		defaults_filename[counter] = 0;
+		new_defaults_filename[counter] = 0;
+	}
+
+	for (counter = 0; counter < 10000; counter++)
+	{
+		memory_string[counter] = 0;
+
+	}
+
+
     input_is_a_tty = InputIsATerminal();
     output_is_a_tty = OutputIsAtTerminal();
 

@@ -4875,8 +4875,8 @@ void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_
 	temp_image.Allocate(wanted_x_dimension, wanted_y_dimension, wanted_z_dimension, is_in_real_space);
 	ClipInto(&temp_image, wanted_padding_value);
 
-	CopyFrom(&temp_image);
-	//Consume(&temp_image);
+	//CopyFrom(&temp_image);
+	Consume(&temp_image);
 }
 
 void Image::CopyFrom(Image *other_image)

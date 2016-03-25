@@ -1294,7 +1294,7 @@ bool CtffindApp::DoCalculation()
 		delete [] ctf_values_profile;
 		delete [] fit_frc;
 		delete [] fit_frc_sigma;
-		if (is_running_locally) delete output_text_avrot;
+		delete output_text_avrot;
 	}
 	delete conjugate_gradient_minimizer;
 

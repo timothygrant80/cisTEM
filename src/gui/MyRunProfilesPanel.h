@@ -11,6 +11,7 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		long selected_command;
 		bool command_panel_has_changed;
 		RunProfile buffer_profile;
+		bool is_dirty;
 
 		/** Constructor */
 		MyRunProfilesPanel( wxWindow* parent );
@@ -35,6 +36,8 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void EditCommandButtonClick( wxCommandEvent& event );
 		void RemoveCommandButtonClick( wxCommandEvent& event );
 		void CommandsSaveButtonClick( wxCommandEvent& event );
+		void OnImportButtonClick( wxCommandEvent& event );
+		void OnExportButtonClick( wxCommandEvent& event );
 
 		void GuiAddressAutoClick( wxCommandEvent& event );
 		void GuiAddressSpecifyClick( wxCommandEvent& event );
@@ -66,6 +69,8 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void SetSelectedCommand(long wanted_command);
 
 		void ImportAllFromDatabase();
+		void WriteRunProfilesToDisk(wxString filename, wxArrayInt profiles_to_write);
+		bool ImportRunProfilesFromDisk(wxString filename);
 		void Reset();
 };
 

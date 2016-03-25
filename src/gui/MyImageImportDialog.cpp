@@ -65,6 +65,8 @@ void MyImageImportDialog::AddDirectoryClick( wxCommandEvent& event )
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
 
+    	all_files.Sort();
+
     	PathListCtrl->Freeze();
 
     	for (unsigned long counter = 0; counter < all_files.GetCount(); counter++)
@@ -175,8 +177,7 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.asset_id = image_asset_panel->current_asset_number;
 						image_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextImageAsset(image_asset_panel->current_asset_number, temp_asset.filename.GetFullPath(), 1, -1, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
-						image_asset_panel->current_asset_number++;
+						main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), 1, -1, -1, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
 
 					}
 					else

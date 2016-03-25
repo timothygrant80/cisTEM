@@ -353,7 +353,7 @@ void MyAssetParentPanel::AddAsset(Asset *asset_to_add)
 	all_assets_list->AddAsset(asset_to_add);
 	all_groups_list->AddMemberToGroup(0, all_assets_list->number_of_assets - 1);
 
-	if (asset_to_add->asset_id > current_asset_number) current_asset_number = asset_to_add->asset_id;
+	if (asset_to_add->asset_id >= current_asset_number) current_asset_number = asset_to_add->asset_id + 1;
 
 	//FillContentsList();
 }
@@ -657,9 +657,12 @@ void MyAssetParentPanel::OnMotion(wxMouseEvent& event)
 }
 
 bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
-{
+{/*
 	if (all_assets_list->FindFile(file_to_check) == -1) return false;
-	else return true;
+	else return true;*/
+
+	MyPrintWithDetails("This should never be called!!");
+	abort();
 }
 
 int MyAssetParentPanel::ReturnArrayPositionFromParentID(int wanted_id)
@@ -815,7 +818,7 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 	dropped_group = my_owner->HitTest(drop_position, flags);
 
 	//  Add the specified image to the specified group..
-
+	wxPrintf("dropped_group = %li\n", dropped_group);
 	if (dropped_group > 0)
 	{
 		if (my_panel->ContentsListBox->GetSelectedItemCount() == 1)
@@ -828,7 +831,7 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 			if (my_panel->all_groups_list->groups[dropped_group].FindMember(selected_asset) == -1)
 			{
 				my_panel->all_groups_list->groups[dropped_group].AddMember(selected_asset);
-				my_panel->InsertGroupMemberToDatabase(dropped_group, selected_asset);
+				my_panel->InsertGroupMemberToDatabase(dropped_group, my_panel->all_groups_list->groups[dropped_group].number_of_members - 1);
 			}
 		}
 		else
@@ -848,11 +851,12 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 				if (my_panel->all_groups_list->groups[dropped_group].FindMember(selected_asset) == -1)
 				{
 					my_panel->all_groups_list->groups[dropped_group].AddMember(selected_asset);
-					my_panel->InsertGroupMemberToDatabase(dropped_group, selected_asset);
+					my_panel->InsertGroupMemberToDatabase(dropped_group, my_panel->all_groups_list->groups[dropped_group].number_of_members - 1);
 				}
 			}
 
 		}
+
 
 		my_panel->FillGroupList();
 		main_frame->RecalculateAssetBrowser();

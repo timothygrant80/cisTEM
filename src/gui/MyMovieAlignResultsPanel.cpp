@@ -86,8 +86,12 @@ void MyMovieAlignResultsPanel::OnValueChanged(wxDataViewEvent &event)
 
 				main_frame->current_project.database.GetFromBatchSelect("it", &alignment_id, &output_file);
 				main_frame->current_project.database.EndBatchSelect();
+//				main_frame->current_project.database.InsertOrReplace("IMAGE_ASSETS", "itiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", image_asset_id, output_file.ToUTF8().data(), 1, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
 
-				main_frame->current_project.database.InsertOrReplace("IMAGE_ASSETS", "itiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", image_asset_id, output_file.ToUTF8().data(), 1, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
+
+				main_frame->current_project.database.BeginImageAssetInsert();
+				main_frame->current_project.database.AddNextImageAsset(image_asset_id, output_file.ToUTF8().data(), image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
+				main_frame->current_project.database.EndImageAssetInsert();
 
 				image_asset_panel->ReturnAssetPointer(image_asset)->filename = output_file;
 				image_asset_panel->ReturnAssetPointer(image_asset)->alignment_id = alignment_id;
@@ -274,7 +278,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	main_frame->current_project.database.EndBatchSelect();
 
 	ResultPanel->Draw();
-	InfoSizer->Layout();
+	RightPanel->Layout();
 	RightPanel->Thaw();
 
 }
@@ -420,9 +424,19 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 			should_continue = main_frame->current_project.database.GetFromBatchSelect("i", &current_asset);
 			array_position = movie_asset_panel->ReturnArrayPositionFromAssetID(current_asset);
 
-			per_row_asset_id[number_of_assets] = current_asset;
-			per_row_array_position[number_of_assets] = array_position;
-			number_of_assets++;
+			if (array_position < 0 || current_asset < 0)
+			{
+				MyPrintWithDetails("Error: Something wrong finding asset %i, skipping", current_asset);
+			}
+			else
+			{
+				per_row_asset_id[number_of_assets] = current_asset;
+				per_row_array_position[number_of_assets] = array_position;
+				number_of_assets++;
+
+			}
+
+
 		}
 
 		main_frame->current_project.database.EndBatchSelect();
@@ -529,8 +543,23 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 
 }
 
-void MyMovieAlignResultsPanel::JunkMe(wxCommandEvent & event)
+void MyMovieAlignResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 {
+	Freeze();
 
-	FillBasedOnSelectCommand("SELECT MOVIE_ASSET_ID FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID BETWEEN 10 AND 160");
+	if (JobDetailsToggleButton->GetValue() == true)
+	{
+		JobDetailsPanel->Show(true);
+	}
+	else
+	{
+		JobDetailsPanel->Show(false);
+	}
+
+
+	RightPanel->Layout();
+	Thaw();
+
+
 }
+

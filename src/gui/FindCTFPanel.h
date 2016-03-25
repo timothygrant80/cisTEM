@@ -31,7 +31,7 @@ public:
 		void OnImageRadioButton(wxCommandEvent& event );
 		void OnFindAdditionalPhaseCheckBox(wxCommandEvent& event );
 		void OnRestrainAstigmatismCheckBox(wxCommandEvent& event );
-		//void WriteResultToDataBase();
+		void WriteResultToDataBase();
 		void OnExpertOptionsToggle( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();
@@ -39,8 +39,7 @@ public:
 		void StartEstimationClick( wxCommandEvent& event );
 		void FinishButtonClick( wxCommandEvent& event );
 		void TerminateButtonClick( wxCommandEvent& event );
-
-		//void Refresh();
+	//void Refresh();
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);
 

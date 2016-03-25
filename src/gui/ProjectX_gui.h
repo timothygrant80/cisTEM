@@ -10,9 +10,12 @@
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
+class BitmapPanel;
+class CTF1DPanel;
 class JobPanel;
 class NumericTextCtrl;
 class ResultsDataViewListCtrl;
+class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
 #include <wx/gdicmn.h>
@@ -29,17 +32,17 @@ class UnblurResultsPanel;
 #include <wx/icon.h>
 #include <wx/menu.h>
 #include <wx/frame.h>
-#include <wx/statline.h>
 #include <wx/radiobut.h>
+#include <wx/statline.h>
 #include <wx/button.h>
 #include <wx/dataview.h>
+#include <wx/tglbtn.h>
 #include <wx/stattext.h>
 #include <wx/combobox.h>
 #include <wx/splitter.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
 #include <wx/statbmp.h>
-#include <wx/tglbtn.h>
 #include <wx/checkbox.h>
 #include <wx/spinctrl.h>
 #include <wx/richtext/richtextctrl.h>
@@ -82,6 +85,120 @@ class MainFrame : public wxFrame
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ShowCTFResultsParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class ShowCTFResultsParentPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxRadioButton* FitType2DRadioButton;
+		wxRadioButton* FitType1DRadioButton;
+		wxStaticLine* m_staticline26;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnFitTypeRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		BitmapPanel* CTF2DResultsPanel;
+		CTF1DPanel* CTFPlotPanel;
+		
+		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~ShowCTFResultsParentPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class FindCTFResultsPanel
+///////////////////////////////////////////////////////////////////////////////
+class FindCTFResultsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline25;
+		wxSplitterWindow* m_splitter4;
+		wxPanel* m_panel13;
+		wxRadioButton* AllImagesButton;
+		wxRadioButton* ByFilterButton;
+		wxButton* FilterButton;
+		ResultsDataViewListCtrl* ResultDataView;
+		wxButton* PreviousButton;
+		wxButton* NextButton;
+		wxPanel* RightPanel;
+		wxToggleButton* JobDetailsToggleButton;
+		wxStaticLine* m_staticline28;
+		wxPanel* JobDetailsPanel;
+		wxFlexGridSizer* InfoSizer;
+		wxStaticText* m_staticText72;
+		wxStaticText* EstimationIDStaticText;
+		wxStaticText* m_staticText74;
+		wxStaticText* DateOfRunStaticText;
+		wxStaticText* m_staticText93;
+		wxStaticText* TimeOfRunStaticText;
+		wxStaticText* m_staticText83;
+		wxStaticText* VoltageStaticText;
+		wxStaticText* m_staticText82;
+		wxStaticText* CsStaticText;
+		wxStaticText* m_staticText78;
+		wxStaticText* PixelSizeStaticText;
+		wxStaticText* m_staticText96;
+		wxStaticText* AmplitudeContrastStaticText;
+		wxStaticText* m_staticText85;
+		wxStaticText* BoxSizeStaticText;
+		wxStaticText* m_staticText87;
+		wxStaticText* MinResStaticText;
+		wxStaticText* m_staticText89;
+		wxStaticText* MaxResStaticText;
+		wxStaticText* m_staticText91;
+		wxStaticText* MinDefocusStaticText;
+		wxStaticText* m_staticText79;
+		wxStaticText* MaxDefocusStaticText;
+		wxStaticText* m_staticText95;
+		wxStaticText* DefocusStepStaticText;
+		wxStaticText* m_staticText99;
+		wxStaticText* RestrainAstigStaticText;
+		wxStaticText* ToleratedAstigLabel;
+		wxStaticText* ToleratedAstigStaticText;
+		wxStaticText* m_staticText103;
+		wxStaticText* AddtionalPhaseShiftStaticText;
+		wxStaticText* MinPhaseShiftLabel;
+		wxStaticText* MinPhaseShiftStaticText;
+		wxStaticText* MaxPhaseShiftLabel;
+		wxStaticText* MaxPhaseshiftStaticText;
+		wxStaticText* PhaseShiftStepLabel;
+		wxStaticText* PhaseShiftStepStaticText;
+		wxStaticLine* m_staticline30;
+		ShowCTFResultsPanel* ResultPanel;
+		wxButton* AddToGroupButton;
+		wxComboBox* GroupComboBox;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		FindCTFResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+		~FindCTFResultsPanel();
+		
+		void m_splitter4OnIdle( wxIdleEvent& )
+		{
+			m_splitter4->SetSashPosition( 500 );
+			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindCTFResultsPanel::m_splitter4OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class MovieAlignResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
 class MovieAlignResultsPanel : public wxPanel 
@@ -99,6 +216,9 @@ class MovieAlignResultsPanel : public wxPanel
 		wxButton* PreviousButton;
 		wxButton* NextButton;
 		wxPanel* RightPanel;
+		wxToggleButton* JobDetailsToggleButton;
+		wxStaticLine* m_staticline28;
+		wxPanel* JobDetailsPanel;
 		wxFlexGridSizer* InfoSizer;
 		wxStaticText* m_staticText72;
 		wxStaticText* AlignmentIDStaticText;
@@ -145,6 +265,7 @@ class MovieAlignResultsPanel : public wxPanel
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
@@ -262,7 +383,7 @@ class MovieImportDialog : public wxDialog
 		wxListCtrl* PathListCtrl;
 		wxButton* m_button10;
 		wxButton* m_button11;
-		wxButton* ClearButton;
+		wxButton* s;
 		wxStaticLine* m_staticline7;
 		wxStaticText* m_staticText19;
 		wxComboBox* VoltageCombo;
@@ -427,6 +548,9 @@ class RunProfilesPanel : public wxPanel
 		wxButton* AddProfileButton;
 		wxButton* RenameProfileButton;
 		wxButton* RemoveProfileButton;
+		wxStaticLine* m_staticline26;
+		wxButton* ImportButton;
+		wxButton* ExportButton;
 		wxPanel* CommandsPanel;
 		wxStaticLine* m_staticline15;
 		wxStaticText* m_staticText34;
@@ -460,6 +584,8 @@ class RunProfilesPanel : public wxPanel
 		virtual void OnAddProfileClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRenameProfileClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveProfileClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ManagerTextChanged( wxCommandEvent& event ) { event.Skip(); }
 		virtual void GuiAddressAutoClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void GuiAddressSpecifyClick( wxCommandEvent& event ) { event.Skip(); }
@@ -482,7 +608,7 @@ class RunProfilesPanel : public wxPanel
 		
 		void m_splitter5OnIdle( wxIdleEvent& )
 		{
-			m_splitter5->SetSashPosition( 300 );
+			m_splitter5->SetSashPosition( 349 );
 			m_splitter5->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RunProfilesPanel::m_splitter5OnIdle ), NULL, this );
 		}
 	
@@ -629,8 +755,6 @@ class FindCTFPanel : public JobPanel
 		NumericTextCtrl* PhaseShiftStepNumericCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
-		wxPanel* ResultsPanel;
-		wxStaticText* m_staticText203;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
 		wxStaticLine* m_staticline11;
@@ -659,6 +783,7 @@ class FindCTFPanel : public JobPanel
 		
 	
 	public:
+		ShowCTFResultsPanel* CTFResultsPanel;
 		
 		FindCTFPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~FindCTFPanel();
@@ -741,8 +866,10 @@ class FilterDialog : public wxDialog
 		wxBoxSizer* MainBoxSizer;
 		wxStaticText* m_staticText64;
 		wxStaticLine* m_staticline18;
+		wxScrolledWindow* FilterScrollPanel;
 		wxBoxSizer* FilterBoxSizer;
 		wxStaticLine* m_staticline19;
+		wxScrolledWindow* SortScrollPanel;
 		wxGridSizer* SortSizer;
 		wxStaticLine* m_staticline21;
 		wxButton* CancelButton;

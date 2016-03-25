@@ -8,9 +8,7 @@ class MyFilterDialog : public FilterDialog
 public :
 
 	MyFilterDialog (wxWindow *parent);
-	virtual void OnCancelClick( wxCommandEvent& event );
-	virtual void OnFilterClick( wxCommandEvent& event );
-	virtual void BuildSearchCommand() = 0;
+
 	void SizeAndPosition();
 };
 
@@ -20,6 +18,9 @@ class MyMovieFilterDialog : public MyFilterDialog
 	public:
 
 		MyMovieFilterDialog( wxWindow* parent );
+
+		void OnCancelClick( wxCommandEvent& event );
+		void OnFilterClick( wxCommandEvent& event );
 		int ReturnNumberChecked();
 		void BuildSearchCommand();
 
@@ -49,6 +50,9 @@ class MyCTFFilterDialog : public MyFilterDialog
 public:
 
 	MyCTFFilterDialog( wxWindow* parent );
+
+	void OnCancelClick( wxCommandEvent& event );
+	void OnFilterClick( wxCommandEvent& event );
 	int ReturnNumberChecked();
 	void BuildSearchCommand();
 
@@ -58,15 +62,15 @@ public:
 	IntegerFilterItem *estimation_id_filter;
 	DateFilterItem *date_of_run_filter;
 	IntegerFilterItem *job_id_filter;
-	FloatFilterItem *defocus_filter;
-	FloatFilterItem *astigmatism_filter;
-	FloatFilterItem *astigmatism_angle_filter;
-	FloatFilterItem *score_filter;
-	FloatFilterItem *ring_resolution_filter;
-	FloatFilterItem *alias_resolution_filter;
-	FloatFilterItem *additional_phase_shift_filter;
+	FloatFilterItem *defocus;
+	FloatFilterItem *astigmatism;
+	FloatFilterItem *astigmatism_angle;
+	FloatFilterItem *score;
+	FloatFilterItem *ring_resolution;
+	FloatFilterItem *alias_resolution;
+	FloatFilterItem *additional_phase_shift;
 	FloatFilterItem *voltage_filter;
-	FloatFilterItem *spherical_aberration_filter;
+	FloatFilterItem *spherical_aberation_filter;
 	FloatFilterItem *pixel_size_filter;
 	FloatFilterItem *amplitude_contrast_filter;
 	IntegerFilterItem *box_size_filter;
@@ -92,7 +96,7 @@ public:
 	wxRadioButton *alias_resolution_radio;
 	wxRadioButton *additional_phase_shift_radio;
 	wxRadioButton *voltage_radio;
-	wxRadioButton *spherical_aberration_radio;
+	wxRadioButton *spherical_abeeration_radio;
 	wxRadioButton *pixel_size_radio;
 	wxRadioButton *amplitude_contrast_radio;
 	wxRadioButton *box_size_radio;

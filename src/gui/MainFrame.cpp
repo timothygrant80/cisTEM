@@ -7,10 +7,12 @@
 
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
+extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
+extern MyFindCTFResultsPanel *ctf_results_panel;
 
 
 MyMainFrame::MyMainFrame( wxWindow* parent )
@@ -23,8 +25,23 @@ MainFrame( parent )
 	//movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
 	socket_server = NULL;
-
 	SetupServer();
+
+	int screen_x_size = wxSystemSettings::GetMetric ( wxSYS_SCREEN_X );
+	int screen_y_size = wxSystemSettings::GetMetric ( wxSYS_SCREEN_Y );
+	int x_offset;
+	int y_offset;
+
+	if (screen_x_size >= 1920 && screen_y_size >= 1080)
+	{
+		x_offset = (screen_x_size - 1800) / 2;
+		y_offset = (screen_y_size - 1180) / 2;
+
+		if (x_offset < 0) x_offset = 0;
+		if (y_offset < 0) y_offset = 0;
+
+		SetSize(x_offset, y_offset, 1600, 980);
+	}
 
 
 }
@@ -173,10 +190,17 @@ void MyMainFrame::DirtyImageGroups()
 {
 	image_asset_panel->is_dirty = true;
 	findctf_panel->group_combo_is_dirty = true;
+	ctf_results_panel->group_combo_is_dirty = true;
+}
+
+void MyMainFrame::DirtyParticlePositionGroups()
+{
+	particle_position_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyRunProfiles()
 {
+	run_profiles_panel->is_dirty = true;
 	align_movies_panel->run_profiles_are_dirty = true;
 	findctf_panel->run_profiles_are_dirty = true;
 }
@@ -292,20 +316,24 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 5, this);
+		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 7, this);
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(1);
 		image_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(2);
-		run_profiles_panel->ImportAllFromDatabase();
+		particle_position_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(3);
-		//align_movies_panel->Refresh();
-		DirtyEverything();
+		run_profiles_panel->ImportAllFromDatabase();
 		my_dialog->Update(4);
-		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
+		//align_movies_panel->Refresh();
 		my_dialog->Update(5);
+		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
+		my_dialog->Update(6);
+		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
+		my_dialog->Update(7);
+		DirtyEverything();
 		my_dialog->Destroy();
 	}
 	else
@@ -329,9 +357,11 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 
 	movie_asset_panel->Reset();
 	image_asset_panel->Reset();
+	particle_position_asset_panel->Reset();
 	RecalculateAssetBrowser();
 	run_profiles_panel->Reset();
 	movie_results_panel->Clear();
+	ctf_results_panel->Clear();
 
 
 	SetTitle("ProjectX");

@@ -1,15 +1,14 @@
-class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
+class MyFindCTFResultsPanel : public FindCTFResultsPanel
 {
 	public:
-		MyMovieAlignResultsPanel( wxWindow* parent );
+		MyFindCTFResultsPanel( wxWindow* parent );
 
-
-		void JunkMe(wxCommandEvent & event);
+		/*
 		void OnDefineFilterClick( wxCommandEvent& event );
 		void OnAddToGroupClick( wxCommandEvent& event );
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );
-		void OnUpdateUI( wxUpdateUIEvent& event );
+
 		void OnShowTypeRadioBoxChange(wxCommandEvent& event);
 		void OnJobDetailsToggle( wxCommandEvent& event );
 
@@ -18,16 +17,32 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
 
 		int GetFilter();
 
-		void OnValueChanged(wxDataViewEvent &event);
-		void DrawCurveAndFillDetails(int row, int column);
+
+
 		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
+
+		void Clear();
+*/
+		void OnDefineFilterClick( wxCommandEvent& event );
+		void OnUpdateUI( wxUpdateUIEvent& event );
+		void OnValueChanged(wxDataViewEvent &event);
+		void FillGroupComboBox();
 		void FillBasedOnSelectCommand(wxString wanted_command);
+		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
+		void FillResultsPanelAndDetails(int row, int column);
+		void OnNextButtonClick( wxCommandEvent& event );
+		void OnPreviousButtonClick( wxCommandEvent& event );
+		void OnAddToGroupClick( wxCommandEvent& event );
+		void OnJobDetailsToggle( wxCommandEvent& event );
 		void Clear();
 
-		void FillGroupComboBox();
+		int GetFilter();
+		void OnAllMoviesSelect( wxCommandEvent& event );
+		void OnByFilterSelect( wxCommandEvent& event );
 
-		int *alignment_job_ids;
-		int number_of_alignmnet_jobs;
+
+		int *ctf_estimation_job_ids;
+		int number_of_ctf_estimation_jobs;
 		int *per_row_asset_id;
 		int *per_row_array_position;
 		int number_of_assets;

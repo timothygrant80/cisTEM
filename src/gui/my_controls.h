@@ -2,6 +2,7 @@
 #include <wx/checkbox.h>
 #include <wx/spinctrl.h>
 #include <wx/datectrl.h>
+#include <wx/filedlg.h>
 
 
 #ifndef __MyControls__
@@ -121,6 +122,18 @@ public :
 	int GetLowValue();
 	int GetHighValue();
 
+};
+
+// Dialogs..
+
+class ProperOverwriteCheckSaveDialog : public wxFileDialog
+{
+public :
+	wxString extension_lowercase;
+	wxString extension_uppercase;
+	ProperOverwriteCheckSaveDialog(wxWindow *parent, const wxString &message, const wxString &wildcard, const wxString wanted_extension);
+	~ProperOverwriteCheckSaveDialog();
+	void OnSave( wxCommandEvent& event);
 };
 
 #endif

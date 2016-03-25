@@ -449,4 +449,39 @@ int DateFilterItem::GetHighValue()
 
 
 
+ProperOverwriteCheckSaveDialog::ProperOverwriteCheckSaveDialog(wxWindow *parent, const wxString &message, const wxString &wildcard, const wxString wanted_extension)
+:
+wxFileDialog(parent, message, wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr)
+{
+
+	extension_lowercase = wanted_extension.Lower();
+	extension_uppercase = wanted_extension.Upper();
+	Bind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+
+};
+
+ProperOverwriteCheckSaveDialog::~ProperOverwriteCheckSaveDialog()
+{
+	Unbind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+}
+
+void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
+{
+	wxString current_path = GetPath();
+
+	if (current_path.EndsWith(extension_lowercase) == false && current_path.EndsWith(extension_uppercase) == false)
+	{
+		current_path += extension_lowercase;
+	}
+	SetPath(current_path);
+
+	if (DoesFileExist(current_path) == true)
+	{
+		wxMessageDialog check_dialog(this, wxString::Format("The File :-\n\n\"%s\"\n\nAlready exists, Do you want to OVERWRITE it?", GetPath()), "Confirm", wxYES_NO|wxICON_WARNING);
+
+		if (check_dialog.ShowModal() ==  wxID_YES) event.Skip();
+	}
+	else event.Skip();
+}
+
 

@@ -12,9 +12,12 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 
 	// Create a mpFXYVector layer for the plot
 
-	current_x_shift_vector_layer = new mpFXYVector((""));
-	current_y_shift_vector_layer = new mpFXYVector((""));
+	current_x_shift_vector_layer = new mpFXYVector(("X-Shift"));
+	current_y_shift_vector_layer = new mpFXYVector(("Y-Shift"));
 	//average_shift_vector_layer = new mpFXYVector((""));
+
+	current_x_shift_vector_layer->ShowName(false);
+	current_y_shift_vector_layer->ShowName(false);
 
 	wxPen vectorpen(*wxBLUE, 2, wxSOLID);
 	wxPen redvectorpen(*wxRED, 2, wxSOLID);
@@ -32,20 +35,25 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 
 	current_plot_window = new mpWindow( this, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
 
-	mpScaleX* current_xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
-	mpScaleY* current_yaxis = new mpScaleY(wxT("Shifts (Å)"), mpALIGN_LEFT, true);
+	current_xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
+	current_yaxis = new mpScaleY(wxT("Shifts (Å)"), mpALIGN_LEFT, true);
+
+	legend = new mpBottomInfoLegend;
+	title = new mpTitle("");
 
     current_xaxis->SetFont(graphFont);
     current_yaxis->SetFont(graphFont);
     current_xaxis->SetDrawOutsideMargins(false);
     current_yaxis->SetDrawOutsideMargins(false);
 
-    current_plot_window->SetMargins(30, 30, 60, 80);
+    current_plot_window->SetMargins(30, 30, 100, 80);
 
     current_plot_window->AddLayer(current_xaxis);
     current_plot_window->AddLayer(current_yaxis);
 	current_plot_window->AddLayer(current_x_shift_vector_layer);
 	current_plot_window->AddLayer(current_y_shift_vector_layer);
+	current_plot_window->AddLayer(legend);
+	current_plot_window->AddLayer(title);
 
 	GraphSizer->Add(current_plot_window, 1, wxEXPAND );
     current_plot_window->EnableDoubleBuffer(true);
@@ -56,14 +64,30 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, false);
+	current_plot_window->SetLayerVisible(4, false);
+	current_plot_window->SetLayerVisible(5, false);
 
 
+}
+
+UnblurResultsPanel::~UnblurResultsPanel()
+{
+	delete current_plot_window;
+	//delete legend;
+	//delete title;
+	//delete current_x_shift_vector_layer;
+	//delete current_y_shift_vector_layer;
+	//delete current_xaxis;
+	//delete current_yaxis;
 }
 
 void UnblurResultsPanel::Clear()
 {
 	current_plot_window->Freeze();
+
 	current_x_shift_vector_layer->Clear();
+	current_y_shift_vector_layer->Clear();
+
 	current_accumulated_dose_data.clear();
 	current_x_movement_data.clear();
 	current_y_movement_data.clear();
@@ -72,6 +96,8 @@ void UnblurResultsPanel::Clear()
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, false);
+	current_plot_window->SetLayerVisible(4, false);
+	current_plot_window->SetLayerVisible(5, false);
 	current_plot_window->Thaw();
 
 }
@@ -96,6 +122,8 @@ void UnblurResultsPanel::Draw()
 	current_plot_window->SetLayerVisible(1, true);
 	current_plot_window->SetLayerVisible(2, true);
 	current_plot_window->SetLayerVisible(3, true);
+	current_plot_window->SetLayerVisible(4, true);
+	current_plot_window->SetLayerVisible(5, true);
 
 	current_plot_window->Thaw();
 }

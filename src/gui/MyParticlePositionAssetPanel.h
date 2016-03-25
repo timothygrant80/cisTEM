@@ -1,15 +1,14 @@
-class MyMovieAssetPanel : public MyAssetParentPanel
+class MyParticlePositionAssetPanel : public MyAssetParentPanel
 {
 
 	protected:
 
-		void DirtyGroups() {main_frame->DirtyMovieGroups();};
-
+		void DirtyGroups() {main_frame->DirtyParticlePositionGroups();};
 
 	public:
 
-		MyMovieAssetPanel( wxWindow* parent );
-		~MyMovieAssetPanel();
+		MyParticlePositionAssetPanel( wxWindow* parent );
+		~MyParticlePositionAssetPanel();
 
 		void ImportAssetClick( wxCommandEvent& event );
 
@@ -25,14 +24,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
-		double ReturnAssetPixelSize(long wanted_asset);
-		double ReturnAssetAccelerationVoltage(long wanted_asset);
-		double ReturnAssetDosePerFrame(long wanted_asset);
-		double ReturnAssetPreExposureAmount(long wanted_asset);
-		float ReturnAssetSphericalAbberation(long wanted_asset);
-		int ReturnAssetID(long wanted_asset);
-
-		MovieAsset* ReturnAssetPointer(long wanted_asset);
+		ParticlePositionAsset* ReturnAssetPointer(long wanted_asset);
 
 };
 

@@ -106,6 +106,7 @@ class WXDLLIMPEXP_MATHPLOT mpScaleX;
 class WXDLLIMPEXP_MATHPLOT mpScaleY;
 class WXDLLIMPEXP_MATHPLOT mpWindow;
 class WXDLLIMPEXP_MATHPLOT mpText;
+class WXDLLIMPEXP_MATHPLOT mpTitle;
 class WXDLLIMPEXP_MATHPLOT mpPrintout;
 
 /** Command IDs used by mpWindow */
@@ -455,8 +456,42 @@ public:
         @sa mpLayer::Plot */
     virtual void   Plot(wxDC & dc, mpWindow & w);
 
+
 protected:
     
+};
+
+
+class WXDLLIMPEXP_MATHPLOT mpBottomInfoLegend : public mpInfoLegend
+{
+public:
+    /** Default constructor */
+    mpBottomInfoLegend();
+
+    /** Complete constructor, setting initial rectangle and background brush.
+        @param rect The initial bounding rectangle.
+        @param brush The wxBrush to be used for box background: default is transparent
+        @sa mpInfoLayer::mpInfoLayer */
+    mpBottomInfoLegend(wxRect rect, const wxBrush* brush = wxTRANSPARENT_BRUSH);
+
+    /**  Default destructor */
+    ~mpBottomInfoLegend();
+
+    /** Updates the content of the info box. Unused in this class.
+        @param w parent mpWindow from which to obtain information
+        @param event The event which called the update. */
+    virtual void UpdateInfo(mpWindow& w, wxEvent& event);
+
+    /** Plot method.
+        @param dc the device content where to plot
+        @param w the window to plot
+        @sa mpLayer::Plot */
+    virtual void   Plot(wxDC & dc, mpWindow & w);
+
+    int my_line_width;
+
+protected:
+
 };
 
 
@@ -1356,6 +1391,29 @@ protected:
     DECLARE_DYNAMIC_CLASS(mpText)
 };
 
+//-----------------------------------------------------------------------------
+// mpTitle - Tim Grant
+//-----------------------------------------------------------------------------
+
+class WXDLLIMPEXP_MATHPLOT mpTitle : public mpLayer
+{
+public:
+    /** @param name text to be drawn in the plot
+        @param offsetx holds offset for the X location in percentage (0-100)
+        @param offsety holds offset for the Y location in percentage (0-100) */
+    mpTitle(wxString name = wxT("Title"));
+
+    /** Text Layer plot handler.
+        This implementation will plot text adjusted to the visible area. */
+    virtual void Plot(wxDC & dc, mpWindow & w);
+
+    /** mpText should not be used for scaling decisions. */
+    virtual bool HasBBox() { return FALSE; }
+
+protected:
+
+    DECLARE_DYNAMIC_CLASS(mpText)
+};
 
 //-----------------------------------------------------------------------------
 // mpPrintout - provided by Davide Rondini

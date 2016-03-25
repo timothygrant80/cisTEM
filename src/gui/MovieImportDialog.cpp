@@ -65,6 +65,8 @@ void MyMovieImportDialog::AddDirectoryClick( wxCommandEvent& event )
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
 
+    	all_files.Sort();
+
     	PathListCtrl->Freeze();
 
     	for (unsigned long counter = 0; counter < all_files.GetCount(); counter++)
@@ -179,8 +181,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(movie_asset_panel->current_asset_number, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
-						movie_asset_panel->current_asset_number++;
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
 
 					}
 					else

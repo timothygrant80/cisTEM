@@ -5,6 +5,7 @@ extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
+extern MyFindCTFResultsPanel *ctf_results_panel;
 
 MyFindCTFPanel::MyFindCTFPanel( wxWindow* parent )
 :
@@ -43,7 +44,11 @@ FindCTFPanel( parent )
 	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
 	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 3.15);
 
+	result_bitmap.Create(1,1, 24);
+	time_of_last_result_update = time(NULL);
+
 }
+
 
 void MyFindCTFPanel::OnInfoURL(wxTextUrlEvent& event)
 {
@@ -559,30 +564,30 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		number_of_previous_estimations =  main_frame->current_project.database.ReturnNumberOfPreviousCTFEstimationsByAssetID(current_asset_id);
 
 		buffer_filename = main_frame->current_project.ctf_asset_directory.GetFullPath();
-		buffer_filename += wxString::Format("/%s_CTF_%i.mrc", image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)), current_asset_id, number_of_previous_estimations);
+		buffer_filename += wxString::Format("/%s_CTF_%i.mrc", wxFileName::StripExtension(image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))), number_of_previous_estimations);
 
 		output_diagnostic_filename = buffer_filename.ToStdString();
 
 
-		my_job_package.AddJob("sbisffffiffffffbfff",	input_filename,
-														input_is_a_movie,
-														number_of_frames_to_average,
-														output_diagnostic_filename,
-														pixel_size,
-														acceleration_voltage,
-														spherical_aberration,
-														amplitude_contrast,
-														box_size,
-														minimum_resolution,
-														maximum_resolution,
-														minimum_defocus,
-														maximum_defocus,
-														defocus_search_step,
-														astigmatism_tolerance,
-														find_additional_phase_shift,
-														minimum_additional_phase_shift,
-														maximum_additional_phase_shift,
-														additional_phase_shift_search_step);
+		my_job_package.AddJob("sbisffffiffffffbfff",	input_filename.c_str(), // 0
+														input_is_a_movie, // 1
+														number_of_frames_to_average, //2
+														output_diagnostic_filename.c_str(), // 3
+														pixel_size, // 4
+														acceleration_voltage, // 5
+														spherical_aberration, // 6
+														amplitude_contrast, // 7
+														box_size, // 8
+														minimum_resolution, // 9
+														maximum_resolution, // 10
+														minimum_defocus, // 11
+														maximum_defocus, // 12
+														defocus_search_step, // 13
+														astigmatism_tolerance, // 14
+														find_additional_phase_shift, // 15
+														minimum_additional_phase_shift, // 16
+														maximum_additional_phase_shift, // 17
+														additional_phase_shift_search_step); // 18
 	}
 
 	// launch a controller
@@ -624,7 +629,7 @@ my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_prof
 		ExpertPanel->Show(false);
 		InfoPanel->Show(false);
 		OutputTextPanel->Show(true);
-		ResultsPanel->Show(true);
+		CTFResultsPanel->Show(true);
 
 		ExpertToggleButton->Enable(false);
 		GroupComboBox->Enable(false);
@@ -649,7 +654,7 @@ void MyFindCTFPanel::FinishButtonClick( wxCommandEvent& event )
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
-	ResultsPanel->Show(false);
+	CTFResultsPanel->Show(false);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 
@@ -657,6 +662,9 @@ void MyFindCTFPanel::FinishButtonClick( wxCommandEvent& event )
 	else ExpertPanel->Show(false);
 	running_job = false;
 	Layout();
+
+	CTFResultsPanel->CTF2DResultsPanel->should_show = false;
+	CTFResultsPanel->CTF2DResultsPanel->Refresh();
 
 
 
@@ -871,9 +879,9 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	int frame_counter;
 
 	long current_time = time(NULL);
+	wxString bitmap_string;
+	wxString plot_string;
 
-
-	wxPrintf ("Got a results DF1 = %f, DF2 = %f, AA = %f, PS = %f, SC = %f, TF = %f, AL = %f\n");
 	// results should be ..
 
 	// Defocus 1 (Angstroms)
@@ -884,21 +892,9 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	// Resolution (Angstroms) to which Thon rings are well fit by the CTF
 	// Reolution (Angstroms) at which aliasing was detected
 
-	if (current_time - time_of_last_result_update > 1)
+	if (current_time - time_of_last_result_update > 5)
 	{
-
-//		GraphPanel->Draw();
-
-		//if (graph_is_hidden == true)
-		{
-	//		GraphPanel->Show(true);
-	//		Layout();
-	//		graph_is_hidden = false;
-		}
-
-		time_of_last_result_update = current_time;
-
-
+		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[15].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6]);		time_of_last_result_update = time(NULL);
 	}
 
 	my_job_tracker.MarkJobFinished();
@@ -912,7 +908,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	{
 		// job has really finished, so we can write to the database...
 
-	//	WriteResultToDataBase();
+		WriteResultToDataBase();
 
 		if (buffered_results != NULL)
 		{
@@ -931,164 +927,164 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 }
 
-/*
 
 
-void MyAlignMoviesPanel::WriteResultToDataBase()
+
+void MyFindCTFPanel::WriteResultToDataBase()
 {
 
 	long counter;
 	int frame_counter;
 	int array_location;
-	int parent_id;
 	bool have_errors = false;
+	int image_asset_id;
+	int current_asset;
+	bool restrain_astigmatism;
+	bool find_additional_phase_shift;
+	float min_phase_shift;
+	float max_phase_shift;
+	float phase_shift_step;
+	float tolerated_astigmatism;
 	wxString current_table_name;
-	ImageAsset temp_asset;
+
 
 	// find the current highest alignment number in the database, then increment by one
 
-	int starting_alignment_id = main_frame->current_project.database.ReturnHighestAlignmentID();
-	int alignment_id = starting_alignment_id + 1;
-	int alignment_job_id =  main_frame->current_project.database.ReturnHighestAlignmentJobID() + 1;
+	int starting_ctf_estimation_id = main_frame->current_project.database.ReturnHighestFindCTFID();
+	int ctf_estimation_id = starting_ctf_estimation_id + 1;
+	int ctf_estimation_job_id =  main_frame->current_project.database.ReturnHighestFindCTFJobID() + 1;
 
 	// loop over all the jobs, and add them..
-
-	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 19, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 29,
+			                                                                              "CTF_ESTIMATION_ID",
+																						  "CTF_ESTIMATION_JOB_ID",
+																						  "DATETIME_OF_RUN",
+																						  "IMAGE_ASSET_ID",
+																						  "ESTIMATED_ON_MOVIE_FRAMES",
+																						  "VOLTAGE",
+																						  "SPHERICAL_ABERRATION",
+																						  "PIXEL_SIZE",
+																						  "AMPLITUDE_CONTRAST",
+																						  "BOX_SIZE",
+																						  "MIN_RESOLUTION",
+																						  "MAX_RESOLUTION",
+																						  "MIN_DEFOCUS",
+																						  "MAX_DEFOCUS",
+																						  "DEFOCUS_STEP",
+																						  "RESTRAIN_ASTIGMATISM",
+																						  "TOLERATED_ASTIGMATISM",
+																						  "FIND_ADDITIONAL_PHASE_SHIFT",
+																						  "MIN_PHASE_SHIFT",
+																						  "MAX_PHASE_SHIFT",
+																						  "PHASE_SHIFT_STEP",
+																						  "DEFOCUS1",
+																						  "DEFOCUS2",
+																						  "DEFOCUS_ANGLE",
+																						  "ADDITIONAL_PHASE_SHIFT",
+																						  "SCORE",
+																						  "DETECTED_RING_RESOLUTION",
+																						  "DETECTED_ALIAS_RESOLUTION",
+																						  "OUTPUT_DIAGNOSTIC_FILE");
 
 	wxDateTime now = wxDateTime::Now();
+
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiii", alignment_id,
-				                                                                    (long int) now.GetAsDOS(),
-																					alignment_job_id,
-																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)),
-																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument(), // output_filename
-																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
-																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
-																					my_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
-																					my_job_package.jobs[counter].arguments[15].ReturnFloatArgument(), // current_pre_exposure
-																					my_job_package.jobs[counter].arguments[3].ReturnFloatArgument(), // min shift
-																					my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // max shift
-																					my_job_package.jobs[counter].arguments[5].ReturnBoolArgument(), // should dose filter
-																					my_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
-																					my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
-																					my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
-																					int(my_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
-																					my_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
-																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
-																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument() // vertical mask
-																					);
+		image_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->asset_id;
 
-		alignment_id++;
+		if (my_job_package.jobs[counter].arguments[14].ReturnFloatArgument() < 0)
+		{
+			restrain_astigmatism = false;
+			tolerated_astigmatism = 0;
+		}
+		else
+		{
+			restrain_astigmatism = true;
+			tolerated_astigmatism = my_job_package.jobs[counter].arguments[14].ReturnFloatArgument();
+		}
+
+		if ( my_job_package.jobs[counter].arguments[15].ReturnBoolArgument() == true)
+		{
+			find_additional_phase_shift = true;
+			min_phase_shift = my_job_package.jobs[counter].arguments[16].ReturnFloatArgument();
+			max_phase_shift = my_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
+			phase_shift_step = my_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
+		}
+		else
+		{
+			find_additional_phase_shift = false;
+			min_phase_shift = 0;
+			max_phase_shift = 0;
+			phase_shift_step = 0;
+		}
 
 
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrt", ctf_estimation_id,
+																					 ctf_estimation_job_id,
+																					 (long int) now.GetAsDOS(),
+																					 image_asset_id,
+																					 my_job_package.jobs[counter].arguments[1].ReturnBoolArgument(), // input_is_a_movie
+																					 my_job_package.jobs[counter].arguments[5].ReturnFloatArgument(), // voltage
+																					 my_job_package.jobs[counter].arguments[6].ReturnFloatArgument(), // spherical_aberration
+																					 my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // pixel_size
+																					 my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // amplitude contrast
+																					 my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // box_size
+																					 my_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // min resolution
+																					 my_job_package.jobs[counter].arguments[10].ReturnFloatArgument(),  // max resolution
+																					 my_job_package.jobs[counter].arguments[11].ReturnFloatArgument(), // min defocus
+																					 my_job_package.jobs[counter].arguments[12].ReturnFloatArgument(), // max defocus
+																					 my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // defocus_step
+																					 restrain_astigmatism,
+																					 tolerated_astigmatism,
+																					 find_additional_phase_shift,
+																					 min_phase_shift,
+																					 max_phase_shift,
+																					 phase_shift_step,
+																					 buffered_results[counter].result_data[0], // defocus1
+																					 buffered_results[counter].result_data[1], // defocus2
+																					 buffered_results[counter].result_data[2], // defocus angle
+																					 buffered_results[counter].result_data[3], // additional phase shift
+																					 buffered_results[counter].result_data[4], // score
+																					 buffered_results[counter].result_data[5], // detected ring resolution
+																					 buffered_results[counter].result_data[6], // detected aliasing resolution
+																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str()); // output diagnostic filename																 );
+		ctf_estimation_id++;
 	}
 
 	main_frame->current_project.database.EndBatchInsert();
 
-	// now need to add the results of the job..
+	// we need to update the image assets with the correct CTF estimation number..
 
-	alignment_id = starting_alignment_id + 1;
-
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-		current_table_name = wxString::Format("MOVIE_ALIGNMENT_PARAMETERS_%i", alignment_id);
-		main_frame->current_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
-		main_frame->current_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
-
-		for (frame_counter = 0; frame_counter < buffered_results[counter].result_size / 2; frame_counter++)
-		{
-			main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter +  buffered_results[counter].result_size / 2]);
-		}
-
-		main_frame->current_project.database.EndBatchInsert();
-		alignment_id++;
-
-	}
-
-	// now we need to add the resulting image files as image assets..
-
-	// for adding to the database..
+	ctf_estimation_id = starting_ctf_estimation_id + 1;
 	main_frame->current_project.database.BeginImageAssetInsert();
 
-	MyErrorDialog *my_error = new MyErrorDialog(this);
-	alignment_id = starting_alignment_id + 1;
-
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-			temp_asset.Update(my_job_package.jobs[counter].arguments[1].ReturnStringArgument());
+		current_asset = image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter);
 
-			if (temp_asset.is_valid == true)
-			{
-				parent_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
+		main_frame->current_project.database.AddNextImageAsset(image_asset_panel->ReturnAssetPointer(current_asset)->asset_id,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->filename.GetFullPath(),
+															   image_asset_panel->ReturnAssetPointer(current_asset)->position_in_stack,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->parent_id,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->alignment_id,
+															   ctf_estimation_id,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->x_size,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->y_size,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->microscope_voltage,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->pixel_size,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->spherical_aberration);
 
-				// is this image (or a previous version) already an asset?
-
-				if (array_location == -1) // we don't already have an asset from this movie..
-				{
-					temp_asset.asset_id = image_asset_panel->current_asset_number;
-					temp_asset.parent_id = parent_id;
-					temp_asset.alignment_id = alignment_id;
-					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					temp_asset.pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
-					temp_asset.position_in_stack = 1;
-					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
-					image_asset_panel->AddAsset(&temp_asset);
-					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+		ctf_estimation_id++;
 
 
-				}
-				else
-				{// TODO:: Rewrite this to use return asset pointer..//
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].filename = my_job_package.jobs[counter].arguments[1].ReturnStringArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
-					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
-							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            my_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
-																											parent_id,
-																											alignment_id,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
-				}
-
-
-				image_asset_panel->current_asset_number++;
-			}
-			else
-			{
-				my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
-				have_errors = true;
-			}
-
-			alignment_id++;
 	}
 
 	main_frame->current_project.database.EndImageAssetInsert();
-
-	image_asset_panel->is_dirty = true;
-	movie_results_panel->is_dirty = true;
-
-
-	if (have_errors == true)
-	{
-		my_error->ShowModal();
-	}
-
-	my_error->Destroy();
-
+	ctf_results_panel->is_dirty = true;
 
 }
 
-
+/*
 void MyAlignMoviesPanel::UpdateProgressBar()
 {
 	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();

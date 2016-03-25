@@ -813,6 +813,8 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 	if (current_time - time_of_last_graph_update > 1)
 	{
 		GraphPanel->Clear();
+		wxFileName current_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
+		GraphPanel->title->SetName(current_filename.GetFullName());
 
 		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
 		{
@@ -891,7 +893,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				                                                                    (long int) now.GetAsDOS(),
 																					alignment_job_id,
 																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)),
-																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument(), // output_filename
+																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument().c_str(), // output_filename
 																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
 																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
 																					my_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
@@ -964,7 +966,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					temp_asset.position_in_stack = 1;
 					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					image_asset_panel->AddAsset(&temp_asset);
-					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
 
 
 				}
@@ -982,15 +984,15 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
 																											parent_id,
 																											alignment_id,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].ctf_estimation_id,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
+
+					image_asset_panel->current_asset_number++;
 				}
-
-
-				image_asset_panel->current_asset_number++;
 			}
 			else
 			{
@@ -1005,6 +1007,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	image_asset_panel->is_dirty = true;
 	movie_results_panel->is_dirty = true;
+	main_frame->DirtyImageGroups();
 
 
 	if (have_errors == true)

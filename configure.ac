@@ -26,32 +26,47 @@ if test "x$CXX" = "xicpc"; then
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
-	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -ffast-math -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	
+	#sqlite needs dl on gcc
+	
+	LIBS="$LIBS -ldl"
 fi
 
-# Static linking
-
-static_default="no"
-AC_ARG_ENABLE(static, [  --enable-static         Turn on static linking],[static_link=true],[static_link=false])
-
-AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
-
-
-# If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
-if test "x$static_link" = "xtrue"; then
-	if test "x$CXX" = "xicpc"; then
-		LDFLAGS="$LDFLAGS -static -static-intel"
-	else
-		LDFLAGS="$LDFLAGS -static"
-	fi
-fi
-
+# MKL
 
 AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
   if test "$enableval" = no; then
         use_mkl=0
   fi])
+
+
+# Static linking
+
+static_link="false"
+
+AC_ARG_ENABLE(staticmode, [  --enable-staticmode     Link statically [[default=no]]],[
+  if test "$enableval" = yes; then
+	static_link="true"
+  fi
+  ])
+
+	
+AC_MSG_NOTICE(static_link = $static_link)
+AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
+
+
+#If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
+if test "x$static_link" = "xtrue"; then
+ if test "x$CXX" = "xicpc"; then
+ 	LDFLAGS="$LDFLAGS -static -static-intel"
+ else
+	LDFLAGS="$LDFLAGS -static"
+ fi
+fi
+
+
 
 # wx-config 
 
@@ -98,16 +113,16 @@ AC_ARG_WITH(fftw-dir,
 
 #sqlite3-dir
 
-AC_ARG_WITH(sqlite3-dir,
-[[  --with-sqlite3-dir=DIR  Declare the root directory of sqlite3, if its
-                          current location is not system accessible ]],
-[
-    if test "$withval" != "yes" -a "$withval" != ""; then
-        CPPFLAGS="$CPPFLAGS -I$withval/include -L$withval/lib"
-        CXXFLAGS="$CXXFLAGS -I$withval/include -L$withval/lib"
-        LDFLAGS="$LDFLAGS -L$withval/lib"
-    fi
-])
+#AC_ARG_WITH(sqlite3-dir,
+#[[  --with-sqlite3-dir=DIR  Declare the root directory of sqlite3, if its
+#                          current location is not system accessible ]],
+#[
+#    if test "$withval" != "yes" -a "$withval" != ""; then
+#        CPPFLAGS="$CPPFLAGS -I$withval/include -L$withval/lib"
+#        CXXFLAGS="$CXXFLAGS -I$withval/include -L$withval/lib"
+#        LDFLAGS="$LDFLAGS -L$withval/lib"
+#    fi
+#])
 
 wxversion=0
 
@@ -164,7 +179,7 @@ if test "x$HAVE_MKL" = "xyes"; then
 		CPPFLAGS="$CPPFLAGS -mkl"
 	fi
 	
-	if test "x$static_link" = "xyes"; then
+	if test "x$static_link" = "xtrue"; then
 	       	LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm "
 	       	#LDFLAGS="$LDFLAGS -static"
 	else

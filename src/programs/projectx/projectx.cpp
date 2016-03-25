@@ -12,6 +12,7 @@
 
 #include "../../gui/icons/movie_icon.cpp"
 #include "../../gui/icons/image_icon.cpp"
+#include "../../gui/icons/particle_position_icon.cpp"
 
 #include "../../gui/icons/movie_align_icon.cpp"
 #include "../../gui/icons/ctf_icon.cpp"
@@ -43,8 +44,10 @@ SettingsPanel *settings_panel;
 
 MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
+MyParticlePositionAssetPanel *particle_position_asset_panel;
 
 MyMovieAlignResultsPanel *movie_results_panel;
+MyFindCTFResultsPanel *ctf_results_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
 
@@ -82,14 +85,13 @@ bool MyGuiApp::OnInit()
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
+	particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
 
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 	findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
-
-
-
+	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
 
 	// Setup list books
 
@@ -107,6 +109,7 @@ bool MyGuiApp::OnInit()
 
 	wxBitmap movie_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_icon);
 	wxBitmap image_icon_bmp = wxBITMAP_PNG_FROM_DATA(image_icon);
+	wxBitmap particle_position_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
 
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
@@ -127,8 +130,10 @@ bool MyGuiApp::OnInit()
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
+	AssetsBookIconImages->Add(particle_position_icon_bmp);
 
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
+	ResultsBookIconImages->Add(ctf_icon_bmp);
 
 	SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
@@ -145,13 +150,15 @@ bool MyGuiApp::OnInit()
 	main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
 	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
 
-	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", false, 0);
+	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", true, 0);
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
+	assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
+	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
 

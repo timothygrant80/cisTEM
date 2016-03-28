@@ -20,9 +20,7 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 
 # set up initial flags
 
-if test "x$CXX" = "xicpc"; then
-	#CXXFLAGS="$CXXFLAGS -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
-	#CPPFLAGS="$CPPFLAGS -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"		
+if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
@@ -162,7 +160,6 @@ fi
 # Check whether Intel's MKL is available. If not, link against FFTW.
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
 AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
-#AC_CHECK_LIB([mkl_rt],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"])
 
 if test "x$use_mkl" = "x0"; then
 	HAVE_MKL="no"
@@ -175,20 +172,21 @@ if test "x$HAVE_MKL" = "xyes"; then
 	CXXFLAGS="$CXXFLAGS -DMKL"
 	CPPFLAGS="$CPPFLAGS -DMKL"
 
-	if test "x$CXX=" = "xicpc"; then
+	if test "x$CXX" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl"
-	fi
-	
-	if test "x$static_link" = "xtrue"; then
-	       	LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm "
-	       	#LDFLAGS="$LDFLAGS -static"
+		LIBS="$LIBS -mkl"
 	else
-		if test "x$CXX" = "xicpc"; then
-			LIBS="$LIBS -mkl -lmkl_rt"	
-		else
-       		LIBS="$LIBS -lmkl_rt"
-   			LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
-		fi
+		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+		if test "x$static_link" = "xtrue"; then
+			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
+	       	#LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl "
+	       	#LIBS="$LIBS -Wl,--start-group,${MKLROOT}/lib/intel64/libmkl_intel_lp64.a,${MKLROOT}/lib/intel64/libmkl_core.a,${MKLROOT}/lib/intel64/libmkl_sequential.a,--end-group -lpthread -lm -ldl "
+	       	#LDFLAGS="$LDFLAGS --preserve-dup-deps"
+	       	LIBS="$LIBS ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -lpthread -lm -ldl "
+	       	LIBTOOL="$LIBTOOL --preserve-dup-deps"
+	    else
+	    	LIBS="$LIBS -lmkl_rt"
+	    fi
 	fi
 else
 

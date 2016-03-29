@@ -667,7 +667,8 @@ bool CtffindApp::DoCalculation()
 					if (current_input_image->logical_x_dimension != micrograph_square_dimension || current_input_image->logical_y_dimension != micrograph_square_dimension)
 					{
 						current_input_image_square->Allocate(micrograph_square_dimension,micrograph_square_dimension,true);
-						current_input_image->ClipInto(current_input_image_square,current_input_image->ReturnAverageOfRealValues());
+						//current_input_image->ClipInto(current_input_image_square,current_input_image->ReturnAverageOfRealValues());
+						current_input_image->ClipIntoLargerRealSpace2D(current_input_image_square,current_input_image->ReturnAverageOfRealValues());
 						current_input_image->Consume(current_input_image_square);
 					}
 					//

@@ -4672,6 +4672,75 @@ void Image::Sine1D(int number_of_periods)
 	}
 }
 
+// An alternative to ClipInto which only works for 2D real space clipping into larger image. Should be faster.
+void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space,"Image must be in real space");
+	MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
+	MyDebugAssertTrue(logical_z_dimension == 1,"Image must be 2D");
+	MyDebugAssertTrue(logical_x_dimension <= other_image->logical_x_dimension && logical_y_dimension <= other_image->logical_y_dimension, "Image must be smaller than other image");
+
+	other_image->is_in_real_space = is_in_real_space;
+	other_image->object_is_centred_in_box = object_is_centred_in_box;
+
+
+	// Looping variables
+	long address_in_self = 0;
+	long address_in_other = 0;
+
+	int i;
+	int j;
+
+	// The address boudaries in the other_image for the input image data
+	// If we are clipping a (2,2) image into a (4,4) image, we should be
+	// copying into addresses 1 to 2 in both directions
+	// If we are clipping a logical dimension of 2 into a dimension of 5,
+	// we are copying into addresses 1 to 2
+	const int i_lower_bound = other_image->physical_address_of_box_center_x - physical_address_of_box_center_x;
+	const int j_lower_bound = other_image->physical_address_of_box_center_y - physical_address_of_box_center_y;
+	const int i_upper_bound = i_lower_bound + logical_x_dimension - 1;
+	const int j_upper_bound = j_lower_bound + logical_y_dimension - 1;
+
+	// Loop over the other (larger) image
+	for (j = 0; j < other_image->logical_y_dimension; j++)
+	{
+		// Check whether this line is outside of the original image
+		if (j < j_lower_bound || j > j_upper_bound)
+		{
+			// Fill this line with the padding value
+			for (i = 0; i < other_image->logical_x_dimension; i++)
+			{
+				other_image->real_values[address_in_other] = wanted_padding_value;
+				address_in_other ++;
+			}
+		}
+		else
+		{
+			// This line is within the central region
+			for (i = 0; i < other_image->logical_x_dimension; i++)
+			{
+				if (i < i_lower_bound && i > i_upper_bound)
+				{
+					// We are near the beginning or the end of the line
+					other_image->real_values[address_in_other] = wanted_padding_value;
+				}
+				else
+				{
+					other_image->real_values[address_in_other] = real_values[address_in_self];
+					address_in_self++;
+				}
+				address_in_other ++;
+			}
+		}
+		// We've reached the end of the line
+		address_in_other += other_image->padding_jump_value;
+		address_in_self += padding_jump_value;
+	}
+
+}
+
 
 void Image::ClipInto(Image *other_image, float wanted_padding_value)
 {

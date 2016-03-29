@@ -259,6 +259,7 @@ public:
 
 	bool IsConstant();
 	void SetToConstant(float wanted_value);
+	void ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value = 0);
 	void ClipInto(Image *other_image, float wanted_padding_value = 0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);

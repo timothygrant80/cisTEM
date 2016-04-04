@@ -627,6 +627,7 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 		dc.SetPen( m_pen);
 
 		double x, y;
+		double temp_y;
 		// Do this to reset the counters to evaluate bounding box for label positioning
 		Rewind(); GetNextXY(x, y);
 		maxDrawX = x; minDrawX = x; maxDrawY = y; minDrawY = y;
@@ -642,6 +643,7 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 
 		if (!m_continuous)
 		{
+
 			// for some reason DrawPoint does not use the current pen,
 			// so we use DrawLine for fat pens
 			if (m_pen.GetWidth() <= 1)
@@ -672,6 +674,7 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 		}
 		else
 		{
+
 			// Old code
 			wxCoord x0=0,c0=0;
 			bool    first = TRUE;
@@ -685,44 +688,76 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 					x0=x1;c0=c1;
 				}
 				bool outUp, outDown;
-				if((x1 >= startPx)&&(x0 <= endPx)) {
+				if((x1 >= startPx)&&(x1 <= endPx))
+				{
 					outDown = (c0 > maxYpx) && (c1 > maxYpx);
 					outUp = (c0 < minYpx) && (c1 < minYpx);
-					if (!outUp && !outDown) {
-						if (c1 != c0) {
-							if (c0 < minYpx) {
+					if (!outUp && !outDown)
+					{
+						/*
+						if (c1 != c0)
+						{
+							if (c0 < minYpx)
+							{
 								x0 = (int)(((float)(minYpx - c0))/((float)(c1 - c0))*(x1-x0)) + x0;
 								c0 = minYpx;
 							}
-							if (c0 > maxYpx) {
+							if (c0 > maxYpx)
+							{
 								x0 = (int)(((float)(maxYpx - c0))/((float)(c1 - c0))*(x1-x0)) + x0;
 								//wxLogDebug(wxT("old x0 = %d, new x0 = %d"), x0, newX0);
 								//x0 = newX0;
 								c0 = maxYpx;
 							}
-							if (c1 < minYpx) {
+							if (c1 < minYpx)
+							{
 								x1 = (int)(((float)(minYpx - c0))/((float)(c1 - c0))*(x1-x0)) + x0;
 								c1 = minYpx;
 							}
-							if (c1 > maxYpx) {
+				`			if (c1 > maxYpx)
+							{
 								x1 = (int)(((float)(maxYpx - c0))/((float)(c1 - c0))*(x1-x0)) + x0;
 								//wxLogDebug(wxT("old x0 = %d, old x1 = %d, new x1 = %d, c0 = %d, c1 = %d, maxYpx = %d"), x0, x1, newX1, c0, c1, maxYpx);
 								//x1 = newX1;
 								c1 = maxYpx;
 							}
 						}
-						if (x1 != x0) {
-							if (x0 < startPx) {
+						if (x1 != x0)
+						{
+							if (x0 < startPx)
+							{
 								c0 = (int)(((float)(startPx - x0))/((float)(x1 -x0))*(c1 -c0)) + c0;
 								x0 = startPx;
 							}
-							if (x1 > endPx) {
+							if (x1 > endPx)
+							{
 								c1 = (int)(((float)(endPx - x0))/((float)(x1 -x0))*(c1 -c0)) + c0;
 								x1 = endPx;
 							}
 						}
-						dc.DrawLine(x0, c0, x1, c1);
-						UpdateViewBoundary(x1, c1);
+
+						*/
+
+						if (c0 < minYpx) c0 = minYpx;
+						if (c0 > maxYpx) c0 = maxYpx;
+
+						if (c1 >= minYpx && c1 <= maxYpx)
+						{
+							dc.DrawLine(x0, c0, x1, c1);
+							UpdateViewBoundary(x1, c1);
+						}
+						else
+						{
+							if (c0 >= minYpx && c0 <= maxYpx)
+							{
+								if (c1 <= minYpx) temp_y = minYpx;
+								else temp_y = maxYpx;
+
+								dc.DrawLine(x0, c0, x1, temp_y);
+								UpdateViewBoundary(x1, temp_y);
+							}
+						}
+
 					}
 				}
 				x0=x1; c0=c1;

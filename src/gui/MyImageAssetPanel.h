@@ -24,6 +24,7 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		bool IsFileAnAsset(wxFileName file_to_check);
 		ImageAsset* ReturnAssetPointer(long wanted_asset);
 
 };

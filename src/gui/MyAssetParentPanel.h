@@ -103,12 +103,13 @@ protected:
 
 		//void CheckActiveButtons();
 
-		bool IsFileAnAsset(wxFileName file_to_check);
+
 		int ReturnArrayPositionFromParentID(int wanted_id);
 		int ReturnArrayPositionFromAssetID(int wanted_id);
 		int ReturnAssetID(int wanted_asset);
 		int ReturnParentID(int wanted_asset);
 
+		//bool IsFileAnAsset(wxFileName file_to_check) = 0;
 		virtual Asset* ReturnAssetPointer(long wanted_asset) = 0;
 
 

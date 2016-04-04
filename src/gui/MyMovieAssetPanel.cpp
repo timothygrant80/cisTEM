@@ -61,6 +61,12 @@ void MyMovieAssetPanel::UpdateInfo()
 
 }
 
+bool MyMovieAssetPanel::IsFileAnAsset(wxFileName file_to_check)
+{
+	if (reinterpret_cast <MovieAssetList*>  (all_assets_list)->FindFile(file_to_check) == -1) return false;
+	else return true;
+}
+
 MovieAsset* MyMovieAssetPanel::ReturnAssetPointer(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset);

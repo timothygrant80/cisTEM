@@ -25,6 +25,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		bool IsFileAnAsset(wxFileName file_to_check);
 		double ReturnAssetPixelSize(long wanted_asset);
 		double ReturnAssetAccelerationVoltage(long wanted_asset);
 		double ReturnAssetDosePerFrame(long wanted_asset);

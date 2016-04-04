@@ -656,14 +656,15 @@ void MyAssetParentPanel::OnMotion(wxMouseEvent& event)
 	if (should_veto_motion == false) event.Skip();
 }
 
+/*
 bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
-{/*
+{
 	if (all_assets_list->FindFile(file_to_check) == -1) return false;
-	else return true;*/
+	else return true;
 
 	MyPrintWithDetails("This should never be called!!");
 	abort();
-}
+}*/
 
 int MyAssetParentPanel::ReturnArrayPositionFromParentID(int wanted_id)
 {

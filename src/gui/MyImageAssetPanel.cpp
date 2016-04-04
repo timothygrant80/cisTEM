@@ -60,6 +60,12 @@ void MyImageAssetPanel::UpdateInfo()
 
 }
 
+bool MyImageAssetPanel::IsFileAnAsset(wxFileName file_to_check)
+{
+	if (reinterpret_cast <ImageAssetList*>  (all_assets_list)->FindFile(file_to_check) == -1) return false;
+	else return true;
+}
+
 ImageAsset* MyImageAssetPanel::ReturnAssetPointer(long wanted_asset)
 {
 	return all_assets_list->ReturnImageAssetPointer(wanted_asset);

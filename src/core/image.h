@@ -94,10 +94,12 @@ public:
 	void PhaseFlipPixelWise(Image &other_image);
 	void MultiplyPixelWiseReal(Image &other_image);
 	void MultiplyPixelWise(Image &other_image);
+	void DividePixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
-	void Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
+	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
 	void ReplaceOutliersWithMean(float maximum_n_sigmas);
 	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void ApplySqrtNFilter();
 	void WhitenTwo(Image &other_image);
 	void Whiten();
@@ -125,6 +127,7 @@ public:
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
 	void CircleMask(float wanted_mask_radius, bool invert = false);
+	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
 
 	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
@@ -239,6 +242,10 @@ public:
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void AddConstant(float constant_to_add);
+	void MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add);
+	void AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by);
+	void SquareRealValues();
+	void SquareRootRealValues();
 
 	void ForwardFFT(bool should_scale = true);
 	void BackwardFFT();

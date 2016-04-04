@@ -503,6 +503,7 @@ void Image::MultiplyPixelWise(Image &other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
 	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
 
 	int i;
 	long pixel_counter;
@@ -516,9 +517,36 @@ void Image::MultiplyPixelWise(Image &other_image)
 	}
 	else
 	{
+		// TODO: add MKL implementation (see EulerSearch::Run for a similar example)
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 		{
 			complex_values[pixel_counter] *= other_image.complex_values[pixel_counter];
+		}
+	}
+}
+
+void Image::DividePixelWise(Image &other_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
+
+	int i;
+	long pixel_counter;
+
+	if (is_in_real_space)
+	{
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			real_values[pixel_counter] /= other_image.real_values[pixel_counter];
+		}
+	}
+	else
+	{
+		// TODO: add MKL implementation (see EulerSearch::Run for a similar example)
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+		{
+			complex_values[pixel_counter] /= other_image.complex_values[pixel_counter];
 		}
 	}
 }
@@ -533,16 +561,13 @@ void Image::AddGaussianNoise(float wanted_sigma_value)
 	}
 }
 
-void Image::Normalize(float wanted_sigma_value, float wanted_mask_radius)
+long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius)
 {
 	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-	// TODO: call a function that returns both average & variance, rather than two separate functions
-	float variance = ReturnVarianceOfRealValues(wanted_mask_radius);
-	float average = ReturnAverageOfRealValues(wanted_mask_radius);
-
-	AddConstant(-average);
-	DivideByConstant(sqrtf(variance));
+	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius);
+	AddMultiplyConstant(-my_distribution.GetSampleMean(),1.0/sqrtf(my_distribution.GetSampleVariance()));
+	return my_distribution.GetNumberOfSamples();
 }
 
 // Pixels with values greater than maximum_n_sigmas above the mean or less than maximum_n_sigmas below the mean will be replaced with the mean
@@ -2541,6 +2566,60 @@ void Image::CircleMask(float wanted_mask_radius, bool invert)
 }
 
 
+void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert)
+{
+	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
+	MyDebugAssertTrue(object_is_centred_in_box,"Object not centered in box");
+
+	long pixel_counter;
+	int i,j,k;
+	float x,y,z;
+	float distance_from_center_squared;
+	const float wanted_mask_radius_squared = powf(wanted_mask_radius,2);
+	long number_of_pixels = 0;
+
+	// Let's mask
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = powf(k - physical_address_of_box_center_z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = powf(j - physical_address_of_box_center_y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = powf(i - physical_address_of_box_center_x, 2);
+
+				distance_from_center_squared = x + y + z;
+
+				if (invert)
+				{
+					if ( distance_from_center_squared <= wanted_mask_radius_squared)
+					{
+						real_values[pixel_counter] = wanted_mask_value;
+					}
+				}
+				else
+				{
+					if ( distance_from_center_squared > wanted_mask_radius_squared)
+					{
+						real_values[pixel_counter] = wanted_mask_value;
+					}
+				}
+
+				pixel_counter++;
+
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+
+}
+
+
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
@@ -3139,6 +3218,23 @@ void Image::DivideByConstant(float constant_to_divide_by)
 	}
 }
 
+void Image::MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add)
+{
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] = real_values[pixel_counter] * constant_to_multiply_by + constant_to_add;
+	}
+}
+
+void Image::AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by)
+{
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] = (real_values[pixel_counter] + constant_to_add) * constant_to_multiply_by;
+	}
+}
+
+
 //!> \brief Multiply all voxels by a constant value
 
 //inline
@@ -3149,6 +3245,26 @@ void Image::MultiplyByConstant(float constant_to_multiply_by)
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{
 		real_values[pixel_counter] *= constant_to_multiply_by;
+	}
+}
+
+void Image::SquareRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Must be in real space to square real values");
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter ++ )
+	{
+		real_values[pixel_counter] *= real_values[pixel_counter];
+	}
+}
+
+void Image::SquareRootRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Must be in real space to square real values");
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter ++ )
+	{
+		real_values[pixel_counter] = sqrtf(real_values[pixel_counter]);
 	}
 }
 
@@ -3704,6 +3820,91 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius)
 
 	}
 	return float(sum / (logical_x_dimension * logical_y_dimension * logical_z_dimension));
+}
+
+EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z)
+{
+	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+	int i;
+	int j;
+	int k;
+	int number_of_pixels = 0;
+
+	float x;
+	float y;
+	float z;
+
+	long pixel_counter = 0;
+
+	float distance_from_center_squared;
+	float mask_radius_squared;
+	float edge;
+	float center_x;
+	float center_y;
+	float center_z;
+
+	EmpiricalDistribution my_distribution = EmpiricalDistribution(false);
+
+
+	if (wanted_center_x == 0.0 && wanted_center_y == 0.0 && wanted_center_z == 0.0)
+	{
+		center_x = physical_address_of_box_center_x;
+		center_y = physical_address_of_box_center_y;
+		center_z = physical_address_of_box_center_z;
+	}
+	else
+	{
+		center_x = wanted_center_x;
+		center_y = wanted_center_y;
+		center_z = wanted_center_z;
+	}
+
+	if (wanted_mask_radius > 0.0)
+	{
+		mask_radius_squared = powf(wanted_mask_radius, 2);
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = powf(k - center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = powf(j - center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = powf(i - center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					if (distance_from_center_squared <= mask_radius_squared)
+					{
+						my_distribution.AddSampleValue(real_values[pixel_counter]);
+					}
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					my_distribution.AddSampleValue(real_values[pixel_counter]);
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+		number_of_pixels = logical_x_dimension * logical_y_dimension * logical_z_dimension;
+	}
+
+	return my_distribution;
+
 }
 
 
@@ -4721,7 +4922,7 @@ void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_v
 			// This line is within the central region
 			for (i = 0; i < other_image->logical_x_dimension; i++)
 			{
-				if (i < i_lower_bound && i > i_upper_bound)
+				if (i < i_lower_bound || i > i_upper_bound)
 				{
 					// We are near the beginning or the end of the line
 					other_image->real_values[address_in_other] = wanted_padding_value;
@@ -4736,7 +4937,7 @@ void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_v
 		}
 		// We've reached the end of the line
 		address_in_other += other_image->padding_jump_value;
-		address_in_self += padding_jump_value;
+		if (j >= j_lower_bound) address_in_self += padding_jump_value;
 	}
 
 }

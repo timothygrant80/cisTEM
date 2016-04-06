@@ -473,7 +473,7 @@ void Image::PhaseFlipPixelWise(Image &phase_image)
 	{
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 		{
-			if (crealf(phase_image.complex_values[pixel_counter]) < 0.0) complex_values[pixel_counter] = - complex_values[pixel_counter];
+			if (crealf(phase_image.complex_values[pixel_counter]) < 0.0) complex_values[pixel_counter] = -1.0 * complex_values[pixel_counter];
 		}
 	}
 }
@@ -5325,7 +5325,7 @@ void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 
 			ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth);
 
-			if (ctf_value < 0.0) complex_values[pixel_counter] = - complex_values[pixel_counter];
+			if (ctf_value < 0.0) complex_values[pixel_counter] = - 1.0 * complex_values[pixel_counter];
 			pixel_counter++;
 		}
 	}

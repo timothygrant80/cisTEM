@@ -73,9 +73,15 @@ void Curve::AllocateSavitzkyGolayCoefficients()
 	MyDebugAssertTrue(savitzky_golay_coefficients == NULL,"Oops, trying to allocate coffecients when they are already allocated\n");
 	MyDebugAssertTrue(savitzky_golay_polynomial_order > 0, "Oops, looks like the SG polynomial order was not set properly\n");
 	savitzky_golay_coefficients = new float*[number_of_points];
+	int counter;
 	for (int pixel_counter = 0; pixel_counter < number_of_points; pixel_counter ++ )
 	{
 		savitzky_golay_coefficients[pixel_counter] = new float[savitzky_golay_polynomial_order + 1];
+		// Initialise
+		for (counter = 0; counter < savitzky_golay_polynomial_order + 1; counter ++)
+		{
+			savitzky_golay_coefficients[pixel_counter][counter] = 0.0;
+		}
 	}
 }
 

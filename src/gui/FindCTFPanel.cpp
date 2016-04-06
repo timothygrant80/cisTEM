@@ -477,6 +477,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float  		minimum_additional_phase_shift;
 	float		maximum_additional_phase_shift;
 	float		additional_phase_shift_search_step;
+	bool 		astigmatism_is_known;
+	float		known_astigmatism;
+	float		known_astigmatism_angle;
 
 	// allocate space for the buffered results..
 
@@ -540,6 +543,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		// minimum_additional_phase_shift (float);
 		// maximum_additional_phase_shift (float);
 		///additional_phase_shift_search_step (float);
+		// astigmatism_is_known (bool);
+		// known_astigmatism (float);
+		// known_astigmatism_angle (float);
 
 		if (input_is_a_movie == true)
 		{
@@ -568,8 +574,17 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		output_diagnostic_filename = buffer_filename.ToStdString();
 
+		// These parameters are not presented in the GUI (yet?)
+		astigmatism_is_known = false;
+		known_astigmatism = 0.0;
+		known_astigmatism_angle = 0.0;
+		//astigmatism_is_known = true;
+		//known_astigmatism = 385.0;
+		//known_astigmatism_angle = 35.0;
 
-		my_job_package.AddJob("sbisffffiffffffbfff",	input_filename.c_str(), // 0
+
+
+		my_job_package.AddJob("sbisffffiffffffbfffbff",	input_filename.c_str(), // 0
 														input_is_a_movie, // 1
 														number_of_frames_to_average, //2
 														output_diagnostic_filename.c_str(), // 3
@@ -587,7 +602,10 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 														find_additional_phase_shift, // 15
 														minimum_additional_phase_shift, // 16
 														maximum_additional_phase_shift, // 17
-														additional_phase_shift_search_step); // 18
+														additional_phase_shift_search_step, // 18
+													    astigmatism_is_known, // 19
+													    known_astigmatism, // 20
+													    known_astigmatism_angle); // 21
 	}
 
 	// launch a controller

@@ -94,6 +94,7 @@ public:
 	void PhaseFlipPixelWise(Image &other_image);
 	void MultiplyPixelWiseReal(Image &other_image);
 	void MultiplyPixelWise(Image &other_image);
+	void ConjugateMultiplyPixelWise(Image &other_image);
 	void DividePixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
 	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
@@ -291,6 +292,7 @@ public:
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);
+	void SetMinimumValue(float new_minimum_value);
 	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);
 	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);

@@ -499,6 +499,21 @@ void Image::MultiplyPixelWiseReal(Image &other_image)
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter += 2) {real_b[pixel_counter] *= real_r[pixel_counter];};
 }
 
+void Image::ConjugateMultiplyPixelWise(Image &other_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+	MyDebugAssertFalse(is_in_real_space, "Image must be in Fourier space");
+	MyDebugAssertFalse(other_image.is_in_real_space, "Other image must be in Fourier space");
+
+	long pixel_counter;
+
+	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
+	{
+		complex_values[pixel_counter] *= conjf(other_image.complex_values[pixel_counter]);
+	}
+}
+
 void Image::MultiplyPixelWise(Image &other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
@@ -566,7 +581,14 @@ long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius)
 	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
 	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius);
-	AddMultiplyConstant(-my_distribution.GetSampleMean(),1.0/sqrtf(my_distribution.GetSampleVariance()));
+	if (my_distribution.GetSampleVariance() == 0.0)
+	{
+		AddConstant(-my_distribution.GetSampleMean());
+	}
+	else
+	{
+		AddMultiplyConstant(-my_distribution.GetSampleMean(),1.0/sqrtf(my_distribution.GetSampleVariance()));
+	}
 	return my_distribution.GetNumberOfSamples();
 }
 
@@ -3524,6 +3546,18 @@ void Image::SetMaximumValue(float new_maximum_value)
 	for (long address = 0; address < real_memory_allocated; address++)
 	{
 		real_values[address] = std::min(new_maximum_value,real_values[address]);
+	}
+}
+
+
+void Image::SetMinimumValue(float new_minimum_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	for (long address = 0; address < real_memory_allocated; address++)
+	{
+		real_values[address] = std::max(new_minimum_value,real_values[address]);
 	}
 }
 

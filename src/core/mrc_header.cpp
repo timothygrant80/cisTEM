@@ -84,12 +84,84 @@ float MRCHeader::ReturnPixelSize()
 	}
 }
 
+
+// Make sure to call this after the volume / image dimensions have been set
 void MRCHeader::SetPixelSize(float wanted_pixel_size)
 {
 	cell_a_x[0] = wanted_pixel_size * mx[0];
 	cell_a_y[0] = wanted_pixel_size * my[0];
 	cell_a_z[0] = wanted_pixel_size * mz[0];
 }
+
+void MRCHeader::SetDimensionsImage(int wanted_x_dim, int wanted_y_dim)
+{
+	nx[0] = wanted_x_dim;
+	ny[0] = wanted_y_dim;
+
+	nxstart[0] = 0;
+	nystart[0] = 0;
+	nzstart[0] = 0;
+
+	mx[0] = wanted_x_dim;
+	my[0] = wanted_y_dim;
+
+
+	space_group_number[0] = 1; // Contravening MRC2014 definition, which indicate we should set this to 0 when dealing with (stacks of) 2D images
+}
+
+void MRCHeader::SetNumberOfImages(int wanted_number_of_images)
+{
+	nz[0] = wanted_number_of_images;
+	mz[0] = wanted_number_of_images;
+}
+
+void MRCHeader::SetDimensionsVolume(int wanted_x_dim, int wanted_y_dim, int wanted_z_dim)
+{
+	nx[0] = wanted_x_dim;
+	ny[0] = wanted_y_dim;
+	nz[0] = wanted_z_dim;
+
+	nxstart[0] = 0;
+	nystart[0] = 0;
+	nzstart[0] = 0;
+
+	mx[0] = wanted_x_dim;
+	my[0] = wanted_y_dim;
+	mz[0] = wanted_z_dim;
+
+	space_group_number[0] = 1;
+}
+
+
+void MRCHeader::SetDensityStatistics( float wanted_min, float wanted_max, float wanted_mean, float wanted_rms )
+{
+	dmin[0] = wanted_min;
+	dmax[0] = wanted_max;
+	dmean[0] = wanted_mean;
+
+	rms[0] = wanted_rms;
+}
+
+void MRCHeader::ResetLabels()
+{
+	labels[0] = '*';
+	labels[1] = '*';
+	labels[2] = ' ';
+	labels[3] = 'G';
+	labels[4] = 'u';
+	labels[5] = 'i';
+	labels[6] = 'X';
+	labels[7] = ' ';
+	labels[8] = '*';
+	labels[9] = '*';
+
+	for (int counter = 10; counter < 800; counter++)
+	{
+		labels[counter]					= ' ';
+	}
+	number_of_labels_used[0] = 1;
+}
+
 
 
 //!>  \brief  Setup the pointers so that they point to the correct place in the buffer
@@ -243,7 +315,7 @@ void MRCHeader::BlankHeader()
 	dmin[0]					= 0.0;
 	dmax[0]       	 		= 0.0;
 	dmean[0]       			= 0.0;
-	space_group_number[0] 	= 0;
+	space_group_number[0] 	= 1; // assume we'll treat stacks of images as volumes
 	symmetry_data_bytes[0] 	= 0;
 
 	for (counter = 0; counter < 25; counter++)
@@ -264,21 +336,7 @@ void MRCHeader::BlankHeader()
 	rms[0]                 	= 0;
 	number_of_labels_used[0]= 1;
 
-	labels[0] = '*';
-	labels[1] = '*';
-	labels[2] = ' ';
-	labels[3] = 'G';
-	labels[4] = 'u';
-	labels[5] = 'i';
-	labels[6] = 'X';
-	labels[7] = ' ';
-	labels[8] = '*';
-	labels[9] = '*';
-
-	for (counter = 10; counter < 800; counter++)
-	{
-		labels[counter]					= ' ';
-	}
+	ResetLabels();
 
 	bytes_per_pixel = 4;
 

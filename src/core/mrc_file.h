@@ -15,16 +15,11 @@ class MRCFile {
 	MRCFile(std::string filename, bool overwrite = false);
 	~MRCFile();
 
-	inline int ReturnXSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.nx[0];};
-	inline int ReturnYSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ny[0];};
-	inline int ReturnZSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.nz[0];};
-	inline int ReturnNumberOfSlices() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.nz[0];};
+	inline int ReturnXSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionX();};
+	inline int ReturnYSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionY();};
+	inline int ReturnZSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
+	inline int ReturnNumberOfSlices() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
 
-
-	inline void SetXSize(int wanted_x_size) {MyDebugAssertTrue(my_file.is_open(), "File not open!");	my_header.nx[0] = wanted_x_size;};
-	inline void SetYSize(int wanted_y_size) {MyDebugAssertTrue(my_file.is_open(), "File not open!");	my_header.ny[0] = wanted_y_size;};
-	inline void SetZSize(int wanted_z_size) {MyDebugAssertTrue(my_file.is_open(), "File not open!");	my_header.nz[0] = wanted_z_size;};
-	inline void SetNumberOfSlices(int wanted_z_size) {MyDebugAssertTrue(my_file.is_open(), "File not open!");	my_header.nz[0] = wanted_z_size;};
 
 
 

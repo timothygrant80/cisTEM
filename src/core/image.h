@@ -97,10 +97,13 @@ public:
 	void ConjugateMultiplyPixelWise(Image &other_image);
 	void DividePixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
-	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0);
+	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
+	long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
+	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
 	void ReplaceOutliersWithMean(float maximum_n_sigmas);
 	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
-	EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	void UpdateDistributionOfRealValues(EmpiricalDistribution *distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void ApplySqrtNFilter();
 	void WhitenTwo(Image &other_image);
 	void Whiten();
@@ -245,8 +248,10 @@ public:
 	void AddConstant(float constant_to_add);
 	void MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add);
 	void AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by);
+	void AddMultiplyAddConstant(float first_constant_to_add, float constant_to_multiply_by, float second_constant_to_add);
 	void SquareRealValues();
 	void SquareRootRealValues();
+	void ExponentiateRealValues();
 
 	void ForwardFFT(bool should_scale = true);
 	void BackwardFFT();
@@ -277,6 +282,7 @@ public:
 
 	void AddImage(Image *other_image);
 	void SubtractImage(Image *other_image);
+	void SubtractSquaredImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply);

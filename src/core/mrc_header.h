@@ -52,8 +52,6 @@ class MRCHeader {
 
 	char	*buffer; 	// !< The true byte data
 
-	public:
-
 
 	//  The following are all pointers and just point to the relevant area of the buffer..
 
@@ -98,6 +96,8 @@ class MRCHeader {
 	int pixel_data_are_of_type;
 	bool pixel_data_are_complex;
 
+	public:
+
 	// methods
 
 	MRCHeader();
@@ -108,11 +108,28 @@ class MRCHeader {
 	void WriteHeader(std::fstream *MRCFile);
 	void BlankHeader();
 
+	void ResetLabels();
+
 	void SetLocalMachineStamp();
 
 	void PrintInfo();
 
+	inline int ReturnDimensionX() {return nx[0];};
+	inline int ReturnDimensionY() {return ny[0];};
+	inline int ReturnDimensionZ() {return nz[0];};
+
 	float ReturnPixelSize();
 	void SetPixelSize(float wanted_pixel_size);
+
+	void SetDimensionsImage(int wanted_x_dim, int wanted_y_dim);
+	void SetDimensionsVolume(int wanted_x_dim, int wanted_y_dim, int wanted_z_dim);
+	void SetNumberOfImages(int wanted_number_of_images);
+	void SetNumberOfVolumes(int wanted_number_of_volumes);
+	void SetDensityStatistics( float wanted_min, float wanted_max, float wanted_mean, float wanted_rms );
+
+	inline int BytesPerPixel() { return bytes_per_pixel; };
+	inline int Mode() { return mode[0];};
+	inline int SymmetryDataBytes() { return symmetry_data_bytes[0];};
+
 
 };

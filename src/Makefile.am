@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels reset_mrc_header
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -141,3 +141,9 @@ remove_outlier_pixels_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 remove_outlier_pixels_LDFLAGS = $(WX_LIBS_BASE)
 remove_outlier_pixels_LDADD = libcore.a
 
+
+reset_mrc_header_SOURCES = programs/reset_mrc_header/reset_mrc_header.cpp
+reset_mrc_header_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+reset_mrc_header_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+reset_mrc_header_LDFLAGS = $(WX_LIBS_BASE)
+reset_mrc_header_LDADD = libcore.a

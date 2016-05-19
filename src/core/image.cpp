@@ -576,18 +576,41 @@ void Image::AddGaussianNoise(float wanted_sigma_value)
 	}
 }
 
-long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius)
+long Image::ZeroFloat(float wanted_mask_radius, bool outside)
 {
 	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius);
-	if (my_distribution.GetSampleVariance() == 0.0)
+	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+	AddConstant(-my_distribution.GetSampleMean());
+
+	return my_distribution.GetNumberOfSamples();
+}
+
+long Image::ZeroFloatAndNormalize(float wanted_sigma_value, float wanted_mask_radius, bool outside)
+{
+	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
+
+	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+	if (my_distribution.IsConstant())
 	{
 		AddConstant(-my_distribution.GetSampleMean());
 	}
 	else
 	{
-		AddMultiplyConstant(-my_distribution.GetSampleMean(),1.0/sqrtf(my_distribution.GetSampleVariance()));
+		AddMultiplyConstant(-my_distribution.GetSampleMean(),wanted_sigma_value/sqrtf(my_distribution.GetSampleVariance()));
+	}
+	return my_distribution.GetNumberOfSamples();
+}
+
+// Normalize without zero-floating
+long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius, bool outside)
+{
+	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
+
+	EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+	if (! my_distribution.IsConstant())
+	{
+		AddMultiplyAddConstant(-my_distribution.GetSampleMean(),wanted_sigma_value/sqrtf(my_distribution.GetSampleVariance()),my_distribution.GetSampleMean());
 	}
 	return my_distribution.GetNumberOfSamples();
 }
@@ -3256,6 +3279,14 @@ void Image::AddMultiplyConstant(float constant_to_add, float constant_to_multipl
 	}
 }
 
+void Image::AddMultiplyAddConstant(float first_constant_to_add, float constant_to_multiply_by, float second_constant_to_add)
+{
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] = (real_values[pixel_counter] + first_constant_to_add) * constant_to_multiply_by + second_constant_to_add;
+	}
+}
+
 
 //!> \brief Multiply all voxels by a constant value
 
@@ -3277,6 +3308,16 @@ void Image::SquareRealValues()
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter ++ )
 	{
 		real_values[pixel_counter] *= real_values[pixel_counter];
+	}
+}
+
+void Image::ExponentiateRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Must be in real space to square real values");
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter ++ )
+	{
+		real_values[pixel_counter] = exp(real_values[pixel_counter]);
 	}
 }
 
@@ -3383,12 +3424,11 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 
 	if (start_slice == 1) // if the start slice is one, we set the header to match the image
 	{
-		input_file->SetXSize(logical_x_dimension);
-		input_file->SetYSize(logical_y_dimension);
+		input_file->my_header.SetDimensionsImage(logical_x_dimension,logical_y_dimension);
 
 		if (end_slice > input_file->ReturnNumberOfSlices())
 		{
-			input_file->SetNumberOfSlices(end_slice);
+			input_file->my_header.SetNumberOfImages(end_slice);
 		}
 
 		//input_file->WriteHeader();
@@ -3398,7 +3438,7 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 	{
 		if (end_slice > input_file->ReturnNumberOfSlices())
 		{
-			input_file->SetNumberOfSlices(end_slice);
+			input_file->my_header.SetNumberOfImages(end_slice);
 		}
 
 		input_file->rewrite_header_on_close = true;
@@ -3856,8 +3896,9 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius)
 	return float(sum / (logical_x_dimension * logical_y_dimension * logical_z_dimension));
 }
 
-EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z)
+void Image::UpdateDistributionOfRealValues(EmpiricalDistribution *my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z )
 {
+
 	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
 	int i;
@@ -3877,8 +3918,6 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 	float center_x;
 	float center_y;
 	float center_z;
-
-	EmpiricalDistribution my_distribution = EmpiricalDistribution(false);
 
 
 	if (wanted_center_x == 0.0 && wanted_center_y == 0.0 && wanted_center_z == 0.0)
@@ -3911,9 +3950,19 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 
 					distance_from_center_squared = x + y + z;
 
-					if (distance_from_center_squared <= mask_radius_squared)
+					if (outside)
 					{
-						my_distribution.AddSampleValue(real_values[pixel_counter]);
+						if (distance_from_center_squared > mask_radius_squared)
+						{
+							my_distribution->AddSampleValue(real_values[pixel_counter]);
+						}
+					}
+					else
+					{
+						if (distance_from_center_squared <= mask_radius_squared)
+						{
+							my_distribution->AddSampleValue(real_values[pixel_counter]);
+						}
 					}
 					pixel_counter++;
 				}
@@ -3929,13 +3978,27 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 			{
 				for (i = 0; i < logical_x_dimension; i++)
 				{
-					my_distribution.AddSampleValue(real_values[pixel_counter]);
+					my_distribution->AddSampleValue(real_values[pixel_counter]);
+					pixel_counter++;
 				}
 				pixel_counter += padding_jump_value;
 			}
 		}
 		number_of_pixels = logical_x_dimension * logical_y_dimension * logical_z_dimension;
 	}
+
+}
+
+EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z)
+{
+	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+
+
+	EmpiricalDistribution my_distribution = EmpiricalDistribution(false);
+
+
+	UpdateDistributionOfRealValues(&my_distribution, wanted_mask_radius, outside, wanted_center_x, wanted_center_y, wanted_center_z);
 
 	return my_distribution;
 
@@ -4141,6 +4204,17 @@ void Image::SubtractImage(Image *other_image)
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{
 		real_values[pixel_counter] -= other_image->real_values[pixel_counter];
+	}
+
+}
+
+void Image::SubtractSquaredImage(Image *other_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] -= powf(other_image->real_values[pixel_counter],2);
 	}
 
 }

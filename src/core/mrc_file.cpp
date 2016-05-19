@@ -103,15 +103,15 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 	// calculate and seek to the start byte..
 
-	long records_to_read = my_header.nx[0] * my_header.ny[0] * ((end_slice - start_slice) + 1);
-	long bytes_per_slice = my_header.nx[0] * my_header.ny[0] * my_header.bytes_per_pixel;
+	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
+	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
 	long image_offset = (start_slice - 1) * bytes_per_slice;
 
-	my_file.seekg(1024 + image_offset + my_header.symmetry_data_bytes[0]);
+	my_file.seekg(1024 + image_offset + my_header.SymmetryDataBytes());
 
 	// we need a temp array for non float formats..
 
-	switch ( my_header.mode[0] )
+	switch ( my_header.Mode() )
 	{
 		case 0:
 		{
@@ -159,7 +159,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		default:
 		{
-			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.mode[0]);
+			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.Mode());
 			abort();
 		}
 		break;
@@ -176,15 +176,15 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 
 	// calculate and seek to the start byte..
 
-	long records_to_read = my_header.nx[0] * my_header.ny[0] * ((end_slice - start_slice) + 1);
-	long bytes_per_slice = my_header.nx[0] * my_header.ny[0] * my_header.bytes_per_pixel;
+	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
+	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
 	long image_offset = (start_slice - 1) * bytes_per_slice;
 
-	my_file.seekg(1024 + image_offset + my_header.symmetry_data_bytes[0]);
+	my_file.seekg(1024 + image_offset + my_header.SymmetryDataBytes());
 
 	// we need a temp array for non float formats..
 
-	switch ( my_header.mode[0] )
+	switch ( my_header.Mode() )
 	{
 		case 0:
 		{
@@ -222,7 +222,7 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 
 		default:
 		{
-			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.mode[0]);
+			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.Mode());
 			abort();
 		}
 		break;

@@ -8,6 +8,8 @@ private:
 	float		maximum;
 	bool		keep_sample_values;
 	float		*sample_values;
+	bool		is_constant;
+	float		last_added_value;
 
 public:
 
@@ -23,6 +25,9 @@ public:
 	float GetSampleVariance();
 	float GetSampleSumOfSquares();
 	float GetUnbiasedEstimateOfPopulationVariance();
+	inline float GetMinimum() {return minimum;};
+	inline float GetMaximum() {return maximum;};
+	bool IsConstant();
 	void PopulateHistogram();
 	void Reset();
 

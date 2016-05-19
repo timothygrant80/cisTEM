@@ -28,6 +28,8 @@ void EmpiricalDistribution::Reset()
 	MyDebugAssertFalse(keep_sample_values,"Keeping of samples values (to compute histograms) not yet implemented\n");
 	minimum = std::numeric_limits<float>::max();
 	maximum = - std::numeric_limits<float>::max();
+	is_constant = true;
+	last_added_value = 0.0;
 }
 
 void EmpiricalDistribution::AddSampleValue(float sample_value)
@@ -35,14 +37,28 @@ void EmpiricalDistribution::AddSampleValue(float sample_value)
 	sum_of_samples += sample_value;
 	sum_of_squared_samples += pow(sample_value,2);
 	number_of_samples++;
-	minimum = - std::max(minimum,sample_value);
+	minimum = std::min(minimum,sample_value);
 	maximum = std::max(maximum,sample_value);
+	if (number_of_samples == 1)
+	{
+		is_constant = true;
+	}
+	else
+	{
+		is_constant = is_constant && last_added_value == sample_value;
+	}
+	last_added_value = sample_value;
 	// We may need to record the value
 	if (keep_sample_values)
 	{
 		MyPrintWithDetails("Keeping of sample values not yet implemented\n");
 		abort();
 	}
+}
+
+bool EmpiricalDistribution::IsConstant()
+{
+	return is_constant;
 }
 
 float EmpiricalDistribution::GetSampleSumOfSquares()

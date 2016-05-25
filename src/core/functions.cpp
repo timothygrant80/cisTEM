@@ -330,3 +330,12 @@ void Deallocate2DFloatArray(float **&array, int dim1)
 	}
 	delete [] array;					// now delete pointer array
 }
+
+long ReturnFileSizeInBytes(wxString filename)
+{
+	long size;
+	std::ifstream filesize(filename, std::ifstream::ate | std::ifstream::binary);
+	size = filesize.tellg();
+	filesize.close();
+	return size;
+}

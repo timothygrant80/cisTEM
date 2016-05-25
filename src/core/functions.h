@@ -6,7 +6,7 @@ inline void ZeroBoolArray(bool *array_to_zero, int size_of_array)
 	{
 		array_to_zero[counter] = false;
 	}
-};
+}
 
 inline void ZeroIntArray(int *array_to_zero, int size_of_array)
 {
@@ -14,7 +14,15 @@ inline void ZeroIntArray(int *array_to_zero, int size_of_array)
 	{
 		array_to_zero[counter] = 0;
 	}
-};
+}
+
+inline void ZeroLongArray(long *array_to_zero, int size_of_array)
+{
+	for (int counter = 0; counter < size_of_array; counter++)
+	{
+		array_to_zero[counter] = 0;
+	}
+}
 
 inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 {
@@ -22,7 +30,7 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	{
 		array_to_zero[counter] = 0.0;
 	}
-};
+}
 
 inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
 {
@@ -30,13 +38,13 @@ inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
 	{
 		array_to_zero[counter] = 0.0;
 	}
-};
+}
 
 inline bool IsEven(int number_to_check)
 {
 	  if ( number_to_check % 2== 0 ) return true;
 	  else return false;
-};
+}
 
 inline bool DoesFileExist(wxString filename)
 {
@@ -44,7 +52,7 @@ inline bool DoesFileExist(wxString filename)
 
     if(file_to_check.is_open()) return true;
     return false;
-};
+}
 
 inline float rad_2_deg(float radians)
 {
@@ -68,28 +76,28 @@ inline double myround(double a)
 {
 	if (a > 0) return double(long(a + 0.5));
 	else return double(long(a - 0.5));
-};
+}
 
 inline float myround(float a)
 {
 	if (a > 0) return float(int(a + 0.5));	else return float(int(a - 0.5));
-};
+}
 
 inline int myroundint(double a)
 {
 	if (a > 0) return int(a + 0.5); else return int(a - 0.5);
-};
+}
 
 inline int myroundint(float a)
 {
 	if (a > 0) return int(a + 0.5);	else return int(a - 0.5);
-};
+}
 
 inline bool IsOdd(int number)
 {
 	if ((number & 1) == 0) return false;
 	else return true;
-};
+}
 
 wxString ReturnIPAddress();
 wxString ReturnIPAddressFromSocket(wxSocketBase *socket);
@@ -100,7 +108,7 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket);
 inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float dimension_size)
 {
 	return real_space_shift * distance_from_origin * 2.0 * PI / dimension_size;
-};
+}
 
 inline fftw_complex Return3DPhaseFromIndividualDimensions( float phase_x, float phase_y, float phase_z)
 {
@@ -122,7 +130,7 @@ inline bool InputIsATerminal()
 inline bool OutputIsAtTerminal()
 {
     return isatty(fileno(stdout));
-};
+}
 
 int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false);
 int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false);
@@ -137,3 +145,15 @@ std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add);
 
 void Allocate2DFloatArray(float **&array, int dim1, int dim2);
 void Deallocate2DFloatArray(float **&array, int dim1);
+
+inline wxString BoolToYesNo(bool b)
+{
+  return b ? "Yes" : "No";
+}
+
+long ReturnFileSizeInBytes(wxString filename);
+
+inline float kDa_to_Angstrom3(float kilo_daltons)
+{
+  return kilo_daltons * 1000.0 / 0.81;
+}

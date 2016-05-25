@@ -17,8 +17,11 @@ public:
 	ResolutionStatistics(float wanted_pixel_size, int wanted_number_of_bins = 0);
 //	~ResolutionStatistics();
 
+	ResolutionStatistics & operator = (const ResolutionStatistics &t);
+	ResolutionStatistics & operator = (const ResolutionStatistics *t);
+
 	void Init(float wanted_pixel_size, int wanted_number_of_bins = 0);
 	void CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2);
 	void CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_in_kDa);
-	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction);
+	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction, float wanted_mask_volume_fraction = 1.0);
 };

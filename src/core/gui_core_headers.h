@@ -55,6 +55,7 @@
 #include "../gui/MyMovieAssetPanel.h"
 #include "../gui/MyImageAssetPanel.h"
 #include "../gui/MyParticlePositionAssetPanel.h"
+#include "../gui/MyVolumeAssetPanel.h"
 #include "../gui/MovieImportDialog.h"
 #include "../gui/MyMovieFilterDialog.h"
 #include "../gui/MyImageImportDialog.h"

@@ -2360,7 +2360,7 @@ void mpWindow::GetBoundingBox(double* bbox)
 
 bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSize, bool fit)
 {
-	int sizeX, sizeY;
+/*	int sizeX, sizeY;
 	int bk_scrX, bk_scrY;
 	if (imageSize == wxDefaultSize) {
 		sizeX = m_scrX;
@@ -2399,7 +2399,7 @@ bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSi
 	}
     // Once drawing is complete, actually save screen shot
     wxImage screenImage = screenBuffer.ConvertToImage();
-    return screenImage.SaveFile(filename, type);
+    return screenImage.SaveFile(filename, type);*/
 }
 
 void mpWindow::SetMargins(int top, int right, int bottom, int left)

@@ -312,8 +312,12 @@ bool Database::CreateAllTables()
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 	success = CreateTable("IMAGE_ASSETS", "ptiiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	success = CreateTable("PARTICLE_POSITION_ASSETS", "piirr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");
-	success = CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	success = CreateParticlePositionAssetTable();
+	success = CreateParticlePositionGroupListTable();
+	success = CreateVolumeAssetTable();
+	success = CreateVolumeGroupListTable();
+
+
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrt", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE");
 	return success;
 }
@@ -605,6 +609,18 @@ void Database::EndImageAssetInsert()
 	EndBatchInsert();
 }
 
+void Database::BeginParticlePositionAssetInsert()
+{
+	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 5, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");
+}
+
+void Database::AddNextParticlePositionAsset(long particle_position_asset_id, long parent_image_asset_id, long pick_job_id, double x_position, double y_position)
+{
+	AddToBatchInsert("lllrr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position);
+
+}
+
+
 
 bool Database::BeginBatchSelect(const char *select_command)
 {
@@ -721,10 +737,21 @@ void Database::BeginAllParticlePositionAssetsSelect()
 	BeginBatchSelect("SELECT * FROM PARTICLE_POSITION_ASSETS;");
 }
 
+void Database::BeginAllVolumeAssetsSelect()
+{
+	BeginBatchSelect("SELECT * FROM VOLUME_ASSETS;");
+}
+
 void Database::BeginAllParticlePositionGroupsSelect()
 {
 	BeginBatchSelect("SELECT * FROM PARTICLE_POSITION_GROUP_LIST;");
 }
+
+void Database::BeginAllVolumeGroupsSelect()
+{
+	BeginBatchSelect("SELECT * FROM VOLUME_GROUP_LIST;");
+}
+
 
 
 
@@ -857,6 +884,37 @@ AssetGroup Database::GetNextParticlePositionGroup()
 	return temp_group;
 }
 
+AssetGroup Database::GetNextVolumeGroup()
+{
+	AssetGroup temp_group;
+	int group_table_number;
+	int return_code;
+	wxString group_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("iti", &temp_group.id, &temp_group.name, &group_table_number);
+
+	// now we fill from the specific group table.
+
+	group_sql_select_command = wxString::Format("SELECT * FROM VOLUME_GROUP_%i", group_table_number);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
+			return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+	return temp_group;
+}
+
 
 
 MovieAsset Database::GetNextMovieAsset()
@@ -881,6 +939,13 @@ ParticlePositionAsset Database::GetNextParticlePositionAsset()
 {
 	ParticlePositionAsset temp_asset;
 	GetFromBatchSelect("iiirr", &temp_asset.asset_id, &temp_asset.parent_id, &temp_asset.pick_job_id, &temp_asset.x_position, &temp_asset.y_position);
+	return temp_asset;
+}
+
+VolumeAsset Database::GetNextVolumeAsset()
+{
+	VolumeAsset temp_asset;
+	GetFromBatchSelect("fiiriii", &temp_asset.filename, &temp_asset.asset_id, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size);
 	return temp_asset;
 }
 

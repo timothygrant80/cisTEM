@@ -1,3 +1,4 @@
+
 class Curve {
 
 private:
@@ -46,4 +47,5 @@ public:
 	void DeleteSavitzkyGolayCoefficients();
 	void AllocateSavitzkyGolayCoefficients();
 	void CheckMemory();
+	void AddWith(Curve *other_curve);
 };

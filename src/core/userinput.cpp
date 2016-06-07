@@ -153,7 +153,7 @@ void UserInput::Init(const char *program_name, wxString program_version)
     	    if (new_defaults_file == 0) wxPrintf("\n\nError Can't open defaults file! for writing\n\n");
     }
 
-	wxPrintf("        **   Welcome to %s   **\n\n", program_name);
+	wxPrintf("\n\n        **   Welcome to %s   **\n\n", program_name);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("         Version : %s\n", program_version);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");

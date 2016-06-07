@@ -185,6 +185,7 @@ void ImageAsset::Update(wxString wanted_filename)
 
 }
 
+
 void ImageAsset::CopyFrom(Asset *other_asset)
 {
 	ImageAsset *casted_asset = reinterpret_cast < ImageAsset *> (other_asset);
@@ -233,6 +234,79 @@ void ParticlePositionAsset::CopyFrom(Asset *other_asset)
 	y_position = casted_asset->y_position;
 }
 
+// Volume asset///
+
+VolumeAsset::VolumeAsset()
+{
+	asset_id = -1;
+	parent_id = -1;
+	reconstruction_job_id = -1;
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+	pixel_size = 0;
+
+	is_valid = false;
+	filename = wxEmptyString;
+
+}
+
+VolumeAsset::~VolumeAsset()
+{
+	//Don't have to do anything for now
+}
+
+VolumeAsset::VolumeAsset(wxString wanted_filename)
+{
+	filename = wanted_filename;
+	asset_id = -1;
+	parent_id = -1;
+	reconstruction_job_id = -1;
+
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+	pixel_size = 0;
+	is_valid = false;
+
+	int number_in_stack;
+
+	if (filename.IsOk() == true && filename.FileExists() == true)
+	{
+		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
+	}
+
+}
+
+
+void VolumeAsset::Update(wxString wanted_filename)
+{
+	filename = wanted_filename;
+
+
+	if (filename.IsOk() == true && filename.FileExists() == true)
+	{
+		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
+	}
+
+}
+
+
+void VolumeAsset::CopyFrom(Asset *other_asset)
+{
+	VolumeAsset *casted_asset = reinterpret_cast < VolumeAsset *> (other_asset);
+	asset_id = casted_asset->asset_id;
+	parent_id = casted_asset->parent_id;
+	reconstruction_job_id = casted_asset->reconstruction_job_id;
+
+	x_size = casted_asset->x_size;
+	y_size = casted_asset->y_size;
+	z_size = casted_asset->z_size;
+
+	filename = casted_asset->filename;
+	pixel_size = casted_asset->pixel_size;
+	is_valid = casted_asset->is_valid;
+}
 
 // Return Pointers
 
@@ -250,6 +324,12 @@ ImageAsset * AssetList::ReturnImageAssetPointer(long wanted_asset)
 }
 
 ParticlePositionAsset * AssetList::ReturnParticlePositionAssetPointer(long wanted_asset)
+{
+	MyPrintWithDetails("This should never be called!!");
+	abort();
+}
+
+VolumeAsset* AssetList::ReturnVolumeAssetPointer(long wanted_asset)
 {
 	MyPrintWithDetails("This should never be called!!");
 	abort();
@@ -299,7 +379,7 @@ void MovieAssetList::CheckMemory()
 
 }
 
-long MovieAssetList::FindFile(wxFileName file_to_find)
+long MovieAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
 {
 	long found_position = -1;
 
@@ -309,6 +389,15 @@ long MovieAssetList::FindFile(wxFileName file_to_find)
 		{
 			found_position = counter;
 			break;
+		}
+
+		if (also_check_vs_shortname == true)
+		{
+			if (reinterpret_cast < MovieAsset *> (assets)[counter].filename.GetFullName() == file_to_find.GetFullName())
+			{
+				found_position = counter;
+				break;
+			}
 		}
 	}
 
@@ -442,7 +531,7 @@ void ImageAssetList::CheckMemory()
 
 }
 
-long ImageAssetList::FindFile(wxFileName file_to_find)
+long ImageAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
 {
 	long found_position = -1;
 
@@ -452,6 +541,15 @@ long ImageAssetList::FindFile(wxFileName file_to_find)
 		{
 			found_position = counter;
 			break;
+		}
+
+		if (also_check_vs_shortname == true)
+		{
+			if (reinterpret_cast < ImageAsset *> (assets)[counter].filename.GetFullName() == file_to_find.GetFullName())
+			{
+				found_position = counter;
+				break;
+			}
 		}
 	}
 
@@ -659,6 +757,154 @@ void ParticlePositionAssetList::RemoveAll()
 		delete [] reinterpret_cast < ParticlePositionAsset *> (assets);
 		number_allocated = 100;
 		assets = new ParticlePositionAsset[number_allocated];
+	}
+}
+
+// Volume Asset List
+
+VolumeAssetList::VolumeAssetList()
+{
+	number_of_assets = 0;
+	number_allocated = 15;
+	assets = new ImageAsset[15];
+
+}
+
+VolumeAssetList::~VolumeAssetList()
+{
+	delete [] reinterpret_cast < VolumeAsset *> (assets);
+}
+
+void VolumeAssetList::CheckMemory()
+{
+	VolumeAsset *buffer;
+
+	// check we have enough memory
+
+	if (number_of_assets >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_of_assets < 10000) number_allocated *= 2;
+		else number_allocated += 10000;
+
+		buffer = new VolumeAsset[number_allocated];
+
+		for (long counter = 0; counter < number_of_assets; counter++)
+		{
+			buffer[counter].CopyFrom(& reinterpret_cast < VolumeAsset *> (assets)[counter]);
+		}
+
+		delete [] reinterpret_cast < VolumeAsset *>  (assets);
+		assets = buffer;
+	}
+
+
+}
+
+long VolumeAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
+{
+	long found_position = -1;
+
+	for (long counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast < VolumeAsset *> (assets)[counter].filename == file_to_find)
+		{
+			found_position = counter;
+			break;
+		}
+
+		if (also_check_vs_shortname == true)
+		{
+			if (reinterpret_cast < VolumeAsset *> (assets)[counter].filename.GetFullName() == file_to_find.GetFullName())
+			{
+				found_position = counter;
+				break;
+			}
+		}
+	}
+
+	return found_position;
+
+}
+
+Asset * VolumeAssetList::ReturnAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <VolumeAsset *> (assets)[wanted_asset];
+}
+
+VolumeAsset * VolumeAssetList::ReturnVolumeAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <VolumeAsset *> (assets)[wanted_asset];
+}
+
+int VolumeAssetList::ReturnAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].asset_id;
+}
+
+int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <VolumeAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+int VolumeAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <VolumeAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+
+
+void VolumeAssetList::AddAsset(Asset *asset_to_add)
+{
+	CheckMemory();
+
+	// Should be fine for memory, so just add one.
+
+	reinterpret_cast < VolumeAsset *> (assets)[number_of_assets].CopyFrom(asset_to_add);
+	number_of_assets++;
+
+
+
+}
+
+void VolumeAssetList::RemoveAsset(long number_to_remove)
+{
+	if (number_to_remove < 0 || number_to_remove >= number_of_assets)
+	{
+		wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+		exit(-1);
+	}
+
+	for (long counter = number_to_remove; counter < number_of_assets -1; counter++)
+	{
+		reinterpret_cast < VolumeAsset *> (assets)[counter].CopyFrom(& reinterpret_cast < VolumeAsset *> (assets)[counter + 1]);
+	}
+
+	number_of_assets--;
+}
+
+void VolumeAssetList::RemoveAll()
+{
+	number_of_assets = 0;
+
+	if (number_allocated > 100)
+	{
+		delete [] reinterpret_cast < VolumeAsset *> (assets);
+		number_allocated = 100;
+		assets = new VolumeAsset[number_allocated];
 	}
 }
 

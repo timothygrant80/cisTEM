@@ -53,31 +53,40 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 	int i, j, k;
 	int yi, zi;
-	int bin;
+	float bin;
+	int ibin;
+
+	float difference;
+	float current_sum1;
+	float current_sum2;
 
 	float x, y, z;
 	float frequency;
 	float frequency_squared;
 
-	if (number_of_bins == 0) number_of_bins = reconstructed_volume_1.ReturnSmallestLogicalDimension() / 2 + 1;
+	if (number_of_bins == 0 ) number_of_bins = reconstructed_volume_1.ReturnSmallestLogicalDimension() / 2 + 1;
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 
 // Extend table to include corners in 3D Fourier space
-	number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
+	if (reconstructed_volume_1.logical_z_dimension == 1) number_of_bins_extended = int(number_of_bins * sqrtf(2.0)) + 1;
+	else number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
+
 	double *sum1 = new double[number_of_bins_extended];
 	double *sum2 = new double[number_of_bins_extended];
 	double *cross_terms = new double[number_of_bins_extended];
-	int *non_zero_count = new int[number_of_bins_extended];
+	double *non_zero_count = new double[number_of_bins_extended];
 	double temp_double;
 
 	long pixel_counter = 0;
 
 	fftwf_complex temp_c;
 
+	FSC.ClearData();
+
 	ZeroDoubleArray(sum1, number_of_bins_extended);
 	ZeroDoubleArray(sum2, number_of_bins_extended);
 	ZeroDoubleArray(cross_terms, number_of_bins_extended);
-	ZeroIntArray(non_zero_count, number_of_bins_extended);
+	ZeroDoubleArray(non_zero_count, number_of_bins_extended);
 
 	for (k = 0; k <= reconstructed_volume_1.physical_upper_bound_complex_z; k++)
 	{
@@ -102,20 +111,51 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 						if ((i != 0) || (i == 0 && zi > 0) || (i == 0 && yi > 0 && zi == 0))
 						{
 							// compute radius, in units of physical Fourier pixels
-							bin = int(sqrtf(frequency_squared) * number_of_bins2);
+							bin = sqrtf(frequency_squared) * number_of_bins2;
+							ibin = int(bin);
+							difference = bin - float(ibin);
+
+							//bin = int(sqrtf(frequency_squared) * number_of_bins2);
+
 							if ((i == 0 && yi != 0) || pixel_counter == 0)
 							{
-								sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter])) * 0.25;
-								sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter])) * 0.25;
-								cross_terms[bin] += crealf(temp_c) * 0.25;
-								non_zero_count[bin] += 1;
+								current_sum1 = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter])) * 0.25;
+								current_sum2 = crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter])) * 0.25;
+
+								sum1[ibin] += current_sum1 * (1 - difference);
+								sum1[ibin + 1] += current_sum1 * difference;
+
+								sum2[ibin] += current_sum2 * (1 - difference);
+								sum2[ibin + 1] += current_sum2 * difference;
+
+								cross_terms[ibin] += crealf(temp_c) * (1 - difference) * 0.25;
+								cross_terms[ibin + 1] += crealf(temp_c) * difference * 0.25;
+
+								non_zero_count[ibin] += 1 - difference * 0.25;
+								non_zero_count[ibin + 1] += difference * 0.25;
 							}
 							else
 							{
-								sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter]));
-								sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
-								cross_terms[bin] += crealf(temp_c);
-								non_zero_count[bin] += 1;
+								//sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter]));
+								//sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
+								//cross_terms[bin] += crealf(temp_c);
+								//non_zero_count[bin] += 1;
+
+								current_sum1 = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter]));
+								current_sum2 = crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
+
+								sum1[ibin] += current_sum1 * (1 - difference);
+								sum1[ibin + 1] += current_sum1 * difference;
+
+								sum2[ibin] += current_sum2 * (1 - difference);
+								sum2[ibin + 1] += current_sum2 * difference;
+
+								cross_terms[ibin] += crealf(temp_c) * (1 - difference);
+								cross_terms[ibin + 1] += crealf(temp_c) * difference;
+
+								non_zero_count[ibin] += 1 - difference;
+								non_zero_count[ibin + 1] += difference;
+
 							}
 						}
 					}

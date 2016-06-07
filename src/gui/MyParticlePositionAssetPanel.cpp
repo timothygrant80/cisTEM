@@ -1,6 +1,8 @@
 #include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyImageAssetPanel *image_asset_panel;
+
 MyParticlePositionAssetPanel::MyParticlePositionAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
@@ -95,7 +97,14 @@ void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
 	}
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE PARTICLE_POSITION_GROUP_LIST");
-	main_frame->current_project.database.CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	main_frame->current_project.database.CreateParticlePositionGroupListTable();
+
+	main_frame->current_project.database.ExecuteSQL("DROP TABLE PARTICLE_POSITION_ASSETS");
+	main_frame->current_project.database.CreateParticlePositionAssetTable();
+
+
+
+
 
 }
 
@@ -194,8 +203,125 @@ void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()
 
 void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
+	// Get a text file which should have asset_id x_pos y_pos
 
-	//MyImageImportDialog *import_dialog = new MyImageImportDialog(this);
-	//import_dialog->ShowModal();
+	 wxFileDialog openFileDialog(this, _("Open TXT file"), "", "", "TXT files (*.txt)|*.txt;*.txt", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
 
+	 if (openFileDialog.ShowModal() == wxID_OK)
+	 {
+		 wxTextFile input_file;
+		 wxString current_line;
+		 wxString current_token;
+		 wxStringTokenizer current_tokenizer;
+		 bool have_errors = false;
+		 int token_counter;
+		 input_file.Open(openFileDialog.GetPath());
+		 MyErrorDialog *my_error = new MyErrorDialog(this);
+		 long image_asset_id;
+
+		 ParticlePositionAsset temp_asset;
+		 temp_asset.pick_job_id = -1;
+
+
+		 // for each line, we add an asset..
+
+		 wxProgressDialog *my_dialog = new wxProgressDialog ("Import Assets", "Importing Assets", input_file.GetLineCount(), this);
+
+		 // for database..
+
+		 main_frame->current_project.database.BeginParticlePositionAssetInsert();
+
+
+		 for (long counter = 0; counter < input_file.GetLineCount(); counter++)
+		 {
+			 current_line = input_file.GetLine(counter);
+			 current_line.Trim();
+
+			 if (current_line.IsEmpty() == false && current_line.StartsWith("#") == false)
+			 {
+				 current_tokenizer.SetString(current_line);
+				 wxPrintf("Current Line = %s, number_tokens = %li\n", current_line, current_tokenizer.CountTokens());
+
+
+				 if (current_tokenizer.CountTokens() < 3)
+				 {
+					 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li contains less than 3 (%li) values and will be ignored\n"), counter, current_tokenizer.CountTokens()));
+					 have_errors = true;
+				 }
+				 else
+				 {
+					 if (current_tokenizer.CountTokens() > 3)
+					 {
+						 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li contains more than 3 values, only first 3 values will be parsed..\n"), counter));
+						 have_errors = true;
+					 }
+
+					 // get the first token
+
+					 current_token = current_tokenizer.GetNextToken();
+					 if (current_token.ToLong(&image_asset_id) == false)
+					 {
+						 // it wasn't a number, so is it a valid filename?
+						 image_asset_id = reinterpret_cast <ImageAssetList*>  (image_asset_panel->all_assets_list)->FindFile(current_token, true);
+					 }
+
+					 if (image_asset_id == -1)
+					 {
+						 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li, column 1 is not read as a valid Asset ID or filename, and so the line will be ignored\n"), counter));
+						 have_errors = true;
+					 }
+					 else
+					 {
+						 if (image_asset_panel->ReturnArrayPositionFromAssetID(image_asset_id) < 0)
+						 {
+							 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li, column 1 : Asset (%li) is not an existing image asset\nn"), counter, image_asset_id));
+							 have_errors = true;
+						 }
+						 else
+						 {
+							 temp_asset.parent_id = image_asset_id;
+							 current_token = current_tokenizer.GetNextToken();
+							 if (current_token.ToDouble(&temp_asset.x_position) == false)
+							 {
+								 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li, column 2 is not read as a valid X position, and so the line will be ignored\n"), counter));
+								 have_errors = true;
+							 }
+							 else
+							 {
+								 current_token = current_tokenizer.GetNextToken();
+								 if (current_token.ToDouble(&temp_asset.y_position) == false)
+								 {
+									 my_error->ErrorText->AppendText(wxString::Format(wxT("Line %li, column 3 is not read as a valid Y position, and so the line will be ignored\n"), counter));
+									 have_errors = true;
+								 }
+								 else // if we get here, we should be ok..
+								 {
+									 temp_asset.asset_id = current_asset_number;
+									 AddAsset(&temp_asset);
+									 main_frame->current_project.database.AddNextParticlePositionAsset(temp_asset.asset_id, temp_asset.parent_id, temp_asset.pick_job_id, temp_asset.x_position, temp_asset.y_position);
+								 }
+							 }
+						 }
+					 }
+				 }
+
+				 my_dialog->Update(counter);
+			 }
+		 }
+
+		 main_frame->current_project.database.EndParticlePositionAssetInsert();
+
+		 my_dialog->Destroy();
+
+		 // errros?
+
+		 if (have_errors == true)
+		 {
+			my_error->ShowModal();
+		 }
+
+		 my_error->Destroy();
+
+		 is_dirty = true;
+	 }
 }

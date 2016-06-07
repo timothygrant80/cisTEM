@@ -3676,6 +3676,116 @@ pure function GetMaximumDiagonalRadius(self)  result(maximum_radius)
 end function GetMaximumDiagonalRadius
 */
 
+float Image::ReturnSigmaOfFourierValuesOnEdges()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "Image not in Fourier Space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D currently supported");
+
+	long number_of_pixels = 0;
+	double total = 0.0;
+	double total_squared = 0.0;
+	float sigma;
+	float average_density;
+	long counter = 0;
+
+	int x_counter;
+	int y_counter;
+	int logical_x;
+	int logical_y;
+
+    for (y_counter = 0; y_counter <= physical_upper_bound_complex_y; y_counter++)
+    {
+    	logical_y = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(y_counter);
+
+      for (x_counter = 0; x_counter <= physical_upper_bound_complex_x; x_counter++)
+      {
+    	  logical_x = ReturnFourierLogicalCoordGivenPhysicalCoord_X(x_counter);
+
+    	  if (logical_x == logical_lower_bound_complex_x || y_counter == logical_lower_bound_complex_y || x_counter == logical_upper_bound_complex_x || y_counter == logical_upper_bound_complex_y)
+    	  {
+    	      total += creal(complex_values[counter]);
+    	      total += cimag(complex_values[counter]);
+
+    	      total_squared += powf(creal(complex_values[counter]), 2);
+    	      total_squared += powf(cimag(complex_values[counter]), 2);
+    	      number_of_pixels+=2;
+    	   }
+
+	 	 counter++;
+
+   	    }
+    }
+
+    average_density = total / double(number_of_pixels);
+    sigma = sqrtf((total_squared / double(number_of_pixels)) - pow(average_density, 2));
+    //wxPrintf("Average = %f, Sigma = %f\n", average_density, sigma);
+    return sigma;
+
+}
+
+float Image::ReturnSigmaOfFourierValuesOnEdgesAndCorners()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "Image not in Fourier Space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D currently supported");
+
+	long number_of_pixels = 0;
+	double total = 0.0;
+	double total_squared = 0.0;
+	float sigma;
+	float average_density;
+	float frequency_squared;
+	long counter = 0;
+
+	int k;
+	int j;
+	int i;
+
+	float x;
+	float y;
+	float z;
+
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x + y + z;
+
+				if (frequency_squared >= 0.249)
+				{
+					total += creal(complex_values[counter]);
+					total += cimag(complex_values[counter]);
+
+					total_squared += powf(creal(complex_values[counter]), 2);
+					total_squared += powf(cimag(complex_values[counter]), 2);
+					number_of_pixels+=2;
+				}
+
+				counter++;
+
+			}
+		}
+    }
+
+    average_density = total / double(number_of_pixels);
+    sigma = sqrtf((total_squared / double(number_of_pixels)) - pow(average_density, 2));
+    //wxPrintf("Average = %f, Sigma = %f\n", average_density, sigma);
+    return sigma;
+
+}
+
 float Image::ReturnAverageOfRealValuesOnEdges()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -5051,10 +5161,11 @@ void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_v
 }
 
 
-void Image::ClipInto(Image *other_image, float wanted_padding_value)
+void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertFalse(is_in_real_space == true && fill_with_noise == true, "Fill with noise, only for fourier space");
 
 	long pixel_counter = 0;
 	int array_address = 0;
@@ -5137,7 +5248,22 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value)
 
 					//if (temp_logical_x > logical_upper_bound_complex_x || temp_logical_x < logical_lower_bound_complex_x) continue;
 
-					other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value);
+					if (fill_with_noise == false) other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value);
+					else
+					{
+
+						if (temp_logical_x < logical_lower_bound_complex_x || temp_logical_x > logical_upper_bound_complex_x || temp_logical_y < logical_lower_bound_complex_y ||temp_logical_y > logical_upper_bound_complex_y || temp_logical_z < logical_lower_bound_complex_z || temp_logical_z > logical_upper_bound_complex_z)
+						{
+							other_image->complex_values[pixel_counter] = (global_random_number_generator.GetNormalRandom() * wanted_noise_sigma) + (I * global_random_number_generator.GetNormalRandom() * wanted_noise_sigma);
+						}
+						else
+						{
+							other_image->complex_values[pixel_counter] = complex_values[ReturnFourier1DAddressFromLogicalCoord(temp_logical_x,temp_logical_y, temp_logical_z)];
+
+						}
+
+
+					}
 					pixel_counter++;
 
 				}
@@ -6134,6 +6260,87 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
 
 	//wxPrintf("%f %f %f %f\n", integer_peak.x, integer_peak.y, found_peak.x, found_peak.y);
     return found_peak;
+}
+
+void Image::SubSampleWithNoisyResampling(Image *first_sampled_image, Image *second_sampled_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "Image must be in Fourier space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D images supported for now");
+	MyDebugAssertTrue(HasSameDimensionsAs(first_sampled_image) == true && HasSameDimensionsAs(second_sampled_image) == true, "Images are different dimensions");
+
+	Image scaled_image;
+	Image first_temp_image;
+	Image second_temp_image;
+
+	scaled_image.Allocate(logical_x_dimension * 2, logical_y_dimension * 2, false);
+	first_temp_image.Allocate(logical_x_dimension * 2, logical_y_dimension * 2, true);
+	second_temp_image.Allocate(logical_x_dimension * 2, logical_y_dimension * 2, true);
+
+	float current_sigma = ReturnSigmaOfFourierValuesOnEdgesAndCorners();
+
+	ClipInto(&scaled_image, 0, true, current_sigma);
+	scaled_image.BackwardFFT();
+	scaled_image.SubSampleMask(&first_temp_image, &second_temp_image);
+
+	first_temp_image.ForwardFFT();
+	first_temp_image.ClipInto(first_sampled_image);
+	second_temp_image.ForwardFFT();
+	second_temp_image.ClipInto(second_sampled_image);
+}
+
+
+void Image::SubSampleMask(Image *first_sampled_image, Image *second_sampled_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D images supported for now");
+//	MyDebugAssertTrue(HasSameDimensionsAs(first_sampled_image) == true && HasSameDimensionsAs(second_sampled_image) == true, "Images are different dimensions");
+
+	long pixel_counter = 0;
+
+	int i;
+	int j;
+
+	float first_mask = 0.;
+	float second_mask = 1.;
+
+	bool odd_x;
+
+	if (IsOdd(logical_x_dimension) == true) odd_x = true;
+	else odd_x = false;
+
+	first_sampled_image->CopyFrom(this);
+	second_sampled_image->CopyFrom(this);
+
+	for (j = 0; j < logical_y_dimension; j++)
+	{
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			if (first_mask == 0) first_mask = 1.;
+		    else first_mask = 0;
+
+		    if (second_mask == 0) second_mask = 1.;
+		    else second_mask = 0;
+
+
+		  	first_sampled_image->real_values[pixel_counter] *= first_mask;
+		  	second_sampled_image->real_values[pixel_counter] *= second_mask;
+
+		  	if (i == logical_x_dimension - 1 && odd_x == false)
+		  	{
+				if (first_mask == 0) first_mask = 1;
+			    else first_mask = 0;
+
+			    if (second_mask == 0) second_mask = 1;
+			    else second_mask = 0;
+		  	}
+
+		  	pixel_counter++;
+		}
+
+		pixel_counter+=padding_jump_value;
+	}
 }
 
 

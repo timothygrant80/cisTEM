@@ -14,7 +14,7 @@ class JobPanel : public wxPanel
 	public:
 
 	virtual void UpdateJobDetails(const char *updateinfo) { }
-	virtual void OnJobSocketEvent(wxSocketEvent& event) {wxPrintf("JobPanel\n\n");}
+	virtual void OnJobSocketEvent(wxSocketEvent& event) {}
 
 	virtual void WriteInfoText(wxString text_to_write) = 0;
 	virtual void WriteErrorText(wxString text_to_write) = 0;

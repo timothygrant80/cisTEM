@@ -70,6 +70,19 @@ public :
 	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
 	void EndImageAssetInsert();
 
+	void BeginParticlePositionAssetInsert();
+	void AddNextParticlePositionAsset(long particle_position_asset_id, long parent_image_asset_id, long pick_job_id, double x_position, double y_position);
+	void EndParticlePositionAssetInsert() {EndBatchInsert();};
+
+	// Table creation wrappers..
+
+
+	bool CreateParticlePositionAssetTable() {return CreateTable("PARTICLE_POSITION_ASSETS", "piirr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");};
+	bool CreateParticlePositionGroupListTable() {return  CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
+
+	bool CreateVolumeAssetTable() {return CreateTable("VOLUME_ASSETS", "pitriii", "VOLUME_ASSET_ID", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
+	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
+
 	// Convenience select functions...
 
 	void BeginAllMovieAssetsSelect();
@@ -95,6 +108,14 @@ public :
 	void BeginAllParticlePositionGroupsSelect();
 	AssetGroup GetNextParticlePositionGroup();
 	void EndAllParticlePositionGroupsSelect(){EndBatchSelect();};
+
+	void BeginAllVolumeAssetsSelect();
+	VolumeAsset GetNextVolumeAsset();
+	void EndAllVolumeAssetsSelect() {EndBatchSelect();};
+
+	void BeginAllVolumeGroupsSelect();
+	AssetGroup GetNextVolumeGroup();
+	void EndAllVolumeGroupsSelect(){EndBatchSelect();};
 
 	void BeginAllRunProfilesSelect();
 	RunProfile GetNextRunProfile();

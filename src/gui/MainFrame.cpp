@@ -8,11 +8,14 @@
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
+extern MyVolumeAssetPanel *volume_asset_panel;
+
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
+
 
 
 MyMainFrame::MyMainFrame( wxWindow* parent )
@@ -327,6 +330,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		my_dialog->Update(3);
 		run_profiles_panel->ImportAllFromDatabase();
 		my_dialog->Update(4);
+		volume_asset_panel->ImportAllFromDatabase();
 		//align_movies_panel->Refresh();
 		my_dialog->Update(5);
 		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");

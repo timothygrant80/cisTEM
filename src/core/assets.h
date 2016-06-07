@@ -87,6 +87,26 @@ class ParticlePositionAsset : public Asset {
 	void CopyFrom(Asset *other_asset);
 };
 
+class VolumeAsset : public Asset {
+
+  public:
+
+	VolumeAsset();
+	VolumeAsset(wxString wanted_filename);
+	~VolumeAsset();
+
+	long reconstruction_job_id;
+
+	int x_size;
+	int y_size;
+	int z_size;
+
+	double pixel_size;
+
+	void Update(wxString wanted_filename);
+	void CopyFrom(Asset *other_asset);
+};
+
 
 class AssetList {
 
@@ -108,10 +128,13 @@ public :
 	virtual void RemoveAll() = 0;
 //	virtual long FindFile(wxFileName file_to_find) = 0;
 	virtual void CheckMemory() = 0;
+
 	virtual Asset * ReturnAssetPointer(long wanted_asset) = 0;
 	virtual MovieAsset * ReturnMovieAssetPointer(long wanted_asset);
 	virtual ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 	virtual ParticlePositionAsset * ReturnParticlePositionAssetPointer(long wanted_asset);
+	virtual VolumeAsset* ReturnVolumeAssetPointer(long wanted_asset);
+
 	virtual int ReturnAssetID(long wanted_asset) = 0;
 	virtual int ReturnArrayPositionFromID(int wanted_id) = 0;
 	virtual int ReturnArrayPositionFromParentID(int wanted_id) = 0;
@@ -138,7 +161,7 @@ public:
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
 	void RemoveAll();
-	long FindFile(wxFileName file_to_find);
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
 	void CheckMemory();
 
 };
@@ -161,7 +184,7 @@ public:
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
 	void RemoveAll();
-	long FindFile(wxFileName file_to_find);
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
 	void CheckMemory();
 
 };
@@ -187,5 +210,30 @@ public:
 	void CheckMemory();
 
 };
+
+
+class VolumeAssetList : public AssetList {
+
+public:
+
+	VolumeAssetList();
+	~VolumeAssetList();
+
+
+	Asset * ReturnAssetPointer(long wanted_asset);
+	VolumeAsset * ReturnVolumeAssetPointer(long wanted_asset);
+
+	int ReturnAssetID(long wanted_asset);
+	int ReturnArrayPositionFromID(int wanted_id);
+	int ReturnArrayPositionFromParentID(int wanted_id);
+
+	void AddAsset(Asset *asset_to_add);
+	void RemoveAsset(long number_to_remove);
+	void RemoveAll();
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
+	void CheckMemory();
+
+};
+
 
 #endif

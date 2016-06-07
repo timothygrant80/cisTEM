@@ -133,6 +133,8 @@ public:
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
+	void SubSampleWithNoisyResampling(Image *first_sampled_image, Image *second_sampled_image);
+	void SubSampleMask(Image *first_sampled_image, Image *second_sampled_image);
 
 	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
@@ -273,7 +275,7 @@ public:
 	bool IsConstant();
 	void SetToConstant(float wanted_value);
 	void ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value = 0);
-	void ClipInto(Image *other_image, float wanted_padding_value = 0);
+	void ClipInto(Image *other_image, float wanted_padding_value = 0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
@@ -296,6 +298,8 @@ public:
 	void TaperEdges();
 	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0);
 	float ReturnAverageOfRealValuesOnEdges();
+	float ReturnSigmaOfFourierValuesOnEdges();
+	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
 	float ReturnMaximumValue(float inner_radius, float outer_radius);
 	void SetMaximumValue(float new_maximum_value);
 	void SetMinimumValue(float new_minimum_value);

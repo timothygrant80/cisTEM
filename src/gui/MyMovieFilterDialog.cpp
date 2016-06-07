@@ -164,7 +164,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (date_of_run_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DATETIME_OF_RUN BETWEEN %i AND %i", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
+			search_command += wxString::Format(" DATETIME_OF_RUN BETWEEN %li AND %li", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -172,7 +172,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (job_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" ALIGNMENT_JOB_ID BETWEEN %i AND %i", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
+			search_command += wxString::Format(" ALIGNMENT_JOB_ID BETWEEN %f AND %f", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -180,7 +180,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (voltage_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" VOLTAGE BETWEEN %i AND %i", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
+			search_command += wxString::Format(" VOLTAGE BETWEEN %f AND %f", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -188,7 +188,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (pixel_size_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PIXEL_SIZE BETWEEN %i AND %i", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
+			search_command += wxString::Format(" PIXEL_SIZE BETWEEN %f AND %f", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -196,7 +196,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (exposure_per_frame_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" EXPOSURE_PER_FRAME BETWEEN %i AND %i", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
+			search_command += wxString::Format(" EXPOSURE_PER_FRAME BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -204,7 +204,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (pre_exposure_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PRE_EXPOSURE_AMOUNT BETWEEN %i AND %i", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
+			search_command += wxString::Format(" PRE_EXPOSURE_AMOUNT BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";

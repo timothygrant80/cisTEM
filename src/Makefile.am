@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels reset_mrc_header
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf estimate_dataset_ssnr reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -74,7 +74,7 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 
 
-ProjectX_SOURCES = programs/projectx/projectx.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/BitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp
+ProjectX_SOURCES = programs/projectx/projectx.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/BitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/MyVolumeAssetPanel.cpp
 ProjectX_CXXFLAGS = $(WX_CPPFLAGS)
 ProjectX_CPPFLAGS = $(WX_CPPFLAGS)
 ProjectX_LDFLAGS = $(WX_LIBS)
@@ -111,6 +111,12 @@ ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
 ctffind_LDADD = libcore.a
 
+estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
+estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+estimate_dataset_ssnr_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+estimate_dataset_ssnr_LDFLAGS = $(WX_LIBS_BASE)
+estimate_dataset_ssnr_LDADD = libcore.a
+
 reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -140,6 +146,12 @@ remove_outlier_pixels_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_outlier_pixels_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 remove_outlier_pixels_LDFLAGS = $(WX_LIBS_BASE)
 remove_outlier_pixels_LDADD = libcore.a
+
+resize_SOURCES = programs/resize/resize.cpp
+resize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+resize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+resize_LDFLAGS = $(WX_LIBS_BASE)
+resize_LDADD = libcore.a
 
 
 reset_mrc_header_SOURCES = programs/reset_mrc_header/reset_mrc_header.cpp

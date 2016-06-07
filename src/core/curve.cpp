@@ -215,6 +215,18 @@ Curve & Curve::operator = (const Curve &other_curve)
 	return *this;
 }
 
+void Curve::AddWith(Curve *other_curve)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
+	MyDebugAssertTrue(number_of_points == other_curve->number_of_points, "Different number of points");
+
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		data_y[counter] += other_curve->data_y[counter];
+	}
+}
+
+
 void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 {
 	MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");

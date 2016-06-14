@@ -46,7 +46,7 @@ float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, fl
 	is_in_memory		=	true;
 
 	// Initialise values
-	escale = 1000.0;
+	escale = 100.0;
 	num_function_calls = 0;
 
 

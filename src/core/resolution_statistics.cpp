@@ -288,8 +288,10 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 //			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), float(sum_double[i]) / float(sum_int[i]) / 0.25 / 10000 * i);
 			// Average sum of CTF^2 from N 2D images contributing to a 3D voxel = float(sum_double[i]) / float(sum_int[i]) = N * 0.5 / 2i
 			// The factor of 0.5 is due to the average value for CTF^2.
-			// Divide volume SSNR by  float(sum_double[i]) / float(sum_int[i])
-			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), mask_volume_fraction* fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
+			// The factor of 1 / 2 is due to the average weight in the trilinear interpolation
+			// Divide volume SSNR by float(sum_double[i]) / float(sum_int[i])
+//			wxPrintf("i = %i, sum_int = %g, sum_double = %g, ratio = %g\n", i, float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
+			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 2.0 * mask_volume_fraction* fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
 		}
 		else
 		{

@@ -18,6 +18,9 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 	wxChar   symmetry_type;
 	long     symmetry_number;
 
+	wanted_symmetry_symbol = wanted_symmetry_symbol.Trim();
+	wanted_symmetry_symbol = wanted_symmetry_symbol.Trim(false);
+
 	if (wanted_symmetry_symbol.Length() < 1)
 	{
 		MyPrintWithDetails("Error: Must specify symmetry symbol\n");
@@ -32,7 +35,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 	{
 		if (! wanted_symmetry_symbol.Mid(1).ToLong(&symmetry_number))
 		{
-			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", wanted_symmetry_symbol.Mid(1));
 			abort();
 		}
 	}

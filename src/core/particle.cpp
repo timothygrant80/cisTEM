@@ -15,7 +15,7 @@ Particle::Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimensio
 Particle::~Particle()
 {
 	delete [] temp_float;
-	delete [] input_parameters;
+	delete [] current_parameters;
 	delete [] parameter_average;
 	delete [] parameter_variance;
 	delete [] refined_parameters;
@@ -75,23 +75,25 @@ void Particle::Init()
 	mask_radius = 0.0;
 	mask_falloff = 0.0;
 	mask_volume = 0.0;
+	molecular_mass_kDa = 0.0;
 	is_filtered = false;
 	filter_radius_low = 0.0;
 	filter_radius_high = 0.0;
 	filter_falloff = 0.0;
+	signed_CC_limit = 0.0;
 	is_ssnr_filtered = false;
 	is_centered_in_box = true;
 	shift_counter = 0;
 	insert_even = false;
 	temp_float = new float [number_of_parameters];
-	input_parameters = new float [number_of_parameters];
+	current_parameters = new float [number_of_parameters];
 	parameter_average = new float [number_of_parameters];
 	parameter_variance = new float [number_of_parameters];
 	refined_parameters = new float [number_of_parameters];
 	parameter_map = new bool [number_of_parameters];
 	constraints_used = new bool [number_of_parameters];
 	ZeroFloatArray(temp_float, number_of_parameters);
-	ZeroFloatArray(input_parameters, number_of_parameters);
+	ZeroFloatArray(current_parameters, number_of_parameters);
 	ZeroFloatArray(parameter_average, number_of_parameters);
 	ZeroFloatArray(parameter_variance, number_of_parameters);
 	ZeroFloatArray(refined_parameters, number_of_parameters);
@@ -99,6 +101,11 @@ void Particle::Init()
 	ZeroBoolArray(constraints_used, number_of_parameters);
 	number_of_search_dimensions = 0;
 	bin_index = NULL;
+	mask_center_2d_x = 0.0;
+	mask_center_2d_y = 0.0;
+	mask_center_2d_z = 0.0;
+	mask_radius_2d = 0.0;
+	apply_2D_masking = false;
 }
 
 void Particle::AllocateImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension)
@@ -206,10 +213,17 @@ void Particle::CenterInCorner()
 
 void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle)
 {
-	MyDebugAssertTrue(! ctf_is_initialized, "CTF already initialized");
+//	MyDebugAssertTrue(! ctf_is_initialized, "CTF already initialized");
 
 	ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, 0.0);
 	ctf_is_initialized = true;
+}
+
+void Particle::SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle)
+{
+	MyDebugAssertTrue(ctf_is_initialized, "CTF not initialized");
+
+	ctf_parameters.SetDefocus(defocus_1 / pixel_size, defocus_2 / pixel_size, deg_2_rad(astigmatism_angle));
 }
 
 void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle)
@@ -217,9 +231,30 @@ void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, flo
 	MyDebugAssertTrue(ctf_image->is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! ctf_image->is_in_real_space, "CTF image not in Fourier space");
 
-	if (! ctf_is_initialized) ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, 0.0);
-	ctf_image->CalculateCTFImage(ctf_parameters);
+	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle);
+	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false)
+	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
+	{
+		current_ctf = ctf_parameters;
+		ctf_image->CalculateCTFImage(current_ctf);
+	}
 	ctf_image_calculated = true;
+}
+
+void Particle::PhaseFlipImage()
+{
+	MyDebugAssertTrue(ctf_image_calculated, "CTF image not calculated");
+
+	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
+	particle_image->PhaseFlipPixelWise(*ctf_image);
+}
+
+void Particle::CTFMultiplyImage()
+{
+	MyDebugAssertTrue(ctf_image_calculated, "CTF image not calculated");
+
+	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
+	particle_image->MultiplyPixelWiseReal(*ctf_image);
 }
 
 void Particle::SetIndexForWeightedCorrelation()
@@ -237,13 +272,16 @@ void Particle::SetIndexForWeightedCorrelation()
 	float frequency;
 	float frequency_squared;
 
-	float low_limit2 = powf(pixel_size / filter_radius_low,2);
+	float low_limit2;
 	float high_limit2 = fminf(powf(pixel_size / filter_radius_high,2),0.25);
 
 	int number_of_bins = particle_image->ReturnLargestLogicalDimension() / 2 + 1;
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 
 	long pixel_counter = 0;
+
+	low_limit2 = 0.0;
+	if (filter_radius_low != 0.0) low_limit2 = powf(pixel_size / filter_radius_low,2);
 
 	if (bin_index != NULL) delete [] bin_index;
 	bin_index = new int [particle_image->real_memory_allocated / 2];
@@ -275,7 +313,7 @@ void Particle::SetIndexForWeightedCorrelation()
 	}
 }
 
-void Particle::WeightBySSNR(Curve &SSNR)
+void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting)
 {
 	MyDebugAssertTrue(particle_image->is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(ctf_image->is_in_memory, "CTF image memory not allocated");
@@ -283,14 +321,62 @@ void Particle::WeightBySSNR(Curve &SSNR)
 	MyDebugAssertTrue(! is_ssnr_filtered, "Already SSNR filtered");
 
 	int i;
+	// mask_volume = number of pixels in 2D mask applied to input images
+	// (4.0 * PI / 3.0 * powf(mask_volume / PI, 1.5)) = volume (number of voxels) inside sphere with radius of 2D mask
+	// kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3) = volume (number of pixels) inside the particle envelope
+	float particle_area_in_pixels = PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);
+//	float ssnr_scale_factor = particle_area_in_pixels / mask_volume;
+	float ssnr_scale_factor = particle_area_in_pixels / particle_image->logical_x_dimension / particle_image->logical_y_dimension;
+//	wxPrintf("particle_area_in_pixels = %g, mask_volume = %g\n", particle_area_in_pixels, mask_volume);
+//	float ssnr_scale_factor_old = kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) / (4.0 * PI / 3.0 * powf(mask_volume / PI, 1.5));
+//	wxPrintf("old = %g, new = %g\n", ssnr_scale_factor_old, ssnr_scale_factor);
+//	float ssnr_scale_factor = PI * powf( powf(3.0 * kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) ,1.0 / 3.0) ,2) / mask_volume;
+//	float ssnr_scale_factor = particle_image->logical_x_dimension * particle_image->logical_y_dimension / mask_volume;
+
+	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
+
 	Image *snr_image = new Image;
 	snr_image->Allocate(ctf_image->logical_x_dimension, ctf_image->logical_y_dimension, false);
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);
 	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
-	snr_image->MultiplyByWeightsCurve(SSNR);
-	particle_image->OptimalFilterBySNRImage(*snr_image);
+	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
+	particle_image->OptimalFilterBySNRImage(*snr_image, include_reference_weighting);
+	is_ssnr_filtered = true;
+
+	delete snr_image;
+}
+
+void Particle::WeightBySSNR(Curve &SSNR, Image &projection_image)
+{
+	MyDebugAssertTrue(particle_image->is_in_memory, "particle_image memory not allocated");
+	MyDebugAssertTrue(projection_image.is_in_memory, "projection_image memory not allocated");
+	MyDebugAssertTrue(ctf_image->is_in_memory, "CTF image memory not allocated");
+	MyDebugAssertTrue(ctf_image_calculated, "CTF image not initialized");
+	MyDebugAssertTrue(! is_ssnr_filtered, "Already SSNR filtered");
+
+	int i;
+	float particle_area_in_pixels = PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);
+//	float ssnr_scale_factor = particle_area_in_pixels / mask_volume;
+	float ssnr_scale_factor = particle_area_in_pixels / particle_image->logical_x_dimension / particle_image->logical_y_dimension;
+//	wxPrintf("particle_area_in_pixels = %g, mask_volume = %g\n", particle_area_in_pixels, mask_volume);
+//	float ssnr_scale_factor_old = kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) / (4.0 * PI / 3.0 * powf(mask_volume / PI, 1.5));
+//	wxPrintf("old = %g, new = %g\n", ssnr_scale_factor_old, ssnr_scale_factor);
+//	float ssnr_scale_factor = PI * powf((3.0 * kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3),1.0 / 3.0) ,2) / mask_volume;
+//	float ssnr_scale_factor = particle_image->logical_x_dimension * particle_image->logical_y_dimension / mask_volume;
+
+	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
+
+	Image *snr_image = new Image;
+	snr_image->Allocate(ctf_image->logical_x_dimension, ctf_image->logical_y_dimension, false);
+	particle_image->Whiten();
+
+//	snr_image->CopyFrom(ctf_image);
+	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
+	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
+	particle_image->OptimalFilterBySNRImage(*snr_image, 0);
+	projection_image.OptimalFilterBySNRImage(*snr_image, -1);
 	is_ssnr_filtered = true;
 
 	delete snr_image;
@@ -308,9 +394,9 @@ void Particle::CalculateProjection(Image &projection_image, ReconstructedVolume 
 
 void Particle::SetParameters(float *wanted_parameters)
 {
-	for (int i = 0; i < number_of_parameters; i++) {input_parameters[i] = wanted_parameters[i];};
+	for (int i = 0; i < number_of_parameters; i++) {current_parameters[i] = wanted_parameters[i];};
 
-	alignment_parameters.Init(input_parameters[1], input_parameters[2], input_parameters[3], input_parameters[4], input_parameters[5]);
+	alignment_parameters.Init(current_parameters[1], current_parameters[2], current_parameters[3], current_parameters[4], current_parameters[5]);
 }
 
 void Particle::SetAlignmentParameters(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x, float wanted_shift_y)
@@ -377,11 +463,11 @@ float Particle::ReturnParameterLogP(float *parameters)
 int Particle::MapParameterAccuracy(float *accuracies)
 {
 	ZeroFloatArray(temp_float, number_of_parameters);
-	temp_float[1] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius);
-	temp_float[2] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius);
-	temp_float[3] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius);
-	temp_float[4] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size);
-	temp_float[5] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size);
+	temp_float[1] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	temp_float[2] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	temp_float[3] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	temp_float[4] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
+	temp_float[5] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
 	number_of_search_dimensions = MapParametersFromExternal(temp_float, accuracies);
 	return number_of_search_dimensions;
 }
@@ -413,7 +499,7 @@ int Particle::MapParameters(float *mapped_parameters)
 	{
 		if (parameter_map[i])
 		{
-			mapped_parameters[j] = input_parameters[i];
+			mapped_parameters[j] = current_parameters[i];
 			j++;
 		}
 	}
@@ -447,12 +533,95 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	{
 		if (parameter_map[i])
 		{
-			input_parameters[i] = mapped_parameters[j];
+			current_parameters[i] = mapped_parameters[j];
 			j++;
 		}
 	}
 
-	alignment_parameters.Init(input_parameters[1], input_parameters[2], input_parameters[3], input_parameters[4], input_parameters[5]);
+	alignment_parameters.Init(current_parameters[1], current_parameters[2], current_parameters[3], current_parameters[4], current_parameters[5]);
 
 	return j;
+}
+
+float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma)
+{
+	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
+
+	float number_of_independent_pixels;
+	float variance_masked;
+	float variance_difference;
+	float rotated_center_x;
+	float rotated_center_y;
+	float rotated_center_z;
+
+	float pixel_center_2d_x = mask_center_2d_x / pixel_size - particle_image->physical_address_of_box_center_x;
+	float pixel_center_2d_y = mask_center_2d_y / pixel_size - particle_image->physical_address_of_box_center_y;
+	// Assumes cubic reference volume
+	float pixel_center_2d_z = mask_center_2d_z / pixel_size - particle_image->physical_address_of_box_center_x;
+	float pixel_radius_2d = mask_radius_2d / pixel_size;
+
+//	ResetImageFlags();
+//	mask_volume = PI * powf(mask_radius / pixel_size,2);
+	is_ssnr_filtered = false;
+	is_centered_in_box = true;
+	CenterInCorner();
+	input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, pixel_size / filter_radius_high, false, true);
+	projection_image.PhaseFlipPixelWise(*ctf_image);
+	WeightBySSNR(input_3d.statistics.part_SSNR, projection_image);
+
+	particle_image->SwapRealSpaceQuadrants();
+	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
+	particle_image->BackwardFFT();
+
+	projection_image.SwapRealSpaceQuadrants();
+	projection_image.BackwardFFT();
+//	particle_image->QuickAndDirtyWriteSlice("part.mrc", 1);
+//	projection_image.QuickAndDirtyWriteSlice("proj.mrc", 1);
+	alpha = particle_image->ReturnImageScale(projection_image, mask_radius / pixel_size);
+	projection_image.MultiplyByConstant(alpha);
+
+	if (apply_2D_masking)
+	{
+		AnglesAndShifts	reverse_alignment_parameters;
+		reverse_alignment_parameters.Init(- current_parameters[3], - current_parameters[2], - current_parameters[1], 0.0, 0.0);
+		reverse_alignment_parameters.euler_matrix.RotateCoords(pixel_center_2d_x, pixel_center_2d_y, pixel_center_2d_z, rotated_center_x, rotated_center_y, rotated_center_z);
+		variance_masked = particle_image->ReturnVarianceOfRealValues(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
+				rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0);
+	}
+	else
+	{
+		variance_masked = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
+	}
+
+	particle_image->SubtractImage(&projection_image);
+//	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
+	if (classification_resolution_limit > 0.0)
+	{
+		particle_image->ForwardFFT();
+		particle_image->CosineMask(pixel_size / classification_resolution_limit, pixel_size / mask_falloff);
+		particle_image->BackwardFFT();
+	}
+	if (apply_2D_masking)
+	{
+		variance_difference = particle_image->ReturnVarianceOfRealValues(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
+				rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0);
+		sigma = sqrtf(variance_difference / projection_image.ReturnVarianceOfRealValues(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
+				rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0));
+		number_of_independent_pixels = PI * powf(pixel_radius_2d,2);
+	}
+	else
+	{
+		variance_difference = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
+		sigma = sqrtf(variance_difference / projection_image.ReturnVarianceOfRealValues(mask_radius / pixel_size));
+		number_of_independent_pixels = mask_volume;
+	}
+
+	// Prevent rare occurrences of unrealistically high sigmas
+	if (sigma > 100.0) sigma = 100.0;
+
+//	wxPrintf("number_of_independent_pixels = %g, variance_difference = %g, variance_masked = %g, logp = %g\n", number_of_independent_pixels,
+//			variance_difference, variance_masked, -number_of_independent_pixels * variance_difference / variance_masked / 2.0);
+//	exit(0);
+	return 	- number_of_independent_pixels * variance_difference / variance_masked / 2.0
+			+ ReturnParameterLogP(current_parameters);
 }

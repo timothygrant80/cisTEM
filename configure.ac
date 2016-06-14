@@ -173,17 +173,12 @@ if test "x$HAVE_MKL" = "xyes"; then
 	CPPFLAGS="$CPPFLAGS -DMKL"
 
 	if test "x$CXX" = "xicpc"; then
-		CPPFLAGS="$CPPFLAGS -mkl"
-		LIBS="$LIBS -mkl"
+		CPPFLAGS="$CPPFLAGS -mkl=sequential"
+		LIBS="$LIBS -mkl=sequential -lmkl_rt"
 	else
 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
 		if test "x$static_link" = "xtrue"; then
 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
-	       	#LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl "
-	       	#LIBS="$LIBS -Wl,--start-group,${MKLROOT}/lib/intel64/libmkl_intel_lp64.a,${MKLROOT}/lib/intel64/libmkl_core.a,${MKLROOT}/lib/intel64/libmkl_sequential.a,--end-group -lpthread -lm -ldl "
-	       	#LDFLAGS="$LDFLAGS --preserve-dup-deps"
-	       	LIBS="$LIBS ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -lpthread -lm -ldl "
-	       	LIBTOOL="$LIBTOOL --preserve-dup-deps"
 	    else
 	    	LIBS="$LIBS -lmkl_rt"
 	    fi

@@ -13,6 +13,7 @@ typedef struct Kernel2D {
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
 #include <cstdarg>
@@ -29,6 +30,7 @@ typedef struct Kernel2D {
 #include <wx/wfstream.h>
 #include <wx/tokenzr.h>
 #include <wx/txtstrm.h>
+#include <wx/textfile.h>
 #include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
@@ -63,6 +65,7 @@ typedef struct Kernel2D {
 #include "brute_force_search.h"
 #include "conjugate_gradient.h"
 #include "euler_search.h"
+#include "frealign_parameter_file.h"
 #include "myapp.h"
 #ifdef MKL
 #include <mkl.h>

@@ -157,7 +157,7 @@ void UserInput::Init(const char *program_name, wxString program_version)
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("         Version : %s\n", program_version);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
-	wxPrintf("       Compiled : %s\n", __DATE__);
+	wxPrintf("        Compiled : %s\n", __DATE__);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("            Mode : ");
 

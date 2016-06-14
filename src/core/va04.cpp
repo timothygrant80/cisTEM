@@ -18,14 +18,14 @@ extern "C" {
 
 /* Table of constant values */
 
-static integer c__1 = 1;
+static int c__1 = 1;
 
 
 /* ****************************************************************************** */
 
-/* Subroutine */ int calcfx_(integer *nx, real *xpar, real *rf, real *ain, 
-	real *cs, real *wl, real *wgh1, real *wgh2, real *thetatr, real *
-	rmin2, real *rmax2, integer *nxyz, real *hw, real *dast)
+/* Subroutine */ int calcfx_(int *nx, float *xpar, float *rf, float *ain,
+	float *cs, float *wl, float *wgh1, float *wgh2, float *thetatr, float *
+	rmin2, float *rmax2, int *nxyz, float *hw, float *dast)
 {
 
 /*     CALCULATES NEW VALUE FOR F TO INPUT TO SUBROUTINE VA04A */
@@ -62,41 +62,39 @@ int va04a_(int *n, float *e, float *escale, int *num_function_calls, float (*tar
 {
 
     /* Format strings */
-    static char fmt_19[] = "(5x,\002VA04A MAXIMUM CHANGE DOES NOT ALTER FUNC\
-TION\002)";
-    static char fmt_52[] = "(/1x,\002ITERATION\002,i5,i15,\002 FUNCTION VALU\
-ES\002,10x,\002F =\002,e21.14/(5e24.14))";
-    static char fmt_80[] = "(5x,\002VA04A ACCURACY LIMITED BY ERRORS IN F\
-\002)";
+    static char fmt_19[] = "(5x,\002VA04A MAXIMUM CHANGE DOES NOT ALTER FUNCTION\002)";
+    static char fmt_52[] = "(/1x,\002ITERATION\002,i5,i15,\002 FUNCTION VALUES\002,10x,\002F =\002,e21.14/(5e24.14))";
+    static char fmt_80[] = "(5x,\002VA04A ACCURACY LIMITED BY ERRORS IN F\002)";
 
     /* System generated locals */
-    integer i__1, i__2;
-    real r__1, r__2;
+    int i__1, i__2, maxx = 100 * *maxit;
+    double r__1, r__2;
 
     /* Builtin functions */
-    integer s_wsfe(cilist *), e_wsfe();
-    double r_sign(real *, real *), sqrt(doublereal);
-    integer do_fio(integer *, char *, ftnlen);
+    int s_wsfe(cilist *), e_wsfe();
+//    double r_sign(real *, real *), sqrt(doublereal);
+    int do_fio(int *, char *, ftnlen);
 
     /* Local variables */
-    static real a, b, d__;
-    static integer i__, j, k;
+    int icnt = 0;
+    static double a, b, d__, xs[11];
+    static int i__, j, k;
 // work array w must have at least dimension n * (n + 3)
-    static real w[130], da, db, fa, dd, fb, fc, dc, di, fi, dl;
-    static integer jj;
-    static real fp;
-    static integer is;
-    static real aaa;
-    static integer ind, jjj, jil, inn, ixp;
-    static real tmp, sum, dacc, dmag;
-    static integer nfcc;
-    static real dmax__, scer, ddmag, fkeep, fhold, ddmax;
-    static integer iline, idirn, iterc, itone;
-    static real fprev;
-    extern /* Subroutine */ int calcfx_(integer *, real *, real *, real *, 
-	    real *, real *, real *, real *, real *, real *, real *, integer *,
-	     real *, real *);
-    static integer isgrad;
+    static double w[154], da, db, fa, dd, fb, fc, dc, di, fi, dl;
+    static int jj;
+    static double fp;
+    static int is;
+    static double aaa;
+    static int ind, jjj, jil, inn, ixp;
+    static double tmp, sum, dacc, dmag;
+    static int nfcc;
+    static double dmax__, scer, ddmag, fkeep, fhold, ddmax;
+    static int iline, idirn, iterc, itone;
+    static double fprev;
+    extern /* Subroutine */ int calcfx_(int *, float *, float *, float *,
+	    float *, float *, float *, float *, float *, float *, float *, int *,
+	     float *, float *);
+    static int isgrad;
 
     /* Fortran I/O blocks */
     static cilist io___32 = { 0, 6, 0, fmt_19, 0 };
@@ -123,6 +121,7 @@ ES\002,10x,\002F =\002,e21.14/(5e24.14))";
     ind = 1;
     inn = 1;
     i__1 = *n;
+    for (i__ = 1; i__ <= i__1; i__++) {xs[i__] = x[i__];};
     for (i__ = 1; i__ <= i__1; ++i__) {
 	i__2 = *n;
 	for (j = 1; j <= i__2; ++j) {
@@ -145,6 +144,8 @@ L4:
     isgrad = 2;
     //calcfx_(n, &x[1], f, &ain[1], cs, wl, wgh1, wgh2, thetatr, rmin2, rmax2, &
 	//    nxyz[1], hw, dast);
+    icnt++;
+	if (icnt > maxx) goto L999;
     *f = target_function(parameters, x + 1);
     fkeep = dabs(*f) + dabs(*f);
 L5:
@@ -195,6 +196,8 @@ L58:
     }
     //calcfx_(n, &x[1], f, &ain[1], cs, wl, wgh1, wgh2, thetatr, rmin2, rmax2, &
 	//    nxyz[1], hw, dast);
+    icnt++;
+	if (icnt > maxx) goto L999;
     *f = target_function(parameters, x + 1);
 
     ++nfcc;
@@ -226,7 +229,8 @@ L17:
 L18:
     //s_wsfe(&io___32);
     //e_wsfe();
-    wxPrintf("Warning(VA04): maximum change does not alter target function\n");
+	// Removed this statement since it does not seem to be very informative
+    // wxPrintf("Warning(VA04): maximum change does not alter target function\n");
     goto L20;
 L15:
     fb = *f;
@@ -410,16 +414,6 @@ L41:
 	goto L50;
     }
 L50:
-    // Debug printout of parameter values and function value
-	//s_wsfe(&io___42);
-    //do_fio(&c__1, (char *)&iterc, (ftnlen)sizeof(integer));
-    //do_fio(&c__1, (char *)&nfcc, (ftnlen)sizeof(integer));
-    //do_fio(&c__1, (char *)&(*f), (ftnlen)sizeof(real));
-    //i__1 = *n;
-    //for (i__ = 1; i__ <= i__1; ++i__) {
-	//do_fio(&c__1, (char *)&x[i__], (ftnlen)sizeof(real));
-    //}
-    //e_wsfe();
     switch (*iprint) {
 	case 1:  goto L51;
 	case 2:  goto L53;
@@ -597,6 +591,8 @@ L100:
     fkeep = *f;
     //calcfx_(n, &x[1], f, &ain[1], cs, wl, wgh1, wgh2, thetatr, rmin2, rmax2, &
 	//    nxyz[1], hw, dast);
+    icnt++;
+	if (icnt > maxx) goto L999;
     *f = target_function(parameters, x + 1);
     ++nfcc;
     ddmag = (float)0.;
@@ -610,7 +606,8 @@ L76:
 L78:
     //s_wsfe(&io___45);
     //e_wsfe();
-    wxPrintf("Warning(VA04): accuracy limited by errors in target function\n");
+	// Removed this statement since it does not seem to be very informative
+    // wxPrintf("Warning(VA04): accuracy limited by errors in target function\n");
     goto L20;
 L88:
     ind = 1;
@@ -692,6 +689,12 @@ L20:
 L107:
     inn = 1;
     goto L35;
+L999:
+	for (i__ = 1; i__ <= i__1; i__++) {x[i__] = xs[i__];};
+    *f = target_function(parameters, x + 1);
+	// Removed this statement since it does not seem to be very informative
+    // wxPrintf("Warning(VA04): Endless loop safety catch, icnt = %i\n", icnt);
+    return 0;
 } /* va04a_ */
 
 #ifdef __cplusplus

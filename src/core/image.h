@@ -90,7 +90,7 @@ public:
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
-	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins);
+	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins, float signed_CC_limit);
 	void PhaseFlipPixelWise(Image &other_image);
 	void MultiplyPixelWiseReal(Image &other_image);
 	void MultiplyPixelWise(Image &other_image);
@@ -100,29 +100,29 @@ public:
 	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
 	long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
 	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
+	void ZeroFloatOutside(float wanted_mask_radius, bool invert_mask = false);
 	void ReplaceOutliersWithMean(float maximum_n_sigmas);
-	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
 	EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void UpdateDistributionOfRealValues(EmpiricalDistribution *distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void ApplySqrtNFilter();
-	void WhitenTwo(Image &other_image);
-	void Whiten();
-	void OptimalFilterBySNRImage(Image &SNR_image);
-	void MultiplyByWeightsCurve(Curve &weights);
+	void Whiten(float resolution_limit = 1.0);
+	void OptimalFilterBySNRImage(Image &SNR_image, int include_reference_weighting = 1);
+	void MultiplyByWeightsCurve(Curve &weights, float scale_factor = 1.0);
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
-	float Correct3D(float mask_radius = 0.0);
+	float Correct3D(float wanted_mask_radius = 0.0);
 	void MirrorXFourier2D(Image &mirrored_image);
 	void MirrorYFourier2D(Image &mirrored_image);
 	void RotateQuadrants(Image &rotated_image, int quad_i);
-	void GenerateReferenceProjections(Image *projections, EulerSearch &parameters);
-	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
+	void GenerateReferenceProjections(Image *projections, EulerSearch &parameters, float resolution);
+	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start);
 	void RotateFourier2DDeleteIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
 	void RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_index);
 	void RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
 	Kernel2D ReturnLinearInterpolatedFourierKernel2D(float &x, float &y);
 	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, bool use_nearest_neighbor = false);
-	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0);
+	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
 	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
@@ -133,8 +133,11 @@ public:
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
-	void SubSampleWithNoisyResampling(Image *first_sampled_image, Image *second_sampled_image);
-	void SubSampleMask(Image *first_sampled_image, Image *second_sampled_image);
+
+	inline long ReturnVolumeInRealSpace()
+	{
+		return long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+	};
 
 	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
@@ -154,7 +157,7 @@ public:
 	inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address (%i %i %i) out of bounds (%i to %i; %i to %i; %i to %i)!",wanted_x,wanted_y,wanted_z,0,physical_upper_bound_complex_x,0,physical_upper_bound_complex_y,0,physical_upper_bound_complex_z );
-		return (((physical_upper_bound_complex_x + 1) * (physical_upper_bound_complex_y + 1)) * wanted_z) + ((physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
+		return ((long(physical_upper_bound_complex_x + 1) * long(physical_upper_bound_complex_y + 1)) * wanted_z) + (long(physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
 	};
 
 	inline long ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
@@ -296,7 +299,7 @@ public:
 	void Compute1DRotationalAverage(double average[], int number_of_bins);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
-	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0);
+	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0, bool invert_mask = false);
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
@@ -316,10 +319,12 @@ public:
 	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value);
 
 
-	Peak FindPeakAtOriginFast2D(int wanted_max_1d_distance);
+	Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
 	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 
+	void SubSampleWithNoisyResampling(Image *first_sampled_image, Image *second_sampled_image);
+	void SubSampleMask(Image *first_sampled_image, Image *second_sampled_image);
 	// Test patterns
 	void Sine1D(int number_of_periods);
 };

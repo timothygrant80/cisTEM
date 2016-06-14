@@ -226,7 +226,6 @@ void Curve::AddWith(Curve *other_curve)
 	}
 }
 
-
 void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 {
 	MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");

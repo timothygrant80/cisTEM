@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf estimate_dataset_ssnr reconstruct3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -61,7 +61,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/brute_force_search.cpp \
                        core/va04.cpp \
                        core/conjugate_gradient.cpp \
-                       core/euler_search.cpp
+                       core/euler_search.cpp \
+                       core/frealign_parameter_file.cpp
 
                        
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -111,17 +112,17 @@ ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
 ctffind_LDADD = libcore.a
 
-estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
-estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-estimate_dataset_ssnr_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-estimate_dataset_ssnr_LDFLAGS = $(WX_LIBS_BASE)
-estimate_dataset_ssnr_LDADD = libcore.a
-
 reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_LDFLAGS = $(WX_LIBS_BASE)
 reconstruct3d_LDADD = libcore.a
+
+merge3d_SOURCES = programs/merge3d/merge3d.cpp
+merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+merge3d_LDFLAGS = $(WX_LIBS_BASE)
+merge3d_LDADD = libcore.a
 
 project3d_SOURCES = programs/project3d/project3d.cpp
 project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)

@@ -32,6 +32,7 @@ public:
 	float						scaled_noise_variance;
 	ParameterConstraints		parameter_constraints;
 	CTF							ctf_parameters;
+	CTF							current_ctf;
 	bool						ctf_is_initialized;
 	Image						*ctf_image;
 	bool						ctf_image_calculated;
@@ -42,10 +43,12 @@ public:
 	float						mask_radius;			// In A
 	float						mask_falloff;			// In A
 	float						mask_volume;			// In pixels
+	float						molecular_mass_kDa;		// In kilo Daltons
 	bool						is_filtered;
 	float						filter_radius_low;		// In 1/pixel
 	float						filter_radius_high;		// In 1/pixel
 	float						filter_falloff;			// In 1/pixel
+	float						signed_CC_limit;		// In 1/pixel, 0.0 = use max resolution
 	bool						is_ssnr_filtered;
 	bool						is_centered_in_box;
 	int							shift_counter;
@@ -53,7 +56,7 @@ public:
 	int							number_of_parameters;
 	float						target_phase_error;
 	float						*temp_float;
-	float						*input_parameters;
+	float						*current_parameters;
 	float						*parameter_average;
 	float						*parameter_variance;
 	float						*refined_parameters;
@@ -61,6 +64,11 @@ public:
 	bool						*constraints_used;
 	int							number_of_search_dimensions;
 	int							*bin_index;
+	float						mask_center_2d_x;
+	float						mask_center_2d_y;
+	float						mask_center_2d_z;
+	float						mask_radius_2d;
+	bool						apply_2D_masking;
 
 	Particle();
 	Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
@@ -79,9 +87,13 @@ public:
 	void CenterInBox();
 	void CenterInCorner();
 	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
+	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle);
 	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
+	void PhaseFlipImage();
+	void CTFMultiplyImage();
 	void SetIndexForWeightedCorrelation();
-	void WeightBySSNR(Curve &SSNR);
+	void WeightBySSNR(Curve &SSNR, int include_reference_weighting = 1);
+	void WeightBySSNR(Curve &SSNR, Image &projection_image);
 	void CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d);
 	void SetParameters(float *wanted_parameters);
 	void SetAlignmentParameters(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x = 0.0, float wanted_shift_y = 0.0);
@@ -90,8 +102,10 @@ public:
 	float ReturnParameterPenalty(float *parameters);
 	float ReturnParameterLogP(float *parameters);
 	int MapParameterAccuracy(float *accuracies);
-	int MapParametersFromExternal(float *input_parametersfloat, float *mapped_parameters);
+	int MapParametersFromExternal(float *input_parameters, float *mapped_parameters);
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(float *output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
+	float ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma);
+//	float ReturnLogLikelihood(Image &input_image, Image &projection_image, float input_pixel_size, float classification_resolution_limit, float &alpha, float &sigma);
 };

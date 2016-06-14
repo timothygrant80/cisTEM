@@ -11,14 +11,21 @@ EulerSearch::EulerSearch()
 	list_of_best_parameters = NULL;
 //	kernel_index = NULL;
 //	best_values = NULL;
-	starting_values = NULL;
+//	starting_values = NULL;
 	parameter_map = NULL;
 	angular_step_size = 0.0;
-	psi_max = 360.0;
+	phi_max = 0.0;
+	phi_start = 0.0;
+	theta_max = 0.0;
+	theta_start = 0.0;
+	psi_max = 0.0;
 	psi_step = 0.0;
+	psi_start = 0.0;
 	resolution_limit = 0.0;
 //	best_score = - std::numeric_limits<float>::max();
 	test_mirror = false;
+	max_search_x = 0.0;
+	max_search_y = 0.0;
 }
 
 EulerSearch::~EulerSearch()
@@ -26,21 +33,7 @@ EulerSearch::~EulerSearch()
 //	if (best_values != NULL) delete [] best_values;
 	if (parameter_map != NULL) delete [] parameter_map;
 	if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
-//	{
-//		for (int i = 0; i < 2; ++i)
-//		{
-//			delete [] list_of_search_parameters[i];						// delete inner arrays of floats
-//		}
-//		delete [] list_of_search_parameters;							// delete array of pointers to float arrays
-//	}
-	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep);
-//	{
-//		for (int i = 0; i < best_parameters_to_keep; ++i)
-//		{
-//			delete [] list_of_best_parameters[i];						// delete inner arrays of floats
-//		}
-//		delete [] list_of_best_parameters;							// delete array of pointers to float arrays
-//	}
+	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
 }
 
 void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
@@ -58,79 +51,68 @@ void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map
 	resolution_limit = wanted_resolution_limit;
 
 	best_parameters_to_keep = wanted_parameters_to_keep;
-	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep);
-//	{
-//		for (i = 0; i < best_parameters_to_keep; ++i)
-//		{
-//			delete [] list_of_best_parameters[i];						// delete inner arrays of floats
-//		}
-//		delete [] list_of_best_parameters;								// delete array of pointers to float arrays
-//	}
-	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep, 6);
-
-//	list_of_best_parameters = new float* [best_parameters_to_keep];							// dynamic array (size 2) of pointers to float
-
-//	for (i = 0; i < best_parameters_to_keep; ++i)
-//	{
-//		list_of_best_parameters[i] = new float[6];	// each i-th pointer is now pointing to dynamic array (size number_of_positions) of actual float values
-//		ZeroFloatArray(list_of_best_parameters[i], 5);
-//		list_of_best_parameters[i][5] = - std::numeric_limits<float>::max();
-//	}
+	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
+	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
-void EulerSearch::InitGrid(float wanted_angular_step_size, float wanted_psi_step, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
+void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
 {
-	Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
+	if (number_of_search_positions == 0) Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
 	angular_step_size = wanted_angular_step_size;
+	phi_start = wanted_phi_start;
+	theta_start = wanted_theta_start;
+	psi_max = wanted_psi_max;
 	psi_step = wanted_psi_step;
+	psi_start = wanted_psi_start;
+	symmetry_symbol = wanted_symmetry_symbol;
+
+	SetSymmetryLimits();
 	CalculateGridSearchPositions();
 }
 
-void EulerSearch::InitRandom(float wanted_psi_step, float *starting_values, int wanted_number_of_search_positions, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
+// This method has not been tested
+void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
 {
 	int i;
 
-	Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
+	if (number_of_search_positions == 0) Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
 	number_of_search_positions = wanted_number_of_search_positions;
 
 	psi_step = wanted_psi_step;
+	symmetry_symbol = wanted_symmetry_symbol;
+
+	SetSymmetryLimits();
 	CalculateRandomSearchPositions();
 }
 
 void EulerSearch::CalculateGridSearchPositions()
 {
 	int i;
-	float phi_max = 0.0;
-	float theta_max = 0.0;
-	float phi_step;
-	float theta_step;
-	float phi = 0.0;
-	float theta = 0.0;
+	float phi_step = 360.0;
+	float theta_step = 360.0;
+	float phi;
+	float theta;
+	float theta_max_local;
+	float theta_start_local;
+	float phi_start_local;
 
-	if (parameter_map[0]) phi_max = 360.0;
-	if (parameter_map[1]) theta_max = 90.0;
-	// make sure that theta_step produces an integer number of steps
-	theta_step = theta_max / int(theta_max / angular_step_size);
+//	phi_max = 360.0;
+	theta_max_local = theta_max;
 
-	number_of_search_positions = 0;
-	for (theta = 0.0; theta <= theta_max; theta += theta_step)
+	if (! parameter_map[0]) phi_start_local = phi_start;
+	if (parameter_map[1])
 	{
-        if (theta == 0.0 || theta == 180.0)
-        {
-        	phi_step = 360.0;
-        }
-        else
-        {
-        	// angular sampling was adapted from Spider subroutine VOEA (Paul Penczek)
-    		phi_step = angular_step_size / sinf(deg_2_rad(theta));
-    		phi_step = phi_max / int(phi_max / phi_step);
-        }
-        for (phi = 0.0; phi < phi_max; phi += phi_step)
-		{
-        	number_of_search_positions++;
-		}
+//		theta_max_local = 90.0;
+		// make sure that theta_step produces an integer number of steps
+		theta_step = theta_max_local / int(theta_max_local / angular_step_size + 0.5);
+		theta_start_local = fabsf(theta_step / 2.0 * global_random_number_generator.GetUniformRandom());
+	}
+	else
+	{
+		theta_start_local = theta_start;
+		theta_max_local = theta_start;
 	}
 
 	if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
@@ -142,6 +124,29 @@ void EulerSearch::CalculateGridSearchPositions()
 //		delete [] list_of_search_parameters;							// delete array of pointers to float arrays
 //	}
 
+	number_of_search_positions = 0;
+	for (theta = theta_start_local; theta < theta_max_local + theta_step / 2.0; theta += theta_step)
+	{
+		if (parameter_map[0])
+		{
+	        if (theta == 0.0 || theta == 180.0)
+	        {
+	        	phi_step = phi_max;
+	        }
+	        else
+	        {
+	        	// angular sampling was adapted from Spider subroutine VOEA (Paul Penczek)
+	        	phi_step = fabsf(angular_step_size / sinf(deg_2_rad(theta)));
+	        	if (phi_step > phi_max) phi_step = phi_max;
+	    		phi_step = phi_max / int(phi_max / phi_step + 0.5);
+	        }
+		}
+        for (phi = 0; phi < phi_max; phi += phi_step)
+		{
+        	number_of_search_positions++;
+		}
+	}
+
 	Allocate2DFloatArray(list_of_search_parameters, number_of_search_positions, 2);
 //	list_of_search_parameters = new float* [2];							// dynamic array (size 2) of pointers to float
 
@@ -151,27 +156,35 @@ void EulerSearch::CalculateGridSearchPositions()
 //	}
 
 	number_of_search_positions = 0;
-	for (theta = 0.0; theta <= theta_max; theta += theta_step)
+	for (theta = theta_start_local; theta < theta_max_local + theta_step / 2.0; theta += theta_step)
 	{
-        if (theta == 0.0 || theta == 180.0)
-        {
-        	phi_step = 360.0;
-        }
-        else
-        {
-        	// angular sampling was adapted from Spider subroutine VOEA (Paul Penczek)
-    		phi_step = angular_step_size / sinf(deg_2_rad(theta));
-    		phi_step = phi_max / int(phi_max / phi_step);
-        }
+		if (parameter_map[0])
+		{
+	        if (theta == 0.0 || theta == 180.0)
+	        {
+	        	phi_step = phi_max;
+	        }
+	        else
+	        {
+	        	// angular sampling was adapted from Spider subroutine VOEA (Paul Penczek)
+	        	phi_step = fabsf(angular_step_size / sinf(deg_2_rad(theta)));
+	        	if (phi_step > phi_max) phi_step = phi_max;
+	    		phi_step = phi_max / int(phi_max / phi_step + 0.5);
+	    		phi_start_local = phi_step / 2.0 * global_random_number_generator.GetUniformRandom();
+	        }
+		}
         for (phi = 0.0; phi < phi_max; phi += phi_step)
 		{
-        	list_of_search_parameters[number_of_search_positions][0] = phi;
+        	list_of_search_parameters[number_of_search_positions][0] = phi + phi_start_local;
         	list_of_search_parameters[number_of_search_positions][1] = theta;
         	number_of_search_positions++;
 		}
 	}
 
-	test_mirror = true;
+	if (! parameter_map[2])
+	{
+		test_mirror = false;
+	}
 	wxPrintf("Number of search positions = %i\n", number_of_search_positions);
 }
 
@@ -183,6 +196,9 @@ void EulerSearch::CalculateRandomSearchPositions()
 	int number_of_positions = 0;
 	float theta;
 	float phi;
+
+//	phi_max = 360.0;
+//	theta_max = 90.0;
 
 	if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
 //	{
@@ -203,8 +219,22 @@ void EulerSearch::CalculateRandomSearchPositions()
 
 	while (number_of_positions < number_of_search_positions)
 	{
-		theta = 180.0 * global_random_number_generator.GetUniformRandom();
-		phi = 360.0 * global_random_number_generator.GetUniformRandom();
+		if (parameter_map[0])
+		{
+			phi = phi_max * (global_random_number_generator.GetUniformRandom() + 1.0) / 2.0;
+		}
+		else
+		{
+			phi = phi_start;
+		}
+		if (parameter_map[1])
+		{
+			theta = theta_max * (global_random_number_generator.GetUniformRandom() + 1.0) / 2.0;
+		}
+		else
+		{
+			theta = theta_start;
+		}
 		if (theta == 0.0)
 		{
 			list_of_search_parameters[number_of_positions][0] = phi;
@@ -220,10 +250,106 @@ void EulerSearch::CalculateRandomSearchPositions()
 		}
 		trials++;
 	}
+
+	if (! parameter_map[2])
+	{
+		test_mirror = false;
+	}
+}
+
+void EulerSearch::SetSymmetryLimits()
+{
+// Frealign limits, original code written by Richard Henderson
+//    DATA  ASYMTEST/' CDTOI0123456789'/
+//    DATA  THETASTORE/90.0,  90.0,  54.7,  54.7,  31.7/
+//    DATA  PHISTORE/360.0,  360.0, 180.0,  90.0, 180.0/
+//    DATA  JSTORE/2,1,1,1,1/
+
+	wxChar   symmetry_type;
+	long     symmetry_number;
+
+	if (symmetry_symbol.Length() < 1)
+	{
+		MyPrintWithDetails("Error: Must specify symmetry symbol\n");
+		abort();
+	}
+	symmetry_type = symmetry_symbol.Capitalize()[0];
+	if (symmetry_symbol.Length() == 1)
+	{
+		symmetry_number = 0;
+	}
+	else
+	{
+		if (! symmetry_symbol.Mid(1).ToLong(&symmetry_number))
+		{
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
+			abort();
+		}
+	}
+
+	if (symmetry_type == 'C')
+	{
+		if (symmetry_number == 0)
+		{
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
+			abort();
+		}
+
+		phi_max = 360.0 / symmetry_number;
+		theta_max = 90.0;
+		test_mirror = true;
+
+		return;
+	}
+
+	if (symmetry_type == 'D')
+	{
+		if (symmetry_number == 0)
+		{
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
+			abort();
+		}
+
+		phi_max = 360.0 / symmetry_number;
+		theta_max = 90.0;
+		test_mirror = false;
+
+		return;
+	}
+
+	if (symmetry_type == 'T')
+	{
+		phi_max = 180.0 / symmetry_number;
+		theta_max = 54.7;
+		test_mirror = false;
+
+		return;
+	}
+
+	if (symmetry_type == 'O')
+	{
+		phi_max = 90.0 / symmetry_number;
+		theta_max = 54.7;
+		test_mirror = false;
+
+		return;
+	}
+
+	if (symmetry_type == 'I')
+	{
+		phi_max = 180.0 / symmetry_number;
+		theta_max = 31.7;
+		test_mirror = false;
+
+		return;
+	}
+
+	MyPrintWithDetails("Error: Invalid symmetry symbol\n");
+	abort();
 }
 
 // Run the search
-void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, Kernel2D **kernel_index)
+void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections, Kernel2D **kernel_index)
 {
 	MyDebugAssertTrue(number_of_search_positions > 0,"EulerSearch not initialized");
 	MyDebugAssertTrue(particle.particle_image->is_in_memory,"Particle image not allocated");
@@ -237,6 +363,9 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	int pixel_counter;
 	int psi_i;
 	int psi_m;
+	int number_of_psi_positions;
+	int max_pix_x = max_search_x / particle.pixel_size;
+	int max_pix_y = max_search_y / particle.pixel_size;
 	float psi;
 //	float psi_max = 360.0;
 //	float psi_step = 1.0;
@@ -249,14 +378,12 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	Image *flipped_image = new Image;
 	Image *projection_image = new Image;
 	Image *rotated_image = new Image;
-	Image *quad_rot_image = new Image;
 	Image *correlation_map = new Image;
 //	Image *sampled_image = new Image;
 	Image *rotation_cache = NULL;
 	flipped_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 	projection_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 	rotated_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
-	quad_rot_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 	correlation_map->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 //	sampled_image->Allocate(int(input_3d.logical_x_dimension / sample_rate), int(input_3d.logical_y_dimension / sample_rate), false);
 	correlation_map->object_is_centred_in_box = false;
@@ -285,13 +412,22 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //	wxPrintf("0, 1, 2 = %g, %g, %g\n", real_a[0], real_a[1], real_a[2]);
 //	exit(0);
 
-	for (i = 0; i < best_parameters_to_keep; ++i)
+	for (i = 0; i < best_parameters_to_keep + 1; ++i)
 	{
 		ZeroFloatArray(list_of_best_parameters[i], 5);
 		list_of_best_parameters[i][5] = - std::numeric_limits<float>::max();
 	}
 
-	psi_i = myroundint(psi_max / psi_step);
+	if (parameter_map[2])
+	{
+		number_of_psi_positions = myroundint(psi_max / psi_step);
+		if (number_of_psi_positions < 1) number_of_psi_positions = 1;
+	}
+	else
+	{
+		number_of_psi_positions = 1;
+	}
+	psi_i = number_of_psi_positions;
 	if (test_mirror) psi_i *= 2;
 	rotation_cache = new Image [psi_i];
 	for (i = 0; i < psi_i; i++)
@@ -302,19 +438,26 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //	best_score = - std::numeric_limits<float>::max();
 	flipped_image->CopyFrom(particle.particle_image);
 //	flipped_image->PhaseFlipPixelWise(*particle.ctf_image);
-	flipped_image->MultiplyPixelWise(*particle.ctf_image);
 
-	psi_i = 0;
+//	psi_i = 0;
 	psi_m = 0;
-	for (psi = 0.0; psi < psi_max; psi += psi_step)
+	for (psi_i = 0; psi_i < number_of_psi_positions; psi_i++)
 	{
 //		wxPrintf("rotation_cache[psi_m].logical_z_dimension = %i\n", rotation_cache[psi_m].logical_z_dimension);
-		flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
+		if (parameter_map[2])
+		{
+			flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
+		}
+		else
+		{
+			angles.GenerateRotationMatrix2D(psi_start);
+			flipped_image->RotateFourier2D(rotation_cache[psi_m], angles);
+		}
 //		for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated / 2; pixel_counter++)
 //		{
 //			rotation_cache[psi_m].complex_values[pixel_counter] = conjf(rotation_cache[psi_m].complex_values[pixel_counter]);
 //		}
-		psi_i++;
+//		psi_i++;
 		psi_m++;
 		if (test_mirror)
 		{
@@ -327,9 +470,10 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	{
 		if (projections == NULL)
 		{
-			wxPrintf("i, phi, theta = %i, %f, %f\n", i, list_of_search_parameters[i][0], list_of_search_parameters[i][1]);
+//			wxPrintf("i, phi, theta = %i, %f, %f\n", i, list_of_search_parameters[i][0], list_of_search_parameters[i][1]);
 			angles.Init(list_of_search_parameters[i][0], list_of_search_parameters[i][1], 0.0, 0.0, 0.0);
 			input_3d.ExtractSlice(*projection_image, angles, resolution_limit);
+			projection_image->Whiten(resolution_limit);
 		}
 		else
 		{
@@ -341,15 +485,15 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 		}
 
 		best_inplane_score = - std::numeric_limits<float>::max();
-		psi_i = 0;
-		for (psi = 0.0; psi < psi_max; psi += psi_step)
+		psi_m = 0;
+		for (psi_i = 0; psi_i < number_of_psi_positions; psi_i++)
 		{
 			#ifndef MKL
-				real_c = rotation_cache[psi_i].real_values;
-				real_d = rotation_cache[psi_i].real_values + 1;
+				real_c = rotation_cache[psi_m].real_values;
+				real_d = rotation_cache[psi_m].real_values + 1;
 			#endif
 
-//			projection_image->RotateFourier2DFromIndex(*quad_rot_image, kernel_index[psi_i]);
+//			projection_image->RotateFourier2DFromIndex(*quad_rot_image, kernel_index[psi_m]);
 
 			// test 90, 180 and 270 degree rotated references
 //			for (quad_i = 0; quad_i < 3; quad_i++)
@@ -365,7 +509,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //			for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k3[pixel_counter] = real_c[pixel_counter] * (real_b[pixel_counter] - real_a[pixel_counter]);};
 			#ifdef MKL
 				// Use the MKL
-				vmcMulByConj(flipped_image->real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (projection_image->complex_values),reinterpret_cast <MKL_Complex8 *> (rotation_cache[psi_i].complex_values),reinterpret_cast <MKL_Complex8 *> (correlation_map->complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
+				vmcMulByConj(flipped_image->real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (projection_image->complex_values),reinterpret_cast <MKL_Complex8 *> (rotation_cache[psi_m].complex_values),reinterpret_cast <MKL_Complex8 *> (correlation_map->complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
 			#else
 				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * temp_k1[pixel_counter];};
 				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * temp_k2[pixel_counter];};
@@ -373,7 +517,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	//		for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * (real_a[pixel_counter] + real_b[pixel_counter]);};
 	//		for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * (real_b[pixel_counter] - real_a[pixel_counter]);};
 	//			for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated / 2; pixel_counter++)
-	//				{correlation_map->complex_values[pixel_counter] = projection_image->complex_values[pixel_counter] * rotation_cache[psi_i].complex_values[pixel_counter];}
+	//				{correlation_map->complex_values[pixel_counter] = projection_image->complex_values[pixel_counter] * rotation_cache[psi_m].complex_values[pixel_counter];}
 				correlation_map->is_in_real_space = false;
 //				correlation_map->BackwardFFT();
 //				correlation_map->SetToConstant(0.0);
@@ -383,33 +527,48 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //				sampled_image->SwapRealSpaceQuadrants();
 	//			sampled_image->BackwardFFT();
 //				sampled_image->QuickAndDirtyWriteSlice("junks.mrc",1);
-//				correlation_map->SwapRealSpaceQuadrants();
+/*				if (fabsf(list_of_search_parameters[i][1] - 90.0) < 10.0)
+				{
+				rotation_cache[psi_m].SwapRealSpaceQuadrants();
+				rotation_cache[psi_m].BackwardFFT();
+				rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc",1);
+				projection_image->SwapRealSpaceQuadrants();
+				projection_image->BackwardFFT();
+				projection_image->QuickAndDirtyWriteSlice("proj.mrc",1);
+				correlation_map->SwapRealSpaceQuadrants();
 				correlation_map->BackwardFFT();
-//				correlation_map->QuickAndDirtyWriteSlice("junkc.mrc",1);
-//				exit(0);
+				correlation_map->QuickAndDirtyWriteSlice("cros.mrc",1);
+				exit(0);
+				}
+				else
+				{ */
+				correlation_map->complex_values[0] = 0.0;
+				correlation_map->BackwardFFT();
+//				}
 	//			found_peak = sampled_image->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
-				found_peak = correlation_map->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
+				found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
+//				wxPrintf("peak  = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
+//						list_of_search_parameters[i][1], list_of_search_parameters[i][0], found_peak.x, found_peak.y);
 				if (found_peak.value > best_inplane_score)
 				{
 					best_inplane_score =  found_peak.value;
-					best_inplane_values[0] = 360.0 - psi;
-//					best_inplane_values[0] = 360.0 - (psi + quad_i * 90);
+					best_inplane_values[0] = 360.0 - (psi_i * psi_step + psi_start);
+//					best_inplane_values[0] = 360.0 - (psi_i * psi_step + quad_i * 90);
 					best_inplane_values[1] = found_peak.x;
 					best_inplane_values[2] = found_peak.y;
 					mirrored_match = false;
 				}
 
-//				if (test_mirror && fabs(list_of_search_parameters[i][1] - 90.0) > 1.0 && fabs(list_of_search_parameters[i][1] - 270.0) > 1.0)
 				if (test_mirror)
 				{
-					psi_i++;
+					psi_m++;
 
 					#ifndef MKL
-						real_c = rotation_cache[psi_i].real_values;
-						real_d = rotation_cache[psi_i].real_values + 1;
+						real_c = rotation_cache[psi_m].real_values;
+						real_d = rotation_cache[psi_m].real_values + 1;
 					#endif
 
-//					rotation_cache[psi_i].MirrorYFourier2D(*correlation_map);
+//					rotation_cache[psi_m].MirrorYFourier2D(*correlation_map);
 //					for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated / 2; pixel_counter++)
 //					{
 //						correlation_map->complex_values[pixel_counter] *= conjf(flipped_image->complex_values[pixel_counter]);
@@ -419,7 +578,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //					for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k3[pixel_counter] = real_c[pixel_counter] * (real_b[pixel_counter] - real_a[pixel_counter]);};
 					#ifdef MKL
 						// Use the MKL
-						vmcMulByConj(flipped_image->real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (projection_image->complex_values),reinterpret_cast <MKL_Complex8 *> (rotation_cache[psi_i].complex_values),reinterpret_cast <MKL_Complex8 *> (correlation_map->complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
+						vmcMulByConj(flipped_image->real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (projection_image->complex_values),reinterpret_cast <MKL_Complex8 *> (rotation_cache[psi_m].complex_values),reinterpret_cast <MKL_Complex8 *> (correlation_map->complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
 					#else
 						for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * temp_k1[pixel_counter];};
 						for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * temp_k2[pixel_counter];};
@@ -427,24 +586,27 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	//				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_r[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_d[pixel_counter] * (real_a[pixel_counter] + real_b[pixel_counter]);};
 	//				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {real_i[pixel_counter] = real_a[pixel_counter] * (real_c[pixel_counter] - real_d[pixel_counter]) + real_c[pixel_counter] * (real_b[pixel_counter] - real_a[pixel_counter]);};
 	//				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated / 2; pixel_counter++)
-	//					{correlation_map->complex_values[pixel_counter] = projection_image->complex_values[pixel_counter] * rotation_cache[psi_i].complex_values[pixel_counter];}
+	//					{correlation_map->complex_values[pixel_counter] = projection_image->complex_values[pixel_counter] * rotation_cache[psi_m].complex_values[pixel_counter];}
 					correlation_map->is_in_real_space = false;
 	//				correlation_map->SampleFFT(*sampled_image, sample_rate);
 	//				sampled_image->BackwardFFT();
 	//				found_peak = sampled_image->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
+					correlation_map->complex_values[0] = 0.0;
 					correlation_map->BackwardFFT();
-					found_peak = correlation_map->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
+					found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
+//					wxPrintf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
+//							list_of_search_parameters[i][1] + 180.0, list_of_search_parameters[i][0], found_peak.x, found_peak.y);
 					if (found_peak.value > best_inplane_score)
 					{
 						best_inplane_score =  found_peak.value;
-						best_inplane_values[0] = 360.0 - psi;
+						best_inplane_values[0] = 360.0 - (psi_i * psi_step + psi_start);
 						best_inplane_values[1] = found_peak.x;
 						best_inplane_values[2] = found_peak.y;
 						mirrored_match = true;
 					}
 				}
 //			}
-			psi_i++;
+			psi_m++;
 		}
 		if (best_inplane_score > list_of_best_parameters[best_parameters_to_keep - 1][5])
 		{
@@ -465,7 +627,21 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //				best_values[1] = list_of_search_parameters[i][1] + 180.0;
 //				best_values[2] = best_inplane_values[0];
 //				wxPrintf("i = %i, best_score_m = %f, best values = %f, %f, %f, %f, %f\n", i, list_of_best_parameters[best_parameters_to_keep - 1][5],
-//						list_of_best_parameters[best_parameters_to_keep - 1][2], list_of_best_parameters[best_parameters_to_keep - 1][1], list_of_best_parameters[best_parameters_to_keep - 1][0], list_of_best_parameters[best_parameters_to_keep - 1][3], list_of_best_parameters[best_parameters_to_keep - 1][4]);
+//						list_of_best_parameters[best_parameters_to_keep - 1][2], list_of_best_parameters[best_parameters_to_keep - 1][1], list_of_best_parameters[best_parameters_to_keep - 1][0],
+//						list_of_best_parameters[best_parameters_to_keep - 1][3], list_of_best_parameters[best_parameters_to_keep - 1][4]);
+/*				if (i == 0)
+				{
+					rotation_cache[0].SwapRealSpaceQuadrants();
+					rotation_cache[0].BackwardFFT();
+					rotation_cache[0].QuickAndDirtyWriteSlice("part.mrc",1);
+					rotation_cache[0].ForwardFFT();
+					rotation_cache[0].SwapRealSpaceQuadrants();
+					projection_image->SwapRealSpaceQuadrants();
+					projection_image->BackwardFFT();
+					projection_image->QuickAndDirtyWriteSlice("proj.mrc",1);
+					projection_image->ForwardFFT();
+					projection_image->SwapRealSpaceQuadrants();
+				} */
 			}
 			else
 			{
@@ -478,7 +654,8 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 //				best_values[1] = list_of_search_parameters[i][1];
 //				best_values[2] = best_inplane_values[0];
 //				wxPrintf("i = %i, best_score   = %f, best values = %f, %f, %f, %f, %f\n", i, list_of_best_parameters[best_parameters_to_keep - 1][5],
-//						list_of_best_parameters[best_parameters_to_keep - 1][2], list_of_best_parameters[best_parameters_to_keep - 1][1], list_of_best_parameters[best_parameters_to_keep - 1][0], list_of_best_parameters[best_parameters_to_keep - 1][3], list_of_best_parameters[best_parameters_to_keep - 1][4]);
+//						list_of_best_parameters[best_parameters_to_keep - 1][2], list_of_best_parameters[best_parameters_to_keep - 1][1], list_of_best_parameters[best_parameters_to_keep - 1][0],
+//						list_of_best_parameters[best_parameters_to_keep - 1][3], list_of_best_parameters[best_parameters_to_keep - 1][4]);
 			}
 		}
 		for (j = best_parameters_to_keep - 1; j > 0; j--)
@@ -504,9 +681,9 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections, K
 	delete flipped_image;
 	delete projection_image;
 	delete rotated_image;
-	delete quad_rot_image;
 	delete correlation_map;
-	psi_i = myroundint(psi_max / psi_step);
+//	psi_i = myroundint(psi_max / psi_step);
+	psi_i = number_of_psi_positions;
 	if (test_mirror) psi_i *= 2;
 	for (i = 0; i < psi_i; ++i)
 	{

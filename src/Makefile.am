@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -154,6 +154,11 @@ resize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 resize_LDFLAGS = $(WX_LIBS_BASE)
 resize_LDADD = libcore.a
 
+estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
+estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+estimate_dataset_ssnr_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+estimate_dataset_ssnr_LDFLAGS = $(WX_LIBS_BASE)
+estimate_dataset_ssnr_LDADD = libcore.a
 
 reset_mrc_header_SOURCES = programs/reset_mrc_header/reset_mrc_header.cpp
 reset_mrc_header_CXXFLAGS = $(WX_CPPFLAGS_BASE)

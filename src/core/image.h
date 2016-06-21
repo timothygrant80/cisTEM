@@ -57,6 +57,9 @@ public:
 
 	int			 insert_into_which_reconstruction;				// !<  Determines which reconstruction the image will be inserted into (for FSC calculation).
 
+	long		 number_of_real_space_pixels;					// !<	Total number of pixels in real space
+	float		 ft_normalization_factor;						// !<	Normalization factor for the Fourier transform (1/sqrt(N), where N is the number of pixels in real space)
+
 	// Arrays to hold voxel values
 
 	float 	 	 *real_values;									// !<  Real array to hold values for REAL images.
@@ -129,7 +132,7 @@ public:
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
-	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false);
+	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
@@ -247,7 +250,10 @@ public:
 	int ReturnMaximumDiagonalRadius();
 
 	bool FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
+	bool FourierComponentIsExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
 
+
+	inline void NormalizeFT() { MultiplyByConstant(ft_normalization_factor); }
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void AddConstant(float constant_to_add);
@@ -276,9 +282,11 @@ public:
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
 	bool IsConstant();
+	bool HasNan();
+	bool HasNegativeRealValue();
 	void SetToConstant(float wanted_value);
 	void ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value = 0);
-	void ClipInto(Image *other_image, float wanted_padding_value = 0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0);
+	void ClipInto(Image *other_image, float wanted_padding_value = 0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
@@ -291,12 +299,15 @@ public:
 	void ApplyBFactor(float bfactor);
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply);
+	void ApplyCurveFilter(Curve *filter_to_apply);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
 	void ComputeAmplitudeSpectrum(Image *other_image);
+	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
 	void Compute1DRotationalAverage(double average[], int number_of_bins);
+	void ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_variance_map, Image *mask, long number_of_pixels_within_mask);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
 	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0, bool invert_mask = false);
@@ -320,7 +331,7 @@ public:
 
 
 	Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
-	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
+	Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX,  int wanted_min_distance_from_edges = 0);
 	Peak FindPeakWithParabolaFit(float wanted_min_radius = 0, float wanted_max_radius = FLT_MAX);
 
 	void SubSampleWithNoisyResampling(Image *first_sampled_image, Image *second_sampled_image);

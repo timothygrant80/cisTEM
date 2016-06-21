@@ -215,6 +215,24 @@ Curve & Curve::operator = (const Curve &other_curve)
 	return *this;
 }
 
+void Curve::SetupXAxis(float lower_bound, float upper_bound, int wanted_number_of_points)
+{
+	ClearData();
+
+	for ( int counter = 0; counter < wanted_number_of_points; counter++ )
+	{
+		AddPoint(counter * (upper_bound - lower_bound)/float(wanted_number_of_points-1) , 0.0);
+	}
+}
+
+void Curve::ZeroYData()
+{
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		data_y[counter] = 0;
+	}
+}
+
 void Curve::AddWith(Curve *other_curve)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
@@ -262,46 +280,115 @@ float Curve::ReturnLinearInterpolationFromI(float wanted_i)
 	return (1.0 - distance_above) * data_y[i + 1] + (1.0 - distance_below) * data_y[i];
 }
 
-float Curve::ReturnLinearInterpolationFromX(float wanted_x_value)
+float Curve::ReturnLinearInterpolationFromX(float wanted_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
+	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
-	int closest_x_below;
-	int closest_x_above;
+	float value_to_return = 0.0;
 
-	float closest_distance_below = std::numeric_limits<float>::max();
-	float closest_distance_above = std::numeric_limits<float>::max();
-	float distance;
+	const int index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
 
-	for (int i = 0; i < number_of_points; i++)
+	if (index_of_previous_bin == number_of_points-1)
 	{
-		distance = fabs(data_x[i] - wanted_x_value);
-		if (data_x[i] <= wanted_x_value && distance < closest_distance_below)
+		value_to_return =  data_y[number_of_points-1];
+	}
+	else
+	{
+		float distance = (wanted_x - data_x[index_of_previous_bin])/(data_x[index_of_previous_bin+1] - data_x[index_of_previous_bin]);
+		value_to_return += data_y[index_of_previous_bin]   * (1.0 - distance);
+		value_to_return += data_y[index_of_previous_bin+1] * distance;
+	}
+	return value_to_return;
+}
+
+float Curve::ReturnMaximumValue()
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	float maximum_value = - FLT_MAX;
+
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] > maximum_value)
 		{
-			closest_x_below = i;
-			closest_distance_below = distance;
-		}
-		if (data_x[i] >= wanted_x_value && distance < closest_distance_above)
-		{
-			closest_x_above = i;
-			closest_distance_above = distance;
+			maximum_value = data_y[counter];
 		}
 	}
-
-	// wanted_x_value is outside range. Assign closest value
-	if (closest_x_below == closest_x_above) return data_y[closest_x_below];
-
-	// Otherwise, return interpolated value
-	distance = data_x[closest_x_above] - data_x[closest_x_below];
-	if (distance == 0) return (data_y[closest_x_below] + data_y[closest_x_above]) / 2.0;
-	return ((distance - closest_distance_above) * data_y[closest_x_above] + (distance - closest_distance_below) * data_y[closest_x_below]) / distance;
+	return maximum_value;
 }
+
+// Scale the Y values so that the peak is at 1.0 (assumes all Y values >=0)
+void Curve::NormalizeMaximumValue()
+{
+#ifdef DEBUG
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] < 0.0) MyDebugAssertTrue(false,"This routine assumes all Y values are positive, but value %i is %f\n",counter,data_y[counter]);
+	}
+#endif
+
+	const float maximum_value = ReturnMaximumValue();
+
+	if (maximum_value > 0.0)
+	{
+		float factor = 1.0 / maximum_value;
+		for ( int counter = 0; counter < number_of_points; counter ++ )
+		{
+			data_y[counter] *= factor;
+		}
+	}
+}
+
+void Curve::SquareRoot()
+{
+#ifdef DEBUG
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] < 0.0) MyDebugAssertTrue(false,"This routine assumes all Y values are positive, but value %i is %f\n",counter,data_y[counter]);
+	}
+#endif
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_y[counter] = sqrtf(data_y[counter]);
+	}
+}
+
+
+
+void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+
+	int index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
+
+	if (index_of_previous_bin == number_of_points-1){
+		data_y[number_of_points-1] += value_to_add;
+	}
+	else
+	{
+		float distance = (wanted_x - data_x[index_of_previous_bin])/(data_x[index_of_previous_bin+1] - data_x[index_of_previous_bin]);
+		data_y[index_of_previous_bin]   += value_to_add * (1.0 - distance);
+		data_y[index_of_previous_bin+1] += value_to_add * distance;
+	}
+}
+
+void Curve::AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+
+	data_y[ReturnIndexOfNearestPointFromX(wanted_x)] += value_to_add;
+
+}
+
 
 void Curve::PrintToStandardOut()
 {
 	for (int i = 0; i < number_of_points; i++)
 	{
-		wxPrintf("%f,%f\n",data_x[i],data_y[i]);
+		wxPrintf("%f %f\n",data_x[i],data_y[i]);
 	}
 }
 
@@ -312,8 +399,8 @@ void Curve::WriteToFile(wxString output_file)
 	float temp_float[2];
 
 	NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
-	output_curve_file.WriteCommentLine("C            X              Y");
-	for (int i = 1; i < number_of_points; i++)
+	output_curve_file.WriteCommentLine("#            X              Y");
+	for (int i = 0; i < number_of_points; i++)
 	{
 		temp_float[0] = data_x[i];
 		temp_float[1] = data_y[i];
@@ -387,6 +474,28 @@ void Curve::ClearData()
 	}
 }
 
+void Curve::MultiplyByConstant(float constant_to_multiply_by)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_y[counter] *= constant_to_multiply_by;
+	}
+}
+
+// It is assumed that the X axis has spatial frequencies in reciprocal pixels (0.5 is Nyquist)
+void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_y[counter] *= ctf_to_apply.Evaluate(powf(data_x[counter],2),azimuth_in_radians);
+	}
+}
+
 float Curve::ReturnSavitzkyGolayInterpolationFromX( float wanted_x )
 {
 	//MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points],"Wanted x (%f) outside of range (%f to %f)\n",wanted_x,data_x[0],data_x[number_of_points]);
@@ -428,6 +537,35 @@ int Curve::ReturnIndexOfNearestPointFromX( float wanted_x )
 		}
 	}
 	return index_of_nearest_point;
+}
+
+//TODO: write a quicker version of this
+int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+
+	if (wanted_x < data_x[0])
+	{
+		return 0;
+	}
+	else if (wanted_x >= data_x[number_of_points-1])
+	{
+		return number_of_points - 1;
+	}
+	else
+	{
+		for (int counter = 0; counter < number_of_points - 1; counter++)
+		{
+			if (wanted_x >=data_x[counter] && wanted_x < data_x[counter+1])
+			{
+				return counter;
+			}
+		}
+	}
+	// Should never get here
+	MyDebugAssertTrue(false,"Oops, programming error\n");
+	return 0;
 }
 
 void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order)

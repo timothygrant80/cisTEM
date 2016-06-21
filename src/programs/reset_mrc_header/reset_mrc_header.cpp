@@ -48,7 +48,7 @@ bool ResetMRCHeaderApp::DoCalculation()
 
 	EmpiricalDistribution my_distribution(false);
 
-	wxPrintf("Resetting MRC header of file %s...\n",input_filename);
+	//wxPrintf("Resetting MRC header of file %s...\n",input_filename);
 
 	ProgressBar *my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices());
 
@@ -68,6 +68,7 @@ bool ResetMRCHeaderApp::DoCalculation()
 	my_input_file.my_header.SetDensityStatistics(my_distribution.GetMinimum(),my_distribution.GetMaximum(),my_distribution.GetSampleMean(),std);
 	my_input_file.my_header.SetPixelSize(new_pixel_size);
 	my_input_file.my_header.ResetLabels();
+	my_input_file.my_header.SetOrigin( -float(my_image.physical_address_of_box_center_x) * new_pixel_size, -float(my_image.physical_address_of_box_center_y) * new_pixel_size, -float(my_input_file.ReturnNumberOfSlices()/2) * new_pixel_size );
 
 	my_input_file.WriteHeader();
 

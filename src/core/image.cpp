@@ -2757,7 +2757,7 @@ void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_valu
 }
 
 
-float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert)
+float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
 	MyDebugAssertTrue(wanted_mask_edge > 0, "Edge width too small");
@@ -2801,31 +2801,38 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	number_of_pixels = 0;
 	if (is_in_real_space && object_is_centred_in_box)
 	{
-		for (k = 0; k < logical_z_dimension; k++)
+		if (force_mask_value)
 		{
-			z = powf(k - physical_address_of_box_center_z, 2);
-
-			for (j = 0; j < logical_y_dimension; j++)
-			{
-				y = powf(j - physical_address_of_box_center_y, 2);
-
-				for (i = 0; i < logical_x_dimension; i++)
-				{
-					x = powf(i - physical_address_of_box_center_x, 2);
-
-					distance_from_center_squared = x + y + z;
-
-					if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
-					{
-						pixel_sum += real_values[pixel_counter];
-						number_of_pixels++;
-					}
-					pixel_counter++;
-				}
-				pixel_counter += padding_jump_value;
-			}
+			pixel_sum = wanted_mask_value;
 		}
-		pixel_sum /= number_of_pixels;
+		else
+		{
+			for (k = 0; k < logical_z_dimension; k++)
+			{
+				z = powf(k - physical_address_of_box_center_z, 2);
+
+				for (j = 0; j < logical_y_dimension; j++)
+				{
+					y = powf(j - physical_address_of_box_center_y, 2);
+
+					for (i = 0; i < logical_x_dimension; i++)
+					{
+						x = powf(i - physical_address_of_box_center_x, 2);
+
+						distance_from_center_squared = x + y + z;
+
+						if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
+						{
+							pixel_sum += real_values[pixel_counter];
+							number_of_pixels++;
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+			pixel_sum /= number_of_pixels;
+		}
 
 		pixel_counter = 0.0;
 		for (k = 0; k < logical_z_dimension; k++)
@@ -2890,37 +2897,44 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	else
 	if (is_in_real_space)
 	{
-		for (k = 0; k < logical_z_dimension; k++)
+		if (force_mask_value)
 		{
-			kk = k;
-			if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
-			z = powf(kk, 2);
-
-			for (j = 0; j < logical_y_dimension; j++)
-			{
-				jj = j;
-				if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
-				y = powf(jj, 2);
-
-				for (i = 0; i < logical_x_dimension; i++)
-				{
-					ii = i;
-					if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
-					x = powf(ii, 2);
-
-					distance_from_center_squared = x + y + z;
-
-					if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
-					{
-						pixel_sum += real_values[pixel_counter];
-						number_of_pixels++;
-					}
-					pixel_counter++;
-				}
-				pixel_counter += padding_jump_value;
-			}
+			pixel_sum = wanted_mask_value;
 		}
-		pixel_sum /= number_of_pixels;
+		else
+		{
+			for (k = 0; k < logical_z_dimension; k++)
+			{
+				kk = k;
+				if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
+				z = powf(kk, 2);
+
+				for (j = 0; j < logical_y_dimension; j++)
+				{
+					jj = j;
+					if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
+					y = powf(jj, 2);
+
+					for (i = 0; i < logical_x_dimension; i++)
+					{
+						ii = i;
+						if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
+						x = powf(ii, 2);
+
+						distance_from_center_squared = x + y + z;
+
+						if (distance_from_center_squared >= mask_radius_squared && distance_from_center_squared <= mask_radius_plus_edge_squared)
+						{
+							pixel_sum += real_values[pixel_counter];
+							number_of_pixels++;
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+			pixel_sum /= number_of_pixels;
+		}
 
 		pixel_counter = 0.0;
 		for (k = 0; k < logical_z_dimension; k++)
@@ -2996,7 +3010,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					}
 					if (invert)
 					{
-						if (frequency_squared <= mask_radius) complex_values[pixel_counter] = 0.0;
+						if (frequency_squared <= mask_radius_squared) complex_values[pixel_counter] = 0.0;
 					}
 					else
 					{
@@ -3151,6 +3165,11 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 
 	if (IsEven(logical_x_dimension) == true) padding_jump_value = 2;
 	else padding_jump_value = 1;
+
+	//
+
+	number_of_real_space_pixels = long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+	ft_normalization_factor = 1.0 / sqrtf(float(number_of_real_space_pixels));
 }
 
 //!>  \brief  Allocate memory for the Image object.
@@ -3282,7 +3301,7 @@ bool Image::FourierComponentHasExplicitHermitianMate(int physical_index_x, int p
 {
 	bool explicit_mate;
 
-	explicit_mate = physical_index_x == 0 && ! ( physical_index_y == 0 && physical_index_x == 0);
+	explicit_mate = physical_index_x == 0 && ! ( physical_index_y == 0 && physical_index_z == 0);
 
 	// We assume that the Y dimension is the non-flat one
 	if (IsEven(logical_y_dimension))
@@ -3301,6 +3320,15 @@ bool Image::FourierComponentHasExplicitHermitianMate(int physical_index_x, int p
 	return explicit_mate;
 }
 
+// Work out whether a given Fourier component is a (redundant) Hermitian mate which is described explicitely by the FFTW but
+// shouldn't be counted in statistics as an independent Fourier component
+bool Image::FourierComponentIsExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z)
+{
+	bool explicit_mate = physical_index_x == 0 && (physical_index_y >= physical_index_of_first_negative_frequency_y || physical_index_z >= physical_index_of_first_negative_frequency_z);
+
+	return explicit_mate;
+}
+
 
 //!> \brief   Apply a forward FT to the Image object. The FT is scaled.
 //   The DC component is at (self%DIM(1)/2+1,self%DIM(2)/2+1,self%DIM(3)/2+1) (assuming even dimensions) or at (1,1,1) by default.
@@ -3310,7 +3338,12 @@ bool Image::FourierComponentHasExplicitHermitianMate(int physical_index_x, int p
 //   A helpful page for understanding the output format: http://www.dsprelated.com/showmessage/102675/1.php
 //   A helpful page to learn about vectorization and FFTW benchmarking: http://www.dsprelated.com/showmessage/76779/1.php
 //   \todo   Check this: http://objectmix.com/fortran/371439-ifort-openmp-fftw-problem.html
-
+//
+//
+//
+// 	A note on scaling: by default, we divide by N, the number of pixels. This ensures that after we do an inverse FT (without further scaling),
+//	we will return to our original values. However, it means that while in Fourier space, the amplitudes are too high, by a factor of sqrt(N),
+//  such that, for example, Parserval's theorem is not satisfied.
 void Image::ForwardFFT(bool should_scale)
 {
 
@@ -3320,9 +3353,9 @@ void Image::ForwardFFT(bool should_scale)
 
 	fftwf_execute_dft_r2c(plan_fwd, real_values, complex_values);
 
-	if (should_scale == true)
+	if (should_scale)
 	{
-		DivideByConstant(float(long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
+		DivideByConstant(float(number_of_real_space_pixels));
 	}
 
 	// Set the image type
@@ -3416,6 +3449,7 @@ void Image::SquareRootRealValues()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Must be in real space to square real values");
+	MyDebugAssertFalse(HasNegativeRealValue(),"Image has negative value(s). Cannot compute square root.\n");
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter ++ )
 	{
 		real_values[pixel_counter] = sqrtf(real_values[pixel_counter]);
@@ -3430,6 +3464,47 @@ bool Image::IsConstant()
 		if (real_values[pixel_counter] != real_values[0]) return false;
 	}
 	return true;
+}
+
+bool Image::HasNan()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	long pixel_counter = 0;
+	for ( int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				if (isnan(real_values[pixel_counter])) return true; // isnan() is part of C++11
+				pixel_counter ++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+
+
+	}
+	return false;
+}
+
+bool Image::HasNegativeRealValue()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	long pixel_counter = 0;
+	for ( int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				if (real_values[pixel_counter] < 0.0) return true;
+				pixel_counter ++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	return false;
 }
 
 //!> \brief Read a set of slices from disk (FFTW padding is done automatically)
@@ -4030,6 +4105,7 @@ float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimu
 	return maximum_value;
 }
 
+//TODO: consolidate (reduce code duplication) by using an Empirical distribution object
 float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mask)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4543,7 +4619,7 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 				{
 					i_logi = pow(i,2) + j_logi;
 					//
-					if (FourierComponentHasExplicitHermitianMate(i,j,k)) continue;
+					if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
 					rad = sqrt(float(i_logi));
 					//
 					average[int(rad)  ] += (rad-int(rad)    ) * cabs(complex_values[address]);
@@ -4571,6 +4647,110 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 			average[i] = 0.0;
 		}
 	}
+}
+
+// It is assumed the curve objects are already setup with an X axis in reciprocal pixels (i.e. origin is 0.0, Nyquist is 0.5)
+void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values)
+{
+
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
+	MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
+	MyDebugAssertTrue(curve_with_average_power->data_x[0] == 0.0, "Curve does not start at x = 0\n");
+	MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points-1] >= 0.5, "Curve does not go to at least x = 0.5 (it goes to %f)\n",curve_with_average_power->data_x[curve_with_average_power->number_of_points-1]);
+	MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
+	MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
+	MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points-1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points-1], "Curves need to have the same ending point");
+
+
+	int i,j,k;
+	float sq_dist_x, sq_dist_y, sq_dist_z;
+	int counter;
+	long address;
+	float spatial_frequency;
+	int number_of_hermitian_mates = 0;
+
+	// Make sure the curves are clean
+	curve_with_average_power->ZeroYData();
+	curve_with_number_of_values->ZeroYData();
+
+
+	// Get amplitudes and sum them into the curve object
+	address = 0;
+	for ( k = 0; k <= physical_upper_bound_complex_z; k ++ )
+	{
+		sq_dist_z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
+		for ( j = 0; j <= physical_upper_bound_complex_y; j ++ )
+		{
+			sq_dist_y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2);
+			for  ( i = 0; i <= physical_upper_bound_complex_x; i ++ )
+			{
+				if (FourierComponentIsExplicitHermitianMate(i,j,k))
+				{
+					number_of_hermitian_mates++;
+					address ++;
+					continue;
+				}
+				else
+				{
+					sq_dist_x = powf(i * fourier_voxel_size_x,2);
+					spatial_frequency = sqrtf(sq_dist_x+sq_dist_y+sq_dist_z);
+
+					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,crealf(complex_values[address]) * crealf(complex_values[address]) + cimagf(complex_values[address]) * cimagf(complex_values[address]) );
+					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0);
+
+					address ++;
+				}
+			}
+		}
+	}
+
+	// Do the actual averaging
+	for ( counter = 0; counter < curve_with_average_power->number_of_points; counter ++ )
+	{
+		if ( curve_with_number_of_values->data_y[counter] > 0.0 )
+		{
+			curve_with_average_power->data_y[counter] /= curve_with_number_of_values->data_y[counter];
+		}
+		else
+		{
+			curve_with_average_power->data_y[counter] = 0.0;
+		}
+	}
+
+}
+
+// Apply an arbitrary filter to an image.
+// The curve object should have X values in reciprocal pixels (Nyquist is 0.5, corner is ~sqrt(2.0)/2).
+void Image::ApplyCurveFilter(Curve *filter_to_apply)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
+
+	int i,j,k;
+	float sq_dist_x, sq_dist_y, sq_dist_z;
+	int counter;
+	long address;
+	float spatial_frequency;
+
+	address = 0;
+	for ( k = 0; k <= physical_upper_bound_complex_z; k ++ )
+	{
+		sq_dist_z = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
+		for ( j = 0; j <= physical_upper_bound_complex_y; j ++ )
+		{
+			sq_dist_y = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2);
+			for  ( i = 0; i <= physical_upper_bound_complex_x; i ++ )
+			{
+				sq_dist_x = pow(i * fourier_voxel_size_x,2);
+				spatial_frequency = sqrt(sq_dist_x+sq_dist_y+sq_dist_z);
+
+				complex_values[address] *= filter_to_apply->ReturnLinearInterpolationFromX(spatial_frequency);
+				address ++;
+			}
+		}
+	}
+
 }
 
 // The output image will be allocated to the correct dimensions (half-volume, a la FFTW)
@@ -4618,7 +4798,7 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 {
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
-	MyDebugAssertTrue(amplitude_spectrum->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertTrue(amplitude_spectrum->is_in_memory, "Other image memory not allocated");
 	MyDebugAssertTrue(HasSameDimensionsAs(amplitude_spectrum), "Images do not have same dimensions");
 	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
 
@@ -4647,6 +4827,117 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 	// Done
 	amplitude_spectrum->is_in_real_space = true;
 	amplitude_spectrum->object_is_centred_in_box = true;
+}
+
+
+// Compute the local mean and variance of the image at every point. The mask image must have the same dimensions as the image itself.
+// Typically, the mask image would be 0.0 everywhere, except 1.0 in a central disk. This defines the area over which the local statistics
+// will be computed.
+// See van Heel 1987 and Roseman 2003 for more details.
+void Image::ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_variance_map, Image *mask, long number_of_pixels_within_mask)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertTrue(local_mean_map->is_in_memory, "Mean map memory not allocated");
+	MyDebugAssertTrue(local_variance_map->is_in_memory, "Variance map image memory not allocated");
+	MyDebugAssertTrue(mask->is_in_memory, "Other image memory not allocated");
+	MyDebugAssertTrue(HasSameDimensionsAs(local_mean_map), "Local mean map does not have same dimensions");
+	MyDebugAssertTrue(HasSameDimensionsAs(local_variance_map), "Local variance map does not have same dimensions");
+	MyDebugAssertTrue(HasSameDimensionsAs(mask), "Mask does not have the same dimensions");
+
+	// For now, we assume all images start off in real space,
+	// such that we can control normalization internally
+	MyDebugAssertTrue(is_in_real_space,"Image should be in real space");
+	MyDebugAssertTrue(local_mean_map->is_in_real_space,"Mean map should be in real space");
+	MyDebugAssertTrue(local_variance_map->is_in_real_space,"Variance map should be in real space");
+	MyDebugAssertTrue(mask->is_in_real_space,"Mask image should be in real space");
+
+
+	//
+	// Let's compute the mean first
+	//
+
+	// Make a couple of copies of the input image
+	local_mean_map->CopyFrom(this);
+
+	// Compute the local average in the micrograph, which is the convolution of
+	// the micrograph with the mask
+	// (because we will multiply with the mask FT later on, we do not need to normalize both FTs)
+	mask->ForwardFFT(false);
+	local_mean_map->ForwardFFT(true);
+	local_mean_map->MultiplyPixelWise(*mask);
+	local_mean_map->SwapRealSpaceQuadrants();
+	local_mean_map->BackwardFFT();
+
+	// Now divide by the number of pixels within the mask, and calculate the mean at the same time
+	// (we will need it later
+	float inverse_number_of_pixels_within_mask = 1.0 / float(number_of_pixels_within_mask);
+	long address = 0;
+	double local_mean_average = 0.0;
+	for ( int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				local_mean_average += local_mean_map->real_values[address];
+				local_mean_map->real_values[address] *= inverse_number_of_pixels_within_mask;
+				address ++;
+			}
+			address += padding_jump_value;
+		}
+	}
+	local_mean_average /= float(long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension) * long(number_of_pixels_within_mask));
+
+
+
+	//
+	// Now let's compute the local variance
+	// To avoid numeric instability and catastrophic cancellation (liable to occur for
+	// example when the micrograph has a large mean and a small variance), we will
+	// first subtract from the micrograph values the mean (it doesn't need to be exactly
+	// the mean, just any value between min and max would do)
+	//
+	address = 0;
+	for ( int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				local_variance_map->real_values[address] = powf(real_values[address] - local_mean_average,2);
+				address ++;
+			}
+			address += padding_jump_value;
+		}
+	}
+
+
+
+	// Fourier transforms
+	// (because we will multiply with the mask FT later on, we do not need to normalize both FTs)
+	local_variance_map->ForwardFFT(true);
+
+
+	// Convolute the squared micrograph with the mask image
+	local_variance_map->MultiplyPixelWise(*mask);
+	local_variance_map->SwapRealSpaceQuadrants();
+	local_variance_map->BackwardFFT();
+
+
+
+	// Compute the local variance (Eqn 10 in Roseman 2003)
+	for (long address=0; address < real_memory_allocated; address++)
+	{
+		local_variance_map->real_values[address] = (local_variance_map->real_values[address] * inverse_number_of_pixels_within_mask) - powf(local_mean_map->real_values[address] - local_mean_average,2);
+	}
+
+	local_mean_map->object_is_centred_in_box = true;
+	local_variance_map->object_is_centred_in_box = true;
+
+	MyDebugAssertFalse(local_mean_map->HasNan(),"Local mean map has NaN value(s)\n");
+	MyDebugAssertFalse(local_variance_map->HasNan(),"Local variance map has NaN value(s)\n");
+	//MyDebugAssertFalse(local_variance_map->HasNegativeRealValue(),"Local variance map has negative value(s)\n");
+
 }
 
 
@@ -5264,11 +5555,14 @@ void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_v
 
 }
 
-void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma)
+// If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
+void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
 	MyDebugAssertFalse(is_in_real_space == true && fill_with_noise == true, "Fill with noise, only for fourier space");
+	MyDebugAssertFalse((! is_in_real_space) && (wanted_coordinate_of_box_center_x != 0 || wanted_coordinate_of_box_center_y != 0 || wanted_coordinate_of_box_center_z != 0), "Cannot clip off-center in Fourier space");
+
 
 	long pixel_counter = 0;
 	int array_address = 0;
@@ -5303,17 +5597,17 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_w
 		for (kk = 0; kk < other_image->logical_z_dimension; kk++)
 		{
 			kk_logi = kk - other_image->physical_address_of_box_center_z;
-			k = physical_address_of_box_center_z + kk_logi;
+			k = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + kk_logi;
 
 			for (jj = 0; jj < other_image->logical_y_dimension; jj++)
 			{
 				jj_logi = jj - other_image->physical_address_of_box_center_y;
-				j = physical_address_of_box_center_y + jj_logi;
+				j = physical_address_of_box_center_y + wanted_coordinate_of_box_center_y + jj_logi;
 
 				for (ii = 0; ii < other_image->logical_x_dimension; ii++)
 				{
 					ii_logi = ii - other_image->physical_address_of_box_center_x;
-					i = physical_address_of_box_center_x + ii_logi;
+					i = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + ii_logi;
 
 					if (k < 0 || k >= logical_z_dimension || j < 0 || j >= logical_y_dimension || i < 0 || i >= logical_x_dimension)
 					{
@@ -6042,10 +6336,11 @@ Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y)
 	return found_peak;
 }
 
-Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted_max_radius)
+Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted_max_radius, int wanted_min_distance_from_edges)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+	MyDebugAssertFalse((! object_is_centred_in_box) && wanted_min_distance_from_edges > 0,"Minimum distance from edges only implemented when object is centered in the box. Sorry");
 
 	int k;
 	int j;
@@ -6083,6 +6378,27 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 	wanted_min_radius = powf(wanted_min_radius, 2);
 	wanted_max_radius = powf(wanted_max_radius, 2);
 
+	//
+	int k_min, k_max;
+	if (logical_z_dimension > 1)
+	{
+		k_min = wanted_min_distance_from_edges;
+		k_max = logical_z_dimension - wanted_min_distance_from_edges;
+	}
+	else
+	{
+		k_min = 0;
+		k_max = logical_z_dimension;
+	}
+	const int j_min = wanted_min_distance_from_edges;
+	const int j_max = logical_y_dimension - wanted_min_distance_from_edges;
+	const int i_min = wanted_min_distance_from_edges;
+	const int i_max = logical_x_dimension - wanted_min_distance_from_edges;
+
+
+
+	//
+
 	if (object_is_centred_in_box)
 	{
 		if (radii_are_fractional == true)
@@ -6107,7 +6423,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 							distance_from_origin = x + y + z;
 
-							if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+							if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius && i >= i_min && i <= i_max && j >= j_min && j <= j_max && k >= k_min && k <= k_max)
 							{
 								if (real_values[pixel_counter] > found_peak.value)
 								{
@@ -6147,7 +6463,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 
 						distance_from_origin = x + y + z;
 
-						if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius)
+						if (distance_from_origin >= wanted_min_radius && distance_from_origin <= wanted_max_radius && i >= i_min && i <= i_max && j >= j_min && j <= j_max && k >= k_min && k <= k_max)
 						{
 							if (real_values[pixel_counter] > found_peak.value)
 							{

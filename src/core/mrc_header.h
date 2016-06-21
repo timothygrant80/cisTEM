@@ -80,9 +80,9 @@ class MRCHeader {
 	int 	*space_group_number;	// !< space group number 0 or 1 (default=0)
 	int 	*symmetry_data_bytes;	// !< number of bytes used for symmetry data (0 or 80)
 	int     *extra;					// !< extra space used for anything - 0 by default (100 bytes)
-	int 	*origin_x;				// !< origin in X used for transforms
-	int 	*origin_y;				// !< origin in Y used for transforms
-	int 	*origin_z;              // !< origin in Z used for transforms
+	float 	*origin_x;				// !< origin in X used for transforms
+	float 	*origin_y;				// !< origin in Y used for transforms
+	float 	*origin_z;              // !< origin in Z used for transforms
 	char 	*map;					// !< character string 'MAP ' to identify file type
 	int 	*machine_stamp;			// !< machine stamp
 	float 	*rms;					// !< rms deviation of map from mean density
@@ -109,6 +109,7 @@ class MRCHeader {
 	void BlankHeader();
 
 	void ResetLabels();
+	void ResetOrigin();
 
 	void SetLocalMachineStamp();
 
@@ -126,6 +127,7 @@ class MRCHeader {
 	void SetNumberOfImages(int wanted_number_of_images);
 	void SetNumberOfVolumes(int wanted_number_of_volumes);
 	void SetDensityStatistics( float wanted_min, float wanted_max, float wanted_mean, float wanted_rms );
+	void SetOrigin( float wanted_x, float wanted_y, float wanted_z );
 
 	inline int BytesPerPixel() { return bytes_per_pixel; };
 	inline int Mode() { return mode[0];};

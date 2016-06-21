@@ -162,6 +162,20 @@ void MRCHeader::ResetLabels()
 	number_of_labels_used[0] = 1;
 }
 
+void MRCHeader::ResetOrigin()
+{
+	origin_x[0] = 0;
+	origin_y[0] = 0;
+	origin_z[0] = 0;
+}
+
+void MRCHeader::SetOrigin(float wanted_x, float wanted_y, float wanted_z)
+{
+	origin_x[0] = wanted_x;
+	origin_y[0] = wanted_y;
+	origin_z[0] = wanted_z;
+}
+
 
 
 //!>  \brief  Setup the pointers so that they point to the correct place in the buffer
@@ -194,9 +208,9 @@ void MRCHeader::InitPointers()
 	space_group_number 		= (int*) &buffer[88];
 	symmetry_data_bytes 	= (int*) &buffer[92];
 	extra					= (int*) &buffer[96];
-	origin_x				= (int*) &buffer[196];
-	origin_y				= (int*) &buffer[200];
-	origin_z				= (int*) &buffer[204];
+	origin_x				= (float*) &buffer[196];
+	origin_y				= (float*) &buffer[200];
+	origin_z				= (float*) &buffer[204];
 	map						= (char*) &buffer[208];
 	machine_stamp			= (int*) &buffer[212];
 	rms                 	= (float*) &buffer[216];

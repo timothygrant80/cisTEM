@@ -35,10 +35,14 @@ public:
 	void ResampleCurve(Curve *input_curve, int wanted_number_of_points);
 	float ReturnLinearInterpolationFromI(float wanted_i);
 	float ReturnLinearInterpolationFromX(float wanted_x_value);
+	void AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add);
+	void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
+	int ReturnIndexOfNearestPreviousBin(float wanted_x);
 	void PrintToStandardOut();
 	void WriteToFile(wxString output_file);
 	void CopyFrom(Curve *other_curve);
 	void ClearData();
+	void MultiplyByConstant(float constant_to_multiply_by);
 	void AddPoint(float x_value, float y_value);
 	void FitPolynomialToData(int wanted_polynomial_order = 6);
 	void FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order);
@@ -48,4 +52,10 @@ public:
 	void AllocateSavitzkyGolayCoefficients();
 	void CheckMemory();
 	void AddWith(Curve *other_curve);
+	void SetupXAxis(float lower_bound, float upper_bound, int wanted_number_of_points);
+	float ReturnMaximumValue();
+	void NormalizeMaximumValue();
+	void ZeroYData();
+	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);
+	void SquareRoot();
 };

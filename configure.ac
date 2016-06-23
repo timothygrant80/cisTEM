@@ -55,17 +55,6 @@ AC_MSG_NOTICE(static_link = $static_link)
 AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 
-#If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
-if test "x$static_link" = "xtrue"; then
- if test "x$CXX" = "xicpc"; then
- 	LDFLAGS="$LDFLAGS -static -static-intel"
- else
-	LDFLAGS="$LDFLAGS -static"
- fi
-fi
-
-
-
 # wx-config 
 
 WXCONFIG=wx-config
@@ -174,7 +163,7 @@ if test "x$HAVE_MKL" = "xyes"; then
 
 	if test "x$CXX" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl=sequential"
-		LIBS="$LIBS -mkl=sequential -lmkl_rt"
+		LIBS="$LIBS -mkl=sequential"
 	else
 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
 		if test "x$static_link" = "xtrue"; then
@@ -188,6 +177,16 @@ else
 	AC_CHECK_LIB(fftw3f, fftwf_malloc, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
 	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
 
+fi
+
+#If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
+# It's importnat that -static-intel be specified after -mkl, otherwise mkl will be linked dynamically
+if test "x$static_link" = "xtrue"; then
+ if test "x$CXX" = "xicpc"; then
+ 	LDFLAGS="$LDFLAGS -static -static-intel"
+ else
+	LDFLAGS="$LDFLAGS -static"
+ fi
 fi
 
 # make it so we can turn off gui

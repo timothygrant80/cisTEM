@@ -6,8 +6,6 @@ private:
 	long		number_of_samples;
 	float		minimum;
 	float		maximum;
-	bool		keep_sample_values;
-	float		*sample_values;
 	bool		is_constant;
 	float		last_added_value;
 
@@ -15,7 +13,6 @@ public:
 
 	// Constructors, destructors
 	EmpiricalDistribution();
-	EmpiricalDistribution(bool should_keep_sample_values);
 	~EmpiricalDistribution();
 
 	void AddSampleValue(float sample_value);

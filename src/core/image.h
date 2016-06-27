@@ -103,6 +103,7 @@ public:
 	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
 	long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
 	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
+	void NormalizeSumOfSquares();
 	void ZeroFloatOutside(float wanted_mask_radius, bool invert_mask = false);
 	void ReplaceOutliersWithMean(float maximum_n_sigmas);
 	float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
@@ -124,7 +125,7 @@ public:
 	void RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_index);
 	void RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
 	Kernel2D ReturnLinearInterpolatedFourierKernel2D(float &x, float &y);
-	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, bool use_nearest_neighbor = false);
+	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit_in_reciprocal_pixels = 1.0, bool use_nearest_neighbor = false);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
 	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);
@@ -135,11 +136,13 @@ public:
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
+	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
+
 
 	inline long ReturnVolumeInRealSpace()
 	{
-		return long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+		return number_of_real_space_pixels;
 	};
 
 	inline long ReturnReal1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
@@ -247,7 +250,7 @@ public:
 	int ReturnFourierLogicalCoordGivenPhysicalCoord_Y(int physical_index);
 	int ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index);
 
-	int ReturnMaximumDiagonalRadius();
+	float ReturnMaximumDiagonalRadius();
 
 	bool FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
 	bool FourierComponentIsExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
@@ -286,7 +289,7 @@ public:
 	bool HasNegativeRealValue();
 	void SetToConstant(float wanted_value);
 	void ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value = 0);
-	void ClipInto(Image *other_image, float wanted_padding_value = 0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
+	void ClipInto(Image *other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
@@ -298,15 +301,17 @@ public:
 	void SubtractSquaredImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
-	void ApplyCTF(CTF ctf_to_apply);
+	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
 	void ApplyCurveFilter(Curve *filter_to_apply);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
 	void ComputeAmplitudeSpectrum(Image *other_image);
+	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
 	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
-	void Compute1DRotationalAverage(double average[], int number_of_bins);
+	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values);
+	void AverageRadially();
 	void ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_variance_map, Image *mask, long number_of_pixels_within_mask);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();

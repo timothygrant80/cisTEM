@@ -74,6 +74,7 @@ public:
 	inline float GetDefocus2() { return defocus_2; };
 	inline float GetAstigmatismAzimuth() { return astigmatism_azimuth; };
 	inline float GetAdditionalPhaseShift() { return additional_phase_shift; };
+	inline float GetWavelength() { return wavelength; };
 	int ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
 	float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);
 	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth);

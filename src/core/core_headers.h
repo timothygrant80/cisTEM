@@ -3,6 +3,7 @@ typedef struct Peak {
   float y;
   float z;
   float value;
+  long  physical_address_within_image;
 } Peak;
 
 typedef struct Kernel2D {

@@ -35,7 +35,7 @@ public:
 	void ResampleCurve(Curve *input_curve, int wanted_number_of_points);
 	float ReturnLinearInterpolationFromI(float wanted_i);
 	float ReturnLinearInterpolationFromX(float wanted_x_value);
-	void AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add);
+	void AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x);
 	void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
 	int ReturnIndexOfNearestPreviousBin(float wanted_x);
 	void PrintToStandardOut();
@@ -52,8 +52,10 @@ public:
 	void AllocateSavitzkyGolayCoefficients();
 	void CheckMemory();
 	void AddWith(Curve *other_curve);
-	void SetupXAxis(float lower_bound, float upper_bound, int wanted_number_of_points);
+	void SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points);
 	float ReturnMaximumValue();
+	float ReturnMode();
+	void ComputeMaximumValueAndMode(float &maximum_value, float &mode);
 	void NormalizeMaximumValue();
 	void ZeroYData();
 	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);

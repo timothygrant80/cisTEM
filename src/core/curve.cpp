@@ -215,7 +215,7 @@ Curve & Curve::operator = (const Curve &other_curve)
 	return *this;
 }
 
-void Curve::SetupXAxis(float lower_bound, float upper_bound, int wanted_number_of_points)
+void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points)
 {
 	ClearData();
 
@@ -302,19 +302,33 @@ float Curve::ReturnLinearInterpolationFromX(float wanted_x)
 	return value_to_return;
 }
 
-float Curve::ReturnMaximumValue()
+void Curve::ComputeMaximumValueAndMode(float &maximum_value, float &mode)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-	float maximum_value = - FLT_MAX;
+	maximum_value = - FLT_MAX;
 
 	for ( int counter = 0; counter < number_of_points; counter ++ )
 	{
 		if (data_y[counter] > maximum_value)
 		{
 			maximum_value = data_y[counter];
+			mode = data_x[counter];
 		}
 	}
+}
+
+float Curve::ReturnMaximumValue()
+{
+	float maximum_value, mode;
+	ComputeMaximumValueAndMode(maximum_value,mode);
 	return maximum_value;
+}
+
+float Curve::ReturnMode()
+{
+	float maximum_value, mode;
+	ComputeMaximumValueAndMode(maximum_value,mode);
+	return mode;
 }
 
 // Scale the Y values so that the peak is at 1.0 (assumes all Y values >=0)
@@ -355,13 +369,21 @@ void Curve::SquareRoot()
 }
 
 
-
-void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add)
+// If it the data_x values form a linear axies (i.e. they are regularly spaced), give assume_linear_x true.
+void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
 	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
-	int index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
+	int index_of_previous_bin;
+	if (assume_linear_x)
+	{
+		index_of_previous_bin = int((wanted_x - data_x[0])/(data_x[1]-data_x[0]));
+	}
+	else
+	{
+		index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
+	}
 
 	if (index_of_previous_bin == number_of_points-1){
 		data_y[number_of_points-1] += value_to_add;

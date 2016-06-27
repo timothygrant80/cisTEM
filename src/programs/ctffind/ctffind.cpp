@@ -18,13 +18,27 @@ CtffindApp : public MyApp
 class ImageCTFComparison
 {
 public:
-	Image 	img;		// Usually an amplitude spectrum
+	ImageCTFComparison(int wanted_number_of_images, CTF wanted_ctf, float wanted_pixel_size, bool should_find_phase_shift, bool wanted_astigmatism_is_known, float wanted_known_astigmatism, float wanted_known_astigmatism_angle, bool should_fit_defocus_sweep);
+	~ImageCTFComparison();
+	void SetImage(int wanted_image_number, Image *new_image);
+	void SetCTF(CTF new_ctf);
+	CTF ReturnCTF();
+	bool AstigmatismIsKnown();
+	float ReturnKnownAstigmatism();
+	float ReturnKnownAstigmatismAngle();
+	bool FindPhaseShift();
+
+	int 	number_of_images;
+	Image 	*img;		// Usually an amplitude spectrum, or an array of amplitude spectra
+
+private:
 	CTF		ctf;
 	float	pixel_size;
 	bool	find_phase_shift;
 	bool	astigmatism_is_known;
 	float	known_astigmatism;
 	float 	known_astigmatism_angle;
+	bool 	fit_defocus_sweep;
 };
 
 class CurveCTFComparison
@@ -37,24 +51,66 @@ public:
 	bool 	find_phase_shift;
 };
 
+ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_ctf, float wanted_pixel_size, bool should_find_phase_shift, bool wanted_astigmatism_is_known, float wanted_known_astigmatism, float wanted_known_astigmatism_angle, bool should_fit_defocus_sweep)
+{
+	MyDebugAssertTrue(wanted_number_of_images >= 0, "Bad wanted number of images: %i\n",wanted_number_of_images);
+	number_of_images = wanted_number_of_images;
+	img = new Image [wanted_number_of_images];
+
+	ctf = wanted_ctf;
+	pixel_size = wanted_pixel_size;
+	find_phase_shift = should_find_phase_shift;
+	astigmatism_is_known = wanted_astigmatism_is_known;
+	known_astigmatism = wanted_known_astigmatism;
+	known_astigmatism_angle = wanted_known_astigmatism_angle;
+	fit_defocus_sweep = should_fit_defocus_sweep;
+}
+
+ImageCTFComparison::~ImageCTFComparison()
+{
+	for (int image_counter = 0; image_counter < number_of_images; image_counter++)
+	{
+		img[image_counter].Deallocate();
+	}
+	delete [] img;
+}
+
+void ImageCTFComparison::SetImage(int wanted_image_number, Image *new_image)
+{
+	MyDebugAssertTrue(wanted_image_number >= 0 && wanted_image_number < number_of_images, "Wanted image number (%i) is out of bounds", wanted_image_number);
+	img[wanted_image_number].CopyFrom(new_image);
+}
+
+void ImageCTFComparison::SetCTF(CTF new_ctf)
+{
+	ctf = new_ctf;
+}
+
+CTF ImageCTFComparison::ReturnCTF() { return ctf; }
+bool ImageCTFComparison::AstigmatismIsKnown() { return astigmatism_is_known; }
+float ImageCTFComparison::ReturnKnownAstigmatism() { return known_astigmatism; }
+float ImageCTFComparison::ReturnKnownAstigmatismAngle() { return known_astigmatism_angle; }
+bool ImageCTFComparison::FindPhaseShift() { return find_phase_shift; }
+
+
 // This is the function which will be minimised
 float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[] )
 {
 	ImageCTFComparison *comparison_object = reinterpret_cast < ImageCTFComparison *> (scoring_parameters);
 
-	CTF my_ctf = comparison_object->ctf;
-	if (comparison_object->astigmatism_is_known)
+	CTF my_ctf = comparison_object->ReturnCTF();
+	if (comparison_object->AstigmatismIsKnown())
 	{
-		MyDebugAssertTrue(comparison_object->known_astigmatism >= 0.0,"Known asitgmatism must be >= 0.0");
-		my_ctf.SetDefocus(array_of_values[0],array_of_values[0] - comparison_object->known_astigmatism, comparison_object->known_astigmatism_angle);
+		MyDebugAssertTrue(comparison_object->ReturnKnownAstigmatism() >= 0.0,"Known asitgmatism must be >= 0.0");
+		my_ctf.SetDefocus(array_of_values[0],array_of_values[0] - comparison_object->ReturnKnownAstigmatism(), comparison_object->ReturnKnownAstigmatismAngle());
 	}
 	else
 	{
 		my_ctf.SetDefocus(array_of_values[0],array_of_values[1],array_of_values[2]);
 	}
-	if (comparison_object->find_phase_shift)
+	if (comparison_object->FindPhaseShift())
 	{
-		if (comparison_object->astigmatism_is_known)
+		if (comparison_object->AstigmatismIsKnown())
 		{
 			my_ctf.SetAdditionalPhaseShift(array_of_values[1]);
 		}
@@ -67,7 +123,7 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f D2 = %6.2f, Ast = %5.2f, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAstigmatismAzimuth(),- comparison_object->img.GetCorrelationWithCTF(my_ctf));
 
 	// Evaluate the function
-	return - comparison_object->img.GetCorrelationWithCTF(my_ctf);
+	return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
 }
 
 //#pragma GCC push_options
@@ -161,6 +217,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float known_astigmatism;
 	float known_astigmatism_angle;
 	bool large_astigmatism_expected;
+	bool should_restrain_astigmatism;
 	float astigmatism_tolerance;
 	bool find_additional_phase_shift;
 	float minimum_additional_phase_shift;
@@ -424,20 +481,22 @@ void CtffindApp::DoInteractiveUserInput()
 		if (astigmatism_is_known)
 		{
 			large_astigmatism_expected = false;
+			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
 			known_astigmatism		= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
 			known_astigmatism_angle = my_input->GetFloatFromUser("Known astigmatism angle", "In degrees, the angle of astigmatism","0.0");
 		}
 		else
 		{
-			large_astigmatism_expected	= my_input->GetYesNoFromUser("Do you expect large astigmatism?","Answer yes if you expect high astigmatism. If you answer no, a restraint will be used during fitting to penalise large astigmatisms","no");
-			if (large_astigmatism_expected)
+			large_astigmatism_expected	= my_input->GetYesNoFromUser("Do you expect very large astigmatism?","Answer yes if you expect very high astigmatism (say, much greater than 1000A). In that case, a slower search over 2D spectra will be used for the initial search","no");
+			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","yes");
+			if (should_restrain_astigmatism)
 			{
-				astigmatism_tolerance 	= -100.0; // a negative value here signals that we don't want any restraint on astigmatism
+				astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms). Give a negative value to turn off this restraint.","200.0");
 			}
 			else
 			{
-				astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms)","100.0");
+				astigmatism_tolerance 	= -100.0; // a negative value here signals that we don't want any restraint on astigmatism
 			}
 		}
 
@@ -579,7 +638,7 @@ bool CtffindApp::DoCalculation()
 	CTF					current_ctf;
 	float				average, sigma;
 	int					convolution_box_size;
-	ImageCTFComparison	comparison_object_2D;
+	ImageCTFComparison	*comparison_object_2D;
 	CurveCTFComparison	comparison_object_1D;
 	float 				estimated_astigmatism_angle;
 	float				bf_halfrange[4];
@@ -593,12 +652,13 @@ bool CtffindApp::DoCalculation()
 	ConjugateGradient   *conjugate_gradient_minimizer;
 	int 				current_output_location;
 	int					number_of_bins_in_1d_spectra;
-	double				*rotational_average = NULL;
+	Curve				number_of_averaged_pixels;
+	Curve				rotational_average;
 	Image				*number_of_extrema_image = new Image();
 	Image				*ctf_values_image = new Image();
+	double				*rotational_average_astig = NULL;
 	double				*spatial_frequency = NULL;
 	double				*spatial_frequency_in_reciprocal_angstroms = NULL;
-	double				*rotational_average_astig = NULL;
 	double				*rotational_average_astig_fit = NULL;
 	float				*number_of_extrema_profile = NULL;
 	float				*ctf_values_profile = NULL;
@@ -808,7 +868,7 @@ bool CtffindApp::DoCalculation()
 			// Try to weaken cross artefacts
 			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
 			average_spectrum->DivideByConstant(sigma);
-			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
+			average_spectrum->SetMaximumValueOnCentralCross(average+ sigma*10.0); //TODO: check whether average/sigma+10.0 is really what I meant to write. I think it's supposed to be average + 10*sigma
 
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
@@ -843,6 +903,9 @@ bool CtffindApp::DoCalculation()
 
 
 		// Set up the comparison object
+		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
+		comparison_object_2D->SetImage(0,average_spectrum);
+		/*
 		comparison_object_2D.ctf = current_ctf;
 		comparison_object_2D.img = average_spectrum;
 		comparison_object_2D.pixel_size = pixel_size_for_fitting;
@@ -850,6 +913,7 @@ bool CtffindApp::DoCalculation()
 		comparison_object_2D.astigmatism_is_known = astigmatism_is_known;
 		comparison_object_2D.known_astigmatism = known_astigmatism / pixel_size_for_fitting;
 		comparison_object_2D.known_astigmatism_angle = known_astigmatism_angle / 180.0 * PI;
+		*/
 
 		if (is_running_locally && old_school_input)
 		{
@@ -882,8 +946,9 @@ bool CtffindApp::DoCalculation()
 
 			// 1D rotational average
 			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
-			rotational_average = new double[number_of_bins_in_1d_spectra];
-			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_bins_in_1d_spectra);
+			rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
+			number_of_averaged_pixels = rotational_average;
+			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels);
 
 
 
@@ -891,7 +956,7 @@ bool CtffindApp::DoCalculation()
 			comparison_object_1D.curve = new float[number_of_bins_in_1d_spectra];
 			for (counter=0; counter < number_of_bins_in_1d_spectra; counter++)
 			{
-				comparison_object_1D.curve[counter] = rotational_average[counter];
+				comparison_object_1D.curve[counter] = rotational_average.data_y[counter];
 			}
 			comparison_object_1D.find_phase_shift = find_additional_phase_shift;
 			comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
@@ -946,7 +1011,7 @@ bool CtffindApp::DoCalculation()
 			best_score_after_initial_phase = - conjugate_gradient_minimizer->GetBestScore();
 
 			// Set up the 2D comparison object, which we will soon need
-			comparison_object_2D.ctf = current_ctf;
+			comparison_object_2D->SetCTF(current_ctf);
 			//comparison_object_2D.img = average_spectrum;
 			//comparison_object_2D.pixel_size_of_input_image = pixel_size_of_input_image;
 			//comparison_object_2D.find_phase_shift = find_additional_phase_shift;
@@ -984,7 +1049,6 @@ bool CtffindApp::DoCalculation()
 
 
 			// Cleanup
-			delete [] rotational_average;
 			delete conjugate_gradient_minimizer;
 			delete brute_force_search;
 			delete [] comparison_object_1D.curve;
@@ -1044,7 +1108,7 @@ bool CtffindApp::DoCalculation()
 
 			// Actually run the BF search
 			brute_force_search = new BruteForceSearch();
-			brute_force_search->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,is_running_locally);
+			brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,is_running_locally);
 			brute_force_search->Run();
 
 			// The end point of the BF search is the beginning of the CG search
@@ -1106,7 +1170,7 @@ bool CtffindApp::DoCalculation()
 			cg_accuracy[3] = 0.05;
 		}
 		conjugate_gradient_minimizer = new ConjugateGradient();
-		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,&comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
 		conjugate_gradient_minimizer->Run();
 
 		// Remember the results of the refinement
@@ -1163,8 +1227,10 @@ bool CtffindApp::DoCalculation()
 
 		// 1D rotational average
 		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
-		rotational_average = new double[number_of_bins_in_1d_spectra];
-		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_bins_in_1d_spectra);
+		rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
+		rotational_average.ZeroYData();
+		number_of_averaged_pixels.ZeroYData();
+		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels);
 
 		// Rotational average, taking astigmatism into account
 		if (compute_extra_stats)
@@ -1219,17 +1285,17 @@ bool CtffindApp::DoCalculation()
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
 			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,0.0))*average_spectrum->logical_x_dimension);
-			//wxPrintf("Will only check from bin %i onwards\n", first_bin_to_check);
+			//wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
 			last_bin_with_good_fit = -1;
 			for (counter=first_bin_to_check;counter<number_of_bins_in_1d_spectra;counter++)
 			{
-				//wxPrintf("On bin %i, fit_frc = %f\n", counter, fit_frc[counter]);
+				//wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
 				at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold))
 											||
-											((number_of_bins_above_significance_threshold > 3) && (   ( (fit_frc[counter] < frc_significance_threshold) && (rotational_average_astig[counter] > 2.0) )
-																									||( (fit_frc[counter] < frc_significance_threshold) && (rotational_average_astig[counter] < -2.0))
-																									)
-																									);
+											((number_of_bins_above_significance_threshold > 3) &&   ( fit_frc[counter] < frc_significance_threshold) ); // && (rotational_average_astig[counter] > 2.0) )
+																									//||( fit_frc[counter] < frc_significance_threshold) // && (rotational_average_astig[counter] < -2.0))
+																								//	)
+																								//	);
 				if (at_last_bin_with_good_fit)
 				{
 					last_bin_with_good_fit = counter;
@@ -1247,7 +1313,15 @@ bool CtffindApp::DoCalculation()
 		{
 			last_bin_with_good_fit = 0;
 		}
+
+		#ifdef DEBUG
 		MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
+		#else
+		if (last_bin_with_good_fit < 0 && last_bin_with_good_fit >= number_of_bins_in_1d_spectra)
+		{
+			last_bin_with_good_fit = 0;
+		}
+		#endif
 
 		// Prepare output diagnostic image
 		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
@@ -1299,7 +1373,7 @@ bool CtffindApp::DoCalculation()
 			}
 			else
 			{
-				SendInfo(wxString::Format("Warning: for image %s, CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,box_size));
+				SendInfo(wxString::Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,box_size, current_micrograph_number, number_of_micrographs));
 			}
 		}
 
@@ -1346,13 +1420,15 @@ bool CtffindApp::DoCalculation()
 				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size_for_fitting;
 			}
 			output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
-			output_text_avrot->WriteLine(rotational_average);
+			output_text_avrot->WriteLine(rotational_average.data_y);
 			output_text_avrot->WriteLine(rotational_average_astig);
 			output_text_avrot->WriteLine(rotational_average_astig_fit);
 			output_text_avrot->WriteLine(fit_frc);
 			output_text_avrot->WriteLine(fit_frc_sigma);
 			delete [] spatial_frequency_in_reciprocal_angstroms;
 		}
+
+		delete comparison_object_2D;
 
 	} // End of loop over micrographs
 
@@ -1417,7 +1493,6 @@ bool CtffindApp::DoCalculation()
 	if (is_running_locally) delete output_text;
 	if (compute_extra_stats)
 	{
-		delete [] rotational_average;
 		delete [] spatial_frequency;
 		delete [] rotational_average_astig;
 		delete [] rotational_average_astig_fit;
@@ -1534,8 +1609,8 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 
 	//
-	EmpiricalDistribution values_in_rings(false);
-	EmpiricalDistribution values_in_fitting_range(false);
+	EmpiricalDistribution values_in_rings;
+	EmpiricalDistribution values_in_fitting_range;
 	int i;
 	int j;
 	long address;
@@ -2094,9 +2169,9 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 	float best_rotation = - std::numeric_limits<float>::max();
 	float current_rotation = - search_half_range;
 	float current_rotation_rad;
-	EmpiricalDistribution cc_numerator_dist(false);
-	EmpiricalDistribution cc_denom_self_dist(false);
-	EmpiricalDistribution cc_denom_other_dist(false);
+	EmpiricalDistribution cc_numerator_dist;
+	EmpiricalDistribution cc_denom_self_dist;
+	EmpiricalDistribution cc_denom_other_dist;
 	int current_image;
 	int i, i_logi;
 	float i_logi_frac, ii_phys;

@@ -15,14 +15,14 @@ AnglesAndShifts::AnglesAndShifts(float wanted_euler_phi, float wanted_euler_thet
 	Init(wanted_euler_phi, wanted_euler_theta, wanted_euler_psi, wanted_shift_x, wanted_shift_y);
 }
 
-void AnglesAndShifts::Init(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x, float wanted_shift_y)
+void AnglesAndShifts::Init(float wanted_euler_phi_in_degrees, float wanted_euler_theta_in_degrees, float wanted_euler_psi_in_degrees, float wanted_shift_x, float wanted_shift_y)
 {
 	shift_x = wanted_shift_x;
 	shift_y = wanted_shift_y;
-	GenerateEulerMatrices(wanted_euler_phi, wanted_euler_theta, wanted_euler_psi);
+	GenerateEulerMatrices(wanted_euler_phi_in_degrees, wanted_euler_theta_in_degrees, wanted_euler_psi_in_degrees);
 }
 
-void AnglesAndShifts::GenerateEulerMatrices(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi)
+void AnglesAndShifts::GenerateEulerMatrices(float wanted_euler_phi_in_degrees, float wanted_euler_theta_in_degrees, float wanted_euler_psi_in_degrees)
 {
 	float			cos_phi;
 	float			sin_phi;
@@ -31,9 +31,9 @@ void AnglesAndShifts::GenerateEulerMatrices(float wanted_euler_phi, float wanted
 	float			cos_psi;
 	float			sin_psi;
 
-	euler_phi = wanted_euler_phi;
-	euler_theta = wanted_euler_theta;
-	euler_psi = wanted_euler_psi;
+	euler_phi = wanted_euler_phi_in_degrees;
+	euler_theta = wanted_euler_theta_in_degrees;
+	euler_psi = wanted_euler_psi_in_degrees;
 	cos_phi = cosf(deg_2_rad(euler_phi));
 	sin_phi = sinf(deg_2_rad(euler_phi));
 	cos_theta = cosf(deg_2_rad(euler_theta));
@@ -51,7 +51,7 @@ void AnglesAndShifts::GenerateEulerMatrices(float wanted_euler_phi, float wanted
 	euler_matrix.m[2][2] = cos_theta;
 }
 
-void AnglesAndShifts::GenerateRotationMatrix2D(float wanted_rotation_angle)
+void AnglesAndShifts::GenerateRotationMatrix2D(float wanted_rotation_angle_in_degrees)
 {
 	float			cos_phi;
 	float			sin_phi;
@@ -60,7 +60,7 @@ void AnglesAndShifts::GenerateRotationMatrix2D(float wanted_rotation_angle)
 	float			cos_psi;
 	float			sin_psi;
 
-	euler_psi = wanted_rotation_angle;
+	euler_psi = wanted_rotation_angle_in_degrees;
 	cos_psi = cosf(deg_2_rad(euler_psi));
 	sin_psi = sinf(deg_2_rad(euler_psi));
 	euler_matrix.m[0][0] = cos_psi;

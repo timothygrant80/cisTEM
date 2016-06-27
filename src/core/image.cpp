@@ -541,10 +541,15 @@ void Image::ConjugateMultiplyPixelWise(Image &other_image)
 
 	long pixel_counter;
 
+#ifdef MKL
+	// Use the MKL - not sure whether this can work in place
+	vmcMulByConj(real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (complex_values),reinterpret_cast <MKL_Complex8 *> (other_image.complex_values),reinterpret_cast <MKL_Complex8 *> (complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
+#else
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
 	{
 		complex_values[pixel_counter] *= conjf(other_image.complex_values[pixel_counter]);
 	}
+#endif
 }
 
 void Image::MultiplyPixelWise(Image &other_image)
@@ -1671,7 +1676,7 @@ Kernel2D Image::ReturnLinearInterpolatedFourierKernel2D(float &x, float &y)
 	return kernel;
 }
 
-void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit, bool use_nearest_neighbor)
+void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit_in_reciprocal_pixels, bool use_nearest_neighbor)
 {
 	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
 	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
@@ -1693,7 +1698,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 	float x_coordinate_3d;
 	float y_coordinate_3d;
 
-	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
+	float resolution_limit_sq = powf(resolution_limit_in_reciprocal_pixels * logical_x_dimension,2);
 	float y_coord_sq;
 	float padding_factor = logical_x_dimension / rotated_image.logical_x_dimension;
 
@@ -2752,8 +2757,54 @@ void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_valu
 			pixel_counter += padding_jump_value;
 		}
 	}
+}
 
+void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert)
+{
+	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
+	MyDebugAssertTrue(object_is_centred_in_box,"Object not centered in box");
 
+	long pixel_counter;
+	int i,j,k;
+	float x,y,z;
+
+	const int i_min = physical_address_of_box_center_x - wanted_mask_dim/2;
+	const int i_max = physical_address_of_box_center_x + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+	const int j_min = physical_address_of_box_center_y - wanted_mask_dim/2;
+	const int j_max = physical_address_of_box_center_y + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+	const int k_min = physical_address_of_box_center_z - wanted_mask_dim/2;
+	const int k_max = physical_address_of_box_center_z + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+
+	// Let's mask
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+
+				if (invert)
+				{
+					if ( i >= i_min && i <= i_max && j >= j_min && j <= j_max && k >= k_min && k <= k_max )
+					{
+						real_values[pixel_counter] = wanted_mask_value;
+					}
+				}
+				else
+				{
+					if ( i < i_min || i > i_max || j < j_min || j > j_max || k < k_min || k > k_max )
+					{
+						real_values[pixel_counter] = wanted_mask_value;
+					}
+				}
+
+				pixel_counter++;
+
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
 }
 
 
@@ -3777,7 +3828,7 @@ void Image::SetMinimumAndMaximumValues(float new_minimum_value, float new_maximu
 	}
 }
 
-int Image::ReturnMaximumDiagonalRadius()
+float Image::ReturnMaximumDiagonalRadius()
 {
 	if (is_in_real_space)
 	{
@@ -3785,7 +3836,7 @@ int Image::ReturnMaximumDiagonalRadius()
 	}
 	else
 	{
-		return sqrt(pow(logical_upper_bound_complex_x * fourier_voxel_size_x , 2) + pow(logical_upper_bound_complex_y * fourier_voxel_size_y , 2) + pow(logical_upper_bound_complex_z * fourier_voxel_size_z , 2) );
+		return sqrt(pow(logical_lower_bound_complex_x * fourier_voxel_size_x , 2) + pow(logical_lower_bound_complex_y * fourier_voxel_size_y , 2) + pow(logical_lower_bound_complex_z * fourier_voxel_size_z , 2) );
 	}
 }
 
@@ -4287,7 +4338,7 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 
 
 
-	EmpiricalDistribution my_distribution = EmpiricalDistribution(false);
+	EmpiricalDistribution my_distribution;
 
 
 	UpdateDistributionOfRealValues(&my_distribution, wanted_mask_radius, outside, wanted_center_x, wanted_center_y, wanted_center_z);
@@ -4306,7 +4357,7 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 	// Private variables
 	int i, j;
 	float x_sq, y_sq, rad_sq;
-	EmpiricalDistribution my_distribution(false);
+	EmpiricalDistribution my_distribution;
 	const float min_rad_sq = powf(minimum_radius,2);
 	const float max_rad_sq = powf(maximum_radius,2);
 	const float cross_half_width_sq = powf(cross_half_width,2);
@@ -4548,14 +4599,10 @@ int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index)
     else return physical_index;
 }
 
-//  \brief  Compute the 1D rotational average
-//          Each bin is 1 pixel wide and there are as many bins as fit in the diagonal of the image
-//          If the image is in Fourier space, compute the average of amplitudes.
-//			It is assumed that the average array has already been allocated with number_of_bins elements.
-//			The first element will be the value at the center/origin of the image.
-void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
-{
 
+// Pixel values in the image are replaced with the radial average from the image
+void Image::AverageRadially()
+{
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
 	int i;
@@ -4565,15 +4612,101 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 	int j_logi;
 	int k_logi;
 	float rad;
-	double number_of_values[number_of_bins];
+	long address;
+
+	Curve average;
+	Curve number_of_values;
+
+	if (is_in_real_space)
+	{
+		average.SetupXAxis(0.0,ReturnMaximumDiagonalRadius(),logical_x_dimension);
+	}
+	else
+	{
+		average.SetupXAxis(0.0,sqrt(2.0)*0.5,logical_x_dimension);
+	}
+	number_of_values = average;
+
+	// Compute the average curve
+	Compute1DRotationalAverage(average,number_of_values);
+
+	//
+	address = 0;
+	if (is_in_real_space)
+	{
+		for (k=0;k<logical_z_dimension;k++)
+		{
+			k_logi = pow((k-physical_address_of_box_center_z),2);
+			for (j=0;j<logical_y_dimension;j++)
+			{
+				j_logi = pow((j-physical_address_of_box_center_y),2) + k_logi;
+				for (i=0;i<logical_x_dimension;i++)
+				{
+					i_logi = pow((i-physical_address_of_box_center_x),2) + j_logi;
+					//
+					rad = sqrt(float(i_logi));
+					//
+					real_values[address] = average.ReturnLinearInterpolationFromX(rad);
+
+					// Increment the address
+					address ++;
+				}
+				// End of the line in real space
+				address += padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k=0;k<logical_z_dimension;k++)
+		{
+			k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
+			for (j=0;j<logical_y_dimension;j++)
+			{
+				j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2) + k_logi;
+				for (i=0;i<physical_upper_bound_complex_x;i++)
+				{
+					i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
+					//
+					if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
+					rad = sqrt(float(i_logi));
+					//
+
+					complex_values[address] = (average.ReturnLinearInterpolationFromX(rad),0.0);
+
+					// Increment the address
+					address ++;
+				}
+			}
+		}
+	}
+
+
+}
+
+
+//  \brief  Compute the 1D rotational average
+//			The first element will be the value at the center/origin of the image.
+//			It is assume the X axis of the Curve object has been setup already. It should run from 0.0 to the maximum value
+//			possible, which is sqrt(2)*0.5 in Fourier space of sqrt(2)*0.5*logical_dimension in real space.
+void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values)
+{
+
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(average.number_of_points == number_of_values.number_of_points,"Curves do not have the same number of points");
+
+	int i;
+	int j;
+	int k;
+	int i_logi;
+	int j_logi;
+	int k_logi;
+	float rad;
 	long address;
 
 	// Initialise
-	for (i=0;i<number_of_bins;i++)
-	{
-		average[i] = 0.0;
-		number_of_values[i] = 0.0;
-	}
+	average.ZeroYData();
+	number_of_values.ZeroYData();
 	address = 0;
 
 
@@ -4592,12 +4725,8 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 					//
 					rad = sqrt(float(i_logi));
 					//
-					MyDebugAssertTrue(int(rad)+1 < number_of_bins,"Bad radius: %f",rad);
-					average[int(rad)  ] += (int(rad)-rad+1.0) * real_values[address];
-					average[int(rad)+1] += (rad-int(rad)    ) * real_values[address];
-					//
-					number_of_values[int(rad)  ] += (rad-int(rad)    );
-					number_of_values[int(rad)+1] += (int(rad)-rad+1.0);
+					average.AddValueAtXUsingLinearInterpolation(rad,real_values[address],true);
+					number_of_values.AddValueAtXUsingLinearInterpolation(rad,1.0,true);
 
 					// Increment the address
 					address ++;
@@ -4611,22 +4740,19 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 	{
 		for (k=0;k<logical_z_dimension;k++)
 		{
-			k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k),2);
+			k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
 			for (j=0;j<logical_y_dimension;j++)
 			{
-				j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j),2) + k_logi;
+				j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2) + k_logi;
 				for (i=0;i<physical_upper_bound_complex_x;i++)
 				{
-					i_logi = pow(i,2) + j_logi;
+					i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
 					//
 					if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
 					rad = sqrt(float(i_logi));
 					//
-					average[int(rad)  ] += (rad-int(rad)    ) * cabs(complex_values[address]);
-					average[int(rad)+1] += (int(rad)-rad+1.0) * cabs(complex_values[address]);
-					//
-					number_of_values[int(rad)  ] += (rad-int(rad)    );
-					number_of_values[int(rad)+1] += (int(rad)-rad+1.0);
+					average.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+					number_of_values.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
 
 					// Increment the address
 					address ++;
@@ -4636,16 +4762,9 @@ void Image::Compute1DRotationalAverage(double average[], int number_of_bins)
 	}
 
 	// Do the actual averaging
-	for (i=0;i<number_of_bins;i++)
+	for (int counter = 0; counter < average.number_of_points; counter ++ )
 	{
-		if (number_of_values[i] > 0.0)
-		{
-			average[i] /= number_of_values[i];
-		}
-		else
-		{
-			average[i] = 0.0;
-		}
+		average.data_y[counter] /=number_of_values.data_y[counter];
 	}
 }
 
@@ -4696,8 +4815,9 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 					sq_dist_x = powf(i * fourier_voxel_size_x,2);
 					spatial_frequency = sqrtf(sq_dist_x+sq_dist_y+sq_dist_z);
 
-					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,crealf(complex_values[address]) * crealf(complex_values[address]) + cimagf(complex_values[address]) * cimagf(complex_values[address]) );
-					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0);
+					// TODO: this could be made faster by doing both interpolations in one go, so one wouldn't have to work out twice between which points the interpolation will happen
+					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,crealf(complex_values[address]) * crealf(complex_values[address]) + cimagf(complex_values[address]) * cimagf(complex_values[address]), true );
+					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0, true);
 
 					address ++;
 				}
@@ -4715,6 +4835,40 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 		else
 		{
 			curve_with_average_power->data_y[counter] = 0.0;
+		}
+	}
+
+}
+
+// Return a histogram as a curve object.
+void Image::ComputeHistogramOfRealValuesCurve(Curve *histogram_curve)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space,"Image is in Fourier space");
+
+	// Decide on the min/max and number of bins
+	float min_value, max_value;
+	const int number_of_bins = 100; //TODO: better choice of number_of_bins, particularly in cases of very small images
+	GetMinMax(min_value,max_value);
+
+	histogram_curve->SetupXAxis(min_value,max_value,number_of_bins);
+	histogram_curve->ZeroYData();
+
+
+	// Loop over image
+	int current_bin;
+	long address = 0;
+	for (int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				current_bin = histogram_curve->ReturnIndexOfNearestPointFromX(real_values[address]);
+				histogram_curve->data_y[current_bin] += 1.0;
+				address ++;
+			}
+			address += padding_jump_value;
 		}
 	}
 
@@ -4886,7 +5040,7 @@ void Image::ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_
 			address += padding_jump_value;
 		}
 	}
-	local_mean_average /= float(long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension) * long(number_of_pixels_within_mask));
+	local_mean_average /= float(number_of_real_space_pixels * long(number_of_pixels_within_mask));
 
 
 
@@ -5854,6 +6008,9 @@ void Image::Consume(Image *other_image) // copy the parameters then directly ste
 	other_image->plan_bwd = NULL;
 	other_image->planned = false;
 
+	number_of_real_space_pixels = other_image->number_of_real_space_pixels;
+	ft_normalization_factor = other_image->ft_normalization_factor;
+
 }
 
 
@@ -5963,7 +6120,7 @@ void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 
 }
 
-void Image::ApplyCTF(CTF ctf_to_apply)
+void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -6005,6 +6162,8 @@ void Image::ApplyCTF(CTF ctf_to_apply)
 			frequency_squared = x_coord_sq + y_coord_sq;
 
 			ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth);
+
+			if (absolute) ctf_value = fabsf(ctf_value);
 
 			complex_values[pixel_counter] *= ctf_value;
 			pixel_counter++;
@@ -6282,6 +6441,7 @@ Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y)
 				found_peak.value = real_values[pixel_counter];
 				found_peak.x = i;
 				found_peak.y = j;
+				found_peak.physical_address_within_image = pixel_counter;
 			}
 		}
 	}
@@ -6297,6 +6457,7 @@ Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y)
 				found_peak.value = real_values[pixel_counter];
 				found_peak.x = i;
 				found_peak.y = j;
+				found_peak.physical_address_within_image = pixel_counter;
 			}
 		}
 	}
@@ -6312,6 +6473,7 @@ Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y)
 				found_peak.value = real_values[pixel_counter];
 				found_peak.x = i;
 				found_peak.y = j;
+				found_peak.physical_address_within_image = pixel_counter;
 			}
 		}
 	}
@@ -6327,6 +6489,7 @@ Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y)
 				found_peak.value = real_values[pixel_counter];
 				found_peak.x = i;
 				found_peak.y = j;
+				found_peak.physical_address_within_image = pixel_counter;
 			}
 		}
 	}
@@ -6431,6 +6594,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 									found_peak.x = i - physical_address_of_box_center_x;
 									found_peak.y = j - physical_address_of_box_center_y;
 									found_peak.z = k - physical_address_of_box_center_z;
+									found_peak.physical_address_within_image = pixel_counter;
 								}
 
 							}
@@ -6471,6 +6635,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 								found_peak.x = i - physical_address_of_box_center_x;
 								found_peak.y = j - physical_address_of_box_center_y;
 								found_peak.z = k - physical_address_of_box_center_z;
+								found_peak.physical_address_within_image = pixel_counter;
 								//wxPrintf("new peak %f, %f, %f (%f)\n", found_peak.x, found_peak.y, found_peak.z, found_peak.value);
 								//wxPrintf("new peak %i, %i, %i (%f)\n", i, j, k, found_peak.value);
 							}
@@ -6522,6 +6687,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 								found_peak.x = ii;
 								found_peak.y = jj;
 								found_peak.z = kk;
+								found_peak.physical_address_within_image = pixel_counter;
 							}
 						}
 
@@ -6565,6 +6731,7 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 								found_peak.x = ii;
 								found_peak.y = jj;
 								found_peak.z = kk;
+								found_peak.physical_address_within_image = pixel_counter;
 							}
 						}
 

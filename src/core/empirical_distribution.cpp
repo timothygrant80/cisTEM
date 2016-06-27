@@ -1,19 +1,11 @@
 #include "core_headers.h"
 
 // Initialise an empirical distribution
-EmpiricalDistribution::EmpiricalDistribution(bool should_keep_sample_values)
+EmpiricalDistribution::EmpiricalDistribution()
 {
-	keep_sample_values = should_keep_sample_values;
-	MyDebugAssertFalse(keep_sample_values,"Keeping of samples values (to compute histograms) not yet implemented\n");
-	// Here, would allocate sample_values array
-	sample_values = NULL;
 	Reset();
 }
 
-EmpiricalDistribution::EmpiricalDistribution()
-{
-	MyDebugAssertFalse(true,"Sorry, you must use the other constructor, which specifies whether to keep samples values. To be improved later.\n")
-}
 
 EmpiricalDistribution::~EmpiricalDistribution()
 {
@@ -25,7 +17,6 @@ void EmpiricalDistribution::Reset()
 	sum_of_samples = 0.0;
 	sum_of_squared_samples = 0.0;
 	number_of_samples = 0;
-	MyDebugAssertFalse(keep_sample_values,"Keeping of samples values (to compute histograms) not yet implemented\n");
 	minimum = std::numeric_limits<float>::max();
 	maximum = - std::numeric_limits<float>::max();
 	is_constant = true;
@@ -48,12 +39,6 @@ void EmpiricalDistribution::AddSampleValue(float sample_value)
 		is_constant = is_constant && last_added_value == sample_value;
 	}
 	last_added_value = sample_value;
-	// We may need to record the value
-	if (keep_sample_values)
-	{
-		MyPrintWithDetails("Keeping of sample values not yet implemented\n");
-		abort();
-	}
 }
 
 bool EmpiricalDistribution::IsConstant()
@@ -109,19 +94,5 @@ float EmpiricalDistribution::GetUnbiasedEstimateOfPopulationVariance()
 	else
 	{
 		return 0.0;
-	}
-}
-
-void EmpiricalDistribution::PopulateHistogram()
-{
-	if (keep_sample_values)
-	{
-		MyPrintWithDetails("Keeping of sample values not yet implemented\n");
-		abort();
-	}
-	else
-	{
-		MyPrintWithDetails("Need to have kept samples to compute a histogram\n");
-		abort();
 	}
 }

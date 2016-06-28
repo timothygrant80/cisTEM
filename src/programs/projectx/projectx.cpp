@@ -13,11 +13,14 @@
 #include "../../gui/icons/movie_icon.cpp"
 #include "../../gui/icons/image_icon.cpp"
 #include "../../gui/icons/particle_position_icon.cpp"
+#include "../../gui/icons/virus_icon.cpp"
+//#include "../../gui/icons/ribosome_icon.cpp"
 
 #include "../../gui/icons/movie_align_icon.cpp"
 #include "../../gui/icons/ctf_icon.cpp"
 
 #include "../../gui/icons/run_profiles_icon.cpp"
+
 
 class
 MyGuiApp : public wxApp
@@ -45,6 +48,7 @@ SettingsPanel *settings_panel;
 MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
 MyParticlePositionAssetPanel *particle_position_asset_panel;
+MyVolumeAssetPanel *volume_asset_panel;
 
 MyMovieAlignResultsPanel *movie_results_panel;
 MyFindCTFResultsPanel *ctf_results_panel;
@@ -86,6 +90,7 @@ bool MyGuiApp::OnInit()
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
 	particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
+	volume_asset_panel = new MyVolumeAssetPanel(assets_panel->AssetsBook);
 
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 	findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
@@ -110,6 +115,8 @@ bool MyGuiApp::OnInit()
 	wxBitmap movie_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_icon);
 	wxBitmap image_icon_bmp = wxBITMAP_PNG_FROM_DATA(image_icon);
 	wxBitmap particle_position_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
+	wxBitmap virus_icon_bmp = wxBITMAP_PNG_FROM_DATA(virus_icon);
+	//wxBitmap ribosome_icon_bmp = wxBITMAP_PNG_FROM_DATA(ribosome_icon);
 
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
@@ -131,6 +138,8 @@ bool MyGuiApp::OnInit()
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
 	AssetsBookIconImages->Add(particle_position_icon_bmp);
+	AssetsBookIconImages->Add(virus_icon_bmp);
+	//AssetsBookIconImages->Add(ribosome_icon_bmp);
 
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
 	ResultsBookIconImages->Add(ctf_icon_bmp);
@@ -153,6 +162,7 @@ bool MyGuiApp::OnInit()
 	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", true, 0);
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
 	assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
+	assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);

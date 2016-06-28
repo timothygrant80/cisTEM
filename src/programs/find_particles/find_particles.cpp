@@ -44,6 +44,7 @@ void FindParticlesApp::DoInteractiveUserInput()
 	bool 		rotate_templates					=	false;
 	int			number_of_template_rotations		=	1;
 	bool 		average_templates_radially			=	false;
+	float 		typical_radius						=	25.0;
 	if (already_have_templates)
 	{
 				templates_filename					=	my_input->GetFilenameFromUser("Input templates filename","Set of templates to use in the search. Must have same pixel size as the micrograph","templates.mrc",true);
@@ -61,13 +62,17 @@ void FindParticlesApp::DoInteractiveUserInput()
 					}
 				}
 	}
+	else
+	{
+		typical_radius								=	my_input->GetFloatFromUser("Typical radius of particles (in Angstroms)","An estimate of the typical or average radius of the particles to be found. This will be used to generate a featureless disc as a template.","25.0",0.0);
+	}
 	float		maximum_radius						=	my_input->GetFloatFromUser("Maximum radius of the particle (in Angstroms)","The maximum radius of the templates, in angstroms","32.0",0.0);
 	float		highest_resolution_to_use			=	my_input->GetFloatFromUser("Highest resolution to use for picking","In Angstroms. Data at higher resolutions will be ignored in the picking process","15.0",pixel_size * 2.0);
 
 	delete my_input;
 
 	my_current_job.Reset(15);
-	my_current_job.ManualSetArguments("tffffffffbtbiff",    	micrograph_filename.ToStdString().c_str(),
+	my_current_job.ManualSetArguments("tffffffffbtbifff",    	micrograph_filename.ToStdString().c_str(),
 															pixel_size,
 															acceleration_voltage_in_keV,
 															spherical_aberration_in_mm,
@@ -80,6 +85,7 @@ void FindParticlesApp::DoInteractiveUserInput()
 															templates_filename.ToStdString().c_str(),
 															average_templates_radially,
 															number_of_template_rotations,
+															typical_radius,
 															maximum_radius,
 															highest_resolution_to_use
 															);
@@ -109,15 +115,16 @@ bool FindParticlesApp::DoCalculation()
 	wxString 	templates_filename					= 	my_current_job.arguments[10].ReturnStringArgument();
 	bool		average_templates_radially			=	my_current_job.arguments[11].ReturnBoolArgument();
 	int			number_of_template_rotations		=	my_current_job.arguments[12].ReturnIntegerArgument();
-	float		mask_radius_in_angstroms			=	my_current_job.arguments[13].ReturnFloatArgument();
-	float 		highest_resolution_to_use			=	my_current_job.arguments[14].ReturnFloatArgument();
+	float		typical_radius_in_angstroms			=	my_current_job.arguments[13].ReturnFloatArgument();
+	float		maximum_radius_in_angstroms			=	my_current_job.arguments[14].ReturnFloatArgument();
+	float 		highest_resolution_to_use			=	my_current_job.arguments[15].ReturnFloatArgument();
 
 
 	// Parameters which could be set by the user
 	const int number_of_background_boxes_to_skip = 0;
 	const int number_of_background_boxes = 50;
 	const float minimum_peak_height_for_candidate_particles = 8.0;
-	const float minimum_distance_between_picks_in_angstroms = 2.0 * mask_radius_in_angstroms;
+	const float minimum_distance_between_picks_in_angstroms = 2.0 * maximum_radius_in_angstroms;
 
 	// Other variables
 	Image template_large;
@@ -228,9 +235,10 @@ bool FindParticlesApp::DoCalculation()
 	CTF micrograph_ctf(acceleration_voltage_in_keV,spherical_aberration_in_mm,amplitude_contrast,defocus_1_in_angstroms,defocus_2_in_angstroms,astigmatism_angle_in_degrees,pixel_size,additional_phase_shift_in_radians);
 
 	// Let's decide on a box size for picking (on the resampled micrograph)
-	float mask_radius_in_pixels = mask_radius_in_angstroms / pixel_size;
-	const int minimum_box_size_for_object_with_psf = 2 * (mask_radius_in_pixels + int(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size));
-	int box_size_for_picking = minimum_box_size_for_object_with_psf;
+	float maximum_radius_in_pixels = maximum_radius_in_angstroms / pixel_size;
+	float typical_radius_in_pixels = typical_radius_in_angstroms / pixel_size;
+	const int minimum_box_size_for_object_with_psf = 2 * (maximum_radius_in_pixels + int(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size));
+	const int box_size_for_picking = minimum_box_size_for_object_with_psf;
 	wxPrintf("DBG: box size for picking = %i pixels\n", box_size_for_picking);
 	const float minimum_distance_between_picks_in_pixels = minimum_distance_between_picks_in_angstroms / pixel_size;
 
@@ -303,7 +311,7 @@ bool FindParticlesApp::DoCalculation()
 	{
 		template_image[0].Allocate(box_size_for_picking,box_size_for_picking,1);
 		template_image[0].SetToConstant(1.0);
-		template_image[0].CosineMask(mask_radius_in_pixels,5.0,false,true,0.0);
+		template_image[0].CosineMask(typical_radius_in_pixels,5.0,false,true,0.0);
 		template_image[0].QuickAndDirtyWriteSlice("dbg_template.mrc",1);
 		template_image[0].ForwardFFT(false);
 		template_image[0].NormalizeFT();
@@ -360,7 +368,7 @@ bool FindParticlesApp::DoCalculation()
 	mask_image.Allocate(micrograph.logical_x_dimension, micrograph.logical_y_dimension,1);
 	mask_image.SetToConstant(1.0);
 	//mask_image.CircleMaskWithValue(mask_radius_in_pixels,0.0);
-	mask_image.SquareMaskWithValue(mask_radius_in_pixels*2,0.0);
+	mask_image.SquareMaskWithValue(maximum_radius_in_pixels*2,0.0);
 	long number_of_pixels_within_mask = mask_image.ReturnAverageOfRealValues() * mask_image.logical_x_dimension * mask_image.logical_y_dimension;
 	mask_image.QuickAndDirtyWriteSlice("dbg_mask.mrc",1);
 
@@ -382,7 +390,7 @@ bool FindParticlesApp::DoCalculation()
 //#define use_lowest_variance
 
 	Image box;
-	box.Allocate(mask_radius_in_pixels * 2 + 2, mask_radius_in_pixels * 2 + 2, 1);
+	box.Allocate(maximum_radius_in_pixels * 2 + 2, maximum_radius_in_pixels * 2 + 2, 1);
 	background_power_spectrum.ZeroYData();
 
 #ifdef use_lowest_variance

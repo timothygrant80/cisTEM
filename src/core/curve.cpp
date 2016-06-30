@@ -317,6 +317,27 @@ void Curve::ComputeMaximumValueAndMode(float &maximum_value, float &mode)
 	}
 }
 
+// This is meant to be used to measure, e.g., the full-width at half-maximum of a histogram
+// stored as a curve
+float Curve::ReturnFullWidthAtGivenValue(const float &wanted_value)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	int first_bin_above_value = -1;
+	int last_bin_above_value = -1;
+
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (first_bin_above_value == -1 && data_y[counter] > wanted_value) first_bin_above_value = counter;
+		if (last_bin_above_value  == -1 && first_bin_above_value != -1 && data_y[counter] < wanted_value) last_bin_above_value  = counter - 1;
+	}
+
+	MyDebugAssertTrue(first_bin_above_value != -1,"Could not find first bin above value");
+	MyDebugAssertTrue(last_bin_above_value != -1,"Could not find last bin above value");
+
+	return data_x[last_bin_above_value + 1] - data_x[first_bin_above_value];
+}
+
 float Curve::ReturnMaximumValue()
 {
 	float maximum_value, mode;

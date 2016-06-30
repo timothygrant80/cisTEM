@@ -56,6 +56,7 @@ public:
 	float ReturnMaximumValue();
 	float ReturnMode();
 	void ComputeMaximumValueAndMode(float &maximum_value, float &mode);
+	float ReturnFullWidthAtGivenValue(const float &wanted_value);
 	void NormalizeMaximumValue();
 	void ZeroYData();
 	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);

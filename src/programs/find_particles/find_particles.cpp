@@ -142,6 +142,8 @@ bool FindParticlesApp::DoCalculation()
 	Image rotated_template_image;
 	Image template_medium;
 	AnglesAndShifts template_rotation;
+	float temp_float[3];
+	long address;
 
 	// Open input files so we know dimensions
 	MRCFile micrograph_file(micrograph_filename.ToStdString(),false);
@@ -319,12 +321,16 @@ bool FindParticlesApp::DoCalculation()
 		template_power_spectrum.MultiplyByConstant(1.0/float(template_file.ReturnNumberOfSlices()));
 		delete my_progress_bar;
 
+#ifdef sum_all_templates
 		for (int template_counter = 1; template_counter < number_of_templates; template_counter ++)
 		{
 			template_image[0].AddImage(&template_image[template_counter]);
 		}
+#ifdef dump_intermediate_files
 		template_image[0].QuickAndDirtyWriteSlice("dbg_template.mrc",1);
+#endif
 		number_of_templates = 1;
+#endif
 	}
 	else // User did not supply a template, we will generate one
 	{
@@ -423,30 +429,31 @@ bool FindParticlesApp::DoCalculation()
 	// keep a copy of the unmodified variance
 	local_mean = local_sigma;
 
-//#define use_lowest_variance
+#define use_lowest_variance
 
 	Image box;
 	box.Allocate(maximum_radius_in_pixels * 2 + 2, maximum_radius_in_pixels * 2 + 2, 1);
 	background_power_spectrum.ZeroYData();
+
+	// Get some statistics on the local_sigma image
+	Curve local_sigma_histogram;
+	local_sigma.ComputeHistogramOfRealValuesCurve(&local_sigma_histogram);
+	float local_sigma_mode;
+	float local_sigma_histogram_max_value;
+	local_sigma_histogram.ComputeMaximumValueAndMode(local_sigma_histogram_max_value,local_sigma_mode);
+	float local_sigma_fwhm = local_sigma_histogram.ReturnFullWidthAtGivenValue(local_sigma_histogram_max_value * 0.5);
+#ifdef dump_intermediate_files
+	local_sigma_histogram.WriteToFile("dbg_local_sigma_histogram.txt");
+#endif
+
 
 #ifdef use_lowest_variance
 	// Let's look for the areas of lowest variance, which we will assume are plain ice, so we can work out a whitening filter later on
 	// WARNING; this is liable to bias the whitening filter against the templates
 	local_sigma.MultiplyByConstant(-1.0);
 #else
-	// We will get a histogram of the local_sigma image and use boxes that have local sigma nearest to the mode of the histogram
-	Curve local_sigma_histogram;
-	local_sigma.ComputeHistogramOfRealValuesCurve(&local_sigma_histogram);
-#ifdef dump_intermediate_files
-	local_sigma_histogram.WriteToFile("dbg_local_sigma_histogram.txt");
-#endif
-	float local_sigma_mode;
-	float local_sigma_histogram_max_value;
-	local_sigma_histogram.ComputeMaximumValueAndMode(local_sigma_histogram_max_value,local_sigma_mode);
-	float local_sigma_fwhm = local_sigma_histogram.ReturnFullWidthAtGivenValue(local_sigma_histogram_max_value * 0.5);
-
 	// fold the values around such that the mode becomes the maximum
-	long address = 0;
+	address = 0;
 	for (int j = 0; j < local_sigma.logical_y_dimension; j ++ )
 	{
 		for ( int i = 0; i < local_sigma.logical_x_dimension; i ++ )
@@ -456,6 +463,10 @@ bool FindParticlesApp::DoCalculation()
 		}
 		address += local_sigma.padding_jump_value;
 	}
+#endif
+
+#ifdef dump_intermediate_files
+	NumericTextFile temp_coos_file("dbg_background_box.plt", OPEN_TO_WRITE, 3);
 #endif
 
 	wxPrintf("\nEstimating background whitening filter...\n");
@@ -474,6 +485,12 @@ bool FindParticlesApp::DoCalculation()
 			//wxPrintf("Boxed out background at position %i, %i = %i, %i; peak value = %f\n",int(my_peak.x),int(my_peak.y),int(my_peak.x)+local_sigma.physical_address_of_box_center_x,int(my_peak.y)+local_sigma.physical_address_of_box_center_y,my_peak.value);
 #ifdef dump_intermediate_files
 			box.QuickAndDirtyWriteSlice("dbg_background_box.mrc",background_box_counter+1-number_of_background_boxes_to_skip);
+			temp_float[1] =  micrograph.logical_x_dimension - (micrograph.physical_address_of_box_center_x - (my_peak.x));
+			temp_float[0] =  micrograph.physical_address_of_box_center_y - (my_peak.y);
+			temp_float[1] =  temp_float[1] * pixel_size / original_micrograph_pixel_size + 1.0;
+			temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
+			temp_float[2] =  1.0;
+			temp_coos_file.WriteLine(temp_float);
 #endif
 			box.ForwardFFT(false);
 			box.NormalizeFT();
@@ -694,25 +711,31 @@ bool FindParticlesApp::DoCalculation()
 #define avoid_high_variance_areas
 
 #ifdef avoid_high_variance_areas
-	float threshold = local_sigma_mode + 5.0 * local_sigma_fwhm;
-	wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
-	wxPrintf("Threshold on sigma = %f\n",threshold);
+	// this is slightly complicated because the correlation map and the variance map are in reverse order
+	float threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
+	//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
+	//wxPrintf("Threshold on sigma = %f\n",threshold);
 	address = 0;
+	long address_in_score = maximum_score.real_memory_allocated;
 	for ( int j = 0; j < maximum_score.logical_y_dimension; j ++ )
 	{
+		address_in_score -= maximum_score.padding_jump_value;
 		for ( int i = 0; i < maximum_score.logical_x_dimension; i ++ )
 		{
 			if (local_mean.real_values[address] > threshold)
 			{
-				maximum_score.real_values[address] = 0.0;
+				maximum_score.real_values[address_in_score] = 0.0;
 			}
 			address ++;
+			address_in_score --;
 		}
 		address += local_mean.padding_jump_value;
 	}
 
+#ifdef dump_intermediate_files
 	local_mean.QuickAndDirtyWriteSlice("dbg_local_sigma_2.mrc",1);
 	maximum_score.QuickAndDirtyWriteSlice("dbg_maximum_score_2.mrc",1);
+#endif
 
 #endif
 
@@ -725,11 +748,10 @@ bool FindParticlesApp::DoCalculation()
 	micrograph.ReadSlice(&micrograph_file,1);
 	Peak my_peak;
 	int number_of_candidate_particles = 0;
-	NumericTextFile output_coos_file(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 3);
-	MRCFile output_stack(output_stack_filename.ToStdString(),true);
-	float temp_float[3];
+	NumericTextFile *output_coos_file;
+	MRCFile output_stack;
 	float highest_peak;
-	wxPrintf("\nFinding peaks...\n");
+	wxPrintf("\nFinding peaks & extracting particle images...\n");
 	my_progress_bar = new ProgressBar(100);
 	while (true)
 	{
@@ -739,6 +761,11 @@ bool FindParticlesApp::DoCalculation()
 		if (number_of_candidate_particles == 0) highest_peak = my_peak.value;
 		// We have found a candidate particle
 		number_of_candidate_particles ++;
+		if (number_of_candidate_particles == 1)
+		{
+			output_stack.OpenFile(output_stack_filename.ToStdString(),true);
+			output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 3);
+		}
 		micrograph.ClipInto(&box,0.0,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
 		box.WriteSlice(&output_stack,number_of_candidate_particles);
 		// Zero an area around this peak to ensure we don't pick again near there
@@ -753,7 +780,7 @@ bool FindParticlesApp::DoCalculation()
 		temp_float[1] =  temp_float[1] * pixel_size / original_micrograph_pixel_size + 1.0;
 		temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
 		temp_float[2] =  1.0;
-		output_coos_file.WriteLine(temp_float);
+		output_coos_file->WriteLine(temp_float);
 
 
 		// Find the matching template

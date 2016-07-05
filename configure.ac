@@ -21,8 +21,8 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 # set up initial flags
 
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -xHost -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
 	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
@@ -31,6 +31,15 @@ else
 	
 	LIBS="$LIBS -ldl"
 fi
+
+# Use all available processor instruction sets
+AC_ARG_ENABLE(latestinstruction, [  --enable-latest-instruction-set     Use latest available CPU instruction set [[default=yes]]],[
+  if test "$enableval" = yes; then
+	if test "x$CXX" = "xicpc"; then	
+		CXXFLAGS="$CXXFLAGS -xHost"
+	fi
+  fi
+  ])
 
 # MKL
 

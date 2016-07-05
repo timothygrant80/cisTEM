@@ -33,7 +33,7 @@ else
 fi
 
 # Use all available processor instruction sets
-AC_ARG_ENABLE(latestinstruction, [  --enable-latest-instruction-set     Use latest available CPU instruction set [[default=yes]]],[
+AC_ARG_ENABLE(latest-instruction-set, [  --enable-latest-instruction-set     Use latest available CPU instruction set [[default=yes]]],[
   if test "$enableval" = yes; then
 	if test "x$CXX" = "xicpc"; then	
 		CXXFLAGS="$CXXFLAGS -xHost"

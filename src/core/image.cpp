@@ -1,3 +1,4 @@
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
 
 Image::Image()
@@ -97,6 +98,7 @@ int Image::ReturnLargestLogicalDimension()
 		return std::max(temp_int, logical_z_dimension);
 	}
 }
+//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::SampleFFT(Image &sampled_image, int sample_rate)
 {
@@ -1374,6 +1376,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 	rotated_image.is_in_real_space = false;
 }
 
+
 void Image::GenerateReferenceProjections(Image *projections, EulerSearch &parameters, float resolution)
 {
 	int i;
@@ -2623,6 +2626,8 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	return float(mask_volume);
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
+
 void Image::CircleMask(float wanted_mask_radius, bool invert)
 {
 	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
@@ -2707,6 +2712,8 @@ void Image::CircleMask(float wanted_mask_radius, bool invert)
 
 
 }
+
+//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert)
 {
@@ -3078,6 +3085,8 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	
 	return float(mask_volume);
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 Image & Image::operator = (const Image &other_image)
 {
@@ -3867,6 +3876,8 @@ void Image::GetMinMax(float &min_value, float &max_value)
 		}
 }
 
+//END_FOR_STAND_ALONE_CTFFIND
+
 /*
 !>  \brief  return the maximum radius possible along a diagonal
 pure function GetMaximumDiagonalRadius(self)  result(maximum_radius)
@@ -4001,6 +4012,8 @@ float Image::ReturnSigmaOfFourierValuesOnEdgesAndCorners()
     return sigma;
 
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 float Image::ReturnAverageOfRealValuesOnEdges()
 {
@@ -4241,6 +4254,8 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
 	return float(sum / (long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
 }
 
+//END_FOR_STAND_ALONE_CTFFIND
+
 void Image::UpdateDistributionOfRealValues(EmpiricalDistribution *my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z )
 {
 
@@ -4346,6 +4361,8 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 	return my_distribution;
 
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width)
 {
@@ -4527,7 +4544,6 @@ void Image::ApplyMirrorAlongY()
 	}
 }
 
-
 void Image::AddImage(Image *other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4599,6 +4615,7 @@ int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index)
     else return physical_index;
 }
 
+//END_FOR_STAND_ALONE_CTFFIND
 
 // Pixel values in the image are replaced with the radial average from the image
 void Image::AverageRadially()
@@ -4683,6 +4700,8 @@ void Image::AverageRadially()
 
 
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 
 //  \brief  Compute the 1D rotational average
@@ -4840,6 +4859,8 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 
 }
 
+//END_FOR_STAND_ALONE_CTFFIND
+
 // Return a histogram as a curve object.
 void Image::ComputeHistogramOfRealValuesCurve(Curve *histogram_curve)
 {
@@ -4948,6 +4969,7 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 	}
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 {
@@ -4983,6 +5005,7 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 	amplitude_spectrum->object_is_centred_in_box = true;
 }
 
+//END_FOR_STAND_ALONE_CTFFIND
 
 // Compute the local mean and variance of the image at every point. The mask image must have the same dimensions as the image itself.
 // Typically, the mask image would be 0.0 everywhere, except 1.0 in a central disk. This defines the area over which the local statistics
@@ -5094,8 +5117,7 @@ void Image::ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_
 
 }
 
-
-
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 /*
  * Real-space box convolution meant for 2D amplitude spectra
@@ -5622,6 +5644,8 @@ void Image::TaperEdges()
 //#pragma GCC pop_options
 
 
+//END_FOR_STAND_ALONE_CTFFIND
+
 void Image::Sine1D(int number_of_periods)
 {
 	int i;
@@ -5639,6 +5663,8 @@ void Image::Sine1D(int number_of_periods)
 		}
 	}
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 // An alternative to ClipInto which only works for 2D real space clipping into larger image. Should be faster.
 void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value)
@@ -5893,6 +5919,7 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_w
 
 }
 
+
 // Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)
 void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value)
 {
@@ -5933,6 +5960,7 @@ void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_
 	//CopyFrom(&temp_image);
 	Consume(&temp_image);
 }
+
 
 void Image::CopyFrom(Image *other_image)
 {
@@ -6069,6 +6097,8 @@ void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_
 	if (need_to_fft == true) BackwardFFT();
 
 }
+
+//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 {

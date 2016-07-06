@@ -38,7 +38,7 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/f2c.h
 
 
-noinst_LIBRARIES = libcore.a
+#noinst_LIBRARIES = libcore.a
 
 bin_PROGRAMS = ctffind 
 
@@ -97,8 +97,31 @@ libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
 
 
-ctffind_SOURCES = src/programs/ctffind/ctffind.cpp
+ctffind_SOURCES = src/programs/ctffind/ctffind.cpp \
+					src/core/functions.cpp \
+					   src/core/globals.cpp \
+					   src/core/randomnumbergenerator.cpp \
+                       src/core/userinput.cpp \
+                       src/core/curve.cpp \
+                       image_trim.cpp \
+                       src/core/matrix.cpp \
+                       src/core/symmetry_matrix.cpp \
+                       src/core/mrc_file.cpp \
+                       src/core/mrc_header.cpp \
+                       src/core/dm_file.cpp \
+                       src/core/job_packager.cpp \
+                       src/core/job_tracker.cpp \
+                       src/core/run_profiles.cpp \
+                       src/core/myapp.cpp \
+                       src/core/empirical_distribution.cpp \
+                       src/core/ctf.cpp \
+                       src/core/numeric_text_file.cpp \
+                       src/core/progressbar.cpp \
+                       src/core/downhill_simplex.cpp \
+                       src/core/brute_force_search.cpp \
+                       src/core/va04.cpp \
+                       src/core/conjugate_gradient.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
-ctffind_LDADD = libcore.a
+#ctffind_LDADD = libcore.a

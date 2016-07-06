@@ -41,6 +41,8 @@ noinst_LIBRARIES = libcore.a
 
 bin_PROGRAMS = ctffind 
 
+dist_bin_SCRIPTS = scripts/ctffind_plot_results.sh
+
 image_trim.cpp:
 	if [ -e $(top_srcdir)/src/core/image.cpp ]; then \
 		$(AWK) 'BEGIN { in_include_block=0} {\

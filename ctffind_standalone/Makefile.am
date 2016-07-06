@@ -34,7 +34,8 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/conjugate_gradient.h \
                  src/core/euler_search.h \
                  src/core/frealign_parameter_file.h \
-                 src/core/myapp.h
+                 src/core/myapp.h \
+                 src/core/f2c.h
 
 
 noinst_LIBRARIES = libcore.a

@@ -1,0 +1,62 @@
+If possible, use the binary executables available from http://grigoriefflab.janelia.org/ctf.
+
+For questions or bug reports, please use our online forum: http://grigoriefflab.janelia.org/ctf/forum
+
+
+
+If you want to build ctffind from source, see below.
+
+
+1. Check dependencies
+
+There are two dependencies: wxWidgets >= 3.0 and either FFTW or Intel's Math Kernel Library (MKL)
+
+1.1 wxWidgets
+
+To check that you have wxWidgets installed, do:
+
+which wx-config
+
+To check you have the correct version of wxWidgets, do:
+
+wx-config --version
+
+If you have several versions of wxWidgets installed, you may have to do e.g.:
+
+wx-config-3.0 --version
+
+or:
+
+/path/to/wx-config --version
+
+and add the following flag to your configure line: --with-wx-config=/path/to/wx-config-3.0
+
+
+
+1.2 Intel MKL
+
+If it is available on your system, the configure script should detect Intel's MKL and ensure that the program will be linked against it. This is preferred as it gives a significant performance boost.
+
+
+1.3 FFTW
+
+If the MKL is not available, you need to ensure FFTW is installed.
+
+
+
+
+
+2. Configure
+
+See configure --help for details of available options. 
+
+For optimal performance, we recommend: --disable-debugmode --enable-mkl
+
+
+
+
+
+3. Build and install
+
+make && make install
+

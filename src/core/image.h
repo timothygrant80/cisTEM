@@ -310,7 +310,7 @@ public:
 	void ComputeAmplitudeSpectrum(Image *other_image);
 	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
 	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
-	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values);
+	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space = false);
 	void AverageRadially();
 	void ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_variance_map, Image *mask, long number_of_pixels_within_mask);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);

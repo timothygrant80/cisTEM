@@ -4707,8 +4707,9 @@ void Image::AverageRadially()
 //  \brief  Compute the 1D rotational average
 //			The first element will be the value at the center/origin of the image.
 //			It is assume the X axis of the Curve object has been setup already. It should run from 0.0 to the maximum value
-//			possible, which is sqrt(2)*0.5 in Fourier space of sqrt(2)*0.5*logical_dimension in real space.
-void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values)
+//			possible, which is sqrt(2)*0.5 in Fourier space or sqrt(2)*0.5*logical_dimension in real space. To use
+//			The Fourier space radius convention in real space, give fractional_radius_in_real_space
+void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space)
 {
 
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4717,9 +4718,6 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values)
 	int i;
 	int j;
 	int k;
-	int i_logi;
-	int j_logi;
-	int k_logi;
 	float rad;
 	long address;
 
@@ -4730,8 +4728,10 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values)
 
 
 	//
-	if (is_in_real_space)
+	if (is_in_real_space && !fractional_radius_in_real_space)
 	{
+		int i_logi,j_logi,k_logi;
+
 		for (k=0;k<logical_z_dimension;k++)
 		{
 			k_logi = pow((k-physical_address_of_box_center_z),2);
@@ -4757,24 +4757,54 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values)
 	}
 	else
 	{
-		for (k=0;k<logical_z_dimension;k++)
-		{
-			k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
-			for (j=0;j<logical_y_dimension;j++)
-			{
-				j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2) + k_logi;
-				for (i=0;i<physical_upper_bound_complex_x;i++)
-				{
-					i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
-					//
-					if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
-					rad = sqrt(float(i_logi));
-					//
-					average.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
-					number_of_values.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+		float i_logi,j_logi,k_logi;
 
-					// Increment the address
-					address ++;
+		if (is_in_real_space && fractional_radius_in_real_space)
+		{
+			for (k=0;k<logical_z_dimension;k++)
+			{
+				k_logi = pow((k-physical_address_of_box_center_z) * fourier_voxel_size_z,2);
+				for (j=0;j<logical_y_dimension;j++)
+				{
+					j_logi = pow((j-physical_address_of_box_center_y) * fourier_voxel_size_y,2) + k_logi;
+					for (i=0;i<logical_x_dimension;i++)
+					{
+						i_logi = pow((i-physical_address_of_box_center_x) * fourier_voxel_size_x,2) + j_logi;
+						//
+						rad = sqrt(float(i_logi));
+						//
+						average.AddValueAtXUsingLinearInterpolation(rad,real_values[address],true);
+						number_of_values.AddValueAtXUsingLinearInterpolation(rad,1.0,true);
+
+						// Increment the address
+						address ++;
+					}
+					// End of the line in real space
+					address += padding_jump_value;
+				}
+			}
+		}
+		else
+		{
+			for (k=0;k<logical_z_dimension;k++)
+			{
+				k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
+				for (j=0;j<logical_y_dimension;j++)
+				{
+					j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2) + k_logi;
+					for (i=0;i<physical_upper_bound_complex_x;i++)
+					{
+						i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
+						//
+						if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
+						rad = sqrt(float(i_logi));
+						//
+						average.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+						number_of_values.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+
+						// Increment the address
+						address ++;
+					}
 				}
 			}
 		}

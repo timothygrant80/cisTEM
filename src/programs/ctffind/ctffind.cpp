@@ -443,7 +443,7 @@ void CtffindApp::DoInteractiveUserInput()
 	else
 	{
 
-		UserInput *my_input = new UserInput("Ctffind", "4.1.0");
+		UserInput *my_input = new UserInput("Ctffind", "4.1.1");
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
@@ -948,7 +948,7 @@ bool CtffindApp::DoCalculation()
 			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
 			rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
 			number_of_averaged_pixels = rotational_average;
-			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels);
+			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 
 
@@ -1230,7 +1230,7 @@ bool CtffindApp::DoCalculation()
 		rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
 		rotational_average.ZeroYData();
 		number_of_averaged_pixels.ZeroYData();
-		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels);
+		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
 		if (compute_extra_stats)

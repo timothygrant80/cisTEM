@@ -6350,6 +6350,8 @@ void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
+
 bool Image::HasSameDimensionsAs(Image *other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -6358,6 +6360,8 @@ bool Image::HasSameDimensionsAs(Image *other_image)
 	if (logical_x_dimension == other_image->logical_x_dimension && logical_y_dimension == other_image->logical_y_dimension && logical_z_dimension == other_image->logical_z_dimension) return true;
 	else return false;
 }
+
+//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::SwapRealSpaceQuadrants()
 {

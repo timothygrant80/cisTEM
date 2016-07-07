@@ -1,4 +1,4 @@
-AC_INIT(ctffind, 4.1.1)
+AC_INIT(ctffind, 4.1.2)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_FILES([Makefile])
 AM_INIT_AUTOMAKE

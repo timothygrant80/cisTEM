@@ -223,6 +223,8 @@ void CtffindApp::DoInteractiveUserInput()
 	float minimum_additional_phase_shift;
 	float maximum_additional_phase_shift;
 	float additional_phase_shift_search_step;
+	bool give_expert_options;
+	bool resample_if_pixel_too_small;
 
 	// Things we need for old school input
 	double temp_double;
@@ -238,6 +240,7 @@ void CtffindApp::DoInteractiveUserInput()
 		astigmatism_is_known = false;
 		known_astigmatism = 0.0;
 		known_astigmatism_angle = 0.0;
+		resample_if_pixel_too_small = true;
 
 		char buf[4096];
 		wxString my_string;
@@ -443,7 +446,7 @@ void CtffindApp::DoInteractiveUserInput()
 	else
 	{
 
-		UserInput *my_input = new UserInput("Ctffind", "4.1.1");
+		UserInput *my_input = new UserInput("Ctffind", "4.1.2");
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
@@ -515,13 +518,22 @@ void CtffindApp::DoInteractiveUserInput()
 			additional_phase_shift_search_step = 0.0;
 		}
 
+		give_expert_options						= my_input->GetYesNoFromUser("Do you want to set expert options?","There are options which normally not changed, but can be accessed by answering yes here","no");
+		if (give_expert_options)
+		{
+			resample_if_pixel_too_small 		= my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?","When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed","yes");
+		}
+		else
+		{
+			resample_if_pixel_too_small			 = true;
+		}
 
 		delete my_input;
 
 	}
 
-	my_current_job.Reset(22);
-	my_current_job.ManualSetArguments("tbitffffiffffffbfffbff",	input_filename.c_str(),
+	my_current_job.Reset(23);
+	my_current_job.ManualSetArguments("tbitffffiffffffbfffbffb",input_filename.c_str(),
 													 	 	 	input_is_a_movie,
 																number_of_frames_to_average,
 																output_diagnostic_filename.c_str(),
@@ -542,7 +554,8 @@ void CtffindApp::DoInteractiveUserInput()
 																additional_phase_shift_search_step,
 																astigmatism_is_known,
 																known_astigmatism,
-																known_astigmatism_angle);
+																known_astigmatism_angle,
+																resample_if_pixel_too_small);
 
 
 }
@@ -567,28 +580,29 @@ bool CtffindApp::DoCalculation()
 
 	// Arguments for this job
 
-	std::string input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
-	bool        input_is_a_movie 					= my_current_job.arguments[1].ReturnBoolArgument();
-	int         number_of_frames_to_average			= my_current_job.arguments[2].ReturnIntegerArgument();
-	std::string output_diagnostic_filename			= my_current_job.arguments[3].ReturnStringArgument();
-	float 		pixel_size_of_input_image			= my_current_job.arguments[4].ReturnFloatArgument();
-	float 		acceleration_voltage				= my_current_job.arguments[5].ReturnFloatArgument();
-	float       spherical_aberration				= my_current_job.arguments[6].ReturnFloatArgument();
-	float 		amplitude_contrast					= my_current_job.arguments[7].ReturnFloatArgument();
-	int         box_size							= my_current_job.arguments[8].ReturnIntegerArgument();
-	float 		minimum_resolution					= my_current_job.arguments[9].ReturnFloatArgument();
-	float       maximum_resolution					= my_current_job.arguments[10].ReturnFloatArgument();
-	float       minimum_defocus						= my_current_job.arguments[11].ReturnFloatArgument();
-	float       maximum_defocus						= my_current_job.arguments[12].ReturnFloatArgument();
-	float       defocus_search_step					= my_current_job.arguments[13].ReturnFloatArgument();
-	float       astigmatism_tolerance               = my_current_job.arguments[14].ReturnFloatArgument();
-	bool       	find_additional_phase_shift         = my_current_job.arguments[15].ReturnBoolArgument();
-	float  		minimum_additional_phase_shift		= my_current_job.arguments[16].ReturnFloatArgument();
-	float		maximum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
-	float		additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
-	bool		astigmatism_is_known				= my_current_job.arguments[19].ReturnBoolArgument();
-	float 		known_astigmatism					= my_current_job.arguments[20].ReturnFloatArgument();
-	float		known_astigmatism_angle				= my_current_job.arguments[21].ReturnFloatArgument();
+	const std::string 	input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
+	const bool			input_is_a_movie 					= my_current_job.arguments[1].ReturnBoolArgument();
+	const int         	number_of_frames_to_average			= my_current_job.arguments[2].ReturnIntegerArgument();
+	const std::string 	output_diagnostic_filename			= my_current_job.arguments[3].ReturnStringArgument();
+	const float 		pixel_size_of_input_image			= my_current_job.arguments[4].ReturnFloatArgument();
+	const float 		acceleration_voltage				= my_current_job.arguments[5].ReturnFloatArgument();
+	const float       	spherical_aberration				= my_current_job.arguments[6].ReturnFloatArgument();
+	const float 		amplitude_contrast					= my_current_job.arguments[7].ReturnFloatArgument();
+	const int         	box_size							= my_current_job.arguments[8].ReturnIntegerArgument();
+	const float 		minimum_resolution					= my_current_job.arguments[9].ReturnFloatArgument();
+	const float       	maximum_resolution					= my_current_job.arguments[10].ReturnFloatArgument();
+	const float       	minimum_defocus						= my_current_job.arguments[11].ReturnFloatArgument();
+	const float       	maximum_defocus						= my_current_job.arguments[12].ReturnFloatArgument();
+	const float       	defocus_search_step					= my_current_job.arguments[13].ReturnFloatArgument();
+	const float       	astigmatism_tolerance               = my_current_job.arguments[14].ReturnFloatArgument();
+	const bool       	find_additional_phase_shift         = my_current_job.arguments[15].ReturnBoolArgument();
+	const float  		minimum_additional_phase_shift		= my_current_job.arguments[16].ReturnFloatArgument();
+	const float			maximum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
+	const float			additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
+	const bool  		astigmatism_is_known				= my_current_job.arguments[19].ReturnBoolArgument();
+	const float 		known_astigmatism					= my_current_job.arguments[20].ReturnFloatArgument();
+	const float 		known_astigmatism_angle				= my_current_job.arguments[21].ReturnFloatArgument();
+	const bool			resample_if_pixel_too_small			= my_current_job.arguments[22].ReturnBoolArgument();
 
 	// These variables will be set by command-line options
 	const bool		old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
@@ -598,7 +612,6 @@ bool CtffindApp::DoCalculation()
 	const bool		boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
 
 	// Resampling of input images to ensure that the pixel size isn't too small
-	const bool		resample_if_pixel_too_small = true;
 	const float		target_nyquist_after_resampling = 2.8; // Angstroms
 	const float 	target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
 	float 			pixel_size_for_fitting = pixel_size_of_input_image;

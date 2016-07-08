@@ -124,9 +124,9 @@ do for [current_micrograph=1:$number_of_micrographs] {
 	pshift=sprintf('%.2f rad',word(pshift_values,current_micrograph)+0)
 	score=sprintf('%.3f',word(score_values,current_micrograph)+0)
 	set title 'Micrograph '.current_micrograph." of $number_of_micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | Score: '.score.'}'
-	plot '/tmp/tmp.txt' using (\$1 / $pixel_size):(column(4+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 3 title 'CTF fit', \
-		 ''             using (\$1 / $pixel_size):(column(5+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 1 title 'Quality of fit', \
-	 	 ''             using (\$1 / $pixel_size):(column(3+(current_micrograph-1)*$lines_per_micrograph))  w lines ls 5 title 'Amplitude spectrum'
+	plot '/tmp/tmp.txt' using (\$1):(column(4+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 3 title 'CTF fit', \
+		 ''             using (\$1):(column(5+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 1 title 'Quality of fit', \
+	 	 ''             using (\$1):(column(3+(current_micrograph-1)*$lines_per_micrograph))  w lines ls 5 title 'Amplitude spectrum'
 }
 EOF
 

@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+const std::string ctffind_version = "4.1.3";
+
 class
 CtffindApp : public MyApp
 {
@@ -446,7 +448,7 @@ void CtffindApp::DoInteractiveUserInput()
 	else
 	{
 
-		UserInput *my_input = new UserInput("Ctffind", "4.1.2");
+		UserInput *my_input = new UserInput("Ctffind", ctffind_version);
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
@@ -724,7 +726,7 @@ bool CtffindApp::DoCalculation()
 		output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
 
 		// Print header to the output text file
-		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version,wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
 		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
@@ -893,8 +895,6 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
 
 			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
-
-			// POTENTIAL OPTIMIZATION: do not store the convoluted spectrum as a separate image - just subtract one convoluted pixel at a time from the image
 
 			// Subtract low-pass-filtered spectrum from the spectrum. This should remove the background slope.
 			average_spectrum->SubtractImage(current_power_spectrum);
@@ -1357,10 +1357,10 @@ bool CtffindApp::DoCalculation()
 		// Print more detailed results to terminal
 		if (is_running_locally && number_of_micrographs == 1)
 		{
-			wxPrintf("Estimated defocus values        : %0.2f,%0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
+			wxPrintf("Estimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
 			if (find_additional_phase_shift)
 			{
-				wxPrintf("Additional phase shift          : %0.3f (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift());
+				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PI);
 			}
 			wxPrintf("Score                           : %0.5f\n", - conjugate_gradient_minimizer->GetBestScore());
 			if (compute_extra_stats)
@@ -1421,7 +1421,7 @@ bool CtffindApp::DoCalculation()
 			if (current_micrograph_number == 1)
 			{
 				output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
-				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n","0.0.0",wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version.c_str(),wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
 				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um; num. frames averaged: %i\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus,number_of_frames_to_average);

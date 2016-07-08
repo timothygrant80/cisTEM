@@ -221,7 +221,7 @@ void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const i
 
 	for ( int counter = 0; counter < wanted_number_of_points; counter++ )
 	{
-		AddPoint(counter * (upper_bound - lower_bound)/float(wanted_number_of_points-1) , 0.0);
+		AddPoint(counter * (upper_bound - lower_bound)/float(wanted_number_of_points-1) + lower_bound, 0.0);
 	}
 }
 

@@ -726,7 +726,7 @@ bool CtffindApp::DoCalculation()
 		output_text = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,7);
 
 		// Print header to the output text file
-		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version,wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
+		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version.c_str(),wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
 		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);

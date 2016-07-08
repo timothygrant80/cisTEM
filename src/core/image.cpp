@@ -4558,6 +4558,7 @@ void Image::AddImage(Image *other_image)
 void Image::SubtractImage(Image *other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(HasSameDimensionsAs(other_image),"Images should have same dimensions, but they don't: %i %i %i        %i %i %i",logical_x_dimension,logical_y_dimension,logical_z_dimension,other_image->logical_x_dimension,other_image->logical_y_dimension,other_image->logical_z_dimension);
 
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{

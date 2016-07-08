@@ -1293,7 +1293,7 @@ bool CtffindApp::DoCalculation()
 		if (compute_extra_stats)
 		{
 			static float low_threshold = 0.2;
-			static float frc_significance_threshold = 0.75;
+			static float frc_significance_threshold = 0.5; // In analogy to the usual criterion when comparing experimental results to the atomic model
 			bool at_last_bin_with_good_fit;
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
@@ -1363,12 +1363,13 @@ bool CtffindApp::DoCalculation()
 				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PI);
 			}
 			wxPrintf("Score                           : %0.5f\n", - conjugate_gradient_minimizer->GetBestScore());
+			wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n",pixel_size_for_fitting);
 			if (compute_extra_stats)
 			{
 				wxPrintf("Thon rings with good fit up to  : %0.1f Angstroms\n",pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit]);
 				if (last_bin_without_aliasing != 0)
 				{
-					wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
+					wxPrintf("CTF aliasing apparent from      : %0.1f Angstroms\n", pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
 				}
 				else
 				{

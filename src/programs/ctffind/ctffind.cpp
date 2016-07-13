@@ -1,6 +1,6 @@
 #include "../../core/core_headers.h"
 
-const std::string ctffind_version = "4.1.3";
+const std::string ctffind_version = "4.1.4";
 
 class
 CtffindApp : public MyApp
@@ -474,7 +474,7 @@ void CtffindApp::DoInteractiveUserInput()
 		output_diagnostic_filename	= my_input->GetFilenameFromUser("Output diagnostic image file name","Will contain the experimental power spectrum and the best CTF fit","diagnostic_output.mrc",false);
 		pixel_size 					= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0);
 		acceleration_voltage 		= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0);
-		spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.7",0.0);
+		spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.70",0.0);
 		amplitude_contrast 			= my_input->GetFloatFromUser("Amplitude contrast","Fraction of amplitude contrast","0.07",0.0,1.0);
 		box_size 					= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128);
 		minimum_resolution 			= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowed_minimum_resolution);
@@ -728,7 +728,7 @@ bool CtffindApp::DoCalculation()
 		// Print header to the output text file
 		output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version.c_str(),wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 		output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
+		output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 		output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus);
 		output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
 	}
@@ -1424,7 +1424,7 @@ bool CtffindApp::DoCalculation()
 				output_text_avrot = new NumericTextFile(output_text_fn,OPEN_TO_WRITE,number_of_bins_in_1d_spectra);
 				output_text_avrot->WriteCommentLine("# Output from CTFFind version %s, run on %s\n",ctffind_version.c_str(),wxDateTime::Now().FormatISOCombined(' ').ToUTF8().data());
 				output_text_avrot->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n",input_filename.c_str(),number_of_micrographs);
-				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.1f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
+				output_text_avrot->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n",pixel_size_of_input_image,acceleration_voltage,spherical_aberration,amplitude_contrast);
 				output_text_avrot->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um; num. frames averaged: %i\n",box_size,minimum_resolution,maximum_resolution,minimum_defocus,maximum_defocus,number_of_frames_to_average);
 				output_text_avrot->WriteCommentLine("# 6 lines per micrograph: #1 - spatial frequency (1/Angstroms); #2 - 1D rotational average of spectrum (assuming no astigmatism); #3 - 1D rotational average of spectrum; #4 - CTF fit; #5 - cross-correlation between spectrum and CTF fit; #6 - 2sigma of expected cross correlation of noise\n");
 			}

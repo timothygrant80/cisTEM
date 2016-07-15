@@ -7,6 +7,7 @@ extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
 extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
+extern MyPickingResultsPanel *picking_results_panel;
 
 enum particle_picking_algorithms { ab_initio };
 
@@ -932,14 +933,11 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 			for (int job_counter = 0; job_counter < my_job_tracker.total_number_of_jobs; job_counter ++ )
 			{
 				parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
-				//sql_command = wxString::Format("delete from particle_position_group_%i where exists(select 1 from particle_position_assets where particle_position_assets.parent_image_asset_id = %i AND particle_position_group_%i.particle_position_asset_id = particle_position_assets.particle_position_asset_id)",group_counter-1,parent_id,group_counter-1);
-				//main_frame->current_project.database.ExecuteSQL(sql_command);
 				main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,parent_id);
 			}
 		}
 
 		// Remove from particle_position_assets assets which have a parent_id which is from picking_job_id that we've just done
-		//main_frame->current_project.database.ExecuteSQL(wxString::Format("delete from particle_position_assets where exists(select 1 from particle_picking_list where particle_picking_list.picking_job_id = %i AND particle_picking_list.parent_image_asset_id = particle_position_assets.parent_image_asset_id)",picking_job_id));
 		main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID(picking_job_id);
 
 		// Now store the actual coordinates in the PARTICLE_PICKING_RESULTS_*** tables
@@ -955,16 +953,14 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		int starting_asset_id = 0;
 		if (starting_picking_id > 0)
 		{
-			starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",starting_picking_id));
+			starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
 		}
 		temp_asset.asset_id = starting_asset_id;
+		current_table_name = wxString::Format("PARTICLE_PICKING_RESULTS_%i",temp_asset.pick_job_id);
+		main_frame->current_project.database.CreateTable(current_table_name,"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");
+		main_frame->current_project.database.BeginBatchInsert(current_table_name,6,"POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
 		for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 		{
-
-			current_table_name = wxString::Format("PARTICLE_PICKING_RESULTS_%i",picking_id);
-			main_frame->current_project.database.CreateTable(current_table_name,"prrrirrr","POSITION_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");
-			main_frame->current_project.database.BeginBatchInsert(current_table_name,4,"POSITION_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
-
 			temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
 			temp_asset.picking_id = picking_id;
 
@@ -979,11 +975,11 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 				temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
 
 				// Add results for this particle to the table
-				main_frame->current_project.database.AddToBatchInsert("irrr",temp_asset.asset_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
+				main_frame->current_project.database.AddToBatchInsert("iiirrr",temp_asset.asset_id,temp_asset.picking_id,temp_asset.parent_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
 			}
-			main_frame->current_project.database.EndBatchInsert();
 			picking_id ++;
 		}
+		main_frame->current_project.database.EndBatchInsert();
 
 
 
@@ -1035,6 +1031,6 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 
 	particle_position_asset_panel->is_dirty = true;
-	//particle_picking_results_panel->is_dirty = true;
+	picking_results_panel->is_dirty = true;
 
 }

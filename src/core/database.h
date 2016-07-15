@@ -59,7 +59,7 @@ public :
 
 	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
 	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
-	void GetUniquePickingIDs(int *picking_job_ids, int number_of_picking_jobs);
+	void GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs);
 	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
 
 	//Convenience insertion functions..
@@ -141,5 +141,7 @@ public :
 	// Particle position asset management
 	void RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id);
 	void RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID( const int &picking_job_id);
+	void RemoveParticlePositionAssetsPickedFromImageWithGivenID( const int &parent_image_asset_id );
+	void CopyParticleAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id);
 
 };

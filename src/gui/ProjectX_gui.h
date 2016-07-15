@@ -14,6 +14,7 @@ class BitmapPanel;
 class CTF1DPanel;
 class JobPanel;
 class NumericTextCtrl;
+class PickingResultsDisplayPanel;
 class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
@@ -112,6 +113,30 @@ class ShowCTFResultsParentPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class PickingResultsDisplayParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class PickingResultsDisplayParentPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxRadioButton* FitType2DRadioButton;
+		wxRadioButton* FitType1DRadioButton;
+		wxStaticLine* m_staticline26;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnFitTypeRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		BitmapPanel* PickingResultsImagePanel;
+		
+		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~PickingResultsDisplayParentPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class FindCTFResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
 class FindCTFResultsPanel : public wxPanel 
@@ -196,6 +221,95 @@ class FindCTFResultsPanel : public wxPanel
 		{
 			m_splitter4->SetSashPosition( 500 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindCTFResultsPanel::m_splitter4OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class PickingResultsPanel
+///////////////////////////////////////////////////////////////////////////////
+class PickingResultsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline25;
+		wxSplitterWindow* m_splitter4;
+		wxPanel* m_panel13;
+		wxRadioButton* AllImagesButton;
+		wxRadioButton* ByFilterButton;
+		wxButton* FilterButton;
+		ResultsDataViewListCtrl* ResultDataView;
+		wxButton* PreviousButton;
+		wxButton* NextButton;
+		wxPanel* RightPanel;
+		wxToggleButton* JobDetailsToggleButton;
+		wxStaticLine* m_staticline28;
+		wxPanel* JobDetailsPanel;
+		wxFlexGridSizer* InfoSizer;
+		wxStaticText* m_staticText72;
+		wxStaticText* EstimationIDStaticText;
+		wxStaticText* m_staticText74;
+		wxStaticText* DateOfRunStaticText;
+		wxStaticText* m_staticText93;
+		wxStaticText* TimeOfRunStaticText;
+		wxStaticText* m_staticText83;
+		wxStaticText* VoltageStaticText;
+		wxStaticText* m_staticText82;
+		wxStaticText* CsStaticText;
+		wxStaticText* m_staticText78;
+		wxStaticText* PixelSizeStaticText;
+		wxStaticText* m_staticText96;
+		wxStaticText* AmplitudeContrastStaticText;
+		wxStaticText* m_staticText85;
+		wxStaticText* BoxSizeStaticText;
+		wxStaticText* m_staticText87;
+		wxStaticText* MinResStaticText;
+		wxStaticText* m_staticText89;
+		wxStaticText* MaxResStaticText;
+		wxStaticText* m_staticText91;
+		wxStaticText* MinDefocusStaticText;
+		wxStaticText* m_staticText79;
+		wxStaticText* MaxDefocusStaticText;
+		wxStaticText* m_staticText95;
+		wxStaticText* DefocusStepStaticText;
+		wxStaticText* m_staticText99;
+		wxStaticText* RestrainAstigStaticText;
+		wxStaticText* ToleratedAstigLabel;
+		wxStaticText* ToleratedAstigStaticText;
+		wxStaticText* m_staticText103;
+		wxStaticText* AddtionalPhaseShiftStaticText;
+		wxStaticText* MinPhaseShiftLabel;
+		wxStaticText* MinPhaseShiftStaticText;
+		wxStaticText* MaxPhaseShiftLabel;
+		wxStaticText* MaxPhaseshiftStaticText;
+		wxStaticText* PhaseShiftStepLabel;
+		wxStaticText* PhaseShiftStepStaticText;
+		wxStaticLine* m_staticline30;
+		PickingResultsDisplayPanel* ResultDisplayPanel;
+		wxButton* AddToGroupButton;
+		wxComboBox* GroupComboBox;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+		~PickingResultsPanel();
+		
+		void m_splitter4OnIdle( wxIdleEvent& )
+		{
+			m_splitter4->SetSashPosition( 500 );
+			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( PickingResultsPanel::m_splitter4OnIdle ), NULL, this );
 		}
 	
 };

@@ -113,6 +113,11 @@ int Database::ReturnNumberOfCTFEstimationJobs()
 	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT CTF_ESTIMATION_JOB_ID) FROM ESTIMATED_CTF_PARAMETERS");
 }
 
+int Database::ReturnNumberOfPickingJobs()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT PICKING_JOB_ID) FROM PARTICLE_PICKING_LIST");
+}
+
 void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -135,6 +140,31 @@ void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_align
 
 	EndBatchSelect();
 }
+
+
+void Database::GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	bool more_data;
+
+	more_data = BeginBatchSelect("SELECT DISTINCT PICKING_JOB_ID FROM PARTICLE_PICKING_LIST") == true;
+
+	for (int counter = 0; counter < number_of_picking_jobs; counter++)
+	{
+		if (more_data == false)
+		{
+			MyPrintWithDetails("Unexpected end of select command");
+			abort();
+		}
+
+		more_data = GetFromBatchSelect("i", &picking_job_ids[counter]);
+
+	}
+
+	EndBatchSelect();
+}
+
 
 void Database::GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs)
 {
@@ -1000,7 +1030,16 @@ void Database::RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPick
 	ExecuteSQL(wxString::Format("delete from particle_position_assets where exists(select 1 from particle_picking_list where particle_picking_list.picking_job_id = %i AND particle_picking_list.parent_image_asset_id = particle_position_assets.parent_image_asset_id)",picking_job_id));
 }
 
+void Database::RemoveParticlePositionAssetsPickedFromImageWithGivenID( const int &parent_image_asset_id )
+{
+	ExecuteSQL(wxString::Format("delete from particle_position_assets where parent_image_asset_id = %i",parent_image_asset_id));
+}
 
+void Database::CopyParticleAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id)
+{
+	ExecuteSQL(wxString::Format("insert into particle_position_assets select particle_picking_results_%i.position_id, %i, particle_picking_results_%i.picking_id, %i, particle_picking_results_%i.x_position, particle_picking_results_%i.y_position, particle_picking_results_%i.peak_height, particle_picking_results_%i.template_asset_id, particle_picking_results_%i.template_psi, particle_picking_results_%i.template_theta, particle_picking_results_%i.template_phi from particle_picking_results_%i where particle_picking_results_%i.parent_image_asset_id = %i",
+												                                          picking_job_id,  parent_image_asset_id,     picking_job_id,     picking_job_id,           picking_job_id,                         picking_job_id,                              picking_job_id,                            picking_job_id,                             picking_job_id,                                picking_job_id,                        picking_job_id,                              picking_job_id,                    picking_job_id,                  parent_image_asset_id));
+}
 
 MovieAsset Database::GetNextMovieAsset()
 {

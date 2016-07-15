@@ -16,6 +16,7 @@ extern MyFindParticlesPanel *findparticles_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
+extern MyPickingResultsPanel *picking_results_panel;
 
 
 
@@ -322,7 +323,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 7, this);
+		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 8, this);
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
@@ -340,6 +341,8 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		my_dialog->Update(6);
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
 		my_dialog->Update(7);
+		picking_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT PARENT_IMAGE_ASSET_ID FROM PARTICLE_PICKING_LIST");
+		my_dialog->Update(8);
 		DirtyEverything();
 		my_dialog->Destroy();
 	}

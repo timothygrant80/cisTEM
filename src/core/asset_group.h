@@ -16,6 +16,8 @@ class AssetGroup {
 	long number_of_members;
 	wxString name;
 
+	bool can_be_picked; // Used by FindParticlesPanel to keep track of whether all images within the group are ready to be picked
+
 	void SetName(wxString wanted_name);
 	void AddMember(long number_to_add);
 	void RemoveMember(long number_to_remove);

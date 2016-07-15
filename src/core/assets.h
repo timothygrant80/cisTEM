@@ -79,10 +79,16 @@ class ParticlePositionAsset : public Asset {
 	ParticlePositionAsset();
 	~ParticlePositionAsset();
 
+	int picking_id;
 	int pick_job_id;
+	int parent_template_id;
 
 	double x_position;
 	double y_position;
+	double peak_height;
+	double template_phi;
+	double template_theta;
+	double template_psi;
 
 	void CopyFrom(Asset *other_asset);
 };

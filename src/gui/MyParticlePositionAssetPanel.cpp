@@ -197,7 +197,6 @@ void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()
 			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->x_position));
 			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->y_position));
 
-
 		}
 }
 
@@ -220,7 +219,8 @@ void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 		 long image_asset_id;
 
 		 ParticlePositionAsset temp_asset;
-		 temp_asset.pick_job_id = -1;
+		temp_asset.pick_job_id = -1;		 
+		temp_asset.picking_id = -1;
 
 
 		 // for each line, we add an asset..

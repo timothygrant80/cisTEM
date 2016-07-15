@@ -46,14 +46,21 @@ public :
 	int ReturnHighestAlignmentJobID();
 	int ReturnHighestFindCTFID();
 	int ReturnHighestFindCTFJobID();
+	int ReturnHighestPickingID();
+	int ReturnHighestPickingJobID();
 	int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
+	int ReturnNumberOfPreviousParticlePicksByAssetID(int wanted_asset_id);
 
 	int ReturnNumberOfAlignmentJobs();
 	int ReturnNumberOfCTFEstimationJobs();
+	int ReturnNumberOfPickingJobs();
+	int ReturnNumberOfImageAssetsWithCTFEstimates();
 
 	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
 	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
+	void GetUniquePickingIDs(int *picking_job_ids, int number_of_picking_jobs);
+	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
 
 	//Convenience insertion functions..
 
@@ -68,16 +75,22 @@ public :
 
 	void BeginImageAssetInsert();
 	void AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
-	void EndImageAssetInsert();
+	void EndImageAssetInsert() {EndBatchInsert();};
 
 	void BeginParticlePositionAssetInsert();
-	void AddNextParticlePositionAsset(long particle_position_asset_id, long parent_image_asset_id, long pick_job_id, double x_position, double y_position);
+	void AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position);
 	void EndParticlePositionAssetInsert() {EndBatchInsert();};
+
+	void BeginAbInitioParticlePositionAssetInsert();
+	void AddNextAbInitioParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position, double peak_height);
+	void EndAbInitioParticlePositionAssetInsert() {EndBatchInsert();};
 
 	// Table creation wrappers..
 
+	bool CreateParticlePickingListTable() {return CreateTable("PARTICLE_PICKING_LIST", "piiii", "PICKING_ID", "DATETIME_OF_RUN", "PICKING_JOB_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ALGORITHM");};
+	bool CreateAbInitioParticlePickingListTable() {return CreateTable("AB_INITIO_PARTICLE_PICKING_LIST", "prrrriiii", "PICKING_ID", "CHARACTERISTIC_RADIUS", "MAXIMUM_RADIUS","THRESHOLD_PEAK_HEIGHT","HIGHEST_RESOLUTION_USED_IN_PICKING","MIN_DIST_FROM_EDGES","AVOID_HIGH_VARIANCE","AVOID_HIGH_LOW_MEAN","NUM_BACKGROUND_BOXES");};
 
-	bool CreateParticlePositionAssetTable() {return CreateTable("PARTICLE_POSITION_ASSETS", "piirr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");};
+	bool CreateParticlePositionAssetTable() {return CreateTable("PARTICLE_POSITION_ASSETS", "piiirrrirrr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");};
 	bool CreateParticlePositionGroupListTable() {return  CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
 
 	bool CreateVolumeAssetTable() {return CreateTable("VOLUME_ASSETS", "pitriii", "VOLUME_ASSET_ID", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
@@ -120,5 +133,13 @@ public :
 	void BeginAllRunProfilesSelect();
 	RunProfile GetNextRunProfile();
 	void EndAllRunProfilesSelect(){EndBatchSelect();};
+
+
+	// Convenience CTF parameter function
+	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );
+
+	// Particle position asset management
+	void RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id);
+	void RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID( const int &picking_job_id);
 
 };

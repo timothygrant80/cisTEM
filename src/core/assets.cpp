@@ -210,9 +210,16 @@ ParticlePositionAsset::ParticlePositionAsset()
 {
 	asset_id = -1;
 	parent_id = -1;
+	picking_id = -1;
 	pick_job_id = -1;
-	x_position = -1;
-	y_position = -1;
+	parent_template_id = -1;
+	x_position = 0.0;
+	y_position = 0.0;
+	peak_height = 0.0;
+	template_phi = 0.0;
+	template_theta = 0.0;
+	template_psi = 0.0;
+
 
 	filename = wxEmptyString;
 
@@ -229,9 +236,15 @@ void ParticlePositionAsset::CopyFrom(Asset *other_asset)
 	ParticlePositionAsset *casted_asset = reinterpret_cast < ParticlePositionAsset *> (other_asset);
 	asset_id = casted_asset->asset_id;
 	parent_id = casted_asset->parent_id;
+	picking_id = casted_asset->picking_id;
 	pick_job_id = casted_asset->pick_job_id;
+	parent_template_id = casted_asset->parent_template_id;
 	x_position = casted_asset->x_position;
 	y_position = casted_asset->y_position;
+	peak_height = casted_asset->peak_height;
+	template_phi = casted_asset->template_phi;
+	template_theta = casted_asset->template_theta;
+	template_psi = casted_asset->template_psi;
 }
 
 // Volume asset///

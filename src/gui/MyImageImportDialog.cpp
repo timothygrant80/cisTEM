@@ -205,6 +205,7 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 		image_asset_panel->FillGroupList();
 		image_asset_panel->FillContentsList();
 		main_frame->RecalculateAssetBrowser();
+		main_frame->DirtyImageGroups();
 	}
 
 

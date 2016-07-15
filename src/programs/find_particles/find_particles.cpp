@@ -72,31 +72,41 @@ void FindParticlesApp::DoInteractiveUserInput()
 	int			output_stack_box_size				=	my_input->GetIntFromUser("Box size for output candidate particle images (pixels)","In pixels","256",0);
 	int			minimum_distance_from_edges			=	my_input->GetIntFromUser("Minimum distance from edge (pixels)","In pixels, the minimum distance between the center of a box and the edge of the micrograph","129",0);
 	float		picking_threshold					=	my_input->GetFloatFromUser("Picking threshold","The minimum peak height for candidate particles. In numbers of background noise standard deviations. Typically in the 3.0 to 15.0 range. For micrographs with good contrast, give higher values to avoid spurious peaks.","8.0",0.0);
+	bool		avoid_high_variance_areas			=	my_input->GetYesNoFromUser("Avoid high variance areas?","Areas with abnormally high local variance should be avoided. This often works well to avoid the edges of support film, ice crystals etc.","yes");
+	bool 		avoid_high_low_mean_areas			=	my_input->GetYesNoFromUser("Avoid areas with abnormal local mean?","Areas with abnormal local mean are can be avoided. This often works well to avoid ice crystals, for example.","yes");
+	int			algorithm_to_find_background		=	my_input->GetIntFromUser("Algorithm to find background areas (0 or 1)","0: lowest variance; 1: variance near mode","0",0,1);
+	int			number_of_background_boxes			=	my_input->GetIntFromUser("Number of background boxes","This number of boxes will be extracted from the micrographs in areas devoid of particles or other features, to compute the background amplitude spectrum","50",1);
+
+
 
 	delete my_input;
 
-	my_current_job.Reset(20);
-	my_current_job.ManualSetArguments("tffffffffbtbiffftiif",	micrograph_filename.ToStdString().c_str(),
-																pixel_size,
-																acceleration_voltage_in_keV,
-																spherical_aberration_in_mm,
-																amplitude_contrast,
-																additional_phase_shift_in_radians,
-																defocus_1_in_angstroms,
-																defocus_2_in_angstroms,
-																astigmatism_angle_in_degrees,
-																already_have_templates,
-																templates_filename.ToStdString().c_str(),
-																average_templates_radially,
-																number_of_template_rotations,
-																typical_radius,
-																maximum_radius,
-																highest_resolution_to_use,
-																output_stack_filename.ToStdString().c_str(),
-																output_stack_box_size,
-																minimum_distance_from_edges,
-																picking_threshold
-																);
+	my_current_job.Reset(24);
+	my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbii",	micrograph_filename.ToStdString().c_str(),
+																	pixel_size,
+																	acceleration_voltage_in_keV,
+																	spherical_aberration_in_mm,
+																	amplitude_contrast,
+																	additional_phase_shift_in_radians,
+																	defocus_1_in_angstroms,
+																	defocus_2_in_angstroms,
+																	astigmatism_angle_in_degrees,
+																	already_have_templates,
+																	templates_filename.ToStdString().c_str(),
+																	average_templates_radially,
+																	number_of_template_rotations,
+																	typical_radius,
+																	maximum_radius,
+																	highest_resolution_to_use,
+																	output_stack_filename.ToStdString().c_str(),
+																	output_stack_box_size,
+																	minimum_distance_from_edges,
+																	picking_threshold,
+																	avoid_high_variance_areas,
+																	avoid_high_low_mean_areas,
+																	algorithm_to_find_background,
+																	number_of_background_boxes
+																	);
 
 
 }
@@ -105,6 +115,8 @@ void FindParticlesApp::DoInteractiveUserInput()
 
 bool FindParticlesApp::DoCalculation()
 {
+
+	wxPrintf("DEBUG: in FindParticlesApp::DoCalculation()\n");
 
 	ProgressBar *my_progress_bar;
 	EmpiricalDistribution my_dist;
@@ -128,13 +140,25 @@ bool FindParticlesApp::DoCalculation()
 	float 		highest_resolution_to_use					=	my_current_job.arguments[15].ReturnFloatArgument();
 	wxString	output_stack_filename						=	my_current_job.arguments[16].ReturnStringArgument();
 	int			output_stack_box_size						=	my_current_job.arguments[17].ReturnIntegerArgument();
-	int			minimum_distance_from_edges_in_pixels					=	my_current_job.arguments[18].ReturnIntegerArgument();
+	int			minimum_distance_from_edges_in_pixels		=	my_current_job.arguments[18].ReturnIntegerArgument();
 	float		minimum_peak_height_for_candidate_particles = 	my_current_job.arguments[19].ReturnFloatArgument();
+	const bool	avoid_high_variance_areas					=	my_current_job.arguments[20].ReturnBoolArgument();
+	const bool	avoid_high_low_mean_areas					=	my_current_job.arguments[21].ReturnBoolArgument();
+	const int	algorithm_to_find_background				=	my_current_job.arguments[22].ReturnIntegerArgument();
+	const int   number_of_background_boxes					=	my_current_job.arguments[23].ReturnIntegerArgument();
 
+	wxPrintf("DEBUG: finished job arguments\n");
+
+	wxPrintf("Micrograph : %s\n",micrograph_filename);
+	wxPrintf("Psize: %f\n",original_micrograph_pixel_size);
+	wxPrintf("CTF : %f %f %f %f %f %f\n", acceleration_voltage_in_keV, spherical_aberration_in_mm, amplitude_contrast, defocus_1_in_angstroms, defocus_2_in_angstroms, astigmatism_angle_in_degrees);
+	wxPrintf("typical, max rad = %f %f\n", typical_radius_in_angstroms, maximum_radius_in_angstroms);
+	wxPrintf("Num back boxes: %i\n",number_of_background_boxes);
+	wxPrintf("Algorithm for background: %i\n",algorithm_to_find_background);
+	wxPrintf("Number of back boxes: %i\n",number_of_background_boxes);
 
 	// Parameters which could be set by the user
 	const int number_of_background_boxes_to_skip = 0;
-	const int number_of_background_boxes = 50;
 	const float minimum_distance_between_picks_in_angstroms = 2.0 * maximum_radius_in_angstroms;
 
 	// Other variables
@@ -255,10 +279,7 @@ bool FindParticlesApp::DoCalculation()
 	float typical_radius_in_pixels = typical_radius_in_angstroms / pixel_size;
 	const int minimum_box_size_for_object_with_psf = 2 * (maximum_radius_in_pixels + int(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size));
 	const int minimum_box_size_for_picking = minimum_box_size_for_object_with_psf;
-	//wxPrintf("DBG: box size for picking = %i pixels\n", minimum_box_size_for_picking);
 	const float minimum_distance_between_picks_in_pixels = minimum_distance_between_picks_in_angstroms / pixel_size;
-
-	// TODO: let the user choose the box size
 
 
 
@@ -274,7 +295,6 @@ bool FindParticlesApp::DoCalculation()
 	current_power_spectrum = template_power_spectrum;
 	current_number_of_fourier_elements = template_power_spectrum;
 	temp_curve = template_power_spectrum;
-
 
 
 	// If the user is supplying templates, read them in. If not, generate a single template image.
@@ -355,6 +375,7 @@ bool FindParticlesApp::DoCalculation()
 	// Normalize the curve to turn it into a band-pass filter
 	template_power_spectrum.NormalizeMaximumValue();
 	template_power_spectrum.SquareRoot();
+
 
 	// Read in the micrograph and resample it
 	Image micrograph;
@@ -456,25 +477,30 @@ bool FindParticlesApp::DoCalculation()
 	// keep a copy of the unmodified variance
 	local_sigma_modified = local_sigma;
 
-#define use_lowest_variance
 
-#ifdef use_lowest_variance
-	// Let's look for the areas of lowest variance, which we will assume are plain ice, so we can work out a whitening filter later on
-	// WARNING; this is liable to bias the whitening filter against the templates
-	local_sigma_modified.MultiplyByConstant(-1.0);
-#else
-	// fold the values around such that the mode becomes the maximum
-	address = 0;
-	for (int j = 0; j < local_sigma.logical_y_dimension; j ++ )
+	switch(algorithm_to_find_background)
 	{
-		for ( int i = 0; i < local_sigma.logical_x_dimension; i ++ )
+	case(0) :
+		// Let's look for the areas of lowest variance, which we will assume are plain ice, so we can work out a whitening filter later on
+		// WARNING; this is liable to bias the whitening filter against the templates
+		local_sigma_modified.MultiplyByConstant(-1.0);
+		break;
+	case(1) :
+		// fold the values around such that the mode becomes the maximum
+		address = 0;
+		for (int j = 0; j < local_sigma.logical_y_dimension; j ++ )
 		{
-			local_sigma.real_values[address] = -1.0 * fabs(local_sigma.real_values[address] - local_sigma_mode);
-			address ++;
+			for ( int i = 0; i < local_sigma.logical_x_dimension; i ++ )
+			{
+				local_sigma.real_values[address] = -1.0 * fabs(local_sigma.real_values[address] - local_sigma_mode);
+				address ++;
+			}
+			address += local_sigma.padding_jump_value;
 		}
-		address += local_sigma.padding_jump_value;
+		break;
+	default :
+		MyDebugAssertTrue(false,"Oops, bad algorithm number : %i\n",algorithm_to_find_background);
 	}
-#endif
 
 #ifdef dump_intermediate_files
 	NumericTextFile temp_coos_file("dbg_background_box.plt", OPEN_TO_WRITE, 3);
@@ -724,65 +750,64 @@ bool FindParticlesApp::DoCalculation()
 		SendInfo(wxString::Format("Warning: user-supplied box size (%i) is smaller than minimum recommended box size given the max radius and the defocus (%i)\n",output_stack_box_size,minimum_box_size_for_picking_unbinned));
 	}
 
-#define avoid_high_variance_areas
-#define avoid_high_low_mean_areas
-
-#ifdef avoid_high_variance_areas
-	// this is slightly complicated because the correlation map and the variance map are in reverse order
-	float threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
-	//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
-	//wxPrintf("Threshold on sigma = %f\n",threshold);
-	address = 0;
-	address_in_score = maximum_score.real_memory_allocated;
-	for ( int j = 0; j < maximum_score.logical_y_dimension; j ++ )
+	if (avoid_high_variance_areas)
 	{
-		address_in_score -= maximum_score.padding_jump_value;
-		for ( int i = 0; i < maximum_score.logical_x_dimension; i ++ )
+		// this is slightly complicated because the correlation map and the variance map are in reverse order
+		float threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
+		//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
+		//wxPrintf("Threshold on sigma = %f\n",threshold);
+		address = 0;
+		address_in_score = maximum_score.real_memory_allocated;
+		for ( int j = 0; j < maximum_score.logical_y_dimension; j ++ )
 		{
-			if (local_sigma.real_values[address] > threshold)
+			address_in_score -= maximum_score.padding_jump_value;
+			for ( int i = 0; i < maximum_score.logical_x_dimension; i ++ )
 			{
-				maximum_score.real_values[address_in_score] = 0.0;
+				if (local_sigma.real_values[address] > threshold)
+				{
+					maximum_score.real_values[address_in_score] = 0.0;
+				}
+				address ++;
+				address_in_score --;
 			}
-			address ++;
-			address_in_score --;
+			address += local_sigma.padding_jump_value;
 		}
-		address += local_sigma.padding_jump_value;
-	}
 
 #ifdef dump_intermediate_files
-	maximum_score.QuickAndDirtyWriteSlice("dbg_maximum_score_2.mrc",1);
+		maximum_score.QuickAndDirtyWriteSlice("dbg_maximum_score_2.mrc",1);
 #endif
-
-#endif
-
-#ifdef avoid_high_low_mean_areas
-
-	float threshold_high = local_mean_mode + 2.0 * local_mean_fwhm;
-	float threshold_low  = local_mean_mode - 2.0 * local_mean_fwhm;
-	address = 0;
-	address_in_score = maximum_score.real_memory_allocated;
-	for ( int j = 0; j < maximum_score.logical_y_dimension; j ++ )
-	{
-		address_in_score -= maximum_score.padding_jump_value;
-		for ( int i = 0; i < maximum_score.logical_x_dimension; i ++ )
-		{
-			if (local_mean.real_values[address] > threshold_high || local_mean.real_values[address] < threshold_low)
-			{
-				maximum_score.real_values[address_in_score] = 0.0;
-			}
-			address ++;
-			address_in_score --;
-		}
-		address += local_mean.padding_jump_value;
 	}
 
+	if (avoid_high_low_mean_areas)
+	{
+		float threshold_high = local_mean_mode + 2.0 * local_mean_fwhm;
+		float threshold_low  = local_mean_mode - 2.0 * local_mean_fwhm;
+		address = 0;
+		address_in_score = maximum_score.real_memory_allocated;
+		for ( int j = 0; j < maximum_score.logical_y_dimension; j ++ )
+		{
+			address_in_score -= maximum_score.padding_jump_value;
+			for ( int i = 0; i < maximum_score.logical_x_dimension; i ++ )
+			{
+				if (local_mean.real_values[address] > threshold_high || local_mean.real_values[address] < threshold_low)
+				{
+					maximum_score.real_values[address_in_score] = 0.0;
+				}
+				address ++;
+				address_in_score --;
+			}
+			address += local_mean.padding_jump_value;
+		}
+
 #ifdef dump_intermediate_files
-	maximum_score.QuickAndDirtyWriteSlice("dbg_maximum_score_3.mrc",1);
+		maximum_score.QuickAndDirtyWriteSlice("dbg_maximum_score_3.mrc",1);
 #endif
+	}
 
-
-#endif
-
+	// Use will (mis)use Curve objects to keep track of our results
+	Curve results_x_y;
+	Curve results_height_template;
+	Curve results_rotation;
 
 	// Let's find peaks in our scoring function and box candidate particles out
 	box.Deallocate();
@@ -826,11 +851,16 @@ bool FindParticlesApp::DoCalculation()
 		temp_float[2] =  1.0;
 		output_coos_file->WriteLine(temp_float);
 
-
 		// Find the matching template
 		index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 		rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 
+		//Remember results
+		results_x_y.AddPoint(pixel_size * (my_peak.x + float(maximum_score.physical_address_of_box_center_x)), pixel_size * (my_peak.y + float(maximum_score.physical_address_of_box_center_y)));
+		results_height_template.AddPoint(my_peak.value,float(index_of_matching_template));
+		results_rotation.AddPoint(rotation_of_matching_template,0.0);
+
+		// Get ready for template matching
 		PrepareTemplateForMatching(&template_image[index_of_matching_template],template_medium,rotation_of_matching_template,&micrograph_ctf,&background_whitening_filter);
 
 #ifdef dump_intermediate_files
@@ -852,6 +882,29 @@ bool FindParticlesApp::DoCalculation()
 	}
 	delete my_progress_bar;
 	wxPrintf("\nFound %i candidate particles\n",number_of_candidate_particles);
+
+	// Put together results
+
+	float *result_array = new float[ 5 * results_x_y.number_of_points ];
+
+	address = 0;
+	for ( long counter = 0; counter < results_x_y.number_of_points; counter ++ )
+	{
+		result_array[address] = results_x_y.data_x[counter]; // x
+		address ++;
+		result_array[address] = results_x_y.data_y[counter]; // y
+		address ++;
+		result_array[address] = results_height_template.data_x[counter]; // peak height
+		address ++;
+		result_array[address] = results_height_template.data_y[counter]; // which template
+		address ++;
+		result_array[address] = results_rotation.data_x[counter]; // template rotation (in degrees)
+		address ++;
+	}
+
+	my_result.SetResult(5*results_x_y.number_of_points, result_array);
+
+	delete [] result_array;
 
 	return true;
 }

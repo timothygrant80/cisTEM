@@ -987,8 +987,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].ctf_estimation_id,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
 
 					image_asset_panel->current_asset_number++;

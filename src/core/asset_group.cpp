@@ -10,6 +10,7 @@ AssetGroup::AssetGroup()
 	number_of_members = 0;
 	number_allocated = 15;
 	members = new long[15];
+	can_be_picked = false;
 }
 
 AssetGroup::~AssetGroup()
@@ -30,6 +31,8 @@ AssetGroup::AssetGroup( const AssetGroup &obj) // copy constructor
 	{
 		members[counter] = obj.members[counter];
 	}
+
+	can_be_picked = obj.can_be_picked;
 }
 
 AssetGroup & AssetGroup::operator = (const AssetGroup &t)
@@ -54,6 +57,8 @@ AssetGroup & AssetGroup::operator = (const AssetGroup &t)
 	   {
 		   this->members[counter] = t.members[counter];
 	   }
+
+	   can_be_picked = t.can_be_picked;
    }
 
    return *this;
@@ -81,6 +86,8 @@ AssetGroup & AssetGroup::operator = (const AssetGroup *t)
 	   {
 		   this->members[counter] = t->members[counter];
 	   }
+
+	   can_be_picked = t->can_be_picked;
    }
 
    return *this;
@@ -138,6 +145,7 @@ void AssetGroup::CopyFrom(AssetGroup *other_group)
 	RemoveAll();
 	id = other_group->id;
 	name = other_group->name;
+	can_be_picked = other_group->can_be_picked;
 
 	for (long counter = 0; counter < other_group->number_of_members; counter++)
 	{

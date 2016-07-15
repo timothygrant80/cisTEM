@@ -12,6 +12,7 @@ extern MyVolumeAssetPanel *volume_asset_panel;
 
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
+extern MyFindParticlesPanel *findparticles_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
@@ -194,6 +195,7 @@ void MyMainFrame::DirtyImageGroups()
 	image_asset_panel->is_dirty = true;
 	findctf_panel->group_combo_is_dirty = true;
 	ctf_results_panel->group_combo_is_dirty = true;
+	findparticles_panel->group_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyParticlePositionGroups()
@@ -206,6 +208,7 @@ void MyMainFrame::DirtyRunProfiles()
 	run_profiles_panel->is_dirty = true;
 	align_movies_panel->run_profiles_are_dirty = true;
 	findctf_panel->run_profiles_are_dirty = true;
+	findparticles_panel->run_profiles_are_dirty = true;
 }
 
 

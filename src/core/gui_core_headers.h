@@ -62,6 +62,7 @@
 #include "../gui/AlignMoviesPanel.h"
 #include "../gui/ShowCTFResultsPanel.h"
 #include "../gui/FindCTFPanel.h"
+#include "../gui/FindParticlesPanel.h"
 #include "../gui/MyMovieAlignResultsPanel.h"
 #include "../gui/MyFindCTFResultsPanel.h"
 #include "../gui/MyRunProfilesPanel.h"

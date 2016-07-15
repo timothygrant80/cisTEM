@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -10,7 +10,6 @@
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
-#include "job_panel.h"
 #include "my_controls.h"
 
 #include "ProjectX_gui.h"
@@ -1089,6 +1088,395 @@ MovieImportDialog::~MovieImportDialog()
 	DoseText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
+	
+}
+
+FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : JobPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer43;
+	bSizer43 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline12 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline12, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer1211;
+	bSizer1211 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer45;
+	bSizer45 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer44;
+	bSizer44 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText21 = new wxStaticText( this, wxID_ANY, wxT("Input Group :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText21->Wrap( -1 );
+	bSizer44->Add( m_staticText21, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	GroupComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	bSizer44->Add( GroupComboBox, 40, wxALL, 5 );
+	
+	m_staticText211 = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText211->Wrap( -1 );
+	bSizer44->Add( m_staticText211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALL, 5 );
+	
+	
+	bSizer44->Add( 0, 0, 60, wxEXPAND, 5 );
+	
+	
+	bSizer45->Add( bSizer44, 1, wxEXPAND, 5 );
+	
+	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer45->Add( ExpertToggleButton, 0, wxALL, 5 );
+	
+	
+	bSizer1211->Add( bSizer45, 1, wxEXPAND, 5 );
+	
+	PleaseEstimateCTFStaticText = new wxStaticText( this, wxID_ANY, wxT("Please run CTF estimation on this group before picking particles"), wxDefaultPosition, wxDefaultSize, 0 );
+	PleaseEstimateCTFStaticText->Wrap( -1 );
+	PleaseEstimateCTFStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	PleaseEstimateCTFStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	PleaseEstimateCTFStaticText->Hide();
+	
+	bSizer1211->Add( PleaseEstimateCTFStaticText, 0, wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer1211, 0, wxEXPAND, 5 );
+	
+	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer46;
+	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PickingParametersPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
+	PickingParametersPanel->SetScrollRate( 5, 5 );
+	PickingParametersPanel->Hide();
+	
+	InputSizer = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer120;
+	bSizer120 = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer1;
+	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer1->AddGrowableCol( 1 );
+	fgSizer1->SetFlexibleDirection( wxBOTH );
+	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText196 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Maximum particle radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText196->Wrap( -1 );
+	fgSizer1->Add( m_staticText196, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	MaximumParticleRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("120.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MaximumParticleRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	CharacteristicParticleRadiusStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Characteristic particle radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	CharacteristicParticleRadiusStaticText->Wrap( -1 );
+	fgSizer1->Add( CharacteristicParticleRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	CharacteristicParticleRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("80.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( CharacteristicParticleRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	ThresholdPeakHeightStaticText1 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Threshold peak height :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThresholdPeakHeightStaticText1->Wrap( -1 );
+	fgSizer1->Add( ThresholdPeakHeightStaticText1, 0, wxALL, 5 );
+	
+	ThresholdPeakHeightNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("6.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ThresholdPeakHeightNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	TestOnCurrentMicrographButton = new wxButton( PickingParametersPanel, wxID_ANY, wxT("Test on current micrograph"), wxDefaultPosition, wxDefaultSize, 0 );
+	TestOnCurrentMicrographButton->Enable( false );
+	
+	fgSizer1->Add( TestOnCurrentMicrographButton, 0, wxALL, 5 );
+	
+	AutoPickRefreshCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Auto pick refresh"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoPickRefreshCheckBox->Enable( false );
+	
+	fgSizer1->Add( AutoPickRefreshCheckBox, 0, wxALL, 5 );
+	
+	
+	bSizer120->Add( fgSizer1, 0, wxEXPAND, 5 );
+	
+	ExpertOptionsPanel = new wxPanel( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ExpertOptionsPanel->Hide();
+	
+	ExpertInputSizer = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline35 = new wxStaticLine( ExpertOptionsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	ExpertInputSizer->Add( m_staticline35, 0, wxEXPAND | wxALL, 5 );
+	
+	wxFlexGridSizer* ExpertOptionsSizer;
+	ExpertOptionsSizer = new wxFlexGridSizer( 0, 2, 0, 0 );
+	ExpertOptionsSizer->SetFlexibleDirection( wxBOTH );
+	ExpertOptionsSizer->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	ExpertOptionsStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertOptionsStaticText->Wrap( -1 );
+	ExpertOptionsStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
+	
+	ExpertOptionsSizer->Add( ExpertOptionsStaticText, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	HighestResolutionStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Highest resolution used in picking (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighestResolutionStaticText->Wrap( -1 );
+	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	HighestResolutionNumericCtrl = new NumericTextCtrl( ExpertOptionsPanel, wxID_ANY, wxT("15.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	ExpertOptionsSizer->Add( HighestResolutionNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_checkBox7 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Set minimum distance from edges (pix.) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertOptionsSizer->Add( m_checkBox7, 0, wxALL, 5 );
+	
+	MinimumDistanceFromEdgesSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 128 );
+	MinimumDistanceFromEdgesSpinCtrl->Enable( false );
+	
+	ExpertOptionsSizer->Add( MinimumDistanceFromEdgesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_checkBox8 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Use radial averages of templates"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_checkBox8->SetValue(true); 
+	m_checkBox8->Enable( false );
+	
+	ExpertOptionsSizer->Add( m_checkBox8, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_checkBox9 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Rotate each template this many times : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_checkBox9->Enable( false );
+	
+	ExpertOptionsSizer->Add( m_checkBox9, 0, wxALL, 5 );
+	
+	NumberOfTemplateRotationsSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 360, 72 );
+	NumberOfTemplateRotationsSpinCtrl->Enable( false );
+	
+	ExpertOptionsSizer->Add( NumberOfTemplateRotationsSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	AvoidHighVarianceAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid high variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
+	AvoidHighVarianceAreasCheckBox->SetValue(true); 
+	ExpertOptionsSizer->Add( AvoidHighVarianceAreasCheckBox, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	AvoidAbnormalLocalMeanAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid areas with abnormal local mean"), wxDefaultPosition, wxDefaultSize, 0 );
+	AvoidAbnormalLocalMeanAreasCheckBox->SetValue(true); 
+	ExpertOptionsSizer->Add( AvoidAbnormalLocalMeanAreasCheckBox, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	ShowEstimatedBackgroundSpectrumCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show estimated background spectrum"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertOptionsSizer->Add( ShowEstimatedBackgroundSpectrumCheckBox, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	ShowPositionsOfBackgroundBoxesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show positions of background boxes"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertOptionsSizer->Add( ShowPositionsOfBackgroundBoxesCheckBox, 0, wxALL, 5 );
+	
+	
+	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText170 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Number of background boxes : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText170->Wrap( -1 );
+	ExpertOptionsSizer->Add( m_staticText170, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	NumberOfBackgroundBoxesSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999, 50 );
+	ExpertOptionsSizer->Add( NumberOfBackgroundBoxesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText169 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Algorithm to find background areas : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText169->Wrap( -1 );
+	ExpertOptionsSizer->Add( m_staticText169, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxString AlgorithmToFindBackgroundChoiceChoices[] = { wxT("Lowest variance"), wxT("Variance near mode") };
+	int AlgorithmToFindBackgroundChoiceNChoices = sizeof( AlgorithmToFindBackgroundChoiceChoices ) / sizeof( wxString );
+	AlgorithmToFindBackgroundChoice = new wxChoice( ExpertOptionsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, AlgorithmToFindBackgroundChoiceNChoices, AlgorithmToFindBackgroundChoiceChoices, 0 );
+	AlgorithmToFindBackgroundChoice->SetSelection( 0 );
+	ExpertOptionsSizer->Add( AlgorithmToFindBackgroundChoice, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	ExpertInputSizer->Add( ExpertOptionsSizer, 1, wxEXPAND, 5 );
+	
+	
+	ExpertOptionsPanel->SetSizer( ExpertInputSizer );
+	ExpertOptionsPanel->Layout();
+	ExpertInputSizer->Fit( ExpertOptionsPanel );
+	bSizer120->Add( ExpertOptionsPanel, 1, wxALL|wxEXPAND, 0 );
+	
+	
+	InputSizer->Add( bSizer120, 1, wxEXPAND, 5 );
+	
+	
+	PickingParametersPanel->SetSizer( InputSizer );
+	PickingParametersPanel->Layout();
+	InputSizer->Fit( PickingParametersPanel );
+	bSizer46->Add( PickingParametersPanel, 0, wxALL|wxEXPAND, 5 );
+	
+	OutputTextPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	OutputTextPanel->Hide();
+	
+	wxBoxSizer* bSizer56;
+	bSizer56 = new wxBoxSizer( wxVERTICAL );
+	
+	output_textctrl = new wxTextCtrl( OutputTextPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_READONLY );
+	bSizer56->Add( output_textctrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	OutputTextPanel->SetSizer( bSizer56 );
+	OutputTextPanel->Layout();
+	bSizer56->Fit( OutputTextPanel );
+	bSizer46->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
+	
+	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer61;
+	bSizer61 = new wxBoxSizer( wxVERTICAL );
+	
+	InfoText = new wxRichTextCtrl( InfoPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY|wxHSCROLL|wxVSCROLL );
+	bSizer61->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	InfoPanel->SetSizer( bSizer61 );
+	InfoPanel->Layout();
+	bSizer61->Fit( InfoPanel );
+	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
+	
+	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer48;
+	bSizer48 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer70;
+	bSizer70 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer71;
+	bSizer71 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer55;
+	bSizer55 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer71->Add( bSizer55, 0, wxALIGN_CENTER_HORIZONTAL, 5 );
+	
+	
+	bSizer70->Add( bSizer71, 1, wxALIGN_CENTER_VERTICAL, 5 );
+	
+	wxBoxSizer* bSizer74;
+	bSizer74 = new wxBoxSizer( wxVERTICAL );
+	
+	
+	bSizer70->Add( bSizer74, 0, wxALIGN_CENTER_VERTICAL, 5 );
+	
+	
+	bSizer48->Add( bSizer70, 1, wxEXPAND, 5 );
+	
+	ProgressPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ProgressPanel->Hide();
+	
+	wxBoxSizer* bSizer57;
+	bSizer57 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer59;
+	bSizer59 = new wxBoxSizer( wxVERTICAL );
+	
+	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
+	ProgressBar->SetValue( 0 ); 
+	bSizer59->Add( ProgressBar, 0, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer62;
+	bSizer62 = new wxBoxSizer( wxHORIZONTAL );
+	
+	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("1000 / 1000 processes connected."), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberConnectedText->Wrap( -1 );
+	bSizer62->Add( NumberConnectedText, 1, wxALIGN_CENTER|wxALL|wxEXPAND, 5 );
+	
+	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Remaining Time : ???h:??m:??s"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	TimeRemainingText->Wrap( -1 );
+	bSizer62->Add( TimeRemainingText, 0, wxALIGN_RIGHT|wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer59->Add( bSizer62, 1, wxEXPAND, 5 );
+	
+	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Running Job"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+	
+	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
+	FinishButton->Hide();
+	
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
+	
+	
+	ProgressPanel->SetSizer( bSizer57 );
+	ProgressPanel->Layout();
+	bSizer57->Fit( ProgressPanel );
+	bSizer48->Add( ProgressPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	StartPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer58;
+	bSizer58 = new wxBoxSizer( wxHORIZONTAL );
+	
+	RunProfileText = new wxStaticText( StartPanel, wxID_ANY, wxT("Run Profile :"), wxDefaultPosition, wxDefaultSize, 0 );
+	RunProfileText->Wrap( -1 );
+	bSizer58->Add( RunProfileText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	RunProfileComboBox = new wxComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer60;
+	bSizer60 = new wxBoxSizer( wxVERTICAL );
+	
+	StartPickingButton = new wxButton( StartPanel, wxID_ANY, wxT("Start Picking"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer60->Add( StartPickingButton, 0, wxALL, 5 );
+	
+	
+	bSizer58->Add( bSizer60, 50, wxEXPAND, 5 );
+	
+	
+	StartPanel->SetSizer( bSizer58 );
+	StartPanel->Layout();
+	bSizer58->Fit( StartPanel );
+	bSizer48->Add( StartPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer48, 0, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer43 );
+	this->Layout();
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
+	PickingAlgorithmComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
+	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
+	AutoPickRefreshCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindParticlesPanel::OnInfoURL ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::TerminateButtonClick ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::FinishButtonClick ), NULL, this );
+	StartPickingButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::StartPickingClick ), NULL, this );
+}
+
+FindParticlesPanel::~FindParticlesPanel()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
+	PickingAlgorithmComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
+	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
+	AutoPickRefreshCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindParticlesPanel::OnInfoURL ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::TerminateButtonClick ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::FinishButtonClick ), NULL, this );
+	StartPickingButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::StartPickingClick ), NULL, this );
 	
 }
 

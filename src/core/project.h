@@ -14,6 +14,7 @@ public :
 	wxFileName movie_asset_directory;
 	wxFileName image_asset_directory;
 	wxFileName ctf_asset_directory;
+	wxFileName particle_position_asset_directory;
 
 	double total_cpu_hours;
 	int total_jobs_run;

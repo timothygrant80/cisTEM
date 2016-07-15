@@ -509,8 +509,8 @@ void CtffindApp::DoInteractiveUserInput()
 
 		if (find_additional_phase_shift)
 		{
-			minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
-			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","3.15",minimum_additional_phase_shift,3.15);
+			minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift (rad)","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
+			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift (rad)","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","3.15",minimum_additional_phase_shift,3.15);
 			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.001,maximum_additional_phase_shift-minimum_additional_phase_shift);
 		}
 		else

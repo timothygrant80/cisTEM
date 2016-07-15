@@ -38,6 +38,7 @@ MyMainFrame *main_frame;
 
 MyAlignMoviesPanel *align_movies_panel;
 MyFindCTFPanel *findctf_panel;
+MyFindParticlesPanel *findparticles_panel;
 
 OverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
@@ -94,6 +95,7 @@ bool MyGuiApp::OnInit()
 
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 	findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
+	findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
 	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -120,6 +122,7 @@ bool MyGuiApp::OnInit()
 
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
+	wxBitmap find_particles_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
@@ -134,6 +137,7 @@ bool MyGuiApp::OnInit()
 
 	ActionsBookIconImages->Add(movie_align_icon_bmp);
 	ActionsBookIconImages->Add(ctf_icon_bmp);
+	ActionsBookIconImages->Add(find_particles_icon_bmp);
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
@@ -166,6 +170,7 @@ bool MyGuiApp::OnInit()
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
+	actions_panel->ActionsBook->AddPage(findparticles_panel,"Find Particles",false,2);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

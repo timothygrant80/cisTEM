@@ -320,18 +320,18 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			GroupComboBox->Enable(true);
 			ExpertToggleButton->Enable(true);
 
-		if (RunProfileComboBox->GetCount() > 0)
-		{
-			if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+			if (RunProfileComboBox->GetCount() > 0)
 			{
-				StartEstimationButton->Enable(true);
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				{
+					StartEstimationButton->Enable(true);
+				}
+				else StartEstimationButton->Enable(false);
 			}
-			else StartEstimationButton->Enable(false);
-		}
-		else
-		{
-			StartEstimationButton->Enable(false);
-		}
+			else
+			{
+				StartEstimationButton->Enable(false);
+			}
 		}
 		else
 		{
@@ -353,6 +353,23 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			FillRunProfileComboBox();
 			run_profiles_are_dirty = false;
 		}
+
+		// Check whether all members of the group have movie parents. If not, make sure we only allow image processing
+		MovieRadioButton->Enable(true);
+		NoMovieFramesStaticText->Enable(true);
+		NoFramesToAverageSpinCtrl->Enable(true);
+		for (int counter = 0; counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); counter ++ )
+		{
+			if (image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(),counter))->parent_id < 0)
+			{
+				MovieRadioButton->SetValue(false);
+				MovieRadioButton->Enable(false);
+				NoMovieFramesStaticText->Enable(false);
+				NoFramesToAverageSpinCtrl->Enable(false);
+				ImageRadioButton->SetValue(true);
+			}
+		}
+
 	}
 
 
@@ -480,6 +497,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	bool 		astigmatism_is_known;
 	float		known_astigmatism;
 	float		known_astigmatism_angle;
+	bool		resample_if_pixel_too_small;
 
 	// allocate space for the buffered results..
 
@@ -546,6 +564,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		// astigmatism_is_known (bool);
 		// known_astigmatism (float);
 		// known_astigmatism_angle (float);
+		// resample_if_pixel_too_small (bool);
 
 		if (input_is_a_movie == true)
 		{
@@ -581,10 +600,10 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		//astigmatism_is_known = true;
 		//known_astigmatism = 385.0;
 		//known_astigmatism_angle = 35.0;
+		resample_if_pixel_too_small = true;
 
 
-
-		my_job_package.AddJob("sbisffffiffffffbfffbff",	input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffiffffffbfffbffb",input_filename.c_str(), // 0
 														input_is_a_movie, // 1
 														number_of_frames_to_average, //2
 														output_diagnostic_filename.c_str(), // 3
@@ -605,7 +624,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 														additional_phase_shift_search_step, // 18
 													    astigmatism_is_known, // 19
 													    known_astigmatism, // 20
-													    known_astigmatism_angle); // 21
+													    known_astigmatism_angle, // 21
+														resample_if_pixel_too_small); // 22
 	}
 
 	// launch a controller
@@ -893,6 +913,9 @@ void MyFindCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
 {
+
+	extern MyFindParticlesPanel *findparticles_panel;
+
 	int number_of_frames;
 	int frame_counter;
 
@@ -927,6 +950,9 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 		// job has really finished, so we can write to the database...
 
 		WriteResultToDataBase();
+
+		// let the FindParticles panel check whether any of the groups are now ready to be picked
+		findparticles_panel->CheckWhetherGroupsCanBePicked();
 
 		if (buffered_results != NULL)
 		{
@@ -1091,6 +1117,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 															   image_asset_panel->ReturnAssetPointer(current_asset)->microscope_voltage,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->pixel_size,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->spherical_aberration);
+
+		image_asset_panel->ReturnAssetPointer(current_asset)->ctf_estimation_id = ctf_estimation_id;
 
 		ctf_estimation_id++;
 

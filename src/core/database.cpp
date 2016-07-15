@@ -59,12 +59,17 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 
 int Database::ReturnHighestAlignmentID()
 {
-	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_ID) FROM ESTIMATED_CTF_PARAMETERS");
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
 }
 
 int Database::ReturnHighestFindCTFID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_ID) FROM ESTIMATED_CTF_PARAMETERS");
+}
+
+int Database::ReturnHighestPickingID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(PICKING_ID) FROM PARTICLE_PICKING_LIST");
 }
 
 int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id)
@@ -77,6 +82,12 @@ int Database::ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id)
 	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID = %i", wanted_asset_id));
 }
 
+
+int Database::ReturnNumberOfPreviousParticlePicksByAssetID(int wanted_asset_id)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM PARTICLE_PICKING_LIST WHERE PARENT_IMAGE_ASSET_ID = %i", wanted_asset_id));
+}
+
 int Database::ReturnHighestAlignmentJobID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
@@ -85,6 +96,11 @@ int Database::ReturnHighestAlignmentJobID()
 int Database::ReturnHighestFindCTFJobID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(CTF_ESTIMATION_JOB_ID) FROM ESTIMATED_CTF_PARAMETERS");
+}
+
+int Database::ReturnHighestPickingJobID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(PICKING_JOB_ID) FROM PARTICLE_PICKING_LIST");
 }
 
 int Database::ReturnNumberOfAlignmentJobs()
@@ -141,6 +157,59 @@ void Database::GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number
 	}
 
 	EndBatchSelect();
+}
+
+int Database::ReturnNumberOfImageAssetsWithCTFEstimates()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT IMAGE_ASSET_ID) FROM ESTIMATED_CTF_PARAMETERS");
+}
+
+void Database::GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	bool more_data;
+
+	wxPrintf("Number of distinct images with ctf estimates = %i\n",number_of_image_ids);
+
+	more_data = BeginBatchSelect("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
+
+	for (int counter = 0; counter < number_of_image_ids; counter++)
+	{
+		if (more_data == false)
+		{
+			MyPrintWithDetails("Unexpected end of select command");
+			abort();
+		}
+
+		more_data = GetFromBatchSelect("i", &image_ids[counter]);
+
+	}
+
+	EndBatchSelect();
+}
+
+void Database::GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift )
+{
+	MyDebugAssertTrue(is_open,"Database not open");
+
+
+	bool more_data;
+
+	more_data = BeginBatchSelect(wxString::Format("SELECT VOLTAGE, SPHERICAL_ABERRATION, AMPLITUDE_CONTRAST, DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT FROM ESTIMATED_CTF_PARAMETERS WHERE CTF_ESTIMATION_ID=%i", ctf_estimation_id));
+
+	if (more_data)
+	{
+		GetFromBatchSelect("rrrrrrr",&acceleration_voltage,&spherical_aberration,&amplitude_constrast,&defocus_1,&defocus_2,&defocus_angle,&additional_phase_shift);
+	}
+	else
+	{
+		MyPrintWithDetails("Unexpected end of select command\n");
+		abort();
+	}
+
+	EndBatchSelect();
+
 }
 
 
@@ -312,6 +381,8 @@ bool Database::CreateAllTables()
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 	success = CreateTable("IMAGE_ASSETS", "ptiiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	success = CreateParticlePickingListTable();
+	success = CreateAbInitioParticlePickingListTable();
 	success = CreateParticlePositionAssetTable();
 	success = CreateParticlePositionGroupListTable();
 	success = CreateVolumeAssetTable();
@@ -604,22 +675,26 @@ void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int pos
 	AddToBatchInsert("itiiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
 }
 
-void Database::EndImageAssetInsert()
+
+void Database::BeginAbInitioParticlePositionAssetInsert()
 {
-	EndBatchInsert();
+	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 6, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "X_POSITION", "Y_POSITION","PEAK_HEIGHT");
+}
+
+void Database::AddNextAbInitioParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position, double peak_height )
+{
+	AddToBatchInsert("iiirrr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position, peak_height);
 }
 
 void Database::BeginParticlePositionAssetInsert()
 {
-	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 5, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION");
+	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 5, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "X_POSITION", "Y_POSITION");
 }
 
-void Database::AddNextParticlePositionAsset(long particle_position_asset_id, long parent_image_asset_id, long pick_job_id, double x_position, double y_position)
+void Database::AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position )
 {
-	AddToBatchInsert("lllrr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position);
-
+	AddToBatchInsert("iiirr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position);
 }
-
 
 
 bool Database::BeginBatchSelect(const char *select_command)
@@ -915,6 +990,16 @@ AssetGroup Database::GetNextVolumeGroup()
 	return temp_group;
 }
 
+void Database::RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id)
+{
+	ExecuteSQL(wxString::Format("delete from particle_position_group_%i where exists(select 1 from particle_position_assets where particle_position_assets.parent_image_asset_id = %i AND particle_position_group_%i.particle_position_asset_id = particle_position_assets.particle_position_asset_id)",group_number_following_gui_convention-1,parent_image_asset_id,group_number_following_gui_convention-1));
+}
+
+void Database::RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID( const int &picking_job_id)
+{
+	ExecuteSQL(wxString::Format("delete from particle_position_assets where exists(select 1 from particle_picking_list where particle_picking_list.picking_job_id = %i AND particle_picking_list.parent_image_asset_id = particle_position_assets.parent_image_asset_id)",picking_job_id));
+}
+
 
 
 MovieAsset Database::GetNextMovieAsset()
@@ -938,7 +1023,7 @@ ImageAsset Database::GetNextImageAsset()
 ParticlePositionAsset Database::GetNextParticlePositionAsset()
 {
 	ParticlePositionAsset temp_asset;
-	GetFromBatchSelect("iiirr", &temp_asset.asset_id, &temp_asset.parent_id, &temp_asset.pick_job_id, &temp_asset.x_position, &temp_asset.y_position);
+	GetFromBatchSelect("iiiirrrirrr", &temp_asset.asset_id, &temp_asset.parent_id, &temp_asset.picking_id, &temp_asset.pick_job_id, &temp_asset.x_position, &temp_asset.y_position,&temp_asset.peak_height,&temp_asset.parent_template_id,&temp_asset.template_psi,&temp_asset.template_theta,&temp_asset.template_phi);
 	return temp_asset;
 }
 

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -18,6 +18,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -42,12 +43,13 @@ class UnblurResultsPanel;
 #include <wx/splitter.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
-#include <wx/statbmp.h>
 #include <wx/checkbox.h>
 #include <wx/spinctrl.h>
+#include <wx/choice.h>
+#include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
-#include <wx/scrolwin.h>
+#include <wx/statbmp.h>
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
@@ -411,6 +413,85 @@ class MovieImportDialog : public wxDialog
 		
 		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
 		~MovieImportDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class FindParticlesPanel
+///////////////////////////////////////////////////////////////////////////////
+class FindParticlesPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText21;
+		wxComboBox* GroupComboBox;
+		wxStaticText* m_staticText211;
+		wxComboBox* PickingAlgorithmComboBox;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticText* PleaseEstimateCTFStaticText;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* PickingParametersPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText196;
+		NumericTextCtrl* MaximumParticleRadiusNumericCtrl;
+		wxStaticText* CharacteristicParticleRadiusStaticText;
+		NumericTextCtrl* CharacteristicParticleRadiusNumericCtrl;
+		wxStaticText* ThresholdPeakHeightStaticText1;
+		NumericTextCtrl* ThresholdPeakHeightNumericCtrl;
+		wxButton* TestOnCurrentMicrographButton;
+		wxCheckBox* AutoPickRefreshCheckBox;
+		wxPanel* ExpertOptionsPanel;
+		wxBoxSizer* ExpertInputSizer;
+		wxStaticLine* m_staticline35;
+		wxStaticText* ExpertOptionsStaticText;
+		wxStaticText* HighestResolutionStaticText;
+		NumericTextCtrl* HighestResolutionNumericCtrl;
+		wxCheckBox* m_checkBox7;
+		wxSpinCtrl* MinimumDistanceFromEdgesSpinCtrl;
+		wxCheckBox* m_checkBox8;
+		wxCheckBox* m_checkBox9;
+		wxSpinCtrl* NumberOfTemplateRotationsSpinCtrl;
+		wxCheckBox* AvoidHighVarianceAreasCheckBox;
+		wxCheckBox* AvoidAbnormalLocalMeanAreasCheckBox;
+		wxCheckBox* ShowEstimatedBackgroundSpectrumCheckBox;
+		wxCheckBox* ShowPositionsOfBackgroundBoxesCheckBox;
+		wxStaticText* m_staticText170;
+		wxSpinCtrl* NumberOfBackgroundBoxesSpinCtrl;
+		wxStaticText* m_staticText169;
+		wxChoice* AlgorithmToFindBackgroundChoice;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxGauge* ProgressBar;
+		wxStaticText* NumberConnectedText;
+		wxStaticText* TimeRemainingText;
+		wxButton* CancelAlignmentButton;
+		wxButton* FinishButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		wxComboBox* RunProfileComboBox;
+		wxButton* StartPickingButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnPickingAlgorithmComboBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAutoPickRefreshCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartPickingClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		FindParticlesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+		~FindParticlesPanel();
 	
 };
 

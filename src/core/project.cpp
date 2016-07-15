@@ -72,6 +72,11 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	ctf_asset_directory = directory_string;
 	wxFileName::Mkdir(ctf_asset_directory.GetFullPath());
 
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/ParticlePosition";
+	particle_position_asset_directory = directory_string;
+	wxFileName::Mkdir(particle_position_asset_directory.GetFullPath());
+
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
 
@@ -111,6 +116,10 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
 	ctf_asset_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/ParticlePosition";
+	particle_position_asset_directory = directory_string;
 
 	is_open = true;
 

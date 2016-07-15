@@ -93,12 +93,7 @@ void ProgressBar::Update(long current_tick)
 			// draw out the bar.. starting with percent complete.
 
 			wxPrintf("   %3li% [",percent_complete);
-			/*
-			cout.width(3);
-			cout << right << percent_complete;
-			cout.width(0);
-			cout << "% [";
-			*/
+
 
 			for (long position = 0; position < 30; position++)
 			{
@@ -116,28 +111,20 @@ void ProgressBar::Update(long current_tick)
 			}
 			else
 			{
-				//cout << right << hours_remaining;
-				//cout << "h:";
 				wxPrintf("%lih:",hours_remaining);
 
 				// minutes, if less than ten do a preceding 0
 
-				//if (minutes_remaining < 10) cout << "0";
-				//cout << minutes_remaining;
 				wxPrintf("%02lim",minutes_remaining);
 
-				//cout << "m:";
 
 				// similiar for the seconds
 
-				//if (seconds_remaining < 10) cout << "0";
-				//cout << seconds_remaining;
 				wxPrintf("%02lis                 \r", seconds_remaining);
 				fflush(stdout);
 
 				// we are done so flush and CR!
 
-				//cout << "s   \r" << flush ;
 			}
 		}
 	}

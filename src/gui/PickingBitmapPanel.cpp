@@ -96,23 +96,26 @@ void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, float pixel_
 
 void PickingBitmapPanel::UpdateScalingAndDimensions()
 {
-	int panel_dim_x, panel_dim_y;
-	GetSize(&panel_dim_x, &panel_dim_y);
-
-	float target_scaling_x = float(panel_dim_x) * 0.95 /float(image_in_memory.logical_x_dimension);
-	float target_scaling_y = float(panel_dim_y) * 0.95 /float(image_in_memory.logical_y_dimension);
-	float scaling_factor = std::min(target_scaling_x,target_scaling_y);
-
-	int new_x_dimension = int(float(image_in_memory.logical_x_dimension) * scaling_factor);
-	int new_y_dimension = int(float(image_in_memory.logical_y_dimension) * scaling_factor);
-
-	// TODO: choose dimensions that are more favorable to FFT
-
-	if (!image_in_bitmap.is_in_memory || new_x_dimension != image_in_bitmap.logical_x_dimension || new_y_dimension != image_in_bitmap.logical_y_dimension )
+	if (!image_in_memory_filename.IsEmpty())
 	{
-		image_in_bitmap.Allocate(new_x_dimension,new_y_dimension,true);
-		image_in_bitmap_scaling_factor = scaling_factor;
-		image_in_bitmap_pixel_size = image_in_memory_pixel_size / scaling_factor;
+		int panel_dim_x, panel_dim_y;
+		GetSize(&panel_dim_x, &panel_dim_y);
+
+		float target_scaling_x = float(panel_dim_x) * 0.95 /float(image_in_memory.logical_x_dimension);
+		float target_scaling_y = float(panel_dim_y) * 0.95 /float(image_in_memory.logical_y_dimension);
+		float scaling_factor = std::min(target_scaling_x,target_scaling_y);
+
+		int new_x_dimension = int(float(image_in_memory.logical_x_dimension) * scaling_factor);
+		int new_y_dimension = int(float(image_in_memory.logical_y_dimension) * scaling_factor);
+
+		// TODO: choose dimensions that are more favorable to FFT
+
+		if (!image_in_bitmap.is_in_memory || new_x_dimension != image_in_bitmap.logical_x_dimension || new_y_dimension != image_in_bitmap.logical_y_dimension )
+		{
+			image_in_bitmap.Allocate(new_x_dimension,new_y_dimension,true);
+			image_in_bitmap_scaling_factor = scaling_factor;
+			image_in_bitmap_pixel_size = image_in_memory_pixel_size / scaling_factor;
+		}
 	}
 }
 

@@ -15,7 +15,7 @@ public :
 
 	//void OnFitTypeRadioButton(wxCommandEvent& event);
 	void Clear();
-	void Draw();
+	void Draw(const wxString &image_filename, const int &number_of_particles, const double *particle_coordinates_x_in_pixels, const double *particle_coordinates_y_pixels, const float particle_radius_in_pixels, const float pixel_size_in_angstroms);
 
 };
 

@@ -1,4 +1,4 @@
-#include "../core/core_headers.h"
+//#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
 PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
@@ -26,18 +26,26 @@ void PickingResultsDisplayPanel::Clear()
 	Refresh();
 }
 
-void PickingResultsDisplayPanel::Draw()
+void PickingResultsDisplayPanel::Draw(const wxString &image_filename, const int &number_of_particles, const double *particle_coordinates_x_in_angstroms, const double *particle_coordinates_y_in_angstroms, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms)
 {
 
 
-	PickingResultsImagePanel->Clear();
+	// Don't do this - it deallocates the images
+	//PickingResultsImagePanel->Clear();
 
-	PickingResultsImagePanel->panel_text = wxString::Format(wxT("This will display the picking results really nicely"));
+	PickingResultsImagePanel->SetImageFilename(image_filename,pixel_size_in_angstroms);
 
-	Freeze();
+	PickingResultsImagePanel->UpdateScalingAndDimensions();
 
-	// Read image from disk etc.
+	PickingResultsImagePanel->UpdateImageInBitmap();
 
-	Thaw();
+	PickingResultsImagePanel->SetParticleCoordinatesAndRadius(number_of_particles, particle_coordinates_x_in_angstroms, particle_coordinates_y_in_angstroms, particle_radius_in_angstroms);
+
+	PickingResultsImagePanel->should_show = true;
+
+	PickingResultsImagePanel->Draw();
+
+	//PickingResultsImagePanel->Refresh();
+
 
 }

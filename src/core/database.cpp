@@ -57,6 +57,31 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	return value;
 }
 
+double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	double value;
+
+	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(current_statement);
+
+	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	value = sqlite3_column_double(current_statement, 0);
+
+	sqlite3_finalize(current_statement);
+
+	return value;
+}
+
 int Database::ReturnHighestAlignmentID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
@@ -412,7 +437,6 @@ bool Database::CreateAllTables()
 	success = CreateTable("IMAGE_ASSETS", "ptiiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateParticlePickingListTable();
-	success = CreateAbInitioParticlePickingListTable();
 	success = CreateParticlePositionAssetTable();
 	success = CreateParticlePositionGroupListTable();
 	success = CreateVolumeAssetTable();

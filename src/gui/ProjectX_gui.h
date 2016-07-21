@@ -14,6 +14,7 @@ class BitmapPanel;
 class CTF1DPanel;
 class JobPanel;
 class NumericTextCtrl;
+class PickingBitmapPanel;
 class PickingResultsDisplayPanel;
 class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
@@ -129,7 +130,7 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		
 	
 	public:
-		BitmapPanel* PickingResultsImagePanel;
+		PickingBitmapPanel* PickingResultsImagePanel;
 		
 		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
 		~PickingResultsDisplayParentPanel();

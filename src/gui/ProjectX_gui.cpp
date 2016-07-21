@@ -5,6 +5,7 @@
 // PLEASE DO "NOT" EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
+#include "../core/gui_core_headers.h"
 #include "BitmapPanel.h"
 #include "CTF1DPanel.h"
 #include "PickingResultsDisplayPanel.h"
@@ -57,7 +58,7 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	FileMenu->Append( FileNewProject );
 	
 	wxMenuItem* FileOpenProject;
-	FileOpenProject = new wxMenuItem( FileMenu, wxID_ANY, wxString( wxT("Open Project") ) , wxEmptyString, wxITEM_NORMAL );
+	FileOpenProject = new wxMenuItem( FileMenu, wxID_ANY, wxString( wxT("Open Project") ) + wxT('\t') + wxT("Ctrl-O"), wxEmptyString, wxITEM_NORMAL );
 	FileMenu->Append( FileOpenProject );
 	
 	wxMenuItem* FileCloseProject;
@@ -175,7 +176,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	bSizer92->Add( bSizer93, 1, wxEXPAND, 5 );
 	
-	PickingResultsImagePanel = new BitmapPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	PickingResultsImagePanel = new PickingBitmapPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	bSizer92->Add( PickingResultsImagePanel, 50, wxEXPAND | wxALL, 5 );
 	
 	

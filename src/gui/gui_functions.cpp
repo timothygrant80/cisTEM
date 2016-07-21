@@ -1,4 +1,4 @@
-#include "../core/core_headers.h"
+//#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
 
@@ -57,14 +57,16 @@ void ConvertImageToBitmap(Image *input_image, wxBitmap *output_bitmap, bool auto
 	wxNativePixelData::Iterator p(pixel_data);
 	p.Reset(pixel_data);
 
-	// we have to mirror the lines as wxwidgets using 0,0 at top left
 
+	// we have to mirror the lines as wxwidgets using 0,0 at top left
 	for (j = 0; j < input_image->logical_y_dimension; j++)
 	{
 		mirror_line_address = (input_image->logical_y_dimension - 1 - j) * (input_image->logical_x_dimension + input_image->padding_jump_value);
+		p.MoveTo(pixel_data,0,j);
 
 		for (i = 0; i < input_image->logical_x_dimension; i++)
 		{
+			//mirror_line_address = input_image->ReturnReal1DAddressFromPhysicalCoord(i,j,0);
 			current_grey_value = myroundint((input_image->real_values[mirror_line_address] - image_min_value) * inverse_range);
 
 			if (current_grey_value < 0) current_grey_value = 0;
@@ -79,6 +81,7 @@ void ConvertImageToBitmap(Image *input_image, wxBitmap *output_bitmap, bool auto
 			mirror_line_address++;
 		}
 	}
+
 
 }
 

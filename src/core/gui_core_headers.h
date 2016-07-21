@@ -39,11 +39,14 @@
 #include <wx/dateevt.h>
 #include <wx/dataview.h>
 
+#include "../core/core_headers.h"
+
 #include "../gui/job_panel.h"
 #include "../gui/ProjectX_gui.h"
 #include "../gui/gui_functions.h"
 #include "../gui/ResultsDataViewListCtrl.h"
 #include "../gui/BitmapPanel.h"
+#include "../gui/PickingBitmapPanel.h"
 #include "gui_job_controller.h"
 #include "../gui/mathplot.h"
 #include "../gui/my_controls.h"

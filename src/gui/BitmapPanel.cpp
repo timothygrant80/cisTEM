@@ -1,4 +1,4 @@
-#include "../core/core_headers.h"
+//#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
 BitmapPanel::BitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
@@ -126,6 +126,8 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 
 					dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor)), x_offset, y_offset, false);
 
+
+
 					text_y_offset = ((bitmap_height * scale_factor) - text_y_size) / 2;
 					//wxPrintf("BH = %i, t_size = %i, text_offset = %i\n", int(bitmap_height * scale_factor), text_y_size, text_offset);
 					if (text_y_offset > 0) dc.DrawText(panel_text, (bitmap_width * scale_factor) + x_offset, y_offset + text_y_offset);
@@ -149,6 +151,7 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 					y_offset = (window_y_size - (bitmap_height * scale_factor)) / 2;
 
 					dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor)), x_offset, y_offset, false);
+
 
 					text_y_offset = ((bitmap_height * scale_factor) - text_y_size) / 2;
 

@@ -1,4 +1,4 @@
-#include "core_headers.h"
+//#include "core_headers.h"
 #include "gui_core_headers.h"
 
 extern MyMainFrame *main_frame;

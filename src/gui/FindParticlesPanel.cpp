@@ -1,4 +1,4 @@
-#include "../core/core_headers.h"
+//#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
 extern MyMovieAssetPanel *movie_asset_panel;
@@ -875,159 +875,134 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 
 	// Record the parameters we used to pick
-	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",5,
+	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",13,
 																						"PICKING_ID",
 																						"PICKING_JOB_ID",
 																						"DATETIME_OF_RUN",
 																						"PARENT_IMAGE_ASSET_ID",
-																						"PICKING_ALGORITHM");
+																						"PICKING_ALGORITHM",
+																						"CHARACTERISTIC_RADIUS",
+																						"MAXIMUM_RADIUS",
+																						"THRESHOLD_PEAK_HEIGHT",
+																						"HIGHEST_RESOLUTION_USED_IN_PICKING",
+																						"MIN_DIST_FROM_EDGES",
+																						"AVOID_HIGH_VARIANCE",
+																						"AVOID_HIGH_LOW_MEAN",
+																						"NUM_BACKGROUND_BOXES");
 	picking_id = starting_picking_id + 1;
 	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 	{
-		main_frame->current_project.database.AddToBatchInsert("iilii", picking_id, picking_job_id, (long int) now.GetAsDOS(),image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetCurrentSelection(),counter),PickingAlgorithmComboBox->GetSelection());
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiii", 			picking_id,
+																						picking_job_id,
+																						(long int) now.GetAsDOS(),
+																						image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetCurrentSelection(),counter),
+																						PickingAlgorithmComboBox->GetSelection(),
+																						CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
+																						MaximumParticleRadiusNumericCtrl->ReturnValue(),
+																						ThresholdPeakHeightNumericCtrl->ReturnValue(),
+																						HighestResolutionNumericCtrl->ReturnValue(),
+																						MinimumDistanceFromEdgesSpinCtrl->GetValue(),
+																						AvoidHighVarianceAreasCheckBox->GetValue(),
+																						AvoidAbnormalLocalMeanAreasCheckBox->GetValue(),
+																						NumberOfBackgroundBoxesSpinCtrl->GetValue());
+		picking_id ++;
+	}
+	main_frame->current_project.database.EndBatchInsert();
+
+	// Remove group members and assets from the database, one group at a time
+	int parent_id;
+	wxString sql_command;
+	for (int group_counter = 1; group_counter < particle_position_asset_panel->all_groups_list->number_of_groups; group_counter ++)
+	{
+		for (int job_counter = 0; job_counter < my_job_tracker.total_number_of_jobs; job_counter ++ )
+		{
+			parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
+			main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,parent_id);
+		}
+	}
+
+	// Remove from particle_position_assets assets which have a parent_id which is from picking_job_id that we've just done
+	main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID(picking_job_id);
+
+	// Now store the actual coordinates in the PARTICLE_PICKING_RESULTS_*** tables
+	ParticlePositionAsset temp_asset;
+	temp_asset.parent_template_id = -1;
+	temp_asset.pick_job_id = picking_job_id;
+	temp_asset.template_phi = 0.0;
+	temp_asset.template_theta = 0.0;
+	temp_asset.template_psi = 0.0;
+	int address_within_results = 0;
+	picking_id = starting_picking_id + 1;
+	int starting_asset_id = 0;
+	if (starting_picking_id > 0)
+	{
+		starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
+	}
+	temp_asset.asset_id = starting_asset_id;
+	current_table_name = wxString::Format("PARTICLE_PICKING_RESULTS_%i",temp_asset.pick_job_id);
+	main_frame->current_project.database.CreateTable(current_table_name,"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");
+	main_frame->current_project.database.BeginBatchInsert(current_table_name,6,"POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
+	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
+	{
+		temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
+		temp_asset.picking_id = picking_id;
+
+		// Loop over all the picked coordinates
+		for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
+		{
+			address_within_results = particle_counter * 5;
+
+			// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
+			temp_asset.asset_id ++;
+			temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
+			temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
+
+			// Add results for this particle to the table
+			main_frame->current_project.database.AddToBatchInsert("iiirrr",temp_asset.asset_id,temp_asset.picking_id,temp_asset.parent_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
+		}
 		picking_id ++;
 	}
 	main_frame->current_project.database.EndBatchInsert();
 
 
-	// Now write the algorithm-specific parameters to the relevant table as well as the results
-	switch(PickingAlgorithmComboBox->GetSelection())
+
+
+	// Store the results into the PARTICLE_POSITION_ASSETS table
+	temp_asset.parent_template_id = -1;
+	temp_asset.pick_job_id = picking_job_id;
+	temp_asset.template_phi = 0.0;
+	temp_asset.template_theta = 0.0;
+	temp_asset.template_psi = 0.0;
+	address_within_results = 0;
+	picking_id = starting_picking_id + 1;
+	temp_asset.asset_id = starting_asset_id;
+	main_frame->current_project.database.BeginBatchInsert("PARTICLE_POSITION_ASSETS",7,"PARTICLE_POSITION_ASSET_ID","PARENT_IMAGE_ASSET_ID","PICKING_ID","PICK_JOB_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
+	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 	{
-	case(ab_initio) :
-	{
 
-		main_frame->current_project.database.BeginBatchInsert("AB_INITIO_PARTICLE_PICKING_LIST",9,
-																									"PICKING_ID",
-																									"CHARACTERISTIC_RADIUS",
-																									"MAXIMUM_RADIUS",
-																									"THRESHOLD_PEAK_HEIGHT",
-																									"HIGHEST_RESOLUTION_USED_IN_PICKING",
-																									"MIN_DIST_FROM_EDGES",
-																									"AVOID_HIGH_VARIANCE",
-																									"AVOID_HIGH_LOW_MEAN",
-																									"NUM_BACKGROUND_BOXES");
+		temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
+		temp_asset.picking_id = picking_id;
 
-		picking_id = starting_picking_id + 1;
-		for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
+		// Loop over all the picked coordinates
+		for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
 		{
-			main_frame->current_project.database.AddToBatchInsert("irrrriiii",		picking_id,
-																					CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
-																					MaximumParticleRadiusNumericCtrl->ReturnValue(),
-																					ThresholdPeakHeightNumericCtrl->ReturnValue(),
-																					HighestResolutionNumericCtrl->ReturnValue(),
-																					MinimumDistanceFromEdgesSpinCtrl->GetValue(),
-																					AvoidHighVarianceAreasCheckBox->GetValue(),
-																					AvoidAbnormalLocalMeanAreasCheckBox->GetValue(),
-																					NumberOfBackgroundBoxesSpinCtrl->GetValue());
-			picking_id ++;
+			address_within_results = particle_counter * 5;
+
+			// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
+			temp_asset.asset_id ++;
+			temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
+			temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
+
+			// Add results for this particle to the table
+			main_frame->current_project.database.AddToBatchInsert("iiiirrr",temp_asset.asset_id,temp_asset.parent_id,temp_asset.picking_id,temp_asset.pick_job_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
 		}
-
-		main_frame->current_project.database.EndBatchInsert();
-
-
-		// Remove group members and assets from the database, one group at a time
-		int parent_id;
-		wxString sql_command;
-		for (int group_counter = 1; group_counter < particle_position_asset_panel->all_groups_list->number_of_groups; group_counter ++)
-		{
-			for (int job_counter = 0; job_counter < my_job_tracker.total_number_of_jobs; job_counter ++ )
-			{
-				parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
-				main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,parent_id);
-			}
-		}
-
-		// Remove from particle_position_assets assets which have a parent_id which is from picking_job_id that we've just done
-		main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID(picking_job_id);
-
-		// Now store the actual coordinates in the PARTICLE_PICKING_RESULTS_*** tables
-		wxString current_table_name;
-		ParticlePositionAsset temp_asset;
-		temp_asset.parent_template_id = -1;
-		temp_asset.pick_job_id = picking_job_id;
-		temp_asset.template_phi = 0.0;
-		temp_asset.template_theta = 0.0;
-		temp_asset.template_psi = 0.0;
-		int address_within_results = 0;
-		picking_id = starting_picking_id + 1;
-		int starting_asset_id = 0;
-		if (starting_picking_id > 0)
-		{
-			starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
-		}
-		temp_asset.asset_id = starting_asset_id;
-		current_table_name = wxString::Format("PARTICLE_PICKING_RESULTS_%i",temp_asset.pick_job_id);
-		main_frame->current_project.database.CreateTable(current_table_name,"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");
-		main_frame->current_project.database.BeginBatchInsert(current_table_name,6,"POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
-		for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
-		{
-			temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
-			temp_asset.picking_id = picking_id;
-
-			// Loop over all the picked coordinates
-			for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
-			{
-				address_within_results = particle_counter * 5;
-
-				// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
-				temp_asset.asset_id ++;
-				temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
-				temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
-
-				// Add results for this particle to the table
-				main_frame->current_project.database.AddToBatchInsert("iiirrr",temp_asset.asset_id,temp_asset.picking_id,temp_asset.parent_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
-			}
-			picking_id ++;
-		}
-		main_frame->current_project.database.EndBatchInsert();
-
-
-
-
-		// Store the results into the PARTICLE_POSITION_ASSETS table
-		temp_asset.parent_template_id = -1;
-		temp_asset.pick_job_id = picking_job_id;
-		temp_asset.template_phi = 0.0;
-		temp_asset.template_theta = 0.0;
-		temp_asset.template_psi = 0.0;
-		address_within_results = 0;
-		picking_id = starting_picking_id + 1;
-		temp_asset.asset_id = starting_asset_id;
-		main_frame->current_project.database.BeginBatchInsert("PARTICLE_POSITION_ASSETS",7,"PARTICLE_POSITION_ASSET_ID","PARENT_IMAGE_ASSET_ID","PICKING_ID","PICK_JOB_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
-		for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
-		{
-
-			temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
-			temp_asset.picking_id = picking_id;
-
-			// Loop over all the picked coordinates
-			for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
-			{
-				address_within_results = particle_counter * 5;
-
-				// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
-				temp_asset.asset_id ++;
-				temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
-				temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
-
-				// Add results for this particle to the table
-				main_frame->current_project.database.AddToBatchInsert("iiiirrr",temp_asset.asset_id,temp_asset.parent_id,temp_asset.picking_id,temp_asset.pick_job_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
-			}
-			picking_id ++;
-		}
-		main_frame->current_project.database.EndBatchInsert();
-
-
-		// At this point, the database should be up-to-date
-		particle_position_asset_panel->ImportAllFromDatabase();
-
-		break;
+		picking_id ++;
 	}
-	default :
-	{
-		MyDebugAssertTrue(false,"Oops, uknown picking algorithm: %i\n",PickingAlgorithmComboBox->GetSelection());
-	}
-	}
+	main_frame->current_project.database.EndBatchInsert();
+
+
+	// At this point, the database should be up-to-date
+	particle_position_asset_panel->ImportAllFromDatabase();
 
 
 	particle_position_asset_panel->is_dirty = true;

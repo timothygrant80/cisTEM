@@ -1,4 +1,4 @@
-#include "../core/core_headers.h"
+//#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
 extern MyMainFrame *main_frame;
@@ -339,120 +339,43 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	// get the correct result from the database..
 
 	int current_image_id = per_row_asset_id[row];
-	int current_ctf_estimation_job_id = picking_job_ids[column - 2];
+	int current_picking_job_id = picking_job_ids[column - 2];
+	wxString parent_image_filename;
 
-	int ctf_estimation_id;
-	int ctf_estimation_job_id;
-	long datetime_of_run;
-	int image_asset_id;
-	int estimated_on_movie_frames;
-	double voltage;
-	double spherical_aberration;
-	double pixel_size;
-	double amplitude_contrast;
-	int box_size;
-	double min_resolution;
-	double max_resolution;
-	double min_defocus;
-	double max_defocus;
-	double defocus_step;
-	int restrain_astigmatism;
-	double tolerated_astigmatism;
-	int find_additional_phase_shift;
-	double min_phase_shift;
-	double max_phase_shift;
-	double phase_shift_step;
-	double defocus1;
-	double defocus2;
-	double defocus_angle;
-	double additional_phase_shift;
-	double score;
-	double detected_ring_resolution;
-	double detected_alias_resolution;
-	wxString output_diagnostic_file;
-
-	/*
-	// get the alignment_id and all the other details..;
-
-	should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT * FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i", current_image_id, current_ctf_estimation_job_id));
-
-	//wxPrintf("SELECT * FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i\n", current_image_id, current_ctf_estimation_job_id);
-
-	if (should_continue == false)
+	bool keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select filename from image_assets where image_asset_id = %i",current_image_id));
+	if (!keep_going)
 	{
-		MyPrintWithDetails("Error getting information about alignment!")
+		MyPrintWithDetails("Error dealing with assets table");
 		abort();
 	}
-
-	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrt", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file);
-	//wxPrintf("%i,%i,%li,%i,%i,%f,%f,%f,%f,%i,%f,%f,%f,%f,%f,%i,%f,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%s\n", ctf_estimation_id, ctf_estimation_job_id,datetime_of_run, image_asset_id, estimated_on_movie_frames, voltage, spherical_aberration, pixel_size, amplitude_contrast, box_size, min_resolution, max_resolution, min_defocus, max_defocus, defocus_step, restrain_astigmatism, tolerated_astigmatism, find_additional_phase_shift, min_phase_shift, max_phase_shift, phase_shift_step, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, output_diagnostic_file);
+	main_frame->current_project.database.GetFromBatchSelect("t",&parent_image_filename);
 	main_frame->current_project.database.EndBatchSelect();
 
-	// Set the appropriate text..
+	int number_of_particles = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select count(*) from particle_picking_results_%i where parent_image_asset_id = %i",current_picking_job_id,current_image_id));
+	double *x_coordinates;
+	double *y_coordinates;
+	x_coordinates = new double[number_of_particles];
+	y_coordinates = new double[number_of_particles];
 
-	EstimationIDStaticText->SetLabel(wxString::Format("%i", picking_id));
-	wxDateTime wxdatetime_of_run;
-	wxdatetime_of_run.SetFromDOS((unsigned long) datetime_of_run);
-	DateOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISODate());
-	TimeOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISOTime());
-	VoltageStaticText->SetLabel(wxString::Format(wxT("%.2f kV"), voltage));
-	CsStaticText->SetLabel(wxString::Format(wxT("%.2f mm"), spherical_aberration));
-	PixelSizeStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), pixel_size));
-	AmplitudeContrastStaticText->SetLabel(wxString::Format(wxT("%.2f"), amplitude_contrast));
-	BoxSizeStaticText->SetLabel(wxString::Format(wxT("%i"), box_size));
-	MinResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_resolution));
-	MaxResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), max_resolution));
-	MinDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_defocus));
-	MaxDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), max_defocus));
-	DefocusStepStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), defocus_step));
+	float maximum_radius_of_particle = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select maximum_radius from particle_picking_list where picking_job_id = %i",current_picking_job_id));
+	float pixel_size = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from image_assets where image_asset_id = %i",current_image_id));
 
-	if (restrain_astigmatism == 1)
+	if (number_of_particles > 0)
 	{
-		RestrainAstigStaticText->SetLabel("Yes");
-		ToleratedAstigLabel->Show(true);
-		ToleratedAstigStaticText->Show(true);
-		ToleratedAstigStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), tolerated_astigmatism));
-
-	}
-	else
-	{
-		RestrainAstigStaticText->SetLabel("No");
-		RestrainAstigStaticText->SetLabel("Yes");
-		ToleratedAstigLabel->Show(false);
-		ToleratedAstigStaticText->Show(false);
+		keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select x_position, y_position from particle_picking_results_%i where parent_image_asset_id = %i",current_picking_job_id,current_image_id));
+		if (!keep_going)
+		{
+			MyPrintWithDetails("Error dealing with results table");
+			abort();
+		}
+		for (int counter = 0; counter < number_of_particles; counter ++ )
+		{
+			main_frame->current_project.database.GetFromBatchSelect("rr",&x_coordinates[counter],&y_coordinates[counter]);
+		}
+		main_frame->current_project.database.EndBatchSelect();
 	}
 
-	if (find_additional_phase_shift == 1)
-	{
-		AddtionalPhaseShiftStaticText->SetLabel("Yes");
-		MinPhaseShiftStaticText->Show(true);
-		MinPhaseShiftLabel->Show(true);
-		MaxPhaseshiftStaticText->Show(true);
-		MaxPhaseShiftLabel->Show(true);
-		PhaseShiftStepStaticText->Show(true);
-		PhaseShiftStepLabel->Show(true);
-
-		MinPhaseShiftStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), min_phase_shift));
-		MaxPhaseshiftStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), max_phase_shift));
-		PhaseShiftStepStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), phase_shift_step));
-
-	}
-	else
-	{
-		AddtionalPhaseShiftStaticText->SetLabel("No");
-		MinPhaseShiftStaticText->Show(false);
-		MinPhaseShiftLabel->Show(false);
-		MaxPhaseshiftStaticText->Show(false);
-		MaxPhaseShiftLabel->Show(false);
-		PhaseShiftStepStaticText->Show(false);
-		PhaseShiftStepLabel->Show(false);
-	}
-
-	*/
-
-	// now get the result, and draw it as we go..
-
-	ResultDisplayPanel->Draw();
+	ResultDisplayPanel->Draw(parent_image_filename,number_of_particles,x_coordinates,y_coordinates,maximum_radius_of_particle, pixel_size);
 	RightPanel->Layout();
 
 }
@@ -526,8 +449,6 @@ void MyPickingResultsPanel::Clear()
 	selected_column = -1;
 
 	ResultDataView->Clear();
-	//ResultDisplayPanel->CTF2DResultsPanel->Clear();
-	//ResultDisplayPanel->CTFPlotPanel->Clear();
 }
 
 void MyPickingResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )

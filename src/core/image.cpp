@@ -6036,6 +6036,8 @@ void Image::CopyLoopingAndAddressingFrom(Image *other_image)
 	logical_lower_bound_real_x = other_image->logical_lower_bound_complex_x;
 	logical_lower_bound_real_y = other_image->logical_lower_bound_complex_y;
 	logical_lower_bound_real_z = other_image->logical_lower_bound_complex_z;
+
+	padding_jump_value = other_image->padding_jump_value;
 }
 
 void Image::Consume(Image *other_image) // copy the parameters then directly steal the memory of another image, leaving it an empty shell

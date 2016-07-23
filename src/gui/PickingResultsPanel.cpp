@@ -4,6 +4,7 @@
 extern MyMainFrame *main_frame;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
+//extern PickingBitmapPanel *PickingResultsImagePanel;
 
 MyPickingResultsPanel::MyPickingResultsPanel( wxWindow* parent )
 :

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -12,6 +12,7 @@
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
+#include "job_panel.h"
 #include "my_controls.h"
 
 #include "ProjectX_gui.h"
@@ -161,11 +162,17 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	wxBoxSizer* bSizer94;
 	bSizer94 = new wxBoxSizer( wxHORIZONTAL );
 	
-	FitType2DRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Show 2D Fit Output"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer94->Add( FitType2DRadioButton, 0, wxALL, 5 );
+	CirclesAroundParticlesCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Circles around particles"), wxDefaultPosition, wxDefaultSize, 0 );
+	CirclesAroundParticlesCheckBox->SetValue(true); 
+	bSizer94->Add( CirclesAroundParticlesCheckBox, 0, wxALL, 5 );
 	
-	FitType1DRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Show 1D Fit Output"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer94->Add( FitType1DRadioButton, 0, wxALL, 5 );
+	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighPassFilterCheckBox->SetValue(true); 
+	bSizer94->Add( HighPassFilterCheckBox, 0, wxALL, 5 );
+	
+	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale bar"), wxDefaultPosition, wxDefaultSize, 0 );
+	ScaleBarCheckBox->SetValue(true); 
+	bSizer94->Add( ScaleBarCheckBox, 0, wxALL, 5 );
 	
 	
 	bSizer93->Add( bSizer94, 1, wxEXPAND, 5 );
@@ -184,15 +191,17 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	this->Layout();
 	
 	// Connect Events
-	FitType2DRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnFitTypeRadioButton ), NULL, this );
-	FitType1DRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnFitTypeRadioButton ), NULL, this );
+	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
+	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
 }
 
 PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
 {
 	// Disconnect Events
-	FitType2DRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnFitTypeRadioButton ), NULL, this );
-	FitType1DRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnFitTypeRadioButton ), NULL, this );
+	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
+	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
 	
 }
 
@@ -861,6 +870,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnPreviousButtonClick ), NULL, this );
 	NextButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnNextButtonClick ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnJobDetailsToggle ), NULL, this );
+	ResultDisplayPanel->Connect( wxEVT_SIZE, wxSizeEventHandler( PickingResultsPanel::OnPickingResultsDisplayPanelSize ), NULL, this );
 	AddToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnAddToGroupClick ), NULL, this );
 }
 
@@ -874,6 +884,7 @@ PickingResultsPanel::~PickingResultsPanel()
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnPreviousButtonClick ), NULL, this );
 	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnNextButtonClick ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnJobDetailsToggle ), NULL, this );
+	ResultDisplayPanel->Disconnect( wxEVT_SIZE, wxSizeEventHandler( PickingResultsPanel::OnPickingResultsDisplayPanelSize ), NULL, this );
 	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnAddToGroupClick ), NULL, this );
 	
 }

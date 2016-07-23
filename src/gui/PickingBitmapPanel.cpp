@@ -17,6 +17,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 
 	Bind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanel::OnEraseBackground, this);
+	Bind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
 
 	image_in_bitmap_filename = "";
 	image_in_bitmap_pixel_size = 0.0;
@@ -32,6 +33,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	particle_coordinates_y_in_angstroms = NULL;
 
 	draw_scale_bar = true;
+	should_high_pass = true;
 
 
 }
@@ -40,6 +42,7 @@ PickingBitmapPanel::~PickingBitmapPanel()
 {
 	Unbind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
 	Unbind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanel::OnEraseBackground, this);
+	Unbind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
 
 }
 
@@ -99,7 +102,7 @@ void PickingBitmapPanel::UpdateScalingAndDimensions()
 	if (!image_in_memory_filename.IsEmpty())
 	{
 		int panel_dim_x, panel_dim_y;
-		GetSize(&panel_dim_x, &panel_dim_y);
+		GetClientSize(&panel_dim_x, &panel_dim_y);
 
 		float target_scaling_x = float(panel_dim_x) * 0.95 /float(image_in_memory.logical_x_dimension);
 		float target_scaling_y = float(panel_dim_y) * 0.95 /float(image_in_memory.logical_y_dimension);
@@ -115,20 +118,24 @@ void PickingBitmapPanel::UpdateScalingAndDimensions()
 			image_in_bitmap.Allocate(new_x_dimension,new_y_dimension,true);
 			image_in_bitmap_scaling_factor = scaling_factor;
 			image_in_bitmap_pixel_size = image_in_memory_pixel_size / scaling_factor;
+
 		}
 	}
 }
 
-void PickingBitmapPanel::UpdateImageInBitmap()
+void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 {
 	if (!image_in_memory_filename.IsEmpty())
 	{
-		if (!image_in_bitmap_filename.IsSameAs(image_in_memory_filename) || PanelBitmap.GetWidth() != image_in_bitmap.logical_x_dimension || PanelBitmap.GetHeight() != image_in_bitmap.logical_y_dimension)
+		if (force_reload || !image_in_bitmap_filename.IsSameAs(image_in_memory_filename) || PanelBitmap.GetWidth() != image_in_bitmap.logical_x_dimension || PanelBitmap.GetHeight() != image_in_bitmap.logical_y_dimension)
 		{
-			wxPrintf("Doing resampling\n");
 			if (image_in_memory.is_in_real_space) image_in_memory.ForwardFFT();
 			image_in_bitmap.is_in_real_space = false;
 			image_in_memory.ClipInto(&image_in_bitmap);
+			if (should_high_pass)
+			{
+				image_in_bitmap.CosineMask(image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms),image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms),true);
+			}
 			image_in_bitmap.BackwardFFT();
 			image_in_bitmap_filename = image_in_memory_filename;
 			ConvertImageToBitmap(&image_in_bitmap,&PanelBitmap,true);
@@ -136,14 +143,16 @@ void PickingBitmapPanel::UpdateImageInBitmap()
 	}
 }
 
-void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
+
+void PickingBitmapPanel::OnSize(wxSizeEvent & event)
 {
 	UpdateScalingAndDimensions();
 	UpdateImageInBitmap();
-	Draw();
+	event.Skip();
 }
 
-void PickingBitmapPanel::Draw()
+
+void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 {
 
 	Freeze();
@@ -155,6 +164,7 @@ void PickingBitmapPanel::Draw()
     dc.SetBackground(*wxWHITE_BRUSH);
     dc.Clear();
     GetClientSize(&window_x_size, &window_y_size);
+    dc.SetBrush( wxNullBrush );
     dc.DrawRectangle(0, 0, window_x_size, window_y_size);
 
 	if (should_show)
@@ -212,7 +222,10 @@ void PickingBitmapPanel::Draw()
 			// Draw circles around particles
 			if (draw_circles_around_particles)
 			{
-				dc.SetPen( wxPen(wxColor(255,0,0),2) );
+				int pen_thickness = std::min(bitmap_width,bitmap_height) / 512;
+				if (pen_thickness < 1) pen_thickness = 1;
+				if (pen_thickness > 5) pen_thickness = 5;
+				dc.SetPen( wxPen(wxColor(255,0,0),pen_thickness) );
 				dc.SetBrush( wxNullBrush );
 				for (int counter = 0; counter < number_of_particles; counter ++ )
 				{
@@ -231,7 +244,6 @@ void PickingBitmapPanel::Draw()
 				int scalebar_x_start = int(float(bitmap_width) * 0.85);
 				int scalebar_y_pos = int(float(bitmap_height)*0.95);
 				int scalebar_thickness = int(float(bitmap_height) / 50.0);
-				wxPrintf("Length of scale bar = %i pixels\n",scalebar_length);
 				dc.DrawRectangle(x_offset+scalebar_x_start,y_offset+scalebar_y_pos,scalebar_length,scalebar_thickness);
 				//dc.SetPen( *wxRED_PEN );
 				dc.SetTextForeground( *wxWHITE );

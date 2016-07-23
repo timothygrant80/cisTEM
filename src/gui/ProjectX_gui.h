@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -20,7 +20,6 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
-#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -37,6 +36,7 @@ class UnblurResultsPanel;
 #include <wx/frame.h>
 #include <wx/radiobut.h>
 #include <wx/statline.h>
+#include <wx/checkbox.h>
 #include <wx/button.h>
 #include <wx/dataview.h>
 #include <wx/tglbtn.h>
@@ -45,7 +45,6 @@ class UnblurResultsPanel;
 #include <wx/splitter.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
-#include <wx/checkbox.h>
 #include <wx/spinctrl.h>
 #include <wx/choice.h>
 #include <wx/scrolwin.h>
@@ -121,12 +120,15 @@ class PickingResultsDisplayParentPanel : public wxPanel
 	private:
 	
 	protected:
-		wxRadioButton* FitType2DRadioButton;
-		wxRadioButton* FitType1DRadioButton;
+		wxCheckBox* CirclesAroundParticlesCheckBox;
+		wxCheckBox* HighPassFilterCheckBox;
+		wxCheckBox* ScaleBarCheckBox;
 		wxStaticLine* m_staticline26;
 		
 		// Virtual event handlers, overide them in your derived class
-		virtual void OnFitTypeRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCirclesAroundParticlesCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHighPassFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnScaleBarCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -299,6 +301,7 @@ class PickingResultsPanel : public wxPanel
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPickingResultsDisplayPanelSize( wxSizeEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -20,6 +20,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -251,43 +252,31 @@ class PickingResultsPanel : public wxPanel
 		wxPanel* JobDetailsPanel;
 		wxFlexGridSizer* InfoSizer;
 		wxStaticText* m_staticText72;
-		wxStaticText* EstimationIDStaticText;
+		wxStaticText* PickIDStaticText;
 		wxStaticText* m_staticText74;
 		wxStaticText* DateOfRunStaticText;
 		wxStaticText* m_staticText93;
 		wxStaticText* TimeOfRunStaticText;
 		wxStaticText* m_staticText83;
-		wxStaticText* VoltageStaticText;
+		wxStaticText* AlgorithmStaticText;
 		wxStaticText* m_staticText82;
-		wxStaticText* CsStaticText;
+		wxStaticText* ManualEditStaticText;
 		wxStaticText* m_staticText78;
-		wxStaticText* PixelSizeStaticText;
+		wxStaticText* ThresholdStaticText;
 		wxStaticText* m_staticText96;
-		wxStaticText* AmplitudeContrastStaticText;
+		wxStaticText* MaximumRadiusStaticText;
 		wxStaticText* m_staticText85;
-		wxStaticText* BoxSizeStaticText;
+		wxStaticText* CharacteristicRadiusStaticText;
 		wxStaticText* m_staticText87;
-		wxStaticText* MinResStaticText;
+		wxStaticText* HighestResStaticText;
 		wxStaticText* m_staticText89;
-		wxStaticText* MaxResStaticText;
+		wxStaticText* MinEdgeDistStaticText;
 		wxStaticText* m_staticText91;
-		wxStaticText* MinDefocusStaticText;
+		wxStaticText* AvoidHighVarStaticText;
 		wxStaticText* m_staticText79;
-		wxStaticText* MaxDefocusStaticText;
+		wxStaticText* AvoidHighLowMeanStaticText;
 		wxStaticText* m_staticText95;
-		wxStaticText* DefocusStepStaticText;
-		wxStaticText* m_staticText99;
-		wxStaticText* RestrainAstigStaticText;
-		wxStaticText* ToleratedAstigLabel;
-		wxStaticText* ToleratedAstigStaticText;
-		wxStaticText* m_staticText103;
-		wxStaticText* AddtionalPhaseShiftStaticText;
-		wxStaticText* MinPhaseShiftLabel;
-		wxStaticText* MinPhaseShiftStaticText;
-		wxStaticText* MaxPhaseShiftLabel;
-		wxStaticText* MaxPhaseshiftStaticText;
-		wxStaticText* PhaseShiftStepLabel;
-		wxStaticText* PhaseShiftStepStaticText;
+		wxStaticText* NumBackgroundBoxesStaticText;
 		wxStaticLine* m_staticline30;
 		PickingResultsDisplayPanel* ResultDisplayPanel;
 		wxButton* AddToGroupButton;
@@ -301,7 +290,6 @@ class PickingResultsPanel : public wxPanel
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnPickingResultsDisplayPanelSize( wxSizeEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	

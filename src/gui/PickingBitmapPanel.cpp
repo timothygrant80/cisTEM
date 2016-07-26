@@ -1,5 +1,21 @@
 #include "../core/gui_core_headers.h"
 
+int compare_particle_coordinate_using_x( particle_coordinate **first, particle_coordinate **second)
+{
+	if (first[0]->x < second[0]->x)
+	{
+		return -1;
+	}
+	else
+	{
+		if (first[0]->x > second[0]->x) return 1;
+		return 0;
+	}
+}
+
+
+#include <wx/arrimpl.cpp>
+WX_DEFINE_OBJARRAY(ArrayOfCoordinates);
 
 PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
 : wxPanel(parent, id, pos, size, style, name)
@@ -18,6 +34,9 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	Bind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanel::OnEraseBackground, this);
 	Bind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
+	Bind(wxEVT_LEFT_DOWN, &PickingBitmapPanel::OnLeftDown, this);
+	Bind(wxEVT_LEFT_UP, &PickingBitmapPanel::OnLeftUp, this);
+	Bind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
 
 	image_in_bitmap_filename = "";
 	image_in_bitmap_pixel_size = 0.0;
@@ -29,11 +48,24 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	draw_circles_around_particles = true;
 	number_of_particles = 0;
 	radius_of_circles_around_particles_in_angstroms = 0.0;
-	particle_coordinates_x_in_angstroms = NULL;
-	particle_coordinates_y_in_angstroms = NULL;
+	//particle_coordinates_x_in_angstroms = NULL;
+	//particle_coordinates_y_in_angstroms = NULL;
+	//particle_coordinates_in_angstroms = NULL;
 
 	draw_scale_bar = true;
 	should_high_pass = true;
+
+	allow_editing_of_coordinates = true;
+
+	draw_selection_rectangle = false;
+	selection_rectangle_current_x = 0;
+	selection_rectangle_current_y = 0;
+	selection_rectangle_start_x = 0;
+	selection_rectangle_start_y = 0;
+	selection_rectangle_start_x_in_angstroms = 0.0;
+	selection_rectangle_start_y_in_angstroms = 0.0;
+	selection_rectangle_finish_x_in_angstroms = 0.0;
+	selection_rectangle_finish_y_in_angstroms = 0.0;
 
 
 }
@@ -43,6 +75,11 @@ PickingBitmapPanel::~PickingBitmapPanel()
 	Unbind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
 	Unbind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanel::OnEraseBackground, this);
 	Unbind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
+	Unbind(wxEVT_LEFT_DOWN, &PickingBitmapPanel::OnLeftDown, this);
+	Unbind(wxEVT_LEFT_UP, &PickingBitmapPanel::OnLeftUp, this);
+	Unbind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
+
+	particle_coordinates_in_angstroms.Empty();
 
 }
 
@@ -66,10 +103,13 @@ void PickingBitmapPanel::AllocateMemoryForParticleCoordinates(const int wanted_n
 {
 	if (wanted_number_of_particles != number_of_particles)
 	{
-		delete [] particle_coordinates_x_in_angstroms;
-		delete [] particle_coordinates_y_in_angstroms;
-		particle_coordinates_x_in_angstroms = new float [wanted_number_of_particles];
-		particle_coordinates_y_in_angstroms = new float [wanted_number_of_particles];
+		//delete [] particle_coordinates_x_in_angstroms;
+		//delete [] particle_coordinates_y_in_angstroms;
+		//delete [] particle_coordinates_in_angstroms;
+		//particle_coordinates_x_in_angstroms = new float [wanted_number_of_particles];
+		//particle_coordinates_y_in_angstroms = new float [wanted_number_of_particles];
+		//particle_coordinates_in_angstroms = new particle_coordinate[wanted_number_of_particles];
+		particle_coordinates_in_angstroms.Alloc(wanted_number_of_particles);
 		number_of_particles = wanted_number_of_particles;
 	}
 
@@ -81,10 +121,39 @@ void PickingBitmapPanel::SetParticleCoordinatesAndRadius(const int wanted_number
 
 	for (int counter = 0; counter < wanted_number_of_particles; counter ++ )
 	{
-		particle_coordinates_x_in_angstroms[counter] = wanted_x[counter];
-		particle_coordinates_y_in_angstroms[counter] = wanted_y[counter];
+		//particle_coordinates_x_in_angstroms[counter] = wanted_x[counter];
+		//particle_coordinates_y_in_angstroms[counter] = wanted_y[counter];
+		//particle_coordinates_in_angstroms[counter].x = wanted_x[counter];
+		//particle_coordinates_in_angstroms[counter].y = wanted_y[counter];
+		//particle_coordinates_in_angstroms.insert(particle_coordinates_in_angstroms.end(), particle_coordinate(float(wanted_x[counter]),float(wanted_y[counter])));
+		particle_coordinates_in_angstroms.Add(particle_coordinate(float(wanted_x[counter]),float(wanted_y[counter])));
 	}
+	particle_coordinates_in_angstroms.Sort(compare_particle_coordinate_using_x);
 	radius_of_circles_around_particles_in_angstroms = wanted_radius_in_angstroms;
+}
+
+void PickingBitmapPanel::RemoveParticleCoordinatesWithinRectangle()
+{
+
+	size_t counter = particle_coordinates_in_angstroms.GetCount() - 1;
+	while (true)
+	{
+		if (ParticleCoordinatesShouldBeRemoved(particle_coordinates_in_angstroms.Item(counter))) particle_coordinates_in_angstroms.RemoveAt(counter);
+		if (counter == 0) break;
+		counter --;
+	}
+
+	Refresh();
+	Update();
+
+}
+
+bool PickingBitmapPanel::ParticleCoordinatesShouldBeRemoved(const particle_coordinate &particle_coordinates_to_check)
+{
+	return 	particle_coordinates_to_check.x >= selection_rectangle_start_x_in_angstroms &&
+			particle_coordinates_to_check.x <= selection_rectangle_finish_x_in_angstroms &&
+			particle_coordinates_to_check.y >= selection_rectangle_start_y_in_angstroms &&
+			particle_coordinates_to_check.y <= selection_rectangle_finish_y_in_angstroms;
 }
 
 void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, float pixel_size)
@@ -176,14 +245,9 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 		int text_x_size;
 		int text_y_size;
 
-		int bitmap_width;
-		int bitmap_height;
-
 		int combined_width;
 		int combined_height;
 
-		int x_offset;
-		int y_offset;
 
 		int text_y_offset;
 
@@ -212,24 +276,29 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 		}
 		else
 		{
-			x_offset = (window_x_size - ((bitmap_width) + text_x_size)) / 2;
-			y_offset = (window_y_size - (bitmap_height)) / 2;
+			bitmap_x_offset = (window_x_size - ((bitmap_width) + text_x_size)) / 2;
+			bitmap_y_offset = (window_y_size - (bitmap_height)) / 2;
 
 			// Draw the image bitmap
-			dc.DrawBitmap( PanelBitmap, x_offset, y_offset, false );
+			dc.DrawBitmap( PanelBitmap, bitmap_x_offset, bitmap_y_offset, false );
 
+			// Choose a pen thickness for drawing circles around particles
+			int pen_thickness = std::min(bitmap_width,bitmap_height) / 512;
+			if (pen_thickness < 1) pen_thickness = 1;
+			if (pen_thickness > 5) pen_thickness = 5;
 
 			// Draw circles around particles
 			if (draw_circles_around_particles)
 			{
-				int pen_thickness = std::min(bitmap_width,bitmap_height) / 512;
-				if (pen_thickness < 1) pen_thickness = 1;
-				if (pen_thickness > 5) pen_thickness = 5;
+				float x,y;
 				dc.SetPen( wxPen(wxColor(255,0,0),pen_thickness) );
 				dc.SetBrush( wxNullBrush );
-				for (int counter = 0; counter < number_of_particles; counter ++ )
+				for (int counter = 0; counter < particle_coordinates_in_angstroms.GetCount(); counter ++ )
 				{
-					dc.DrawCircle(x_offset + bitmap_width - particle_coordinates_x_in_angstroms[counter] / image_in_bitmap_pixel_size, y_offset + particle_coordinates_y_in_angstroms[counter] / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+					x = particle_coordinates_in_angstroms.Item(counter).x;
+					y = particle_coordinates_in_angstroms.Item(counter).y;
+					//dc.DrawCircle(x_offset + bitmap_width - particle_coordinates_x_in_angstroms[counter] / image_in_bitmap_pixel_size, y_offset + particle_coordinates_y_in_angstroms[counter] / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+					dc.DrawCircle(bitmap_x_offset + bitmap_width - x / image_in_bitmap_pixel_size, bitmap_y_offset + y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
 				}
 			}
 
@@ -244,7 +313,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				int scalebar_x_start = int(float(bitmap_width) * 0.85);
 				int scalebar_y_pos = int(float(bitmap_height)*0.95);
 				int scalebar_thickness = int(float(bitmap_height) / 50.0);
-				dc.DrawRectangle(x_offset+scalebar_x_start,y_offset+scalebar_y_pos,scalebar_length,scalebar_thickness);
+				dc.DrawRectangle(bitmap_x_offset+scalebar_x_start,bitmap_y_offset+scalebar_y_pos,scalebar_length,scalebar_thickness);
 				//dc.SetPen( *wxRED_PEN );
 				dc.SetTextForeground( *wxWHITE );
 				dc.SetFont( *wxNORMAL_FONT );
@@ -253,16 +322,24 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				int scalebar_label_width;
 				int scalebar_label_height;
 				dc.GetTextExtent(scalebar_label,&scalebar_label_width,&scalebar_label_height);
-				dc.DrawText(scalebar_label,x_offset + scalebar_x_start + scalebar_length/2 - scalebar_label_width/2,y_offset + scalebar_y_pos - scalebar_label_height - scalebar_thickness/8);
+				dc.DrawText(scalebar_label,bitmap_x_offset + scalebar_x_start + scalebar_length/2 - scalebar_label_width/2,bitmap_y_offset + scalebar_y_pos - scalebar_label_height - scalebar_thickness/8);
+			}
+
+			// Draw selection retangle
+			if (draw_selection_rectangle)
+			{
+				dc.SetPen( wxPen(wxColor(255,0,0),pen_thickness * 2, wxPENSTYLE_LONG_DASH) );
+				dc.SetBrush( wxNullBrush );
+				dc.DrawRectangle(std::min(selection_rectangle_start_x,selection_rectangle_current_x),std::min(selection_rectangle_start_y,selection_rectangle_current_y),abs(selection_rectangle_current_x - selection_rectangle_start_x),abs(selection_rectangle_current_y - selection_rectangle_start_y));
 			}
 
 
 			// Draw text
 
 			text_y_offset = ((bitmap_height) - text_y_size) / 2;
-			if (text_y_offset > 0) dc.DrawText(panel_text, bitmap_width + x_offset, text_y_offset + y_offset);
+			if (text_y_offset > 0) dc.DrawText(panel_text, bitmap_width + bitmap_x_offset, text_y_offset + bitmap_y_offset);
 			else
-			dc.DrawText(panel_text, bitmap_width + x_offset, y_offset);
+			dc.DrawText(panel_text, bitmap_width + bitmap_x_offset, bitmap_y_offset);
 
 		}
 	}
@@ -287,8 +364,62 @@ void PickingBitmapPanel::SetupPanelBitmap()
 		PanelBitmap.Create(window_x_size, window_y_size, 24);
 	}
 
+}
+
+void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
+{
+	int x_pos, y_pos;
+	event.GetPosition(&x_pos,&y_pos);
+	if (event.ControlDown())
+	{
+		draw_selection_rectangle = true;
+		selection_rectangle_start_x = x_pos;
+		selection_rectangle_start_y = y_pos;
+	}
+	event.Skip();
+}
 
 
+/*
+ * Conversion to/from angstrom and bitmap pixels
+ *
+ * x_pix = x_offset + bitmap_width - x_ang / psize;
+ * x_ang = (x_offset + bitmap_width - x_pix) * psize;
+ *
+ * y_pix = y_offset + y_ang / psize;
+ * y_ang = (y_pix - y_offset) * psize;
+ *
+ */
 
+void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
+{
 
+	if (draw_selection_rectangle)
+	{
+		// Convert begin and end coordinates to Angstroms
+		//dc.DrawCircle(x_offset + bitmap_width - particle_coordinates_in_angstroms[counter].x / image_in_bitmap_pixel_size, y_offset + particle_coordinates_in_angstroms[counter].y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+		selection_rectangle_start_x_in_angstroms 	= float(bitmap_x_offset + bitmap_width - std::max(selection_rectangle_start_x,selection_rectangle_current_x)) * image_in_bitmap_pixel_size;
+		selection_rectangle_finish_x_in_angstroms	= float(bitmap_x_offset + bitmap_width - std::min(selection_rectangle_start_x,selection_rectangle_current_x)) * image_in_bitmap_pixel_size;
+		selection_rectangle_start_y_in_angstroms 	= float(std::min(selection_rectangle_start_y,selection_rectangle_current_y) - bitmap_y_offset) * image_in_bitmap_pixel_size;
+		selection_rectangle_finish_y_in_angstroms 	= float(std::max(selection_rectangle_start_y,selection_rectangle_current_y) - bitmap_y_offset) * image_in_bitmap_pixel_size;
+		RemoveParticleCoordinatesWithinRectangle();
+		draw_selection_rectangle = false;
+	}
+	Refresh();
+	Update();
+	event.Skip();
+}
+
+void PickingBitmapPanel::OnMotion(wxMouseEvent & event)
+{
+	int x_pos, y_pos;
+	event.GetPosition(&x_pos,&y_pos);
+	if (draw_selection_rectangle)
+	{
+		selection_rectangle_current_x = x_pos;
+		selection_rectangle_current_y = y_pos;
+	}
+	Refresh();
+	Update();
+	event.Skip();
 }

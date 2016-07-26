@@ -51,6 +51,11 @@ public:
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);
 
+		//
+		enum particle_picking_algorithms { ab_initio, number_of_picking_algorithms };
+		wxString ReturnNameOfPickingAlgorithm( const int wanted_algorithm );
+
+
 
 };
 

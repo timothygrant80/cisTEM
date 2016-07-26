@@ -222,7 +222,7 @@ public:
 		return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
 	};
 
-	fftw_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
+	fftwf_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, float out_of_bounds_value)
 	{
 		if (wanted_x < logical_lower_bound_complex_x || wanted_x > logical_upper_bound_complex_x || wanted_y < logical_lower_bound_complex_y ||wanted_y > logical_upper_bound_complex_y || wanted_z < logical_lower_bound_complex_z || wanted_z > logical_upper_bound_complex_z)
 		{

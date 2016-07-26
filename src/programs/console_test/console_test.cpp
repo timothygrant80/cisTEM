@@ -678,7 +678,7 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	MRCFile input_file(hiv_images_80x80x10_filename.ToStdString(), false);
 	Image test_image;
 	Image clipped_image;
-	fftw_complex test_pixel;
+	fftwf_complex test_pixel;
 
 	// test real space clipping bigger..
 

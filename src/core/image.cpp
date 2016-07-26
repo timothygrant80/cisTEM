@@ -6096,7 +6096,7 @@ void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_
 	float phase_y;
 	float phase_x;
 
-	fftw_complex total_phase_shift;
+	fftwf_complex total_phase_shift;
 
 	if (is_in_real_space == true)
 	{

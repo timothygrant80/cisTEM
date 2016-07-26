@@ -4,7 +4,7 @@
 extern MyMainFrame *main_frame;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
-//extern PickingBitmapPanel *PickingResultsImagePanel;
+extern MyFindParticlesPanel *findparticles_panel;
 
 MyPickingResultsPanel::MyPickingResultsPanel( wxWindow* parent )
 :
@@ -342,8 +342,72 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	int current_image_id = per_row_asset_id[row];
 	int current_picking_job_id = picking_job_ids[column - 2];
 	wxString parent_image_filename;
+	bool keep_going;
 
-	bool keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select filename from image_assets where image_asset_id = %i",current_image_id));
+	// Variables for job details
+	int picking_id;
+	long datetime_of_run;
+	int picking_job_id_check;
+	int parent_image_id_check;
+	int picking_algorithm;
+	double characteristic_radius;
+	double maximum_radius;
+	double threshold_peak_height;
+	double highest_resolution_used;
+	int minimum_distance_from_edges;
+	int avoid_high_variance;
+	int avoid_high_low_mean;
+	int number_of_background_boxes;
+
+	// Get job details
+	keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select * from particle_picking_list where picking_job_id = %i",current_picking_job_id));
+	if (!keep_going)
+	{
+		MyPrintWithDetails("Error dealing with picking_list table");
+		abort();
+	}
+	main_frame->current_project.database.GetFromBatchSelect("iliiirrrriiii",&picking_id, &datetime_of_run, &picking_job_id_check, &parent_image_id_check, &picking_algorithm, &characteristic_radius, &maximum_radius, &threshold_peak_height, &highest_resolution_used, &minimum_distance_from_edges, &avoid_high_variance, &avoid_high_low_mean, &number_of_background_boxes);
+
+	main_frame->current_project.database.EndBatchSelect();
+
+
+	// Set text in the details panel
+	PickIDStaticText->SetLabel(wxString::Format("%i", picking_id));
+	wxDateTime wxdatetime_of_run;
+	wxdatetime_of_run.SetFromDOS((unsigned long) datetime_of_run);
+	DateOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISODate());
+	TimeOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISOTime());
+	AlgorithmStaticText->SetLabel(findparticles_panel->ReturnNameOfPickingAlgorithm(picking_algorithm));
+	ManualEditStaticText->SetLabel("no");
+	ThresholdStaticText->SetLabel(wxString::Format("%0.1f",threshold_peak_height));
+	MaximumRadiusStaticText->SetLabel(wxString::Format("%0.1f A",maximum_radius));
+	CharacteristicRadiusStaticText->SetLabel(wxString::Format("%0.1f A",characteristic_radius));
+	HighestResStaticText->SetLabel(wxString::Format("%0.1f A",highest_resolution_used));
+	MinEdgeDistStaticText->SetLabel(wxString::Format("%i px",minimum_distance_from_edges));
+	if (avoid_high_variance == 1)
+	{
+		AvoidHighVarStaticText->SetLabel("yes");
+	}
+	else
+	{
+		AvoidHighVarStaticText->SetLabel("no");
+	}
+	if (avoid_high_low_mean == 1)
+	{
+		AvoidHighLowMeanStaticText->SetLabel("yes");
+	}
+	else
+	{
+		AvoidHighLowMeanStaticText->SetLabel("no");
+	}
+	NumBackgroundBoxesStaticText->SetLabel(wxString::Format("%i",number_of_background_boxes));
+
+
+
+
+	// Get the filename of the image we will need to display
+
+	keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select filename from image_assets where image_asset_id = %i",current_image_id));
 	if (!keep_going)
 	{
 		MyPrintWithDetails("Error dealing with assets table");
@@ -351,6 +415,9 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	}
 	main_frame->current_project.database.GetFromBatchSelect("t",&parent_image_filename);
 	main_frame->current_project.database.EndBatchSelect();
+
+
+	// Get the coordinates of picked particles
 
 	int number_of_particles = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select count(*) from particle_picking_results_%i where parent_image_asset_id = %i",current_picking_job_id,current_image_id));
 	double *x_coordinates;

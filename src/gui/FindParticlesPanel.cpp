@@ -9,7 +9,6 @@ extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyPickingResultsPanel *picking_results_panel;
 
-enum particle_picking_algorithms { ab_initio };
 
 MyFindParticlesPanel::MyFindParticlesPanel( wxWindow* parent )
 :
@@ -128,17 +127,33 @@ void MyFindParticlesPanel::FillGroupComboBox()
 	GroupComboBox->Thaw();
 }
 
+wxString MyFindParticlesPanel::ReturnNameOfPickingAlgorithm( const int wanted_algorithm )
+{
+
+	wxString string_to_return;
+
+	switch(wanted_algorithm)
+	{
+	case(ab_initio):
+			string_to_return = "ab initio";
+			break;
+	default:
+			string_to_return = "unknown";
+	}
+
+	return string_to_return;
+}
+
 void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 {
 
 	PickingAlgorithmComboBox->Freeze();
 	PickingAlgorithmComboBox->Clear();
 
-	PickingAlgorithmComboBox->Append("Ab initio");
-	//PickingAlgorithmComboBox->Append("Swarm (not implemented)");
-	//PickingAlgorithmComboBox->Append("Template matching (not implemented)");
-	//PickingAlgorithmComboBox->Append("Manual (not implemented)");
-	//PickingAlgorithmComboBox->Append("Import coordinates (not implemented)");
+	for ( int counter = 0; counter < number_of_picking_algorithms; counter ++ )
+	{
+		PickingAlgorithmComboBox->Append(ReturnNameOfPickingAlgorithm(counter).Capitalize());
+	}
 
 	PickingAlgorithmComboBox->SetSelection(-1);
 

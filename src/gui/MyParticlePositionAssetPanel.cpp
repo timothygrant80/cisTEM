@@ -298,7 +298,8 @@ void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 								 {
 									 temp_asset.asset_id = current_asset_number;
 									 AddAsset(&temp_asset);
-									 main_frame->current_project.database.AddNextParticlePositionAsset(temp_asset.asset_id, temp_asset.parent_id, temp_asset.pick_job_id, temp_asset.x_position, temp_asset.y_position);
+									 //main_frame->current_project.database.AddNextParticlePositionAsset(temp_asset.asset_id, temp_asset.parent_id, temp_asset.pick_job_id, temp_asset.x_position, temp_asset.y_position);
+									 main_frame->current_project.database.AddNextParticlePositionAsset(&temp_asset);
 								 }
 							 }
 						 }

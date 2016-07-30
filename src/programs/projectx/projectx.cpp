@@ -43,7 +43,7 @@ MyFindParticlesPanel *findparticles_panel;
 OverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
-ResultsPanel *results_panel;
+MyResultsPanel *results_panel;
 SettingsPanel *settings_panel;
 
 MyMovieAssetPanel *movie_asset_panel;
@@ -83,7 +83,7 @@ bool MyGuiApp::OnInit()
 	overview_panel = new OverviewPanel(main_frame->MenuBook, wxID_ANY);
 	actions_panel = new ActionsPanel(main_frame->MenuBook, wxID_ANY);
 	assets_panel = new AssetsPanel(main_frame->MenuBook, wxID_ANY);
-	results_panel = new ResultsPanel(main_frame->MenuBook, wxID_ANY);
+	results_panel = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
 	settings_panel = new SettingsPanel(main_frame->MenuBook, wxID_ANY);
 
 	// Individual Panels

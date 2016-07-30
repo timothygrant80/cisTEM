@@ -94,8 +94,35 @@ int Database::ReturnHighestFindCTFID()
 
 int Database::ReturnHighestPickingID()
 {
-	return ReturnSingleIntFromSelectCommand("SELECT MAX(PICKING_ID) FROM PARTICLE_PICKING_LIST");
+	// We return 0 if the particle_picking_list is empty
+	return ReturnSingleIntFromSelectCommand("SELECT COALESCE(MAX(PICKING_ID),0) FROM PARTICLE_PICKING_LIST");
 }
+
+int Database::ReturnHighestParticlePositionID()
+{
+	// Note: we can't just look for the maximum position_id in the latest picking results table, since the user is free to add new particle positions
+	// to old results tables
+	int number_of_picking_jobs = ReturnNumberOfPickingJobs();
+	int max_position_id = -1;
+	int current_max_position_id = -1;
+	int number_of_non_empty_tables = 0;
+	wxString sql_query = "select max(";
+	for (int counter = 1; counter <= number_of_picking_jobs; counter++)
+	{
+		if (ReturnSingleIntFromSelectCommand(wxString::Format("select count(*) from particle_picking_results_%i",counter)) > 0)
+		{
+			if (number_of_non_empty_tables > 0)
+			{
+				sql_query += ",";
+			}
+			number_of_non_empty_tables ++;
+			sql_query += wxString::Format("(select max(position_id) from particle_picking_results_%i)",counter);
+		}
+	}
+	sql_query += ")";
+	return ReturnSingleIntFromSelectCommand(sql_query);
+}
+
 
 int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id)
 {
@@ -224,8 +251,6 @@ void Database::GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &numbe
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	bool more_data;
-
-	wxPrintf("Number of distinct images with ctf estimates = %i\n",number_of_image_ids);
 
 	more_data = BeginBatchSelect("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
 
@@ -729,7 +754,7 @@ void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int pos
 	AddToBatchInsert("itiiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
 }
 
-
+/*
 void Database::BeginAbInitioParticlePositionAssetInsert()
 {
 	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 6, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "X_POSITION", "Y_POSITION","PEAK_HEIGHT");
@@ -739,16 +764,18 @@ void Database::AddNextAbInitioParticlePositionAsset(int particle_position_asset_
 {
 	AddToBatchInsert("iiirrr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position, peak_height);
 }
+*/
 
 void Database::BeginParticlePositionAssetInsert()
 {
-	BeginBatchInsert("PARTICLE_POSITION_ASSETS", 5, "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "X_POSITION", "Y_POSITION");
+	BeginBatchInsert("particle_position_assets", 11, "particle_position_asset_id", "parent_image_asset_id", "picking_id", "pick_job_id", "x_position", "y_position", "peak_height", "template_asset_id", "template_psi", "template_theta", "template_phi");
 }
 
-void Database::AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position )
+void Database::AddNextParticlePositionAsset(const ParticlePositionAsset *asset)
 {
-	AddToBatchInsert("iiirr", particle_position_asset_id, parent_image_asset_id, pick_job_id, x_position, y_position);
+	AddToBatchInsert("iiiirrrirrr", asset->asset_id, asset->parent_id, asset->picking_id, asset->pick_job_id, asset->x_position, asset->y_position, asset->peak_height, asset->parent_template_id, asset->template_psi, asset->template_theta, asset->template_phi);
 }
+
 
 
 bool Database::BeginBatchSelect(const char *select_command)
@@ -1044,6 +1071,23 @@ AssetGroup Database::GetNextVolumeGroup()
 	return temp_group;
 }
 
+void Database::RemoveParticlePositionsFromResultsList(const int &picking_job_id, const int &parent_image_asset_id)
+{
+	ExecuteSQL(wxString::Format("delete from particle_picking_results_%i where parent_image_asset_id = %i",picking_job_id,parent_image_asset_id));
+}
+
+int Database::ReturnPickingIDGivenPickingJobIDAndParentImageID(const int & picking_job_id, const int &parent_image_asset_id)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("select distinct picking_id from particle_picking_results_%i where parent_image_asset_id = %i",picking_job_id, parent_image_asset_id));
+}
+
+void Database::SetManualEditForPickingID(const int &picking_id, const bool wanted_manual_edit)
+{
+	int manual_edit_value = 0;
+	if (wanted_manual_edit) manual_edit_value = 1;
+	ExecuteSQL(wxString::Format("update particle_picking_list set manual_edit=%i where picking_id=%i",manual_edit_value,picking_id));
+}
+
 void Database::RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id)
 {
 	ExecuteSQL(wxString::Format("delete from particle_position_group_%i where exists(select 1 from particle_position_assets where particle_position_assets.parent_image_asset_id = %i AND particle_position_group_%i.particle_position_asset_id = particle_position_assets.particle_position_asset_id)",group_number_following_gui_convention-1,parent_image_asset_id,group_number_following_gui_convention-1));
@@ -1063,6 +1107,47 @@ void Database::CopyParticleAssetsFromResultsTable(const int &picking_job_id, con
 {
 	ExecuteSQL(wxString::Format("insert into particle_position_assets select particle_picking_results_%i.position_id, %i, particle_picking_results_%i.picking_id, %i, particle_picking_results_%i.x_position, particle_picking_results_%i.y_position, particle_picking_results_%i.peak_height, particle_picking_results_%i.template_asset_id, particle_picking_results_%i.template_psi, particle_picking_results_%i.template_theta, particle_picking_results_%i.template_phi from particle_picking_results_%i where particle_picking_results_%i.parent_image_asset_id = %i",
 												                                          picking_job_id,  parent_image_asset_id,     picking_job_id,     picking_job_id,           picking_job_id,                         picking_job_id,                              picking_job_id,                            picking_job_id,                             picking_job_id,                                picking_job_id,                        picking_job_id,                              picking_job_id,                    picking_job_id,                  parent_image_asset_id));
+}
+
+void Database::AddArrayOfParticlePositionAssetsToResultsTable(const int &picking_job_id, ArrayOfParticlePositionAssets *array_of_assets)
+{
+	BeginBatchInsert(wxString::Format("particle_picking_results_%i",picking_job_id), 10, "position_id", "picking_id", "parent_image_asset_id", "x_position", "y_position", "peak_height", "template_asset_id", "template_psi", "template_theta", "template_phi");
+
+	ParticlePositionAsset *asset;
+	for (size_t counter = 0; counter < array_of_assets->GetCount(); counter ++ )
+	{
+		asset = & array_of_assets->Item(counter);
+		AddToBatchInsert("iiirrrirrr", asset->asset_id, asset->picking_id, asset->parent_id, asset->x_position, asset->y_position, asset->peak_height, asset->parent_template_id, asset->template_psi, asset->template_theta, asset->template_phi);
+	}
+
+	EndBatchInsert();
+
+}
+
+void Database::AddArrayOfParticlePositionAssetsToAssetsTable(ArrayOfParticlePositionAssets *array_of_assets)
+{
+	BeginParticlePositionAssetInsert();
+	ParticlePositionAsset *asset;
+	for (size_t counter = 0; counter < array_of_assets->GetCount(); counter ++ )
+	{
+		asset = & array_of_assets->Item(counter);
+		AddNextParticlePositionAsset(asset);
+	}
+
+	EndBatchInsert();
+}
+
+ArrayOfParticlePositionAssets Database::ReturnArrayOfParticlePositionAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id)
+{
+	ArrayOfParticlePositionAssets array_of_assets;
+	array_of_assets.Clear();
+	BeginBatchSelect(wxString::Format("select * from particle_picking_results_%i where parent_image_asset_id = %i",picking_job_id,parent_image_asset_id));
+	while (last_return_code == SQLITE_ROW)
+	{
+		array_of_assets.Add(GetNextParticlePositionAssetFromResults());
+	}
+	EndBatchSelect();
+	return array_of_assets;
 }
 
 MovieAsset Database::GetNextMovieAsset()
@@ -1089,6 +1174,14 @@ ParticlePositionAsset Database::GetNextParticlePositionAsset()
 	GetFromBatchSelect("iiiirrrirrr", &temp_asset.asset_id, &temp_asset.parent_id, &temp_asset.picking_id, &temp_asset.pick_job_id, &temp_asset.x_position, &temp_asset.y_position,&temp_asset.peak_height,&temp_asset.parent_template_id,&temp_asset.template_psi,&temp_asset.template_theta,&temp_asset.template_phi);
 	return temp_asset;
 }
+
+ParticlePositionAsset Database::GetNextParticlePositionAssetFromResults()
+{
+	ParticlePositionAsset temp_asset;
+	GetFromBatchSelect("iiirrrirrr", &temp_asset.asset_id, &temp_asset.picking_id,  &temp_asset.parent_id, &temp_asset.x_position, &temp_asset.y_position,&temp_asset.peak_height,&temp_asset.parent_template_id,&temp_asset.template_psi,&temp_asset.template_theta,&temp_asset.template_phi);
+	return temp_asset;
+}
+
 
 VolumeAsset Database::GetNextVolumeAsset()
 {

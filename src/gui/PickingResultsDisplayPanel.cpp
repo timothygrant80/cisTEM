@@ -26,7 +26,7 @@ void PickingResultsDisplayPanel::Clear()
 	Refresh();
 }
 
-void PickingResultsDisplayPanel::Draw(const wxString &image_filename, const int &number_of_particles, const double *particle_coordinates_x_in_angstroms, const double *particle_coordinates_y_in_angstroms, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms)
+void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms)
 {
 
 
@@ -35,7 +35,7 @@ void PickingResultsDisplayPanel::Draw(const wxString &image_filename, const int 
 
 	PickingResultsImagePanel->SetImageFilename(image_filename,pixel_size_in_angstroms);
 
-	PickingResultsImagePanel->SetParticleCoordinatesAndRadius(number_of_particles, particle_coordinates_x_in_angstroms, particle_coordinates_y_in_angstroms, particle_radius_in_angstroms);
+	PickingResultsImagePanel->SetParticleCoordinatesAndRadius(array_of_assets, particle_radius_in_angstroms);
 
 	PickingResultsImagePanel->UpdateScalingAndDimensions();
 
@@ -108,4 +108,14 @@ void PickingResultsDisplayPanel::OnHighPassFilterCheckBox(wxCommandEvent & event
 			PickingResultsImagePanel->Refresh();
 		}
 	}
+}
+
+void PickingResultsDisplayPanel::OnUndoButtonClick(wxCommandEvent& event)
+{
+	PickingResultsImagePanel->StepBackwardInHistoryOfParticleCoordinates();
+}
+
+void PickingResultsDisplayPanel::OnRedoButtonClick(wxCommandEvent& event)
+{
+	PickingResultsImagePanel->StepForwardInHistoryOfParticleCoordinates();
 }

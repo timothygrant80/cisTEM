@@ -163,15 +163,33 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	CirclesAroundParticlesCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Circles around particles"), wxDefaultPosition, wxDefaultSize, 0 );
 	CirclesAroundParticlesCheckBox->SetValue(true); 
+	CirclesAroundParticlesCheckBox->SetToolTip( wxT("Draw circles around picked particles") );
+	
 	bSizer94->Add( CirclesAroundParticlesCheckBox, 0, wxALL, 5 );
 	
 	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighPassFilterCheckBox->SetValue(true); 
+	HighPassFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
+	
 	bSizer94->Add( HighPassFilterCheckBox, 0, wxALL, 5 );
 	
 	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale bar"), wxDefaultPosition, wxDefaultSize, 0 );
 	ScaleBarCheckBox->SetValue(true); 
+	ScaleBarCheckBox->SetToolTip( wxT("Display a scale bar") );
+	
 	bSizer94->Add( ScaleBarCheckBox, 0, wxALL, 5 );
+	
+	UndoButton = new wxButton( this, wxID_ANY, wxT("Undo"), wxDefaultPosition, wxDefaultSize, 0 );
+	UndoButton->Enable( false );
+	UndoButton->SetToolTip( wxT("Undo manual change of particle coordinates") );
+	
+	bSizer94->Add( UndoButton, 0, wxALL, 5 );
+	
+	RedoButton = new wxButton( this, wxID_ANY, wxT("Redo"), wxDefaultPosition, wxDefaultSize, 0 );
+	RedoButton->Enable( false );
+	RedoButton->SetToolTip( wxT("Redo manual change of particle coordinates") );
+	
+	bSizer94->Add( RedoButton, 0, wxALL, 5 );
 	
 	
 	bSizer93->Add( bSizer94, 1, wxEXPAND, 5 );
@@ -193,6 +211,8 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
 	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
 	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
+	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
+	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
 }
 
 PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
@@ -201,6 +221,8 @@ PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
 	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
 	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
 	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
+	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
+	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
 	
 }
 
@@ -1222,10 +1244,16 @@ ResultsPanel::ResultsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	this->SetSizer( bSizer12 );
 	this->Layout();
+	
+	// Connect Events
+	ResultsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ResultsPanel::OnResultsBookPageChanged ), NULL, this );
 }
 
 ResultsPanel::~ResultsPanel()
 {
+	// Disconnect Events
+	ResultsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ResultsPanel::OnResultsBookPageChanged ), NULL, this );
+	
 }
 
 AssetsPanel::AssetsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
@@ -1466,6 +1494,8 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer45->Add( bSizer44, 1, wxEXPAND, 5 );
 	
 	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertToggleButton->Enable( false );
+	
 	bSizer45->Add( ExpertToggleButton, 0, wxALL, 5 );
 	
 	
@@ -1608,12 +1638,16 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	ShowEstimatedBackgroundSpectrumCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show estimated background spectrum"), wxDefaultPosition, wxDefaultSize, 0 );
+	ShowEstimatedBackgroundSpectrumCheckBox->Enable( false );
+	
 	ExpertOptionsSizer->Add( ShowEstimatedBackgroundSpectrumCheckBox, 0, wxALL, 5 );
 	
 	
 	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	ShowPositionsOfBackgroundBoxesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show positions of background boxes"), wxDefaultPosition, wxDefaultSize, 0 );
+	ShowPositionsOfBackgroundBoxesCheckBox->Enable( false );
+	
 	ExpertOptionsSizer->Add( ShowPositionsOfBackgroundBoxesCheckBox, 0, wxALL, 5 );
 	
 	
@@ -1681,6 +1715,11 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	InfoPanel->Layout();
 	bSizer61->Fit( InfoPanel );
 	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	PickingResultsPanel = new PickingResultsDisplayPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	PickingResultsPanel->Hide();
+	
+	bSizer46->Add( PickingResultsPanel, 1, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );

@@ -10,11 +10,14 @@ class MyPickingResultsPanel : public PickingResultsPanel
 		void FillBasedOnSelectCommand(wxString wanted_command);
 		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
 		void FillResultsPanelAndDetails(int row, int column);
+		void UpdateResultsFromBitmapPanel(const int row, const int column);
+		void UpdateResultsFromBitmapPanel();
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );
 		void OnAddToGroupClick( wxCommandEvent& event );
 		void OnJobDetailsToggle( wxCommandEvent& event );
 		void Clear();
+		bool CheckBoxIsChecked(const int row, const int column);
 
 		int GetFilter();
 		void OnAllMoviesSelect( wxCommandEvent& event );

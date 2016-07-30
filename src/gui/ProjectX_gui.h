@@ -130,9 +130,13 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		virtual void OnCirclesAroundParticlesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHighPassFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnScaleBarCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUndoButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRedoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
+		wxButton* UndoButton;
+		wxButton* RedoButton;
 		PickingBitmapPanel* PickingResultsImagePanel;
 		
 		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
@@ -278,7 +282,6 @@ class PickingResultsPanel : public wxPanel
 		wxStaticText* m_staticText95;
 		wxStaticText* NumBackgroundBoxesStaticText;
 		wxStaticLine* m_staticline30;
-		PickingResultsDisplayPanel* ResultDisplayPanel;
 		wxButton* AddToGroupButton;
 		wxComboBox* GroupComboBox;
 		
@@ -294,6 +297,7 @@ class PickingResultsPanel : public wxPanel
 		
 	
 	public:
+		PickingResultsDisplayPanel* ResultDisplayPanel;
 		
 		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
 		~PickingResultsPanel();
@@ -435,6 +439,10 @@ class ResultsPanel : public wxPanel
 	
 	protected:
 		wxStaticLine* m_staticline3;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnResultsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+		
 	
 	public:
 		wxListbook* ResultsBook;
@@ -595,6 +603,7 @@ class FindParticlesPanel : public JobPanel
 		
 	
 	public:
+		PickingResultsDisplayPanel* PickingResultsPanel;
 		
 		FindParticlesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~FindParticlesPanel();

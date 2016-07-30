@@ -77,7 +77,10 @@ class ParticlePositionAsset : public Asset {
   public:
 
 	ParticlePositionAsset();
+	ParticlePositionAsset(const float &wanted_x_in_angstroms, const float &wanted_y_in_angstroms);
 	~ParticlePositionAsset();
+
+	void Reset();
 
 	int picking_id;
 	int pick_job_id;
@@ -92,6 +95,8 @@ class ParticlePositionAsset : public Asset {
 
 	void CopyFrom(Asset *other_asset);
 };
+
+WX_DECLARE_OBJARRAY(ParticlePositionAsset, ArrayOfParticlePositionAssets);
 
 class VolumeAsset : public Asset {
 

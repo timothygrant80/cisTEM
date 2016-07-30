@@ -72,6 +72,7 @@
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
 #include "../gui/MyNewProjectWizard.h"
+#include "../gui/MyResultsPanel.h"
 #include "../gui/PickingResultsPanel.h"
 
 

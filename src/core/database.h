@@ -49,6 +49,7 @@ public :
 	int ReturnHighestFindCTFJobID();
 	int ReturnHighestPickingID();
 	int ReturnHighestPickingJobID();
+	int ReturnHighestParticlePositionID();
 	int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousParticlePicksByAssetID(int wanted_asset_id);
@@ -79,19 +80,24 @@ public :
 	void EndImageAssetInsert() {EndBatchInsert();};
 
 	void BeginParticlePositionAssetInsert();
-	void AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position);
+	//void AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position);
+	void AddNextParticlePositionAsset(const ParticlePositionAsset *asset);
 	void EndParticlePositionAssetInsert() {EndBatchInsert();};
 
+	/*
 	void BeginAbInitioParticlePositionAssetInsert();
 	void AddNextAbInitioParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position, double peak_height);
 	void EndAbInitioParticlePositionAssetInsert() {EndBatchInsert();};
+	*/
 
 	// Table creation wrappers..
 
-	bool CreateParticlePickingListTable() {return CreateTable("PARTICLE_PICKING_LIST", "piiiirrrriiii", "PICKING_ID", "DATETIME_OF_RUN", "PICKING_JOB_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ALGORITHM","CHARACTERISTIC_RADIUS", "MAXIMUM_RADIUS","THRESHOLD_PEAK_HEIGHT","HIGHEST_RESOLUTION_USED_IN_PICKING","MIN_DIST_FROM_EDGES","AVOID_HIGH_VARIANCE","AVOID_HIGH_LOW_MEAN","NUM_BACKGROUND_BOXES");};
+	bool CreateParticlePickingListTable() {return CreateTable("PARTICLE_PICKING_LIST", "piiiirrrriiiii", "PICKING_ID", "DATETIME_OF_RUN", "PICKING_JOB_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ALGORITHM","CHARACTERISTIC_RADIUS", "MAXIMUM_RADIUS","THRESHOLD_PEAK_HEIGHT","HIGHEST_RESOLUTION_USED_IN_PICKING","MIN_DIST_FROM_EDGES","AVOID_HIGH_VARIANCE","AVOID_HIGH_LOW_MEAN","NUM_BACKGROUND_BOXES","MANUAL_EDIT");};
 
 	bool CreateParticlePositionAssetTable() {return CreateTable("PARTICLE_POSITION_ASSETS", "piiirrrirrr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");};
 	bool CreateParticlePositionGroupListTable() {return  CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
+	bool CreateParticlePickingResultsTable(const int &picking_job_id) {return CreateTable(wxString::Format("PARTICLE_PICKING_RESULTS_%i",picking_job_id),"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");};
+
 
 	bool CreateVolumeAssetTable() {return CreateTable("VOLUME_ASSETS", "pitriii", "VOLUME_ASSET_ID", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
 	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
@@ -116,6 +122,7 @@ public :
 
 	void BeginAllParticlePositionAssetsSelect();
 	ParticlePositionAsset GetNextParticlePositionAsset();
+	ParticlePositionAsset GetNextParticlePositionAssetFromResults();
 	void EndAllParticlePositionAssetsSelect() {EndBatchSelect();};
 
 	void BeginAllParticlePositionGroupsSelect();
@@ -143,5 +150,13 @@ public :
 	void RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID( const int &picking_job_id);
 	void RemoveParticlePositionAssetsPickedFromImageWithGivenID( const int &parent_image_asset_id );
 	void CopyParticleAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id);
+	void AddArrayOfParticlePositionAssetsToResultsTable(const int &picking_job_id, ArrayOfParticlePositionAssets *array_of_assets);
+	void AddArrayOfParticlePositionAssetsToAssetsTable(ArrayOfParticlePositionAssets *array_of_assets);
+	ArrayOfParticlePositionAssets ReturnArrayOfParticlePositionAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id);
+
+	// Particle picking results management
+	void RemoveParticlePositionsFromResultsList(const int &picking_job_id, const int &parent_image_asset_id);
+	int ReturnPickingIDGivenPickingJobIDAndParentImageID(const int & picking_job_id, const int &parent_image_asset_id);
+	void SetManualEditForPickingID(const int &picking_id, const bool wanted_manual_edit);
 
 };

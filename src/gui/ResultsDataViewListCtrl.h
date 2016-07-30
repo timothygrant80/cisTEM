@@ -18,6 +18,7 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl
 	wxIcon checked_eye_icon;
 	wxIcon unchecked_eye_icon;
 
+	// TODO: shouldn't these really be called current_eye_row and current_eye_column?
 	int currently_selected_row;
 	int currently_selected_column;
 
@@ -42,6 +43,8 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl
 	void PreviousEye();
 
 	int ReturnCheckedColumn(int wanted_row);
+	inline int ReturnEyeColumn(){return currently_selected_column;};
+	inline int ReturnEyeRow(){return currently_selected_row;};
 	void Clear();
 
 	void SizeColumns();

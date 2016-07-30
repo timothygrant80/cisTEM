@@ -28,7 +28,7 @@ class MyMainFrame : public MainFrame
 		void SetupServer();
 		void RecalculateAssetBrowser(void);
 		void OnCollapseAll( wxCommandEvent& event );
-		void OnMenuBookChange( wxListbookEvent& event );
+		void OnMenuBookChange( wxBookCtrlEvent& event );
 
 		void OnFileNewProject( wxCommandEvent& event );
 		void OnFileOpenProject( wxCommandEvent& event );

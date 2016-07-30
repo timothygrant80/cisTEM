@@ -260,7 +260,7 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 
 		if (!should_continue)
 		{
-			MyPrintWithDetails("Error getting selected alignments..");
+			MyPrintWithDetails("Error getting picking results..");
 			abort();
 		}
 
@@ -333,6 +333,76 @@ int MyPickingResultsPanel::ReturnRowFromAssetID(int asset_id, int start_location
 	return -1;
 }
 
+
+void MyPickingResultsPanel::UpdateResultsFromBitmapPanel()
+{
+	UpdateResultsFromBitmapPanel(ResultDataView->ReturnEyeRow(),ResultDataView->ReturnEyeColumn());
+}
+
+// Grab the set of coordinates from the bitmap panel and send them to the database (if the user changed them with the bitmap panel)
+void MyPickingResultsPanel::UpdateResultsFromBitmapPanel(const int row, const int column)
+{
+
+
+	// Work out whether the user changed anything in the Bitmap panel since we last saved
+	if (ResultDisplayPanel->PickingResultsImagePanel->UserHasEditedParticleCoordinates())
+	{
+		//wxPrintf("User has edited particle coordinates, let's update the database\n");
+
+		int current_image_id = per_row_asset_id[row];
+		int current_picking_job_id = picking_job_ids[column - 2];
+		int picking_id = main_frame->current_project.database.ReturnPickingIDGivenPickingJobIDAndParentImageID(current_picking_job_id, current_image_id);
+
+
+		// Get a pointer to the array of particle position assets
+		ArrayOfParticlePositionAssets * assets_in_bitmap_panel = &ResultDisplayPanel->PickingResultsImagePanel->particle_coordinates_in_angstroms;
+		ResultDisplayPanel->PickingResultsImagePanel->ResetHistory();
+
+		// Before we can add new particle coordinates to the database, we need to assign IDs to positions that were added
+		// by the user and therefore don't have an ID yet
+		int highest_position_id_so_far = main_frame->current_project.database.ReturnHighestParticlePositionID();
+		ParticlePositionAsset * current_asset;
+		for (size_t counter = 0; counter < assets_in_bitmap_panel->GetCount(); counter ++ )
+		{
+			current_asset = & assets_in_bitmap_panel->Item(counter);
+			if (current_asset->asset_id == -1)
+			{
+				highest_position_id_so_far ++;
+				current_asset->asset_id = highest_position_id_so_far;
+				current_asset->parent_id = current_image_id;
+				current_asset->picking_id = picking_id;
+				current_asset->pick_job_id = current_picking_job_id;
+			}
+		}
+
+		// Remove results from database
+		main_frame->current_project.database.RemoveParticlePositionsFromResultsList(current_picking_job_id,current_image_id);
+		if (CheckBoxIsChecked(row, column))
+		{
+			main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImageWithGivenID(current_image_id);
+			particle_position_asset_panel->is_dirty = true;
+			particle_position_asset_panel->Refresh();
+		}
+
+		// Add results to picking_results_*** table
+		main_frame->current_project.database.AddArrayOfParticlePositionAssetsToResultsTable(current_picking_job_id,assets_in_bitmap_panel);
+
+		// If the current results are the ones used as assets, update the assets table also
+		if (CheckBoxIsChecked(row,column))
+		{
+			main_frame->current_project.database.CopyParticleAssetsFromResultsTable(current_picking_job_id, current_image_id);
+			particle_position_asset_panel->ImportAllFromDatabase();
+			particle_position_asset_panel->is_dirty = true;
+		}
+
+		// Mark the picking results as manually edited
+		wxPrintf("Setting manual edit to true for picking id %i",picking_id);
+		main_frame->current_project.database.SetManualEditForPickingID(picking_id, true);
+
+	}
+
+}
+
 void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 {
 	bool should_continue;
@@ -358,6 +428,7 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	int avoid_high_variance;
 	int avoid_high_low_mean;
 	int number_of_background_boxes;
+	int manual_edit;
 
 	// Get job details
 	keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select * from particle_picking_list where picking_job_id = %i",current_picking_job_id));
@@ -366,7 +437,7 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		MyPrintWithDetails("Error dealing with picking_list table");
 		abort();
 	}
-	main_frame->current_project.database.GetFromBatchSelect("iliiirrrriiii",&picking_id, &datetime_of_run, &picking_job_id_check, &parent_image_id_check, &picking_algorithm, &characteristic_radius, &maximum_radius, &threshold_peak_height, &highest_resolution_used, &minimum_distance_from_edges, &avoid_high_variance, &avoid_high_low_mean, &number_of_background_boxes);
+	main_frame->current_project.database.GetFromBatchSelect("iliiirrrriiiii",&picking_id, &datetime_of_run, &picking_job_id_check, &parent_image_id_check, &picking_algorithm, &characteristic_radius, &maximum_radius, &threshold_peak_height, &highest_resolution_used, &minimum_distance_from_edges, &avoid_high_variance, &avoid_high_low_mean, &number_of_background_boxes, &manual_edit);
 
 	main_frame->current_project.database.EndBatchSelect();
 
@@ -378,7 +449,14 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	DateOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISODate());
 	TimeOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISOTime());
 	AlgorithmStaticText->SetLabel(findparticles_panel->ReturnNameOfPickingAlgorithm(picking_algorithm));
-	ManualEditStaticText->SetLabel("no");
+	if (manual_edit == 1)
+	{
+		ManualEditStaticText->SetLabel("yes");
+	}
+	else
+	{
+		ManualEditStaticText->SetLabel("no");
+	}
 	ThresholdStaticText->SetLabel(wxString::Format("%0.1f",threshold_peak_height));
 	MaximumRadiusStaticText->SetLabel(wxString::Format("%0.1f A",maximum_radius));
 	CharacteristicRadiusStaticText->SetLabel(wxString::Format("%0.1f A",characteristic_radius));
@@ -418,34 +496,22 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 
 
 	// Get the coordinates of picked particles
-
-	int number_of_particles = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select count(*) from particle_picking_results_%i where parent_image_asset_id = %i",current_picking_job_id,current_image_id));
-	double *x_coordinates;
-	double *y_coordinates;
-	x_coordinates = new double[number_of_particles];
-	y_coordinates = new double[number_of_particles];
+	ArrayOfParticlePositionAssets array_of_particle_positions = main_frame->current_project.database.ReturnArrayOfParticlePositionAssetsFromResultsTable(current_picking_job_id,current_image_id);
 
 	float maximum_radius_of_particle = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select maximum_radius from particle_picking_list where picking_job_id = %i",current_picking_job_id));
 	float pixel_size = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from image_assets where image_asset_id = %i",current_image_id));
 
-	if (number_of_particles > 0)
-	{
-		keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select x_position, y_position from particle_picking_results_%i where parent_image_asset_id = %i",current_picking_job_id,current_image_id));
-		if (!keep_going)
-		{
-			MyPrintWithDetails("Error dealing with results table");
-			abort();
-		}
-		for (int counter = 0; counter < number_of_particles; counter ++ )
-		{
-			main_frame->current_project.database.GetFromBatchSelect("rr",&x_coordinates[counter],&y_coordinates[counter]);
-		}
-		main_frame->current_project.database.EndBatchSelect();
-	}
-
-	ResultDisplayPanel->Draw(parent_image_filename,number_of_particles,x_coordinates,y_coordinates,maximum_radius_of_particle, pixel_size);
+	ResultDisplayPanel->Draw(parent_image_filename,array_of_particle_positions, maximum_radius_of_particle, pixel_size);
 	RightPanel->Layout();
 
+}
+
+bool MyPickingResultsPanel::CheckBoxIsChecked(const int row, const int column)
+{
+	wxVariant temp_variant;
+	ResultDataView->GetValue(temp_variant, row, column);
+	long value = temp_variant.GetLong();
+	return value == CHECKED_WITH_EYE || value == CHECKED;
 }
 
 void MyPickingResultsPanel::OnValueChanged(wxDataViewEvent &event)
@@ -470,11 +536,12 @@ void MyPickingResultsPanel::OnValueChanged(wxDataViewEvent &event)
 			old_selected_row = selected_row;
 			old_selected_column = selected_column;
 
+			UpdateResultsFromBitmapPanel(old_selected_row,old_selected_column);
+
 			selected_row = row;
 			selected_column = column;
 
 			FillResultsPanelAndDetails(row, column);
-			//wxPrintf("drawing curve\n");
 
 		}
 		else // This is dodgy, and relies on the fact that a box will be deselected, before a new box is selected...

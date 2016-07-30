@@ -1,21 +1,21 @@
 #include "../core/gui_core_headers.h"
 
-int compare_particle_coordinate_using_x( particle_coordinate **first, particle_coordinate **second)
+int compare_particle_position_asset_using_x( ParticlePositionAsset **first, ParticlePositionAsset **second)
 {
-	if (first[0]->x < second[0]->x)
+	if (first[0]->x_position < second[0]->x_position)
 	{
 		return -1;
 	}
 	else
 	{
-		if (first[0]->x > second[0]->x) return 1;
+		if (first[0]->x_position > second[0]->x_position) return 1;
 		return 0;
 	}
 }
 
 
 #include <wx/arrimpl.cpp>
-WX_DEFINE_OBJARRAY(ArrayOfCoordinates);
+WX_DEFINE_OBJARRAY(ArrayOfCoordinatesHistory);
 
 PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
 : wxPanel(parent, id, pos, size, style, name)
@@ -45,12 +45,11 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	image_in_memory_filename = "";
 	image_in_memory_pixel_size = 0.0;
 
+
 	draw_circles_around_particles = true;
-	number_of_particles = 0;
+	//number_of_particles = 0;
 	radius_of_circles_around_particles_in_angstroms = 0.0;
-	//particle_coordinates_x_in_angstroms = NULL;
-	//particle_coordinates_y_in_angstroms = NULL;
-	//particle_coordinates_in_angstroms = NULL;
+	squared_radius_of_circles_around_particles_in_angstroms = 0.0;
 
 	draw_scale_bar = true;
 	should_high_pass = true;
@@ -66,6 +65,10 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	selection_rectangle_start_y_in_angstroms = 0.0;
 	selection_rectangle_finish_x_in_angstroms = 0.0;
 	selection_rectangle_finish_y_in_angstroms = 0.0;
+	clicked_point_x = 0;
+	clicked_point_y = 0;
+	clicked_point_x_in_angstroms = 0.0;
+	clicked_point_y_in_angstroms = 0.0;
 
 
 }
@@ -80,7 +83,7 @@ PickingBitmapPanel::~PickingBitmapPanel()
 	Unbind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
 
 	particle_coordinates_in_angstroms.Empty();
-
+	EmptyHistoryOfParticleCoordinates();
 }
 
 void PickingBitmapPanel::Clear()
@@ -91,7 +94,22 @@ void PickingBitmapPanel::Clear()
     dc.Clear();
     image_in_memory.Deallocate();
     image_in_bitmap.Deallocate();
+    particle_coordinates_in_angstroms.Empty();
+    EmptyHistoryOfParticleCoordinates();
     Thaw();
+}
+
+void PickingBitmapPanel::EmptyHistoryOfParticleCoordinates()
+{
+	extern MyPickingResultsPanel *picking_results_panel;
+
+	for (size_t counter = 0; counter < particle_coordinates_in_angstroms_history.GetCount(); counter ++ )
+	{
+		particle_coordinates_in_angstroms_history.Item(counter).Empty();
+	}
+	particle_coordinates_in_angstroms_history.Empty();
+	picking_results_panel->ResultDisplayPanel->UndoButton->Enable(false);
+	picking_results_panel->ResultDisplayPanel->RedoButton->Enable(false);
 }
 
 void PickingBitmapPanel::OnEraseBackground(wxEraseEvent& event)
@@ -99,64 +117,123 @@ void PickingBitmapPanel::OnEraseBackground(wxEraseEvent& event)
 
 }
 
-void PickingBitmapPanel::AllocateMemoryForParticleCoordinates(const int wanted_number_of_particles)
+void PickingBitmapPanel::ResetHistory()
 {
-	if (wanted_number_of_particles != number_of_particles)
-	{
-		//delete [] particle_coordinates_x_in_angstroms;
-		//delete [] particle_coordinates_y_in_angstroms;
-		//delete [] particle_coordinates_in_angstroms;
-		//particle_coordinates_x_in_angstroms = new float [wanted_number_of_particles];
-		//particle_coordinates_y_in_angstroms = new float [wanted_number_of_particles];
-		//particle_coordinates_in_angstroms = new particle_coordinate[wanted_number_of_particles];
-		particle_coordinates_in_angstroms.Alloc(wanted_number_of_particles);
-		number_of_particles = wanted_number_of_particles;
-	}
-
+	// Empty the history
+	EmptyHistoryOfParticleCoordinates();
+	particle_coordinates_in_angstroms_history.Add(particle_coordinates_in_angstroms);
+	current_step_in_history = 0;
 }
 
-void PickingBitmapPanel::SetParticleCoordinatesAndRadius(const int wanted_number_of_particles, const double *wanted_x, const double *wanted_y, const float wanted_radius_in_angstroms)
+void PickingBitmapPanel::SetParticleCoordinatesAndRadius(const ArrayOfParticlePositionAssets &array_of_assets, const float wanted_radius_in_angstroms)
 {
-	AllocateMemoryForParticleCoordinates(wanted_number_of_particles);
-
-	for (int counter = 0; counter < wanted_number_of_particles; counter ++ )
-	{
-		//particle_coordinates_x_in_angstroms[counter] = wanted_x[counter];
-		//particle_coordinates_y_in_angstroms[counter] = wanted_y[counter];
-		//particle_coordinates_in_angstroms[counter].x = wanted_x[counter];
-		//particle_coordinates_in_angstroms[counter].y = wanted_y[counter];
-		//particle_coordinates_in_angstroms.insert(particle_coordinates_in_angstroms.end(), particle_coordinate(float(wanted_x[counter]),float(wanted_y[counter])));
-		particle_coordinates_in_angstroms.Add(particle_coordinate(float(wanted_x[counter]),float(wanted_y[counter])));
-	}
-	particle_coordinates_in_angstroms.Sort(compare_particle_coordinate_using_x);
+	particle_coordinates_in_angstroms = array_of_assets;
 	radius_of_circles_around_particles_in_angstroms = wanted_radius_in_angstroms;
+	squared_radius_of_circles_around_particles_in_angstroms = powf(wanted_radius_in_angstroms,2);
+
+	ResetHistory();
 }
 
-void PickingBitmapPanel::RemoveParticleCoordinatesWithinRectangle()
+int PickingBitmapPanel::RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint()
 {
-
+	extern MyPickingResultsPanel *picking_results_panel;
+	Freeze();
+	SetCurrentAsLastStepInHistoryOfParticleCoordinates();
+	int number_of_removed_particles = 0;
 	size_t counter = particle_coordinates_in_angstroms.GetCount() - 1;
-	while (true)
+	if (draw_selection_rectangle)
 	{
-		if (ParticleCoordinatesShouldBeRemoved(particle_coordinates_in_angstroms.Item(counter))) particle_coordinates_in_angstroms.RemoveAt(counter);
-		if (counter == 0) break;
-		counter --;
+		while (true)
+		{
+			if (ParticleCoordinatesAreWithinRectangle(particle_coordinates_in_angstroms.Item(counter)))
+			{
+				particle_coordinates_in_angstroms.RemoveAt(counter);
+				number_of_removed_particles ++;
+			}
+			if (counter == 0) break;
+			counter --;
+		}
 	}
+	else
+	{
+		while (true)
+		{
+			if (ParticleCoordinatesAreNearClickedPoint(particle_coordinates_in_angstroms.Item(counter)))
+			{
+				particle_coordinates_in_angstroms.RemoveAt(counter);
+				number_of_removed_particles ++;
+			}
+			if (counter == 0) break;
+			counter --;
+		}
+	}
+	if (number_of_removed_particles > 0)
+	{
+		particle_coordinates_in_angstroms_history.Add(particle_coordinates_in_angstroms);
+		particle_coordinates_in_angstroms_history.Last().Shrink();
+		current_step_in_history ++;
+		picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
+	}
+	Thaw();
+	return number_of_removed_particles;
 
+}
+
+bool PickingBitmapPanel::ParticleCoordinatesAreWithinRectangle(const ParticlePositionAsset &particle_coordinates_to_check)
+{
+	return 	particle_coordinates_to_check.x_position >= selection_rectangle_start_x_in_angstroms &&
+			particle_coordinates_to_check.x_position <= selection_rectangle_finish_x_in_angstroms &&
+			particle_coordinates_to_check.y_position >= selection_rectangle_start_y_in_angstroms &&
+			particle_coordinates_to_check.y_position <= selection_rectangle_finish_y_in_angstroms;
+}
+
+bool PickingBitmapPanel::ParticleCoordinatesAreNearClickedPoint(const ParticlePositionAsset &particle_coordinates_to_check)
+{
+	return 	squared_radius_of_circles_around_particles_in_angstroms >= powf(particle_coordinates_to_check.x_position - clicked_point_x_in_angstroms,2) + powf(particle_coordinates_to_check.y_position - clicked_point_y_in_angstroms,2);
+}
+
+
+void PickingBitmapPanel::SetCurrentAsLastStepInHistoryOfParticleCoordinates()
+{
+	extern MyPickingResultsPanel *picking_results_panel;
+	if ( current_step_in_history < particle_coordinates_in_angstroms_history.GetCount()-1)
+	{
+		particle_coordinates_in_angstroms_history.RemoveAt(current_step_in_history+1,particle_coordinates_in_angstroms_history.GetCount()-current_step_in_history-1);
+	}
+	// Disable the redo button here
+	picking_results_panel->ResultDisplayPanel->RedoButton->Enable(false);
+}
+
+void PickingBitmapPanel::StepForwardInHistoryOfParticleCoordinates()
+{
+	extern MyPickingResultsPanel *picking_results_panel;
+	current_step_in_history ++;
+	particle_coordinates_in_angstroms = particle_coordinates_in_angstroms_history.Item(current_step_in_history);
+	if (current_step_in_history == particle_coordinates_in_angstroms_history.GetCount() - 1)
+	{
+		picking_results_panel->ResultDisplayPanel->RedoButton->Enable(false);
+	}
+	picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
 	Refresh();
 	Update();
-
 }
 
-bool PickingBitmapPanel::ParticleCoordinatesShouldBeRemoved(const particle_coordinate &particle_coordinates_to_check)
+void PickingBitmapPanel::StepBackwardInHistoryOfParticleCoordinates()
 {
-	return 	particle_coordinates_to_check.x >= selection_rectangle_start_x_in_angstroms &&
-			particle_coordinates_to_check.x <= selection_rectangle_finish_x_in_angstroms &&
-			particle_coordinates_to_check.y >= selection_rectangle_start_y_in_angstroms &&
-			particle_coordinates_to_check.y <= selection_rectangle_finish_y_in_angstroms;
+	extern MyPickingResultsPanel *picking_results_panel;
+	current_step_in_history --;
+	particle_coordinates_in_angstroms = particle_coordinates_in_angstroms_history.Item(current_step_in_history);
+	if (current_step_in_history == 0)
+	{
+		picking_results_panel->ResultDisplayPanel->UndoButton->Enable(false);
+	}
+	picking_results_panel->ResultDisplayPanel->RedoButton->Enable(true);
+	Refresh();
+	Update();
 }
 
-void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, float pixel_size)
+
+void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, const float &pixel_size)
 {
 	if (!wanted_filename.IsSameAs(image_in_memory_filename))
 	{
@@ -295,9 +372,8 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				dc.SetBrush( wxNullBrush );
 				for (int counter = 0; counter < particle_coordinates_in_angstroms.GetCount(); counter ++ )
 				{
-					x = particle_coordinates_in_angstroms.Item(counter).x;
-					y = particle_coordinates_in_angstroms.Item(counter).y;
-					//dc.DrawCircle(x_offset + bitmap_width - particle_coordinates_x_in_angstroms[counter] / image_in_bitmap_pixel_size, y_offset + particle_coordinates_y_in_angstroms[counter] / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+					x = particle_coordinates_in_angstroms.Item(counter).x_position;
+					y = particle_coordinates_in_angstroms.Item(counter).y_position;
 					dc.DrawCircle(bitmap_x_offset + bitmap_width - x / image_in_bitmap_pixel_size, bitmap_y_offset + y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
 				}
 			}
@@ -393,21 +469,53 @@ void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
 
 void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 {
-
+	extern MyPickingResultsPanel *picking_results_panel;
 	if (draw_selection_rectangle)
 	{
 		// Convert begin and end coordinates to Angstroms
-		//dc.DrawCircle(x_offset + bitmap_width - particle_coordinates_in_angstroms[counter].x / image_in_bitmap_pixel_size, y_offset + particle_coordinates_in_angstroms[counter].y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
-		selection_rectangle_start_x_in_angstroms 	= float(bitmap_x_offset + bitmap_width - std::max(selection_rectangle_start_x,selection_rectangle_current_x)) * image_in_bitmap_pixel_size;
-		selection_rectangle_finish_x_in_angstroms	= float(bitmap_x_offset + bitmap_width - std::min(selection_rectangle_start_x,selection_rectangle_current_x)) * image_in_bitmap_pixel_size;
-		selection_rectangle_start_y_in_angstroms 	= float(std::min(selection_rectangle_start_y,selection_rectangle_current_y) - bitmap_y_offset) * image_in_bitmap_pixel_size;
-		selection_rectangle_finish_y_in_angstroms 	= float(std::max(selection_rectangle_start_y,selection_rectangle_current_y) - bitmap_y_offset) * image_in_bitmap_pixel_size;
-		RemoveParticleCoordinatesWithinRectangle();
+		selection_rectangle_start_x_in_angstroms 	= PixelToAngstromX(std::max(selection_rectangle_start_x,selection_rectangle_current_x));
+		selection_rectangle_finish_x_in_angstroms	= PixelToAngstromX(std::min(selection_rectangle_start_x,selection_rectangle_current_x));
+		selection_rectangle_start_y_in_angstroms 	= PixelToAngstromY(std::min(selection_rectangle_start_y,selection_rectangle_current_y));
+		selection_rectangle_finish_y_in_angstroms 	= PixelToAngstromY(std::max(selection_rectangle_start_y,selection_rectangle_current_y));
+
+		if (allow_editing_of_coordinates) RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint();
 		draw_selection_rectangle = false;
+	}
+	else
+	{
+		event.GetPosition(&clicked_point_x,&clicked_point_y);
+		if (clicked_point_x > bitmap_x_offset && clicked_point_x < bitmap_x_offset + bitmap_width && clicked_point_y > bitmap_y_offset && clicked_point_y < bitmap_y_offset + bitmap_height)
+		{
+			clicked_point_x_in_angstroms = PixelToAngstromX(clicked_point_x);
+			clicked_point_y_in_angstroms = PixelToAngstromY(clicked_point_y);
+			if (allow_editing_of_coordinates)
+			{
+				int number_of_removed_coordinates = RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint();
+				if (number_of_removed_coordinates == 0)
+				{
+					// The user clicked to add a particle
+					particle_coordinates_in_angstroms.Add(ParticlePositionAsset(clicked_point_x_in_angstroms,clicked_point_y_in_angstroms));
+					SetCurrentAsLastStepInHistoryOfParticleCoordinates();
+					particle_coordinates_in_angstroms_history.Add(particle_coordinates_in_angstroms);
+					current_step_in_history++;
+					picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
+				}
+			}
+		}
 	}
 	Refresh();
 	Update();
 	event.Skip();
+}
+
+float PickingBitmapPanel::PixelToAngstromX(const int &x_in_pixels)
+{
+	return float(bitmap_x_offset + bitmap_width - x_in_pixels) * image_in_bitmap_pixel_size;
+}
+
+float PickingBitmapPanel::PixelToAngstromY(const int &y_in_pixels)
+{
+	return float(y_in_pixels - bitmap_y_offset) * image_in_bitmap_pixel_size;
 }
 
 void PickingBitmapPanel::OnMotion(wxMouseEvent & event)
@@ -422,4 +530,9 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent & event)
 	Refresh();
 	Update();
 	event.Skip();
+}
+
+bool PickingBitmapPanel::UserHasEditedParticleCoordinates()
+{
+	return current_step_in_history > 0;
 }

@@ -804,6 +804,7 @@ bool FindParticlesApp::DoCalculation()
 #endif
 	}
 
+	// Todo: use more appropriate objects to do this. Maybe ParticlePositionAssets, or wxArrays of floats
 	// Use will (mis)use Curve objects to keep track of our results
 	Curve results_x_y;
 	Curve results_height_template;

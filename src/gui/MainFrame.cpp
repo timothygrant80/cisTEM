@@ -168,20 +168,28 @@ void MyMainFrame::OnCollapseAll( wxCommandEvent& event )
 	//AssetTree->CollapseAll();
 }
 
-void MyMainFrame::OnMenuBookChange( wxListbookEvent& event )
+void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 {
 	// redo groups..
 
 	align_movies_panel->Refresh();
 	movie_results_panel->group_combo_is_dirty = true;
 
+	// We we were editing the particle picking results, and we move away from Results, we may need to do some database stuff
+	if ( event.GetOldSelection() == 3)
+	{
+		picking_results_panel->UpdateResultsFromBitmapPanel();
+	}
+
 }
+
 
 void MyMainFrame::DirtyEverything()
 {
 	DirtyMovieGroups();
 	DirtyImageGroups();
 	DirtyRunProfiles();
+	DirtyParticlePositionGroups();
 }
 
 void MyMainFrame::DirtyMovieGroups()

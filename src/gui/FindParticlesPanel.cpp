@@ -94,10 +94,152 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("Individual particles need to be located in each micrograph so that they may be used to compute a 3D reconstruction later. Ideally one would find all the particles and not make any erroneous selections. Several algorithms are available for particle selection: ab initio, swarm, template-based and manual."));
+	InfoText->WriteText(wxT("Individual particles need to be located in each micrograph so that they may be used to compute a 3D reconstruction later. Ideally one would find all the particles and not make any erroneous selections."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->WriteText(wxT("In the absence of a pre-existing 3D model, one can either select (click on) each particle manually, or use the 'ab initio' mode. In this mode, a template is genated internally, which consists of a cosine-shaped blob and then matched against each micrographs. This works reasonably well to find globular protein complexes, even though it is less accurate and more error-prone than template-based search strategy."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->WriteText(wxT(""));
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Program Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Input Group : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The group of image assets to estimate the CTF for."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Picking algorithm : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Choice of method for picking particles."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Run Profile : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Maximum radius : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("In Angstroms, the maximum radius of the particles to be found. This also determines the minimum distance between picks."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Threshold peak height : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Particle coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."));
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Program Options: ab initio mode"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Characteristic particle radius : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("In Angstroms, the radius within which most of the density is enclosed. This defines the radius at which the cosine-edge template reaches 0.5 (it is 1.0 at the origin and 0.0 at 1.5 * characteristic radius). A good default value might be half of the maximum radius."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Run Profile : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Expert Program Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Highest resolution used in picking : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information int the 'corners' of the Fourier transforms remains intact, so that there is some small risk of bias beyond this resolution."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Minimum distance from edges : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("No particle shall be picked closer than this distance from the edges of the micrograph. In pixels."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Avoid high-variance areas : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Avoid areas with abnormally high local variance. This can be effective in avoiding edges of support films or contamination."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Avoid areas with abnormal local means : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Avoid areas with abnormally low or high local mean. This can be effective to avoid picking from, e.g., contaminating ice crystals, support film."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Show estimated background spectrum : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Show 1D plot of the estimated background spectrum, which is used to build the whitening filter (see Sigworth, 2004, for details)"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Show positions of background boxes : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Plot the position of areas the algorithm selected as background. For optimal performance, none of these boxes should contain any particles."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Number of background boxes : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Number of background areas to use in estimating the background spectrum. The larger the number of boxes, the more accurate the estimate should be, provided that none of the background boxes contain any particles to be picked."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Algorithm to find background areas : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Testing so far suggests that areas of lowest variance in experimental micrographs should be used to estimate the background spectrum. However, when using synthetic micrographs this can lead to bias in the spectrum estimation and the alternative (areas with local variances near the mean of the distribution of local variances) seems to perform better"));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("References"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Sigworth F.J."));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2004. Classical detection theory and the cryo-EM particle selection problem. J. Struct. Biol. 192, 216–221. "));
+	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2003.10.025");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/j.jsb.2003.10.025"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
 
 	InfoText->EndSuppressUndo();
 
@@ -423,7 +565,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 															acceleration_voltage,
 															spherical_aberration,
 															amplitude_contrast,
-															additional_phase_shift,
+															additional_phase_shift, // 5
 															defocus_1,
 															defocus_2,
 															astigmatism_angle,
@@ -432,7 +574,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 															average_templates_radially,
 															number_of_template_rotations,
 															typical_radius,
-															maximum_radius,
+															maximum_radius, // 14
 															highest_resolution_to_use,
 															output_stack_filename.c_str(),
 															output_stack_box_size,
@@ -485,6 +627,7 @@ my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_prof
 		ExpertOptionsPanel->Show(false);
 		InfoPanel->Show(false);
 		OutputTextPanel->Show(true);
+		PickingResultsPanel->Show(true);
 
 		ExpertToggleButton->Enable(false);
 		GroupComboBox->Enable(false);
@@ -510,7 +653,7 @@ void MyFindParticlesPanel::FinishButtonClick( wxCommandEvent& event )
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
-	//CTFResultsPanel->Show(false);
+	PickingResultsPanel->Show(false);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 
@@ -828,8 +971,20 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process) // this 
 	int frame_counter;
 
 	long current_time = time(NULL);
-	wxString bitmap_string;
-	wxString plot_string;
+	//wxString bitmap_string;
+	//wxString plot_string;
+
+
+	if (current_time - time_of_last_result_update > 5)
+	{
+		wxString image_filename = my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument();
+		ArrayOfParticlePositionAssets array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
+		float radius_in_angstroms = my_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
+		float pixel_size_in_angstroms = my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnFloatArgument();
+		PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
+		PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
+	}
+
 
 	my_job_tracker.MarkJobFinished();
 //	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -890,7 +1045,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 
 	// Record the parameters we used to pick
-	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",13,
+	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
 																						"PICKING_ID",
 																						"PICKING_JOB_ID",
 																						"DATETIME_OF_RUN",
@@ -903,11 +1058,12 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 																						"MIN_DIST_FROM_EDGES",
 																						"AVOID_HIGH_VARIANCE",
 																						"AVOID_HIGH_LOW_MEAN",
-																						"NUM_BACKGROUND_BOXES");
+																						"NUM_BACKGROUND_BOXES",
+																						"MANUAL_EDIT");
 	picking_id = starting_picking_id + 1;
 	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 	{
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiii", 			picking_id,
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiiii", 		picking_id,
 																						picking_job_id,
 																						(long int) now.GetAsDOS(),
 																						image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetCurrentSelection(),counter),
@@ -919,7 +1075,8 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 																						MinimumDistanceFromEdgesSpinCtrl->GetValue(),
 																						AvoidHighVarianceAreasCheckBox->GetValue(),
 																						AvoidAbnormalLocalMeanAreasCheckBox->GetValue(),
-																						NumberOfBackgroundBoxesSpinCtrl->GetValue());
+																						NumberOfBackgroundBoxesSpinCtrl->GetValue(),
+																						0);
 		picking_id ++;
 	}
 	main_frame->current_project.database.EndBatchInsert();
@@ -939,81 +1096,28 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	// Remove from particle_position_assets assets which have a parent_id which is from picking_job_id that we've just done
 	main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID(picking_job_id);
 
-	// Now store the actual coordinates in the PARTICLE_PICKING_RESULTS_*** tables
-	ParticlePositionAsset temp_asset;
-	temp_asset.parent_template_id = -1;
-	temp_asset.pick_job_id = picking_job_id;
-	temp_asset.template_phi = 0.0;
-	temp_asset.template_theta = 0.0;
-	temp_asset.template_psi = 0.0;
-	int address_within_results = 0;
-	picking_id = starting_picking_id + 1;
+
+	// Grab the results and build an array of particle position assets
+	ArrayOfParticlePositionAssets array_of_assets;
+	ArrayOfParticlePositionAssets temp_array_of_assets;
 	int starting_asset_id = 0;
-	if (starting_picking_id > 0)
-	{
-		starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
-	}
-	temp_asset.asset_id = starting_asset_id;
-	current_table_name = wxString::Format("PARTICLE_PICKING_RESULTS_%i",temp_asset.pick_job_id);
-	main_frame->current_project.database.CreateTable(current_table_name,"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");
-	main_frame->current_project.database.BeginBatchInsert(current_table_name,6,"POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
-	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
-	{
-		temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
-		temp_asset.picking_id = picking_id;
-
-		// Loop over all the picked coordinates
-		for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
-		{
-			address_within_results = particle_counter * 5;
-
-			// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
-			temp_asset.asset_id ++;
-			temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
-			temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
-
-			// Add results for this particle to the table
-			main_frame->current_project.database.AddToBatchInsert("iiirrr",temp_asset.asset_id,temp_asset.picking_id,temp_asset.parent_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
-		}
-		picking_id ++;
-	}
-	main_frame->current_project.database.EndBatchInsert();
-
-
-
-
-	// Store the results into the PARTICLE_POSITION_ASSETS table
-	temp_asset.parent_template_id = -1;
-	temp_asset.pick_job_id = picking_job_id;
-	temp_asset.template_phi = 0.0;
-	temp_asset.template_theta = 0.0;
-	temp_asset.template_psi = 0.0;
-	address_within_results = 0;
+	if (starting_picking_id > 0) starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
 	picking_id = starting_picking_id + 1;
-	temp_asset.asset_id = starting_asset_id;
-	main_frame->current_project.database.BeginBatchInsert("PARTICLE_POSITION_ASSETS",7,"PARTICLE_POSITION_ASSET_ID","PARENT_IMAGE_ASSET_ID","PICKING_ID","PICK_JOB_ID","X_POSITION","Y_POSITION","PEAK_HEIGHT");
 	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 	{
-
-		temp_asset.parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter);
-		temp_asset.picking_id = picking_id;
-
-		// Loop over all the picked coordinates
-		for (int particle_counter = 0; particle_counter < buffered_results[counter].result_size / 5; particle_counter ++ )
-		{
-			address_within_results = particle_counter * 5;
-
-			// Set up the asset. We use an ID that hasn't been used for any other position asset previously.
-			temp_asset.asset_id ++;
-			temp_asset.x_position = buffered_results[counter].result_data[address_within_results + 0];
-			temp_asset.y_position = buffered_results[counter].result_data[address_within_results + 1];
-
-			// Add results for this particle to the table
-			main_frame->current_project.database.AddToBatchInsert("iiiirrr",temp_asset.asset_id,temp_asset.parent_id,temp_asset.picking_id,temp_asset.pick_job_id,temp_asset.x_position,temp_asset.y_position,temp_asset.peak_height);
-		}
-		picking_id ++;
+		temp_array_of_assets = ParticlePositionsFromJobResults(&buffered_results[counter],image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter),picking_job_id,picking_id,starting_asset_id);
+		WX_APPEND_ARRAY(array_of_assets,temp_array_of_assets);
+		starting_asset_id += temp_array_of_assets.GetCount();
+		picking_id++;
 	}
-	main_frame->current_project.database.EndBatchInsert();
+
+
+
+	// Now that we have our array of assets, let's add them to the database
+	main_frame->current_project.database.CreateParticlePickingResultsTable(picking_job_id);
+	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToResultsTable(picking_job_id,&array_of_assets);
+	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&array_of_assets);
+
 
 
 	// At this point, the database should be up-to-date
@@ -1023,4 +1127,33 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	particle_position_asset_panel->is_dirty = true;
 	picking_results_panel->is_dirty = true;
 
+}
+
+ArrayOfParticlePositionAssets MyFindParticlesPanel::ParticlePositionsFromJobResults(JobResult *job_result, const int &parent_image_id, const int &picking_job_id, const int &picking_id, const int &starting_asset_id)
+{
+	ParticlePositionAsset temp_asset;
+	ArrayOfParticlePositionAssets array_of_assets;
+	int address_within_results = 0;
+
+
+	temp_asset.pick_job_id = picking_job_id;
+	temp_asset.asset_id = starting_asset_id;
+
+	temp_asset.parent_id = parent_image_id;
+	temp_asset.picking_id = picking_id;
+	// Loop over picked coordinates
+	for (int particle_counter = 0; particle_counter < job_result->result_size / 5; particle_counter ++ )
+	{
+		address_within_results = particle_counter * 5;
+		// Finish setting up the asset. We use an ID that hasn't been used for any other position asset previously.
+		temp_asset.asset_id ++;
+		temp_asset.x_position = job_result->result_data[address_within_results + 0];
+		temp_asset.y_position = job_result->result_data[address_within_results + 1];
+		temp_asset.peak_height = job_result->result_data[address_within_results + 2];
+
+		//
+		array_of_assets.Add(temp_asset);
+	}
+
+	return array_of_assets;
 }

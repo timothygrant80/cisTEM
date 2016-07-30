@@ -6,20 +6,23 @@
 #include <functional>
 #include <algorithm>
 
-
+/*
 struct particle_coordinate
 {
 	float x;
 	float y;
+	int id;
 	// Constructor
-	particle_coordinate(const int &wanted_x, const int &wanted_y)
+	particle_coordinate(const float &wanted_x, const float &wanted_y, const int &wanted_id)
 	{
 		x = wanted_x;
 		y = wanted_y;
+		id = wanted_id;
 	}
 };
+*/
 
-WX_DECLARE_OBJARRAY(particle_coordinate, ArrayOfCoordinates);
+WX_DECLARE_OBJARRAY(ArrayOfParticlePositionAssets,ArrayOfCoordinatesHistory);
 
 
 class PickingBitmapPanel : public wxPanel
@@ -27,6 +30,8 @@ class PickingBitmapPanel : public wxPanel
 public :
 	wxBitmap PanelBitmap; // buffer for the panel size
 	wxString panel_text;
+
+	ArrayOfParticlePositionAssets	particle_coordinates_in_angstroms;
 
 
 
@@ -41,12 +46,22 @@ public :
 
 
 
-	void AllocateMemoryForParticleCoordinates(const int number_of_particles);
-	void SetParticleCoordinatesAndRadius(const int number_of_particles, const double *wanted_x, const double *wanted_y, const float wanted_radius_in_angstroms);
-	void RemoveParticleCoordinatesWithinRectangle();
-	bool ParticleCoordinatesShouldBeRemoved(const particle_coordinate &particle_coordinates_to_check);
+	void SetParticleCoordinatesAndRadius(const ArrayOfParticlePositionAssets &array_of_assets, const float wanted_radius_in_angstroms);
+	int RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint();
+	bool ParticleCoordinatesAreWithinRectangle(const ParticlePositionAsset &particle_coordinates_to_check);
+	bool ParticleCoordinatesAreNearClickedPoint(const ParticlePositionAsset &particle_coordinates_to_check);
+	void EmptyHistoryOfParticleCoordinates();
+	void StepForwardInHistoryOfParticleCoordinates();
+	void StepBackwardInHistoryOfParticleCoordinates();
+	void SetCurrentAsLastStepInHistoryOfParticleCoordinates();
+	float PixelToAngstromX(const int &x_in_pixels);
+	float PixelToAngstromY(const int &y_in_pixels);
 
-	void SetImageFilename(wxString wanted_filename, float pixel_size);
+	bool UserHasEditedParticleCoordinates();
+	void ResetHistory();
+
+
+	void SetImageFilename(wxString wanted_filename, const float &pixel_size);
 	void UpdateScalingAndDimensions();
 	void UpdateImageInBitmap( bool force_reload = false );
 
@@ -75,8 +90,9 @@ private:
 	float		image_in_memory_pixel_size;
 
 	float 										radius_of_circles_around_particles_in_angstroms;
-	ArrayOfCoordinates							particle_coordinates_in_angstroms;
-	int 										number_of_particles;
+	float 										squared_radius_of_circles_around_particles_in_angstroms;
+	ArrayOfCoordinatesHistory					particle_coordinates_in_angstroms_history; // for storing undo history
+	size_t										current_step_in_history;
 
 	//
 	bool		draw_selection_rectangle;
@@ -88,6 +104,10 @@ private:
 	float		selection_rectangle_start_y_in_angstroms;
 	float		selection_rectangle_finish_x_in_angstroms;
 	float		selection_rectangle_finish_y_in_angstroms;
+	int			clicked_point_x;
+	int			clicked_point_y;
+	float		clicked_point_x_in_angstroms;
+	float		clicked_point_y_in_angstroms;
 
 	//
 	int 		bitmap_x_offset;

@@ -208,6 +208,23 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 
 ParticlePositionAsset::ParticlePositionAsset()
 {
+	Reset();
+}
+
+ParticlePositionAsset::ParticlePositionAsset(const float &wanted_x_in_angstroms, const float &wanted_y_in_angstroms)
+{
+	Reset();
+	x_position = wanted_x_in_angstroms;
+	y_position = wanted_y_in_angstroms;
+}
+
+ParticlePositionAsset::~ParticlePositionAsset()
+{
+	//Don't have to do anything for now
+}
+
+void ParticlePositionAsset::Reset()
+{
 	asset_id = -1;
 	parent_id = -1;
 	picking_id = -1;
@@ -222,12 +239,6 @@ ParticlePositionAsset::ParticlePositionAsset()
 
 
 	filename = wxEmptyString;
-
-}
-
-ParticlePositionAsset::~ParticlePositionAsset()
-{
-	//Don't have to do anything for now
 }
 
 
@@ -246,6 +257,9 @@ void ParticlePositionAsset::CopyFrom(Asset *other_asset)
 	template_theta = casted_asset->template_theta;
 	template_psi = casted_asset->template_psi;
 }
+
+#include <wx/arrimpl.cpp>
+WX_DEFINE_OBJARRAY(ArrayOfParticlePositionAssets);
 
 // Volume asset///
 

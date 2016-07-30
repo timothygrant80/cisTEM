@@ -43,6 +43,8 @@ public:
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);
 
+		ArrayOfParticlePositionAssets ParticlePositionsFromJobResults(JobResult *job_result, const int &parent_image_id, const int &picking_job_id, const int &picking_id, const int &starting_asset_id);
+
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 

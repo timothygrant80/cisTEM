@@ -69,6 +69,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	clicked_point_y = 0;
 	clicked_point_x_in_angstroms = 0.0;
 	clicked_point_y_in_angstroms = 0.0;
+	current_step_in_history = 0;
 
 
 }
@@ -221,6 +222,7 @@ void PickingBitmapPanel::StepForwardInHistoryOfParticleCoordinates()
 void PickingBitmapPanel::StepBackwardInHistoryOfParticleCoordinates()
 {
 	extern MyPickingResultsPanel *picking_results_panel;
+	MyDebugAssertTrue(current_step_in_history > 0,"Ooops, cannot step back in history when at step %i\n",current_step_in_history);
 	current_step_in_history --;
 	particle_coordinates_in_angstroms = particle_coordinates_in_angstroms_history.Item(current_step_in_history);
 	if (current_step_in_history == 0)

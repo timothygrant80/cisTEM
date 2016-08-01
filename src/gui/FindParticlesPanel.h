@@ -38,6 +38,7 @@ public:
 		void FinishButtonClick( wxCommandEvent& event );
 		void TerminateButtonClick( wxCommandEvent& event );
 		void OnAutoPickRefreshCheckBox( wxCommandEvent& event );
+		void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent & event );
 		void CheckWhetherGroupsCanBePicked();
 	//void Refresh();
 		void SetInfo();

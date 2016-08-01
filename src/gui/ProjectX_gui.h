@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -20,7 +20,6 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
-#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -562,7 +561,7 @@ class FindParticlesPanel : public JobPanel
 		wxStaticText* ExpertOptionsStaticText;
 		wxStaticText* HighestResolutionStaticText;
 		NumericTextCtrl* HighestResolutionNumericCtrl;
-		wxCheckBox* m_checkBox7;
+		wxCheckBox* SetMinimumDistanceFromEdgesCheckBox;
 		wxSpinCtrl* MinimumDistanceFromEdgesSpinCtrl;
 		wxCheckBox* m_checkBox8;
 		wxCheckBox* m_checkBox9;
@@ -596,6 +595,7 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnPickingAlgorithmComboBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoPickRefreshCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }

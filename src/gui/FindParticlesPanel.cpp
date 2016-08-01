@@ -340,6 +340,19 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 	}
 }
 
+void MyFindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent & event )
+{
+	if ( SetMinimumDistanceFromEdgesCheckBox->GetValue())
+	{
+		MinimumDistanceFromEdgesSpinCtrl->Enable(true);
+	}
+	else
+	{
+		MinimumDistanceFromEdgesSpinCtrl->Enable(false);
+	}
+	Layout();
+}
+
 void MyFindParticlesPanel::FillRunProfileComboBox()
 {
 	int old_selection = 0;
@@ -758,11 +771,11 @@ void MyFindParticlesPanel::CheckWhetherGroupsCanBePicked()
 			// We start by assuming the current group can be picked
 			image_asset_panel->all_groups_list->groups[group_counter].can_be_picked = true;
 
-			number_of_images_in_group = image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection());
+			number_of_images_in_group = image_asset_panel->ReturnGroupSize(group_counter);
 
 			for ( int counter_in_group = 0; counter_in_group < number_of_images_in_group; counter_in_group ++ )
 			{
-				current_image_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetCurrentSelection(),counter_in_group);
+				current_image_id = image_asset_panel->ReturnGroupMemberID(group_counter,counter_in_group);
 				current_image_has_estimate = false;
 				for ( int counter_in_estimates = 0; counter_in_estimates < number_of_images_with_ctf_estimates; counter_in_estimates ++ )
 				{
@@ -983,6 +996,8 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process) // this 
 		float pixel_size_in_angstroms = my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnFloatArgument();
 		PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
 		PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
+
+		time_of_last_result_update = time(NULL);
 	}
 
 

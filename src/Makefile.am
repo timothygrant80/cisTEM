@@ -23,7 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr find_particles montage
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -177,3 +177,9 @@ montage_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 montage_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 montage_LDFLAGS = $(WX_LIBS_BASE)
 montage_LDADD = libcore.a
+
+extract_particles_SOURCES = programs/extract_particles/extract_particles.cpp
+extract_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+extract_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+extract_particles_LDFLAGS = $(WX_LIBS_BASE)
+extract_particles_LDADD = libcore.a

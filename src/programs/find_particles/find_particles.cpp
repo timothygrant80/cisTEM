@@ -68,8 +68,8 @@ void FindParticlesApp::DoInteractiveUserInput()
 	}
 	float		maximum_radius						=	my_input->GetFloatFromUser("Maximum radius of the particle (in Angstroms)","The maximum radius of the templates, in angstroms","32.0",0.0);
 	float		highest_resolution_to_use			=	my_input->GetFloatFromUser("Highest resolution to use for picking","In Angstroms. Data at higher resolutions will be ignored in the picking process","15.0",pixel_size * 2.0);
-	wxString	output_stack_filename				=	my_input->GetFilenameFromUser("Filename for output stack of candidate particles","A stack of candidate particles will be written to disk","candidate_particles.mrc",false);
-	int			output_stack_box_size				=	my_input->GetIntFromUser("Box size for output candidate particle images (pixels)","In pixels","256",0);
+	wxString	output_stack_filename				=	my_input->GetFilenameFromUser("Filename for output stack of candidate particles.","A stack of candidate particles will be written to disk","candidate_particles.mrc",false);
+	int			output_stack_box_size				=	my_input->GetIntFromUser("Box size for output candidate particle images (pixels)","In pixels. Give 0 to skip writing particle images to disk.","256",0);
 	int			minimum_distance_from_edges			=	my_input->GetIntFromUser("Minimum distance from edge (pixels)","In pixels, the minimum distance between the center of a box and the edge of the micrograph","129",0);
 	float		picking_threshold					=	my_input->GetFloatFromUser("Picking threshold","The minimum peak height for candidate particles. In numbers of background noise standard deviations. Typically in the 3.0 to 15.0 range. For micrographs with good contrast, give higher values to avoid spurious peaks.","8.0",0.0);
 	bool		avoid_high_variance_areas			=	my_input->GetYesNoFromUser("Avoid high variance areas?","Areas with abnormally high local variance should be avoided. This often works well to avoid the edges of support film, ice crystals etc.","yes");
@@ -145,15 +145,6 @@ bool FindParticlesApp::DoCalculation()
 	const int	algorithm_to_find_background				=	my_current_job.arguments[22].ReturnIntegerArgument();
 	const int   number_of_background_boxes					=	my_current_job.arguments[23].ReturnIntegerArgument();
 
-	wxPrintf("DEBUG: finished job arguments\n");
-
-	wxPrintf("Micrograph : %s\n",micrograph_filename);
-	wxPrintf("Psize: %f\n",original_micrograph_pixel_size);
-	wxPrintf("CTF : %f %f %f %f %f %f\n", acceleration_voltage_in_keV, spherical_aberration_in_mm, amplitude_contrast, defocus_1_in_angstroms, defocus_2_in_angstroms, astigmatism_angle_in_degrees);
-	wxPrintf("typical, max rad = %f %f\n", typical_radius_in_angstroms, maximum_radius_in_angstroms);
-	wxPrintf("Num back boxes: %i\n",number_of_background_boxes);
-	wxPrintf("Algorithm for background: %i\n",algorithm_to_find_background);
-	wxPrintf("Number of back boxes: %i\n",number_of_background_boxes);
 
 	// Parameters which could be set by the user
 	const int number_of_background_boxes_to_skip = 0;
@@ -829,13 +820,13 @@ bool FindParticlesApp::DoCalculation()
 		if (number_of_candidate_particles == 0) highest_peak = my_peak.value;
 		// We have found a candidate particle
 		number_of_candidate_particles ++;
-		if (number_of_candidate_particles == 1)
+		if (number_of_candidate_particles == 1 )
 		{
-			output_stack.OpenFile(output_stack_filename.ToStdString(),true);
+			if (output_stack_box_size > 0) output_stack.OpenFile(output_stack_filename.ToStdString(),true);
 			output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 3);
 		}
-		micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
-		box.WriteSlice(&output_stack,number_of_candidate_particles);
+		if (output_stack_box_size > 0) micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
+		if (output_stack_box_size > 0) box.WriteSlice(&output_stack,number_of_candidate_particles);
 		// Zero an area around this peak to ensure we don't pick again near there
 		int coo_to_ignore_x, coo_to_ignore_y;
 		coo_to_ignore_x = int(my_peak.x) + maximum_score.physical_address_of_box_center_x;

@@ -500,7 +500,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	float		maximum_radius = MaximumParticleRadiusNumericCtrl->ReturnValue();
 	float		highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();
 	std::string	output_stack_filename;
-	int			output_stack_box_size = 256;
+	int			output_stack_box_size = 0;
 	int			minimum_distance_from_edges = 128;
 	float		picking_threshold = ThresholdPeakHeightNumericCtrl->ReturnValue();
 	int			number_of_previous_picks;

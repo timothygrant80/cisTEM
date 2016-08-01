@@ -116,8 +116,6 @@ void FindParticlesApp::DoInteractiveUserInput()
 bool FindParticlesApp::DoCalculation()
 {
 
-	wxPrintf("DEBUG: in FindParticlesApp::DoCalculation()\n");
-
 	ProgressBar *my_progress_bar;
 	EmpiricalDistribution my_dist;
 

@@ -349,7 +349,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		my_dialog->Update(6);
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
 		my_dialog->Update(7);
-		picking_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT PARENT_IMAGE_ASSET_ID FROM PARTICLE_PICKING_LIST");
+		picking_results_panel->OnProjectOpen();
 		my_dialog->Update(8);
 		DirtyEverything();
 		my_dialog->Destroy();
@@ -380,6 +380,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	run_profiles_panel->Reset();
 	movie_results_panel->Clear();
 	ctf_results_panel->Clear();
+	picking_results_panel->OnProjectClose();
 
 
 	SetTitle("ProjectX");

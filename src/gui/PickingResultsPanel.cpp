@@ -32,6 +32,23 @@ PickingResultsPanel( parent )
 
 }
 
+MyPickingResultsPanel::~MyPickingResultsPanel()
+{
+	// The destrictor is called when the application is closed, so we need to make sure we've saved any manual edits to the database
+	UpdateResultsFromBitmapPanel();
+}
+
+void MyPickingResultsPanel::OnProjectOpen()
+{
+	FillBasedOnSelectCommand("SELECT DISTINCT PARENT_IMAGE_ASSET_ID FROM PARTICLE_PICKING_LIST");
+}
+
+void MyPickingResultsPanel::OnProjectClose()
+{
+	UpdateResultsFromBitmapPanel();
+	Clear();
+}
+
 void MyPickingResultsPanel::FillGroupComboBox()
 {
 	GroupComboBox->Freeze();

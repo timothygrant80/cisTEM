@@ -2,6 +2,10 @@ class MyPickingResultsPanel : public PickingResultsPanel
 {
 	public:
 		MyPickingResultsPanel( wxWindow* parent );
+		~MyPickingResultsPanel();
+
+		void OnProjectOpen();
+		void OnProjectClose();
 
 		void OnDefineFilterClick( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );

@@ -1,13 +1,13 @@
 #include "core_headers.h"
 
-ReconstructedVolume::ReconstructedVolume()
+ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa)
 {
 	has_been_initialized = false;
 	mask_volume_in_voxels = 0.0;
-	molecular_mass_in_kDa = 0.0;
+	molecular_mass_in_kDa = wanted_molecular_mass_in_kDa;
 	has_masked_applied = false;
 	was_corrected = false;
-	has_statistics = false;
+//	has_statistics = false;
 	has_been_filtered = false;
 	pixel_size = 0.0;
 	symmetry_symbol = "C1";
@@ -32,7 +32,6 @@ ReconstructedVolume::~ReconstructedVolume()
 {
 	Deallocate();
 }
-
 
 ReconstructedVolume & ReconstructedVolume::operator = (const ReconstructedVolume &other_volume)
 {
@@ -67,11 +66,11 @@ ReconstructedVolume & ReconstructedVolume::operator = (const ReconstructedVolume
 
 		mask_volume_in_voxels = other_volume->mask_volume_in_voxels;
 		molecular_mass_in_kDa = other_volume->molecular_mass_in_kDa;
-		statistics = other_volume->statistics;
+//		statistics = other_volume->statistics;
 
 		has_masked_applied = other_volume->has_masked_applied;
 		was_corrected = other_volume->was_corrected;
-		has_statistics = other_volume->has_statistics;
+//		has_statistics = other_volume->has_statistics;
 		has_been_filtered = other_volume->has_been_filtered;
 
    }
@@ -96,7 +95,7 @@ void ReconstructedVolume::InitWithReconstruct3D(Reconstruct3D &image_reconstruct
 	pixel_size = wanted_pixel_size;
 	symmetry_symbol = image_reconstruction.symmetry_matrices.symmetry_symbol;
 	symmetry_matrices.Init(image_reconstruction.symmetry_matrices.symmetry_symbol);
-	statistics.Init(wanted_pixel_size);
+//	statistics.Init(wanted_pixel_size);
 	has_been_initialized = true;
 	current_projection.Allocate(image_reconstruction.logical_x_dimension, image_reconstruction.logical_y_dimension, 1, false);
 	current_projection.object_is_centred_in_box = false;
@@ -109,7 +108,7 @@ void ReconstructedVolume::InitWithDimensions(int wanted_logical_x_dimension, int
 	pixel_size = wanted_pixel_size;
 	symmetry_symbol = wanted_symmetry_symbol;
 	symmetry_matrices.Init(wanted_symmetry_symbol);
-	statistics.Init(wanted_pixel_size);
+//	statistics.Init(wanted_pixel_size);
 	has_been_initialized = true;
 	current_projection.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
 	current_projection.object_is_centred_in_box = false;
@@ -273,7 +272,9 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 //						reconstruction.ctf_reconstruction[pixel_counter], reconstruction.weights_reconstruction[pixel_counter], reconstruction.number_of_measurements[pixel_counter]);
 //					}
 
-					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 1.0);
+					// Use 100.0 as Wiener constant for 3DSimple since the SSNR near the resolution limit of high-resolution reconstructions is often close to 0.01.
+					// The final result is not strongly dependent on this constant and therefore, a value of 100.0 is a sufficiently good estimate.
+					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 100.0);
 //																		/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
 				}
 				else
@@ -286,10 +287,10 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 	}
 }
 
-void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, float pssnr_correction_factor)
+void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics)
 {
 	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");
-	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
+//	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
 	MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension() / 2 + 1) * sqrtf(3.0)) + 1 == statistics.part_SSNR.number_of_points, "Error: part_SSNR table incompatible with volume");
 
 	int i;
@@ -303,6 +304,10 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, floa
 	float y;
 	float z;
 	float frequency_squared;
+	float particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
+	float pssnr_correction_factor = density_map.ReturnVolumeInRealSpace() / (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3))
+			* particle_area_in_pixels / density_map.logical_x_dimension / density_map.logical_y_dimension;
+
 
 	int number_of_bins2 = reconstruction.image_reconstruction.ReturnSmallestLogicalDimension();
 
@@ -316,6 +321,7 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, floa
 	for (i = 0; i < statistics.part_SSNR.number_of_points; i++)
 	{
 		wiener_constant[i] = 1.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
+//		wiener_constant[i] = 32.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
 	}
 
 	for (k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++)
@@ -377,126 +383,103 @@ float ReconstructedVolume::Correct3D(float mask_radius)
 	return density_map.Correct3D(mask_radius);
 }
 
-void ReconstructedVolume::OptimalFilter()
+void ReconstructedVolume::OptimalFilter(ResolutionStatistics &statistics)
 {
 	density_map.OptimalFilterFSC(statistics.part_FSC);
 	was_corrected = true;
 }
 
-void ReconstructedVolume::PrintStatistics()
+void ReconstructedVolume::FinalizeSimple(Reconstruct3D &reconstruction, int &original_box_size, float &original_pixel_size, float &pixel_size,
+		float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff, wxString &output_volume)
 {
-	MyDebugAssertTrue(has_statistics, "Resolution statistics have not been fully calculated");
+	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
+	int box_size = reconstruction.logical_x_dimension;
+	MRCFile output_file;
 
-	int number_of_bins = density_map.ReturnSmallestLogicalDimension() / 2 + 1;
-	wxPrintf("C                                             Sqrt       Sqrt  \n");
-	wxPrintf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
-	for (int i = 1; i < number_of_bins; i++)
+	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	Calculate3DSimple(reconstruction);
+	density_map.SwapRealSpaceQuadrants();
+	if (intermediate_box_size != box_size)
 	{
-		wxPrintf("%5i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n",i + 1, statistics.FSC.data_x[i], pixel_size / statistics.FSC.data_x[i],
-															statistics.FSC.data_y[i], statistics.part_FSC.data_y[i],
-															sqrtf(statistics.part_SSNR.data_y[i]), sqrtf(statistics.rec_SSNR.data_y[i]));
+		density_map.BackwardFFT();
+		density_map.Resize(intermediate_box_size, intermediate_box_size,
+				intermediate_box_size, density_map.ReturnAverageOfRealValuesOnEdges());
+		density_map.ForwardFFT();
 	}
+	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
+	density_map.BackwardFFT();
+	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+//	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
+	output_file.OpenFile(output_volume.ToStdString(), true);
+	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);
+	output_file.SetPixelSize(original_pixel_size);
+	output_file.CloseFile();
+	density_map.ForwardFFT();
 }
 
-void ReconstructedVolume::WriteStatisticsToFile(NumericTextFile &output_statistics_file)
+void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
+		float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
+		wxString &output_volume, NumericTextFile &output_statistics)
 {
-	MyDebugAssertTrue(has_statistics, "Resolution statistics have not been fully calculated");
+	int original_box_size = density_map_1.logical_x_dimension;
+	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
+	int box_size = reconstruction.logical_x_dimension;
+	float binning_factor = pixel_size / original_box_size;
+	float particle_area_in_pixels;
+	float mask_volume_fraction;
+	float resolution_limit = 0.0;
+	MRCFile output_file;
+	ResolutionStatistics statistics(original_pixel_size, original_box_size);
+	ResolutionStatistics cropped_statistics(pixel_size, box_size);
+	ResolutionStatistics temp_statistics(pixel_size, intermediate_box_size);
 
-	int number_of_bins = density_map.ReturnSmallestLogicalDimension() / 2 + 1;
-	float temp_float[7];
+	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
-//	NumericTextFile output_statistics_file(output_file, OPEN_TO_WRITE, 7);
-	output_statistics_file.WriteCommentLine("C        SHELL     RESOLUTION    RING_RADIUS            FSC       Part_FSC  Part_SSNR^0.5   Rec_SSNR^0.5");
-	for (int i = 1; i < number_of_bins; i++)
+	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	statistics.CalculateFSC(density_map_1, density_map_2);
+	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
+	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
+	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;
+	if (intermediate_box_size != box_size && binning_factor != 1.0)
 	{
-		temp_float[0] = float(i+1);
-		temp_float[1] = statistics.FSC.data_x[i];
-		temp_float[2] = pixel_size / statistics.FSC.data_x[i];
-		temp_float[3] = statistics.FSC.data_y[i];
-		temp_float[4] = statistics.part_FSC.data_y[i];
-		temp_float[5] = sqrtf(statistics.part_SSNR.data_y[i]);
-		temp_float[6] = sqrtf(statistics.rec_SSNR.data_y[i]);
-
-		output_statistics_file.WriteLine(temp_float);
+		temp_statistics.CopyFrom(statistics);
+		cropped_statistics.ResampleFrom(temp_statistics);
 	}
-}
-
-void ReconstructedVolume::ReadStatisticsFromFile(wxString input_file)
-{
-	int i;
-	float temp_float[10];
-	float resolution;
-	int number_of_bins2 = density_map.ReturnSmallestLogicalDimension();
-	int number_of_bins_extended = int((number_of_bins2 / 2 + 1) * sqrtf(3.0)) + 1;
-
-	if (! DoesFileExist(input_file))
+	else
 	{
-		MyPrintWithDetails("Error: Statistics file not found\n");
-		abort();
+		cropped_statistics.CopyFrom(statistics);
 	}
-	NumericTextFile my_statistics(input_file, OPEN_TO_READ);
-
-	statistics.FSC.AddPoint(0.0, 1.0);
-	statistics.part_FSC.AddPoint(0.0, 1.0);
-	statistics.part_SSNR.AddPoint(0.0, 1000.0);
-	statistics.rec_SSNR.AddPoint(0.0, 1000.0);
-
-	for (i = 1; i <= my_statistics.number_of_lines; i++)
+	cropped_statistics.CalculateParticleSSNR(reconstruction.image_reconstruction, reconstruction.ctf_reconstruction, mask_volume_fraction);
+	if (intermediate_box_size != box_size && binning_factor != 1.0)
 	{
-		my_statistics.ReadLine(temp_float);
-		resolution = pixel_size / float(i) * float(number_of_bins2);
-		if (fabsf(resolution - temp_float[1]) > 0.1)
-		{
-			MyPrintWithDetails("Statistics file not compatible with input reconstruction\n");
-			abort();
-		}
-		statistics.FSC.AddPoint(temp_float[1], temp_float[3]);
-		statistics.part_FSC.AddPoint(temp_float[1], temp_float[4]);
-		statistics.part_SSNR.AddPoint(temp_float[1], powf(temp_float[5],2));
-		statistics.rec_SSNR.AddPoint(temp_float[1], powf(temp_float[6],2));
+		temp_statistics.ResampleParticleSSNR(cropped_statistics);
+		statistics.CopyParticleSSNR(temp_statistics);
 	}
-
-	for (i = my_statistics.number_of_lines + 1; i <= number_of_bins_extended; i++)
+	else
 	{
-		resolution = pixel_size / float(i) * float(number_of_bins2);
-		statistics.FSC.AddPoint(resolution, 0.0);
-		statistics.part_FSC.AddPoint(resolution, 0.0);
-		statistics.part_SSNR.AddPoint(resolution, 0.0);
-		statistics.rec_SSNR.AddPoint(resolution, 0.0);
+		statistics.CopyParticleSSNR(cropped_statistics);
 	}
+	statistics.ZeroToResolution(resolution_limit);
+	statistics.PrintStatistics();
+	statistics.WriteStatisticsToFile(output_statistics);
 
-	has_statistics = true;
-}
-
-void ReconstructedVolume::GenerateDefaultStatistics()
-{
-	MyDebugAssertTrue(molecular_mass_in_kDa != 0.0, "Molecular mass not set");
-
-	int i;
-	float resolution;
-	float ssnr;
-	float fsc;
-	float particle_diameter = 2.0 * powf(3.0 * kDa_to_Angstrom3(molecular_mass_in_kDa) / 4.0 / PI / powf(pixel_size,3) ,1.0 / 3.0);
-	int number_of_bins2 = density_map.ReturnSmallestLogicalDimension();
-	int number_of_bins_extended = int((number_of_bins2 / 2 + 1) * sqrtf(3.0)) + 1;
-
-	statistics.FSC.AddPoint(0.0, 1.0);
-	statistics.part_FSC.AddPoint(0.0, 1.0);
-	statistics.part_SSNR.AddPoint(0.0, 1000.0);
-	statistics.rec_SSNR.AddPoint(0.0, 1000.0);
-
-	for (i = 1; i <= number_of_bins_extended; i++)
+	Calculate3DOptimal(reconstruction, cropped_statistics);
+	density_map.SwapRealSpaceQuadrants();
+	if (intermediate_box_size != box_size)
 	{
-		resolution = pixel_size / float(i) * float(number_of_bins2);
-		// Approximate formula derived from part_SSNR curve for VSV-L
-		ssnr = powf(molecular_mass_in_kDa,1.5) / 35.0 * (800.0 * expf(-3.5 * particle_diameter / resolution) + expf(-25.0 / resolution));
-		fsc = ssnr / (2.0 + ssnr);
-		statistics.FSC.AddPoint(resolution, fsc);
-		statistics.part_FSC.AddPoint(resolution, fsc);
-		statistics.part_SSNR.AddPoint(resolution, ssnr);
-//		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
-		statistics.rec_SSNR.AddPoint(resolution, ssnr);
+		density_map.BackwardFFT();
+		Correct3D();
+		density_map.Resize(intermediate_box_size, intermediate_box_size,
+				intermediate_box_size, density_map.ReturnAverageOfRealValuesOnEdges());
+		density_map.ForwardFFT();
 	}
-
-	has_statistics = true;
+	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
+	density_map.CosineMask(0.5, 1.0 / 20.0);
+	density_map.BackwardFFT();
+	if (intermediate_box_size == box_size) Correct3D();
+	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	output_file.OpenFile(output_volume.ToStdString(), true);
+	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);
+	output_file.SetPixelSize(original_pixel_size);
+	output_file.CloseFile();
 }

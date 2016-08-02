@@ -159,7 +159,6 @@ public:
 		return real_values[ReturnReal1DAddressFromPhysicalCoord(wanted_x, wanted_y, wanted_z)];
 	};
 
-
 	inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address (%i %i %i) out of bounds (%i to %i; %i to %i; %i to %i)!",wanted_x,wanted_y,wanted_z,0,physical_upper_bound_complex_x,0,physical_upper_bound_complex_y,0,physical_upper_bound_complex_z );
@@ -259,6 +258,7 @@ public:
 	inline void NormalizeFT() { MultiplyByConstant(ft_normalization_factor); }
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
+	void InvertRealValues();
 	void AddConstant(float constant_to_add);
 	void MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add);
 	void AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by);

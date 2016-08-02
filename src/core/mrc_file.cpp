@@ -106,8 +106,10 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
 	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
 	long image_offset = (start_slice - 1) * bytes_per_slice;
+	long current_position = my_file.tellg();
+	long seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
 
-	my_file.seekg(1024 + image_offset + my_header.SymmetryDataBytes());
+	if (current_position != seek_position) my_file.seekg(seek_position);
 
 	// we need a temp array for non float formats..
 
@@ -179,8 +181,10 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
 	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
 	long image_offset = (start_slice - 1) * bytes_per_slice;
+	long current_position = my_file.tellg();
+	long seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
 
-	my_file.seekg(1024 + image_offset + my_header.SymmetryDataBytes());
+	if (current_position != seek_position) my_file.seekg(seek_position);
 
 	// we need a temp array for non float formats..
 

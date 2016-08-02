@@ -3485,6 +3485,16 @@ void Image::MultiplyByConstant(float constant_to_multiply_by)
 	}
 }
 
+void Image::InvertRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+		real_values[pixel_counter] = - real_values[pixel_counter];
+	}
+}
+
 void Image::SquareRealValues()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -5982,6 +5992,9 @@ void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float 
 void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(wanted_x_dimension != 0 && wanted_y_dimension != 0 && wanted_z_dimension != 0, "Resize dimension is zero");
+
+	if (logical_x_dimension == wanted_x_dimension && logical_y_dimension == wanted_y_dimension && logical_z_dimension == wanted_z_dimension) return;
 
 	Image temp_image;
 

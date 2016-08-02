@@ -244,6 +244,19 @@ void Curve::AddWith(Curve *other_curve)
 	}
 }
 
+void Curve::ZeroAfterIndex(int index)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	if (index + 1 <= number_of_points)
+	{
+		for (int counter = index + 1; counter < number_of_points; counter++)
+		{
+			data_y[counter] = 0.0;
+		}
+	}
+}
+
 void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 {
 	MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");
@@ -255,7 +268,7 @@ void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 
 	for (int i = 0; i < wanted_number_of_points; i++)
 	{
-		i_x = float(i * number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
+		i_x = float(i * input_curve->number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
 		temp_curve.AddPoint(i_x, input_curve->ReturnLinearInterpolationFromI(i_x));
 	}
 
@@ -442,7 +455,7 @@ void Curve::WriteToFile(wxString output_file)
 	float temp_float[2];
 
 	NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
-	output_curve_file.WriteCommentLine("#            X              Y");
+	output_curve_file.WriteCommentLine("C            X              Y");
 	for (int i = 0; i < number_of_points; i++)
 	{
 		temp_float[0] = data_x[i];
@@ -520,7 +533,6 @@ void Curve::ClearData()
 void Curve::MultiplyByConstant(float constant_to_multiply_by)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-
 
 	for (int counter = 0; counter < number_of_points; counter ++ )
 	{

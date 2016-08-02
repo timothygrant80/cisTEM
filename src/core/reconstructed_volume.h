@@ -14,7 +14,7 @@ public:
 	SymmetryMatrix				symmetry_matrices;
 	Image						density_map;
 	Image						current_projection;
-	ResolutionStatistics		statistics;
+//	ResolutionStatistics		statistics;
 	float						current_resolution_limit;
 	float						current_ctf;
 	float						current_phi;
@@ -30,11 +30,11 @@ public:
 	bool						has_been_initialized;
 	bool						has_masked_applied;
 	bool						was_corrected;
-	bool						has_statistics;
+//	bool						has_statistics;
 	bool						has_been_filtered;
 	bool						whitened_projection;
 
-	ReconstructedVolume();
+	ReconstructedVolume(float wanted_molecular_mass_in_kDa = 0.0);
 	~ReconstructedVolume();
 
 	ReconstructedVolume & operator = (const ReconstructedVolume &t);
@@ -46,13 +46,14 @@ public:
 	void PrepareForProjections(float resolution_limit, bool approximate_binning = false);
 	void CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius = 0.0, float mask_falloff = 0.0, float resolution_limit = 1.0, bool swap_quadrants = true, bool whiten = false);
 	void Calculate3DSimple(Reconstruct3D &reconstruction);
-	void Calculate3DOptimal(Reconstruct3D &reconstruction, float pssnr_correction_factor = 1.0);
+	void Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics);
 	float Correct3D(float mask_radius = 0.0);
 	void CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge);
 	void CosineMask(float wanted_mask_radius, float wanted_mask_edge);
-	void OptimalFilter();
-	void PrintStatistics();
-	void WriteStatisticsToFile(NumericTextFile &output_statistics_file);
-	void ReadStatisticsFromFile(wxString input_file);
-	void GenerateDefaultStatistics();
+	void OptimalFilter(ResolutionStatistics &statistics);
+	void FinalizeSimple(Reconstruct3D &reconstruction, int &original_box_size, float &original_pixel_size, float &pixel_size,
+			float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff, wxString &output_volume);
+	void FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
+			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
+			wxString &output_volume, NumericTextFile &output_statistics);
 };

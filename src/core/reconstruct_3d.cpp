@@ -5,8 +5,12 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
 	logical_z_dimension = 0;
+	original_x_dimension = 0;
+	original_y_dimension = 0;
+	original_z_dimension = 0;
 
 	pixel_size = wanted_pixel_size;
+	original_pixel_size = 0.0;
 	average_occupancy = wanted_average_occupancy;
 	average_score = wanted_average_score;
 	score_bfactor_conversion = wanted_score_bfactor_conversion;
@@ -22,8 +26,12 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
 	logical_z_dimension = 0;
+	original_x_dimension = 0;
+	original_y_dimension = 0;
+	original_z_dimension = 0;
 
 	pixel_size = wanted_pixel_size;
+	original_pixel_size = 0.0;
 	average_occupancy = wanted_average_occupancy;
 	average_score = wanted_average_score;
 	score_bfactor_conversion = wanted_score_bfactor_conversion;
@@ -74,7 +82,7 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 
 	image_reconstruction.SetToConstant(0.0);
 
-	current_ctf_image.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
+//	current_ctf_image.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
 
 	edge_terms_were_added = false;
 }
@@ -84,19 +92,20 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_x_dimension == logical_x_dimension && particle_to_insert.particle_image->logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
 	MyDebugAssertTrue(image_reconstruction.is_in_memory, "Memory not allocated for image_reconstruction");
-	MyDebugAssertTrue(current_ctf_image.is_in_memory, "Memory not allocated for current_ctf_image");
+	MyDebugAssertTrue(particle_to_insert.ctf_image->is_in_memory, "Memory not allocated for current_ctf_image");
 	MyDebugAssertTrue(particle_to_insert.particle_image->IsSquare(), "Image must be square");
 
 	float particle_weight;
 
-	if (particle_to_insert.particle_image->is_in_real_space == true)
-	{
-		particle_to_insert.particle_image->ForwardFFT();
-		particle_to_insert.particle_image->SwapRealSpaceQuadrants();
-	}
+//	if (particle_to_insert.particle_image->is_in_real_space == true)
+//	{
+//		particle_to_insert.particle_image->ForwardFFT();
+//		particle_to_insert.particle_image->SwapRealSpaceQuadrants();
+//	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
-	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
+	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13],2);
+//	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	if (particle_weight > 0.0)
 	{
@@ -128,26 +137,26 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
 		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
 
-		if (particle_to_insert.ctf_parameters.IsAlmostEqualTo(&current_ctf, 50.0 / pixel_size) == false)
-		// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
-		{
-			current_ctf = particle_to_insert.ctf_parameters;
-			current_ctf_image.CalculateCTFImage(current_ctf);
-		}
+//		if (particle_to_insert.ctf_parameters.IsAlmostEqualTo(&current_ctf, 50.0 / pixel_size) == false)
+//		// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
+//		{
+//			current_ctf = particle_to_insert.ctf_parameters;
+//			current_ctf_image->CalculateCTFImage(current_ctf);
+//		}
 
 	// Now insert into 3D arrays
 		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+			y_coord_sq = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 			for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
+				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
 				weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
 			}
 		}
 	// Now deal with special case of i = 0
@@ -155,11 +164,11 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
-			frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 			weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
 		}
 
 		if (symmetry_matrices.number_of_matrices > 1)
@@ -169,16 +178,16 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
-					y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+					y_coord_sq = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 					for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 					{
 						x_coordinate_2d = i;
-						frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
+						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
 						weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
 					}
 				}
 			// Now deal with special case of i = 0
@@ -186,12 +195,12 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 				{
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
-					frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 					weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], current_ctf_image.complex_values[pixel_counter], weight);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
 				}
 			}
 		}
@@ -214,6 +223,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
+//	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13],2);
 	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	if (particle_weight > 0.0)
@@ -250,11 +260,11 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+			y_coord_sq = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 			for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
+				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
 				weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
@@ -266,7 +276,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
-			frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 			weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
@@ -280,11 +290,11 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 				{
 					y_coordinate_2d = j;
-					y_coord_sq = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+					y_coord_sq = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 					for (i = 1; i <= particle_to_insert.particle_image->logical_upper_bound_complex_x; i++)
 					{
 						x_coordinate_2d = i;
-						frequency_squared = powf(x_coordinate_2d * current_ctf_image.fourier_voxel_size_x, 2) + y_coord_sq;
+						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
 						weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
@@ -297,7 +307,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 				{
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
-					frequency_squared = powf(y_coordinate_2d * current_ctf_image.fourier_voxel_size_y, 2);
+					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
 					weight = particle_weight * expf(bfactor_conversion * frequency_squared);
 					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
@@ -317,46 +327,103 @@ void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate,
 	int int_x_coordinate;
 	int int_y_coordinate;
 	int int_z_coordinate;
+	long physical_x_address;
+	long physical_y_address;
+	long physical_z_address;
+	long upper_x = image_reconstruction.physical_upper_bound_complex_x + 1;
+	long upper_xy = upper_x * long(image_reconstruction.physical_upper_bound_complex_y + 1);
 
 	long physical_coord;
+	long physical_coord_xy;
 
 	float weight;
-	float weight_y;
-	float weight_z;
+	float weight_x;
+	float weight_xy;
 
 	fftwf_complex conjugate;
-	fftwf_complex value_to_insert = input_value * ctf_value * wanted_weight;
 
-	float ctf_squared = powf(crealf(ctf_value),2) * wanted_weight;
+	float ctf_real = crealf(ctf_value);
+	float ctf_squared = powf(ctf_real,2) * wanted_weight;
+	fftwf_complex value_to_insert = input_value * fabsf(ctf_real) * wanted_weight;
+//	fftwf_complex value_to_insert = input_value * ctf_value * wanted_weight;
 
 	int_x_coordinate = int(floorf(wanted_logical_x_coordinate));
 	int_y_coordinate = int(floorf(wanted_logical_y_coordinate));
 	int_z_coordinate = int(floorf(wanted_logical_z_coordinate));
 
-	for (k = int_z_coordinate; k <= int_z_coordinate + 1; k++)
+	for (i = int_x_coordinate; i <= int_x_coordinate + 1; i++)
 	{
-		weight_z = (1.0 - fabsf(wanted_logical_z_coordinate - k));
+		weight_x = (1.0 - fabsf(wanted_logical_x_coordinate - i));
+		physical_x_address = i;
+		if (i < 0) physical_x_address = - i;
 		for (j = int_y_coordinate; j <= int_y_coordinate + 1; j++)
 		{
-			weight_y = (1.0 - fabsf(wanted_logical_y_coordinate - j));
-			for (i = int_x_coordinate; i <= int_x_coordinate + 1; i++)
+			weight_xy = (1.0 - fabsf(wanted_logical_y_coordinate - j)) * weight_x;
+			if (i >= 0)
 			{
-				if (i >= image_reconstruction.logical_lower_bound_complex_x && i <= image_reconstruction.logical_upper_bound_complex_x
-				 && j >= image_reconstruction.logical_lower_bound_complex_y && j <= image_reconstruction.logical_upper_bound_complex_y
-				 && k >= image_reconstruction.logical_lower_bound_complex_z && k <= image_reconstruction.logical_upper_bound_complex_z)
+				physical_x_address = i;
+				if (j >= 0)
 				{
-					weight = (1.0 - fabsf(wanted_logical_x_coordinate - i)) * weight_y * weight_z;
-					physical_coord = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(i, j, k);
-					if (i < 0)
+					physical_y_address = j;
+				}
+				else
+				{
+					physical_y_address = image_reconstruction.logical_y_dimension + j;
+				}
+				physical_coord_xy = upper_x * physical_y_address + physical_x_address;
+				for (k = int_z_coordinate; k <= int_z_coordinate + 1; k++)
+				{
+					if (i <= image_reconstruction.logical_upper_bound_complex_x
+					 && j >= image_reconstruction.logical_lower_bound_complex_y && j <= image_reconstruction.logical_upper_bound_complex_y
+					 && k >= image_reconstruction.logical_lower_bound_complex_z && k <= image_reconstruction.logical_upper_bound_complex_z)
 					{
+						if (k >= 0)
+						{
+							physical_z_address = k;
+						}
+						else
+						{
+							physical_z_address = image_reconstruction.logical_z_dimension + k;
+						}
+						weight = (1.0 - fabsf(wanted_logical_z_coordinate - k)) * weight_xy;
+						physical_coord = (upper_xy * physical_z_address) + physical_coord_xy;
+						image_reconstruction.complex_values[physical_coord] = image_reconstruction.complex_values[physical_coord] + value_to_insert * weight;
+						ctf_reconstruction[physical_coord] = ctf_reconstruction[physical_coord] + ctf_squared * weight;
+					}
+				}
+			}
+			else
+			{
+				physical_x_address = - i;
+				if (j > 0)
+				{
+					physical_y_address = image_reconstruction.logical_y_dimension - j;
+				}
+				else
+				{
+					physical_y_address = - j;
+				}
+				physical_coord_xy = upper_x * physical_y_address + physical_x_address;
+				for (k = int_z_coordinate; k <= int_z_coordinate + 1; k++)
+				{
+					if (i >= image_reconstruction.logical_lower_bound_complex_x
+					 && j >= image_reconstruction.logical_lower_bound_complex_y && j <= image_reconstruction.logical_upper_bound_complex_y
+					 && k >= image_reconstruction.logical_lower_bound_complex_z && k <= image_reconstruction.logical_upper_bound_complex_z)
+					{
+						if (k > 0)
+						{
+							physical_z_address = image_reconstruction.logical_z_dimension - k;
+						}
+						else
+						{
+							physical_z_address = - k;
+						}
+						weight = (1.0 - fabsf(wanted_logical_z_coordinate - k)) * weight_xy;
+						physical_coord = (upper_xy * physical_z_address) + physical_coord_xy;
 						conjugate = conjf(value_to_insert);
 						image_reconstruction.complex_values[physical_coord] = image_reconstruction.complex_values[physical_coord] + conjugate * weight;
+						ctf_reconstruction[physical_coord] = ctf_reconstruction[physical_coord] + ctf_squared * weight;
 					}
-					else
-					{
-						image_reconstruction.complex_values[physical_coord] = image_reconstruction.complex_values[physical_coord] + value_to_insert * weight;
-					}
-					ctf_reconstruction[physical_coord] = ctf_reconstruction[physical_coord] + ctf_squared * weight;
 				}
 			}
 		}
@@ -442,7 +509,7 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	int i;
 	int count = 0;
 	int oddeven;
-	char temp_char[4 * sizeof(int) + 4 * sizeof(float) + 4];
+	char temp_char[7 * sizeof(int) + 5 * sizeof(float) + 4];
 	char *char_pointer;
 
 	std::ofstream b_stream(filename.c_str(), std::fstream::out | std::fstream::binary);
@@ -453,7 +520,15 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &logical_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
+	char_pointer = (char *) &original_x_dimension;
+	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
+	char_pointer = (char *) &original_y_dimension;
+	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
+	char_pointer = (char *) &original_z_dimension;
+	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &pixel_size;
+	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
+	char_pointer = (char *) &original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
@@ -476,10 +551,12 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	b_stream.write(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated / 2);
 }
 
-void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension, float &pixel_size, float &average_occupancy, float &average_score, float &score_bfactor_conversion, wxString &symmetry_symbol, bool &insert_even)
+void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension,
+		int &original_x_dimension, int &original_y_dimension, int &original_z_dimension, float &pixel_size, float &original_pixel_size,
+		float &average_occupancy, float &average_score, float &score_bfactor_conversion, wxString &symmetry_symbol, bool &insert_even)
 {
 	int i;
-	int count = 4 * sizeof(int) + 4 * sizeof(float) + 4;
+	int count = 7 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
 	char temp_char[count];
 	char *char_pointer;
@@ -494,7 +571,15 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &logical_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &original_x_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &original_y_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &original_z_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &pixel_size;
+	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
@@ -515,17 +600,21 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 void Reconstruct3D::ReadArrays(wxString filename)
 {
 	int i;
-	int count = 4 * sizeof(int) + 4 * sizeof(float) + 4;
+	int count = 7 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
 	char temp_char[count];
 	char *char_pointer;
 	float input_pixel_size;
+	float input_original_pixel_size;
 	float input_average_occupancy;
 	float input_average_score;
 	float input_score_bfactor_conversion;
 	int input_logical_x_dimension;
 	int input_logical_y_dimension;
 	int input_logical_z_dimension;
+	int input_original_x_dimension;
+	int input_original_y_dimension;
+	int input_original_z_dimension;
 	wxString input_symmetry_symbol;
 
 	std::ifstream b_stream(filename.c_str(), std::fstream::in | std::fstream::binary);
@@ -538,7 +627,15 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_logical_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &input_original_x_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &input_original_y_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &input_original_z_dimension;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_pixel_size;
+	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &input_original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};

@@ -106,6 +106,6 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(float *output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	float ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma);
+	float ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionStatistics &statistics, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma);
 //	float ReturnLogLikelihood(Image &input_image, Image &projection_image, float input_pixel_size, float classification_resolution_limit, float &alpha, float &sigma);
 };

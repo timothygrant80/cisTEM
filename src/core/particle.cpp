@@ -232,7 +232,7 @@ void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, flo
 	MyDebugAssertTrue(! ctf_image->is_in_real_space, "CTF image not in Fourier space");
 
 	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle);
-	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false)
+	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false || ! ctf_image_calculated)
 	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 	{
 		current_ctf = ctf_parameters;
@@ -543,7 +543,7 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma)
+float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionStatistics &statistics, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma)
 {
 	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 
@@ -567,7 +567,7 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projec
 	CenterInCorner();
 	input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, pixel_size / filter_radius_high, false, true);
 	projection_image.PhaseFlipPixelWise(*ctf_image);
-	WeightBySSNR(input_3d.statistics.part_SSNR, projection_image);
+	WeightBySSNR(statistics.part_SSNR, projection_image);
 
 	particle_image->SwapRealSpaceQuadrants();
 	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
@@ -613,7 +613,8 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, Image &projec
 	{
 		variance_difference = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
 		sigma = sqrtf(variance_difference / projection_image.ReturnVarianceOfRealValues(mask_radius / pixel_size));
-		number_of_independent_pixels = mask_volume;
+		number_of_independent_pixels = PI * powf(mask_radius / pixel_size,2);
+//		number_of_independent_pixels = mask_volume;
 	}
 
 	// Prevent rare occurrences of unrealistically high sigmas

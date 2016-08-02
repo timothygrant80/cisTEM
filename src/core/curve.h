@@ -34,7 +34,7 @@ public:
 
 	void ResampleCurve(Curve *input_curve, int wanted_number_of_points);
 	float ReturnLinearInterpolationFromI(float wanted_i);
-	float ReturnLinearInterpolationFromX(float wanted_x_value);
+	float ReturnLinearInterpolationFromX(float wanted_x);
 	void AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x);
 	void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
 	int ReturnIndexOfNearestPreviousBin(float wanted_x);
@@ -61,4 +61,5 @@ public:
 	void ZeroYData();
 	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);
 	void SquareRoot();
+	void ZeroAfterIndex(int index);
 };

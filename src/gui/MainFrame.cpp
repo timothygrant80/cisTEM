@@ -183,7 +183,6 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 
 }
 
-
 void MyMainFrame::DirtyEverything()
 {
 	DirtyMovieGroups();

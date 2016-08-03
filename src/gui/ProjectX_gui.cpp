@@ -494,6 +494,16 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PhaseShiftStepStaticText->Wrap( -1 );
 	InfoSizer->Add( PhaseShiftStepStaticText, 0, wxALL, 5 );
 	
+	NumberOfAveragedFramesLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Num. Averaged Frames :"), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberOfAveragedFramesLabel->Wrap( -1 );
+	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALL, 5 );
+	
+	NumberOfAveragedFramesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	NumberOfAveragedFramesStaticText->Wrap( -1 );
+	InfoSizer->Add( NumberOfAveragedFramesStaticText, 0, wxALL, 5 );
+	
 	
 	bSizer101->Add( InfoSizer, 1, wxEXPAND, 5 );
 	

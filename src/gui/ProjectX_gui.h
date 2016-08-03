@@ -203,6 +203,8 @@ class FindCTFResultsPanel : public wxPanel
 		wxStaticText* MaxPhaseshiftStaticText;
 		wxStaticText* PhaseShiftStepLabel;
 		wxStaticText* PhaseShiftStepStaticText;
+		wxStaticText* NumberOfAveragedFramesLabel;
+		wxStaticText* NumberOfAveragedFramesStaticText;
 		wxStaticLine* m_staticline30;
 		ShowCTFResultsPanel* ResultPanel;
 		wxButton* AddToGroupButton;

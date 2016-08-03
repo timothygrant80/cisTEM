@@ -1000,7 +1000,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	int ctf_estimation_job_id =  main_frame->current_project.database.ReturnHighestFindCTFJobID() + 1;
 
 	// loop over all the jobs, and add them..
-	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 29,
+	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 30,
 			                                                                              "CTF_ESTIMATION_ID",
 																						  "CTF_ESTIMATION_JOB_ID",
 																						  "DATETIME_OF_RUN",
@@ -1029,7 +1029,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																						  "SCORE",
 																						  "DETECTED_RING_RESOLUTION",
 																						  "DETECTED_ALIAS_RESOLUTION",
-																						  "OUTPUT_DIAGNOSTIC_FILE");
+																						  "OUTPUT_DIAGNOSTIC_FILE",
+																						  "NUMBER_OF_FRAMES_AVERAGED");
 
 	wxDateTime now = wxDateTime::Now();
 
@@ -1064,7 +1065,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		}
 
 
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrt", ctf_estimation_id,
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrti", ctf_estimation_id,
 																					 ctf_estimation_job_id,
 																					 (long int) now.GetAsDOS(),
 																					 image_asset_id,
@@ -1092,7 +1093,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 buffered_results[counter].result_data[4], // score
 																					 buffered_results[counter].result_data[5], // detected ring resolution
 																					 buffered_results[counter].result_data[6], // detected aliasing resolution
-																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str()); // output diagnostic filename																 );
+																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
+																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument()); // number of movie frames averaged
 		ctf_estimation_id++;
 	}
 

@@ -334,22 +334,22 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
-		my_dialog->Update(1);
+		my_dialog->Update(1, "Opening project (loading image assets...)");
 		image_asset_panel->ImportAllFromDatabase();
-		my_dialog->Update(2);
+		my_dialog->Update(2, "Opening project (loading particle position assets...)");
 		particle_position_asset_panel->ImportAllFromDatabase();
-		my_dialog->Update(3);
+		my_dialog->Update(3, "Opening project (loading run profiles...)");
 		run_profiles_panel->ImportAllFromDatabase();
-		my_dialog->Update(4);
+		my_dialog->Update(4, "Opening project (loading volume assets...)");
 		volume_asset_panel->ImportAllFromDatabase();
 		//align_movies_panel->Refresh();
-		my_dialog->Update(5);
+		my_dialog->Update(5, "Opening project (loading movie alignment results...)");
 		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
-		my_dialog->Update(6);
+		my_dialog->Update(6, "Opening project (loading CTF estimation results...)");
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
-		my_dialog->Update(7);
+		my_dialog->Update(7, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();
-		my_dialog->Update(8);
+		my_dialog->Update(8, "Opening project (all done)");
 		DirtyEverything();
 		my_dialog->Destroy();
 	}

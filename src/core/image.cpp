@@ -4718,7 +4718,8 @@ void Image::AverageRadially()
 //  \brief  Compute the 1D rotational average
 //			The first element will be the value at the center/origin of the image.
 //			It is assume the X axis of the Curve object has been setup already. It should run from 0.0 to the maximum value
-//			possible, which is sqrt(2)*0.5 in Fourier space or sqrt(2)*0.5*logical_dimension in real space. To use
+//			possible, which is approximately sqrt(2)*0.5 in Fourier space or sqrt(2)*0.5*logical_dimension in real space
+//			(to compute this properly, use ReturnMaximumDiagonalRadius * fourier_voxel_size). To use
 //			The Fourier space radius convention in real space, give fractional_radius_in_real_space
 void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space)
 {
@@ -4824,7 +4825,7 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 	// Do the actual averaging
 	for (int counter = 0; counter < average.number_of_points; counter ++ )
 	{
-		average.data_y[counter] /=number_of_values.data_y[counter];
+		if (number_of_values.data_y[counter] != 0.0) average.data_y[counter] /=number_of_values.data_y[counter];
 	}
 }
 

@@ -883,7 +883,7 @@ bool CtffindApp::DoCalculation()
 			// Try to weaken cross artefacts
 			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
 			average_spectrum->DivideByConstant(sigma);
-			average_spectrum->SetMaximumValueOnCentralCross(average+ sigma*10.0); //TODO: check whether average/sigma+10.0 is really what I meant to write. I think it's supposed to be average + 10*sigma
+			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
 
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
@@ -958,8 +958,8 @@ bool CtffindApp::DoCalculation()
 		{
 
 			// 1D rotational average
-			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
-			rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
+			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
+			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
 			number_of_averaged_pixels = rotational_average;
 			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
@@ -1239,8 +1239,8 @@ bool CtffindApp::DoCalculation()
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
 
 		// 1D rotational average
-		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()) + 2);
-		rotational_average.SetupXAxis(0.0,sqrt(2.0)*0.5,number_of_bins_in_1d_spectra);
+		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
+		rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
 		rotational_average.ZeroYData();
 		number_of_averaged_pixels.ZeroYData();
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
@@ -1303,12 +1303,9 @@ bool CtffindApp::DoCalculation()
 			for (counter=first_bin_to_check;counter<number_of_bins_in_1d_spectra;counter++)
 			{
 				//wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
-				at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold))
+				at_last_bin_with_good_fit = ( (number_of_bins_above_low_threshold          > 3) &&   ( fit_frc[counter] < low_threshold)  )
 											||
-											((number_of_bins_above_significance_threshold > 3) &&   ( fit_frc[counter] < frc_significance_threshold) ); // && (rotational_average_astig[counter] > 2.0) )
-																									//||( fit_frc[counter] < frc_significance_threshold) // && (rotational_average_astig[counter] < -2.0))
-																								//	)
-																								//	);
+											( (number_of_bins_above_significance_threshold > 3) &&   ( fit_frc[counter] < frc_significance_threshold) );
 				if (at_last_bin_with_good_fit)
 				{
 					last_bin_with_good_fit = counter;

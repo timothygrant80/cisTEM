@@ -296,7 +296,7 @@ float Curve::ReturnLinearInterpolationFromI(float wanted_i)
 float Curve::ReturnLinearInterpolationFromX(float wanted_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
-	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+	MyDebugAssertTrue(wanted_x >= data_x[0]  - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1]  + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
 	float value_to_return = 0.0;
 
@@ -407,7 +407,7 @@ void Curve::SquareRoot()
 void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+	MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1] + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
 	int index_of_previous_bin;
 	if (assume_linear_x)
@@ -433,7 +433,7 @@ void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_a
 void Curve::AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+	MyDebugAssertTrue(wanted_x >= data_x[0]  - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1]  + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
 	data_y[ReturnIndexOfNearestPointFromX(wanted_x)] += value_to_add;
 
@@ -598,7 +598,7 @@ int Curve::ReturnIndexOfNearestPointFromX( float wanted_x )
 int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-	MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points-1], "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+	MyDebugAssertTrue(wanted_x >= data_x[0]  - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1]  + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
 	if (wanted_x < data_x[0])
 	{

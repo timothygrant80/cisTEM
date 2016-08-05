@@ -16,6 +16,7 @@ protected:
 
 
 		virtual void ImportAssetClick( wxCommandEvent& event ) = 0;
+		//virtual void ExportAssetClick( wxCommandEvent& event ) = 0;
 
 		void RemoveAssetClick( wxCommandEvent& event );
 		void RemoveAllAssetsClick( wxCommandEvent& event );

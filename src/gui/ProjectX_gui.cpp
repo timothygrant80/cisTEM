@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -12,7 +12,6 @@
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
-#include "job_panel.h"
 #include "my_controls.h"
 
 #include "ProjectX_gui.h"
@@ -74,6 +73,13 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	
 	m_menubar1->Append( FileMenu, wxT("Project") ); 
 	
+	ExportMenu = new wxMenu();
+	wxMenuItem* ExportCoordinatesToImagic;
+	ExportCoordinatesToImagic = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export coordinates to Imagic") ) , wxEmptyString, wxITEM_NORMAL );
+	ExportMenu->Append( ExportCoordinatesToImagic );
+	
+	m_menubar1->Append( ExportMenu, wxT("Export") ); 
+	
 	this->SetMenuBar( m_menubar1 );
 	
 	
@@ -86,6 +92,7 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Connect( FileOpenProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Connect( FileCloseProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Connect( FileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
+	this->Connect( ExportCoordinatesToImagic->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
 }
 
 MainFrame::~MainFrame()
@@ -97,6 +104,7 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
+	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
 	
 }
 
@@ -1364,19 +1372,6 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer28, 0, wxEXPAND, 5 );
 	
-	wxBoxSizer* bSizer29;
-	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText20->Wrap( -1 );
-	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	
-	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
-	
 	wxBoxSizer* bSizer30;
 	bSizer30 = new wxBoxSizer( wxHORIZONTAL );
 	
@@ -1389,6 +1384,19 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	
 	bSizer26->Add( bSizer30, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText20->Wrap( -1 );
+	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer32;
 	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
@@ -1438,10 +1446,10 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	s->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ClearClick ), NULL, this );
 	VoltageCombo->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	VoltageCombo->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
-	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	CsText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	CsText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
@@ -1456,10 +1464,10 @@ MovieImportDialog::~MovieImportDialog()
 	s->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ClearClick ), NULL, this );
 	VoltageCombo->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	VoltageCombo->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	CsText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	CsText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
@@ -1913,19 +1921,6 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer28, 0, wxEXPAND, 5 );
 	
-	wxBoxSizer* bSizer29;
-	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText20->Wrap( -1 );
-	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	
-	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
-	
 	wxBoxSizer* bSizer30;
 	bSizer30 = new wxBoxSizer( wxHORIZONTAL );
 	
@@ -1938,6 +1933,19 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	
 	bSizer26->Add( bSizer30, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText20->Wrap( -1 );
+	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
 	
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
@@ -1974,10 +1982,10 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ClearClick ), NULL, this );
 	VoltageCombo->Connect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	VoltageCombo->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
-	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	CsText->Connect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	CsText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
+	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::CancelClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ImportClick ), NULL, this );
 }
@@ -1990,10 +1998,10 @@ ImageImportDialog::~ImageImportDialog()
 	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ClearClick ), NULL, this );
 	VoltageCombo->Disconnect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	VoltageCombo->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	CsText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	CsText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ImportClick ), NULL, this );
 	
@@ -3594,5 +3602,90 @@ FilterDialog::~FilterDialog()
 	// Disconnect Events
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
 	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
+	
+}
+
+ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer133;
+	bSizer133 = new wxBoxSizer( wxVERTICAL );
+	
+	m_panel38 = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer135;
+	bSizer135 = new wxBoxSizer( wxVERTICAL );
+	
+	wxStaticBoxSizer* sbSizer3;
+	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
+	
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( sbSizer3, 0, wxEXPAND, 25 );
+	
+	wxStaticBoxSizer* sbSizer4;
+	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Destination directory") ), wxVERTICAL );
+	
+	DestinationDirectoryPickerCtrl = new wxDirPickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a folder"), wxDefaultPosition, wxDefaultSize, wxDIRP_DEFAULT_STYLE );
+	sbSizer4->Add( DestinationDirectoryPickerCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( 0, 0, 0, wxEXPAND, 5 );
+	
+	WarningText = new wxStaticText( m_panel38, wxID_ANY, wxT("Warning: running jobs \nmay affect exported coordinates"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	WarningText->Wrap( -1 );
+	WarningText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	WarningText->Hide();
+	
+	bSizer135->Add( WarningText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer137;
+	bSizer137 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer137->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	CancelButton = new wxButton( m_panel38, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer137->Add( CancelButton, 0, wxALL, 5 );
+	
+	ExportButton = new wxButton( m_panel38, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExportButton->SetDefault(); 
+	ExportButton->Enable( false );
+	
+	bSizer137->Add( ExportButton, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer137, 0, wxEXPAND, 5 );
+	
+	
+	m_panel38->SetSizer( bSizer135 );
+	m_panel38->Layout();
+	bSizer135->Fit( m_panel38 );
+	bSizer133->Add( m_panel38, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	this->SetSizer( bSizer133 );
+	this->Layout();
+	bSizer133->Fit( this );
+	
+	this->Centre( wxBOTH );
+	
+	// Connect Events
+	DestinationDirectoryPickerCtrl->Connect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+}
+
+ParticlePositionExportDialog::~ParticlePositionExportDialog()
+{
+	// Disconnect Events
+	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
 	
 }

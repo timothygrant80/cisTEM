@@ -204,6 +204,7 @@ void MyMainFrame::DirtyImageGroups()
 	findctf_panel->group_combo_is_dirty = true;
 	ctf_results_panel->group_combo_is_dirty = true;
 	findparticles_panel->group_combo_is_dirty = true;
+	picking_results_panel->group_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyParticlePositionGroups()
@@ -392,4 +393,10 @@ void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )
 		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(true);
 	}
 	else FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(false);
+}
+
+void MyMainFrame::OnExportCoordinatesToImagic ( wxCommandEvent & event )
+{
+	MyParticlePositionExportDialog *export_dialog = new MyParticlePositionExportDialog(this);
+	export_dialog->ShowModal();
 }

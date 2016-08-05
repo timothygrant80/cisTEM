@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -20,6 +20,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -54,6 +55,8 @@ class UnblurResultsPanel;
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
+#include <wx/statbox.h>
+#include <wx/filepicker.h>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -68,6 +71,7 @@ class MainFrame : public wxFrame
 		wxPanel* LeftPanel;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
+		wxMenu* ExportMenu;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
@@ -76,6 +80,7 @@ class MainFrame : public wxFrame
 		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportCoordinatesToImagic( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -504,10 +509,10 @@ class MovieImportDialog : public wxDialog
 		wxStaticLine* m_staticline7;
 		wxStaticText* m_staticText19;
 		wxComboBox* VoltageCombo;
-		wxStaticText* m_staticText20;
-		wxTextCtrl* PixelSizeText;
 		wxStaticText* m_staticText21;
 		wxTextCtrl* CsText;
+		wxStaticText* m_staticText20;
+		wxTextCtrl* PixelSizeText;
 		wxStaticText* m_staticText22;
 		wxTextCtrl* DoseText;
 		wxStaticLine* m_staticline8;
@@ -627,10 +632,10 @@ class ImageImportDialog : public wxDialog
 		wxStaticLine* m_staticline7;
 		wxStaticText* m_staticText19;
 		wxComboBox* VoltageCombo;
-		wxStaticText* m_staticText20;
-		wxTextCtrl* PixelSizeText;
 		wxStaticText* m_staticText21;
 		wxTextCtrl* CsText;
+		wxStaticText* m_staticText20;
+		wxTextCtrl* PixelSizeText;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -647,7 +652,7 @@ class ImageImportDialog : public wxDialog
 	
 	public:
 		
-		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
 		~ImageImportDialog();
 	
 };
@@ -1083,6 +1088,34 @@ class FilterDialog : public wxDialog
 		
 		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
 		~FilterDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ParticlePositionExportDialog
+///////////////////////////////////////////////////////////////////////////////
+class ParticlePositionExportDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxPanel* m_panel38;
+		wxComboBox* GroupComboBox;
+		wxDirPickerCtrl* DestinationDirectoryPickerCtrl;
+		wxStaticText* WarningText;
+		wxButton* CancelButton;
+		wxButton* ExportButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~ParticlePositionExportDialog();
 	
 };
 

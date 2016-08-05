@@ -789,8 +789,8 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			is_dirty = false;
 			FillGroupList();
 			FillContentsList();
-
 		}
+
 	}
 }
 

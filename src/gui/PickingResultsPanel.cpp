@@ -51,20 +51,7 @@ void MyPickingResultsPanel::OnProjectClose()
 
 void MyPickingResultsPanel::FillGroupComboBox()
 {
-	GroupComboBox->Freeze();
-	GroupComboBox->ChangeValue("");
-	GroupComboBox->Clear();
-
-	for (long counter = 1; counter < image_asset_panel->ReturnNumberOfGroups(); counter++)
-	{
-		GroupComboBox->Append(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")");
-
-	}
-
-	if (GroupComboBox->GetCount() > 0) GroupComboBox->SetSelection(0);
-
-	GroupComboBox->Thaw();
-
+	FillGroupComboBoxSlave(GroupComboBox,false);
 }
 
 void MyPickingResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )

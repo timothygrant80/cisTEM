@@ -36,6 +36,8 @@ class MyMainFrame : public MainFrame
 		void OnFileCloseProject( wxCommandEvent& event );
 		void OnFileMenuUpdate( wxUpdateUIEvent& event );
 
+		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
+
 		void OnServerEvent(wxSocketEvent& event);
 		void OnSocketEvent(wxSocketEvent& event);
 

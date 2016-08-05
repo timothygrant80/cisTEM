@@ -200,6 +200,7 @@ void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()
 		}
 }
 
+
 void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
 	// Get a text file which should have asset_id x_pos y_pos

@@ -108,37 +108,47 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 	const float c = additional_phase_shift + precomputed_amplitude_contrast_term;
 	const float det = powf(b,2.0) - 4.0 * a * (c-phase_shift);
 
-
-	if (det < 0.0)
+	if (spherical_aberration == 0.0)
 	{
-		//MyPrintWithDetails("Ooops, negative determinant\n");
-		//abort();
-		return 0.0;
+		return (phase_shift - c) / b;
 	}
 	else
 	{
-		const float solution_one = ( -b + sqrtf(det)) / (2.0 * a);
-		const float solution_two = ( -b - sqrtf(det)) / (2.0 * a);
 
-		if ( solution_one > 0 && solution_two > 0 )
+		MyDebugAssertTrue(a != 0.0,"Bad values for either cubed wavelength (%f) or spherical aberration (%f) (a = %f)\n",cubed_wavelength,spherical_aberration,a);
+
+
+		if (det < 0.0)
 		{
-			//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
-			return solution_one;
+			//MyPrintWithDetails("Ooops, negative determinant\n");
+			//abort();
+			return 0.0;
 		}
-		else if ( solution_one > 0 )
-		{
-			return solution_one;
-		}
-		else if ( solution_two > 0 )
-			return solution_two;
 		else
 		{
+			const float solution_one = ( -b + sqrtf(det)) / (2.0 * a);
+			const float solution_two = ( -b - sqrtf(det)) / (2.0 * a);
+
+			if ( solution_one > 0 && solution_two > 0 )
+			{
+				//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
+				return solution_one;
+			}
+			else if ( solution_one > 0 )
+			{
+				return solution_one;
+			}
+			else if ( solution_two > 0 )
+				return solution_two;
+			else
+			{
 #ifdef DEBUG
-			MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation\n");
-			abort();
+				MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation\n");
+				abort();
 #else
-			return 0.0;
+				return 0.0;
 #endif
+			}
 		}
 	}
 

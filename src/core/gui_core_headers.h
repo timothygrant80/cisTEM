@@ -74,5 +74,6 @@
 #include "../gui/MyNewProjectWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/PickingResultsPanel.h"
+#include "../gui/MyParticlePositionExportDialog.h"
 
 

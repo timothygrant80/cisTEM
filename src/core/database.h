@@ -153,6 +153,7 @@ public :
 	void AddArrayOfParticlePositionAssetsToResultsTable(const int &picking_job_id, ArrayOfParticlePositionAssets *array_of_assets);
 	void AddArrayOfParticlePositionAssetsToAssetsTable(ArrayOfParticlePositionAssets *array_of_assets);
 	ArrayOfParticlePositionAssets ReturnArrayOfParticlePositionAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id);
+	ArrayOfParticlePositionAssets ReturnArrayOfParticlePositionAssetsFromAssetsTable(const int &parent_image_asset_id);
 
 	// Particle picking results management
 	void RemoveParticlePositionsFromResultsList(const int &picking_job_id, const int &parent_image_asset_id);

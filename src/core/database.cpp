@@ -1150,6 +1150,19 @@ ArrayOfParticlePositionAssets Database::ReturnArrayOfParticlePositionAssetsFromR
 	return array_of_assets;
 }
 
+ArrayOfParticlePositionAssets Database::ReturnArrayOfParticlePositionAssetsFromAssetsTable(const int &parent_image_asset_id)
+{
+	ArrayOfParticlePositionAssets array_of_assets;
+	array_of_assets.Clear();
+	BeginBatchSelect(wxString::Format("select * from particle_position_assets where parent_image_asset_id = %i",parent_image_asset_id));
+	while (last_return_code == SQLITE_ROW)
+	{
+		array_of_assets.Add(GetNextParticlePositionAsset());
+	}
+	EndBatchSelect();
+	return array_of_assets;
+}
+
 MovieAsset Database::GetNextMovieAsset()
 {
 	MovieAsset temp_asset;

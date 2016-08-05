@@ -104,3 +104,24 @@ void GetMultilineTextExtent	(wxDC *wanted_dc, const wxString & string, int &widt
 		height += line_size.GetHeight();
 	}
 }
+
+void FillGroupComboBoxSlave( wxComboBox *GroupComboBox, bool include_all_images_group )
+{
+	extern MyImageAssetPanel *image_asset_panel;
+	GroupComboBox->Freeze();
+	GroupComboBox->ChangeValue("");
+	GroupComboBox->Clear();
+
+	long first_group_to_include = 0;
+	if (!include_all_images_group) first_group_to_include = 1;
+
+	for (long counter = first_group_to_include; counter < image_asset_panel->ReturnNumberOfGroups(); counter++)
+	{
+		GroupComboBox->Append(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")");
+
+	}
+
+	if (GroupComboBox->GetCount() > 0) GroupComboBox->SetSelection(0);
+
+	GroupComboBox->Thaw();
+}

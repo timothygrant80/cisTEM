@@ -286,6 +286,11 @@ wxString MyFindParticlesPanel::ReturnNameOfPickingAlgorithm( const int wanted_al
 	return string_to_return;
 }
 
+int MyFindParticlesPanel::ReturnNumberOfJobsCurrentlyRunning()
+{
+	return my_job_tracker.total_running_processes;
+}
+
 void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 {
 

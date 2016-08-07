@@ -81,6 +81,7 @@ class MainFrame : public wxFrame
 		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportCoordinatesToImagic( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportToFrealign( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -1116,6 +1117,36 @@ class ParticlePositionExportDialog : public wxDialog
 		
 		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~ParticlePositionExportDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class FrealignExportDialog
+///////////////////////////////////////////////////////////////////////////////
+class FrealignExportDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxPanel* m_panel38;
+		wxComboBox* GroupComboBox;
+		wxFilePickerCtrl* OutputImageStackPicker;
+		wxStaticText* m_staticText203;
+		wxSpinCtrl* BoxSizeSpinCtrl;
+		wxStaticText* WarningText;
+		wxButton* CancelButton;
+		wxButton* ExportButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnOutputImageStackFileChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		FrealignExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Frealign"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~FrealignExportDialog();
 	
 };
 

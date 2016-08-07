@@ -391,12 +391,25 @@ void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )
 	if (current_project.is_open == true)
 	{
 		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(true);
+		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(true);
+		ExportMenu->FindItem(ExportMenu->FindItem("Export to Frealign"))->Enable(true);
 	}
-	else FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(false);
+	else
+	{
+		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(false);
+		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(false);
+		ExportMenu->FindItem(ExportMenu->FindItem("Export to Frealign"))->Enable(false);
+	}
 }
 
 void MyMainFrame::OnExportCoordinatesToImagic ( wxCommandEvent & event )
 {
 	MyParticlePositionExportDialog *export_dialog = new MyParticlePositionExportDialog(this);
+	export_dialog->ShowModal();
+}
+
+void MyMainFrame::OnExportToFrealign ( wxCommandEvent & event )
+{
+	MyFrealignExportDialog *export_dialog = new MyFrealignExportDialog(this);
 	export_dialog->ShowModal();
 }

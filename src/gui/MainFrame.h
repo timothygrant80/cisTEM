@@ -37,6 +37,7 @@ class MyMainFrame : public MainFrame
 		void OnFileMenuUpdate( wxUpdateUIEvent& event );
 
 		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
+		void OnExportToFrealign( wxCommandEvent & event );
 
 		void OnServerEvent(wxSocketEvent& event);
 		void OnSocketEvent(wxSocketEvent& event);

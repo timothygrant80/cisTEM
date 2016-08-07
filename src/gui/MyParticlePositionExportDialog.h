@@ -10,8 +10,6 @@ public:
 	void OnExportButtonClick( wxCommandEvent & event );
 	void OnDirChanged( wxFileDirPickerEvent & event );
 
-private:
-	bool group_combo_is_dirty;
 };
 
 #endif

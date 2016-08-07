@@ -78,6 +78,10 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	ExportCoordinatesToImagic = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export coordinates to Imagic") ) , wxEmptyString, wxITEM_NORMAL );
 	ExportMenu->Append( ExportCoordinatesToImagic );
 	
+	wxMenuItem* ExportToFrealign;
+	ExportToFrealign = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export to Frealign") ) , wxEmptyString, wxITEM_NORMAL );
+	ExportMenu->Append( ExportToFrealign );
+	
 	m_menubar1->Append( ExportMenu, wxT("Export") ); 
 	
 	this->SetMenuBar( m_menubar1 );
@@ -93,6 +97,7 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Connect( FileCloseProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Connect( FileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
 	this->Connect( ExportCoordinatesToImagic->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
+	this->Connect( ExportToFrealign->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
 }
 
 MainFrame::~MainFrame()
@@ -105,6 +110,7 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
+	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
 	
 }
 
@@ -3687,5 +3693,103 @@ ParticlePositionExportDialog::~ParticlePositionExportDialog()
 	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+	
+}
+
+FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer133;
+	bSizer133 = new wxBoxSizer( wxVERTICAL );
+	
+	m_panel38 = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer135;
+	bSizer135 = new wxBoxSizer( wxVERTICAL );
+	
+	wxStaticBoxSizer* sbSizer3;
+	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
+	
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( sbSizer3, 0, wxEXPAND, 25 );
+	
+	wxStaticBoxSizer* sbSizer4;
+	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Output image stack") ), wxVERTICAL );
+	
+	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE );
+	sbSizer4->Add( OutputImageStackPicker, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer145;
+	bSizer145 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText203 = new wxStaticText( m_panel38, wxID_ANY, wxT("Box size : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText203->Wrap( -1 );
+	bSizer145->Add( m_staticText203, 0, wxALL, 5 );
+	
+	BoxSizeSpinCtrl = new wxSpinCtrl( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 512 );
+	bSizer145->Add( BoxSizeSpinCtrl, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer145, 1, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( 0, 0, 0, wxEXPAND, 5 );
+	
+	WarningText = new wxStaticText( m_panel38, wxID_ANY, wxT("Warning: running jobs \nmay affect exported coordinates"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	WarningText->Wrap( -1 );
+	WarningText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	WarningText->Hide();
+	
+	bSizer135->Add( WarningText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer137;
+	bSizer137 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer137->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	CancelButton = new wxButton( m_panel38, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer137->Add( CancelButton, 0, wxALL, 5 );
+	
+	ExportButton = new wxButton( m_panel38, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExportButton->SetDefault(); 
+	ExportButton->Enable( false );
+	
+	bSizer137->Add( ExportButton, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer137, 0, wxEXPAND, 5 );
+	
+	
+	m_panel38->SetSizer( bSizer135 );
+	m_panel38->Layout();
+	bSizer135->Fit( m_panel38 );
+	bSizer133->Add( m_panel38, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	this->SetSizer( bSizer133 );
+	this->Layout();
+	bSizer133->Fit( this );
+	
+	this->Centre( wxBOTH );
+	
+	// Connect Events
+	OutputImageStackPicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( FrealignExportDialog::OnOutputImageStackFileChanged ), NULL, this );
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnExportButtonClick ), NULL, this );
+}
+
+FrealignExportDialog::~FrealignExportDialog()
+{
+	// Disconnect Events
+	OutputImageStackPicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( FrealignExportDialog::OnOutputImageStackFileChanged ), NULL, this );
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnExportButtonClick ), NULL, this );
 	
 }

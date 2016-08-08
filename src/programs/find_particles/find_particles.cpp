@@ -178,6 +178,9 @@ bool FindParticlesApp::DoCalculation()
 	// Use this define to dump intermediate files
 //#define dump_intermediate_files
 
+	// We probably don't need to write out PLT files
+//#define write_out_plt_file
+
 	// Internally, everything will be resampled to save time
 	// Let's decide on a new pixel size
 #define aim_for_factorizable_micrograph_dimension
@@ -807,7 +810,9 @@ bool FindParticlesApp::DoCalculation()
 	micrograph.ReadSlice(&micrograph_file,1);
 	Peak my_peak;
 	int number_of_candidate_particles = 0;
+#ifdef write_out_plt_file
 	NumericTextFile *output_coos_file;
+#endif
 	MRCFile output_stack;
 	float highest_peak;
 	wxPrintf("\nFinding peaks & extracting particle images...\n");
@@ -823,7 +828,10 @@ bool FindParticlesApp::DoCalculation()
 		if (number_of_candidate_particles == 1 )
 		{
 			if (output_stack_box_size > 0) output_stack.OpenFile(output_stack_filename.ToStdString(),true);
+#ifdef write_out_plt_file
+			wxPrintf("about to open numeric text file with filename %s\n",FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"));
 			output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 3);
+#endif
 		}
 		if (output_stack_box_size > 0) micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
 		if (output_stack_box_size > 0) box.WriteSlice(&output_stack,number_of_candidate_particles);
@@ -834,12 +842,14 @@ bool FindParticlesApp::DoCalculation()
 		SetCircularAreaToIgnore(maximum_score,coo_to_ignore_x,coo_to_ignore_y,minimum_distance_between_picks_in_pixels,0.0);
 		//maximum_score.QuickAndDirtyWriteSlice("dbg_latest_maximum_score.mrc",number_of_candidate_particles);
 		//wxPrintf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
+#ifdef write_out_plt_file
 		temp_float[1] =  maximum_score.logical_x_dimension - (maximum_score.physical_address_of_box_center_x + (my_peak.x));
 		temp_float[0] =  maximum_score.physical_address_of_box_center_y + (my_peak.y);
 		temp_float[1] =  temp_float[1] * pixel_size / original_micrograph_pixel_size + 1.0;
 		temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
 		temp_float[2] =  1.0;
 		output_coos_file->WriteLine(temp_float);
+#endif
 
 		// Find the matching template
 		index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];

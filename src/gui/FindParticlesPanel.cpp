@@ -898,7 +898,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	    	  // Here, we should call ProcessResult if the job result_size is zero, since in that case no results will be sent
 	    	  if (result_size == 0)
 	    	  {
-	    		  ProcessResult(NULL);
+	    		  ProcessResult(NULL,job_number);
 	    	  }
 
 	    	  //	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -982,7 +982,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 }
 
-void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
+void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const int &wanted_job_number) // this will have to be overidden in the parent clas when i make it.
 {
 	int number_of_frames;
 	int frame_counter;
@@ -990,14 +990,20 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process) // this 
 	long current_time = time(NULL);
 	//wxString bitmap_string;
 	//wxString plot_string;
+	ArrayOfParticlePositionAssets array_of_assets;
+
+	int job_number = wanted_job_number;
+	if (result_to_process) job_number = result_to_process->job_number;
 
 
 	if (current_time - time_of_last_result_update > 5)
 	{
-		wxString image_filename = my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument();
-		ArrayOfParticlePositionAssets array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
-		float radius_in_angstroms = my_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
-		float pixel_size_in_angstroms = my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnFloatArgument();
+		//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
+		wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
+
+		if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
+		float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
+		float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
 		PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
 		PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
 

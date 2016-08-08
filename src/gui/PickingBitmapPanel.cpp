@@ -82,9 +82,6 @@ PickingBitmapPanel::~PickingBitmapPanel()
 	Unbind(wxEVT_LEFT_DOWN, &PickingBitmapPanel::OnLeftDown, this);
 	Unbind(wxEVT_LEFT_UP, &PickingBitmapPanel::OnLeftUp, this);
 	Unbind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
-
-	particle_coordinates_in_angstroms.Empty();
-	EmptyHistoryOfParticleCoordinates();
 }
 
 void PickingBitmapPanel::Clear()

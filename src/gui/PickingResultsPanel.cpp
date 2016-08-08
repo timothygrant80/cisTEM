@@ -262,37 +262,69 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 
 		should_continue = main_frame->current_project.database.BeginBatchSelect("SELECT PARENT_IMAGE_ASSET_ID, PICK_JOB_ID FROM PARTICLE_POSITION_ASSETS;");
 
-		if (!should_continue)
+		if (should_continue)
 		{
-			MyPrintWithDetails("Error getting picking results..");
-			abort();
-		}
 
-		start_from_row = 0;
+			start_from_row = 0;
 
-		while(true)
-		{
-			should_continue = main_frame->current_project.database.GetFromBatchSelect("ii", &current_image_asset_id, &selected_job_id);
-			current_row = ReturnRowFromAssetID(current_image_asset_id, start_from_row);
-
-			if (current_row != -1)
+			while(true)
 			{
-				start_from_row = current_row;
+				should_continue = main_frame->current_project.database.GetFromBatchSelect("ii", &current_image_asset_id, &selected_job_id);
+				current_row = ReturnRowFromAssetID(current_image_asset_id, start_from_row);
 
-				for (job_counter = 0; job_counter < number_of_picking_jobs; job_counter++)
+				if (current_row != -1)
 				{
-					if (picking_job_ids[job_counter] == selected_job_id)
+					start_from_row = current_row;
+
+					for (job_counter = 0; job_counter < number_of_picking_jobs; job_counter++)
 					{
-						ResultDataView->SetValue(wxVariant(CHECKED), current_row, 2 + job_counter);
-						break;
+						if (picking_job_ids[job_counter] == selected_job_id)
+						{
+							ResultDataView->SetValue(wxVariant(CHECKED), current_row, 2 + job_counter);
+							break;
+						}
 					}
 				}
+
+				if (!should_continue) break;
 			}
 
-			if (!should_continue) break;
+		}
+		else
+		{
+			MyDebugPrint("No particle position assets\n");
 		}
 
 		main_frame->current_project.database.EndBatchSelect();
+
+		// It could be that some assets still don't have any checked boxes, for example
+		// because the latest pick job found 0 particles, so that the asset table has no assets for
+		// this image.
+		// In this case, we want to select the job with the largest pick_job_id
+		/*
+		wxVariant temp_variant;
+				ResultDataView->GetValue(temp_variant, row, column);
+				value = temp_variant.GetLong();
+
+				if ((value == CHECKED_WITH_EYE || value == UNCHECKED_WITH_EYE)
+				*/
+		wxVariant temp_variant;
+		bool current_row_has_something_checked;
+		int last_unchecked_column = -1;
+		long value;
+		for (int row = 0; row < number_of_assets; row ++ )
+		{
+			current_row_has_something_checked = false;
+			for (int col = 2; col < number_of_picking_jobs + 2; col ++)
+			{
+				ResultDataView->GetValue(temp_variant,row,col);
+				value = temp_variant.GetLong();
+				if (value == CHECKED_WITH_EYE || value == CHECKED) current_row_has_something_checked = true;
+				if (value == UNCHECKED) last_unchecked_column = col;
+			}
+			if (! current_row_has_something_checked) ResultDataView->CheckItem(row,last_unchecked_column);
+		}
+
 
 		// select the first row..
 		doing_panel_fill = false;

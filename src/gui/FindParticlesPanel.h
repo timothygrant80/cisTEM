@@ -49,7 +49,7 @@ public:
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 
-		void ProcessResult(JobResult *result_to_process);
+		void ProcessResult(JobResult *result_to_process, const int &wanted_job_number = -1);
 		//void UpdateProgressBar();
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);

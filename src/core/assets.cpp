@@ -528,7 +528,7 @@ ImageAssetList::ImageAssetList()
 
 ImageAssetList::~ImageAssetList()
 {
-	delete [] assets;
+	delete [] reinterpret_cast < ImageAsset *>  (assets);
 }
 
 void ImageAssetList::CheckMemory()
@@ -676,7 +676,7 @@ ParticlePositionAssetList::ParticlePositionAssetList()
 
 ParticlePositionAssetList::~ParticlePositionAssetList()
 {
-	delete [] assets;
+	delete [] reinterpret_cast < ParticlePositionAsset *>  (assets);
 }
 
 
@@ -793,7 +793,7 @@ VolumeAssetList::VolumeAssetList()
 {
 	number_of_assets = 0;
 	number_allocated = 15;
-	assets = new ImageAsset[15];
+	assets = new VolumeAsset[15];
 
 }
 

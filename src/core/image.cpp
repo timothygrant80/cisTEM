@@ -56,10 +56,12 @@ Image::Image()
 	planned = false;
 
 	padding_jump_value = 0;
+	image_memory_should_not_be_deallocated = false;
 }
 
 Image::Image( const Image &other_image) // copy constructor
 {
+	image_memory_should_not_be_deallocated = false;
 	MyDebugPrint("Warning: copying an image object");
 	 *this = other_image;
 }
@@ -3140,7 +3142,7 @@ Image & Image::operator = (const Image *other_image)
 
 void Image::Deallocate()
 {
-	if (is_in_memory == true)
+	if (is_in_memory == true && image_memory_should_not_be_deallocated == false)
 	{
 		fftwf_free(real_values);
 		is_in_memory = false;
@@ -3239,6 +3241,63 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 void Image::Allocate(int wanted_x_size, int wanted_y_size, bool should_be_in_real_space)
 {
 	Allocate(wanted_x_size, wanted_y_size, 1, should_be_in_real_space);
+}
+
+
+void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, int wanted_slice)
+{
+	Deallocate();
+	is_in_real_space = wanted3d->is_in_real_space;
+
+	// if we got here we need to do allocation..
+
+	SetLogicalDimensions(wanted3d->logical_x_dimension, wanted3d->logical_y_dimension, 1);
+
+	// we are not actually allocating, we are pointing..
+
+	int bytes_in_slice = wanted3d->real_memory_allocated / wanted3d->logical_z_dimension;
+
+	image_memory_should_not_be_deallocated = true;
+	is_in_memory = true; // kind of a lie
+	real_memory_allocated = bytes_in_slice; // kind of a lie
+
+
+
+	real_values = wanted3d->real_values + (bytes_in_slice * (wanted_slice - 1)); // point to the 3d..
+	complex_values = (fftwf_complex*) real_values;  // Set the complex_values to point at the newly allocated real values;
+
+	// Update addresses etc..
+
+    UpdateLoopingAndAddressing();
+
+    // Prepare the plans for FFTW
+
+    if (planned == false)
+    {
+    	if (logical_z_dimension > 1)
+    	{
+    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
+    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    	}
+    	else
+    	{
+    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
+    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+
+    	}
+
+    	planned = true;
+    }
+
+    // set the loop junmp value..
+
+	if (IsEven(logical_x_dimension) == true) padding_jump_value = 2;
+	else padding_jump_value = 1;
+
+	//
+	number_of_real_space_pixels = long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+	ft_normalization_factor = 1.0 / sqrtf(float(number_of_real_space_pixels));
+
 }
 
 //!>  \brief  Change the logical dimensions of an image and update all related values

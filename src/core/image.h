@@ -72,6 +72,7 @@ public:
 	fftwf_plan 	 plan_fwd;										// !< FFTW plan for the image (fwd)
 	fftwf_plan	 plan_bwd;										// !< FFTW plan for the image (bwd)
 	bool      	 planned;										// !< Whether the plan has been setup by/for FFTW
+	bool         image_memory_should_not_be_deallocated;	    // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
 
 	// Methods
 
@@ -84,6 +85,8 @@ public:
 
 	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
+	void AllocateAsPointingToSliceIn3D(Image *wanted3d, int wanted_slice);
+
 	void Deallocate();
 
 	int ReturnSmallestLogicalDimension();

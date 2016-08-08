@@ -162,6 +162,9 @@ bool UnBlurApp::DoCalculation()
 
 	// Arrays to hold the input images
 
+	Image whole_movie;
+	long slice_byte_size;
+
 	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
 	Image *image_stack = new Image[number_of_input_images];
 
@@ -177,7 +180,9 @@ bool UnBlurApp::DoCalculation()
 
 	// Electron dose object for if dose filtering..
 
-	ElectronDose my_electron_dose(acceleration_voltage, original_pixel_size);
+	ElectronDose *my_electron_dose;
+
+	if (should_dose_filter == true) my_electron_dose = new ElectronDose(acceleration_voltage, original_pixel_size);
 
 	// some quick checks..
 
@@ -189,9 +194,12 @@ bool UnBlurApp::DoCalculation()
 
 	// Read in and FFT all the images..
 
+	whole_movie.ReadSlices(&input_file, 1, number_of_input_images);
+
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
-		image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
+		//image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
+		image_stack[image_counter].AllocateAsPointingToSliceIn3D(&whole_movie, image_counter + 1);
 		image_stack[image_counter].ForwardFFT(true);
 
 		x_shifts[image_counter] = 0.0;
@@ -210,7 +218,8 @@ bool UnBlurApp::DoCalculation()
 
 	if (pre_binning_factor > 1)
 	{
-		unbinned_image_stack = new Image[number_of_input_images];
+		unbinned_image_stack = image_stack;
+		image_stack = new Image[number_of_input_images];
 		pixel_size = original_pixel_size * pre_binning_factor;
 	}
 	else
@@ -235,8 +244,8 @@ bool UnBlurApp::DoCalculation()
 	{
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
-			unbinned_image_stack[image_counter] = image_stack[image_counter];
-			image_stack[image_counter].Resize(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1);
+			image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+			unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
 			//image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
 		}
 
@@ -312,7 +321,7 @@ bool UnBlurApp::DoCalculation()
 
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
-			my_electron_dose.CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
+			my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
 
 			// filter the image, and also calculate the sum of squares..
 
@@ -366,6 +375,8 @@ bool UnBlurApp::DoCalculation()
 	}
 
 	my_result.SetResult(number_of_input_images * 2, result_array);
+
+	if (should_dose_filter == true) delete my_electron_dose;
 
 	delete [] result_array;
 

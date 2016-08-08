@@ -23,7 +23,9 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
+
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
+
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -148,6 +150,12 @@ resize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 resize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 resize_LDFLAGS = $(WX_LIBS_BASE)
 resize_LDADD = libcore.a
+
+resample_SOURCES = programs/resample/resample.cpp
+resample_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+resample_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+resample_LDFLAGS = $(WX_LIBS_BASE)
+resample_LDADD = libcore.a
 
 estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
 estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)

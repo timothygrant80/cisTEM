@@ -734,7 +734,7 @@ bool FindParticlesApp::DoCalculation()
 
 	const int minimum_box_size_for_picking_unbinned = int(float(minimum_box_size_for_picking)*pixel_size/original_micrograph_pixel_size)+1;
 
-	if (output_stack_box_size < minimum_box_size_for_picking_unbinned)
+	if (output_stack_box_size < minimum_box_size_for_picking_unbinned && output_stack_box_size > 0)
 	{
 		SendInfo(wxString::Format("Warning: user-supplied box size (%i) is smaller than minimum recommended box size given the max radius and the defocus (%i)\n",output_stack_box_size,minimum_box_size_for_picking_unbinned));
 	}
@@ -801,7 +801,7 @@ bool FindParticlesApp::DoCalculation()
 
 	// Let's find peaks in our scoring function and box candidate particles out
 	box.Deallocate();
-	box.Allocate(output_stack_box_size,output_stack_box_size,1,true);
+	if (output_stack_box_size > 0) box.Allocate(output_stack_box_size,output_stack_box_size,1,true);
 	//micrograph.BackwardFFT();
 	//micrograph.NormalizeFT();
 	micrograph.ReadSlice(&micrograph_file,1);

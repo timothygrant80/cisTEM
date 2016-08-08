@@ -548,7 +548,6 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	}
 
 	highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();
-	output_stack_box_size = 128;
 	minimum_distance_from_edges = MinimumDistanceFromEdgesSpinCtrl->GetValue();
 	picking_threshold = ThresholdPeakHeightNumericCtrl->ReturnValue();
 	avoid_high_variance_areas = AvoidHighVarianceAreasCheckBox->GetValue();

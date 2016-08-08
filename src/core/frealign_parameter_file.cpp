@@ -7,7 +7,31 @@
 	abort();
 } */
 
+FrealignParameterFile::FrealignParameterFile()
+{
+	filename = "";
+	access_type = 0;
+	parameter_file = NULL;
+	number_of_lines = 0;
+	current_line = 0;
+	parameter_cache = NULL;
+	average_defocus = 0.0;
+	defocus_coeff_a = 0.0;
+	defocus_coeff_b = 0.0;
+	records_per_line = 0;
+}
+
 FrealignParameterFile::FrealignParameterFile(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line)
+{
+	Open(wanted_filename, wanted_access_type, wanted_records_per_line);
+}
+
+FrealignParameterFile::~FrealignParameterFile()
+{
+	Close();
+}
+
+void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_type, int wanted_records_per_line)
 {
 	filename = wanted_filename;
 	access_type = wanted_access_type;
@@ -40,12 +64,6 @@ FrealignParameterFile::FrealignParameterFile(wxString wanted_filename, int wante
 
 	records_per_line = wanted_records_per_line;
 }
-
-FrealignParameterFile::~FrealignParameterFile()
-{
-	Close();
-}
-
 void FrealignParameterFile::Close()
 {
 	if (parameter_cache != NULL)
@@ -53,7 +71,7 @@ void FrealignParameterFile::Close()
 		delete [] parameter_cache;
 		parameter_cache = NULL;
 	}
-	fclose(parameter_file);
+	if (access_type == 1) fclose(parameter_file);
 }
 
 void FrealignParameterFile::WriteCommentLine(wxString comment_string)
@@ -151,6 +169,8 @@ int FrealignParameterFile::ReadFile()
 	wxPrintf("\n %i data lines read\n", number_of_lines);
 	current_line = 0;
 
+	fclose(parameter_file);
+
 	return number_of_lines;
 }
 
@@ -163,6 +183,24 @@ void FrealignParameterFile::ReadLine(float *parameters)
 
 	for (i = 0; i < records_per_line; i++) {parameters[i] = parameter_cache[i + elements_read];};
 	current_line++;
+}
+
+float FrealignParameterFile::ReadParameter(int wanted_line_number, int wanted_parameter)
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+
+	int elements_read = records_per_line * wanted_line_number;
+
+	return parameter_cache[wanted_parameter + elements_read];
+}
+
+void FrealignParameterFile::UpdateParameter(int wanted_line_number, int wanted_parameter, float wanted_value)
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+
+	int elements_read = records_per_line * wanted_line_number;
+
+	parameter_cache[wanted_parameter + elements_read] = wanted_value;
 }
 
 void FrealignParameterFile::Rewind()

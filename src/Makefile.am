@@ -23,8 +23,7 @@ noinst_HEADERS = core/asset_group.h \
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d niko_test ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
-
+bin_PROGRAMS = ProjectX unblur guix_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -64,7 +63,6 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/euler_search.cpp \
                        core/frealign_parameter_file.cpp
 
-                       
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
@@ -72,8 +70,6 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
-
-
 
 ProjectX_SOURCES = programs/projectx/projectx.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp
 ProjectX_CXXFLAGS = $(WX_CPPFLAGS)
@@ -92,7 +88,6 @@ console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_LDFLAGS = $(WX_LIBS_BASE)
 console_test_LDADD = libcore.a
-
 
 unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -124,6 +119,12 @@ merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 merge3d_LDFLAGS = $(WX_LIBS_BASE)
 merge3d_LDADD = libcore.a
 
+calc_occ_SOURCES = programs/calc_occ/calc_occ.cpp
+calc_occ_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+calc_occ_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+calc_occ_LDFLAGS = $(WX_LIBS_BASE)
+calc_occ_LDADD = libcore.a
+
 project3d_SOURCES = programs/project3d/project3d.cpp
 project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 project3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -135,12 +136,6 @@ refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine3d_LDFLAGS = $(WX_LIBS_BASE)
 refine3d_LDADD = libcore.a
-
-niko_test_SOURCES = programs/niko_test/niko_test.cpp
-niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_LDFLAGS = $(WX_LIBS_BASE)
-niko_test_LDADD = libcore.a
 
 remove_outlier_pixels_SOURCES = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
 remove_outlier_pixels_CXXFLAGS = $(WX_CPPFLAGS_BASE)

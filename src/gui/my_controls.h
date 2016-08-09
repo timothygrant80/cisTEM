@@ -136,4 +136,13 @@ public :
 	void OnSave( wxCommandEvent& event);
 };
 
+// virtual listctrl
+class ContentsList: public wxListCtrl{
+	public:
+		ContentsList(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+		wxString OnGetItemText(long item, long column) const;
+
+		int ReturnGuessAtColumnTextWidth(int wanted_column);
+};
+
 #endif

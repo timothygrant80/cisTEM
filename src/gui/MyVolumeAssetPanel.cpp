@@ -189,7 +189,7 @@ void MyVolumeAssetPanel::FillAssetSpecificContentsList()
 	ContentsListBox->InsertColumn(4, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 	ContentsListBox->InsertColumn(5, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 	ContentsListBox->InsertColumn(6, "Z Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-
+/*
 
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
 		{
@@ -202,7 +202,38 @@ void MyVolumeAssetPanel::FillAssetSpecificContentsList()
 			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->z_size));
 
 
-		}
+		}*/
+}
+
+wxString MyVolumeAssetPanel::ReturnItemText(long item, long column) const
+{
+	switch(column)
+	{
+	    case 0  :
+	    	return wxString::Format(wxT("%s"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->filename.GetFullName());
+	       break;
+	    case 1  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
+	       break;
+	    case 2  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->reconstruction_job_id);
+	       break;
+	    case 3  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
+	       break;
+	    case 4  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);
+	       break;
+	    case 5  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_size);
+		   break;
+	    case 6  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->z_size);
+		   break;
+	    default :
+	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+	       return "";
+	}
 }
 
 void MyVolumeAssetPanel::ImportAssetClick( wxCommandEvent& event )

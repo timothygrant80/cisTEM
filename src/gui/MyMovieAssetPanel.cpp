@@ -191,7 +191,7 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 
-
+/*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
 		{
 			ContentsListBox->InsertItem(counter, wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->asset_id, counter));
@@ -205,7 +205,45 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 			ContentsListBox->SetItem(counter, 8, wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->microscope_voltage));
 
 
-		}
+		}*/
+}
+
+wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
+{
+	switch(column)
+	{
+	    case 0  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
+	       break;
+	    case 1  :
+	    	return all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->ReturnShortNameString();
+	       break;
+	    case 2  :
+	    	return wxString::Format(wxT("%i"),all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);
+	       break;
+	    case 3  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_size);
+	       break;
+	    case 4  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->number_of_frames);
+	       break;
+	    case 5  :
+	    	return wxString::Format(wxT("%.3f"),all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
+		   break;
+	    case 6  :
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->dose_per_frame);
+		   break;
+	    case 7  :
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->spherical_aberration);
+	    	break;
+	    case 8  :
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->microscope_voltage);
+	    	break;
+
+	    default :
+	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+	       return "";
+	}
 }
 
 void MyMovieAssetPanel::ImportAssetClick( wxCommandEvent& event )

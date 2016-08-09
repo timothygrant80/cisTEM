@@ -535,7 +535,7 @@ void MyAssetParentPanel::OnEndEdit( wxListEvent& event )
 
 void MyAssetParentPanel::SizeContentsColumn(int column_number)
 {
-	int header_width, text_width;
+/*	int header_width, text_width;
 
 	ContentsListBox->SetColumnWidth(column_number, wxLIST_AUTOSIZE);
 	text_width = ContentsListBox->GetColumnWidth(column_number);
@@ -543,6 +543,10 @@ void MyAssetParentPanel::SizeContentsColumn(int column_number)
 	header_width = ContentsListBox->GetColumnWidth(column_number);
 
 	if (text_width > header_width) ContentsListBox->SetColumnWidth(column_number, wxLIST_AUTOSIZE);
+	*/
+
+	ContentsListBox->SetColumnWidth(column_number,  ContentsListBox->ReturnGuessAtColumnTextWidth(column_number));
+
 
 }
 
@@ -553,7 +557,11 @@ void MyAssetParentPanel::FillContentsList()
 		ContentsListBox->Freeze();
 		ContentsListBox->ClearAll();
 
+		ContentsListBox->SetItemCount(all_groups_list->groups[selected_group].number_of_members);
+
 		FillAssetSpecificContentsList();
+
+		if (all_groups_list->groups[selected_group].number_of_members > 0) ContentsListBox->RefreshItems(0, all_groups_list->groups[selected_group].number_of_members - 1);
 
 		for (int counter = 0; counter < ContentsListBox->GetColumnCount(); counter++)
 		{

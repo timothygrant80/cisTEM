@@ -485,3 +485,56 @@ void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
 }
 
 
+// VIRTUAL LIST CTRL
+ContentsList::ContentsList(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString ContentsList::OnGetItemText(long item, long column) const
+{
+	MyAssetParentPanel *parent_panel =  reinterpret_cast < MyAssetParentPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	return parent_panel->ReturnItemText(item, column);
+	//wxPrintf("Here!\n");
+	//	return "Hi"	;
+}
+
+int ContentsList::ReturnGuessAtColumnTextWidth(int wanted_column)
+{
+	wxClientDC dc(this);
+	long counter;
+
+	wxListItem result;
+	result.SetMask(wxLIST_MASK_TEXT);
+	GetColumn(wanted_column, result);
+
+	int max_width = dc.GetTextExtent(result.GetText()).x + 20;
+
+	if (GetItemCount() < 100)
+	{
+		for ( counter = 0; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+	}
+	else
+	{
+		for ( counter = 0; counter < 50; counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+	}
+
+	return max_width;
+
+}
+
+

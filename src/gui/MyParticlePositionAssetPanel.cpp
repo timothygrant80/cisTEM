@@ -175,20 +175,23 @@ void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 	}
 
 	main_frame->current_project.database.EndAllParticlePositionGroupsSelect();
-	FillGroupList();
-	FillContentsList();
+	//FillGroupList();
+	//FillContentsList();
+	is_dirty = true;
 }
 
 void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()
 {
+	ContentsListBox->SetItemCount(all_groups_list->groups[selected_group].number_of_members);
 
-		ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(1, "Parent Image I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(2, "Pick Job I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(3, "X Position", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(4, "Y Position", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  100 );
+	ContentsListBox->InsertColumn(1, "Parent Image I.D.", wxLIST_FORMAT_LEFT,  100 );
+	ContentsListBox->InsertColumn(2, "Pick Job I.D.", wxLIST_FORMAT_LEFT,  100 );
+	ContentsListBox->InsertColumn(3, "X Position", wxLIST_FORMAT_LEFT,  100 );
+	ContentsListBox->InsertColumn(4, "Y Position", wxLIST_FORMAT_LEFT,  100 );
 
 
+/*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
 		{
 			ContentsListBox->InsertItem(counter, wxString::Format(wxT("%i"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->asset_id, counter));
@@ -197,9 +200,34 @@ void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()
 			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->x_position));
 			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->y_position));
 
-		}
+		}*/
 }
 
+wxString MyParticlePositionAssetPanel::ReturnItemText(long item, long column) const
+{
+	switch(column)
+	{
+	    case 0  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
+	       break;
+	    case 1  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->parent_id);
+	       break;
+	    case 2  :
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pick_job_id);
+	       break;
+	    case 3  :
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_position);
+	       break;
+	    case 4  :
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_position);
+	       break;
+	    default :
+	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+	       return "";
+	}
+
+}
 
 void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {

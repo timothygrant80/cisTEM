@@ -27,5 +27,7 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		bool IsFileAnAsset(wxFileName file_to_check);
 		ImageAsset* ReturnAssetPointer(long wanted_asset);
 
+		wxString ReturnItemText(long item, long column) const;
+
 };
 

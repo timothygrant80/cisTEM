@@ -34,6 +34,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		int ReturnAssetID(long wanted_asset);
 
 		MovieAsset* ReturnAssetPointer(long wanted_asset);
+		wxString ReturnItemText(long item, long column) const;
 
 };
 

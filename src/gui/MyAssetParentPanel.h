@@ -112,6 +112,7 @@ protected:
 
 		//bool IsFileAnAsset(wxFileName file_to_check) = 0;
 		virtual Asset* ReturnAssetPointer(long wanted_asset) = 0;
+		virtual wxString ReturnItemText(long item, long column) const  = 0;
 
 
 		void Reset();
@@ -123,6 +124,7 @@ protected:
 		virtual void UpdateInfo() = 0;
 
 };
+
 
 class GroupDropTarget : public wxDropTarget
 {

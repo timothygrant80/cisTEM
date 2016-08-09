@@ -25,6 +25,7 @@ class MyVolumeAssetPanel : public MyAssetParentPanel
 		void UpdateInfo();
 
 		VolumeAsset* ReturnAssetPointer(long wanted_asset);
+		wxString ReturnItemText(long item, long column) const;
 
 };
 

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -12,6 +12,7 @@
 #include <wx/xrc/xmlres.h>
 class BitmapPanel;
 class CTF1DPanel;
+class ContentsList;
 class JobPanel;
 class NumericTextCtrl;
 class PickingBitmapPanel;
@@ -20,7 +21,6 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
-#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -675,7 +675,7 @@ class AssetParentPanel : public wxPanel
 		wxButton* RemoveGroupButton;
 		wxPanel* m_panel3;
 		wxStaticText* AssetTypeText;
-		wxListCtrl* ContentsListBox;
+		ContentsList* ContentsListBox;
 		wxButton* ImportAsset;
 		wxButton* RemoveSelectedAssetButton;
 		wxButton* RemoveAllAssetsButton;

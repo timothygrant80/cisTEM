@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -12,6 +12,7 @@
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
+#include "job_panel.h"
 #include "my_controls.h"
 
 #include "ProjectX_gui.h"
@@ -2077,7 +2078,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	wxBoxSizer* bSizer25;
 	bSizer25 = new wxBoxSizer( wxVERTICAL );
 	
-	ContentsListBox = new wxListCtrl( m_panel3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_ALIGN_LEFT|wxLC_NO_SORT_HEADER|wxLC_REPORT|wxLC_VRULES );
+	ContentsListBox = new ContentsList( m_panel3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_ALIGN_LEFT|wxLC_NO_SORT_HEADER|wxLC_REPORT|wxLC_VIRTUAL|wxLC_VRULES );
 	bSizer25->Add( ContentsListBox, 100, wxALL|wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer28;

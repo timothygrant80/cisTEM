@@ -232,6 +232,7 @@ void CtffindApp::DoInteractiveUserInput()
 	double temp_double;
 	long temp_long;
 	float xmag, dstep;
+	int token_counter;
 	const bool		old_school_input          = command_line_parser.FoundSwitch("old-school-input");
 	const bool 		old_school_input_ctffind4 = command_line_parser.FoundSwitch("old-school-input-ctffind4");
 
@@ -264,25 +265,26 @@ void CtffindApp::DoInteractiveUserInput()
 			MyPrintfRed("Bad number of arguments (%i, expected %i) in line 3 of input\n",tokenizer.CountTokens(),5);
 			abort();
 		}
+		token_counter = -1;
 		while (tokenizer.HasMoreTokens())
 		{
-			switch (tokenizer.GetPosition())
+			token_counter ++;
+			tokenizer.GetNextToken().ToDouble(&temp_double);
+			switch (token_counter)
 			{
-				case 0: tokenizer.GetNextToken().ToDouble(&temp_double);
-						spherical_aberration = float(temp_double);
+				case 0: spherical_aberration = float(temp_double);
 						break;
-				case 1: tokenizer.GetNextToken().ToDouble(&temp_double);
-						acceleration_voltage = float(temp_double);
+				case 1: acceleration_voltage = float(temp_double);
 						break;
-				case 2: tokenizer.GetNextToken().ToDouble(&temp_double);
-						amplitude_contrast = float(temp_double);
+				case 2: amplitude_contrast = float(temp_double);
 						break;
-				case 3: tokenizer.GetNextToken().ToDouble(&temp_double);
-						xmag = float(temp_double);
+				case 3: xmag = float(temp_double);
 						break;
-				case 4: tokenizer.GetNextToken().ToDouble(&temp_double);
-						dstep = float(temp_double);
+				case 4: dstep = float(temp_double);
 						break;
+				default:
+						wxPrintf("Ooops - bad token number: %li\n",tokenizer.GetPosition());
+						MyDebugAssertTrue(false,"oops\n");
 			}
 		}
 		pixel_size = dstep * 10000.0 / xmag;
@@ -296,9 +298,11 @@ void CtffindApp::DoInteractiveUserInput()
 			MyPrintfRed("Bad number of arguments (%i, expected %i) in line 4 of input\n",tokenizer.CountTokens(),7);
 			abort();
 		}
+		token_counter = -1;
 		while (tokenizer.HasMoreTokens())
 		{
-			switch (tokenizer.GetPosition())
+			token_counter ++;
+			switch (token_counter)
 			{
 				case 0: tokenizer.GetNextToken().ToLong(&temp_long);
 						box_size = int(temp_long);
@@ -330,7 +334,7 @@ void CtffindApp::DoInteractiveUserInput()
 		// Output for old-school users
 		if (is_running_locally)
 		{
-			wxPrintf("\n CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]");
+			wxPrintf("\n CS[mm], HT[kV], AmpCnst, XMAG, DStep[um]\n");
 			wxPrintf("%5.1f%9.1f%8.2f%10.1f%9.3f\n\n",spherical_aberration,acceleration_voltage,amplitude_contrast,xmag,dstep);
 		}
 
@@ -410,6 +414,7 @@ void CtffindApp::DoInteractiveUserInput()
 			minimum_additional_phase_shift = 0.0;
 			maximum_additional_phase_shift = 0.0;
 			additional_phase_shift_search_step = 0.0;
+			number_of_frames_to_average = 1;
 		}
 
 		// Do some argument checking on movie processing option
@@ -511,7 +516,7 @@ void CtffindApp::DoInteractiveUserInput()
 		{
 			minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift (rad)","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
 			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift (rad)","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","3.15",minimum_additional_phase_shift,3.15);
-			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.001,maximum_additional_phase_shift-minimum_additional_phase_shift);
+			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.0,maximum_additional_phase_shift-minimum_additional_phase_shift);
 		}
 		else
 		{
@@ -534,8 +539,8 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(23);
-	my_current_job.ManualSetArguments("tbitffffiffffffbfffbffb",input_filename.c_str(),
+	my_current_job.Reset(24);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffb",input_filename.c_str(),
 													 	 	 	input_is_a_movie,
 																number_of_frames_to_average,
 																output_diagnostic_filename.c_str(),
@@ -549,6 +554,7 @@ void CtffindApp::DoInteractiveUserInput()
 																minimum_defocus,
 																maximum_defocus,
 																defocus_search_step,
+																large_astigmatism_expected,
 																astigmatism_tolerance,
 																find_additional_phase_shift,
 																minimum_additional_phase_shift,
@@ -596,31 +602,33 @@ bool CtffindApp::DoCalculation()
 	const float       	minimum_defocus						= my_current_job.arguments[11].ReturnFloatArgument();
 	const float       	maximum_defocus						= my_current_job.arguments[12].ReturnFloatArgument();
 	const float       	defocus_search_step					= my_current_job.arguments[13].ReturnFloatArgument();
-	const float       	astigmatism_tolerance               = my_current_job.arguments[14].ReturnFloatArgument();
-	const bool       	find_additional_phase_shift         = my_current_job.arguments[15].ReturnBoolArgument();
-	const float  		minimum_additional_phase_shift		= my_current_job.arguments[16].ReturnFloatArgument();
-	const float			maximum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
-	const float			additional_phase_shift_search_step	= my_current_job.arguments[18].ReturnFloatArgument();
-	const bool  		astigmatism_is_known				= my_current_job.arguments[19].ReturnBoolArgument();
-	const float 		known_astigmatism					= my_current_job.arguments[20].ReturnFloatArgument();
-	const float 		known_astigmatism_angle				= my_current_job.arguments[21].ReturnFloatArgument();
-	const bool			resample_if_pixel_too_small			= my_current_job.arguments[22].ReturnBoolArgument();
+	const bool			large_astigmatism_expected			= my_current_job.arguments[14].ReturnBoolArgument();
+	const float       	astigmatism_tolerance               = my_current_job.arguments[15].ReturnFloatArgument();
+	const bool       	find_additional_phase_shift         = my_current_job.arguments[16].ReturnBoolArgument();
+	const float  		minimum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
+	const float			maximum_additional_phase_shift		= my_current_job.arguments[18].ReturnFloatArgument();
+	const float			additional_phase_shift_search_step	= my_current_job.arguments[19].ReturnFloatArgument();
+	const bool  		astigmatism_is_known				= my_current_job.arguments[20].ReturnBoolArgument();
+	const float 		known_astigmatism					= my_current_job.arguments[21].ReturnFloatArgument();
+	const float 		known_astigmatism_angle				= my_current_job.arguments[22].ReturnFloatArgument();
+	const bool			resample_if_pixel_too_small			= my_current_job.arguments[23].ReturnBoolArgument();
 
 	// These variables will be set by command-line options
-	const bool		old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
-	const bool		amplitude_spectrum_input = command_line_parser.FoundSwitch("amplitude-spectrum-input");
-	const bool		filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
-	const bool 		compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
-	const bool		boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
+	const bool			old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
+	const bool			amplitude_spectrum_input = command_line_parser.FoundSwitch("amplitude-spectrum-input");
+	const bool			filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
+	const bool 			compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
+	const bool			boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
 
 	// Resampling of input images to ensure that the pixel size isn't too small
-	const float		target_nyquist_after_resampling = 2.8; // Angstroms
-	const float 	target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
-	float 			pixel_size_for_fitting = pixel_size_of_input_image;
-	int				temporary_box_size;
+	const float			target_nyquist_after_resampling = 2.8; // Angstroms
+	const float 		target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
+	float 				pixel_size_for_fitting = pixel_size_of_input_image;
+	int					temporary_box_size;
 
-	// If the expected astigmatism is less than this value, we will do the initial search in 1D
-	const float		maximum_expected_astigmatism_for_1D_search = 1000.0;
+
+	// Maybe the user wants to hold the phase shift value (which they can do by giving the same value for min and max)
+	const bool			fixed_additional_phase_shift = abs(maximum_additional_phase_shift - minimum_additional_phase_shift) < 0.01;
 
 
 	/*
@@ -954,7 +962,7 @@ bool CtffindApp::DoCalculation()
 		/*
 		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
 		 */
-		if ((astigmatism_tolerance <= maximum_expected_astigmatism_for_1D_search && astigmatism_tolerance > 0.0) || ( astigmatism_is_known && known_astigmatism <= maximum_expected_astigmatism_for_1D_search) )
+		if (!large_astigmatism_expected)
 		{
 
 			// 1D rotational average
@@ -985,7 +993,7 @@ bool CtffindApp::DoCalculation()
 			bf_stepsize[0] = defocus_search_step / pixel_size_for_fitting;
 			bf_stepsize[1] = additional_phase_shift_search_step;
 
-			if (find_additional_phase_shift)
+			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 			{
 				number_of_search_dimensions = 2;
 			}
@@ -1017,7 +1025,14 @@ bool CtffindApp::DoCalculation()
 			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0],estimated_astigmatism_angle);
 			if (find_additional_phase_shift)
 			{
-				current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+				if (fixed_additional_phase_shift)
+				{
+					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+				}
+				else
+				{
+					current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+				}
 			}
 
 			// Remember the best score so far
@@ -1034,7 +1049,7 @@ bool CtffindApp::DoCalculation()
 			{
 				cg_starting_point[0] = current_ctf.GetDefocus1();
 				if (find_additional_phase_shift) cg_starting_point[1] = current_ctf.GetAdditionalPhaseShift();
-				if (find_additional_phase_shift)
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 2;
 				}
@@ -1049,7 +1064,7 @@ bool CtffindApp::DoCalculation()
 				cg_starting_point[1] = current_ctf.GetDefocus2();
 				cg_starting_point[2] = estimated_astigmatism_angle; // We could run the mirror trick to get a better starting point - just not sure whether worth it
 				if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
-				if (find_additional_phase_shift)
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 4;
 				}
@@ -1083,7 +1098,7 @@ bool CtffindApp::DoCalculation()
 				bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
 				bf_stepsize[1] = additional_phase_shift_search_step;
 
-				if (find_additional_phase_shift)
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 2;
 				}
@@ -1109,7 +1124,7 @@ bool CtffindApp::DoCalculation()
 				bf_stepsize[2] = 0.0;
 				bf_stepsize[3] = additional_phase_shift_search_step;
 
-				if (find_additional_phase_shift)
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 4;
 				}
@@ -1136,7 +1151,14 @@ bool CtffindApp::DoCalculation()
 				current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI);
 				if (find_additional_phase_shift)
 				{
-					current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+					if (fixed_additional_phase_shift)
+					{
+						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+					}
+					else
+					{
+						current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+					}
 				}
 			}
 			else
@@ -1144,7 +1166,14 @@ bool CtffindApp::DoCalculation()
 				current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
 				if (find_additional_phase_shift)
 				{
-					current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+					if (fixed_additional_phase_shift)
+					{
+						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+					}
+					else
+					{
+						current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+					}
 				}
 			}
 			current_ctf.EnforceConvention();
@@ -1196,7 +1225,14 @@ bool CtffindApp::DoCalculation()
 			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI);
 			if (find_additional_phase_shift)
 			{
-				current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+				if (fixed_additional_phase_shift)
+				{
+					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+				}
+				else
+				{
+					current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+				}
 			}
 		}
 		else
@@ -1204,7 +1240,14 @@ bool CtffindApp::DoCalculation()
 			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
 			if (find_additional_phase_shift)
 			{
-				current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+				if (fixed_additional_phase_shift)
+				{
+					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+				}
+				else
+				{
+					current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+				}
 			}
 		}
 		current_ctf.EnforceConvention();
@@ -1242,7 +1285,8 @@ bool CtffindApp::DoCalculation()
 		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
 		rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
 		rotational_average.ZeroYData();
-		number_of_averaged_pixels.ZeroYData();
+		//number_of_averaged_pixels.ZeroYData();
+		number_of_averaged_pixels = rotational_average;
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
@@ -1283,7 +1327,7 @@ bool CtffindApp::DoCalculation()
 			}
 			if (is_running_locally && old_school_input && last_bin_without_aliasing != 0)
 			{
-				wxPrintf("CTF aliasing apparent from %0.1f Angstroms",pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
+				wxPrintf("CTF aliasing apparent from %0.1f Angstroms\n",pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]);
 			}
 		}
 

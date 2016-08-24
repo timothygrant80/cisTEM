@@ -11,11 +11,10 @@
 # - update version in AC_INIT at beginning of configure.ac
 # - update version in ctffind.cpp, near line 4 (const std::string ctffind_version = "4.1.3";)
 # - update NEWS, ChangeLog
-# - create SVN tag "ctffind_?.?.?" with correct version number
 #
 # This script should be run on the Janelia cluster rather than workstations to ensure compatibility
 #
-version=4.1.3
+version=4.1.4
 svn_loc="svn+ssh://praha.hhmi.org/groups/grigorieff/home/grantt/Apps/svnrepos/projectx"
 configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"

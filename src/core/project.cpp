@@ -70,7 +70,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Volumes";
 	volume_asset_directory = directory_string;
-	wxFileName::Mkdir(image_asset_directory.GetFullPath());
+	wxFileName::Mkdir(volume_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";

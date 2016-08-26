@@ -319,7 +319,7 @@ void EulerSearch::SetSymmetryLimits()
 
 	if (symmetry_type == 'T')
 	{
-		phi_max = 180.0 / symmetry_number;
+		phi_max = 180.0;
 		theta_max = 54.7;
 		test_mirror = false;
 
@@ -328,7 +328,7 @@ void EulerSearch::SetSymmetryLimits()
 
 	if (symmetry_type == 'O')
 	{
-		phi_max = 90.0 / symmetry_number;
+		phi_max = 90.0;
 		theta_max = 54.7;
 		test_mirror = false;
 
@@ -337,7 +337,7 @@ void EulerSearch::SetSymmetryLimits()
 
 	if (symmetry_type == 'I')
 	{
-		phi_max = 180.0 / symmetry_number;
+		phi_max = 180.0;
 		theta_max = 31.7;
 		test_mirror = false;
 

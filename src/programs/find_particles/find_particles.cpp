@@ -378,6 +378,7 @@ bool FindParticlesApp::DoCalculation()
 	micrograph.Allocate(new_micrograph_dimension_x,new_micrograph_dimension_y,1,false);
 	temp_image.ClipInto(&micrograph);
 
+	micrograph.CosineMask(2.0/float(micrograph.logical_x_dimension), 4.0/float(micrograph.logical_x_dimension), true);
 
 	// Phase flip
 	micrograph.ApplyCTFPhaseFlip(micrograph_ctf);

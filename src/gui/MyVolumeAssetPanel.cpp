@@ -7,7 +7,7 @@ MyVolumeAssetPanel::MyVolumeAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
 {
-	Label0Title->SetLabel("Filename : ");
+	Label0Title->SetLabel("Name : ");
 	Label1Title->SetLabel("I.D. : ");
 	Label2Title->SetLabel("Reconstruction Job I.D. : ");
 	Label3Title->SetLabel("Pixel Size : ");
@@ -38,13 +38,13 @@ void MyVolumeAssetPanel::UpdateInfo()
 {
 	if (selected_content >= 0 && selected_group >= 0 && all_groups_list->groups[selected_group].number_of_members > 0)
 	{
-		Label0Text->SetLabel(wxString::Format(wxT("%s"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->filename.GetFullPath()));
+		Label0Text->SetLabel(all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_name);
 		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
-		Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->reconstruction_job_id));
-		Label3Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
-		Label4Text->SetLabel(wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
-		Label5Text->SetLabel(wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
-		Label6Text->SetLabel(wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size));
+		Label2Text->SetLabel(wxString::Format(wxT("%li"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->reconstruction_job_id));
+		Label3Text->SetLabel(wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
+		Label4Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
+		Label5Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
+		Label6Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size));
 		Label7Text->SetLabel("");
 		Label8Text->SetLabel("");
 		Label9Text->SetLabel("");
@@ -134,6 +134,14 @@ void MyVolumeAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *
 
 }
 
+void MyVolumeAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
+{
+	all_assets_list->ReturnVolumeAssetPointer(wanted_asset)->asset_name = wanted_name;
+	wxString sql_command = wxString::Format("UPDATE VOLUME_ASSETS SET NAME='%s' WHERE VOLUME_ASSET_ID=%i", wanted_name, all_assets_list->ReturnVolumeAssetPointer(wanted_asset)->asset_id);
+	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
+
+}
+
 void MyVolumeAssetPanel::ImportAllFromDatabase()
 {
 
@@ -182,7 +190,7 @@ void MyVolumeAssetPanel::ImportAllFromDatabase()
 
 void MyVolumeAssetPanel::FillAssetSpecificContentsList()
 {
-	ContentsListBox->InsertColumn(0, "Filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(0, "Name", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 	ContentsListBox->InsertColumn(1, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 	ContentsListBox->InsertColumn(2, "Reconstruction Job I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 	ContentsListBox->InsertColumn(3, "Pixel Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
@@ -210,16 +218,16 @@ wxString MyVolumeAssetPanel::ReturnItemText(long item, long column) const
 	switch(column)
 	{
 	    case 0  :
-	    	return wxString::Format(wxT("%s"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->filename.GetFullName());
+	    	return all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_name;
 	       break;
 	    case 1  :
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
 	       break;
 	    case 2  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->reconstruction_job_id);
+	    	return wxString::Format(wxT("%li"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->reconstruction_job_id);
 	       break;
 	    case 3  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
 	       break;
 	    case 4  :
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);
@@ -236,9 +244,16 @@ wxString MyVolumeAssetPanel::ReturnItemText(long item, long column) const
 	}
 }
 
+bool MyVolumeAssetPanel::IsFileAnAsset(wxFileName file_to_check)
+{
+	if (reinterpret_cast <VolumeAssetList*>  (all_assets_list)->FindFile(file_to_check) == -1) return false;
+	else return true;
+}
+
 void MyVolumeAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
-
+	MyVolumeImportDialog *import_dialog = new MyVolumeImportDialog(this);
+		import_dialog->ShowModal();
 		 is_dirty = true;
 
 }

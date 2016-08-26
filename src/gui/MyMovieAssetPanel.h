@@ -23,6 +23,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		void RenameGroupInDatabase(int wanted_group_id, const char *wanted_name);
 		void ImportAllFromDatabase();
 		void FillAssetSpecificContentsList();
+		void RenameAsset(long wanted_asset, wxString wanted_name);
 		void UpdateInfo();
 
 		bool IsFileAnAsset(wxFileName file_to_check);

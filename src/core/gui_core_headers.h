@@ -60,6 +60,7 @@
 #include "../gui/MyParticlePositionAssetPanel.h"
 #include "../gui/MyVolumeAssetPanel.h"
 #include "../gui/MovieImportDialog.h"
+#include "../gui/MyVolumeImportDialog.h"
 #include "../gui/MyMovieFilterDialog.h"
 #include "../gui/MyImageImportDialog.h"
 #include "../gui/AlignMoviesPanel.h"
@@ -72,9 +73,14 @@
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
 #include "../gui/MyNewProjectWizard.h"
+#include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/PickingResultsPanel.h"
 #include "../gui/MyParticlePositionExportDialog.h"
 #include "../gui/MyFrealignExportDialog.h"
+#include "../gui/MyRefinementPackageAssetPanel.h"
+#include "../gui/MyRenameDialog.h"
+#include "../gui/MyVolumeChooserDialog.h"
+#include "../gui/MyRefine3DPanel.h"
 
 

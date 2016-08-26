@@ -125,3 +125,50 @@ void FillGroupComboBoxSlave( wxComboBox *GroupComboBox, bool include_all_images_
 
 	GroupComboBox->Thaw();
 }
+
+void FillParticlePositionsGroupComboBox(wxComboBox *GroupComboBox, bool include_all_particle_positions_group)
+{
+	extern MyParticlePositionAssetPanel *particle_position_asset_panel;
+	GroupComboBox->Freeze();
+	GroupComboBox->ChangeValue("");
+	GroupComboBox->Clear();
+
+	long first_group_to_include = 0;
+	if (!include_all_particle_positions_group) first_group_to_include = 1;
+
+	for (long counter = first_group_to_include; counter < particle_position_asset_panel->ReturnNumberOfGroups(); counter++)
+	{
+		GroupComboBox->Append(particle_position_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), particle_position_asset_panel->ReturnGroupSize(counter)) + ")");
+	}
+
+	if (GroupComboBox->GetCount() > 0) GroupComboBox->SetSelection(0);
+
+	GroupComboBox->Thaw();
+
+}
+
+void AppendVolumeAssetsToComboBox(wxComboBox *ComboBox)
+{
+	extern MyVolumeAssetPanel *volume_asset_panel;
+	ComboBox->Freeze();
+
+	for (unsigned long counter = 0; counter < volume_asset_panel->ReturnNumberOfAssets(); counter++)
+		{
+			ComboBox->Append(volume_asset_panel->ReturnAssetName(counter));
+		}
+
+		ComboBox->Thaw();
+}
+
+void AppendRefinementPackagesToComboBox(wxComboBox *ComboBox)
+{
+	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+	ComboBox->Freeze();
+
+	for (unsigned long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.GetCount(); counter++)
+	{
+			ComboBox->Append(refinement_package_asset_panel->all_refinement_packages.Item(counter).name);
+	}
+
+		ComboBox->Thaw();
+}

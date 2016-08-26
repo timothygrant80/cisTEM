@@ -47,7 +47,7 @@ void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_typ
 		parameter_file = fopen(filename, "w");
 		if (parameter_file == NULL)
 		{
-			MyPrintWithDetails("Error: Cannot open Frealign parameter file for write\n");
+			MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for write\n", wanted_filename);
 			abort();
 		}
 	}
@@ -56,7 +56,7 @@ void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_typ
 		parameter_file = fopen(filename, "r");
 		if (parameter_file == NULL)
 		{
-			MyPrintWithDetails("Error: Cannot open Frealign parameter file for read\n");
+			MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for read\n", wanted_filename);
 			abort();
 		}
 		records_per_line = 16;

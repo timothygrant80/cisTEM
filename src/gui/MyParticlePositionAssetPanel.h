@@ -24,6 +24,7 @@ class MyParticlePositionAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		void RenameAsset(long wanted_asset, wxString wanted_name) {};
 		wxString ReturnItemText(long item, long column) const;
 
 		ParticlePositionAsset* ReturnAssetPointer(long wanted_asset);

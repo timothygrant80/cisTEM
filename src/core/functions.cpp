@@ -313,6 +313,11 @@ int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforc
 	return number;
 }
 
+float CalculateAngularStep(float required_resolution, float radius_in_angstroms)
+{
+	return 360.0 * required_resolution / PI / radius_in_angstroms;
+}
+
 void Allocate2DFloatArray(float **&array, int dim1, int dim2)
 {
 	array = new float* [dim1];			// dynamic array of pointers to float

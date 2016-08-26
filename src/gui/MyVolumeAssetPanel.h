@@ -26,6 +26,8 @@ class MyVolumeAssetPanel : public MyAssetParentPanel
 
 		VolumeAsset* ReturnAssetPointer(long wanted_asset);
 		wxString ReturnItemText(long item, long column) const;
+		void RenameAsset(long wanted_asset, wxString wanted_name);
+		bool IsFileAnAsset(wxFileName file_to_check);
 
 };
 

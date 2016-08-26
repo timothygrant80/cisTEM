@@ -7,6 +7,8 @@ MyParticlePositionAssetPanel::MyParticlePositionAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
 {
+	RenameAssetButton->Show(false);
+	Layout();
 	Label0Title->SetLabel("");
 	Label1Title->SetLabel("I.D. : ");
 	Label2Title->SetLabel("Parent Image I.D. : ");

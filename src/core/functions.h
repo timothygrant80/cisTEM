@@ -132,6 +132,8 @@ inline bool OutputIsAtTerminal()
     return isatty(fileno(stdout));
 }
 
+float CalculateAngularStep(float required_resolution, float radius_in_angstroms);
+
 int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false);
 int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false);
 
@@ -156,4 +158,13 @@ long ReturnFileSizeInBytes(wxString filename);
 inline float kDa_to_Angstrom3(float kilo_daltons)
 {
   return kilo_daltons * 1000.0 / 0.81;
+}
+
+inline bool IsAValidSymmetry(wxString *string_to_check)
+{
+	long junk;
+	if (string_to_check->StartsWith("C") == false && string_to_check->StartsWith("c") == false && string_to_check->StartsWith("D") == false && string_to_check->StartsWith("d") == false && string_to_check->StartsWith("I") == false && string_to_check->StartsWith("i") == false && string_to_check->StartsWith("O") == false && string_to_check->StartsWith("o") == false && string_to_check->StartsWith("T") == false && string_to_check->StartsWith("t") == false) return false;
+
+	return string_to_check->Mid(1).ToLong(&junk);
+
 }

@@ -68,6 +68,11 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	wxFileName::Mkdir(image_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Volumes";
+	volume_asset_directory = directory_string;
+	wxFileName::Mkdir(image_asset_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
 	ctf_asset_directory = directory_string;
 	wxFileName::Mkdir(ctf_asset_directory.GetFullPath());
@@ -76,6 +81,22 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	directory_string += "/Assets/ParticlePosition";
 	particle_position_asset_directory = directory_string;
 	wxFileName::Mkdir(particle_position_asset_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/ParticleStacks";
+	particle_stack_directory = directory_string;
+	wxFileName::Mkdir(particle_stack_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Parameters";
+	parameter_file_directory = directory_string;
+	wxFileName::Mkdir(parameter_file_directory.GetFullPath());
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Scratch";
+	scratch_directory = directory_string;
+	wxFileName::Mkdir(scratch_directory.GetFullPath());
+
 
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
@@ -114,12 +135,28 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	image_asset_directory = directory_string;
 
 	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Volumes";
+	volume_asset_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
 	ctf_asset_directory = directory_string;
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/ParticlePosition";
 	particle_position_asset_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/ParticleStacks";
+	particle_stack_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Parameters";
+	parameter_file_directory = directory_string;
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/Scratch";
+	scratch_directory = directory_string;
 
 	is_open = true;
 

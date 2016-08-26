@@ -56,6 +56,8 @@ typedef struct Kernel2D {
 #include "reconstruct_3d.h"
 #include "electron_dose.h"
 #include "run_profiles.h"
+#include "refinement_package.h"
+#include "refinement.h"
 #include "database.h"
 #include "project.h"
 #include "job_packager.h"

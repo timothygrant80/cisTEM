@@ -165,8 +165,9 @@ void Refine3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(45);
-	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffifffffffffbbbbbbbbbbb",	input_particle_images.ToUTF8().data(),
+	int current_class = 0;
+	my_current_job.Reset(46);
+	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffifffffffffbbbbbbbbbbbi",	input_particle_images.ToUTF8().data(),
 																						input_parameter_file.ToUTF8().data(),
 																						input_reconstruction.ToUTF8().data(),
 																						input_reconstruction_statistics.ToUTF8().data(), use_statistics,
@@ -186,7 +187,7 @@ void Refine3DApp::DoInteractiveUserInput()
 																						global_search, local_refinement,
 																						refine_psi, refine_theta, refine_phi, refine_x, refine_y,
 																						calculate_matching_projections,
-																						apply_2D_masking, ctf_refinement, invert_contrast);
+																						apply_2D_masking, ctf_refinement, invert_contrast, current_class);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -196,53 +197,54 @@ bool Refine3DApp::DoCalculation()
 	Particle refine_particle;
 	Particle search_particle;
 
-	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument();
-	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument();
-	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument();
-	wxString input_reconstruction_statistics 	= my_current_job.arguments[3].ReturnStringArgument();
-	bool	 use_statistics						= my_current_job.arguments[4].ReturnBoolArgument();
-	wxString ouput_matching_projections 		= my_current_job.arguments[5].ReturnStringArgument();
-	wxString ouput_parameter_file				= my_current_job.arguments[6].ReturnStringArgument();
-	wxString ouput_shift_file					= my_current_job.arguments[7].ReturnStringArgument();
-	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument();
-	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument();
-	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument();
-	float 	 pixel_size							= my_current_job.arguments[11].ReturnFloatArgument();
-	float    voltage_kV							= my_current_job.arguments[12].ReturnFloatArgument();
-	float 	 spherical_aberration_mm			= my_current_job.arguments[13].ReturnFloatArgument();
-	float    amplitude_contrast					= my_current_job.arguments[14].ReturnFloatArgument();
-	float	 molecular_mass_kDa					= my_current_job.arguments[15].ReturnFloatArgument();
-	float    mask_radius						= my_current_job.arguments[16].ReturnFloatArgument();
-	float    low_resolution_limit				= my_current_job.arguments[17].ReturnFloatArgument();
-	float    high_resolution_limit				= my_current_job.arguments[18].ReturnFloatArgument();
-	float	 signed_CC_limit					= my_current_job.arguments[19].ReturnFloatArgument();
-	float	 classification_resolution_limit	= my_current_job.arguments[20].ReturnFloatArgument();
-	float    mask_radius_search					= my_current_job.arguments[21].ReturnFloatArgument();
-	float	 high_resolution_limit_search		= my_current_job.arguments[22].ReturnFloatArgument();
-	float	 angular_step						= my_current_job.arguments[23].ReturnFloatArgument();
-	int		 best_parameters_to_keep			= my_current_job.arguments[24].ReturnIntegerArgument();
-	float	 max_search_x						= my_current_job.arguments[25].ReturnFloatArgument();
-	float	 max_search_y						= my_current_job.arguments[26].ReturnFloatArgument();
-	refine_particle.mask_center_2d_x			= my_current_job.arguments[27].ReturnFloatArgument();
-	refine_particle.mask_center_2d_y			= my_current_job.arguments[28].ReturnFloatArgument();
-	refine_particle.mask_center_2d_z			= my_current_job.arguments[29].ReturnFloatArgument();
-	refine_particle.mask_radius_2d				= my_current_job.arguments[30].ReturnFloatArgument();
-	float	 defocus_search_range				= my_current_job.arguments[31].ReturnFloatArgument();
-	float	 defocus_step						= my_current_job.arguments[32].ReturnFloatArgument();
-	float	 padding							= my_current_job.arguments[33].ReturnFloatArgument();
+	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument(); // global
+	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument(); // not sure
+	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument(); // global
+	wxString input_reconstruction_statistics 	= my_current_job.arguments[3].ReturnStringArgument(); // global
+	bool	 use_statistics						= my_current_job.arguments[4].ReturnBoolArgument();   // global
+	wxString ouput_matching_projections 		= my_current_job.arguments[5].ReturnStringArgument(); // ignore (always false)
+	wxString ouput_parameter_file				= my_current_job.arguments[6].ReturnStringArgument(); // not sure par file
+	wxString ouput_shift_file					= my_current_job.arguments[7].ReturnStringArgument(); // not sure output
+	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument(); // global
+	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument(); // local (effectively ignore)
+	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument(); // local (effectively ignore)
+	float 	 pixel_size							= my_current_job.arguments[11].ReturnFloatArgument(); // local
+	float    voltage_kV							= my_current_job.arguments[12].ReturnFloatArgument(); // local
+	float 	 spherical_aberration_mm			= my_current_job.arguments[13].ReturnFloatArgument(); // local
+	float    amplitude_contrast					= my_current_job.arguments[14].ReturnFloatArgument(); // local
+	float	 molecular_mass_kDa					= my_current_job.arguments[15].ReturnFloatArgument(); // global
+	float    mask_radius						= my_current_job.arguments[16].ReturnFloatArgument(); // global
+	float    low_resolution_limit				= my_current_job.arguments[17].ReturnFloatArgument(); // global
+	float    high_resolution_limit				= my_current_job.arguments[18].ReturnFloatArgument(); // global
+	float	 signed_CC_limit					= my_current_job.arguments[19].ReturnFloatArgument(); // global
+	float	 classification_resolution_limit	= my_current_job.arguments[20].ReturnFloatArgument(); // global
+	float    mask_radius_search					= my_current_job.arguments[21].ReturnFloatArgument(); // global
+	float	 high_resolution_limit_search		= my_current_job.arguments[22].ReturnFloatArgument(); // global
+	float	 angular_step						= my_current_job.arguments[23].ReturnFloatArgument(); // global
+	int		 best_parameters_to_keep			= my_current_job.arguments[24].ReturnIntegerArgument(); // global
+	float	 max_search_x						= my_current_job.arguments[25].ReturnFloatArgument(); // global
+	float	 max_search_y						= my_current_job.arguments[26].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_x			= my_current_job.arguments[27].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_y			= my_current_job.arguments[28].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_z			= my_current_job.arguments[29].ReturnFloatArgument(); // global
+	refine_particle.mask_radius_2d				= my_current_job.arguments[30].ReturnFloatArgument(); // global
+	float	 defocus_search_range				= my_current_job.arguments[31].ReturnFloatArgument(); // global
+	float	 defocus_step						= my_current_job.arguments[32].ReturnFloatArgument(); // global
+	float	 padding							= my_current_job.arguments[33].ReturnFloatArgument(); // global
 //	float	 filter_constant					= my_current_job.arguments[34].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[34].ReturnBoolArgument();
-	bool	 local_refinement					= my_current_job.arguments[35].ReturnBoolArgument();
+	bool	 global_search						= my_current_job.arguments[34].ReturnBoolArgument(); // global
+	bool	 local_refinement					= my_current_job.arguments[35].ReturnBoolArgument(); // global
 // Psi, Theta, Phi, ShiftX, ShiftY
-	refine_particle.parameter_map[3]			= my_current_job.arguments[36].ReturnBoolArgument();
-	refine_particle.parameter_map[2]			= my_current_job.arguments[37].ReturnBoolArgument();
-	refine_particle.parameter_map[1]			= my_current_job.arguments[38].ReturnBoolArgument();
-	refine_particle.parameter_map[4]			= my_current_job.arguments[39].ReturnBoolArgument();
-	refine_particle.parameter_map[5]			= my_current_job.arguments[40].ReturnBoolArgument();
-	bool 	 calculate_matching_projections		= my_current_job.arguments[41].ReturnBoolArgument();
-	refine_particle.apply_2D_masking			= my_current_job.arguments[42].ReturnBoolArgument();
-	bool	 ctf_refinement						= my_current_job.arguments[43].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[44].ReturnBoolArgument();
+	refine_particle.parameter_map[3]			= my_current_job.arguments[36].ReturnBoolArgument(); //global
+	refine_particle.parameter_map[2]			= my_current_job.arguments[37].ReturnBoolArgument(); //global
+	refine_particle.parameter_map[1]			= my_current_job.arguments[38].ReturnBoolArgument(); // global
+	refine_particle.parameter_map[4]			= my_current_job.arguments[39].ReturnBoolArgument(); // global
+	refine_particle.parameter_map[5]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
+	bool 	 calculate_matching_projections		= my_current_job.arguments[41].ReturnBoolArgument(); // global - but ignore
+	refine_particle.apply_2D_masking			= my_current_job.arguments[42].ReturnBoolArgument(); // global
+	bool	 ctf_refinement						= my_current_job.arguments[43].ReturnBoolArgument(); // global
+	bool	 invert_contrast					= my_current_job.arguments[44].ReturnBoolArgument(); // global - but ignore.
+	int		 current_class						= my_current_job.arguments[45].ReturnIntegerArgument(); // global - but ignore.
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts
@@ -267,6 +269,8 @@ bool Refine3DApp::DoCalculation()
 	EulerSearch					global_euler_search;
 	Kernel2D					**kernel_index = NULL;
 
+	JobResult *intermediate_result;
+
 	int i;
 	int j;
 	int fourier_size_x, fourier_size_y, fourier_size_z;
@@ -276,8 +280,10 @@ bool Refine3DApp::DoCalculation()
 	int defocus_i;
 	int best_defocus_i;
 	int search_box_size;
+	int result_parameter_counter;
 	float input_parameters[refine_particle.number_of_parameters];
 	float output_parameters[refine_particle.number_of_parameters];
+	float gui_result_parameters[refine_particle.number_of_parameters];
 	float search_parameters[refine_particle.number_of_parameters];
 	float parameter_average[refine_particle.number_of_parameters];
 	float parameter_variance[refine_particle.number_of_parameters];
@@ -311,6 +317,7 @@ bool Refine3DApp::DoCalculation()
 	ZeroFloatArray(cg_starting_point, refine_particle.number_of_parameters);
 	ZeroFloatArray(cg_accuracy, refine_particle.number_of_parameters);
 
+	wxPrintf("opening input file %s.\n", input_parameter_file);
 	FrealignParameterFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
 	my_input_par_file.ReadFile();
 
@@ -399,9 +406,10 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C");
 //	my_output_par_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score         Change");
 	my_output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST     OCC      LogP      SIGMA   SCORE  CHANGE");
-
+	fflush(my_output_par_file.parameter_file);
 //	my_output_par_shifts_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score");
 	my_output_par_shifts_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST     OCC      LogP      SIGMA   SCORE");
+
 
 	if (signed_CC_limit == 0.0) signed_CC_limit = pixel_size;
 
@@ -436,7 +444,8 @@ bool Refine3DApp::DoCalculation()
 		temp_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 		temp_image2.Allocate(search_box_size, search_box_size, true);
 		binning_factor_search = search_reference_3d.pixel_size / pixel_size;
-		if (angular_step <= 0) angular_step = 360.0 * high_resolution_limit_search / PI / mask_radius;
+		//if (angular_step <= 0) angular_step = 360.0 * high_resolution_limit_search / PI / mask_radius;
+		if (angular_step <= 0) angular_step = CalculateAngularStep(high_resolution_limit_search, mask_radius);
 		psi_step = rad_2_deg(search_reference_3d.pixel_size / mask_radius);
 		psi_step = 360.0 / int(360.0 / psi_step + 0.5);
 		psi_start = psi_step / 2.0 * global_random_number_generator.GetUniformRandom();
@@ -474,6 +483,7 @@ bool Refine3DApp::DoCalculation()
 		}
 		if (input_parameters[0] >= first_particle && input_parameters[0] <= last_particle) images_to_process++;
 	}
+
 	for (i = 0; i < refine_particle.number_of_parameters; i++)
 	{
 		parameter_average[i] /= my_input_par_file.number_of_lines;
@@ -769,6 +779,22 @@ bool Refine3DApp::DoCalculation()
 			}
 		}
 		my_output_par_file.WriteLine(output_parameters);
+
+		if (is_running_locally == false) // send results back to the gui..
+		{
+			intermediate_result = new JobResult;
+			intermediate_result->job_number = my_current_job.job_number;
+
+			gui_result_parameters[0] = current_class;
+			for (result_parameter_counter = 1; result_parameter_counter < refine_particle.number_of_parameters + 1; result_parameter_counter++)
+			{
+				gui_result_parameters[result_parameter_counter] = output_parameters[result_parameter_counter - 1];
+			}
+
+			intermediate_result->SetResult(refine_particle.number_of_parameters + 1, gui_result_parameters);
+			AddJobToResultQueue(intermediate_result);
+		}
+
 		for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameter_average[i] += output_parameters[i];}
 		for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] -= input_parameters[i];}
 		for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameter_change[i] += powf(output_parameters[i],2);}
@@ -800,4 +826,7 @@ bool Refine3DApp::DoCalculation()
 	wxPrintf("\nRefine3D: Normal termination\n\n");
 
 	return true;
+
+
+
 }

@@ -101,6 +101,8 @@ public :
 
 };
 
+WX_DECLARE_OBJARRAY(JobPackage, ArrayofJobPackages);
+
 class JobResult
 {
 
@@ -122,4 +124,6 @@ public:
 	void ReceiveFromSocket(wxSocketBase *wanted_socket);
 
 };
+
+WX_DECLARE_OBJARRAY(JobResult, ArrayofJobResults);
 

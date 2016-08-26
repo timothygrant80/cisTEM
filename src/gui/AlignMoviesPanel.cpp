@@ -959,6 +959,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				if (array_location == -1) // we don't already have an asset from this movie..
 				{
 					temp_asset.asset_id = image_asset_panel->current_asset_number;
+					temp_asset.asset_name = movie_asset_panel->ReturnAssetName(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)) + "_aligned";
 					temp_asset.parent_id = parent_id;
 					temp_asset.alignment_id = alignment_id;
 					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
@@ -966,7 +967,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					temp_asset.position_in_stack = 1;
 					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					image_asset_panel->AddAsset(&temp_asset);
-					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
 
 
 				}
@@ -980,6 +981,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_name,
 							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            my_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
 																											parent_id,
@@ -987,8 +989,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].ctf_estimation_id,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
 
 					image_asset_panel->current_asset_number++;

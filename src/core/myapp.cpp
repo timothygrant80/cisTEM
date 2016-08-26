@@ -2,6 +2,10 @@
 
 SETUP_SOCKET_CODES
 
+#define THREAD_START_NEXT_JOB 0
+#define THREAD_DIE 1
+#define THREAD_SLEEP 2
+
 bool MyApp::OnInit()
 {
 
@@ -9,6 +13,8 @@ bool MyApp::OnInit()
 	long counter;
 	int parse_status;
 	int number_of_arguments;
+
+	thread_next_action = THREAD_SLEEP;
 
 	number_of_dispatched_jobs = 0;
 	number_of_finished_jobs = 0;
@@ -23,6 +29,7 @@ bool MyApp::OnInit()
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDERROR, &MyApp::OnThreadSendError, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &MyApp::OnThreadSendInfo, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
 
 
 	// Connect to the controller program..
@@ -103,8 +110,6 @@ bool MyApp::OnInit()
 
 	wxSocketBase::Initialize();
 
-
-
 	// Attempt to connect to the controller..
 
 	controller_address.Service(controller_port);
@@ -141,6 +146,8 @@ bool MyApp::OnInit()
 	Bind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnZombieTimer ), this, 1);
 	zombie_timer = new wxTimer(this, 1);
 	zombie_timer->Start(120000, true);
+
+
 
 
 	// go into the event loop
@@ -314,6 +321,20 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 				  }
 
+					// Start the worker thread..
+
+				  work_thread = new CalculateThread(this);
+
+				  if ( work_thread->Run() != wxTHREAD_NO_ERROR )
+				  {
+				       MyPrintWithDetails("Can't create the thread!");
+				       delete work_thread;
+				       work_thread = NULL;
+				       ExitMainLoop();
+				 }
+
+
+
 				  // we are apparently connected, but this can be a lie = a certain number of connections appear to just be accepted by the operating
 				  // system - if the port if valid.  So if we don't get any events from this socket with 30 seconds, we are going to assume something
 				  // went wrong and die...
@@ -322,6 +343,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  Bind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnZombieTimer ), this, 1);
 				  zombie_timer = new wxTimer(this, 1);
 				  zombie_timer->Start(120000, true);
+
+
 			  }
 			  else
 			  {
@@ -478,6 +501,22 @@ void MyApp::SendJobResult(JobResult *result)
 
 }
 
+void MyApp::SendIntermediateResult(JobResult *result)
+{
+	MyDebugAssertTrue(i_am_the_master == false, "SendIntermediateResult called by master!");
+
+	//SETUP_SOCKET_CODES
+
+	//wxPrintf("Sending int. Job Slave (%f)\n", result->result_data[0]);
+	// sendjobresultcode
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+	controller_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+	result->SendToSocket(controller_socket);
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+}
+
 void MyApp::SendAllJobsFinished()
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
@@ -552,6 +591,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 		    		 {
 		    			 SendAllJobsFinished();
 
+		    			 //wxPrintf("Sending all jobs finished\n");
+
 		    			 if (my_job_package.ReturnNumberOfJobsRemaining() != 0)
 		    			 {
 		    				 SocketSendError("All jobs should be finished, but job package is not empty.");
@@ -591,6 +632,13 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 				// send the error message up the chain..
 
 				SocketSendInfo(info_message);
+			 }
+			 if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
+			 {
+				 JobResult temp_result;
+			     temp_result.ReceiveFromSocket(sock);
+			     //wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
+			     SendJobResult(&temp_result);
 			 }
 
 
@@ -850,18 +898,34 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 				 //MyDebugPrint("JOB SLAVE : New Job, starting thread")
 
-				 MyDebugAssertTrue(work_thread == NULL, "Running a new thread, but old thread is not NULL");
+				 //MyDebugAssertTrue(work_thread == NULL, "Running a new thread, but old thread is not NULL");
 
+				 wxMutexLocker *lock = new wxMutexLocker(job_lock);
+
+				 if (lock->IsOk() == true)
+				 {
+					 MyDebugAssertFalse(thread_next_action = THREAD_START_NEXT_JOB, "Thread action is already start job");
+					 thread_next_action = THREAD_START_NEXT_JOB;
+
+				 }
+				 else
+				 {
+				       MyPrintWithDetails("Can't get job lock!");
+				 }
+
+				 delete lock;
+
+				 /*
 				 work_thread = new CalculateThread(this);
 
-				 if ( work_thread->Run() != wxTHREAD_NO_ERROR )
-				 {
-				       MyPrintWithDetails("Can't create the thread!");
-				       delete work_thread;
-				       work_thread = NULL;
-				       ExitMainLoop();
-				       return;
-				 }
+								 if ( work_thread->Run() != wxTHREAD_NO_ERROR )
+								 {
+								       MyPrintWithDetails("Can't create the thread!");
+								       delete work_thread;
+								       work_thread = NULL;
+								       ExitMainLoop();
+								       return;
+								 }*/
 
 
 				 //MyDebugPrint("JOB SLAVE : Started Thread");
@@ -873,7 +937,22 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 if (memcmp(socket_input_buffer, socket_time_to_die, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 			   	  // time to die!
+				 wxMutexLocker *lock = new wxMutexLocker(job_lock);
+
+				 if (lock->IsOk() == true)
+				 {
+					 thread_next_action = THREAD_DIE;
+
+				 }
+				 else
+				 {
+				       MyPrintWithDetails("Can't get job lock!");
+				 }
+
+				 delete lock;
+
 				 sock->Destroy();
+				 wxSleep(5);
 			     if (work_thread != NULL) work_thread->Kill();
 	 		     ExitMainLoop();
 	 		     return;
@@ -909,10 +988,10 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 	//SETUP_SOCKET_CODES
 
 	// The compute thread is finished.. get the next job
-
 	// thread should be dead, or nearly dead..
 
 	work_thread = NULL;
+	SendAllResultsFromResultQueue();
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
@@ -922,6 +1001,11 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 	my_result.job_number = my_current_job.job_number;
 	my_result.SendToSocket(controller_socket);
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+	// clear the results queue..
+
+
+
 
 }
 
@@ -937,6 +1021,25 @@ void MyApp::OnThreadSendInfo(wxThreadEvent& my_event)
 	//MyDebugPrint("ThreadSendError");
 }
 
+void MyApp::OnThreadIntermediateResultAvailable(wxThreadEvent& my_event)
+{
+	SendAllResultsFromResultQueue();
+}
+
+void MyApp::SendAllResultsFromResultQueue()
+{
+	while (1==1)
+	{
+		JobResult *popped_job = PopJobFromResultQueue();
+
+		if (popped_job == NULL) break;
+		else
+		{
+			SendIntermediateResult(popped_job);
+			delete popped_job;
+		}
+	}
+}
 
 void MyApp::SocketSendError(wxString error_to_send)
 {
@@ -1003,21 +1106,93 @@ void MyApp::SendInfo(wxString info_to_send)
 	}
 }
 
+void MyApp::AddJobToResultQueue(JobResult * result_to_add)
+{
+	wxMutexLocker *lock = new wxMutexLocker(job_lock);
+
+	if (lock->IsOk() == true) job_queue.Add(result_to_add);
+	else
+	{
+		MyPrintWithDetails("Can't get job lock!");
+	}
+
+	delete lock;
+
+	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE);
+
+
+	if (work_thread != NULL)
+	{
+		work_thread->MarkIntermediateResultAvailable();
+	}
+
+
+}
+
+JobResult * MyApp::PopJobFromResultQueue()
+{
+	JobResult *popped_job = NULL;
+
+	wxMutexLocker *lock = new wxMutexLocker(job_lock);
+
+	if (lock->IsOk() == true)
+	{
+		if (job_queue.GetCount() > 0)
+		{
+			popped_job = job_queue.Detach(0);
+		}
+	}
+	else
+	{
+		MyPrintWithDetails("Can't get job lock!");
+	}
+
+	delete lock;
+	return popped_job;
+}
+
 // Main execution in this thread..
 
 wxThread::ExitCode CalculateThread::Entry()
 {
-	bool success = main_thread_pointer->DoCalculation(); // This should be overrided per app..
+	int thread_action_copy;
+
+	while (1==1)
+	{
+		wxMutexLocker *lock = new wxMutexLocker(main_thread_pointer->job_lock);
+
+		if (lock->IsOk() == true)
+		{
+			thread_action_copy = main_thread_pointer->thread_next_action;
+		}
+		else
+		{
+
+		}
+
+		if (main_thread_pointer->thread_next_action == THREAD_START_NEXT_JOB)
+		{
+			main_thread_pointer->thread_next_action = THREAD_SLEEP;
+		}
+
+		delete lock;
+
+		if (thread_action_copy == THREAD_START_NEXT_JOB)
+		{
+			bool success = main_thread_pointer->DoCalculation(); // This should be overrided per app..
+			wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
+
+			if (success == true) my_thread_event->SetInt(1);
+			else my_thread_event->SetInt(0);
+			wxQueueEvent(main_thread_pointer, my_thread_event);
+		}
+		else
+		if (thread_action_copy == THREAD_SLEEP) wxMilliSleep(100);
+		else
+		if (thread_action_copy == THREAD_DIE) break;
+	}
+
 	fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
-
-	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
-
-	if (success == true) my_thread_event->SetInt(1);
-	else my_thread_event->SetInt(0);
-
-	wxQueueEvent(main_thread_pointer, my_thread_event);
-
-
     return (wxThread::ExitCode)0;     // success
 }
 
@@ -1037,6 +1212,12 @@ void  CalculateThread::QueueInfo(wxString info_to_queue)
 	wxQueueEvent(main_thread_pointer, test_event);
 }
 
+void CalculateThread::MarkIntermediateResultAvailable()
+{
+	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE);
+
+	wxQueueEvent(main_thread_pointer, test_event);
+}
 
 CalculateThread::~CalculateThread()
 {

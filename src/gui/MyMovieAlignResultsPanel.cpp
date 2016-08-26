@@ -90,7 +90,7 @@ void MyMovieAlignResultsPanel::OnValueChanged(wxDataViewEvent &event)
 
 
 				main_frame->current_project.database.BeginImageAssetInsert();
-				main_frame->current_project.database.AddNextImageAsset(image_asset_id, output_file.ToUTF8().data(), image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
+				main_frame->current_project.database.AddNextImageAsset(image_asset_id, image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, output_file.ToUTF8().data(), image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
 				main_frame->current_project.database.EndImageAssetInsert();
 
 				image_asset_panel->ReturnAssetPointer(image_asset)->filename = output_file;

@@ -531,6 +531,41 @@ void MyAssetParentPanel::OnEndEdit( wxListEvent& event )
 }
 
 
+void MyAssetParentPanel::RenameAssetClick( wxCommandEvent& event )
+{
+
+
+	MyRenameDialog *rename_dialog = new MyRenameDialog(this);
+	wxTextCtrl *text_ctrl_pointer;
+
+	if (rename_dialog->ShowModal() == wxID_OK)
+	{
+		// do the renaming..
+
+		wxWindowList all_children = rename_dialog->RenameScrollPanel->GetChildren();
+
+		for (long counter = 0; counter <  all_children.GetCount(); counter++)
+		{
+			if (all_children.Item(counter)->GetData()->GetClassInfo()->GetClassName() == wxString("wxTextCtrl"))
+			{
+				text_ctrl_pointer = reinterpret_cast <wxTextCtrl *> (all_children.Item(counter)->GetData());
+
+				if (text_ctrl_pointer->GetValue() != wxEmptyString)
+				{
+					RenameAsset(rename_dialog->selected_assets_array_position[counter], text_ctrl_pointer->GetValue());
+				}
+
+
+			}
+		}
+
+		rename_dialog->Destroy();
+		is_dirty = true;
+	}
+}
+
+
+
 
 
 void MyAssetParentPanel::SizeContentsColumn(int column_number)
@@ -689,6 +724,11 @@ int MyAssetParentPanel::ReturnAssetID(int wanted_asset)
 	return all_assets_list->ReturnAssetID(wanted_asset);
 }
 
+wxString MyAssetParentPanel::ReturnAssetName(long wanted_asset)
+{
+	return all_assets_list->ReturnAssetName(wanted_asset);
+}
+
 
 bool MyAssetParentPanel::DragOverGroups(wxCoord x, wxCoord y)
 {
@@ -773,6 +813,7 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RemoveAllAssetsButton->Enable(false);
 			RemoveSelectedAssetButton->Enable(false);
 			AddSelectedAssetButton->Enable(false);
+			RenameAssetButton->Enable(false);
 		}
 		else
 		{
@@ -782,10 +823,12 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				RemoveSelectedAssetButton->Enable(false);
 				AddSelectedAssetButton->Enable(false);
+				RenameAssetButton->Enable(false);
 			}
 			else
 			{
 				RemoveSelectedAssetButton->Enable(true);
+				RenameAssetButton->Enable(true);
 
 				if (ReturnNumberOfGroups() > 1) AddSelectedAssetButton->Enable(true);
 				else AddSelectedAssetButton->Enable(false);

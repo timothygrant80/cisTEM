@@ -1424,6 +1424,10 @@ void RunArgument::SetBoolArgument(bool wanted_argument)
 	is_allocated = true;
 }
 
+#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
+WX_DEFINE_OBJARRAY(ArrayofJobResults);
+WX_DEFINE_OBJARRAY(ArrayofJobPackages);
+
 JobResult::JobResult()
 {
 	job_number = -1;

@@ -1,27 +1,6 @@
 //#include "../../core/core_headers.h"
 #include "../../core/gui_core_headers.h"
 
-// icons..
-
-#include "../../gui/icons/overview_icon.cpp"
-#include "../../gui/icons/assets_icon.cpp"
-#include "../../gui/icons/action_icon.cpp"
-#include "../../gui/icons/results_icon.cpp"
-#include "../../gui/icons/settings_icon.cpp"
-//#include "../../gui/icons/settings_icon2.cpp"
-
-#include "../../gui/icons/movie_icon.cpp"
-#include "../../gui/icons/image_icon.cpp"
-#include "../../gui/icons/particle_position_icon.cpp"
-#include "../../gui/icons/virus_icon.cpp"
-//#include "../../gui/icons/ribosome_icon.cpp"
-
-#include "../../gui/icons/movie_align_icon.cpp"
-#include "../../gui/icons/ctf_icon.cpp"
-
-#include "../../gui/icons/run_profiles_icon.cpp"
-
-
 class
 MyGuiApp : public wxApp
 {
@@ -39,6 +18,7 @@ MyMainFrame *main_frame;
 MyAlignMoviesPanel *align_movies_panel;
 MyFindCTFPanel *findctf_panel;
 MyFindParticlesPanel *findparticles_panel;
+MyRefine3DPanel *refine_3d_panel;
 
 OverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
@@ -50,6 +30,7 @@ MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
 MyParticlePositionAssetPanel *particle_position_asset_panel;
 MyVolumeAssetPanel *volume_asset_panel;
+MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 MyMovieAlignResultsPanel *movie_results_panel;
 MyFindCTFResultsPanel *ctf_results_panel;
@@ -69,6 +50,29 @@ SETUP_SOCKET_CODES
 
 bool MyGuiApp::OnInit()
 {
+	// icons..
+
+	#include "../../gui/icons/overview_icon.cpp"
+	#include "../../gui/icons/assets_icon.cpp"
+	#include "../../gui/icons/action_icon.cpp"
+	#include "../../gui/icons/results_icon.cpp"
+	#include "../../gui/icons/settings_icon.cpp"
+	//#include "../../gui/icons/settings_icon2.cpp"
+
+	#include "../../gui/icons/movie_icon.cpp"
+	#include "../../gui/icons/image_icon.cpp"
+	#include "../../gui/icons/particle_position_icon.cpp"
+	#include "../../gui/icons/virus_icon.cpp"
+	#include "../../gui/icons/refinement_package_icon.cpp"
+	//#include "../../gui/icons/ribosome_icon.cpp"
+
+	#include "../../gui/icons/movie_align_icon.cpp"
+	#include "../../gui/icons/ctf_icon.cpp"
+	#include "../../gui/icons/growth.cpp"
+
+	#include "../../gui/icons/run_profiles_icon.cpp"
+
+
 	wxImage::AddHandler(new wxPNGHandler);
 
 	wxImageList *MenuBookIconImages;
@@ -93,10 +97,12 @@ bool MyGuiApp::OnInit()
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
 	particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
 	volume_asset_panel = new MyVolumeAssetPanel(assets_panel->AssetsBook);
+	refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
 
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 	findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
 	findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
+	refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
 	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -120,11 +126,13 @@ bool MyGuiApp::OnInit()
 	wxBitmap image_icon_bmp = wxBITMAP_PNG_FROM_DATA(image_icon);
 	wxBitmap particle_position_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
 	wxBitmap virus_icon_bmp = wxBITMAP_PNG_FROM_DATA(virus_icon);
+	wxBitmap refinement_package_icon_bmp = wxBITMAP_PNG_FROM_DATA(refinement_package_icon);
 	//wxBitmap ribosome_icon_bmp = wxBITMAP_PNG_FROM_DATA(ribosome_icon);
 
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
 	wxBitmap find_particles_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
+	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
@@ -140,12 +148,13 @@ bool MyGuiApp::OnInit()
 	ActionsBookIconImages->Add(movie_align_icon_bmp);
 	ActionsBookIconImages->Add(ctf_icon_bmp);
 	ActionsBookIconImages->Add(find_particles_icon_bmp);
+	ActionsBookIconImages->Add(refine3d_icon_bmp);
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
 	AssetsBookIconImages->Add(particle_position_icon_bmp);
 	AssetsBookIconImages->Add(virus_icon_bmp);
-	//AssetsBookIconImages->Add(ribosome_icon_bmp);
+	AssetsBookIconImages->Add(refinement_package_icon_bmp);
 
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
 	ResultsBookIconImages->Add(ctf_icon_bmp);
@@ -170,10 +179,12 @@ bool MyGuiApp::OnInit()
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
 	assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
 	assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
+	assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
 	actions_panel->ActionsBook->AddPage(findparticles_panel,"Find Particles",false,2);
+	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Refine",false,3);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

@@ -5,7 +5,7 @@ MyImageAssetPanel::MyImageAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
 {
-	Label0Title->SetLabel("Filename : ");
+	Label0Title->SetLabel("Name : ");
 	Label1Title->SetLabel("I.D. : ");
 	Label2Title->SetLabel("Parent Movie I.D. : ");
 	Label3Title->SetLabel("Movie Alignment I.D. : ");
@@ -33,7 +33,7 @@ void MyImageAssetPanel::UpdateInfo()
 {
 	if (selected_content >= 0 && selected_group >= 0 && all_groups_list->groups[selected_group].number_of_members > 0)
 	{
-		Label0Text->SetLabel(all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->ReturnFullPathString());
+		Label0Text->SetLabel(all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_name);
 		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
 		Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->parent_id));
 		Label3Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->alignment_id));
@@ -128,6 +128,14 @@ void MyImageAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *w
 
 }
 
+void MyImageAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
+{
+	all_assets_list->ReturnImageAssetPointer(wanted_asset)->asset_name = wanted_name;
+	wxString sql_command = wxString::Format("UPDATE IMAGE_ASSETS SET NAME='%s' WHERE IMAGE_ASSET_ID=%i", wanted_name, all_assets_list->ReturnImageAssetPointer(wanted_asset)->asset_id);
+	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
+
+}
+
 void MyImageAssetPanel::ImportAllFromDatabase()
 {
 	int counter;
@@ -177,7 +185,7 @@ void MyImageAssetPanel::FillAssetSpecificContentsList()
 {
 
 		ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(1, "File", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(1, "Name", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(2, "Parent I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(3, "Align. I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(4, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
@@ -215,7 +223,7 @@ wxString MyImageAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
 	       break;
 	    case 1  :
-	    	return all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->ReturnShortNameString();
+	    	return all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_name;
 	       break;
 	    case 2  :
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->parent_id);

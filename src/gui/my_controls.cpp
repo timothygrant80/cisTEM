@@ -101,6 +101,31 @@ void NumericTextCtrl::OnFocusLost( wxFocusEvent& event )
 	event.Skip();
 }
 
+AutoWrapStaticText::AutoWrapStaticText(wxWindow *parent, wxWindowID id, const wxString &label, const wxPoint &pos, const wxSize &size, long style, const wxString &name)
+:
+wxStaticText(parent, id, label, pos, size, style, name)
+{
+	//Bind(wxEVT_SIZE, &AutoWrapStaticText::OnSize, this );
+	has_autowrapped = false;
+}
+
+AutoWrapStaticText::~AutoWrapStaticText()
+{
+	//Unbind(wxEVT_SIZE, &AutoWrapStaticText::OnSize, this );
+}
+
+void AutoWrapStaticText::AutoWrap()
+{
+	Wrap(GetClientSize().GetWidth());
+	has_autowrapped = true;
+}
+
+void AutoWrapStaticText::OnSize(wxSizeEvent& event)
+{
+	Wrap(GetClientSize().GetWidth());
+	event.Skip();
+}
+
 FilterItem::FilterItem( wxString field_name, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	my_parent = parent;
@@ -537,4 +562,280 @@ int ContentsList::ReturnGuessAtColumnTextWidth(int wanted_column)
 
 }
 
+// REFINEMENT PACKAGE LIST
+
+RefinementPackageListControl::RefinementPackageListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString RefinementPackageListControl::OnGetItemText(long item, long column) const
+{
+	MyDebugAssertTrue(column == 0, "Asking for column that shouldn't exist (%li)", column);
+
+	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+
+	if (parent_panel->all_refinement_packages.GetCount() > 0)
+	{
+		return parent_panel->all_refinement_packages.Item(item).name;
+
+	}
+	else return "";
+
+}
+
+int RefinementPackageListControl::ReturnGuessAtColumnTextWidth()
+{
+
+	wxClientDC dc(this);
+	long counter;
+	int client_height;
+	int client_width;
+
+	int current_width;
+
+	GetClientSize(&client_width, &client_height);
+	int max_width = client_width;
+
+	if (GetItemCount() < 100)
+	{
+		for ( counter = 0; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+		}
+	}
+	else
+	{
+		for ( counter = 0; counter < 50; counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+		}
+
+		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+		}
+
+	}
+
+	return max_width;
+
+}
+
+// CONTAINED PARTICLES
+
+ContainedParticleListControl::ContainedParticleListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString ContainedParticleListControl::OnGetItemText(long item, long column) const
+{
+	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+
+	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
+	{
+		switch(column)
+		{
+		    case 0  :
+		    	return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).original_particle_position_asset_id);
+		       break;
+		    case 1  :
+		    	return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).parent_image_id);
+		       break;
+		    case 2  :
+		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_pos);
+		       break;
+		    case 3  :
+		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_pos);
+		       break;
+		    case 4  :
+		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).pixel_size);
+		       break;
+		    case 5  :
+				return wxString::Format(wxT("%.2f mm"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).spherical_aberration);
+			   break;
+		    case 6  :
+				return wxString::Format(wxT("%.2f kV"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).microscope_voltage);
+			   break;
+		    case 7  :
+		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_1);
+			   break;
+		    case 8  :
+		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_2);
+			   break;
+		    case 9  :
+		    	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_angle);
+		    	break;
+		 /*   case 10 :
+			   	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).psi);
+			   	break;
+		    case 11 :
+			    return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).theta);
+			   	break;
+		    case 12 :
+			    return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phi);
+			    break;
+		    case 13 :
+			    return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_shift);
+			    break;
+		    case 14 :
+			    return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_shift);
+			    break;
+*/
+		    default :
+		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+		       return "";
+
+		}
+	}
+	else
+	{
+		return "";
+	}
+}
+
+int ContainedParticleListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
+{
+	wxClientDC dc(this);
+	long counter;
+
+	wxListItem result;
+	result.SetMask(wxLIST_MASK_TEXT);
+	GetColumn(wanted_column, result);
+
+	int max_width = dc.GetTextExtent(result.GetText()).x + 20;
+
+	if (GetItemCount() < 100)
+	{
+		for ( counter = 0; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+	}
+	else
+	{
+		for ( counter = 0; counter < 50; counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+	}
+
+	return max_width;
+}
+
+// 3D References
+
+ReferenceVolumesListControl::ReferenceVolumesListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) const
+{
+	extern MyVolumeAssetPanel *volume_asset_panel;
+	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+
+	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
+	{
+		switch(column)
+		{
+		    case 0  :
+		    	return wxString::Format(wxT("%li"), item + 1);
+		       break;
+		    case 1  :
+		    	if (parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item) == -1) return wxT("Generate from params.");
+		    	else
+		    	return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item)));
+		       break;
+		    default :
+		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+		       return "";
+		}
+	}
+	else
+	{
+		return "";
+	}
+}
+
+int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
+{
+	wxClientDC dc(this);
+	long counter;
+
+	wxListItem result;
+	result.SetMask(wxLIST_MASK_TEXT);
+	GetColumn(wanted_column, result);
+
+	int max_width = dc.GetTextExtent(result.GetText()).x + 20;
+
+	if (GetItemCount() < 100)
+	{
+		for ( counter = 0; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+	}
+	else
+	{
+		for ( counter = 0; counter < 50; counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+	}
+
+	return max_width;
+}
+
+
+
+ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* bSizer201;
+	bSizer201 = new wxBoxSizer( wxHORIZONTAL );
+
+	ClassText = new wxStaticText( this, wxID_ANY, wxT("Class #1 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ClassText->Wrap( -1 );
+	bSizer201->Add( ClassText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	VolumeComboBox = new wxComboBox( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	VolumeComboBox->Append("Generate From Params.");
+	AppendVolumeAssetsToComboBox(VolumeComboBox);
+	VolumeComboBox->SetSelection(0);
+	bSizer201->Add( VolumeComboBox, 1, wxALL, 5 );
+
+
+	MainSizer->Add( bSizer201, 1, 0, 5 );
+
+	class_number = -1;
+
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
+{
+}
 

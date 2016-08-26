@@ -9,10 +9,13 @@ extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
+extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
+extern MyRefine3DPanel *refine_3d_panel;
+
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
@@ -188,7 +191,10 @@ void MyMainFrame::DirtyEverything()
 	DirtyMovieGroups();
 	DirtyImageGroups();
 	DirtyRunProfiles();
+	DirtyRefinementPackages();
+	DirtyInputParameters();
 	DirtyParticlePositionGroups();
+
 }
 
 void MyMainFrame::DirtyMovieGroups()
@@ -212,12 +218,24 @@ void MyMainFrame::DirtyParticlePositionGroups()
 	particle_position_asset_panel->is_dirty = true;
 }
 
+void MyMainFrame::DirtyRefinementPackages()
+{
+	refinement_package_asset_panel->is_dirty = true;
+	refine_3d_panel->refinement_package_combo_is_dirty = true;
+}
+
+void MyMainFrame::DirtyInputParameters()
+{
+	refine_3d_panel->input_params_combo_is_dirty = true;
+}
+
 void MyMainFrame::DirtyRunProfiles()
 {
 	run_profiles_panel->is_dirty = true;
 	align_movies_panel->run_profiles_are_dirty = true;
 	findctf_panel->run_profiles_are_dirty = true;
 	findparticles_panel->run_profiles_are_dirty = true;
+	refine_3d_panel->run_profiles_are_dirty = true;
 }
 
 
@@ -331,7 +349,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 8, this);
+		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 9, this);
 		SetTitle("ProjectX - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
@@ -343,14 +361,16 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		run_profiles_panel->ImportAllFromDatabase();
 		my_dialog->Update(4, "Opening project (loading volume assets...)");
 		volume_asset_panel->ImportAllFromDatabase();
+		my_dialog->Update(5, "Opening project (loading Refinement Packages...)");
+		refinement_package_asset_panel->ImportAllFromDatabase();
 		//align_movies_panel->Refresh();
-		my_dialog->Update(5, "Opening project (loading movie alignment results...)");
+		my_dialog->Update(6, "Opening project (loading movie alignment results...)");
 		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
-		my_dialog->Update(6, "Opening project (loading CTF estimation results...)");
+		my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
-		my_dialog->Update(7, "Opening project (finishing...)");
+		my_dialog->Update(8, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();
-		my_dialog->Update(8, "Opening project (all done)");
+		my_dialog->Update(9, "Opening project (all done)");
 		DirtyEverything();
 		my_dialog->Destroy();
 	}
@@ -375,7 +395,9 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 
 	movie_asset_panel->Reset();
 	image_asset_panel->Reset();
+	volume_asset_panel->Reset();
 	particle_position_asset_panel->Reset();
+	refinement_package_asset_panel->Reset();
 	RecalculateAssetBrowser();
 	run_profiles_panel->Reset();
 	movie_results_panel->Clear();

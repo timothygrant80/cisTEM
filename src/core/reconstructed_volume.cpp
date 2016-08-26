@@ -419,7 +419,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D &reconstruction, int &ori
 
 void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 		float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
-		wxString &output_volume, NumericTextFile &output_statistics)
+		wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics)
 {
 	int original_box_size = density_map_1.logical_x_dimension;
 	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
@@ -461,7 +461,13 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	}
 	statistics.ZeroToResolution(resolution_limit);
 	statistics.PrintStatistics();
+
 	statistics.WriteStatisticsToFile(output_statistics);
+	if (copy_of_statistics != NULL)
+	{
+		copy_of_statistics->Init(original_pixel_size, original_box_size);
+		copy_of_statistics->CopyFrom(statistics);
+	}
 
 	Calculate3DOptimal(reconstruction, cropped_statistics);
 	density_map.SwapRealSpaceQuadrants();

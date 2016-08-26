@@ -57,6 +57,57 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	return value;
 }
 
+long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	long value;
+
+	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(current_statement);
+
+	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	value = sqlite3_column_int64(current_statement, 0);
+
+	sqlite3_finalize(current_statement);
+
+	return value;
+}
+
+void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	int value;
+	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(current_statement);
+
+	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	defocus_1 = float(sqlite3_column_double(current_statement, 0));
+	defocus_2 = float(sqlite3_column_double(current_statement, 1));
+	defocus_angle = float(sqlite3_column_double(current_statement, 2));
+
+	sqlite3_finalize(current_statement);
+}
+
 double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -80,6 +131,11 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
 	sqlite3_finalize(current_statement);
 
 	return value;
+}
+
+long Database::ReturnHighestRefinementID()
+{
+	return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
 }
 
 int Database::ReturnHighestAlignmentID()
@@ -418,7 +474,13 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 			sql_command += " INTEGER";
 		}
 		else
-		if (*column_format == 'p') // integer
+		if (*column_format == 'l') // integer
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " INTEGER";
+		}
+		else
+		if (*column_format == 'p' || *column_format == 'P') // integer
 		{
 			sql_command += va_arg(args, const char *);
 			sql_command += " INTEGER PRIMARY KEY";
@@ -456,16 +518,20 @@ bool Database::CreateAllTables()
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
 	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
 	success = CreateTable("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID");
-	success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	//success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	success = CreateMovieAssetTable();
+	success = CreateImageAssetTable();
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
-	success = CreateTable("IMAGE_ASSETS", "ptiiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	success = CreateParticlePickingListTable();
 	success = CreateParticlePositionAssetTable();
 	success = CreateParticlePositionGroupListTable();
 	success = CreateVolumeAssetTable();
 	success = CreateVolumeGroupListTable();
+	success = CreateRefinementPackageAssetTable();
+	success = CreateRefinementListTable();
 
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrti", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED");
@@ -522,6 +588,11 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 			sql_command += wxString::Format("%i",  va_arg(args, int));
 		}
 		else
+		if (*column_format == 'l' || *column_format == 'P') // long
+		{
+			sql_command += wxString::Format("%li",  va_arg(args, long));
+		}
+		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
 			abort();
@@ -540,6 +611,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
     if( return_code != SQLITE_OK )
     {
     	MyPrintWithDetails("SQL Error: %s\n\nFor :-\n%s", error_message, sql_command);
+    	abort();
         sqlite3_free(error_message);
         return false;
     }
@@ -723,12 +795,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 10, "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("MOVIE_ASSETS", 11, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration)
 {
-	AddToBatchInsert("itiiiirrrr", movie_asset_id, filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration);
+	AddToBatchInsert("ittiiiirrrr", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration);
 }
 
 /*
@@ -746,12 +818,22 @@ void Database::EndMovieAssetInsert()
 
 void Database::BeginImageAssetInsert()
 {
-	BeginBatchInsert("IMAGE_ASSETS", 11, "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("IMAGE_ASSETS", 12, "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
 }
 
-void Database::AddNextImageAsset(int image_asset_id,  wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+void Database::BeginVolumeAssetInsert()
 {
-	AddToBatchInsert("itiiiiiirrr", image_asset_id, filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
+	BeginBatchInsert("VOLUME_ASSETS", 8, "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
+}
+
+void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size)
+{
+	AddToBatchInsert("ittiriii", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size);
+}
+
+void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+{
+	AddToBatchInsert("ittiiiiiirrr", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
 }
 
 /*
@@ -908,6 +990,10 @@ void Database::BeginAllVolumeGroupsSelect()
 	BeginBatchSelect("SELECT * FROM VOLUME_GROUP_LIST;");
 }
 
+void Database::BeginAllRefinementPackagesSelect()
+{
+	BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");}
+
 
 
 
@@ -1008,6 +1094,101 @@ AssetGroup Database::GetNextImageGroup()
 	sqlite3_finalize(list_statement);
 	return temp_group;
 }
+
+
+
+RefinementPackage*  Database::GetNextRefinementPackage()
+{
+	RefinementPackage *temp_package;
+	RefinementPackageParticleInfo temp_info;
+
+	temp_package = new RefinementPackage;
+
+	int return_code;
+
+
+	wxString group_sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+
+	GetFromBatchSelect("lttitrriii", &temp_package->asset_id, &temp_package->name, &temp_package->stack_filename, &temp_package->stack_box_size, &temp_package->symmetry, &temp_package->estimated_particle_weight_in_kda, &temp_package->estimated_particle_size_in_angstroms, &temp_package->number_of_classes, &temp_package->number_of_run_refinments, &temp_package->last_refinment_id);
+
+	// particles
+
+	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", temp_package->asset_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_info.original_particle_position_asset_id = sqlite3_column_int64(list_statement, 0);
+		temp_info.parent_image_id = sqlite3_column_int64(list_statement, 1);
+		temp_info.position_in_stack = sqlite3_column_int64(list_statement, 2);
+		temp_info.x_pos = sqlite3_column_double(list_statement, 3);
+		temp_info.y_pos = sqlite3_column_double(list_statement, 4);
+		temp_info.pixel_size = sqlite3_column_double(list_statement, 5);
+		temp_info.defocus_1 = sqlite3_column_double(list_statement, 6);
+		temp_info.defocus_2 = sqlite3_column_double(list_statement, 7);
+		temp_info.defocus_angle = sqlite3_column_double(list_statement, 8);
+		temp_info.spherical_aberration = sqlite3_column_double(list_statement, 9);
+		temp_info.microscope_voltage = sqlite3_column_double(list_statement, 10);
+
+		temp_package->contained_particles.Add(temp_info);
+
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+
+	// 3d references
+
+	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", temp_package->asset_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_package->references_for_next_refinement.Add(sqlite3_column_int64(list_statement, 1));
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+
+	// refinement list
+
+	// 3d references
+
+	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", temp_package->asset_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_package->refinement_ids.Add(sqlite3_column_int64(list_statement, 1));
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+
+
+	return temp_package;
+
+}
+
 
 AssetGroup Database::GetNextParticlePositionGroup()
 {
@@ -1167,7 +1348,7 @@ MovieAsset Database::GetNextMovieAsset()
 {
 	MovieAsset temp_asset;
 
-	GetFromBatchSelect("ifiiiirrrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration);
+	GetFromBatchSelect("itfiiiirrrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration);
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;
 }
@@ -1177,7 +1358,7 @@ ImageAsset Database::GetNextImageAsset()
 {
 	ImageAsset temp_asset;
 
-	GetFromBatchSelect("ifiiiiiirrr", &temp_asset.asset_id, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.ctf_estimation_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
+	GetFromBatchSelect("itfiiiiiirrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.ctf_estimation_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
 	return temp_asset;
 }
 
@@ -1199,7 +1380,7 @@ ParticlePositionAsset Database::GetNextParticlePositionAssetFromResults()
 VolumeAsset Database::GetNextVolumeAsset()
 {
 	VolumeAsset temp_asset;
-	GetFromBatchSelect("fiiriii", &temp_asset.filename, &temp_asset.asset_id, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size);
+	GetFromBatchSelect("itflriii", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size);
 	return temp_asset;
 }
 
@@ -1222,4 +1403,253 @@ bool Database::DeleteRunProfile(int wanted_id)
 	ExecuteSQL(wxString::Format("DELETE FROM RUN_PROFILES WHERE RUN_PROFILE_ID=%i", wanted_id).ToUTF8().data());
 	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", wanted_id));
 }
+
+void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
+{
+	InsertOrReplace("REFINEMENT_PACKAGE_ASSETS", "Pttitrriii", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STACK_FILENAME", "STACK_BOX_SIZE", "SYMMETRY", "MOLECULAR_WEIGHT", "PARTICLE_SIZE", "NUMBER_OF_CLASSES", "NUMBER_OF_REFINEMENTS", "LAST_REFINEMENT_ID", asset_to_add->asset_id, asset_to_add->name.ToUTF8().data(), asset_to_add->stack_filename.ToUTF8().data(), asset_to_add->stack_box_size, asset_to_add->symmetry.ToUTF8().data(), asset_to_add->estimated_particle_weight_in_kda, asset_to_add->estimated_particle_size_in_angstroms, asset_to_add->number_of_classes, asset_to_add->number_of_run_refinments, asset_to_add->last_refinment_id);
+	CreateRefinementPackageContainedParticlesTable(asset_to_add->asset_id);
+	CreateRefinementPackageCurrent3DReferencesTable(asset_to_add->asset_id);
+	CreateRefinementPackageRefinementsList(asset_to_add->asset_id);
+
+
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 11 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");
+
+	for (long counter = 0; counter < asset_to_add->contained_particles.GetCount(); counter++)
+	{
+
+		AddToBatchInsert("lllrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage);
+	}
+
+	EndBatchInsert();
+
+
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", asset_to_add->asset_id), 2 , "CLASS_NUMBER", "VOLUME_ASSET_ID");
+
+	for (long counter = 0; counter < asset_to_add->references_for_next_refinement.GetCount(); counter++)
+	{
+
+		AddToBatchInsert("ll", counter + 1, asset_to_add->references_for_next_refinement.Item(counter));
+	}
+
+	EndBatchInsert();
+
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", asset_to_add->asset_id), 2 , "REFINEMENT_NUMBER", "REFINEMENT_ID");
+
+	for (long counter = 0; counter < asset_to_add->refinement_ids.GetCount(); counter++)
+	{
+
+		AddToBatchInsert("ll", counter + 1, asset_to_add->refinement_ids.Item(counter));
+	}
+
+	EndBatchInsert();
+
+}
+
+void Database::AddRefinement(Refinement *refinement_to_add)
+{
+	int class_counter;
+	long counter;
+
+	InsertOrReplace("REFINEMENT_LIST", "Pltillllrrrrrrirrrrirrrrirrir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->refinement_was_imported_or_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->low_resolution_limit, refinement_to_add->high_resolution_limit, refinement_to_add->mask_radius, refinement_to_add->signed_cc_resolution_limit, refinement_to_add->global_resolution_limit, refinement_to_add->global_mask_radius, refinement_to_add->number_results_to_refine, refinement_to_add->angular_search_step, refinement_to_add->search_range_x, refinement_to_add->search_range_y, refinement_to_add->classification_resolution_limit, refinement_to_add->should_focus_classify, refinement_to_add->sphere_x_coord, refinement_to_add->sphere_y_coord, refinement_to_add->sphere_z_coord, refinement_to_add->sphere_radius, refinement_to_add->should_refine_ctf, refinement_to_add->defocus_search_range, refinement_to_add->defocus_search_step, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
+
+	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	{
+		CreateRefinementResultTable(refinement_to_add->refinement_id, class_counter);
+		CreateRefinementResolutionStatisticsTable(refinement_to_add->refinement_id, class_counter);
+	}
+
+	CreateRefinementReferenceVolumeIDsTable(refinement_to_add->refinement_id);
+
+	BeginBatchInsert(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", refinement_to_add->refinement_id), 2 , "CLASS_NUMBER", "VOLUME_ASSET_ID");
+
+	for ( counter = 0; counter < refinement_to_add->reference_volume_ids.GetCount(); counter++)
+	{
+		AddToBatchInsert("ll", counter, refinement_to_add->reference_volume_ids[counter]);
+	}
+
+	EndBatchInsert();
+
+	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	{
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 14 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "SCORE_CHANGE");
+
+		for (counter = 0; counter < refinement_to_add->number_of_particles; counter++)
+		{
+			AddToBatchInsert("lrrrrrrrrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle,refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score_change);
+		}
+
+		EndBatchInsert();
+	}
+
+	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	{
+
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6 ,"SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
+
+		for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++)
+		{
+			AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
+		}
+	}
+
+	EndBatchInsert();
+}
+
+Refinement *Database::GetRefinementByID(long wanted_refinement_id)
+{
+	wxString sql_select_command;
+	int return_code;
+	sqlite3_stmt *list_statement = NULL;
+	Refinement *temp_refinement = new Refinement;
+	RefinementResult temp_result;
+	int class_counter;
+
+	float temp_resolution;
+	float temp_fsc;
+	float temp_part_fsc;
+	float temp_part_ssnr;
+	float temp_rec_ssnr;
+
+	ClassRefinementResults junk_class_results;
+	RefinementResult junk_result;
+
+	// general data
+
+	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_LIST WHERE REFINEMENT_ID=%li", wanted_refinement_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code , sql_select_command);
+
+	return_code = sqlite3_step(list_statement);
+
+
+	temp_refinement->refinement_id = sqlite3_column_int64(list_statement, 0);
+	temp_refinement->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
+	temp_refinement->name = sqlite3_column_text(list_statement, 2);
+	temp_refinement->refinement_was_imported_or_generated = sqlite3_column_int(list_statement, 3);
+	temp_refinement->datetime_of_run.SetFromDOS((unsigned long) sqlite3_column_int64(list_statement, 4));
+	temp_refinement->starting_refinement_id = sqlite3_column_int64(list_statement, 5);
+	temp_refinement->number_of_particles = sqlite3_column_int64(list_statement, 6);
+	temp_refinement->number_of_classes = sqlite3_column_int(list_statement, 7);
+	temp_refinement->low_resolution_limit = sqlite3_column_double(list_statement, 8);
+	temp_refinement->high_resolution_limit = sqlite3_column_double(list_statement, 9);
+	temp_refinement->mask_radius = sqlite3_column_double(list_statement, 10);
+	temp_refinement->signed_cc_resolution_limit = sqlite3_column_double(list_statement, 11);
+	temp_refinement->global_resolution_limit = sqlite3_column_double(list_statement, 12);
+	temp_refinement->global_mask_radius = sqlite3_column_double(list_statement, 13);
+	temp_refinement->number_results_to_refine = sqlite3_column_int(list_statement, 14);
+	temp_refinement->angular_search_step = sqlite3_column_double(list_statement, 15);
+	temp_refinement->search_range_x = sqlite3_column_double(list_statement, 16);
+	temp_refinement->search_range_y = sqlite3_column_double(list_statement, 17);
+	temp_refinement->classification_resolution_limit = sqlite3_column_double(list_statement, 18);
+	temp_refinement->should_focus_classify = sqlite3_column_int(list_statement, 19);
+	temp_refinement->sphere_x_coord = sqlite3_column_double(list_statement, 20);
+	temp_refinement->sphere_y_coord = sqlite3_column_double(list_statement, 21);
+	temp_refinement->sphere_z_coord = sqlite3_column_double(list_statement, 22);
+	temp_refinement->sphere_radius = sqlite3_column_double(list_statement, 23);
+	temp_refinement->should_refine_ctf = sqlite3_column_int(list_statement, 24);
+	temp_refinement->defocus_search_range = sqlite3_column_double(list_statement, 25);
+	temp_refinement->defocus_search_step = sqlite3_column_double(list_statement, 26);
+	temp_refinement->resolution_statistics_box_size = sqlite3_column_int(list_statement, 27);
+	temp_refinement->resolution_statistics_pixel_size = sqlite3_column_double(list_statement, 28);
+
+	sqlite3_finalize(list_statement);
+
+	// volume_ids..
+
+
+	// 3d references
+	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_REFERENCE_VOLUME_IDS_%li", temp_refinement->refinement_id);
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_refinement->reference_volume_ids.Add(sqlite3_column_int64(list_statement, 1));
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+	sqlite3_finalize(list_statement);
+
+	// now get all the parameters..
+
+	temp_refinement->class_refinement_results.Alloc(temp_refinement->number_of_classes);
+	temp_refinement->class_refinement_results.Add(junk_class_results, temp_refinement->number_of_classes);
+
+	for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
+	{
+		temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Alloc(temp_refinement->number_of_particles);
+		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESULT_%li_%i", temp_refinement->refinement_id, class_counter + 1);
+		return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
+		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code, sql_select_command );
+
+		return_code = sqlite3_step(list_statement);
+
+		while (  return_code == SQLITE_ROW)
+		{
+			temp_result.position_in_stack = sqlite3_column_int64(list_statement, 0);
+			temp_result.psi = sqlite3_column_double(list_statement, 1);
+			temp_result.theta = sqlite3_column_double(list_statement, 2);
+			temp_result.phi = sqlite3_column_double(list_statement, 3);
+			temp_result.xshift = sqlite3_column_double(list_statement, 4);
+			temp_result.yshift = sqlite3_column_double(list_statement, 5);
+			temp_result.defocus1 = sqlite3_column_double(list_statement, 6);
+			temp_result.defocus2 = sqlite3_column_double(list_statement, 7);
+			temp_result.defocus_angle = sqlite3_column_double(list_statement, 8);
+			temp_result.occupancy = sqlite3_column_double(list_statement, 9);
+			temp_result.logp =  sqlite3_column_double(list_statement, 10);
+			temp_result.sigma =  sqlite3_column_double(list_statement, 11);
+			temp_result.score =  sqlite3_column_double(list_statement, 12);
+			temp_result.score_change =  sqlite3_column_double(list_statement, 13);
+
+			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
+			return_code = sqlite3_step(list_statement);
+		}
+
+		MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+		sqlite3_finalize(list_statement);
+	}
+
+	// resolution statistics
+
+	for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
+	{
+		temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.Init(temp_refinement->resolution_statistics_pixel_size, temp_refinement->resolution_statistics_box_size);
+
+		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESOLUTION_STATISTICS_%li_%i", temp_refinement->refinement_id, class_counter + 1);
+		return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
+		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+		return_code = sqlite3_step(list_statement);
+
+		while (  return_code == SQLITE_ROW)
+		{
+			temp_resolution = sqlite3_column_double(list_statement, 1);
+			temp_fsc = sqlite3_column_double(list_statement, 2);
+			temp_part_fsc = sqlite3_column_double(list_statement, 3);
+			temp_part_ssnr = sqlite3_column_double(list_statement, 4);
+			temp_rec_ssnr = sqlite3_column_double(list_statement, 5);
+
+			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.AddPoint(temp_resolution, temp_fsc);
+			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.AddPoint(temp_resolution, temp_part_fsc);
+			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.AddPoint(temp_resolution, temp_part_ssnr);
+			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.AddPoint(temp_resolution, temp_rec_ssnr);
+
+
+			return_code = sqlite3_step(list_statement);
+		}
+
+		MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+		sqlite3_finalize(list_statement);
+
+	}
+
+
+	return temp_refinement;
+
+}
+
 

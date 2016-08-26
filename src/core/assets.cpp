@@ -48,6 +48,7 @@ MovieAsset::MovieAsset()
 	total_dose = 0;
 	
 	filename = wxEmptyString;
+	asset_name = wxEmptyString;
 	
 	is_valid = false;
 
@@ -61,6 +62,7 @@ MovieAsset::~MovieAsset()
 MovieAsset::MovieAsset(wxString wanted_filename)
 {
 	filename = wanted_filename;
+	asset_name = wanted_filename;
 	asset_id = -1;
 	position_in_stack = 1;
 
@@ -119,6 +121,7 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	dose_per_frame = casted_asset->dose_per_frame;
 	is_valid = casted_asset->is_valid;
 	total_dose = casted_asset->total_dose;
+	asset_name = casted_asset->asset_name;
 }
 
 // Image asset///
@@ -137,6 +140,7 @@ ImageAsset::ImageAsset()
 	is_valid = false;
 
 	filename = wxEmptyString;
+	asset_name = wxEmptyString;
 
 }
 
@@ -148,6 +152,7 @@ ImageAsset::~ImageAsset()
 ImageAsset::ImageAsset(wxString wanted_filename)
 {
 	filename = wanted_filename;
+	asset_name = wanted_filename;
 	asset_id = -1;
 	position_in_stack = 1;
 	parent_id = -1;
@@ -202,6 +207,7 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 	microscope_voltage = casted_asset->microscope_voltage;
 	spherical_aberration = casted_asset->spherical_aberration;
 	is_valid = casted_asset->is_valid;
+	asset_name = casted_asset->asset_name;
 }
 
 // Particle Position Asset
@@ -236,8 +242,7 @@ void ParticlePositionAsset::Reset()
 	template_phi = 0.0;
 	template_theta = 0.0;
 	template_psi = 0.0;
-
-
+	asset_name = wxEmptyString;
 	filename = wxEmptyString;
 }
 
@@ -256,6 +261,7 @@ void ParticlePositionAsset::CopyFrom(Asset *other_asset)
 	template_phi = casted_asset->template_phi;
 	template_theta = casted_asset->template_theta;
 	template_psi = casted_asset->template_psi;
+	asset_name = casted_asset->asset_name;
 }
 
 #include <wx/arrimpl.cpp>
@@ -275,6 +281,7 @@ VolumeAsset::VolumeAsset()
 
 	is_valid = false;
 	filename = wxEmptyString;
+	asset_name = wxEmptyString;
 
 }
 
@@ -286,6 +293,7 @@ VolumeAsset::~VolumeAsset()
 VolumeAsset::VolumeAsset(wxString wanted_filename)
 {
 	filename = wanted_filename;
+	asset_name = wanted_filename;
 	asset_id = -1;
 	parent_id = -1;
 	reconstruction_job_id = -1;
@@ -333,6 +341,7 @@ void VolumeAsset::CopyFrom(Asset *other_asset)
 	filename = casted_asset->filename;
 	pixel_size = casted_asset->pixel_size;
 	is_valid = casted_asset->is_valid;
+	asset_name = casted_asset->asset_name;
 }
 
 // Return Pointers
@@ -447,6 +456,11 @@ MovieAsset * MovieAssetList::ReturnMovieAssetPointer(long wanted_asset)
 int MovieAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_id;
+}
+
+wxString MovieAssetList::ReturnAssetName(long wanted_asset)
+{
+	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_name;
 }
 
 int MovieAssetList::ReturnArrayPositionFromID(int wanted_id)
@@ -599,6 +613,11 @@ ImageAsset * ImageAssetList::ReturnImageAssetPointer(long wanted_asset)
 int ImageAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].asset_id;
+}
+
+wxString ImageAssetList::ReturnAssetName(long wanted_asset)
+{
+	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].asset_name;
 }
 
 int ImageAssetList::ReturnArrayPositionFromID(int wanted_id)
@@ -870,6 +889,11 @@ VolumeAsset * VolumeAssetList::ReturnVolumeAssetPointer(long wanted_asset)
 int VolumeAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].asset_id;
+}
+
+wxString VolumeAssetList::ReturnAssetName(long wanted_asset)
+{
+	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].asset_name;
 }
 
 int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id)

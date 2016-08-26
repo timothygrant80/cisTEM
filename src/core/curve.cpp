@@ -28,7 +28,7 @@ Curve::Curve( const Curve &other_curve) // copy constructor
 {
 	MyDebugPrint("Warning: copying a curve object");
 	 *this = other_curve;
-	 abort();
+	 //abort();
 }
 
 Curve::~Curve()

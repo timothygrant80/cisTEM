@@ -17,10 +17,13 @@ public:
 
 	ResolutionStatistics();
 	ResolutionStatistics(float wanted_pixel_size, int box_size = 0);
+	ResolutionStatistics( const ResolutionStatistics &other_statistics); // copy constructor
 //	~ResolutionStatistics();
 
 	ResolutionStatistics & operator = (const ResolutionStatistics &t);
 	ResolutionStatistics & operator = (const ResolutionStatistics *t);
+
+
 
 	void ResampleFrom(ResolutionStatistics &other_statistics, int wanted_number_of_bins = 0);
 	void CopyFrom(ResolutionStatistics &other_statistics, int wanted_number_of_bins = 0);
@@ -33,6 +36,7 @@ public:
 	void ZeroToResolution(float resolution_limit);
 	void PrintStatistics();
 	void WriteStatisticsToFile(NumericTextFile &output_statistics_file);
+	void WriteStatisticsToFloatArray(float *float_array, int wanted_class);
 	void ReadStatisticsFromFile(wxString input_file);
 	void GenerateDefaultStatistics(float molecular_mass_in_kDa);
 	inline float kDa_to_area_in_pixel(float molecular_mass_in_kDa)

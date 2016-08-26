@@ -9,6 +9,7 @@ public :
 	int parent_id;
 	wxFileName filename;
 	bool is_valid;
+	wxString asset_name;
 
 	Asset();
 	~Asset();
@@ -147,6 +148,7 @@ public :
 	virtual VolumeAsset* ReturnVolumeAssetPointer(long wanted_asset);
 
 	virtual int ReturnAssetID(long wanted_asset) = 0;
+	virtual wxString ReturnAssetName(long wanted_asset) = 0;
 	virtual int ReturnArrayPositionFromID(int wanted_id) = 0;
 	virtual int ReturnArrayPositionFromParentID(int wanted_id) = 0;
 
@@ -166,6 +168,7 @@ public:
 	MovieAsset * ReturnMovieAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
 
@@ -189,6 +192,7 @@ public:
 	ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
 
@@ -212,6 +216,7 @@ public:
 	ParticlePositionAsset * ReturnParticlePositionAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	wxString ReturnAssetName(long wanted_asset) {return wxEmptyString;};
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
 
@@ -235,6 +240,7 @@ public:
 	VolumeAsset * ReturnVolumeAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
 

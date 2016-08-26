@@ -41,14 +41,16 @@ void Merge3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(9);
-	my_current_job.ManualSetArguments("ttttffftt",	output_reconstruction_1.ToUTF8().data(),
+	int class_number_for_gui = 1;
+	my_current_job.Reset(10);
+	my_current_job.ManualSetArguments("ttttffftti",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
 													molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 													dump_file_seed_1.ToUTF8().data(),
-													dump_file_seed_2.ToUTF8().data());
+													dump_file_seed_2.ToUTF8().data(),
+													class_number_for_gui);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -64,6 +66,11 @@ bool Merge3DApp::DoCalculation()
 	float    outer_mask_radius					= my_current_job.arguments[6].ReturnFloatArgument();
 	wxString dump_file_seed_1 					= my_current_job.arguments[7].ReturnStringArgument();
 	wxString dump_file_seed_2 					= my_current_job.arguments[8].ReturnStringArgument();
+	int class_number_for_gui					= my_current_job.arguments[9].ReturnIntegerArgument();
+
+	ResolutionStatistics *gui_statistics = NULL;
+
+	if (is_running_locally == false) gui_statistics = new ResolutionStatistics;
 
 	ReconstructedVolume output_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d1(molecular_mass_kDa);
@@ -157,7 +164,19 @@ bool Merge3DApp::DoCalculation()
 
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-			output_reconstruction_filtered, output_statistics_file);
+			output_reconstruction_filtered, output_statistics_file, gui_statistics);
+
+	if (is_running_locally == false)
+	{
+		int number_of_points = gui_statistics->FSC.number_of_points;
+		int array_size = (number_of_points * 5) + 2;
+		wxPrintf("number of points = %i, class is %i, array size = %i\n", number_of_points, class_number_for_gui, array_size);
+
+	    float *statistics = new float [array_size];
+	    gui_statistics->WriteStatisticsToFloatArray(statistics, class_number_for_gui);
+	    my_result.SetResult(array_size, statistics);
+	    delete statistics;
+	}
 
 	wxPrintf("\nMerge3D: Normal termination\n\n");
 

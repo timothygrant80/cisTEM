@@ -4,11 +4,12 @@ class MyAssetParentPanel : public AssetParentPanel
 {
 
 		friend class GroupDropTarget;
+		friend class RenameDialog;
 
-protected:
+private:
 
-		long selected_group;
-		long selected_content;
+
+
 		long highlighted_item;
 
 		bool name_is_being_edited;
@@ -19,6 +20,8 @@ protected:
 		//virtual void ExportAssetClick( wxCommandEvent& event ) = 0;
 
 		void RemoveAssetClick( wxCommandEvent& event );
+		void RenameAssetClick( wxCommandEvent& event);
+
 		void RemoveAllAssetsClick( wxCommandEvent& event );
 		void AddSelectedAssetClick( wxCommandEvent& event );
 
@@ -35,6 +38,7 @@ protected:
 		void OnGroupActivated( wxListEvent& event );
 
 		virtual void RemoveAssetFromDatabase(long wanted_asset) = 0;
+		virtual void RenameAsset(long wanted_asset, wxString wanted_name) = 0;
 		virtual void RemoveFromGroupInDatabase(int wanted_group, int wanted_asset_id) = 0;
 		virtual void RemoveAllFromDatabase() = 0;
 		virtual void RemoveAllGroupMembersFromDatabase(int wanted_group_id) = 0;
@@ -49,6 +53,9 @@ protected:
 
 		AssetGroupList *all_groups_list;
 		AssetList *all_assets_list;
+
+		long selected_group;
+		long selected_content;
 
 		int current_asset_number;
 		int current_group_number;
@@ -108,6 +115,7 @@ protected:
 		int ReturnArrayPositionFromParentID(int wanted_id);
 		int ReturnArrayPositionFromAssetID(int wanted_id);
 		int ReturnAssetID(int wanted_asset);
+		wxString ReturnAssetName(long wanted_asset);
 		int ReturnParentID(int wanted_asset);
 
 		//bool IsFileAnAsset(wxFileName file_to_check) = 0;

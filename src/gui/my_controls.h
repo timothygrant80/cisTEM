@@ -31,6 +31,35 @@ public :
 
 };
 
+class AutoWrapStaticText : public wxStaticText
+{
+
+public :
+
+	bool has_autowrapped;
+	AutoWrapStaticText (wxWindow *parent, wxWindowID id, const wxString &label, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=0, const wxString &name=wxStaticTextNameStr);
+	~AutoWrapStaticText();
+
+	void AutoWrap();
+	void OnSize(wxSizeEvent& event);
+};
+
+
+class ClassVolumeSelectPanel : public wxPanel
+{
+	public:
+
+		wxBoxSizer* MainSizer;
+		wxStaticText* ClassText;
+		wxComboBox* VolumeComboBox;
+
+		int class_number;
+
+		ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL );
+		~ClassVolumeSelectPanel();
+};
+
+
 class FilterItem : public wxPanel
 {
 
@@ -144,5 +173,31 @@ class ContentsList: public wxListCtrl{
 
 		int ReturnGuessAtColumnTextWidth(int wanted_column);
 };
+
+class RefinementPackageListControl: public wxListCtrl{
+	public:
+	RefinementPackageListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	wxString OnGetItemText(long item, long column) const;
+
+	int ReturnGuessAtColumnTextWidth();
+};
+
+class ContainedParticleListControl: public wxListCtrl{
+	public:
+	ContainedParticleListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	wxString OnGetItemText(long item, long column) const;
+
+	int ReturnGuessAtColumnTextWidth(int wanted_column);
+};
+
+class ReferenceVolumesListControl: public wxListCtrl{
+	public:
+	ReferenceVolumesListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	wxString OnGetItemText(long item, long column) const;
+
+	int ReturnGuessAtColumnTextWidth(int wanted_column);
+
+};
+
 
 #endif

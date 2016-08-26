@@ -5,7 +5,7 @@ MyMovieAssetPanel::MyMovieAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
 {
-	Label0Title->SetLabel("Filename : ");
+	Label0Title->SetLabel("Name : ");
 	Label1Title->SetLabel("I.D. : ");
 	Label2Title->SetLabel("No. Frames : ");
 	Label3Title->SetLabel("Pixel Size : ");
@@ -34,7 +34,7 @@ void MyMovieAssetPanel::UpdateInfo()
 {
 	if (selected_content >= 0 && selected_group >= 0 && all_groups_list->groups[selected_group].number_of_members > 0)
 	{
-		Label0Text->SetLabel(all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->ReturnFullPathString());
+		Label0Text->SetLabel(all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_name);
 		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
 		Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->number_of_frames));
 		Label3Text->SetLabel(wxString::Format(wxT("%.2f Å"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
@@ -103,7 +103,7 @@ void  MyMovieAssetPanel::RemoveAllFromDatabase()
 	main_frame->current_project.database.CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE MOVIE_ASSETS");
-	main_frame->current_project.database.CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	main_frame->current_project.database.CreateMovieAssetTable();
 
 
 }
@@ -129,6 +129,14 @@ void MyMovieAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 void MyMovieAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
 	wxString sql_command = wxString::Format("UPDATE MOVIE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
+	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
+
+}
+
+void MyMovieAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
+{
+	all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_name = wanted_name;
+	wxString sql_command = wxString::Format("UPDATE MOVIE_ASSETS SET NAME='%s' WHERE MOVIE_ASSET_ID=%i", wanted_name, all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }
@@ -182,7 +190,7 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 {
 
 		ContentsListBox->InsertColumn(0, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(1, "File", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(1, "Name", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(2, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(3, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(4, "No. frames", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
@@ -216,7 +224,7 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
 	       break;
 	    case 1  :
-	    	return all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->ReturnShortNameString();
+	    	return all_assets_list->ReturnAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_name;
 	       break;
 	    case 2  :
 	    	return wxString::Format(wxT("%i"),all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);

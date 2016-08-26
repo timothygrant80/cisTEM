@@ -531,6 +531,8 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 JobResult temp_job;
 			 temp_job.ReceiveFromSocket(sock);
 
+
+
 			 if (temp_job.result_size > 0)
 			 {
 				 SendJobResult(&temp_job);
@@ -552,6 +554,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 		 else
 		 if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		 {
+			 //wxPrintf("controller: All got jobs finished from master\n");
 			 SendAllJobsFinished();
 		 }
 

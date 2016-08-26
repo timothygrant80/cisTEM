@@ -12,6 +12,14 @@ ResolutionStatistics::ResolutionStatistics(float wanted_pixel_size, int box_size
 	Init(wanted_pixel_size, box_size);
 }
 
+ResolutionStatistics::ResolutionStatistics( const ResolutionStatistics &other_statistics) // copy constructor
+{
+	MyDebugPrint("Warning: copying a resolution statistics object");
+	 *this = other_statistics;
+	 //abort();
+}
+
+
 ResolutionStatistics & ResolutionStatistics::operator = (const ResolutionStatistics &other_statistics)
 {
 	*this = &other_statistics;
@@ -24,7 +32,7 @@ ResolutionStatistics & ResolutionStatistics::operator = (const ResolutionStatist
    // Check for self assignment
    if(this != other_statistics)
    {
-		MyDebugAssertTrue(other_statistics->number_of_bins >= 0, "Other statistics not initialized");
+		//MyDebugAssertTrue(other_statistics->number_of_bins >= 0, "Other statistics not initialized");
 
 		FSC = other_statistics->FSC;
 		part_FSC = other_statistics->part_FSC;
@@ -465,6 +473,27 @@ void ResolutionStatistics::PrintStatistics()
 		wxPrintf("%5i%8.2f%10.4f%10.4f%10.4f%10.4f%10.4f\n",i + 1, FSC.data_x[i], pixel_size / FSC.data_x[i],
 															FSC.data_y[i], part_FSC.data_y[i],
 															sqrtf(part_SSNR.data_y[i]), sqrtf(rec_SSNR.data_y[i]));
+	}
+}
+
+void ResolutionStatistics::WriteStatisticsToFloatArray(float *float_array, int wanted_class) // this is a hack for pre-embo course rush, but i predict it will last for a long time after...
+{
+	float_array[0] = FSC.number_of_points;
+	float_array[1] = wanted_class;
+	int position_counter = 2;
+
+	for (int i = 0; i < FSC.number_of_points; i++)
+	{
+		float_array[position_counter] = FSC.data_x[i];
+		position_counter++;
+		float_array[position_counter] = FSC.data_y[i];
+		position_counter++;
+		float_array[position_counter] = part_FSC.data_y[i];
+		position_counter++;
+		float_array[position_counter] = part_SSNR.data_y[i];
+		position_counter++;
+		float_array[position_counter] = rec_SSNR.data_y[i];
+		position_counter++;
 	}
 }
 

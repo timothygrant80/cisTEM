@@ -4,6 +4,7 @@
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, wxThreadEvent);
 
 class MyApp; // So CalculateThread class knows about it
 
@@ -18,6 +19,7 @@ class CalculateThread : public wxThread
     	MyApp *main_thread_pointer;
     	void QueueError(wxString error_to_queue);
     	void QueueInfo(wxString info_to_queue);
+    	void MarkIntermediateResultAvailable();
 
 
 	protected:
@@ -48,6 +50,7 @@ MyApp : public wxAppConsole
 		// array for sending back the results - this may be better off being made into an object..
 
 		JobResult my_result;
+		ArrayofJobResults job_queue;
 
 		// socket stuff
 
@@ -69,6 +72,7 @@ MyApp : public wxAppConsole
 
 		JobPackage my_job_package;
 		RunJob my_current_job;
+		RunJob global_job_parameters;
 
 		wxString master_ip_address;
 		wxString master_port_string;
@@ -88,14 +92,25 @@ MyApp : public wxAppConsole
 
 		void SendError(wxString error_message);
 		void SendInfo(wxString error_message);
+		void SendIntermediateResult(JobResult *result);
+
+		CalculateThread *work_thread;
+		wxMutex job_lock;
+		int thread_next_action;
 
 
-		 CalculateThread *work_thread;
+		void AddJobToResultQueue(JobResult *);
+		JobResult * PopJobFromResultQueue();
+		void SendAllResultsFromResultQueue();
+
+
 		private:
 
 		void SendJobFinished(int job_number);
 		void SendJobResult(JobResult *result);
 		void SendAllJobsFinished();
+
+
 
 		void SocketSendError(wxString error_message);
 		void SocketSendInfo(wxString info_message);
@@ -114,5 +129,6 @@ MyApp : public wxAppConsole
 		void OnThreadComplete(wxThreadEvent& my_event);
 		void OnThreadSendError(wxThreadEvent& my_event);
 		void OnThreadSendInfo(wxThreadEvent& my_event);
+		void OnThreadIntermediateResultAvailable(wxThreadEvent& my_event);
 };
 

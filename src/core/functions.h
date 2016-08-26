@@ -163,7 +163,14 @@ inline float kDa_to_Angstrom3(float kilo_daltons)
 inline bool IsAValidSymmetry(wxString *string_to_check)
 {
 	long junk;
+	wxString buffer_string = *string_to_check;
+	buffer_string.Trim();
+	buffer_string.Trim(false);
+
+
 	if (string_to_check->StartsWith("C") == false && string_to_check->StartsWith("c") == false && string_to_check->StartsWith("D") == false && string_to_check->StartsWith("d") == false && string_to_check->StartsWith("I") == false && string_to_check->StartsWith("i") == false && string_to_check->StartsWith("O") == false && string_to_check->StartsWith("o") == false && string_to_check->StartsWith("T") == false && string_to_check->StartsWith("t") == false) return false;
+	if (buffer_string.Mid(1).IsEmpty() == true && (buffer_string.StartsWith("I") == true || buffer_string.StartsWith("i") == true || buffer_string.StartsWith("T") == true || buffer_string.StartsWith("t") == true || buffer_string.StartsWith("O") == true || buffer_string.StartsWith("o") == true )) return true;
+
 
 	return string_to_check->Mid(1).ToLong(&junk);
 

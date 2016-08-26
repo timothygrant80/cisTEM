@@ -30,6 +30,8 @@ public:
 	long current_input_refinement_id;
 	long current_output_refinement_id;
 
+	long number_of_received_particle_results;
+
 	Refinement *input_refinement;
 	Refinement *output_refinement;
 

@@ -744,6 +744,7 @@ void RefinementManager::BeginRefinementCycle()
 void RefinementManager::RunRefinementJob()
 {
 	running_job_type = REFINEMENT;
+	number_of_received_particle_results = 0;
 
 	output_refinement->SizeAndFillWithEmpty(input_refinement->number_of_particles, input_refinement->number_of_classes);
 	wxPrintf("Output refinement has %li particles\n", output_refinement->number_of_particles);
@@ -1263,6 +1264,11 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[14];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[15];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score_change = result_to_process->result_data[16];
+
+		number_of_received_particle_results++;
+		my_parent->ProgressBar->SetValue(float(number_of_received_particle_results) / float(output_refinement->number_of_particles) * 100.0);
+
+
 
 	}
 	else

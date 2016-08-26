@@ -225,7 +225,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	Refinement temp_refinement;
 	temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
 	temp_refinement.number_of_particles = number_of_particles;
-	temp_refinement.name = "Initial Parameters";
+	temp_refinement.name = "Random Parameters";
 	temp_refinement.resolution_statistics_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
 	temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
 

@@ -38,6 +38,7 @@
 #include <wx/datectrl.h>
 #include <wx/dateevt.h>
 #include <wx/dataview.h>
+#include <wx/graphics.h>
 
 #include "../core/core_headers.h"
 
@@ -82,5 +83,6 @@
 #include "../gui/MyRenameDialog.h"
 #include "../gui/MyVolumeChooserDialog.h"
 #include "../gui/MyRefine3DPanel.h"
+#include "../gui/AngularDistributionPlotPanel.h"
 
 

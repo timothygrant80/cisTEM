@@ -151,6 +151,7 @@ public :
 	virtual wxString ReturnAssetName(long wanted_asset) = 0;
 	virtual int ReturnArrayPositionFromID(int wanted_id) = 0;
 	virtual int ReturnArrayPositionFromParentID(int wanted_id) = 0;
+	virtual wxString ReturnAssetFullFilename(long wanted_asst) = 0;
 
 	long ReturnNumberOfAssets();
 };
@@ -171,6 +172,7 @@ public:
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
+	wxString ReturnAssetFullFilename(long wanted_asst);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
@@ -195,6 +197,7 @@ public:
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
+	wxString ReturnAssetFullFilename(long wanted_asst);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
@@ -217,6 +220,7 @@ public:
 
 	int ReturnAssetID(long wanted_asset);
 	wxString ReturnAssetName(long wanted_asset) {return wxEmptyString;};
+	wxString ReturnAssetFullFilename(long wanted_asst)  {return wxEmptyString;};
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
 
@@ -243,6 +247,7 @@ public:
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id);
 	int ReturnArrayPositionFromParentID(int wanted_id);
+	wxString ReturnAssetFullFilename(long wanted_asst);
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);

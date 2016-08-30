@@ -83,6 +83,9 @@
 #include "../gui/MyRenameDialog.h"
 #include "../gui/MyVolumeChooserDialog.h"
 #include "../gui/MyRefine3DPanel.h"
+#include "../gui/PlotFSCPanel.h"
+#include "../gui/MyFSCPanel.h"
+#include "../gui/MyRefinementResultsPanel.h"
 #include "../gui/AngularDistributionPlotPanel.h"
 
 

@@ -6,9 +6,12 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "../core/gui_core_headers.h"
+#include "AngularDistributionPlotPanel.h"
 #include "BitmapPanel.h"
 #include "CTF1DPanel.h"
+#include "MyFSCPanel.h"
 #include "PickingResultsDisplayPanel.h"
+#include "PlotFSCPanel.h"
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
@@ -111,6 +114,96 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
+	
+}
+
+RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer202;
+	bSizer202 = new wxBoxSizer( wxVERTICAL );
+	
+	m_splitter7 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter7->SetSashSize( 10 );
+	m_splitter7->Connect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter7OnIdle ), NULL, this );
+	
+	m_panel48 = new wxPanel( m_splitter7, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer203;
+	bSizer203 = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer11;
+	fgSizer11 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer11->AddGrowableCol( 1 );
+	fgSizer11->SetFlexibleDirection( wxBOTH );
+	fgSizer11->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText284 = new wxStaticText( m_panel48, wxID_ANY, wxT("Select Refinement Package :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText284->Wrap( -1 );
+	fgSizer11->Add( m_staticText284, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	RefinementPackageComboBox = new wxComboBox( m_panel48, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	fgSizer11->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText285 = new wxStaticText( m_panel48, wxID_ANY, wxT("Select Input Parameters :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText285->Wrap( -1 );
+	fgSizer11->Add( m_staticText285, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	InputParametersComboBox = new wxComboBox( m_panel48, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	fgSizer11->Add( InputParametersComboBox, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer203->Add( fgSizer11, 0, wxEXPAND, 5 );
+	
+	ParameterListCtrl = new RefinementParametersListCtrl( m_panel48, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
+	bSizer203->Add( ParameterListCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	m_panel48->SetSizer( bSizer203 );
+	m_panel48->Layout();
+	bSizer203->Fit( m_panel48 );
+	m_panel49 = new wxPanel( m_splitter7, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer206;
+	bSizer206 = new wxBoxSizer( wxVERTICAL );
+	
+	FSCPlotPanel = new MyFSCPanel( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer206->Add( FSCPlotPanel, 60, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer208;
+	bSizer208 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PlotAngleButton = new wxButton( m_panel49, wxID_ANY, wxT("Plot Angles"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer208->Add( PlotAngleButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	AngularPlotPanel = new AngularDistributionPlotPanel( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer208->Add( AngularPlotPanel, 100, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer206->Add( bSizer208, 40, wxEXPAND, 5 );
+	
+	
+	m_panel49->SetSizer( bSizer206 );
+	m_panel49->Layout();
+	bSizer206->Fit( m_panel49 );
+	m_splitter7->SplitVertically( m_panel48, m_panel49, 550 );
+	bSizer202->Add( m_splitter7, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer202 );
+	this->Layout();
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
+	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnRefinementPackageComboBox ), NULL, this );
+	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnInputParametersComboBox ), NULL, this );
+	PlotAngleButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnPlotButtonClick ), NULL, this );
+}
+
+RefinementResultsPanel::~RefinementResultsPanel()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
+	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnRefinementPackageComboBox ), NULL, this );
+	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnInputParametersComboBox ), NULL, this );
+	PlotAngleButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnPlotButtonClick ), NULL, this );
 	
 }
 
@@ -968,11 +1061,21 @@ OverviewPanel::OverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticline2 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
 	bSizer10->Add( m_staticline2, 0, wxEXPAND | wxALL, 5 );
 	
-	m_staticText1 = new wxStaticText( this, wxID_ANY, wxT("This is an overview,\nthat will display many\ninteresting things!"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	wxBoxSizer* bSizer198;
+	bSizer198 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText1 = new wxStaticText( this, wxID_ANY, wxT("Welcome to cisTEM!"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
 	m_staticText1->Wrap( -1 );
 	m_staticText1->SetFont( wxFont( 24, 70, 90, 90, false, wxEmptyString ) );
 	
-	bSizer10->Add( m_staticText1, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer198->Add( m_staticText1, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticText279 = new wxStaticText( this, wxID_ANY, wxT("Please open an old, or start a new project to start processing."), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText279->Wrap( -1 );
+	bSizer198->Add( m_staticText279, 0, wxALIGN_CENTER|wxALL, 5 );
+	
+	
+	bSizer10->Add( bSizer198, 0, wxALIGN_CENTER, 5 );
 	
 	
 	this->SetSizer( bSizer10 );
@@ -2199,6 +2302,9 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	bSizer28->Add( AddSelectedAssetButton, 0, wxALL|wxEXPAND, 5 );
 	
+	DisplayButton = new wxButton( m_panel3, wxID_ANY, wxT("Display"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer28->Add( DisplayButton, 0, wxALL, 5 );
+	
 	
 	bSizer25->Add( bSizer28, 0, wxEXPAND, 5 );
 	
@@ -2382,6 +2488,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	RemoveAllAssetsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
 	RenameAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameAssetClick ), NULL, this );
 	AddSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
+	DisplayButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::OnDisplayButtonClick ), NULL, this );
 }
 
 AssetParentPanel::~AssetParentPanel()
@@ -2422,6 +2529,7 @@ AssetParentPanel::~AssetParentPanel()
 	RemoveAllAssetsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
 	RenameAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameAssetClick ), NULL, this );
 	AddSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
+	DisplayButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::OnDisplayButtonClick ), NULL, this );
 	
 }
 
@@ -3060,7 +3168,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	gSizer9->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	RefinementPackageComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	RefinementPackageComboBox->SetMinSize( wxSize( 170,-1 ) );
+	RefinementPackageComboBox->SetMinSize( wxSize( 200,-1 ) );
 	
 	gSizer9->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
 	
@@ -3222,13 +3330,6 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	GlobalResolutionLimitStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	GlobalResolutionLimitStaticText->Wrap( -1 );
-	fgSizer1->Add( GlobalResolutionLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	GlobalResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( GlobalResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	GlobalMaskRadiusStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	GlobalMaskRadiusStaticText->Wrap( -1 );
@@ -3501,10 +3602,15 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer61->Fit( InfoPanel );
 	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
 	
-	RefinementResultsPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	RefinementResultsPanel->Hide();
+	FSCResultsPanel = new MyFSCPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	FSCResultsPanel->Hide();
 	
-	bSizer46->Add( RefinementResultsPanel, 50, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( FSCResultsPanel, 50, wxEXPAND | wxALL, 5 );
+	
+	AngularPlotPanel = new AngularDistributionPlotPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	AngularPlotPanel->Hide();
+	
+	bSizer46->Add( AngularPlotPanel, 50, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
@@ -3559,7 +3665,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberConnectedText->Wrap( -1 );
 	bSizer62->Add( NumberConnectedText, 1, wxALIGN_CENTER|wxALL|wxEXPAND, 5 );
 	
-	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Remaining Time : ???h:??m:??s"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
 	TimeRemainingText->Wrap( -1 );
 	bSizer62->Add( TimeRemainingText, 0, wxALIGN_RIGHT|wxALL|wxEXPAND, 5 );
 	
@@ -3647,8 +3753,10 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
+	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
+	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
@@ -3660,8 +3768,10 @@ Refine3DPanel::~Refine3DPanel()
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
+	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
+	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
@@ -3791,7 +3901,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NoFramesToAverageSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 0 );
+	NoFramesToAverageSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 3 );
 	fgSizer1->Add( NoFramesToAverageSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText188 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Box Size (px) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -4260,31 +4370,6 @@ NewProjectWizard::~NewProjectWizard()
 	m_pages.Clear();
 }
 
-NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
-{
-	this->Create( parent, id, title, bitmap, pos, style );
-	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
-	
-	
-	this->Centre( wxBOTH );
-	
-	
-	// Connect Events
-	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewRefinementPackageWizard::OnFinished ) );
-	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewRefinementPackageWizard::PageChanged ) );
-	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewRefinementPackageWizard::PageChanging ) );
-}
-
-NewRefinementPackageWizard::~NewRefinementPackageWizard()
-{
-	// Disconnect Events
-	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewRefinementPackageWizard::OnFinished ) );
-	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewRefinementPackageWizard::PageChanged ) );
-	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewRefinementPackageWizard::PageChanging ) );
-	
-	m_pages.Clear();
-}
-
 RenameDialog::RenameDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
@@ -4347,6 +4432,31 @@ RenameDialog::~RenameDialog()
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RenameDialog::OnCancelClick ), NULL, this );
 	RenameButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RenameDialog::OnRenameClick ), NULL, this );
 	
+}
+
+NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
+{
+	this->Create( parent, id, title, bitmap, pos, style );
+	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
+	
+	
+	this->Centre( wxBOTH );
+	
+	
+	// Connect Events
+	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewRefinementPackageWizard::OnFinished ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewRefinementPackageWizard::PageChanged ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewRefinementPackageWizard::PageChanging ) );
+}
+
+NewRefinementPackageWizard::~NewRefinementPackageWizard()
+{
+	// Disconnect Events
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewRefinementPackageWizard::OnFinished ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewRefinementPackageWizard::PageChanged ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewRefinementPackageWizard::PageChanging ) );
+	
+	m_pages.Clear();
 }
 
 VolumeChooserDialog::VolumeChooserDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
@@ -4732,9 +4842,21 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	ContainedParticlesListCtrl = new ContainedParticleListControl( m_panel51, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
 	bSizer191->Add( ContainedParticlesListCtrl, 1, wxALL|wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer199;
+	bSizer199 = new wxBoxSizer( wxHORIZONTAL );
+	
 	m_staticText230 = new wxStaticText( m_panel51, wxID_ANY, wxT("Active 3D References :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText230->Wrap( -1 );
-	bSizer191->Add( m_staticText230, 0, wxALL, 5 );
+	bSizer199->Add( m_staticText230, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	
+	
+	bSizer199->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	DisplayStackButton = new wxButton( m_panel51, wxID_ANY, wxT("Display Stack"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer199->Add( DisplayStackButton, 0, wxALL, 5 );
+	
+	
+	bSizer191->Add( bSizer199, 0, wxEXPAND, 5 );
 	
 	Active3DReferencesListCtrl = new ReferenceVolumesListControl( m_panel51, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
 	bSizer191->Add( Active3DReferencesListCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -4870,6 +4992,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
+	DisplayStackButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnDisplayStackButton ), NULL, this );
 	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefinementPackageAssetPanel::OnVolumeListItemActivated ), NULL, this );
 }
 
@@ -4904,6 +5027,7 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
+	DisplayStackButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnDisplayStackButton ), NULL, this );
 	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefinementPackageAssetPanel::OnVolumeListItemActivated ), NULL, this );
 	
 }
@@ -4916,7 +5040,7 @@ TemplateWizardPanel::TemplateWizardPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer147;
 	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Template :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Template Refinement Panel :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -4939,6 +5063,40 @@ TemplateWizardPanel::TemplateWizardPanel( wxWindow* parent, wxWindowID id, const
 }
 
 TemplateWizardPanel::~TemplateWizardPanel()
+{
+}
+
+InputParameterWizardPanel::InputParameterWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer153;
+	bSizer153 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer147;
+	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Input Parameters :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214->Wrap( -1 );
+	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	GroupComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	bSizer147->Add( GroupComboBox, 1, wxALL, 5 );
+	
+	
+	bSizer153->Add( bSizer147, 0, wxEXPAND, 5 );
+	
+	
+	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please select the parameters to use to create the new refinement package."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer153 );
+	this->Layout();
+}
+
+InputParameterWizardPanel::~InputParameterWizardPanel()
 {
 }
 
@@ -5193,4 +5351,53 @@ ClassesSetupWizardPanel ::ClassesSetupWizardPanel ( wxWindow* parent, wxWindowID
 
 ClassesSetupWizardPanel ::~ClassesSetupWizardPanel ()
 {
+}
+
+FSCPanel::FSCPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer200;
+	bSizer200 = new wxBoxSizer( wxVERTICAL );
+	
+	TitleSizer = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText280 = new wxStaticText( this, wxID_ANY, wxT("Select Class :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText280->Wrap( -1 );
+	TitleSizer->Add( m_staticText280, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ClassComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	TitleSizer->Add( ClassComboBox, 0, wxALL, 5 );
+	
+	
+	TitleSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	EstimatedResolutionLabel = new wxStaticText( this, wxID_ANY, wxT("Estimated Resolution : "), wxDefaultPosition, wxDefaultSize, 0 );
+	EstimatedResolutionLabel->Wrap( -1 );
+	TitleSizer->Add( EstimatedResolutionLabel, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	EstimatedResolutionText = new wxStaticText( this, wxID_ANY, wxT("00.00  ‎Å"), wxDefaultPosition, wxDefaultSize, 0 );
+	EstimatedResolutionText->Wrap( -1 );
+	TitleSizer->Add( EstimatedResolutionText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer200->Add( TitleSizer, 0, wxEXPAND, 5 );
+	
+	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer200->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
+	
+	PlotPanel = new PlotFSCPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer200->Add( PlotPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	this->SetSizer( bSizer200 );
+	this->Layout();
+	
+	// Connect Events
+	ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FSCPanel::OnClassComboBoxChange ), NULL, this );
+}
+
+FSCPanel::~FSCPanel()
+{
+	// Disconnect Events
+	ClassComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FSCPanel::OnClassComboBoxChange ), NULL, this );
+	
 }

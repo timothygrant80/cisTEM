@@ -19,6 +19,20 @@ class TemplateWizardPage : public wxWizardPage
 
 };
 
+class InputParameterWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	InputParameterWizardPanel *my_panel;
+
+ 	 InputParameterWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
 class ParticleGroupWizardPage : public wxWizardPage
 {
 	MyNewRefinementPackageWizard *wizard_pointer;
@@ -149,6 +163,7 @@ public:
 		~MyNewRefinementPackageWizard();
 
 		TemplateWizardPage *template_page;
+		InputParameterWizardPage *parameter_page;
 		ParticleGroupWizardPage *particle_group_page;
 		NumberofClassesWizardPage *number_of_classes_page;
 		BoxSizeWizardPage *box_size_page;

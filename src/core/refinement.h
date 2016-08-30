@@ -69,6 +69,9 @@ public :
 	int resolution_statistics_box_size;
 	float resolution_statistics_pixel_size;
 
+	float average_sigma;
+	//wxArrayDouble average_occupancy;
+
 	void SizeAndFillWithEmpty(long number_of_particles, int number_of_classes);
 
 	wxArrayLong reference_volume_ids;
@@ -80,3 +83,4 @@ public :
 
 };
 
+WX_DECLARE_OBJARRAY(Refinement, ArrayofRefinements);

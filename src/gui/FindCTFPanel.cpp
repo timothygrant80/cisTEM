@@ -1135,8 +1135,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 }
 
-/*
-void MyAlignMoviesPanel::UpdateProgressBar()
+
+void MyFindCTFPanel::UpdateProgressBar()
 {
 	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
@@ -1144,4 +1144,3 @@ void MyAlignMoviesPanel::UpdateProgressBar()
 	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }
 
-*/

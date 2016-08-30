@@ -35,6 +35,7 @@ MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 MyMovieAlignResultsPanel *movie_results_panel;
 MyFindCTFResultsPanel *ctf_results_panel;
 MyPickingResultsPanel *picking_results_panel;
+MyRefinementResultsPanel *refinement_results_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
 
@@ -107,6 +108,7 @@ bool MyGuiApp::OnInit()
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
 	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
 	picking_results_panel = new MyPickingResultsPanel(results_panel->ResultsBook);
+	refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
 
 	// Setup list books
 
@@ -159,8 +161,9 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
 	ResultsBookIconImages->Add(ctf_icon_bmp);
 	ResultsBookIconImages->Add(particle_position_icon_bmp);
+	ResultsBookIconImages->Add(refine3d_icon_bmp);
 
-	SettingsBookIconImages->Add(run_profiles_icon_bmp);
+		SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
 
 	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
@@ -189,6 +192,7 @@ bool MyGuiApp::OnInit()
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
 	results_panel->ResultsBook->AddPage(picking_results_panel, "Find Particles",false,2);
+	results_panel->ResultsBook->AddPage(refinement_results_panel, "Refinement", false, 3);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
 

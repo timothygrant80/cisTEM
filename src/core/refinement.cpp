@@ -2,6 +2,7 @@
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayofRefinementResults);
 WX_DEFINE_OBJARRAY(ArrayofClassRefinementResults);
+WX_DEFINE_OBJARRAY(ArrayofRefinements);
 
 RefinementResult::RefinementResult()
 {
@@ -112,9 +113,18 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 				parameter_average[parameter_counter] += output_parameters[parameter_counter];
 			}
 
+
 			my_output_par_file->WriteLine(output_parameters);
 
 		}
+
+		// NEED TO WRITE OUT AVERAGE SIGMA WEIGHTED BY OCC.
+
+
+		if (number_of_classes > 1) output_parameters[13] = average_sigma;
+
+		//
+
 
 		for (parameter_counter = 0; parameter_counter < 16; parameter_counter++)
 		{

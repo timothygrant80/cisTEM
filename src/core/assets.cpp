@@ -463,6 +463,13 @@ wxString MovieAssetList::ReturnAssetName(long wanted_asset)
 	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_name;
 }
 
+wxString MovieAssetList::ReturnAssetFullFilename(long wanted_asset)
+{
+	return reinterpret_cast <MovieAsset *> (assets)[wanted_asset].filename.GetFullPath();
+
+}
+
+
 int MovieAssetList::ReturnArrayPositionFromID(int wanted_id)
 {
 	for (int counter = 0; counter < number_of_assets; counter++)
@@ -618,6 +625,12 @@ int ImageAssetList::ReturnAssetID(long wanted_asset)
 wxString ImageAssetList::ReturnAssetName(long wanted_asset)
 {
 	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].asset_name;
+}
+
+wxString ImageAssetList::ReturnAssetFullFilename(long wanted_asset)
+{
+	return reinterpret_cast <ImageAsset *> (assets)[wanted_asset].filename.GetFullPath();
+
 }
 
 int ImageAssetList::ReturnArrayPositionFromID(int wanted_id)
@@ -894,6 +907,12 @@ int VolumeAssetList::ReturnAssetID(long wanted_asset)
 wxString VolumeAssetList::ReturnAssetName(long wanted_asset)
 {
 	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].asset_name;
+}
+
+
+wxString VolumeAssetList::ReturnAssetFullFilename(long wanted_asset)
+{
+	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].filename.GetFullPath();
 }
 
 int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id)

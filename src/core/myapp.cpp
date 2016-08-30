@@ -990,7 +990,7 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 	// The compute thread is finished.. get the next job
 	// thread should be dead, or nearly dead..
 
-	work_thread = NULL;
+	//work_thread = NULL;
 	SendAllResultsFromResultQueue();
 
 	// get the next job..
@@ -1124,6 +1124,10 @@ void MyApp::AddJobToResultQueue(JobResult * result_to_add)
 	if (work_thread != NULL)
 	{
 		work_thread->MarkIntermediateResultAvailable();
+	}
+	else
+	{
+		wxPrintf("Work thread is NULL!\n");
 	}
 
 

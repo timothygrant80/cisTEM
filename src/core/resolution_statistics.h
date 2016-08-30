@@ -39,6 +39,11 @@ public:
 	void WriteStatisticsToFloatArray(float *float_array, int wanted_class);
 	void ReadStatisticsFromFile(wxString input_file);
 	void GenerateDefaultStatistics(float molecular_mass_in_kDa);
+
+	float ReturnEstimatedResolution();
+	float Return0p8Resolution();
+	float Return0p5Resolution();
+
 	inline float kDa_to_area_in_pixel(float molecular_mass_in_kDa)
 	{
 		return PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);

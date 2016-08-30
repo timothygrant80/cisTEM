@@ -17,11 +17,14 @@ class MyRefine3DPanel;
 class RefinementManager
 {
 public:
-
+	bool start_with_reconstruction;
 	MyRefine3DPanel *my_parent;
 
+	long current_job_starttime;
+	long time_of_last_update;
+	int number_of_generated_3ds;
+
 	int running_job_type;
-	bool start_with_reconstruction;
 	int number_of_rounds_to_run;
 	int number_of_rounds_run;
 	long current_job_id;
@@ -43,6 +46,12 @@ public:
 	void SetupRefinementJob();
 	void SetupReconstructionJob();
 	void SetupMerge3dJob();
+
+	void SetupInitialReconstructionJob();
+	void SetupInitialMerge3dJob();
+
+	void RunInitialReconstructionJob();
+	void RunInitialMerge3dJob();
 
 	void RunRefinementJob();
 	void RunReconstructionJob();
@@ -72,6 +81,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void FinishButtonClick( wxCommandEvent& event );
 		void StartRefinementClick( wxCommandEvent& event );
 		void ResetAllDefaultsClick( wxCommandEvent& event );
+		void OnHighResLimitChange( wxCommandEvent& event );
 
 		void OnJobSocketEvent(wxSocketEvent& event);
 
@@ -83,6 +93,8 @@ class MyRefine3DPanel : public Refine3DPanel
 
 	public:
 
+
+		long time_of_last_result_update;
 		bool refinement_package_combo_is_dirty;
 		bool run_profiles_are_dirty;
 		bool input_params_combo_is_dirty;
@@ -106,6 +118,7 @@ class MyRefine3DPanel : public Refine3DPanel
 
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
+		void WriteBlueText(wxString text_to_write);
 
 		void FillRefinementPackagesComboBox();
 		void FillRunProfileComboBoxes();
@@ -114,6 +127,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void NewRefinementPackageSelected();
 
 		void OnRefinementPackageComboBox( wxCommandEvent& event );
+		void OnInputParametersComboBox( wxCommandEvent& event );
 
 
 

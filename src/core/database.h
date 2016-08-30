@@ -190,6 +190,8 @@ public :
 	void SetManualEditForPickingID(const int &picking_id, const bool wanted_manual_edit);
 
 	void AddRefinement(Refinement *refinement_to_add);
+	void UpdateRefinementResolutionStatistics(Refinement *refinement_to_update);
+
 	Refinement *GetRefinementByID(long wanted_refinement_id);
 
 

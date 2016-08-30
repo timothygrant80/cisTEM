@@ -21,6 +21,7 @@ private:
 
 		void RemoveAssetClick( wxCommandEvent& event );
 		void RenameAssetClick( wxCommandEvent& event);
+		void OnDisplayButtonClick( wxCommandEvent& event );
 
 		void RemoveAllAssetsClick( wxCommandEvent& event );
 		void AddSelectedAssetClick( wxCommandEvent& event );

@@ -19,6 +19,7 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void OnRenameClick( wxCommandEvent& event );
 		void OnDeleteClick( wxCommandEvent& event );
 		void OnUpdateUI(wxUpdateUIEvent& event);
+		void OnDisplayStackButton( wxCommandEvent& event );
 
 		void AddAsset(RefinementPackage *refinement_package );
 
@@ -41,6 +42,10 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void OnEndEdit( wxListEvent& event );
 		void OnVolumeListItemActivated( wxListEvent& event );
 		void ReDrawActiveReferences();
+
+		Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
+		void ImportAllRefinementsFromDatabase();
+		ArrayofRefinements all_refinements;
 };
 
 

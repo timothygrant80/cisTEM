@@ -20,6 +20,22 @@ void MyRefinementPackageAssetPanel::OnCreateClick( wxCommandEvent& event )
 	my_wizard->RunWizard(my_wizard->template_page);
 }
 
+void MyRefinementPackageAssetPanel::OnDisplayStackButton( wxCommandEvent& event )
+{
+	if (selected_refinement_package >= 0)
+	{
+		wxString execution_command = wxStandardPaths::Get().GetExecutablePath();
+			execution_command = execution_command.BeforeLast('/');
+			execution_command += "/display ";
+
+			execution_command += all_refinement_packages[selected_refinement_package].stack_filename;
+			execution_command += "&";
+				//wxPrintf("Launching %s\n", execution_command);
+			system(execution_command.ToUTF8().data());
+	}
+
+}
+
 void MyRefinementPackageAssetPanel::OnRenameClick( wxCommandEvent& event )
 {
 	if (selected_refinement_package >= 0)
@@ -62,6 +78,8 @@ void MyRefinementPackageAssetPanel::AddAsset(RefinementPackage *refinement_packa
 
 	main_frame->current_project.database.AddRefinementPackageAsset(refinement_package);
 	main_frame->DirtyRefinementPackages();
+
+
 
 }
 
@@ -191,11 +209,13 @@ void MyRefinementPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event)
 		{
 			RenameButton->Enable(true);
 			DeleteButton->Enable(true);
+			DisplayStackButton->Enable(true);
 		}
 		else
 		{
 			RenameButton->Enable(false);
 			DeleteButton->Enable(false);
+			DisplayStackButton->Enable(false);
 		}
 
 	}
@@ -226,6 +246,8 @@ void MyRefinementPackageAssetPanel::ImportAllFromDatabase()
 	}
 
 	main_frame->current_project.database.EndAllRefinementPackagesSelect();
+
+	ImportAllRefinementsFromDatabase();
 
 	main_frame->DirtyRefinementPackages();
 }
@@ -353,6 +375,46 @@ long MyRefinementPackageAssetPanel::ReturnArrayPositionFromAssetID(long wanted_a
 	}
 
 	return -1;
+
+}
+
+void MyRefinementPackageAssetPanel::ImportAllRefinementsFromDatabase()
+{
+
+	bool more_data;
+	long current_id;
+	Refinement *current_refinement;
+
+	all_refinements.Clear();
+
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT DISTINCT REFINEMENT_ID FROM REFINEMENT_LIST");
+
+	while (more_data == true)
+	{
+		more_data = main_frame->current_project.database.GetFromBatchSelect("l", &current_id);
+		current_refinement = main_frame->current_project.database.GetRefinementByID(current_id);
+		all_refinements.Add(current_refinement);
+	}
+
+	main_frame->current_project.database.EndBatchSelect();
+}
+
+Refinement* MyRefinementPackageAssetPanel::ReturnPointerToRefinementByRefinementID(long wanted_id)
+{
+	long counter;
+
+	//wxPrintf("looking for %li\n", wanted_id);
+	for (counter = 0; counter < all_refinements.GetCount(); counter++)
+	{
+		if (all_refinements[counter].refinement_id == wanted_id)
+		{
+		//wxPrintf("found refinement\n");
+			return &all_refinements.Item(counter);
+		}
+	}
+
+	wxPrintf("returning NULL\n");
+	return NULL;
 
 }
 

@@ -1490,9 +1490,41 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 		{
 			AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
 		}
+
+		EndBatchInsert();
 	}
 
-	EndBatchInsert();
+}
+
+
+void Database::UpdateRefinementResolutionStatistics(Refinement *refinement_to_add)
+{
+	int class_counter;
+	long counter;
+
+	ExecuteSQL("BEGIN");
+
+	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	{
+		ExecuteSQL(wxString::Format("DROP TABLE REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter));
+	}
+
+	ExecuteSQL("COMMIT");
+
+	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	{
+		CreateRefinementResolutionStatisticsTable(refinement_to_add->refinement_id, class_counter);
+
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6 ,"SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
+
+		for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++)
+		{
+			AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
+		}
+
+		EndBatchInsert();
+	}
+
 }
 
 Refinement *Database::GetRefinementByID(long wanted_refinement_id)

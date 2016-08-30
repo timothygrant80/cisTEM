@@ -63,7 +63,7 @@ void JobTracker::MarkJobFinished()
 	long time_since_last_update = current_time - last_update_time;
 	long total_time = current_time - start_time;
 	float naive_time_per_process = float(total_time) / float(total_running_processes);
-
+/*
 	if (last_update_time_total_running_processes == 0)
 	{
 		// this is the first job, and provides us with an estimate for how long one job takes..
@@ -83,7 +83,9 @@ void JobTracker::MarkJobFinished()
 	total_number_of_finished_jobs++;
 
 	last_update_time_total_running_processes = total_running_processes;
-	if (naive_time_per_process < last_update_seconds_per_job_per_process) last_update_seconds_per_job_per_process = naive_time_per_process;
+	if (naive_time_per_process < last_update_seconds_per_job_per_process) last_update_seconds_per_job_per_process = naive_time_per_process;*/
+
+	last_update_seconds_per_job_per_process = naive_time_per_process;
 }
 
 TimeRemaining JobTracker::ReturnRemainingTime()

@@ -163,6 +163,38 @@ void ResolutionStatistics::ResampleParticleSSNR(ResolutionStatistics &other_stat
 	}
 }
 
+float ResolutionStatistics::ReturnEstimatedResolution()
+{
+	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	{
+		if (part_FSC.data_y[counter] < 0.143) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+	}
+
+	return pixel_size * 2.0;
+}
+
+float ResolutionStatistics::Return0p8Resolution()
+{
+	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	{
+		if (part_FSC.data_y[counter] <= 0.8) return part_FSC.data_x[counter];
+	}
+
+	return pixel_size * 2.0;
+}
+
+
+float ResolutionStatistics::Return0p5Resolution()
+{
+	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	{
+		if (part_FSC.data_y[counter] <= 0.5) return part_FSC.data_x[counter];
+	}
+
+	return pixel_size * 2.0;
+}
+
+
 void ResolutionStatistics::Init(float wanted_pixel_size, int box_size)
 {
 	pixel_size = wanted_pixel_size;

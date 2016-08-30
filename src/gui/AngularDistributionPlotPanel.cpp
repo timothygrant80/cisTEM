@@ -13,6 +13,13 @@ AngularDistributionPlotPanel::AngularDistributionPlotPanel(wxWindow* parent, wxW
 	should_show = true;
 	font_size_multiplier = 1.0;
 
+	int client_x;
+	int client_y;
+
+	GetClientSize(&client_x, &client_y);
+	buffer_bitmap.Create(wxSize(client_x, client_y));
+	SetupBitmap();
+
 	Bind(wxEVT_PAINT, &AngularDistributionPlotPanel::OnPaint, this);
 	Bind(wxEVT_SIZE,  &AngularDistributionPlotPanel::OnSize, this);
 
@@ -32,6 +39,10 @@ void AngularDistributionPlotPanel::Clear()
     dc.SetBackground(*wxWHITE_BRUSH);
     dc.Clear();
     Thaw();
+    refinement_results_to_plot.Clear();
+	SetupBitmap();
+	Refresh();
+
 }
 
 
@@ -41,28 +52,13 @@ void AngularDistributionPlotPanel::OnSize(wxSizeEvent & event)
 	event.Skip();
 }
 
-void AngularDistributionPlotPanel::UpdateScalingAndDimensions()
+void AngularDistributionPlotPanel::SetupBitmap()
 {
-	int panel_dim_x, panel_dim_y;
-	GetClientSize(&panel_dim_x, &panel_dim_y);
-
-	circle_center_x = panel_dim_x / 2;
-	circle_center_y = panel_dim_y / 2;
-	circle_radius = std::min(circle_center_x,circle_center_y) * 0.7;
-	major_tick_length = circle_radius * 0.05;
-	minor_tick_length = major_tick_length * 0.5;
-
-	margin_between_major_ticks_and_labels = std::max(major_tick_length * 0.5,5.0);
-	margin_between_circles_and_theta_labels = 2.0;
-}
-
-void AngularDistributionPlotPanel::OnPaint(wxPaintEvent & evt)
-{
-
-	Freeze();
-
+	wxMemoryDC memDC;
+	memDC.SelectObject(buffer_bitmap);
 	int window_x_size;
 	int window_y_size;
+	RotationMatrix temp_matrix;
 
 	float proj_x;
 	float proj_y;
@@ -76,65 +72,63 @@ void AngularDistributionPlotPanel::OnPaint(wxPaintEvent & evt)
 	float tmp_y = 0.0;
 	float tmp_angle = 0.0;
 
-	wxString plot_title;
+    wxGraphicsContext *gc = wxGraphicsContext::Create( memDC );
 
-	RotationMatrix temp_matrix;
+    memDC.SetBackground(*wxWHITE_BRUSH);
+    memDC.Clear();
+	memDC.GetSize(&window_x_size, &window_y_size);
+	memDC.DrawRectangle(0, 0, window_x_size, window_y_size);
 
-    wxPaintDC dc(this);
+	//memDC.DrawText(wxString::Format("Plot of projection directions (%li projections)",refinement_results_to_plot.Count()),10,10);
 
-    wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
+	// Draw small circles for each projection direction
+	UpdateProjCircleRadius();
+	gc->SetPen( wxNullPen );
+	//gc->SetPen( wxPen(wxColor(255,0,0),2) );
+	gc->SetBrush( wxBrush(wxColor(50,50,200,60)) );
 
 
-    dc.SetBackground(*wxWHITE_BRUSH);
-	dc.Clear();
-	dc.GetSize(&window_x_size, &window_y_size);
-	dc.DrawRectangle(0, 0, window_x_size, window_y_size);
+	wxPrintf("number = %li\n", refinement_results_to_plot.Count());
 
-	if (should_show)
+
+
+	for (size_t counter = 0; counter < refinement_results_to_plot.Count(); counter ++ )
 	{
-		dc.DrawText(wxString::Format("Plot of projection directions (%li projections)",refinement_results_to_plot.Count()),10,10);
+		// Setup a angles and shifts
+		angles_and_shifts.Init(refinement_results_to_plot.Item(counter).phi,refinement_results_to_plot.Item(counter).theta,refinement_results_to_plot.Item(counter).psi,0.0,0.0);
 
-		// Draw small circles for each projection direction
-		UpdateProjCircleRadius();
-		gc->SetPen( wxNullPen );
-		//gc->SetPen( wxPen(wxColor(255,0,0),2) );
-		gc->SetBrush( wxBrush(wxColor(50,50,200,60)) );
-		for (size_t counter = 0; counter < refinement_results_to_plot.Count(); counter ++ )
+
+		//gc->BeginLayer(50.0);
+
+
+		// Loop over symmetry-related views
+		for (int sym_counter = 0; sym_counter < symmetry_matrices.number_of_matrices; sym_counter ++ )
 		{
+			//wxPrintf("plotting point\n");
+			// Get the rotation matrix for the current orientation and current symmetry-related view
+			temp_matrix = symmetry_matrices.rot_mat[sym_counter] * angles_and_shifts.euler_matrix;
 
-			// Setup a angles and shifts
-			angles_and_shifts.Init(refinement_results_to_plot.Item(counter).phi,refinement_results_to_plot.Item(counter).theta,refinement_results_to_plot.Item(counter).psi,0.0,0.0);
+			// Rotate a vector which initially points at the north pole
+			temp_matrix.RotateCoords(north_pole_x,north_pole_y,north_pole_z,proj_x,proj_y,proj_z);
 
-
-			gc->BeginLayer(50.0);
-
-
-			// Loop over symmetry-related views
-			for (int sym_counter = 0; sym_counter < symmetry_matrices.number_of_matrices; sym_counter ++ )
+			// If we are in the southern hemisphere, we will need to plot the equivalent projection in the northen hemisphere
+			if (proj_z < 0.0)
 			{
-				// Get the rotation matrix for the current orientation and current symmetry-related view
-				temp_matrix = symmetry_matrices.rot_mat[sym_counter] * angles_and_shifts.euler_matrix;
-
-				// Rotate a vector which initially points at the north pole
-				temp_matrix.RotateCoords(north_pole_x,north_pole_y,north_pole_z,proj_x,proj_y,proj_z);
-
-				// If we are in the southern hemisphere, we will need to plot the equivalent projection in the northen hemisphere
-				if (proj_z < 0.0)
-				{
-					proj_z = - proj_z;
-					proj_y = - proj_y;
-					proj_x = - proj_x;
-				}
-
-				// Do the actual plotting
-				wxGraphicsPath path = gc->CreatePath();
-				path.AddCircle(circle_center_x + proj_x * circle_radius,circle_center_y + proj_y * circle_radius,proj_circle_radius);
-				gc->DrawPath(path);
-
+				proj_z = - proj_z;
+				proj_y = - proj_y;
+				proj_x = - proj_x;
 			}
 
-			gc->EndLayer();
+			// Do the actual plotting
+			wxGraphicsPath path = gc->CreatePath();
+			path.AddCircle(circle_center_x + proj_x * circle_radius,circle_center_y + proj_y * circle_radius,proj_circle_radius);
+			gc->DrawPath(path);
+			//wxPrintf("plot!\n");
 		}
+	}
+
+		//gc->EndLayer();
+
 
 		wxGraphicsPath path;
 
@@ -209,10 +203,46 @@ void AngularDistributionPlotPanel::OnPaint(wxPaintEvent & evt)
 
 
 
-	}
-	delete gc;
 
-	Thaw();
+
+	gc->SetPen(wxNullPen);
+	gc->SetBrush(wxNullBrush);
+	memDC.SelectObject(wxNullBitmap);
+	delete gc;
+}
+
+
+void AngularDistributionPlotPanel::UpdateScalingAndDimensions()
+{
+	int panel_dim_x, panel_dim_y;
+	GetClientSize(&panel_dim_x, &panel_dim_y);
+
+	buffer_bitmap.Create(wxSize(panel_dim_x, panel_dim_y));
+
+	circle_center_x = panel_dim_x / 2;
+	circle_center_y = panel_dim_y / 2;
+	circle_radius = std::min(circle_center_x,circle_center_y) * 0.7;
+	major_tick_length = circle_radius * 0.05;
+	minor_tick_length = major_tick_length * 0.5;
+
+	margin_between_major_ticks_and_labels = std::max(major_tick_length * 0.5,5.0);
+	margin_between_circles_and_theta_labels = 2.0;
+	if (panel_dim_x > 0 && panel_dim_y > 0) SetupBitmap();
+
+
+}
+
+void AngularDistributionPlotPanel::OnPaint(wxPaintEvent & evt)
+{
+
+	Freeze();
+	if (should_show == true)
+	{
+		wxPaintDC dc(this);
+		dc.DrawBitmap(buffer_bitmap, wxPoint(0,0));
+	}
+
+    Thaw();
 
 
 }
@@ -241,12 +271,70 @@ void AngularDistributionPlotPanel::XYFromPhiTheta(const float phi, const float t
 void AngularDistributionPlotPanel::AddRefinementResult(RefinementResult * refinement_result_to_add)
 {
 	//wxPrintf("Adding refinement result to the panel: theta = %f phi = %f\n",refinement_result_to_add->theta, refinement_result_to_add->phi);
-	refinement_results_to_plot.Add(refinement_result_to_add);
+	refinement_results_to_plot.Add(*refinement_result_to_add);
+
+	wxMemoryDC memDC;
+	memDC.SelectObject(buffer_bitmap);
+
+
+	float proj_x;
+	float proj_y;
+	float proj_z;
+
+	float north_pole_x = 0.0;
+	float north_pole_y = 0.0;
+	float north_pole_z = 1.0;
+
+	float tmp_x = 0.0;
+	float tmp_y = 0.0;
+	float tmp_angle = 0.0;
+
+	RotationMatrix temp_matrix;
+
+	wxGraphicsContext *gc = wxGraphicsContext::Create( memDC );
+
+	//memDC.DrawText(wxString::Format("Plot of projection directions (%li projections)",refinement_results_to_plot.Count()),10,10);
+
+	// Draw small circles for each projection direction
+	UpdateProjCircleRadius();
+	gc->SetPen( wxNullPen );
+		//gc->SetPen( wxPen(wxColor(255,0,0),2) );
+	gc->SetBrush( wxBrush(wxColor(50,50,200,60)) );
+	angles_and_shifts.Init(refinement_result_to_add->phi,refinement_result_to_add->theta, refinement_result_to_add->psi,0.0,0.0);
+
+	// paint to the bitmap..
+
+	for (int sym_counter = 0; sym_counter < symmetry_matrices.number_of_matrices; sym_counter ++ )
+	{
+		// Get the rotation matrix for the current orientation and current symmetry-related view
+		temp_matrix = symmetry_matrices.rot_mat[sym_counter] * angles_and_shifts.euler_matrix;
+
+		// Rotate a vector which initially points at the north pole
+		temp_matrix.RotateCoords(north_pole_x,north_pole_y,north_pole_z,proj_x,proj_y,proj_z);
+
+		// If we are in the southern hemisphere, we will need to plot the equivalent projection in the northen hemisphere
+		if (proj_z < 0.0)
+		{
+			proj_z = - proj_z;
+			proj_y = - proj_y;
+			proj_x = - proj_x;
+		}
+
+		// Do the actual plotting
+		wxGraphicsPath path = gc->CreatePath();
+		path.AddCircle(circle_center_x + proj_x * circle_radius,circle_center_y + proj_y * circle_radius,proj_circle_radius);
+		gc->DrawPath(path);
+		//wxPrintf("plot!\n");
+	}
+
+	memDC.SelectObject(wxNullBitmap);
+
+
 }
 
 void AngularDistributionPlotPanel::UpdateProjCircleRadius()
 {
-	const float	maximum_proj_circle_radius = 15.0;
+	const float	maximum_proj_circle_radius = 3.0;
 	const float minimum_proj_circle_radius = 1.0;
 	const float minimum_log = 1.0;
 	const float maximum_log = 5.0;

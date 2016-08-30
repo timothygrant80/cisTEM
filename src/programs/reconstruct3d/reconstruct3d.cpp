@@ -153,6 +153,11 @@ bool Reconstruct3DApp::DoCalculation()
 	my_input_par_file.ReadFile();
 	NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);
 
+	if (is_running_locally == false)
+	{
+		float result;
+		my_result.SetResult(1, &result);
+	}
 	if (input_file.ReturnXSize() != input_file.ReturnYSize())
 	{
 		MyPrintWithDetails("Error: Particles are not square\n");
@@ -378,6 +383,8 @@ bool Reconstruct3DApp::DoCalculation()
 		{
 			my_reconstruction_1.InsertSliceWithCTF(input_particle);
 		}
+
+		if (is_running_locally == false)	SendIntermediateResult(&my_result);
 
 		my_progress->Update(image_counter);
 	}

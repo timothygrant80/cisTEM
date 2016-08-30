@@ -20,6 +20,7 @@ extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyPickingResultsPanel *picking_results_panel;
+extern MyRefinementResultsPanel *refinement_results_panel;
 
 
 
@@ -222,6 +223,7 @@ void MyMainFrame::DirtyRefinementPackages()
 {
 	refinement_package_asset_panel->is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
+	refinement_results_panel->is_dirty=true;
 }
 
 void MyMainFrame::DirtyInputParameters()
@@ -325,7 +327,7 @@ void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 
 	if (current_project.is_open == true)
 	{
-		SetTitle("ProjectX - [" + current_project.project_name + "]");
+		SetTitle("cisTEM - [" + current_project.project_name + "]");
 	}
 
 }
@@ -339,7 +341,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
 
 	    current_project.Close();
-		SetTitle("ProjectX");
+		SetTitle("cisTEM");
 
 	}
 
@@ -350,7 +352,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
 		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 9, this);
-		SetTitle("ProjectX - [" + current_project.project_name + "]");
+		SetTitle("cisTEM - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(1, "Opening project (loading image assets...)");
@@ -371,7 +373,9 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		my_dialog->Update(8, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();
 		my_dialog->Update(9, "Opening project (all done)");
+
 		DirtyEverything();
+
 		my_dialog->Destroy();
 	}
 	else
@@ -405,7 +409,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	picking_results_panel->OnProjectClose();
 
 
-	SetTitle("ProjectX");
+	SetTitle("cisTEM");
 
 }
 void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )

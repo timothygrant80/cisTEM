@@ -1,6 +1,10 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+
+extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+extern MyRefinementResultsPanel *refinement_results_panel;
+
 NumericTextCtrl::NumericTextCtrl(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
 :
 wxTextCtrl(parent, id, value, pos, size, style, validator, name)
@@ -773,6 +777,118 @@ wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) cons
 
 int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 {
+	wxClientDC dc(this);
+	long counter;
+
+	wxListItem result;
+	result.SetMask(wxLIST_MASK_TEXT);
+	GetColumn(wanted_column, result);
+
+	int max_width = dc.GetTextExtent(result.GetText()).x + 20;
+
+	if (GetItemCount() < 100)
+	{
+		for ( counter = 0; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+	}
+	else
+	{
+		for ( counter = 0; counter < 50; counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		{
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+		}
+
+	}
+
+	return max_width;
+}
+
+// Refinements..
+
+RefinementParametersListCtrl::RefinementParametersListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) const
+{
+
+//	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
+
+	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && refinement_results_panel->RefinementPackageComboBox->GetCount() > 0)
+	{
+		Refinement *current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages[refinement_results_panel->RefinementPackageComboBox->GetSelection()].refinement_ids[refinement_results_panel->InputParametersComboBox->GetSelection()]);
+
+		//wxPrintf("getting text for column %li column\n", column);
+
+		switch(column)
+		{
+		    case 0  : // position_in_stack
+		    	return wxString::Format("%li",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].position_in_stack);
+		    	break;
+		    case 1  : // psi
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].psi);
+		     	break;
+		    case 2  : // theta
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].theta);
+		     	break;
+		    case 3  : // phi
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].phi);
+		     	break;
+		    case 4  : // xshift
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].xshift);
+		     	break;
+		    case 5  : // yshift
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].yshift);
+		     	break;
+		    case 6  : // defocus1
+		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus1);
+		     	break;
+		    case 7  : // defocus2
+		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus2);
+		     	break;
+		    case 8  : // defocus_angle
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus_angle);
+		     	break;
+		    case 9  : // occupancy
+		    	return wxString::Format("%.1f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].occupancy);
+		     	break;
+		    case 10  : // logp
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].logp);
+		     	break;
+		    case 11  : // sigma
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].sigma);
+		     	break;
+		    case 12 : // score
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].score);
+		     	break;
+		    case 13 : // score_change
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].score_change);
+		     	break;
+		   default :
+		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+		       return "";
+		}
+	}
+	else
+	{
+		return "";
+	}
+
+}
+
+int RefinementParametersListCtrl::ReturnGuessAtColumnTextWidth(int wanted_column)
+{
+
 	wxClientDC dc(this);
 	long counter;
 

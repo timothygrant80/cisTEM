@@ -69,6 +69,32 @@ void MyAssetParentPanel::CompletelyRemoveAsset(long wanted_asset)
 	DirtyGroups();
 }
 
+void MyAssetParentPanel::OnDisplayButtonClick( wxCommandEvent& event )
+{
+	wxString execution_command = wxStandardPaths::Get().GetExecutablePath();
+	execution_command = execution_command.BeforeLast('/');
+	execution_command += "/display";
+
+	// get all selected..
+
+	long item = -1;
+
+	for ( ;; )
+	{
+			item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+			if ( item == -1 )
+			break;
+
+			execution_command += " ";
+			execution_command += all_assets_list->ReturnAssetFullFilename(all_groups_list->ReturnGroupMember(selected_group, item));
+
+	}
+
+	execution_command += "&";
+	//wxPrintf("Launching %s\n", execution_command);
+	system(execution_command.ToUTF8().data());
+
+}
 void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 {
 	// How many assets are selected?
@@ -801,6 +827,7 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			RemoveGroupButton->Enable(false);
 			RenameGroupButton->Enable(false);
+			RenameGroupButton->Enable(false);
 		}
 		else
 		{
@@ -814,6 +841,7 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RemoveSelectedAssetButton->Enable(false);
 			AddSelectedAssetButton->Enable(false);
 			RenameAssetButton->Enable(false);
+			DisplayButton->Enable(false);
 		}
 		else
 		{
@@ -824,11 +852,13 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				RemoveSelectedAssetButton->Enable(false);
 				AddSelectedAssetButton->Enable(false);
 				RenameAssetButton->Enable(false);
+				DisplayButton->Enable(false);
 			}
 			else
 			{
 				RemoveSelectedAssetButton->Enable(true);
 				RenameAssetButton->Enable(true);
+				DisplayButton->Enable(true);
 
 				if (ReturnNumberOfGroups() > 1) AddSelectedAssetButton->Enable(true);
 				else AddSelectedAssetButton->Enable(false);

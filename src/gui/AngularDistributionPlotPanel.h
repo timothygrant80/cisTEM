@@ -22,6 +22,9 @@ public :
 	void UpdateScalingAndDimensions();
 	void UpdateProjCircleRadius();
 
+	void SetupBitmap();
+
+
 	void AddRefinementResult(RefinementResult *refinement_result_to_add);
 
 	float ReturnRadiusFromTheta(const float theta);
@@ -29,6 +32,7 @@ public :
 	void SetSymmetry(wxString wanted_symmetry_symbol);
 
 	ArrayOfRefinementResults refinement_results_to_plot;
+	wxBitmap buffer_bitmap;
 
 	SymmetryMatrix symmetry_matrices;
 	AnglesAndShifts angles_and_shifts;
@@ -45,6 +49,7 @@ public :
 	float		margin_between_circles_and_theta_labels;
 
 	float		proj_circle_radius;
+
 
 
 

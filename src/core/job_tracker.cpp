@@ -85,6 +85,7 @@ void JobTracker::MarkJobFinished()
 	last_update_time_total_running_processes = total_running_processes;
 	if (naive_time_per_process < last_update_seconds_per_job_per_process) last_update_seconds_per_job_per_process = naive_time_per_process;*/
 
+	total_number_of_finished_jobs++;
 	last_update_seconds_per_job_per_process = naive_time_per_process;
 }
 

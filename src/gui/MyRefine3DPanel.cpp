@@ -1415,7 +1415,9 @@ void RefinementManager::RunReconstructionJob()
 		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
 		else
 		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
+
+		my_parent->AngularPlotPanel->Show(false);
+		my_parent->AngularPlotPanel->Clear();
 
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
@@ -1497,7 +1499,7 @@ void RefinementManager::SetupRefinementJob()
 			bool	 use_statistics							= true;
 
 			wxString ouput_matching_projections		 		= "";
-			wxString output_parameter_file					= "/tmp/test";
+			wxString output_parameter_file					= "/dev/null";
 			wxString ouput_shift_file						= "/dev/null";
 			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
 			long	 first_particle							= current_particle_counter;
@@ -1684,7 +1686,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 			my_parent->AngularPlotPanel->AddRefinementResult( &output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
 	         // Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
 
-	    //    if(my_parent->AngularPlotPanel->refinement_results_to_plot.Count() * my_parent->AngularPlotPanel->symmetry_matrices.number_of_matrices < 1500 || current_time - my_parent->time_of_last_result_update > 0)
+	        if(my_parent->AngularPlotPanel->refinement_results_to_plot.Count() * my_parent->AngularPlotPanel->symmetry_matrices.number_of_matrices < 1500 || current_time - my_parent->time_of_last_result_update > 0)
 	        {
 
 	            my_parent->AngularPlotPanel->Refresh();
@@ -1792,7 +1794,9 @@ void RefinementManager::ProcessAllJobsFinished()
 	{
 		//wxPrintf("Refinement has finished\n");
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
+		//wxPrintf("Setting up reconstruction\n");
 		SetupReconstructionJob();
+		//wxPrintf("Running reconstruction\n");
 		RunReconstructionJob();
 
 	}

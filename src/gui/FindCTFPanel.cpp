@@ -940,7 +940,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	}
 
 	my_job_tracker.MarkJobFinished();
-//	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
 	// store the results..
 

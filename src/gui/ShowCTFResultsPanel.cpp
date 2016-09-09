@@ -56,6 +56,8 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
 
 	CTFPlotPanel->Clear();
 
+	CTF2DResultsPanel->title_text = wxString::Format(wxT("%s\n"),image_filename.GetFullName());
+
 	if (find_additional_phase_shift == false) // find phase shift
 	{
 		if (alias_res == 0.0)

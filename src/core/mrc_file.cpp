@@ -27,7 +27,7 @@ void MRCFile::CloseFile()
 
 void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 {
-	MyDebugAssertFalse(my_file.is_open(), "File Already Open!");
+	MyDebugAssertFalse(my_file.is_open(), "File Already Open: %s",wanted_filename);
 
 	bool file_already_exists;
 

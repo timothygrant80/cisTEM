@@ -43,10 +43,12 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 	int box_at_x;
 	int box_at_y;
 	Image box;
+	Image box_large;
 	box.Allocate(BoxSizeSpinCtrl->GetValue(),BoxSizeSpinCtrl->GetValue(),1);
+	if (DownsamplingFactorSpinCtrl->GetValue() > 1) box_large.Allocate(BoxSizeSpinCtrl->GetValue() * DownsamplingFactorSpinCtrl->GetValue(),BoxSizeSpinCtrl->GetValue() * DownsamplingFactorSpinCtrl->GetValue(),1);
 	long number_of_boxes = 0;
 
-	wxPrintf("output files: %s %s\n",output_stack_filename.GetFullPath(), frealign_txt_filename.GetFullPath());
+	//wxPrintf("output files: %s %s\n",output_stack_filename.GetFullPath(), frealign_txt_filename.GetFullPath());
 
 	for (int image_counter = 0; image_counter < number_of_images_in_group; image_counter ++ )
 	{
@@ -76,10 +78,24 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 
 			number_of_boxes ++;
 
-			box_at_x = myround(current_array_of_assets.Item(particle_counter).x_position / current_image_asset->pixel_size) - micrograph.physical_address_of_box_center_x;
-			box_at_y = myround(current_array_of_assets.Item(particle_counter).y_position / current_image_asset->pixel_size) - micrograph.physical_address_of_box_center_y;
+			box_at_x = current_array_of_assets.Item(particle_counter).x_position / current_image_asset->pixel_size - micrograph.physical_address_of_box_center_x + 1.0;
+			box_at_y = current_array_of_assets.Item(particle_counter).y_position / current_image_asset->pixel_size - micrograph.physical_address_of_box_center_y + 1.0;
 
-			micrograph.ClipInto(&box,micrograph_mean,false,1.0,box_at_x,box_at_y,0);
+
+
+			if (DownsamplingFactorSpinCtrl->GetValue() == 1)
+			{
+				micrograph.ClipInto(&box,micrograph_mean,false,1.0,box_at_x,box_at_y,0);
+			}
+			else
+			{
+				micrograph.ClipInto(&box_large,micrograph_mean,false,1.0,box_at_x,box_at_y,0);
+				box_large.ForwardFFT();
+				box_large.ClipInto(&box);
+				box.BackwardFFT();
+			}
+
+			if (NormalizeCheckBox->IsChecked()) box.ZeroFloatAndNormalize();
 
 			box.WriteSlice(output_stack,number_of_boxes);
 			frealign_txt_file->WriteLine(temp_float);

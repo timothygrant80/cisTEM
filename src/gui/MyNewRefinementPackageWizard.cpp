@@ -374,7 +374,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 //			wxPrintf ("x = %i, y = %i\n", current_x_pos + current_image.physical_address_of_box_center_x, current_y_pos + current_image.physical_address_of_box_center_y);
 
-			current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, -current_x_pos, -current_y_pos, 0);
+			current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
 			cut_particle.Normalize();
 			cut_particle.WriteSlice(&output_stack, position_in_stack);
 

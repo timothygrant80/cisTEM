@@ -25,12 +25,15 @@ public:
 		bool run_profiles_are_dirty;
 		long time_of_last_result_update;
 
-		// methods
 
+		// methods
+		void OnGroupComboBox( wxCommandEvent& event );
+		void OnImageComboBox( wxCommandEvent& event );
 		void WriteResultToDataBase();
 		void OnExpertOptionsToggle( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();
+		void FillImageComboBox();
 		void FillPickingAlgorithmComboBox();
 		void OnPickingAlgorithmComboBox( wxCommandEvent& event );
 		void FillRunProfileComboBox();
@@ -39,7 +42,32 @@ public:
 		void TerminateButtonClick( wxCommandEvent& event );
 		void OnAutoPickRefreshCheckBox( wxCommandEvent& event );
 		void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent & event );
+		void OnTestOnCurrentMicrographButtonClick( wxCommandEvent & event );
+		void OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event );
+		void OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event );
+		void OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event );
 		void CheckWhetherGroupsCanBePicked();
+		void SetAllUserParametersForParticleFinder();
+		void DrawResultsFromParticleFinder();
+		int ReturnDefaultMinimumDistanceFromEdges();
+
+		void OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event );
+		void OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent & event );
+		void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event );
+		void OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent & event );
+		void OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent& event);
+		void OnMaximumParticleRadiusNumericTextSetFocus( wxFocusEvent& event);
+
+		void OnHighestResolutionNumericTextEnter( wxCommandEvent & event );
+		void OnHighestResolutionNumericKillFocus( wxFocusEvent & event );
+		void OnHighestResolutionNumericSetFocus( wxFocusEvent & event );
+
+		void OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& event );
+		void OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event );
+		void OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event );
+		void OnNumberOfBackgroundBoxesSpinCtrl( wxSpinEvent& event );
+		void OnAlgorithmToFindBackgroundChoice( wxCommandEvent& event );
+
 	//void Refresh();
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);
@@ -60,6 +88,10 @@ public:
 
 		int ReturnNumberOfJobsCurrentlyRunning();
 
+private:
+		ParticleFinder particle_finder;
+
+		float 	value_on_focus_float;
 
 
 };

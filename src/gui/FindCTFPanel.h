@@ -42,6 +42,7 @@ public:
 	//void Refresh();
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);
+		void EnableMovieProcessingIfAppropriate();
 
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);

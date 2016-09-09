@@ -44,11 +44,32 @@ FindCTFPanel( parent )
 	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
 	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 3.15);
 
+	EnableMovieProcessingIfAppropriate();
+
 	result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
 
 }
 
+
+void MyFindCTFPanel::EnableMovieProcessingIfAppropriate()
+{
+	// Check whether all members of the group have movie parents. If not, make sure we only allow image processing
+	MovieRadioButton->Enable(true);
+	NoMovieFramesStaticText->Enable(true);
+	NoFramesToAverageSpinCtrl->Enable(true);
+	for (int counter = 0; counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); counter ++ )
+	{
+		if (image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(),counter))->parent_id < 0)
+		{
+			MovieRadioButton->SetValue(false);
+			MovieRadioButton->Enable(false);
+			NoMovieFramesStaticText->Enable(false);
+			NoFramesToAverageSpinCtrl->Enable(false);
+			ImageRadioButton->SetValue(true);
+		}
+	}
+}
 
 void MyFindCTFPanel::OnInfoURL(wxTextUrlEvent& event)
 {
@@ -345,6 +366,7 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		if (group_combo_is_dirty == true)
 		{
 			FillGroupComboBox();
+			EnableMovieProcessingIfAppropriate();
 			group_combo_is_dirty = false;
 		}
 
@@ -354,21 +376,6 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			run_profiles_are_dirty = false;
 		}
 
-		// Check whether all members of the group have movie parents. If not, make sure we only allow image processing
-		MovieRadioButton->Enable(true);
-		NoMovieFramesStaticText->Enable(true);
-		NoFramesToAverageSpinCtrl->Enable(true);
-		for (int counter = 0; counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); counter ++ )
-		{
-			if (image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(),counter))->parent_id < 0)
-			{
-				MovieRadioButton->SetValue(false);
-				MovieRadioButton->Enable(false);
-				NoMovieFramesStaticText->Enable(false);
-				NoFramesToAverageSpinCtrl->Enable(false);
-				ImageRadioButton->SetValue(true);
-			}
-		}
 
 	}
 
@@ -379,14 +386,18 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 void MyFindCTFPanel::OnMovieRadioButton(wxCommandEvent& event )
 {
+	Freeze();
 	NoFramesToAverageSpinCtrl->Enable(true);
 	NoMovieFramesStaticText->Enable(true);
+	Thaw();
 }
 
 void MyFindCTFPanel::OnImageRadioButton(wxCommandEvent& event )
 {
+	Freeze();
 	NoFramesToAverageSpinCtrl->Enable(false);
 	NoMovieFramesStaticText->Enable(false);
+	Thaw();
 }
 
 void MyFindCTFPanel::OnFindAdditionalPhaseCheckBox(wxCommandEvent& event )
@@ -498,6 +509,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float		known_astigmatism;
 	float		known_astigmatism_angle;
 	bool		resample_if_pixel_too_small;
+	bool		large_astigmatism_expected;
 
 	// allocate space for the buffered results..
 
@@ -516,6 +528,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	minimum_defocus = LowDefocusNumericCtrl->ReturnValue();
 	maximum_defocus = HighDefocusNumericCtrl->ReturnValue();
 	defocus_search_step = DefocusStepNumericCtrl->ReturnValue();
+	large_astigmatism_expected = LargeAstigmatismExpectedCheckBox->IsChecked();
 
 	if (RestrainAstigmatismCheckBox->IsChecked() == false) astigmatism_tolerance = -100.0f;
 	else astigmatism_tolerance = ToleratedAstigmatismNumericCtrl->ReturnValue();
@@ -556,6 +569,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		// minimum_defocus (float);
 		// maximum_defocus (float);
 		// defocus_search_step (float);
+		// large_asgitmatism_expected (bool);
 		// astigmatism_tolerance (float);
 		// find_additional_phase_shift (bool);
 		// minimum_additional_phase_shift (float);
@@ -603,7 +617,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		resample_if_pixel_too_small = true;
 
 
-		my_job_package.AddJob("sbisffffiffffffbfffbffb",input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffifffffbfbfffbffb",input_filename.c_str(), // 0
 														input_is_a_movie, // 1
 														number_of_frames_to_average, //2
 														output_diagnostic_filename.c_str(), // 3
@@ -617,15 +631,16 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 														minimum_defocus, // 11
 														maximum_defocus, // 12
 														defocus_search_step, // 13
-														astigmatism_tolerance, // 14
-														find_additional_phase_shift, // 15
-														minimum_additional_phase_shift, // 16
-														maximum_additional_phase_shift, // 17
-														additional_phase_shift_search_step, // 18
-													    astigmatism_is_known, // 19
-													    known_astigmatism, // 20
-													    known_astigmatism_angle, // 21
-														resample_if_pixel_too_small); // 22
+														large_astigmatism_expected, // 14
+														astigmatism_tolerance, // 15
+														find_additional_phase_shift, // 16
+														minimum_additional_phase_shift, // 17
+														maximum_additional_phase_shift, // 18
+														additional_phase_shift_search_step, // 19
+													    astigmatism_is_known, // 20
+													    known_astigmatism, // 21
+													    known_astigmatism_angle, // 22
+														resample_if_pixel_too_small); // 23
 	}
 
 	// launch a controller
@@ -935,7 +950,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 	if (current_time - time_of_last_result_update > 5)
 	{
-		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[15].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6]);
+		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6]);
 		time_of_last_result_update = time(NULL);
 	}
 
@@ -1000,7 +1015,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	int ctf_estimation_job_id =  main_frame->current_project.database.ReturnHighestFindCTFJobID() + 1;
 
 	// loop over all the jobs, and add them..
-	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 30,
+	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 31,
 			                                                                              "CTF_ESTIMATION_ID",
 																						  "CTF_ESTIMATION_JOB_ID",
 																						  "DATETIME_OF_RUN",
@@ -1030,7 +1045,10 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																						  "DETECTED_RING_RESOLUTION",
 																						  "DETECTED_ALIAS_RESOLUTION",
 																						  "OUTPUT_DIAGNOSTIC_FILE",
-																						  "NUMBER_OF_FRAMES_AVERAGED");
+																						  "NUMBER_OF_FRAMES_AVERAGED",
+																						  "LARGE_ASTIGMATISM_EXPECTED");
+
+
 
 	wxDateTime now = wxDateTime::Now();
 
@@ -1038,7 +1056,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	{
 		image_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->asset_id;
 
-		if (my_job_package.jobs[counter].arguments[14].ReturnFloatArgument() < 0)
+
+		if (my_job_package.jobs[counter].arguments[15].ReturnFloatArgument() < 0)
 		{
 			restrain_astigmatism = false;
 			tolerated_astigmatism = 0;
@@ -1046,15 +1065,15 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		else
 		{
 			restrain_astigmatism = true;
-			tolerated_astigmatism = my_job_package.jobs[counter].arguments[14].ReturnFloatArgument();
+			tolerated_astigmatism = my_job_package.jobs[counter].arguments[15].ReturnFloatArgument();
 		}
 
-		if ( my_job_package.jobs[counter].arguments[15].ReturnBoolArgument() == true)
+		if ( my_job_package.jobs[counter].arguments[16].ReturnBoolArgument())
 		{
 			find_additional_phase_shift = true;
-			min_phase_shift = my_job_package.jobs[counter].arguments[16].ReturnFloatArgument();
-			max_phase_shift = my_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
-			phase_shift_step = my_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
+			min_phase_shift = my_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
+			max_phase_shift = my_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
+			phase_shift_step = my_job_package.jobs[counter].arguments[19].ReturnFloatArgument();
 		}
 		else
 		{
@@ -1065,7 +1084,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		}
 
 
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrti", ctf_estimation_id,
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtii", ctf_estimation_id,
 																					 ctf_estimation_job_id,
 																					 (long int) now.GetAsDOS(),
 																					 image_asset_id,
@@ -1094,7 +1113,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 buffered_results[counter].result_data[5], // detected ring resolution
 																					 buffered_results[counter].result_data[6], // detected aliasing resolution
 																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
-																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument()); // number of movie frames averaged
+																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
+																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument()); // large astigmatism expected
 		ctf_estimation_id++;
 	}
 

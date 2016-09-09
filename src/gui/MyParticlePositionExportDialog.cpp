@@ -52,8 +52,8 @@ void MyParticlePositionExportDialog::OnExportButtonClick( wxCommandEvent & event
 
 		for (size_t particle_counter = 0; particle_counter < current_array_of_assets.GetCount(); particle_counter ++ )
 		{
-			temp_float[0] = current_array_of_assets.Item(particle_counter).y_position / current_image_asset->pixel_size + 1.0;
-			temp_float[1] = current_image_asset->x_size - current_array_of_assets.Item(particle_counter).x_position / current_image_asset->pixel_size + 1.0;
+			temp_float[0] = current_image_asset->y_size - current_array_of_assets.Item(particle_counter).y_position / current_image_asset->pixel_size + 1.0;
+			temp_float[1] = current_array_of_assets.Item(particle_counter).x_position / current_image_asset->pixel_size + 1.0;
 
 			output_plt_file->WriteLine(temp_float);
 		}

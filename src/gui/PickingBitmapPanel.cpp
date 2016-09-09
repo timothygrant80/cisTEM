@@ -138,31 +138,34 @@ int PickingBitmapPanel::RemoveParticleCoordinatesWithinRectangleOrNearClickedPoi
 	Freeze();
 	SetCurrentAsLastStepInHistoryOfParticleCoordinates();
 	int number_of_removed_particles = 0;
-	size_t counter = particle_coordinates_in_angstroms.GetCount() - 1;
-	if (draw_selection_rectangle)
+	if (particle_coordinates_in_angstroms.GetCount() > 0)
 	{
-		while (true)
+		size_t counter = particle_coordinates_in_angstroms.GetCount() - 1;
+		if (draw_selection_rectangle)
 		{
-			if (ParticleCoordinatesAreWithinRectangle(particle_coordinates_in_angstroms.Item(counter)))
+			while (true)
 			{
-				particle_coordinates_in_angstroms.RemoveAt(counter);
-				number_of_removed_particles ++;
+				if (ParticleCoordinatesAreWithinRectangle(particle_coordinates_in_angstroms.Item(counter)))
+				{
+					particle_coordinates_in_angstroms.RemoveAt(counter);
+					number_of_removed_particles ++;
+				}
+				if (counter == 0) break;
+				counter --;
 			}
-			if (counter == 0) break;
-			counter --;
 		}
-	}
-	else
-	{
-		while (true)
+		else
 		{
-			if (ParticleCoordinatesAreNearClickedPoint(particle_coordinates_in_angstroms.Item(counter)))
+			while (true)
 			{
-				particle_coordinates_in_angstroms.RemoveAt(counter);
-				number_of_removed_particles ++;
+				if (ParticleCoordinatesAreNearClickedPoint(particle_coordinates_in_angstroms.Item(counter)))
+				{
+					particle_coordinates_in_angstroms.RemoveAt(counter);
+					number_of_removed_particles ++;
+				}
+				if (counter == 0) break;
+				counter --;
 			}
-			if (counter == 0) break;
-			counter --;
 		}
 	}
 	if (number_of_removed_particles > 0)
@@ -373,7 +376,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				{
 					x = particle_coordinates_in_angstroms.Item(counter).x_position;
 					y = particle_coordinates_in_angstroms.Item(counter).y_position;
-					dc.DrawCircle(bitmap_x_offset + bitmap_width - x / image_in_bitmap_pixel_size, bitmap_y_offset + y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+					dc.DrawCircle(bitmap_x_offset + x / image_in_bitmap_pixel_size, bitmap_y_offset + bitmap_height - y / image_in_bitmap_pixel_size,radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
 				}
 			}
 
@@ -472,10 +475,10 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 	if (draw_selection_rectangle)
 	{
 		// Convert begin and end coordinates to Angstroms
-		selection_rectangle_start_x_in_angstroms 	= PixelToAngstromX(std::max(selection_rectangle_start_x,selection_rectangle_current_x));
-		selection_rectangle_finish_x_in_angstroms	= PixelToAngstromX(std::min(selection_rectangle_start_x,selection_rectangle_current_x));
-		selection_rectangle_start_y_in_angstroms 	= PixelToAngstromY(std::min(selection_rectangle_start_y,selection_rectangle_current_y));
-		selection_rectangle_finish_y_in_angstroms 	= PixelToAngstromY(std::max(selection_rectangle_start_y,selection_rectangle_current_y));
+		selection_rectangle_start_x_in_angstroms 	= PixelToAngstromX(std::min(selection_rectangle_start_x,selection_rectangle_current_x));
+		selection_rectangle_finish_x_in_angstroms	= PixelToAngstromX(std::max(selection_rectangle_start_x,selection_rectangle_current_x));
+		selection_rectangle_start_y_in_angstroms 	= PixelToAngstromY(std::max(selection_rectangle_start_y,selection_rectangle_current_y));
+		selection_rectangle_finish_y_in_angstroms 	= PixelToAngstromY(std::min(selection_rectangle_start_y,selection_rectangle_current_y));
 
 		if (allow_editing_of_coordinates) RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint();
 		draw_selection_rectangle = false;
@@ -509,12 +512,12 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 
 float PickingBitmapPanel::PixelToAngstromX(const int &x_in_pixels)
 {
-	return float(bitmap_x_offset + bitmap_width - x_in_pixels) * image_in_bitmap_pixel_size;
+	return float(x_in_pixels - bitmap_x_offset) * image_in_bitmap_pixel_size;
 }
 
 float PickingBitmapPanel::PixelToAngstromY(const int &y_in_pixels)
 {
-	return float(y_in_pixels - bitmap_y_offset) * image_in_bitmap_pixel_size;
+	return float(bitmap_y_offset + bitmap_height - y_in_pixels) * image_in_bitmap_pixel_size;
 }
 
 void PickingBitmapPanel::OnMotion(wxMouseEvent & event)

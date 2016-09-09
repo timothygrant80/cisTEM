@@ -432,7 +432,6 @@ void MyPickingResultsPanel::UpdateResultsFromBitmapPanel(const int row, const in
 		}
 
 		// Mark the picking results as manually edited
-		wxPrintf("Setting manual edit to true for picking id %i",picking_id);
 		main_frame->current_project.database.SetManualEditForPickingID(picking_id, true);
 
 	}

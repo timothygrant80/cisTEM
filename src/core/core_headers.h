@@ -69,6 +69,7 @@ typedef struct Kernel2D {
 #include "conjugate_gradient.h"
 #include "euler_search.h"
 #include "frealign_parameter_file.h"
+#include "particle_finder.h"
 #include "myapp.h"
 #ifdef MKL
 #include <mkl.h>

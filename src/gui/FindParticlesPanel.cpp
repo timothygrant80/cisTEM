@@ -41,17 +41,6 @@ FindParticlesPanel( parent )
 	PickingParametersPanel->SetMinSize(input_size);
 	PickingParametersPanel->SetSize(input_size);
 
-	/*
-	AmplitudeContrastNumericCtrl->SetMinMaxValue(0.0f, 1.0f);
-	MinResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-	MaxResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-	DefocusStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
-	ToleratedAstigmatismNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
-	MinPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 3.15);
-	*/
-
 	//result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
 
@@ -176,7 +165,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Highest resolution used in picking : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information int the 'corners' of the Fourier transforms remains intact, so that there is some small risk of bias beyond this resolution."));
+	InfoText->WriteText(wxT("The template and micrograph will be resampled (by Fourier cropping) to a pixel size of half the resolution given here. Note that the information in the 'corners' of the Fourier transforms (beyond the Nyquist frequency) remains intact, so that there is some small risk of bias beyond this resolution."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Minimum distance from edges : "));
@@ -269,6 +258,41 @@ void MyFindParticlesPanel::FillGroupComboBox()
 	GroupComboBox->Thaw();
 }
 
+void MyFindParticlesPanel::FillImageComboBox()
+{
+	ImageAsset *current_image_asset;
+
+	ImageComboBox->Freeze();
+	ImageComboBox->Clear();
+
+	int number_of_images = image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection());
+
+	for (long counter = 0; counter < number_of_images; counter ++ )
+	{
+		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		ImageComboBox->Append(current_image_asset->ReturnShortNameString());
+	}
+
+	ImageComboBox->SetSelection(0);
+
+	ImageComboBox->Thaw();
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.DoItAll();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
 wxString MyFindParticlesPanel::ReturnNameOfPickingAlgorithm( const int wanted_algorithm )
 {
 
@@ -337,11 +361,304 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 	{
 		// Auto pick refresh is enabled
 		TestOnCurrentMicrographButton->Enable(false);
+
+		// Show results panel
+		PickingResultsPanel->Show(true);
+		InfoPanel->Show(false);
+		Layout();
+
+		// Do the pick
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.DoItAll();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+
 	}
 	else
 	{
 		// Auto pick refresh is disabled
 		TestOnCurrentMicrographButton->Enable(true);
+	}
+}
+
+int MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()
+{
+	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), 0))->pixel_size;
+	return int(MaximumParticleRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
+}
+
+void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event )
+{
+	if (!SetMinimumDistanceFromEdgesCheckBox->IsChecked())
+	{
+		MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
+	}
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMaximumRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+
+}
+
+void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
+{
+	if (fabs(MaximumParticleRadiusNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
+	{
+		if (!SetMinimumDistanceFromEdgesCheckBox->IsChecked())
+		{
+			MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
+		}
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMaximumRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
+{
+	if (fabs(CharacteristicParticleRadiusNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewTypicalRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event )
+{
+	if (fabs(ThresholdPeakHeightNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMinimumPeakHeight();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+
+void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = MaximumParticleRadiusNumericCtrl->ReturnValue();
+}
+
+void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = CharacteristicParticleRadiusNumericCtrl->ReturnValue();
+}
+
+void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = ThresholdPeakHeightNumericCtrl->ReturnValue();
+}
+
+void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewTypicalRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+
+}
+
+void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMinimumPeakHeight();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+
+}
+
+void MyFindParticlesPanel::OnHighestResolutionNumericTextEnter( wxCommandEvent & event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewHighestResolution();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnHighestResolutionNumericKillFocus( wxFocusEvent & event )
+{
+	if (fabs(HighestResolutionNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewHighestResolution();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnHighestResolutionNumericSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = HighestResolutionNumericCtrl->ReturnValue();
+}
+
+void MyFindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMinimumDistanceFromEdges();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewAvoidHighVarianceAreas();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewAvoidAbnormalLocalMeanAreas();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl( wxSpinEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewNumberOfBackgroundBoxes();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnAlgorithmToFindBackgroundChoice( wxCommandEvent& event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewAlgorithmToFindBackground();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
 	}
 }
 
@@ -354,6 +671,21 @@ void MyFindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent
 	else
 	{
 		MinimumDistanceFromEdgesSpinCtrl->Enable(false);
+		MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
+		if (AutoPickRefreshCheckBox->GetValue())
+		{
+			PickingParametersPanel->Freeze();
+			ExpertOptionsPanel->Freeze();
+
+			SetAllUserParametersForParticleFinder();
+
+			particle_finder.RedoWithNewMinimumDistanceFromEdges();
+
+			DrawResultsFromParticleFinder();
+
+			PickingParametersPanel->Thaw();
+			ExpertOptionsPanel->Thaw();
+		}
 	}
 	Layout();
 }
@@ -386,6 +718,29 @@ void MyFindParticlesPanel::FillRunProfileComboBox()
 
 }
 
+void MyFindParticlesPanel::OnGroupComboBox( wxCommandEvent& event )
+{
+	FillImageComboBox();
+}
+
+void MyFindParticlesPanel::OnImageComboBox( wxCommandEvent & event )
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.DoItAll();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
 void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	// are there enough members in the selected group.
@@ -404,6 +759,7 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		if (group_combo_is_dirty == true)
 		{
 			FillGroupComboBox();
+			FillImageComboBox();
 			CheckWhetherGroupsCanBePicked();
 			group_combo_is_dirty = false;
 		}
@@ -475,11 +831,86 @@ void MyFindParticlesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	Layout();
 }
 
+void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
+{
+	ImageAsset * current_image_asset;
+	double acceleration_voltage;
+	double spherical_aberration;
+	double amplitude_contrast;
+	double defocus_1;
+	double defocus_2;
+	double astigmatism_angle;
+	double additional_phase_shift;
+	const bool already_have_templates = false;
+	const bool average_templates_radially = false;
+	const int number_of_template_rotations = 1;
+	const int output_stack_box_size = 0;
+
+	current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), ImageComboBox->GetCurrentSelection()));
+
+	main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
+
+	particle_finder.SetAllUserParameters(   current_image_asset->filename.GetFullPath().ToStdString(),
+											current_image_asset->pixel_size,
+											current_image_asset->microscope_voltage,
+											current_image_asset->spherical_aberration,
+											amplitude_contrast,
+											additional_phase_shift,
+											defocus_1,
+											defocus_2,
+											astigmatism_angle,
+											already_have_templates,
+											"no_templates.mrc",
+											average_templates_radially,
+											number_of_template_rotations,
+											CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
+											MaximumParticleRadiusNumericCtrl->ReturnValue(),
+											HighestResolutionNumericCtrl->ReturnValue(),
+											"no_output_stack.mrc",
+											output_stack_box_size,
+											MinimumDistanceFromEdgesSpinCtrl->GetValue(),
+											ThresholdPeakHeightNumericCtrl->ReturnValue(),
+											AvoidHighVarianceAreasCheckBox->IsChecked(),
+											AvoidAbnormalLocalMeanAreasCheckBox->IsChecked(),
+											AlgorithmToFindBackgroundChoice->GetSelection(),
+											NumberOfBackgroundBoxesSpinCtrl->GetValue());
+}
+
+void MyFindParticlesPanel::DrawResultsFromParticleFinder()
+{
+	// Get results in the form of an array of assets
+	ArrayOfParticlePositionAssets array_of_assets = particle_finder.ReturnArrayOfParticlePositionAssets();
+
+
+	PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
+	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, MaximumParticleRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize());
+
+}
+
+void MyFindParticlesPanel::OnTestOnCurrentMicrographButtonClick( wxCommandEvent & event )
+{
+
+	PickingResultsPanel->Show(true);
+	InfoPanel->Show(false);
+	Layout();
+
+
+	PickingParametersPanel->Freeze();
+	ExpertOptionsPanel->Freeze();
+
+	SetAllUserParametersForParticleFinder();
+
+	particle_finder.DoItAll();
+
+	DrawResultsFromParticleFinder();
+
+	PickingParametersPanel->Thaw();
+	ExpertOptionsPanel->Thaw();
+
+}
 
 void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 {
-
-	wxPrintf("start picking clicked\n");
 	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
 
 

@@ -167,6 +167,10 @@ public:
 	void ReadSliceFromDisk(int wanted_slice, float *output_array);
 	int readDM(wxString wanted_filename, unsigned char *p, bool readdata = true, int img_select = -1);
 
+	int ReturnZSize() const { ReturnNumberOfSlices(); };
+
+	void PrintInfo() { wxPrintf("PrintInfo not yet implemented for DM files\n"); };
+
 	//
 	size_t sizeX() const {
 		return x;

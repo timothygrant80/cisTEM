@@ -9,6 +9,7 @@ class BitmapPanel : public wxPanel
 public :
 	wxBitmap PanelBitmap; // buffer for the panel size
 	wxString panel_text;
+	wxString title_text;
 
 
 	BitmapPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);

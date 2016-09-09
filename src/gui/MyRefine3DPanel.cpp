@@ -1174,7 +1174,7 @@ void RefinementManager::RunRefinementJob()
 		my_parent->ExpertPanel->Show(false);
 		my_parent->InfoPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
-		//	CTFResultsPanel->Show(true);
+ 		my_parent->AngularPlotPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);

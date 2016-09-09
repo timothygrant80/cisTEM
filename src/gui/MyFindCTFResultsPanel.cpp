@@ -3,6 +3,7 @@
 
 extern MyMainFrame *main_frame;
 extern MyImageAssetPanel *image_asset_panel;
+extern MyMovieAssetPanel *movie_asset_panel;
 
 MyFindCTFResultsPanel::MyFindCTFResultsPanel( wxWindow* parent )
 :
@@ -358,6 +359,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	double min_defocus;
 	double max_defocus;
 	double defocus_step;
+	int large_astigmatism_expected;
 	int restrain_astigmatism;
 	double tolerated_astigmatism;
 	int find_additional_phase_shift;
@@ -373,6 +375,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	double detected_alias_resolution;
 	wxString output_diagnostic_file;
 	int number_of_frames_averaged;
+	//wxString input_filename;
 
 	// get the alignment_id and all the other details..;
 
@@ -386,7 +389,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		abort();
 	}
 
-	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrti", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged);
+	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtii", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected);
 	//wxPrintf("%i,%i,%li,%i,%i,%f,%f,%f,%f,%i,%f,%f,%f,%f,%f,%i,%f,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%s\n", ctf_estimation_id, ctf_estimation_job_id,datetime_of_run, image_asset_id, estimated_on_movie_frames, voltage, spherical_aberration, pixel_size, amplitude_contrast, box_size, min_resolution, max_resolution, min_defocus, max_defocus, defocus_step, restrain_astigmatism, tolerated_astigmatism, find_additional_phase_shift, min_phase_shift, max_phase_shift, phase_shift_step, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, output_diagnostic_file);
 	main_frame->current_project.database.EndBatchSelect();
 
@@ -407,7 +410,24 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	MinDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_defocus));
 	MaxDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), max_defocus));
 	DefocusStepStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), defocus_step));
-	NumberOfAveragedFramesStaticText->SetLabel(wxString::Format(wxT("%i"), number_of_frames_averaged));
+	if (estimated_on_movie_frames == 1)
+	{
+		NumberOfAveragedFramesStaticText->SetLabel(wxString::Format(wxT("%i"), number_of_frames_averaged));
+	}
+	else
+	{
+		NumberOfAveragedFramesStaticText->SetLabel("n/a");
+	}
+
+
+	if (large_astigmatism_expected == 1)
+	{
+		LargeAstigExpectedStaticText->SetLabel("Yes");
+	}
+	else
+	{
+		LargeAstigExpectedStaticText->SetLabel("No");
+	}
 
 	if (restrain_astigmatism == 1)
 	{
@@ -450,8 +470,6 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		PhaseShiftStepStaticText->Show(false);
 		PhaseShiftStepLabel->Show(false);
 	}
-
-	NumberOfAveragedFramesLabel->Show(estimated_on_movie_frames == 1);
 
 
 	// now get the result, and draw it as we go..

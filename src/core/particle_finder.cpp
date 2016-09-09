@@ -33,6 +33,7 @@ ParticleFinder::ParticleFinder()
 	avoid_high_low_mean_areas					    = 	false;
 	algorithm_to_find_background				    = 	0;
 	number_of_background_boxes		                = 	0;
+	number_of_templates								=	0;
 
 	// Other
 	number_of_background_boxes_to_skip = 0;
@@ -1255,7 +1256,7 @@ void ParticleFinder::DeallocateTemplateImages()
 	{
 		template_image[counter].Deallocate();
 	}
-	delete [] template_image;
+	if (number_of_templates > 0) delete [] template_image;
 }
 
 /*

@@ -57,6 +57,17 @@ public:
 				float pixel_size_in_angstroms, // A
 				float wanted_additional_phase_shift_in_radians); //rad
 
+	void Init(	float wanted_acceleration_voltage_in_kV, // keV
+				float wanted_spherical_aberration_in_mm, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth_in_degrees, // degrees
+				float pixel_size_in_angstroms, // A
+				float wanted_additional_phase_shift_in_radians); //rad
+
+
+
 	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
 	//

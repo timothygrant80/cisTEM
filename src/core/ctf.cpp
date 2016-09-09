@@ -55,6 +55,19 @@ CTF::~CTF()
 	// Nothing to do
 }
 
+void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
+				float wanted_spherical_aberration_in_mm, // mm
+				float wanted_amplitude_contrast,
+				float wanted_defocus_1_in_angstroms, // A
+				float wanted_defocus_2_in_angstroms, //A
+				float wanted_astigmatism_azimuth_in_degrees, // degrees
+				float pixel_size_in_angstroms, // A
+				float wanted_additional_phase_shift_in_radians // rad
+				)
+{
+	Init(wanted_acceleration_voltage_in_kV,wanted_spherical_aberration_in_mm,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth_in_degrees,0.0,1.0/(2.0*pixel_size_in_angstroms),-10.0,pixel_size_in_angstroms,wanted_additional_phase_shift_in_radians);
+}
+
 // Initialise a CTF object
 void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
 				float wanted_spherical_aberration_in_mm, // mm
@@ -168,7 +181,7 @@ void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixel
 // Set the additional phase shift, given in radians
 void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
 {
-	additional_phase_shift = wanted_additional_phase_shift_radians;
+	additional_phase_shift = fmod(wanted_additional_phase_shift_radians,PI);
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth

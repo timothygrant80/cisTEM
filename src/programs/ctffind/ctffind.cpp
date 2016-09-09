@@ -1,6 +1,8 @@
 #include "../../core/core_headers.h"
 
-const std::string ctffind_version = "4.1.4";
+//#define threshold_spectrum
+
+const std::string ctffind_version = "4.1.5";
 
 class
 CtffindApp : public MyApp
@@ -122,7 +124,7 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f D2 = %6.2f, Ast = %5.2f, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAstigmatismAzimuth(),- comparison_object->img.GetCorrelationWithCTF(my_ctf));
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f D2 = %6.2f, PhaseShift = %6.3f, Ast = %5.2f, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),- - comparison_object->img[0].GetCorrelationWithCTF(my_ctf));
 
 	// Evaluate the function
 	return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
@@ -171,7 +173,7 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 	MyDebugAssertTrue(norm_ctf > 0.0,"Bad norm_ctf: %f\n", norm_ctf);
 	MyDebugAssertTrue(norm_curve > 0.0,"Bad norm_curve: %f\n", norm_curve);
 
-	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f, Score = %g",array_of_values[0], - cross_product / sqrtf(norm_ctf * norm_curve));
+	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Score = %g",array_of_values[0], array_of_values[1], - cross_product / sqrtf(norm_ctf * norm_curve));
 
 	// Note, we are not properly normalizing the cross correlation coefficient. For our
 	// purposes this should be OK, since the average power of the theoretical CTF should not
@@ -498,7 +500,7 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 		else
 		{
-			large_astigmatism_expected	= my_input->GetYesNoFromUser("Do you expect very large astigmatism?","Answer yes if you expect very high astigmatism (say, much greater than 1000A). In that case, a slower search over 2D spectra will be used for the initial search","no");
+			large_astigmatism_expected	= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, much greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","no");
 			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","yes");
 			if (should_restrain_astigmatism)
 			{
@@ -516,7 +518,7 @@ void CtffindApp::DoInteractiveUserInput()
 		{
 			minimum_additional_phase_shift 		= my_input->GetFloatFromUser("Minimum phase shift (rad)","Lower bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","0.0",-3.15,3.15);
 			maximum_additional_phase_shift 		= my_input->GetFloatFromUser("Maximum phase shift (rad)","Upper bound of the search for additional phase shift. Phase shift is of scattered electrons relative to unscattered electrons. In radians","3.15",minimum_additional_phase_shift,3.15);
-			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.2",0.0,maximum_additional_phase_shift-minimum_additional_phase_shift);
+			additional_phase_shift_search_step 	= my_input->GetFloatFromUser("Phase shift search step","Step size for phase shift search (radians)","0.5",0.0,maximum_additional_phase_shift-minimum_additional_phase_shift);
 		}
 		else
 		{
@@ -628,7 +630,7 @@ bool CtffindApp::DoCalculation()
 
 
 	// Maybe the user wants to hold the phase shift value (which they can do by giving the same value for min and max)
-	const bool			fixed_additional_phase_shift = abs(maximum_additional_phase_shift - minimum_additional_phase_shift) < 0.01;
+	const bool			fixed_additional_phase_shift = fabs(maximum_additional_phase_shift - minimum_additional_phase_shift) < 0.01;
 
 
 	/*
@@ -882,7 +884,7 @@ bool CtffindApp::DoCalculation()
 		} // end of test of whether we were given amplitude spectra on input
 
 
-		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
 
 
 		// Filter the amplitude spectrum, remove background
@@ -893,7 +895,7 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->DivideByConstant(sigma);
 			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
 
-			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+			average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
 			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
@@ -916,6 +918,16 @@ bool CtffindApp::DoCalculation()
 		// We now have a spectrum which we can use to fit CTFs
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
 
+
+#ifdef threshold_spectrum
+		wxPrintf("DEBUG: thresholding spectrum\n");
+		for (counter = 0; counter < average_spectrum->real_memory_allocated; counter ++ )
+		{
+			average_spectrum->real_values[counter] = std::max(average_spectrum->real_values[counter], -0.0f);
+			average_spectrum->real_values[counter] = std::min(average_spectrum->real_values[counter], 1.0f);
+		}
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_thr.mrc",1);
+#endif
 
 		// Set up the CTF object
 		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
@@ -1006,6 +1018,13 @@ bool CtffindApp::DoCalculation()
 			brute_force_search = new BruteForceSearch();
 			brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
 			brute_force_search->Run();
+
+			/*			
+			wxPrintf("After 1D brute\n");
+			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0),brute_force_search->GetBestValue(0),0.0,brute_force_search->GetBestScore());
+			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
+			*/
 
 			// We can now do a local optimization
 			// The end point of the BF search is the beginning of the CG search
@@ -1369,7 +1388,11 @@ bool CtffindApp::DoCalculation()
 		}
 
 		#ifdef DEBUG
-		MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
+		//MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
+		if (! (last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra) )
+		{
+			wxPrintf("WARNING: Did not find last bin with good fit: %i\n", last_bin_with_good_fit);
+		}
 		#else
 		if (last_bin_with_good_fit < 0 && last_bin_with_good_fit >= number_of_bins_in_1d_spectra)
 		{
@@ -1699,6 +1722,7 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 				current_ctf_value = fabs(ctf->Evaluate(current_spatial_frequency_squared,current_azimuth));
 				if (current_ctf_value > 0.5) values_in_rings.AddSampleValue(spectrum->real_values[address]);
 				values_in_fitting_range.AddSampleValue(spectrum->real_values[address]);
+				//if (current_azimuth <= ctf->GetAstigmatismAzimuth()  && current_azimuth >= ctf->GetAstigmatismAzimuth() - 3.1415*0.5) spectrum->real_values[address] = current_ctf_value;
 				if (j < spectrum->physical_address_of_box_center_y && i < spectrum->physical_address_of_box_center_x) spectrum->real_values[address] = current_ctf_value;
 			}
 			if (current_spatial_frequency_squared <= lowest_freq)
@@ -1848,14 +1872,14 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 		}
 
 		// Fit the minima and maximum curves using Savitzky-Golay smoothing
-		if (maxima_curve->number_of_points >= sg_width) maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
-		if (minima_curve->number_of_points >= sg_width) minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+		if (maxima_curve->number_of_points > sg_width) maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+		if (minima_curve->number_of_points > sg_width) minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
 
 		// Replace the background and peak envelopes with the smooth min/max curves
 		for (bin_counter=0;bin_counter<number_of_bins;bin_counter++)
 		{
-			if (minima_curve->number_of_points >= sg_width) background[bin_counter] =  minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
-			if (maxima_curve->number_of_points >= sg_width) peak[bin_counter]       =  maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+			if (minima_curve->number_of_points > sg_width) background[bin_counter] =  minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+			if (maxima_curve->number_of_points > sg_width) peak[bin_counter]       =  maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
 		}
 
 		// Now that we have worked out a background and a peak envelope, let's do the actual rescaling

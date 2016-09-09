@@ -14,7 +14,7 @@
 #
 # This script should be run on the Janelia cluster rather than workstations to ensure compatibility
 #
-version=4.1.4
+version=4.1.5
 svn_loc="svn+ssh://praha.hhmi.org/groups/grigorieff/home/grantt/Apps/svnrepos/projectx"
 configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"

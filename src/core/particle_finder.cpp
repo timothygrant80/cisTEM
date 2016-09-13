@@ -1257,6 +1257,7 @@ void ParticleFinder::DeallocateTemplateImages()
 		template_image[counter].Deallocate();
 	}
 	if (number_of_templates > 0) delete [] template_image;
+	number_of_templates = 0;
 }
 
 /*

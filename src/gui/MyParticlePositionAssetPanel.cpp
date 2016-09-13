@@ -137,6 +137,39 @@ void MyParticlePositionAssetPanel::RenameGroupInDatabase(int wanted_group_id, co
 
 }
 
+void MyParticlePositionAssetPanel::RemoveParticlePositionAssetsWithGivenParentImageID(long parent_image_id)
+{
+
+	ContentsListBox->Freeze();
+
+	main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImageWithGivenID(parent_image_id);
+
+
+	// Remove assets from groups (this part will probably be slow when there are many and/or large groups
+
+	ParticlePositionAsset * current_asset;
+
+	for (long asset_counter = all_assets_list->number_of_assets - 1; asset_counter >= 0; asset_counter -- )
+	{
+		current_asset = ReturnAssetPointer(asset_counter);
+
+		//wxPrintf("Asset counter = %li ; Checking whether we need to remove asset with id %i (parent id %i)\n",asset_counter,current_asset->asset_id,current_asset->parent_id);
+		if ( current_asset->parent_id == parent_image_id )
+		{
+			//wxPrintf("Removing asset with id %i (parent id %i) (position %li)\n", current_asset->asset_id, current_asset->parent_id, asset_counter);
+			//all_assets_list->RemoveAsset(asset_counter);
+			RemoveAssetFromGroups(current_asset->asset_id);
+		}
+	}
+
+	// Remove assets from the "master" asset list
+	reinterpret_cast < ParticlePositionAssetList *> (all_assets_list)->RemoveAssetsWithGivenParentImageID(parent_image_id);
+
+	FillContentsList();
+
+	ContentsListBox->Thaw();
+}
+
 void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 {
 

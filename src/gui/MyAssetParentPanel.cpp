@@ -43,6 +43,16 @@ void MyAssetParentPanel::CompletelyRemoveAsset(long wanted_asset)
 
 	RemoveAssetFromDatabase(wanted_asset);
 
+	RemoveAssetFromGroups(wanted_asset);
+}
+
+
+void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset)
+{
+	long counter;
+	long found_position;
+
+
 	// we never actually want to remove members from the all_assets group, but we need to make note that there is 1 less asset.
 
 	all_groups_list->groups[0].number_of_members--;

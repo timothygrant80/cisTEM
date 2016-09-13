@@ -104,6 +104,7 @@ private:
 		int ReturnGroupMemberID(long wanted_group, long wanted_member);
 
 		void CompletelyRemoveAsset(long wanted_asset);
+		void RemoveAssetFromGroups(long wanted_asset);
 
 		void FillGroupList();
 

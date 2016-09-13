@@ -791,11 +791,45 @@ void ParticlePositionAssetList::AddAsset(Asset *asset_to_add)
 
 }
 
+void ParticlePositionAssetList::RemoveAssetsWithGivenParentImageID(long parent_image_id)
+{
+	long copy_from = -1;
+	long copy_to = 0;
+	long number_of_remaining_assets = number_of_assets;
+
+
+	ParticlePositionAsset * current_asset;
+
+	while ( copy_to < number_of_remaining_assets )
+	{
+		copy_from ++ ;
+		MyDebugAssertTrue(copy_from < number_of_assets,"Can't copy from %li, because it's beyond %li\n",copy_from,number_of_assets-1);
+		current_asset = & reinterpret_cast < ParticlePositionAsset *> (assets)[copy_from];
+
+		if ( current_asset->parent_id == parent_image_id )
+		{
+			// We're not keeping this one
+			number_of_remaining_assets -- ;
+		}
+		else
+		{
+			// We're keeping this one
+			reinterpret_cast < ParticlePositionAsset *> (assets)[copy_to].CopyFrom(current_asset);
+			MyDebugAssertTrue(copy_to <= copy_from,"Can't copy from %li to %li\n",copy_from,copy_to);
+			copy_to ++;
+		}
+	}
+
+	MyDebugAssertTrue(number_of_remaining_assets >= 0,"Bad number of remaining assets: %li\n",number_of_remaining_assets);
+	number_of_assets = number_of_remaining_assets;
+
+}
+
 void ParticlePositionAssetList::RemoveAsset(long number_to_remove)
 {
 	if (number_to_remove < 0 || number_to_remove >= number_of_assets)
 	{
-		wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+		wxPrintf("Error! Trying to remove a particle position that does not exist\n\n");
 		exit(-1);
 	}
 

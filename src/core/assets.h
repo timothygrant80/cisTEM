@@ -226,6 +226,7 @@ public:
 
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
+	void RemoveAssetsWithGivenParentImageID(long parent_image_id);
 	void RemoveAll();
 	void CheckMemory();
 

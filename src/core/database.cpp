@@ -176,7 +176,14 @@ int Database::ReturnHighestParticlePositionID()
 		}
 	}
 	sql_query += ")";
-	return ReturnSingleIntFromSelectCommand(sql_query);
+	if (number_of_non_empty_tables > 0)
+	{
+		return ReturnSingleIntFromSelectCommand(sql_query);
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 

@@ -88,7 +88,7 @@ void AngularDistributionPlotPanel::SetupBitmap()
 	gc->SetBrush( wxBrush(wxColor(50,50,200,60)) );
 
 
-	wxPrintf("number = %li\n", refinement_results_to_plot.Count());
+	//wxPrintf("number = %li\n", refinement_results_to_plot.Count());
 
 
 

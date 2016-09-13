@@ -24,6 +24,8 @@ class MyParticlePositionAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		void RemoveParticlePositionAssetsWithGivenParentImageID(long parent_image_id);
+
 		void RenameAsset(long wanted_asset, wxString wanted_name) {};
 		wxString ReturnItemText(long item, long column) const;
 

@@ -392,6 +392,7 @@ void MyPickingResultsPanel::UpdateResultsFromBitmapPanel(const int row, const in
 
 		// Get a pointer to the array of particle position assets
 		ArrayOfParticlePositionAssets * assets_in_bitmap_panel = &ResultDisplayPanel->PickingResultsImagePanel->particle_coordinates_in_angstroms;
+		//wxPrintf("Number of assets in bitmap panel = %li\n",assets_in_bitmap_panel->GetCount());
 		ResultDisplayPanel->PickingResultsImagePanel->ResetHistory();
 
 		// Before we can add new particle coordinates to the database, we need to assign IDs to positions that were added
@@ -411,14 +412,14 @@ void MyPickingResultsPanel::UpdateResultsFromBitmapPanel(const int row, const in
 			}
 		}
 
-		// Remove results from database
+		// Remove results from database and the asset panel
 		main_frame->current_project.database.RemoveParticlePositionsFromResultsList(current_picking_job_id,current_image_id);
 		if (CheckBoxIsChecked(row, column))
 		{
-			main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImageWithGivenID(current_image_id);
+			particle_position_asset_panel->RemoveParticlePositionAssetsWithGivenParentImageID(current_image_id);
 			particle_position_asset_panel->is_dirty = true;
-			particle_position_asset_panel->Refresh();
 		}
+
 
 		// Add results to picking_results_*** table
 		main_frame->current_project.database.AddArrayOfParticlePositionAssetsToResultsTable(current_picking_job_id,assets_in_bitmap_panel);
@@ -427,7 +428,15 @@ void MyPickingResultsPanel::UpdateResultsFromBitmapPanel(const int row, const in
 		if (CheckBoxIsChecked(row,column))
 		{
 			main_frame->current_project.database.CopyParticleAssetsFromResultsTable(current_picking_job_id, current_image_id);
-			particle_position_asset_panel->ImportAllFromDatabase();
+			for (size_t counter = 0; counter < assets_in_bitmap_panel->GetCount(); counter ++ )
+			{
+				current_asset = & assets_in_bitmap_panel->Item(counter);
+				current_asset->pick_job_id = current_picking_job_id;
+				current_asset->parent_id = current_image_id;
+				current_asset->picking_id = picking_id;
+				particle_position_asset_panel->AddAsset(current_asset);
+				//wxPrintf("Adding asset to particel position asset panel list\n");
+			}
 			particle_position_asset_panel->is_dirty = true;
 		}
 

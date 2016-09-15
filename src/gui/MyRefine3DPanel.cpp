@@ -1315,11 +1315,10 @@ void RefinementManager::SetupReconstructionJob()
 
 	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
 	{
+		current_particle_counter = 1;
+
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
-
-			current_particle_counter = 1;
-
 			wxString input_particle_stack 		= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
 			wxString input_parameter_file 		= written_parameter_files[class_counter];
 			wxString output_reconstruction_1    = "/dev/null";
@@ -1339,7 +1338,7 @@ void RefinementManager::SetupReconstructionJob()
 			float 	 pixel_size							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
 			float    voltage_kV							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm			= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
+			float    amplitude_contrast					= 0.07; // refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= my_parent->ReconstructionInnerRadiusTextCtrl->ReturnValue();
 			float    outer_mask_radius					= my_parent->ReconstructionOuterRadiusTextCtrl->ReturnValue();
@@ -1499,8 +1498,8 @@ void RefinementManager::SetupRefinementJob()
 			bool	 use_statistics							= true;
 
 			wxString ouput_matching_projections		 		= "";
-			wxString output_parameter_file					= "/dev/null";
-			wxString ouput_shift_file						= "/dev/null";
+			wxString output_parameter_file					= "/tmp/output_par.par";
+			wxString ouput_shift_file						= "/tmp/output_shift.shft";
 			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
 			long	 first_particle							= current_particle_counter;
 
@@ -1515,7 +1514,7 @@ void RefinementManager::SetupRefinementJob()
 			float 	 pixel_size								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
 			float    voltage_kV								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm				= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
+			float    amplitude_contrast						= 0.07; //refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    low_resolution_limit					= my_parent->LowResolutionLimitTextCtrl->ReturnValue();

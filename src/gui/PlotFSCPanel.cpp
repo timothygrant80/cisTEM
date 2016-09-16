@@ -31,6 +31,10 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	current_xaxis = new mpScaleX(wxT("Spatial Frequency  (1 / Å)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
 	current_yaxis = new mpScaleY(wxT("FSC"), mpALIGN_LEFT, true);
 
+	refinement_limit = new RefinementLimit(-0.1);
+	refinement_limit->SetDrawOutsideMargins(false);
+	refinement_limit->SetPen(*wxGREY_PEN);
+
 	title = new mpTitle("");
 
     current_xaxis->SetFont(graphFont);
@@ -43,6 +47,7 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     current_plot_window->AddLayer(current_xaxis);
     current_plot_window->AddLayer(current_yaxis);
 	current_plot_window->AddLayer(FSC_vector_layer);
+	current_plot_window->AddLayer(refinement_limit);
 	current_plot_window->AddLayer(title);
 
 	GraphSizer->Add(current_plot_window, 1, wxEXPAND );
@@ -54,6 +59,7 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, false);
+	current_plot_window->SetLayerVisible(4, false);
 
 
 }
@@ -83,6 +89,7 @@ void PlotFSCPanel::Clear()
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, false);
+	current_plot_window->SetLayerVisible(4, false);
 	current_plot_window->Thaw();
 
 }
@@ -93,13 +100,16 @@ void PlotFSCPanel::Draw(float nyquist)
 	FSC_vector_layer->SetData(current_spatial_frequency_data, current_FSC_data);
 	current_plot_window->Fit(0, 1./ nyquist, -0.05, 1.05);
 
+	refinement_limit->SetSpatialFrequency(current_refinement_resolution_limit);
+
 
 	current_plot_window->UpdateAll();
 
 	current_plot_window->SetLayerVisible(0, true);
 	current_plot_window->SetLayerVisible(1, true);
 	current_plot_window->SetLayerVisible(2, true);
-	current_plot_window->SetLayerVisible(3, true);
+	current_plot_window->SetLayerVisible(3, current_refinement_resolution_limit > 0.0  && current_refinement_resolution_limit < 1000.0);
+	current_plot_window->SetLayerVisible(4, true);
 
 	current_plot_window->Thaw();
 }

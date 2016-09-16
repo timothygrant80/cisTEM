@@ -46,6 +46,7 @@ void MyFSCPanel::PlotCurrentClass()
 			PlotPanel->AddPoint(1.0 / my_refinement->class_refinement_results[current_class].class_resolution_statistics.part_FSC.data_x[point_counter], my_refinement->class_refinement_results[current_class].class_resolution_statistics.part_FSC.data_y[point_counter]);
 		}
 
+		PlotPanel->current_refinement_resolution_limit = 1.0 /  my_refinement->high_resolution_limit;
 		PlotPanel->Draw(my_refinement->resolution_statistics_pixel_size * 2.0);
 
 

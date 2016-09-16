@@ -194,6 +194,8 @@ void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 
 	// Now the groups..
 
+	int last_found_position = 0;
+
 	main_frame->current_project.database.BeginAllParticlePositionGroupsSelect();
 
 	while (main_frame->current_project.database.last_return_code == SQLITE_ROW)
@@ -204,7 +206,8 @@ void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 
 		for (counter = 0; counter < temp_group.number_of_members; counter++)
 		{
-			temp_group.members[counter] = all_assets_list->ReturnArrayPositionFromID(temp_group.members[counter]);
+			temp_group.members[counter] = all_assets_list->ReturnArrayPositionFromID(temp_group.members[counter],last_found_position);
+			last_found_position = temp_group.members[counter];
 		}
 
 		all_groups_list->AddGroup(&temp_group);

@@ -2345,7 +2345,6 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
-	MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small");
 	MyDebugAssertTrue(wanted_inner_radius <= wanted_outer_radius, "Inner radius larger than outer radius");
 
 	int i;
@@ -2401,6 +2400,7 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	inner_number_of_pixels = 0;
 	if (is_in_real_space && object_is_centred_in_box)
 	{
+		MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small: %f\n",wanted_mask_edge);
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			z = powf(k - physical_address_of_box_center_z, 2);
@@ -2488,6 +2488,7 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	else
 	if (is_in_real_space)
 	{
+		MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small: %f\n",wanted_mask_edge);
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			kk = k;

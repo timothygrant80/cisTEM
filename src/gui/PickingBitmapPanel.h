@@ -76,6 +76,7 @@ public :
 	float 		font_size_multiplier;
 	bool 		draw_circles_around_particles;
 	bool		should_high_pass;
+	bool 		should_low_pass;
 	bool 		draw_scale_bar;
 	bool		allow_editing_of_coordinates;
 

@@ -470,9 +470,16 @@ wxString MovieAssetList::ReturnAssetFullFilename(long wanted_asset)
 }
 
 
-int MovieAssetList::ReturnArrayPositionFromID(int wanted_id)
+int MovieAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
-	for (int counter = 0; counter < number_of_assets; counter++)
+	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <MovieAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
 	{
 		if (reinterpret_cast <MovieAsset *> (assets)[counter].asset_id == wanted_id) return counter;
 	}
@@ -633,9 +640,16 @@ wxString ImageAssetList::ReturnAssetFullFilename(long wanted_asset)
 
 }
 
-int ImageAssetList::ReturnArrayPositionFromID(int wanted_id)
+int ImageAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
-	for (int counter = 0; counter < number_of_assets; counter++)
+	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ImageAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
 	{
 		if (reinterpret_cast <ImageAsset *> (assets)[counter].asset_id == wanted_id) return counter;
 	}
@@ -756,9 +770,16 @@ int ParticlePositionAssetList::ReturnAssetID(long wanted_asset)
 	return  reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset].asset_id;
 }
 
-int ParticlePositionAssetList::ReturnArrayPositionFromID(int wanted_id)
+int ParticlePositionAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
-	for (int counter = 0; counter < number_of_assets; counter++)
+	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <ParticlePositionAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
 	{
 		if (reinterpret_cast <ParticlePositionAsset *> (assets)[counter].asset_id == wanted_id) return counter;
 	}
@@ -949,9 +970,16 @@ wxString VolumeAssetList::ReturnAssetFullFilename(long wanted_asset)
 	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].filename.GetFullPath();
 }
 
-int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id)
+int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
-	for (int counter = 0; counter < number_of_assets; counter++)
+	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <VolumeAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
 	{
 		if (reinterpret_cast <VolumeAsset *> (assets)[counter].asset_id == wanted_id) return counter;
 	}

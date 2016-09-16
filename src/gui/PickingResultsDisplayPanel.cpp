@@ -110,6 +110,28 @@ void PickingResultsDisplayPanel::OnHighPassFilterCheckBox(wxCommandEvent & event
 	}
 }
 
+void PickingResultsDisplayPanel::OnLowPassFilterCheckBox(wxCommandEvent & event)
+{
+	if (LowPassFilterCheckBox->IsChecked())
+	{
+		if (! PickingResultsImagePanel->should_low_pass)
+		{
+			PickingResultsImagePanel->should_low_pass = true;
+			PickingResultsImagePanel->UpdateImageInBitmap(true);
+			PickingResultsImagePanel->Refresh();
+		}
+	}
+	else
+	{
+		if (PickingResultsImagePanel->should_low_pass)
+		{
+			PickingResultsImagePanel->should_low_pass = false;
+			PickingResultsImagePanel->UpdateImageInBitmap(true);
+			PickingResultsImagePanel->Refresh();
+		}
+	}
+}
+
 void PickingResultsDisplayPanel::OnUndoButtonClick(wxCommandEvent& event)
 {
 	PickingResultsImagePanel->StepBackwardInHistoryOfParticleCoordinates();

@@ -19,6 +19,7 @@ public :
 
 	void OnCirclesAroundParticlesCheckBox(wxCommandEvent& event);
 	void OnHighPassFilterCheckBox(wxCommandEvent& event);
+	void OnLowPassFilterCheckBox(wxCommandEvent& event);
 	void OnScaleBarCheckBox(wxCommandEvent& event);
 	void OnUndoButtonClick(wxCommandEvent& event);
 	void OnRedoButtonClick(wxCommandEvent& event);

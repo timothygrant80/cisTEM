@@ -5,6 +5,17 @@
 #include "../gui/mathplot.h"
 #include <wx/panel.h>
 
+class RefinementLimit : public mpFY
+{
+	double spatial_frequency;
+public:
+	RefinementLimit(float wanted_spatial_frequency) : mpFY(wxT(" Refinement limit"),mpALIGN_TOP) { spatial_frequency = wanted_spatial_frequency; }
+	void SetSpatialFrequency(float wanted_spatial_frequency) { spatial_frequency = wanted_spatial_frequency; }
+	virtual double GetX( double y ) { return spatial_frequency; }
+	virtual double GetMinX() { return -0.05; }
+	virtual double GetMinY() { return 1.05; }
+};
+
 class
 PlotFSCPanel : public wxPanel
 {
@@ -23,6 +34,7 @@ PlotFSCPanel : public wxPanel
 
 	std::vector<double> current_spatial_frequency_data;
 	std::vector<double> current_FSC_data;
+	float current_refinement_resolution_limit;
 
 
 	mpWindow        *current_plot_window;
@@ -31,6 +43,8 @@ PlotFSCPanel : public wxPanel
 	mpScaleY * current_yaxis;
 
 	mpFXYVector* FSC_vector_layer;
+
+	RefinementLimit * refinement_limit;
 
 
 };

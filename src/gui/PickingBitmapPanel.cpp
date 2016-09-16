@@ -53,6 +53,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 
 	draw_scale_bar = true;
 	should_high_pass = true;
+	should_low_pass = false;
 
 	allow_editing_of_coordinates = true;
 
@@ -280,9 +281,27 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 			if (image_in_memory.is_in_real_space) image_in_memory.ForwardFFT();
 			image_in_bitmap.is_in_real_space = false;
 			image_in_memory.ClipInto(&image_in_bitmap);
-			if (should_high_pass)
+			const float high_pass_radius = image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms);
+			const float filter_edge_width = image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms);
+			const float low_pass_radius = image_in_bitmap_pixel_size / (0.5 * radius_of_circles_around_particles_in_angstroms);
+
+			if (should_high_pass && ! should_low_pass)
 			{
-				image_in_bitmap.CosineMask(image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms),image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms),true);
+				wxPrintf("High pass filtering: %f %f\n",high_pass_radius,filter_edge_width);
+				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
+			}
+			else if (should_low_pass && ! should_high_pass)
+			{
+				wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
+				//image_in_bitmap.CosineMask(low_pass_radius,filter_edge_width,false);
+				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
+			}
+			else if (should_low_pass & should_high_pass)
+			{
+				wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
+				//image_in_bitmap.CosineRingMask(high_pass_radius,low_pass_radius,filter_edge_width);
+				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
+				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
 			}
 			image_in_bitmap.BackwardFFT();
 			image_in_bitmap_filename = image_in_memory_filename;

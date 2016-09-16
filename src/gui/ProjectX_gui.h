@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jan 30 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -29,7 +29,6 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
-#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -177,12 +176,14 @@ class PickingResultsDisplayParentPanel : public wxPanel
 	protected:
 		wxCheckBox* CirclesAroundParticlesCheckBox;
 		wxCheckBox* HighPassFilterCheckBox;
+		wxCheckBox* LowPassFilterCheckBox;
 		wxCheckBox* ScaleBarCheckBox;
 		wxStaticLine* m_staticline26;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCirclesAroundParticlesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHighPassFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowPassFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnScaleBarCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnUndoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRedoButtonClick( wxCommandEvent& event ) { event.Skip(); }

@@ -387,7 +387,7 @@ void ParticleFinder::RedoWithNewTypicalRadius()
 
 	//UpdatePixelSizeFromMicrographDimensions();
 
-	//OpenTemplatesAndUpdateDimensions();
+	OpenTemplatesAndUpdateDimensions();
 
 	//UpdateCTF();
 
@@ -444,7 +444,7 @@ void ParticleFinder::RedoWithNewMaximumRadius()
 
 	//UpdatePixelSizeFromMicrographDimensions();
 
-	//OpenTemplatesAndUpdateDimensions();
+	OpenTemplatesAndUpdateDimensions();
 
 	//UpdateCTF();
 

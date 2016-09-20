@@ -29,6 +29,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 
 
 	should_show = false;
+	size_is_dirty = true;
 	font_size_multiplier = 1.0;
 
 	Bind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
@@ -257,8 +258,8 @@ void PickingBitmapPanel::UpdateScalingAndDimensions()
 		float target_scaling_y = float(panel_dim_y) * 0.95 /float(image_in_memory.logical_y_dimension);
 		float scaling_factor = std::min(target_scaling_x,target_scaling_y);
 
-		int new_x_dimension = int(float(image_in_memory.logical_x_dimension) * scaling_factor);
-		int new_y_dimension = int(float(image_in_memory.logical_y_dimension) * scaling_factor);
+		int new_x_dimension = std::max(int(float(image_in_memory.logical_x_dimension) * scaling_factor),1);
+		int new_y_dimension = std::max(int(float(image_in_memory.logical_y_dimension) * scaling_factor),1);
 
 		// TODO: choose dimensions that are more favorable to FFT
 
@@ -313,8 +314,7 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 
 void PickingBitmapPanel::OnSize(wxSizeEvent & event)
 {
-	UpdateScalingAndDimensions();
-	UpdateImageInBitmap();
+	size_is_dirty = true;
 	event.Skip();
 }
 
@@ -336,6 +336,15 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 
 	if (should_show)
 	{
+
+		if (size_is_dirty)
+		{
+			UpdateScalingAndDimensions();
+			UpdateImageInBitmap();
+			size_is_dirty = false;
+		}
+
+
 		wxFont current_font = dc.GetFont();
 		current_font.Scale(font_size_multiplier);
 		dc.SetFont(current_font);

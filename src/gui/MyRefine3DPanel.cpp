@@ -705,6 +705,7 @@ void MyRefine3DPanel::FillRefinementPackagesComboBox()
 		long currently_selected_asset_id = -1;
 		bool selection_has_changed = true;
 
+         //TODO: move before the Clear()
 		if (selected_refinement_package >= 0 && selected_refinement_package <= RefinementPackageComboBox->GetCount() && RefinementPackageComboBox->GetCount() > 0)
 		{
 			currently_selected_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).asset_id;
@@ -750,7 +751,7 @@ void MyRefine3DPanel::FillInputParamsComboBox()
 	{
 		for (long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.GetCount(); counter++)
 			{
-				wxPrintf("ID = %li\n",refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter));
+				//wxPrintf("ID = %li\n",refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter));
 				InputParametersComboBox->Append(refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter))->name);
 			}
 

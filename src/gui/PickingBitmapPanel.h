@@ -74,6 +74,7 @@ public :
 	//
 	bool 		should_show;
 	float 		font_size_multiplier;
+	bool		size_is_dirty;
 	bool 		draw_circles_around_particles;
 	bool		should_high_pass;
 	bool 		should_low_pass;

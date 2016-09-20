@@ -33,13 +33,6 @@ FindParticlesPanel( parent )
 	FillRunProfileComboBox();
 	FillPickingAlgorithmComboBox();
 
-	wxSize input_size;
-	int input_size_x = std::max(InputSizer->GetMinSize().x,ExpertInputSizer->GetMinSize().x);
-	input_size.x = input_size_x + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
-	input_size.y = -1;
-
-	PickingParametersPanel->SetMinSize(input_size);
-	PickingParametersPanel->SetSize(input_size);
 
 	//result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
@@ -353,6 +346,8 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 	}
 
 	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
 }
 
 void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
@@ -363,9 +358,11 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 		TestOnCurrentMicrographButton->Enable(false);
 
 		// Show results panel
-		PickingResultsPanel->Show(true);
 		InfoPanel->Show(false);
+		PickingResultsPanel->Show(true);
 		Layout();
+		LeftPanel->Layout();
+		RightPanel->Layout();
 
 		// Do the pick
 		PickingParametersPanel->Freeze();
@@ -379,6 +376,7 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 
 		PickingParametersPanel->Thaw();
 		ExpertOptionsPanel->Thaw();
+
 
 	}
 	else
@@ -688,6 +686,8 @@ void MyFindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent
 		}
 	}
 	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
 }
 
 void MyFindParticlesPanel::FillRunProfileComboBox()
@@ -781,6 +781,8 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				{
 					PleaseEstimateCTFStaticText->Show(false);
 					Layout();
+					LeftPanel->Layout();
+					RightPanel->Layout();
 				}
 			}
 			else
@@ -789,6 +791,8 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				{
 					PleaseEstimateCTFStaticText->Show(true);
 					Layout();
+					LeftPanel->Layout();
+					RightPanel->Layout();
 				}
 			}
 			if (PickingAlgorithmComboBox->GetCurrentSelection() >= 0)
@@ -829,6 +833,8 @@ void MyFindParticlesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 {
 	ExpertOptionsPanel->Show(ExpertToggleButton->GetValue());
 	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
 }
 
 void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
@@ -893,6 +899,8 @@ void MyFindParticlesPanel::OnTestOnCurrentMicrographButtonClick( wxCommandEvent 
 	PickingResultsPanel->Show(true);
 	InfoPanel->Show(false);
 	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
 
 
 	PickingParametersPanel->Freeze();
@@ -1081,6 +1089,8 @@ my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_prof
 		GroupComboBox->Enable(false);
 		PickingAlgorithmComboBox->Enable(false);
 		Layout();
+		LeftPanel->Layout();
+		RightPanel->Layout();
 
 		running_job = true;
 		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
@@ -1120,6 +1130,8 @@ void MyFindParticlesPanel::FinishButtonClick( wxCommandEvent& event )
 
 	running_job = false;
 	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
 
 	//CTFResultsPanel->CTF2DResultsPanel->should_show = false;
 	//CTFResultsPanel->CTF2DResultsPanel->Refresh();
@@ -1296,44 +1308,14 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      else
 	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {
-	    	  /*
-				// which job is finished?
 
-				int finished_job;
-				sock->ReadMsg(&finished_job, 4);
-				my_job_tracker.MarkJobFinished();
-	    	   */
+			// which job is finished?
 
-	    	  // which job is finished, and how big is the result?
-	    	  char job_number_and_result_size[8];
-	    	  sock->ReadMsg(&job_number_and_result_size,8);
+			int finished_job;
+			sock->ReadMsg(&finished_job, 4);
 
-	    	  int job_number;
-	    	  int result_size;
-	    	  unsigned char *byte_pointer;
+			ProcessResult(NULL,finished_job);
 
-	    	  byte_pointer = (unsigned char*) & job_number;
-
-	    	  byte_pointer[0] = job_number_and_result_size[0];
-	    	  byte_pointer[1] = job_number_and_result_size[1];
-	    	  byte_pointer[2] = job_number_and_result_size[2];
-	    	  byte_pointer[3] = job_number_and_result_size[3];
-
-	    	  byte_pointer = (unsigned char*) & result_size;
-
-			  byte_pointer[0] = job_number_and_result_size[4];
-			  byte_pointer[1] = job_number_and_result_size[5];
-			  byte_pointer[2] = job_number_and_result_size[6];
-			  byte_pointer[3] = job_number_and_result_size[7];
-
-	    	  // Here, we should call ProcessResult if the job result_size is zero, since in that case no results will be sent
-	    	  if (result_size == 0)
-	    	  {
-	    		  ProcessResult(NULL,job_number);
-	    	  }
-
-	    	  //	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-	    	  WriteInfoText(wxString::Format("Job %i has finished (result size = %i)!", job_number, result_size));
 	 	  }
 	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {

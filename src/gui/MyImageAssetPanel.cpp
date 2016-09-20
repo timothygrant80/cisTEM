@@ -112,7 +112,7 @@ void MyImageAssetPanel::RemoveAllGroupMembersFromDatabase(int wanted_group_id)
 void MyImageAssetPanel::AddGroupToDatabase(int wanted_group_id, const char * wanted_group_name, int wanted_list_id)
 {
 	main_frame->current_project.database.InsertOrReplace("IMAGE_GROUP_LIST", "iti", "GROUP_ID", "GROUP_NAME", "LIST_ID", wanted_group_id, wanted_group_name, wanted_list_id);
-	main_frame->current_project.database.CreateTable(wxString::Format("IMAGE_GROUP_%i", wanted_list_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "IMAGE_ASSET_ID");
+	main_frame->current_project.database.CreateTable(wxString::Format("IMAGE_GROUP_%i", wanted_list_id).ToUTF8().data(), "pi", "MEMBER_NUMBER", "IMAGE_ASSET_ID");
 }
 
 void MyImageAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)

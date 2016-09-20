@@ -34,16 +34,32 @@ FindCTFResultsPanel( parent )
 void MyFindCTFResultsPanel::FillGroupComboBox()
 {
 	GroupComboBox->Freeze();
-	GroupComboBox->ChangeValue("");
+
+	long currently_selected_position = GroupComboBox->GetSelection();
+
 	GroupComboBox->Clear();
+	GroupComboBox->ChangeValue("");
 
 	for (long counter = 1; counter < image_asset_panel->ReturnNumberOfGroups(); counter++)
 	{
 		GroupComboBox->Append(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")");
-
 	}
 
-	if (GroupComboBox->GetCount() > 0) GroupComboBox->SetSelection(0);
+	if (currently_selected_position >= 0)
+	{
+		if (currently_selected_position < GroupComboBox->GetCount())
+		{
+			GroupComboBox->SetSelection(currently_selected_position);
+		}
+		else
+		{
+			GroupComboBox->SetSelection(GroupComboBox->GetCount() - 1);
+		}
+	}
+	else
+	{
+		GroupComboBox->SetSelection(0);
+	}
 
 	GroupComboBox->Thaw();
 

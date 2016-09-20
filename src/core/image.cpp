@@ -3165,6 +3165,8 @@ void Image::Deallocate()
 void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space)
 {
 
+	MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
+
 	// check to see if we need to do anything?
 
 	if (is_in_memory == true)

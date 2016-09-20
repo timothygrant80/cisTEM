@@ -67,6 +67,14 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 		micrograph.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(),1);
 		micrograph_mean = micrograph.ReturnAverageOfRealValues();
 
+		if (FlipCTFCheckBox->IsChecked())
+		{
+			CTF my_ctf(acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1, defocus_2, astigmatism_angle,current_image_asset->pixel_size, additional_phase_shift);
+			micrograph.ForwardFFT();
+			micrograph.ApplyCTFPhaseFlip(my_ctf);
+			micrograph.BackwardFFT();
+		}
+
 		if (image_counter == 0)
 		{
 			output_stack = new MRCFile(output_stack_filename.GetFullPath().ToStdString(),true);

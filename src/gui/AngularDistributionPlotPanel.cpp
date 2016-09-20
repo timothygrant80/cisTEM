@@ -18,6 +18,7 @@ AngularDistributionPlotPanel::AngularDistributionPlotPanel(wxWindow* parent, wxW
 
 	GetClientSize(&client_x, &client_y);
 	buffer_bitmap.Create(wxSize(client_x, client_y));
+	UpdateScalingAndDimensions();
 	SetupBitmap();
 
 	Bind(wxEVT_PAINT, &AngularDistributionPlotPanel::OnPaint, this);
@@ -72,10 +73,10 @@ void AngularDistributionPlotPanel::SetupBitmap()
 	float tmp_y = 0.0;
 	float tmp_angle = 0.0;
 
-    wxGraphicsContext *gc = wxGraphicsContext::Create( memDC );
+	wxGraphicsContext *gc = wxGraphicsContext::Create( memDC );
 
-    memDC.SetBackground(*wxWHITE_BRUSH);
-    memDC.Clear();
+	memDC.SetBackground(*wxWHITE_BRUSH);
+	memDC.Clear();
 	memDC.GetSize(&window_x_size, &window_y_size);
 	memDC.DrawRectangle(0, 0, window_x_size, window_y_size);
 
@@ -127,79 +128,79 @@ void AngularDistributionPlotPanel::SetupBitmap()
 		}
 	}
 
-		//gc->EndLayer();
+	//gc->EndLayer();
 
 
-		wxGraphicsPath path;
+	wxGraphicsPath path;
 
-		// Draw intermediate circles
-		path = gc->CreatePath();
-		gc->SetPen( *wxBLACK_DASHED_PEN );
-		path.AddCircle(circle_center_x,circle_center_y,circle_radius * sin(PI * 0.5 / 9.0)); // 10 degrees
-		path.AddCircle(circle_center_x,circle_center_y,circle_radius * sin(PI * 0.25)); // 45 degrees
-		gc->StrokePath(path);
+	// Draw intermediate circles
+	path = gc->CreatePath();
+	gc->SetPen( *wxBLACK_DASHED_PEN );
+	path.AddCircle(circle_center_x,circle_center_y,circle_radius * sin(PI * 0.5 / 9.0)); // 10 degrees
+	path.AddCircle(circle_center_x,circle_center_y,circle_radius * sin(PI * 0.25)); // 45 degrees
+	gc->StrokePath(path);
 
-		// Draw a large cicle for the outside of the plot
-		gc->SetPen( *wxBLACK_PEN );
-		path = gc->CreatePath();
-		path.AddCircle(circle_center_x,circle_center_y,circle_radius);
-		gc->StrokePath(path);
+	// Draw a large cicle for the outside of the plot
+	gc->SetPen( *wxBLACK_PEN );
+	path = gc->CreatePath();
+	path.AddCircle(circle_center_x,circle_center_y,circle_radius);
+	gc->StrokePath(path);
 
 
 
-		// Draw axes
-		path = gc->CreatePath();
-		path.AddCircle(circle_center_x,circle_center_y,circle_radius);
-		path.MoveToPoint(circle_center_x - circle_radius - major_tick_length, circle_center_y);
-		path.AddLineToPoint(circle_center_x + circle_radius + major_tick_length, circle_center_y);
-		path.MoveToPoint(circle_center_x,circle_center_y - circle_radius - major_tick_length);
-		path.AddLineToPoint(circle_center_x,circle_center_y + circle_radius + major_tick_length);
-		gc->StrokePath(path);
+	// Draw axes
+	path = gc->CreatePath();
+	path.AddCircle(circle_center_x,circle_center_y,circle_radius);
+	path.MoveToPoint(circle_center_x - circle_radius - major_tick_length, circle_center_y);
+	path.AddLineToPoint(circle_center_x + circle_radius + major_tick_length, circle_center_y);
+	path.MoveToPoint(circle_center_x,circle_center_y - circle_radius - major_tick_length);
+	path.AddLineToPoint(circle_center_x,circle_center_y + circle_radius + major_tick_length);
+	gc->StrokePath(path);
 
-		// Write labels
-		wxDouble label_width;
-		wxDouble label_height;
-		wxDouble label_descent;
-		wxDouble label_externalLeading;
-		wxString greek_theta = wxT("\u03B8");
-		wxString greek_phi = wxT("\u03C6");
-		wxString degree_symbol = wxT("\u00B0");
-		gc->SetFont( wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false) , *wxBLACK );
-		wxString current_label;
+	// Write labels
+	wxDouble label_width;
+	wxDouble label_height;
+	wxDouble label_descent;
+	wxDouble label_externalLeading;
+	wxString greek_theta = wxT("\u03B8");
+	wxString greek_phi = wxT("\u03C6");
+	wxString degree_symbol = wxT("\u00B0");
+	gc->SetFont( wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false) , *wxBLACK );
+	wxString current_label;
 
-		current_label = greek_phi+" = 0 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		gc->DrawText(current_label, circle_center_x + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, circle_center_y - label_height * 0.5, 0.0);
+	current_label = greek_phi+" = 0 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	gc->DrawText(current_label, circle_center_x + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, circle_center_y - label_height * 0.5, 0.0);
 
-		current_label = greek_phi+" = 90 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		gc->DrawText(current_label, circle_center_x - label_height * 0.5, circle_center_y - circle_radius - major_tick_length - margin_between_major_ticks_and_labels, PI * 0.5);
+	current_label = greek_phi+" = 90 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	gc->DrawText(current_label, circle_center_x - label_height * 0.5, circle_center_y - circle_radius - major_tick_length - margin_between_major_ticks_and_labels, PI * 0.5);
 
-		current_label = greek_phi+" = 180 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		gc->DrawText(current_label, circle_center_x - circle_radius - major_tick_length - margin_between_major_ticks_and_labels - label_width, circle_center_y - label_height * 0.5, 0.0);
+	current_label = greek_phi+" = 180 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	gc->DrawText(current_label, circle_center_x - circle_radius - major_tick_length - margin_between_major_ticks_and_labels - label_width, circle_center_y - label_height * 0.5, 0.0);
 
-		current_label = greek_phi+" = 270 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		gc->DrawText(current_label, circle_center_x + label_height * 0.5, circle_center_y + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, PI * 1.5);
+	current_label = greek_phi+" = 270 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	gc->DrawText(current_label, circle_center_x + label_height * 0.5, circle_center_y + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, PI * 1.5);
 
-		current_label = greek_theta+" = 90 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		tmp_x = 0.5 * sqrt(2.0) * (circle_radius + margin_between_circles_and_theta_labels);
-		tmp_y = - 0.5 * sqrt(2.0) * (circle_radius + margin_between_circles_and_theta_labels) - label_height;
-		gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
+	current_label = greek_theta+" = 90 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	tmp_x = 0.5 * sqrt(2.0) * (circle_radius + margin_between_circles_and_theta_labels);
+	tmp_y = - 0.5 * sqrt(2.0) * (circle_radius + margin_between_circles_and_theta_labels) - label_height;
+	gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
 
-		current_label = greek_theta+" = 10 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		tmp_x = 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.5 / 9.0) + margin_between_circles_and_theta_labels);
-		tmp_y = - 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.5 / 9.0) + margin_between_circles_and_theta_labels) - label_height;
-		gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
+	current_label = greek_theta+" = 10 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	tmp_x = 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.5 / 9.0) + margin_between_circles_and_theta_labels);
+	tmp_y = - 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.5 / 9.0) + margin_between_circles_and_theta_labels) - label_height;
+	gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
 
-		current_label = greek_theta+" = 45 "+degree_symbol;
-		gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-		tmp_x = 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.25) + margin_between_circles_and_theta_labels);
-		tmp_y = - 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.25) + margin_between_circles_and_theta_labels) - label_height;
-		gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
+	current_label = greek_theta+" = 45 "+degree_symbol;
+	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
+	tmp_x = 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.25) + margin_between_circles_and_theta_labels);
+	tmp_y = - 0.5 * sqrt(2.0) * (circle_radius * sin(PI * 0.25) + margin_between_circles_and_theta_labels) - label_height;
+	gc->DrawText(current_label, circle_center_x + tmp_x, circle_center_y + tmp_y, 0.0);
 
 
 

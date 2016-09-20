@@ -1754,17 +1754,19 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
 	
-	wxBoxSizer* bSizer46;
-	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
+	FindParticlesSplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	FindParticlesSplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
+	FindParticlesSplitterWindow->SetMinimumPaneSize( 10 );
 	
-	PickingParametersPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
+	LeftPanel = new wxPanel( FindParticlesSplitterWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer214;
+	bSizer214 = new wxBoxSizer( wxVERTICAL );
+	
+	PickingParametersPanel = new wxScrolledWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxHSCROLL|wxVSCROLL );
 	PickingParametersPanel->SetScrollRate( 5, 5 );
 	PickingParametersPanel->Hide();
 	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
-	
-	wxBoxSizer* bSizer120;
-	bSizer120 = new wxBoxSizer( wxVERTICAL );
 	
 	wxFlexGridSizer* fgSizer1;
 	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
@@ -1809,7 +1811,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	fgSizer1->Add( ImageComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer120->Add( fgSizer1, 0, wxEXPAND, 5 );
+	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 	
 	ExpertOptionsPanel = new wxPanel( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	ExpertOptionsPanel->Hide();
@@ -1921,18 +1923,15 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ExpertOptionsPanel->SetSizer( ExpertInputSizer );
 	ExpertOptionsPanel->Layout();
 	ExpertInputSizer->Fit( ExpertOptionsPanel );
-	bSizer120->Add( ExpertOptionsPanel, 1, wxALL|wxEXPAND, 0 );
-	
-	
-	InputSizer->Add( bSizer120, 1, wxEXPAND, 5 );
+	InputSizer->Add( ExpertOptionsPanel, 1, wxALL|wxEXPAND, 0 );
 	
 	
 	PickingParametersPanel->SetSizer( InputSizer );
 	PickingParametersPanel->Layout();
 	InputSizer->Fit( PickingParametersPanel );
-	bSizer46->Add( PickingParametersPanel, 0, wxALL|wxEXPAND, 5 );
+	bSizer214->Add( PickingParametersPanel, 1, wxALL|wxEXPAND, 5 );
 	
-	OutputTextPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	OutputTextPanel = new wxPanel( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	OutputTextPanel->Hide();
 	
 	wxBoxSizer* bSizer56;
@@ -1945,9 +1944,22 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	OutputTextPanel->SetSizer( bSizer56 );
 	OutputTextPanel->Layout();
 	bSizer56->Fit( OutputTextPanel );
-	bSizer46->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
+	bSizer214->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
 	
-	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	
+	LeftPanel->SetSizer( bSizer214 );
+	LeftPanel->Layout();
+	bSizer214->Fit( LeftPanel );
+	RightPanel = new wxPanel( FindParticlesSplitterWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer215;
+	bSizer215 = new wxBoxSizer( wxVERTICAL );
+	
+	PickingResultsPanel = new PickingResultsDisplayPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	PickingResultsPanel->Hide();
+	
+	bSizer215->Add( PickingResultsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	InfoPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer61;
 	bSizer61 = new wxBoxSizer( wxVERTICAL );
 	
@@ -1958,18 +1970,14 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	InfoPanel->SetSizer( bSizer61 );
 	InfoPanel->Layout();
 	bSizer61->Fit( InfoPanel );
-	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
-	
-	PickingResultsPanel = new PickingResultsDisplayPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	PickingResultsPanel->Hide();
-	
-	bSizer46->Add( PickingResultsPanel, 50, wxEXPAND | wxALL, 5 );
+	bSizer215->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
 	
 	
-	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
-	
-	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
+	RightPanel->SetSizer( bSizer215 );
+	RightPanel->Layout();
+	bSizer215->Fit( RightPanel );
+	FindParticlesSplitterWindow->SplitVertically( LeftPanel, RightPanel, 528 );
+	bSizer43->Add( FindParticlesSplitterWindow, 1, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer48;
 	bSizer48 = new wxBoxSizer( wxHORIZONTAL );
@@ -2070,6 +2078,9 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	
 	bSizer43->Add( bSizer48, 0, wxEXPAND, 5 );
+	
+	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
 	
 	
 	this->SetSizer( bSizer43 );
@@ -4824,6 +4835,15 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 	
 	bSizer135->Add( bSizer140, 1, wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer213;
+	bSizer213 = new wxBoxSizer( wxVERTICAL );
+	
+	FlipCTFCheckBox = new wxCheckBox( m_panel38, wxID_ANY, wxT("Flip CTF"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer213->Add( FlipCTFCheckBox, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer213, 1, wxEXPAND, 5 );
+	
 	wxStaticBoxSizer* sbSizer4;
 	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Output image stack") ), wxVERTICAL );
 	
@@ -4875,6 +4895,7 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 	this->Centre( wxBOTH );
 	
 	// Connect Events
+	FlipCTFCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnFlipCTFCheckBox ), NULL, this );
 	OutputImageStackPicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( FrealignExportDialog::OnOutputImageStackFileChanged ), NULL, this );
 	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnExportButtonClick ), NULL, this );
@@ -4883,6 +4904,7 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 FrealignExportDialog::~FrealignExportDialog()
 {
 	// Disconnect Events
+	FlipCTFCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnFlipCTFCheckBox ), NULL, this );
 	OutputImageStackPicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( FrealignExportDialog::OnOutputImageStackFileChanged ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnExportButtonClick ), NULL, this );

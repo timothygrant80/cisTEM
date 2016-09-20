@@ -642,6 +642,8 @@ class FindParticlesPanel : public JobPanel
 		wxToggleButton* ExpertToggleButton;
 		wxStaticText* PleaseEstimateCTFStaticText;
 		wxStaticLine* m_staticline10;
+		wxSplitterWindow* FindParticlesSplitterWindow;
+		wxPanel* LeftPanel;
 		wxScrolledWindow* PickingParametersPanel;
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText196;
@@ -674,9 +676,9 @@ class FindParticlesPanel : public JobPanel
 		wxChoice* AlgorithmToFindBackgroundChoice;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
+		wxPanel* RightPanel;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
-		wxStaticLine* m_staticline11;
 		wxPanel* ProgressPanel;
 		wxGauge* ProgressBar;
 		wxStaticText* NumberConnectedText;
@@ -687,6 +689,7 @@ class FindParticlesPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		wxComboBox* RunProfileComboBox;
 		wxButton* StartPickingButton;
+		wxStaticLine* m_staticline11;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -725,6 +728,12 @@ class FindParticlesPanel : public JobPanel
 		
 		FindParticlesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~FindParticlesPanel();
+		
+		void FindParticlesSplitterWindowOnIdle( wxIdleEvent& )
+		{
+			FindParticlesSplitterWindow->SetSashPosition( 528 );
+			FindParticlesSplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
+		}
 	
 };
 
@@ -1458,12 +1467,14 @@ class FrealignExportDialog : public wxDialog
 		wxStaticText* m_staticText203;
 		wxSpinCtrl* BoxSizeSpinCtrl;
 		wxCheckBox* NormalizeCheckBox;
+		wxCheckBox* FlipCTFCheckBox;
 		wxFilePickerCtrl* OutputImageStackPicker;
 		wxStaticText* WarningText;
 		wxButton* CancelButton;
 		wxButton* ExportButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnFlipCTFCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOutputImageStackFileChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }

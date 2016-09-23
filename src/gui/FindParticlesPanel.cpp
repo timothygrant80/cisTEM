@@ -1277,7 +1277,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
 
 	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 	      {
@@ -1309,13 +1309,16 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {
 
+
 			// which job is finished?
 
-			int finished_job;
-			sock->ReadMsg(&finished_job, 4);
+	    	  int finished_job;
+	    	  sock->Read(&finished_job, 4);
+	    	 // my_job_tracker.MarkJobFinished();
+			  ProcessResult(NULL,finished_job);
 
-			ProcessResult(NULL,finished_job);
-
+	    	  //	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+				//   	  WriteInfoText(wxString::Format("Job %i has finished with no results (socket_job_finished)", finished_job));
 	 	  }
 	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
 	 	  {
@@ -1333,7 +1336,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 			  // how many connections are there?
 
 			  int number_of_connections;
-              sock->ReadMsg(&number_of_connections, 4);
+              sock->Read(&number_of_connections, 4);
 
               my_job_tracker.AddConnection();
 
@@ -1406,10 +1409,10 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 	ArrayOfParticlePositionAssets array_of_assets;
 
 	int job_number = wanted_job_number;
-	if (result_to_process) job_number = result_to_process->job_number;
+	if (result_to_process != NULL) job_number = result_to_process->job_number;
 
 
-	if (current_time - time_of_last_result_update > 5)
+	if (current_time - time_of_last_result_update > 3)
 	{
 		//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
 		wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
@@ -1429,7 +1432,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 
 	// store the results..
 
-	if (result_to_process) buffered_results[result_to_process->job_number] = result_to_process;
+	if (result_to_process != NULL) buffered_results[result_to_process->job_number] = result_to_process;
 
 	if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
 	{

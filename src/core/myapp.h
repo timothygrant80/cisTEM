@@ -2,6 +2,7 @@
 #define SOCKET_ID 101
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_ENDING, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, wxThreadEvent);
@@ -127,6 +128,7 @@ MyApp : public wxAppConsole
 
 		void OnServerEvent(wxSocketEvent& event);
 		void OnThreadComplete(wxThreadEvent& my_event);
+		void OnThreadEnding(wxThreadEvent& my_event);
 		void OnThreadSendError(wxThreadEvent& my_event);
 		void OnThreadSendInfo(wxThreadEvent& my_event);
 		void OnThreadIntermediateResultAvailable(wxThreadEvent& my_event);

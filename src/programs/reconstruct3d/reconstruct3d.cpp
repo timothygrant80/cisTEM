@@ -152,20 +152,22 @@ bool Reconstruct3DApp::DoCalculation()
 	FrealignParameterFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
 	my_input_par_file.ReadFile();
 	NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);
-
+/*
 	if (is_running_locally == false)
 	{
 		float result;
 		my_result.SetResult(1, &result);
-	}
+	}*/
 	if (input_file.ReturnXSize() != input_file.ReturnYSize())
 	{
 		MyPrintWithDetails("Error: Particles are not square\n");
+		SendError("Error: Particles are not square");
 		abort();
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
 		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
+		SendError("Error: Number of last particle to refine smaller than number of first particle to refine");
 		abort();
 	}
 
@@ -296,6 +298,7 @@ bool Reconstruct3DApp::DoCalculation()
 	if (images_to_process == 0)
 	{
 		MyPrintWithDetails("Error: No particles to process\n");
+		SendError("Error: No Particles to process");
 		abort();
 	}
 
@@ -384,7 +387,14 @@ bool Reconstruct3DApp::DoCalculation()
 			my_reconstruction_1.InsertSliceWithCTF(input_particle);
 		}
 
-		if (is_running_locally == false)	SendIntermediateResult(&my_result);
+		if (is_running_locally == false)
+		{
+			temp_float = input_particle.location_in_stack;
+			JobResult *temp_result = new JobResult;
+			temp_result->SetResult(1, &temp_float);
+			AddJobToResultQueue(temp_result);
+			//wxPrintf("Refine3D : Adding job to job queue..\n");
+		}
 
 		my_progress->Update(image_counter);
 	}

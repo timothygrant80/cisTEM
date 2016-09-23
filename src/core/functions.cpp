@@ -109,8 +109,10 @@ void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	// send the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	socket->WriteMsg(char_pointer, 4);
-	socket->WriteMsg(buffer.data(), length_of_string);
+	socket->Write(char_pointer, 4);
+	CheckSocketForError( socket );
+	socket->Write(buffer.data(), length_of_string);
+	CheckSocketForError( socket );
 }
 
 wxString ReceivewxStringFromSocket(wxSocketBase *socket)
@@ -122,13 +124,15 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 	// receive the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	socket->ReadMsg(char_pointer, 4);
+	socket->Read(char_pointer, 4);
+	CheckSocketForError( socket );
 
 	// setup a temp array to receive the string into.
 
 	unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
 
-	socket->ReadMsg(transfer_buffer, length_of_string);
+	socket->Read(transfer_buffer, length_of_string);
+	CheckSocketForError( socket );
 
 	// add the null
 
@@ -343,4 +347,58 @@ long ReturnFileSizeInBytes(wxString filename)
 	size = filesize.tellg();
 	filesize.close();
 	return size;
+}
+
+void CheckSocketForError(wxSocketBase *socket_to_check)
+{
+	if (socket_to_check->Error() == true)
+	{
+		wxPrintf("Socket Error : ");
+
+		switch(socket_to_check->LastError())
+		{
+		    case wxSOCKET_NOERROR  :
+		       wxPrintf("No Error!\n");
+		       break;
+
+		    case wxSOCKET_INVOP  :
+		       wxPrintf("Invalid Operation.\n");
+		       break;
+
+		    case wxSOCKET_IOERR  :
+		       wxPrintf("Input/Output error.\n");
+		       break;
+
+		    case wxSOCKET_INVADDR  :
+		       wxPrintf("Invalid address passed to wxSocket.\n");
+		       break;
+
+		    case wxSOCKET_INVSOCK  :
+		       wxPrintf("Invalid socket (uninitialized).\n");
+		       break;
+
+		    case wxSOCKET_NOHOST  :
+				wxPrintf("No corresponding host.\n");
+			break;
+
+		    case wxSOCKET_INVPORT  :
+				 wxPrintf("Invalid port.\n");
+			break;
+
+		    case wxSOCKET_WOULDBLOCK  :
+				 wxPrintf("The socket is non-blocking and the operation would block.\n");
+			break;
+
+		    case wxSOCKET_TIMEDOUT  :
+				 wxPrintf("The timeout for this operation expired.\n");
+			break;
+
+		    case wxSOCKET_MEMERR  :
+				 wxPrintf("Memory exhausted.\n");
+			break;
+		    // you can have any number of case statements.
+		    default :
+		    	wxPrintf("unknown.\n");
+		}
+	}
 }

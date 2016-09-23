@@ -81,7 +81,7 @@ void MyMainFrame::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
-		socket_server->SetFlags(wxSOCKET_WAITALL);
+		socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
 		if ( socket_server->IsOk())
 		{
@@ -270,18 +270,20 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
       // should ALWAYS be a pending connection).
 
       sock = socket_server->Accept();
-	  sock->SetFlags(wxSOCKET_WAITALL);//|wxSOCKET_BLOCK);
+	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
 
 	  // request identification..
 	  //MyDebugPrint(" Requesting identification...");
-   	  sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
+   	  sock->Write(socket_please_identify, SOCKET_CODE_SIZE);
+   	  CheckSocketForError( sock );
    	  //MyDebugPrint(" Waiting for reply...");
   	  sock->WaitForRead(5);
 
       if (sock->IsData() == true)
       {
 
-    	  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+    	  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+    	  CheckSocketForError( sock );
 
     	  // does this correspond to one of our jobs?
 
@@ -305,7 +307,8 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
 	    	  //sock->SetEventHandler(*this, SOCKET_ID);
 	    	  // Tell the socket it is connected
-	    	  sock->WriteMsg(socket_you_are_connected, SOCKET_CODE_SIZE);
+	    	  sock->Write(socket_you_are_connected, SOCKET_CODE_SIZE);
+	    	  CheckSocketForError( sock );
 	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
 	    	  sock->Notify(true);
 	      }

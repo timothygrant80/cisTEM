@@ -331,21 +331,25 @@ bool Refine3DApp::DoCalculation()
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
 		MyPrintWithDetails("Error: Particles are not square\n");
+		SendError("Error: Particles are not square");
 		abort();
 	}
 	if ((input_file.ReturnXSize() != input_file.ReturnYSize()) || (input_file.ReturnXSize() != input_file.ReturnZSize()))
 	{
 		MyPrintWithDetails("Error: Input reconstruction is not cubic\n");
+		SendError("Error: Input reconstruction is not cubic\n");
 		abort();
 	}
 	if (input_file.ReturnXSize() != input_stack.ReturnXSize())
 	{
 		MyPrintWithDetails("Error: Dimension of particles and input reconstruction differ\n");
+		SendError("Error: Dimension of particles and input reconstruction differ");
 		abort();
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
 		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
+		SendError("Error: Number of last particle to refine smaller than number of first particle to refine");
 		abort();
 	}
 
@@ -774,7 +778,9 @@ bool Refine3DApp::DoCalculation()
 		{
 			if (isnanf(output_parameters[i]) != 0)
 			{
-				MyDebugAssertTrue(false, "NaN value for output parameter encountered");
+				MyDebugPrintWithDetails("NaN value for output parameter encountered\n");
+		//		SendError(wxString::Format("Error: NaN value for output parameter encountered (Particle %i) - Exiting", refine_particle.location_in_stack));
+		//		MyDebugAssertTrue(false, "NaN value for output parameter encountered");
 				output_parameters[i] = input_parameters[i];
 			}
 		}
@@ -792,6 +798,7 @@ bool Refine3DApp::DoCalculation()
 			}
 
 			intermediate_result->SetResult(refine_particle.number_of_parameters + 1, gui_result_parameters);
+	//		wxPrintf("REFINE3D :: Calling - Adding Job to result Queue\n");
 			AddJobToResultQueue(intermediate_result);
 		}
 

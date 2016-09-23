@@ -675,7 +675,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
 
 	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 	      {
@@ -709,7 +709,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	 		 // which job is finished?
 
 	 		 int finished_job;
-	 		 sock->ReadMsg(&finished_job, 4);
+	 		 sock->Read(&finished_job, 4);
 	 		 my_job_tracker.MarkJobFinished();
 
 	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -731,7 +731,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 			  // how many connections are there?
 
 			  int number_of_connections;
-              sock->ReadMsg(&number_of_connections, 4);
+              sock->Read(&number_of_connections, 4);
 
               my_job_tracker.AddConnection();
 

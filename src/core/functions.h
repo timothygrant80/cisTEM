@@ -148,6 +148,8 @@ std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add);
 void Allocate2DFloatArray(float **&array, int dim1, int dim2);
 void Deallocate2DFloatArray(float **&array, int dim1);
 
+void CheckSocketForError(wxSocketBase *socket_to_check);
+
 inline wxString BoolToYesNo(bool b)
 {
   return b ? "Yes" : "No";

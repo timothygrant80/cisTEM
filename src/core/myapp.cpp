@@ -29,6 +29,7 @@ bool MyApp::OnInit()
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDERROR, &MyApp::OnThreadSendError, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &MyApp::OnThreadSendInfo, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
 
 
@@ -117,7 +118,7 @@ bool MyApp::OnInit()
 
 	//MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 30 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
 	controller_socket = new wxSocketClient();
-	controller_socket->SetFlags(wxSOCKET_BLOCK);
+	controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
 
 	// Setup the event handler and subscribe to most events
 
@@ -185,12 +186,14 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 			 // wxSocketEvent again.
 
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 CheckSocketForError( sock );
 
 			 if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 		    	  // send the job identification to complete the connection
-		    	  sock->WriteMsg(job_code, SOCKET_CODE_SIZE);
+		    	  sock->Write(job_code, SOCKET_CODE_SIZE);
+		    	  CheckSocketForError(sock);
 
 		    	  // Enable input events again
 			      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -220,7 +223,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  // ok, now get the job details from the conduit controller
 
-		    	  sock->WriteMsg(socket_send_job_details, SOCKET_CODE_SIZE);
+		    	  sock->Write(socket_send_job_details, SOCKET_CODE_SIZE);
+		    	  CheckSocketForError(sock);
 
 		    	  // it should now send a conformation code followed by the package..
 
@@ -228,7 +232,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  if (sock->IsData() == true)
 		    	  {
-		    		  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+		    		  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+		    		  CheckSocketForError( sock );
 
 		    	 	  // is this correct?
 
@@ -401,7 +406,8 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      CheckSocketForError( sock );
 
 	      /*
 	      if (memcmp(socket_input_buffer, socket_ready_to_send_job_package, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
@@ -418,7 +424,8 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	  {
 	    		  if (slave_sockets[counter] != NULL)
 	    		  {
-	    			  slave_sockets[counter]->WriteMsg(socket_time_to_die, SOCKET_CODE_SIZE);
+	    			  slave_sockets[counter]->Write(socket_time_to_die, SOCKET_CODE_SIZE);
+	    			  CheckSocketForError( slave_sockets[counter]);
 	    			  slave_sockets[counter]->Destroy();
 	  	    		  slave_sockets[counter] = NULL;
 
@@ -466,7 +473,8 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	}
 	else
 	{
-		socket->WriteMsg(socket_time_to_die, SOCKET_CODE_SIZE);
+		socket->Write(socket_time_to_die, SOCKET_CODE_SIZE);
+		CheckSocketForError( socket );
 	}
 }
 
@@ -478,9 +486,11 @@ void MyApp::SendJobFinished(int job_number)
 
 	// send job finished code
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
+	controller_socket->Write(socket_job_finished, SOCKET_CODE_SIZE);
+	CheckSocketForError( controller_socket );
 	// send the job number of the current job..
-	controller_socket->WriteMsg(&job_number, 4);
+	controller_socket->Write(&job_number, 4);
+	CheckSocketForError( controller_socket);
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 
@@ -495,7 +505,8 @@ void MyApp::SendJobResult(JobResult *result)
 	// sendjobresultcode
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+	controller_socket->Write(socket_job_result, SOCKET_CODE_SIZE);
+	CheckSocketForError( controller_socket );
 	result->SendToSocket(controller_socket);
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
@@ -510,10 +521,13 @@ void MyApp::SendIntermediateResult(JobResult *result)
 	//wxPrintf("Sending int. Job Slave (%f)\n", result->result_data[0]);
 	// sendjobresultcode
 
+//	wxPrintf("MyApp::Sending Intermediate Result..\n");
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+	controller_socket->Write(socket_job_result, SOCKET_CODE_SIZE);
+	CheckSocketForError( controller_socket );
 	result->SendToSocket(controller_socket);
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	//wxPrintf("MyApp::Result sent..\n");
 
 }
 
@@ -525,7 +539,8 @@ void MyApp::SendAllJobsFinished()
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	controller_socket->Write(socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	CheckSocketForError( controller_socket );
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
@@ -559,7 +574,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			 // We disable input events, so that the test doesn't trigger
 			 // wxSocketEvent again.
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 CheckSocketForError( sock );
 
 			 if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
 			 {
@@ -637,7 +653,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			 {
 				 JobResult temp_result;
 			     temp_result.ReceiveFromSocket(sock);
-			     //wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
+			   // wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
 			     SendJobResult(&temp_result);
 			 }
 
@@ -692,7 +708,7 @@ void MyApp::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
-		socket_server->SetFlags(wxSOCKET_BLOCK);
+		socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
 
 		if (	socket_server->Ok())
 		{
@@ -755,13 +771,15 @@ void MyApp::CheckForConnections()
 
 		 if (sock == NULL) break;
 
-		 sock->SetFlags(wxSOCKET_BLOCK);//|wxSOCKET_BLOCK);
-		 sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
+		 sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
+		 sock->Write(socket_please_identify, SOCKET_CODE_SIZE);
+		 CheckSocketForError(sock);
 		 sock->WaitForRead(5);
 
 		 if (sock->IsData() == true)
 		 {
-		   	  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+		   	  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+		   	  CheckSocketForError(sock);
 
 		   	  // does this correspond to our job code?
 
@@ -794,7 +812,8 @@ void MyApp::CheckForConnections()
 
 		   		// tell it is is connected..
 
-		   		sock->WriteMsg(socket_you_are_connected, SOCKET_CODE_SIZE);
+		   		sock->Write(socket_you_are_connected, SOCKET_CODE_SIZE);
+		   		CheckSocketForError(sock);
 
 		 		// if we have them all we can delete the timer..
 
@@ -857,13 +876,15 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 // We disable input events, so that the test doesn't trigger
 			 // wxSocketEvent again.
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+			 CheckSocketForError(sock);
 
 			 if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 		    	  // send the job identification to complete the connection
 				 //MyDebugPrint("JOB SLAVE : Sending Identification")
-		    	 sock->WriteMsg(job_code, SOCKET_CODE_SIZE);
+		    	 sock->Write(job_code, SOCKET_CODE_SIZE);
+		    	 CheckSocketForError(sock);
 
 			 }
 			 else
@@ -872,7 +893,8 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			   	  // we are connected, request the first job..
 				 is_connected = true;
 				 //MyDebugPrint("JOB SLAVE : Requesting job");
-				 controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
+				 controller_socket->Write(socket_send_next_job, SOCKET_CODE_SIZE);
+				 CheckSocketForError(controller_socket);
 
 				 JobResult temp_result; // dummy result for the initial request - not reallt very nice
 				 temp_result.job_number = -1;
@@ -910,7 +932,8 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 }
 				 else
 				 {
-				       MyPrintWithDetails("Can't get job lock!");
+					 SocketSendError("Job Lock Error!");
+				     MyPrintWithDetails("Can't get job lock!");
 				 }
 
 				 delete lock;
@@ -946,14 +969,21 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 }
 				 else
 				 {
-				       MyPrintWithDetails("Can't get job lock!");
+					 SocketSendError("Job Lock Error!");
+				     MyPrintWithDetails("Can't get job lock!");
 				 }
 
 				 delete lock;
 
-				 sock->Destroy();
+				 // give the thread some time to die..
 				 wxSleep(5);
-			     if (work_thread != NULL) work_thread->Kill();
+
+				 // process thread events in case it has done something
+				 Yield(); //(wxEVT_CATEGORY_THREAD);
+
+				 // finish
+				 sock->Destroy();
+				 if (work_thread != NULL) work_thread->Kill();
 	 		     ExitMainLoop();
 	 		     return;
 			 }
@@ -995,7 +1025,8 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_send_next_job, SOCKET_CODE_SIZE);
+	controller_socket->Write(socket_send_next_job, SOCKET_CODE_SIZE);
+	CheckSocketForError(controller_socket);
 
 	// if there is a result - send it to the gui..
 	my_result.job_number = my_current_job.job_number;
@@ -1003,10 +1034,12 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 	// clear the results queue..
+}
 
-
-
-
+void MyApp::OnThreadEnding(wxThreadEvent& my_event)
+{
+	SendAllResultsFromResultQueue();
+	work_thread = NULL;
 }
 
 void MyApp::OnThreadSendError(wxThreadEvent& my_event)
@@ -1023,16 +1056,22 @@ void MyApp::OnThreadSendInfo(wxThreadEvent& my_event)
 
 void MyApp::OnThreadIntermediateResultAvailable(wxThreadEvent& my_event)
 {
+//	wxPrintf("MyApp::Received result available event..\n");
 	SendAllResultsFromResultQueue();
 }
 
 void MyApp::SendAllResultsFromResultQueue()
 {
+	//wxPrintf("MyApp::Sending All Results..\n");
 	while (1==1)
 	{
 		JobResult *popped_job = PopJobFromResultQueue();
 
-		if (popped_job == NULL) break;
+		if (popped_job == NULL)
+		{
+		//	wxPrintf("popped job is null\n");
+			break;
+		}
 		else
 		{
 			SendIntermediateResult(popped_job);
@@ -1047,12 +1086,15 @@ void MyApp::SocketSendError(wxString error_to_send)
 
 	// send the error message flag
 
-	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_i_have_an_error, SOCKET_CODE_SIZE);
+	if (is_running_locally == false)
+	{
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+		controller_socket->Write(socket_i_have_an_error, SOCKET_CODE_SIZE);
+		CheckSocketForError(controller_socket);
 
-	SendwxStringToSocket(&error_to_send, controller_socket);
-	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
+		SendwxStringToSocket(&error_to_send, controller_socket);
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	}
 }
 
 void MyApp::SocketSendInfo(wxString info_to_send)
@@ -1061,11 +1103,15 @@ void MyApp::SocketSendInfo(wxString info_to_send)
 
 	// send the error message flag
 
-	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->WriteMsg(socket_i_have_info, SOCKET_CODE_SIZE);
+	if (is_running_locally == false)
+	{
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+		controller_socket->Write(socket_i_have_info, SOCKET_CODE_SIZE);
+		CheckSocketForError(controller_socket);
 
-	SendwxStringToSocket(&info_to_send, controller_socket);
-	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+		SendwxStringToSocket(&info_to_send, controller_socket);
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	}
 
 }
 
@@ -1108,21 +1154,21 @@ void MyApp::SendInfo(wxString info_to_send)
 
 void MyApp::AddJobToResultQueue(JobResult * result_to_add)
 {
+//	wxPrintf("Adding Job to result Queue\n");
 	wxMutexLocker *lock = new wxMutexLocker(job_lock);
 
 	if (lock->IsOk() == true) job_queue.Add(result_to_add);
 	else
 	{
+		SocketSendError("Job Lock Error!");
 		MyPrintWithDetails("Can't get job lock!");
 	}
 
 	delete lock;
 
-	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE);
-
-
 	if (work_thread != NULL)
 	{
+//		wxPrintf("MyApp::Marking Intermediate Result Available...\n");
 		work_thread->MarkIntermediateResultAvailable();
 	}
 	else
@@ -1148,6 +1194,7 @@ JobResult * MyApp::PopJobFromResultQueue()
 	}
 	else
 	{
+		SocketSendError("Job Lock Error!");
 		MyPrintWithDetails("Can't get job lock!");
 	}
 
@@ -1171,7 +1218,7 @@ wxThread::ExitCode CalculateThread::Entry()
 		}
 		else
 		{
-
+			QueueError("Job Lock Error!");
 		}
 
 		if (main_thread_pointer->thread_next_action == THREAD_START_NEXT_JOB)
@@ -1196,6 +1243,9 @@ wxThread::ExitCode CalculateThread::Entry()
 		if (thread_action_copy == THREAD_DIE) break;
 	}
 
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_ENDING);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
 	fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
     return (wxThread::ExitCode)0;     // success
 }
@@ -1219,15 +1269,31 @@ void  CalculateThread::QueueInfo(wxString info_to_queue)
 void CalculateThread::MarkIntermediateResultAvailable()
 {
 	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE);
-
 	wxQueueEvent(main_thread_pointer, test_event);
+	//wxPrintf("CalculateThread::Queueing Result Available Event..\n");
 }
 
 CalculateThread::~CalculateThread()
 {
     //wxCriticalSectionLocker enter(m_pHandler->m_pThreadCS);
     // the thread is being destroyed; make sure not to leave dangling pointers around
-    main_thread_pointer = NULL;
+
+	wxMutexLocker *lock = new wxMutexLocker(main_thread_pointer->job_lock);
+
+	if (lock->IsOk() == true)
+	{
+		main_thread_pointer->work_thread = NULL;
+	}
+	else
+	{
+		QueueError("Job Lock Error!");
+	}
+
+
+	delete lock;
+
+	main_thread_pointer = NULL;
+
 }
 
 

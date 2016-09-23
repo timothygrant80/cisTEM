@@ -22,7 +22,7 @@ typedef struct Kernel2D {
 #include <complex.h>
 #include <fftw3.h>
 #include <math.h>
-#include <sqlite3.h>
+#include "sqlite/sqlite3.h"
 #include <wx/wx.h>
 #include <wx/socket.h>
 #include <wx/cmdline.h>

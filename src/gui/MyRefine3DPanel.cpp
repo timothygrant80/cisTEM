@@ -140,7 +140,6 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->WriteText(wxT("The number of refinement cycles to run. For a global search, one is usually sufficient, possibly followed by another one at a later stage in the refinement if the user suspects that the initial reference was limited in quality such that a significant number of particles were misaligned. For local refinement of a single class, typically 3 to 5 cycles are sufficient, possibly followed by another local refinement at increased resolution (see below). If multiple classes are refined, between 30 and 50 cycles should be run to ensure convergence of the classes."));
 	InfoText->Newline();
 	InfoText->Newline();
-
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -301,7 +300,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->WriteText(wxT("The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."));
 	InfoText->Newline();
 
-	InfoText->EndAlignment();
+//	InfoText->EndAlignment();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
@@ -324,6 +323,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndURL();
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
+	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
 
@@ -339,6 +339,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndURL();
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
+	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
 
@@ -354,6 +355,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndURL();
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
+	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
 
@@ -369,6 +371,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndURL();
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
+	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
 
@@ -933,7 +936,8 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      CheckSocketForError( sock );
 
 	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 	      {
@@ -967,7 +971,8 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	 		 // which job is finished?
 
 	 		 int finished_job;
-	 		 sock->ReadMsg(&finished_job, 4);
+	 		 sock->Read(&finished_job, 4);
+	 		CheckSocketForError( sock );
 	 		 my_job_tracker.MarkJobFinished();
 
 //	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -990,7 +995,8 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			  // how many connections are there?
 
 			  int number_of_connections;
-              sock->ReadMsg(&number_of_connections, 4);
+              sock->Read(&number_of_connections, 4);
+              CheckSocketForError( sock );
 
               my_job_tracker.AddConnection();
 
@@ -1499,8 +1505,11 @@ void RefinementManager::SetupRefinementJob()
 			bool	 use_statistics							= true;
 
 			wxString ouput_matching_projections		 		= "";
-			wxString output_parameter_file					= "/tmp/output_par.par";
-			wxString ouput_shift_file						= "/tmp/output_shift.shft";
+			//wxString output_parameter_file					= "/tmp/output_par.par";
+			//wxString ouput_shift_file						= "/tmp/output_shift.shft";
+			wxString output_parameter_file					= "/dev/null";
+			wxString ouput_shift_file						= "/dev/null";
+
 			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
 			long	 first_particle							= current_particle_counter;
 
@@ -1624,7 +1633,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		int current_class = int(result_to_process->result_data[0] + 0.5);
 		long current_particle = long(result_to_process->result_data[1] + 0.5) - 1;
 
-		//wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
+	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
 		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
 
 
@@ -1701,6 +1710,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 	{
 		//wxPrintf("Got reconstruction job \n");
 		number_of_received_particle_results++;
+	//	wxPrintf("Received a reconstruction intermmediate result\n");
 
 		long current_time = time(NULL);
 
@@ -1995,7 +2005,7 @@ void RefinementManager::ProcessAllJobsFinished()
 			volume_asset_panel->is_dirty = true;
 			refinement_package_asset_panel->is_dirty = true;
 			my_parent->input_params_combo_is_dirty = true;
-			my_parent->SetDefaults();
+		//	my_parent->SetDefaults();
 			refinement_results_panel->is_dirty = true;
 
 			Refinement *current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(output_refinement->refinement_id);
@@ -2040,7 +2050,7 @@ void RefinementManager::ProcessAllJobsFinished()
 			volume_asset_panel->is_dirty = true;
 			refinement_package_asset_panel->is_dirty = true;
 			my_parent->input_params_combo_is_dirty = true;
-			my_parent->SetDefaults();
+	//		my_parent->SetDefaults();
 			refinement_results_panel->is_dirty = true;
 
 			my_parent->FSCResultsPanel->AddRefinement(&refinement_package_asset_panel->all_refinements.Item(refinement_package_asset_panel->all_refinements.GetCount() - 1));

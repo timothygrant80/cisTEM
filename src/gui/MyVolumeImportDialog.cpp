@@ -149,7 +149,7 @@ void MyVolumeImportDialog::ImportClick( wxCommandEvent& event )
 
 		// ProgressBar..
 
-		wxGenericProgressDialog *my_progress_dialog = new wxGenericProgressDialog("Import Volumes",	"Importing Volumes...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_ELAPSED_TIME);
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Import Volumes",	"Importing Volumes...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_ELAPSED_TIME);
 
 		// loop through all the files and add them as assets..
 

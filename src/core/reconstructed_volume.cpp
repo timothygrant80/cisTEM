@@ -279,7 +279,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 				}
 				else
 				{
-					density_map.complex_values[pixel_counter] = 0.0;
+					density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 				pixel_counter++;
 			}
@@ -350,12 +350,12 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 					}
 					else
 					{
-						density_map.complex_values[pixel_counter] = 0.0;
+						density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
 					}
 				}
 				else
 				{
-					density_map.complex_values[pixel_counter] = 0.0;
+					density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 				pixel_counter++;
 			}

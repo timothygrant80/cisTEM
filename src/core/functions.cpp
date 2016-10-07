@@ -109,10 +109,8 @@ void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	// send the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	socket->Write(char_pointer, 4);
-	CheckSocketForError( socket );
-	socket->Write(buffer.data(), length_of_string);
-	CheckSocketForError( socket );
+	WriteToSocket(socket, char_pointer, 4);
+	WriteToSocket(socket, buffer.data(), length_of_string);
 }
 
 wxString ReceivewxStringFromSocket(wxSocketBase *socket)
@@ -124,15 +122,13 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 	// receive the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	socket->Read(char_pointer, 4);
-	CheckSocketForError( socket );
+	ReadFromSocket(socket, char_pointer, 4);
 
 	// setup a temp array to receive the string into.
 
 	unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
 
-	socket->Read(transfer_buffer, length_of_string);
-	CheckSocketForError( socket );
+	ReadFromSocket(socket, transfer_buffer, length_of_string);
 
 	// add the null
 

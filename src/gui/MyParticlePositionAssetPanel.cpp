@@ -294,7 +294,7 @@ void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 
 		 // for each line, we add an asset..
 
-		 wxProgressDialog *my_dialog = new wxProgressDialog ("Import Assets", "Importing Assets", input_file.GetLineCount(), this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Import Assets", "Importing Assets", input_file.GetLineCount(), this);
 
 		 // for database..
 

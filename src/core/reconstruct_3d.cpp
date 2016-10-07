@@ -255,7 +255,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
 		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
 
-		fftwf_complex ctf_value = 1.0;
+		fftwf_complex ctf_value = 1.0 + I * 0.0;
 
 		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
@@ -477,7 +477,7 @@ void Reconstruct3D::CompleteEdges()
 		}
 // Deal with term at origin
 		physical_coord_1 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, 0, 0);
-		image_reconstruction.complex_values[physical_coord_1] = 2.0 * crealf(image_reconstruction.complex_values[physical_coord_1]);
+		image_reconstruction.complex_values[physical_coord_1] = (2.0 * crealf(image_reconstruction.complex_values[physical_coord_1])) + I * 0.0;
 		ctf_reconstruction[physical_coord_1] = 2.0 * ctf_reconstruction[physical_coord_1];
 
 		edge_terms_were_added = true;
@@ -491,7 +491,7 @@ float Reconstruct3D::Correct3DCTF(Image &buffer3d)
 
 	buffer3d.is_in_real_space = false;
 
-	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) buffer3d.complex_values[i] = ctf_reconstruction[i];
+	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) buffer3d.complex_values[i] = ctf_reconstruction[i] + I * 0.0;
 
 	buffer3d.SwapRealSpaceQuadrants();
 	buffer3d.BackwardFFT();
@@ -549,6 +549,7 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 
 	char_pointer = (char *) ctf_reconstruction;
 	b_stream.write(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated / 2);
+	b_stream.close();
 }
 
 void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension,
@@ -595,6 +596,7 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	insert_even = false; if (oddeven == 2) {insert_even = true;};
 
 	symmetry_matrices.Init(symmetry_symbol);
+	b_stream.close();
 }
 
 void Reconstruct3D::ReadArrays(wxString filename)
@@ -659,6 +661,7 @@ void Reconstruct3D::ReadArrays(wxString filename)
 
 	char_pointer = (char *) ctf_reconstruction;
 	b_stream.read(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated / 2);
+	b_stream.close();
 }
 
 Reconstruct3D &Reconstruct3D::operator = (const Reconstruct3D &other)

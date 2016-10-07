@@ -62,7 +62,7 @@ void JobTracker::MarkJobFinished()
 	long seconds_per_job_per_process_since_last_update;
 	long time_since_last_update = current_time - last_update_time;
 	long total_time = current_time - start_time;
-	float naive_time_per_process = float(total_time) / float(total_running_processes);
+	float naive_time_per_process = (float(total_time) / float(total_number_of_finished_jobs));
 /*
 	if (last_update_time_total_running_processes == 0)
 	{

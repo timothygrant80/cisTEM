@@ -274,16 +274,14 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 
 	  // request identification..
 	  //MyDebugPrint(" Requesting identification...");
-   	  sock->Write(socket_please_identify, SOCKET_CODE_SIZE);
-   	  CheckSocketForError( sock );
-   	  //MyDebugPrint(" Waiting for reply...");
+	  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
+
+	  //MyDebugPrint(" Waiting for reply...");
   	  sock->WaitForRead(5);
 
       if (sock->IsData() == true)
       {
-
-    	  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-    	  CheckSocketForError( sock );
+    	  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
     	  // does this correspond to one of our jobs?
 
@@ -307,8 +305,9 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
 	    	  //sock->SetEventHandler(*this, SOCKET_ID);
 	    	  // Tell the socket it is connected
-	    	  sock->Write(socket_you_are_connected, SOCKET_CODE_SIZE);
-	    	  CheckSocketForError( sock );
+
+	    	  WriteToSocket(sock, socket_you_are_connected, SOCKET_CODE_SIZE);
+
 	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
 	    	  sock->Notify(true);
 	      }
@@ -354,7 +353,7 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 
 	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
 	{
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Open Project", "Opening Project", 9, this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();

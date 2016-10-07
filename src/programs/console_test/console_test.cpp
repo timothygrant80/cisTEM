@@ -712,13 +712,13 @@ void MyTestApp::TestScalingAndSizingFunctions()
 
 	// check some values
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(-90, -90, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(-90, -90, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -100.0) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
 	// test Fourier space clipping smaller
@@ -726,10 +726,10 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	clipped_image.Allocate(50,50,1);
 	test_image.ClipInto(&clipped_image, 0);
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100 + I * 0.0);
 	//wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
@@ -748,10 +748,10 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	test_image.ForwardFFT();
 	test_image.ClipInto(&clipped_image, 0);
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100 + I * 0.0);
 	//wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
@@ -786,13 +786,13 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	test_image.ForwardFFT();
 	test_image.Resize(160, 160, 1);
 
-	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(-90, -90, 0, -100);
+	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(-90, -90, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -100.0) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 
 	// Fourier space small
@@ -802,10 +802,10 @@ void MyTestApp::TestScalingAndSizingFunctions()
 	test_image.ForwardFFT();
 	test_image.Resize(50, 50, 1);
 
-	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100);
+	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(0, 0, 0, -100 + I * 0.0);
 	if (DoublesAreAlmostTheSame(creal(test_pixel), -0.010919) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.0) == false) FailTest;
 
-	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100);
+	test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100 + I * 0.0);
 	//wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
 	if (DoublesAreAlmostTheSame(creal(test_pixel), 0.075896) == false || DoublesAreAlmostTheSame(cimag(test_pixel), 0.045677) == false) FailTest;
 

@@ -186,14 +186,12 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 			 // wxSocketEvent again.
 
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-			 CheckSocketForError( sock );
+			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 			 if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 		    	  // send the job identification to complete the connection
-		    	  sock->Write(job_code, SOCKET_CODE_SIZE);
-		    	  CheckSocketForError(sock);
+				  WriteToSocket(sock, job_code, SOCKET_CODE_SIZE);
 
 		    	  // Enable input events again
 			      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -223,8 +221,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  // ok, now get the job details from the conduit controller
 
-		    	  sock->Write(socket_send_job_details, SOCKET_CODE_SIZE);
-		    	  CheckSocketForError(sock);
+		    	  WriteToSocket(sock, socket_send_job_details, SOCKET_CODE_SIZE);
 
 		    	  // it should now send a conformation code followed by the package..
 
@@ -232,8 +229,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  if (sock->IsData() == true)
 		    	  {
-		    		  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-		    		  CheckSocketForError( sock );
+		    		  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 		    	 	  // is this correct?
 
@@ -406,8 +402,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-	      CheckSocketForError( sock );
+	      ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 	      /*
 	      if (memcmp(socket_input_buffer, socket_ready_to_send_job_package, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
@@ -424,8 +419,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	  {
 	    		  if (slave_sockets[counter] != NULL)
 	    		  {
-	    			  slave_sockets[counter]->Write(socket_time_to_die, SOCKET_CODE_SIZE);
-	    			  CheckSocketForError( slave_sockets[counter]);
+	    			  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    			  slave_sockets[counter]->Destroy();
 	  	    		  slave_sockets[counter] = NULL;
 
@@ -449,6 +443,21 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 
 	        wxPrintf("JOB CONTROL : Socket Disconnected!!\n");
 	        sock->Destroy();
+
+	        // tell the slaves to die..
+
+
+	    	for (int counter = 0; counter < number_of_connected_slaves; counter++)
+	    	{
+	    	  if (slave_sockets[counter] != NULL)
+	    	  {
+	    		  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
+	    		  slave_sockets[counter]->Destroy();
+	  	    	  slave_sockets[counter] = NULL;
+    		  }
+
+	    	}
+
 	        ExitMainLoop();
 	        return;
 
@@ -473,8 +482,7 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	}
 	else
 	{
-		socket->Write(socket_time_to_die, SOCKET_CODE_SIZE);
-		CheckSocketForError( socket );
+		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE);
 	}
 }
 
@@ -482,15 +490,12 @@ void MyApp::SendJobFinished(int job_number)
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendJobFinished called by a slave!");
 
-	//SETUP_SOCKET_CODES
-
-	// send job finished code
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->Write(socket_job_finished, SOCKET_CODE_SIZE);
-	CheckSocketForError( controller_socket );
+
+	WriteToSocket(controller_socket, socket_job_finished, SOCKET_CODE_SIZE);
 	// send the job number of the current job..
-	controller_socket->Write(&job_number, 4);
-	CheckSocketForError( controller_socket);
+	WriteToSocket(controller_socket, &job_number, 4);
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 
@@ -500,14 +505,11 @@ void MyApp::SendJobResult(JobResult *result)
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendJobResult called by a slave!");
 
-	//SETUP_SOCKET_CODES
-
-	// sendjobresultcode
-
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->Write(socket_job_result, SOCKET_CODE_SIZE);
-	CheckSocketForError( controller_socket );
+
+	WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE);
 	result->SendToSocket(controller_socket);
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
@@ -516,45 +518,34 @@ void MyApp::SendIntermediateResult(JobResult *result)
 {
 	MyDebugAssertTrue(i_am_the_master == false, "SendIntermediateResult called by master!");
 
-	//SETUP_SOCKET_CODES
-
-	//wxPrintf("Sending int. Job Slave (%f)\n", result->result_data[0]);
-	// sendjobresultcode
-
-//	wxPrintf("MyApp::Sending Intermediate Result..\n");
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->Write(socket_job_result, SOCKET_CODE_SIZE);
-	CheckSocketForError( controller_socket );
-	result->SendToSocket(controller_socket);
-	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-	//wxPrintf("MyApp::Result sent..\n");
 
+	WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE);
+	result->SendToSocket(controller_socket);
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 
 void MyApp::SendAllJobsFinished()
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
 
-	//SETUP_SOCKET_CODES
-
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->Write(socket_all_jobs_finished, SOCKET_CODE_SIZE);
-	CheckSocketForError( controller_socket );
+
+	WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE);
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
 
 void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 {
-	//SETUP_SOCKET_CODES
 
 	wxString s = _("JOB MASTER: OnSlaveSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
 
-	 float *result;
-
-	//MyDebugAssertTrue(sock == controller_socket, "Master Socket event from Non controller socket??");
+	float *result;
 
 	// First, print a message
 	switch(event.GetSocketEvent())
@@ -574,8 +565,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			 // We disable input events, so that the test doesn't trigger
 			 // wxSocketEvent again.
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-			 CheckSocketForError( sock );
+			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 			 if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
 			 {
@@ -772,14 +762,13 @@ void MyApp::CheckForConnections()
 		 if (sock == NULL) break;
 
 		 sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
-		 sock->Write(socket_please_identify, SOCKET_CODE_SIZE);
-		 CheckSocketForError(sock);
+		 WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
+
 		 sock->WaitForRead(5);
 
 		 if (sock->IsData() == true)
 		 {
-		   	  sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-		   	  CheckSocketForError(sock);
+			  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 		   	  // does this correspond to our job code?
 
@@ -811,9 +800,7 @@ void MyApp::CheckForConnections()
 		   		//SocketSendInfo(wxString::Format("slave slaves connected = %li", number_of_connected_slaves));
 
 		   		// tell it is is connected..
-
-		   		sock->Write(socket_you_are_connected, SOCKET_CODE_SIZE);
-		   		CheckSocketForError(sock);
+		   		WriteToSocket(sock, socket_you_are_connected, SOCKET_CODE_SIZE);
 
 		 		// if we have them all we can delete the timer..
 
@@ -846,6 +833,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 	wxString s = _("JOB : OnMasterSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
+	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
 
 	MyDebugAssertTrue(sock == controller_socket, "Master Socket event from Non controller socket??");
 
@@ -876,16 +864,13 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 // We disable input events, so that the test doesn't trigger
 			 // wxSocketEvent again.
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-			 CheckSocketForError(sock);
+			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 			 if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 		    	  // send the job identification to complete the connection
 				 //MyDebugPrint("JOB SLAVE : Sending Identification")
-		    	 sock->Write(job_code, SOCKET_CODE_SIZE);
-		    	 CheckSocketForError(sock);
-
+				 WriteToSocket(sock, job_code, SOCKET_CODE_SIZE);
 			 }
 			 else
 			 if (memcmp(socket_input_buffer, socket_you_are_connected, SOCKET_CODE_SIZE) == 0) // identification
@@ -893,8 +878,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			   	  // we are connected, request the first job..
 				 is_connected = true;
 				 //MyDebugPrint("JOB SLAVE : Requesting job");
-				 controller_socket->Write(socket_send_next_job, SOCKET_CODE_SIZE);
-				 CheckSocketForError(controller_socket);
+				 WriteToSocket(controller_socket, socket_send_next_job, SOCKET_CODE_SIZE);
 
 				 JobResult temp_result; // dummy result for the initial request - not reallt very nice
 				 temp_result.job_number = -1;
@@ -1025,8 +1009,7 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	controller_socket->Write(socket_send_next_job, SOCKET_CODE_SIZE);
-	CheckSocketForError(controller_socket);
+	WriteToSocket(controller_socket, socket_send_next_job, SOCKET_CODE_SIZE);
 
 	// if there is a result - send it to the gui..
 	my_result.job_number = my_current_job.job_number;
@@ -1082,15 +1065,12 @@ void MyApp::SendAllResultsFromResultQueue()
 
 void MyApp::SocketSendError(wxString error_to_send)
 {
-	//SETUP_SOCKET_CODES
-
 	// send the error message flag
 
 	if (is_running_locally == false)
 	{
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-		controller_socket->Write(socket_i_have_an_error, SOCKET_CODE_SIZE);
-		CheckSocketForError(controller_socket);
+		WriteToSocket(controller_socket, socket_i_have_an_error, SOCKET_CODE_SIZE);
 
 		SendwxStringToSocket(&error_to_send, controller_socket);
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -1099,15 +1079,12 @@ void MyApp::SocketSendError(wxString error_to_send)
 
 void MyApp::SocketSendInfo(wxString info_to_send)
 {
-	//SETUP_SOCKET_CODES
-
-	// send the error message flag
+	// send the info message flag
 
 	if (is_running_locally == false)
 	{
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-		controller_socket->Write(socket_i_have_info, SOCKET_CODE_SIZE);
-		CheckSocketForError(controller_socket);
+		WriteToSocket(controller_socket, socket_i_have_info, SOCKET_CODE_SIZE);
 
 		SendwxStringToSocket(&info_to_send, controller_socket);
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);

@@ -120,7 +120,7 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent &event)
 
 		if (check_dialog->ShowModal() ==  wxID_YES)
 		{
-			wxProgressDialog *my_dialog = new wxProgressDialog ("Select Column", "Setting Selections", GetItemCount(), this);
+			OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Select Column", "Setting Selections", GetItemCount(), this);
 
 			for (long counter = 0; counter < GetItemCount(); counter++)
 			{

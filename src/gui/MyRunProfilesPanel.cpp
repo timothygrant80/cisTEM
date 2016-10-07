@@ -490,6 +490,7 @@ void MyRunProfilesPanel::OnAddProfileClick( wxCommandEvent& event )
 {
 	run_profile_manager.AddBlankProfile();
 	main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer());
+	main_frame->DirtyRunProfiles();
 
 
 	FillProfilesBox();
@@ -505,6 +506,7 @@ void MyRunProfilesPanel::OnRemoveProfileClick( wxCommandEvent& event )
 		MyDebugAssertTrue(selected_profile >= 0 && selected_profile < run_profile_manager.number_of_run_profiles, "Trying to remove a profile that doesn't exist!");
 
 		main_frame->current_project.database.DeleteRunProfile(run_profile_manager.run_profiles[selected_profile].id);
+		main_frame->DirtyRunProfiles();
 		run_profile_manager.RemoveProfile(selected_profile);
 
 		FillProfilesBox();
@@ -579,6 +581,7 @@ void MyRunProfilesPanel::CommandsSaveButtonClick( wxCommandEvent& event )
 		buffer_profile.manager_command = ManagerTextCtrl->GetValue();
 		run_profile_manager.run_profiles[selected_profile] = buffer_profile;
 		main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnProfilePointer(selected_profile));
+		main_frame->DirtyRunProfiles();
 
 		command_panel_has_changed = false;
 	}
@@ -588,6 +591,7 @@ void MyRunProfilesPanel::CommandsSaveButtonClick( wxCommandEvent& event )
 void MyRunProfilesPanel::SetProfileName(long wanted_group, wxString wanted_name)
 {
 	run_profile_manager.run_profiles[wanted_group].name = wanted_name;
+	main_frame->DirtyRunProfiles();
 }
 
 void MyRunProfilesPanel::SetSelectedProfile(long wanted_profile)
@@ -730,6 +734,7 @@ void MyRunProfilesPanel::ImportAllFromDatabase()
 	FillProfilesBox();
 	FillCommandsBox();
 	command_panel_has_changed = false;
+	main_frame->DirtyRunProfiles();
 
 
 }
@@ -740,6 +745,8 @@ void MyRunProfilesPanel::Reset()
 
 	FillProfilesBox();
 	FillCommandsBox();
+
+	main_frame->DirtyRunProfiles();
 
 
 }

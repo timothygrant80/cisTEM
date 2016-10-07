@@ -158,7 +158,6 @@ bool JobControlApp::OnInit()
 	// start the server..
 
 	SetupServer();
-	//my_port_string = "5000";
 
 	// Attempt to connect to the gui..
 
@@ -172,7 +171,7 @@ bool JobControlApp::OnInit()
 	gui_panel_is_connected = false;
 
 
-	MyDebugPrint("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 30 sec) ...\n", gui_address.IPAddress(), gui_address.Service());
+	wxPrintf("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 30 sec) ...\n", gui_address.IPAddress(), gui_address.Service());
 
 	gui_socket->Connect(gui_address, false);
 	gui_socket->WaitOnConnect(30);
@@ -184,7 +183,8 @@ bool JobControlApp::OnInit()
 	   return false;
 	}
 
-	MyDebugPrint(" JOB CONTROL: Succeeded - Connection established!\n\n");
+	gui_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	wxPrintf(" JOB CONTROL: Succeeded - Connection established!\n\n");
 	gui_socket_is_connected = true;
 
 	// we can use this socket to get our ip_address
@@ -216,8 +216,6 @@ void JobControlApp::LaunchRemoteJob()
 	long process_counter;
 
 	wxIPV4address address;
-
-	//MyDebugPrint("Launching Slaves");
 
 	// for n processes (specified in the job package) we need to launch the specified command, along with our
 	// IP address, port and job code..
@@ -262,8 +260,6 @@ void JobControlApp::LaunchRemoteJob()
 
 	}
 
-	//MyDebugPrint("Finished Launching Slaves");
-
 	// now we wait for the connections - this is taken care of as server events..
 
 }
@@ -275,7 +271,8 @@ void JobControlApp::SendError(wxString error_to_send)
 	// send the error message flag
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_i_have_an_error, SOCKET_CODE_SIZE);
+
+	WriteToSocket(gui_socket, socket_i_have_an_error, SOCKET_CODE_SIZE);
 	SendwxStringToSocket(&error_to_send, gui_socket);
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -288,7 +285,8 @@ void JobControlApp::SendInfo(wxString info_to_send)
 	// send the error message flag
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_i_have_info, SOCKET_CODE_SIZE);
+
+	WriteToSocket(gui_socket, socket_i_have_info, SOCKET_CODE_SIZE);
 	SendwxStringToSocket(&info_to_send, gui_socket);
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -326,7 +324,6 @@ void JobControlApp::SetupServer()
 			socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
 			socket_server->Notify(true);
 
-//			wxPrintf("JOB CONTROL : Server is setup\n\n");
 			my_port_string = wxString::Format("%hi", my_port);
 			break;
 		}
@@ -355,17 +352,15 @@ void JobControlApp::CheckForConnections()
 
 		  if (sock == NULL) break;
 
-		  sock->SetFlags(wxSOCKET_BLOCK);//|wxSOCKET_BLOCK);
+		  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
 		  // request identification..
-		  //MyDebugPrint(" Requesting identification...");
-		  sock->WriteMsg(socket_please_identify, SOCKET_CODE_SIZE);
-		  //MyDebugPrint(" Waiting for reply...");
+		  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
 		  sock->WaitForRead(5);
 
 		  if (sock->IsData() == true)
 		  {
-			  sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+			  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 			  // does this correspond to our job code?
 
@@ -393,7 +388,7 @@ void JobControlApp::CheckForConnections()
 					  master_socket = sock;
 					  have_assigned_master = true;
 
-					  sock->WriteMsg(socket_you_are_the_master, SOCKET_CODE_SIZE);
+					  WriteToSocket(sock, socket_you_are_the_master, SOCKET_CODE_SIZE);
 
 					  // read the ip address and port..
 
@@ -434,7 +429,7 @@ void JobControlApp::CheckForConnections()
 				  }
 				  else  // we have a master, tell this slave who it's master is.
 				  {
-					  sock->WriteMsg(socket_you_are_a_slave, SOCKET_CODE_SIZE);
+					  WriteToSocket(sock, socket_you_are_a_slave, SOCKET_CODE_SIZE);
 					  SendwxStringToSocket(&master_ip_address, sock);
 					  SendwxStringToSocket(&master_port, sock);
 
@@ -492,14 +487,14 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	    {
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
+
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 		  if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0)
 		  {
 			  // send the job details through...
 
-			  //MyDebugPrint("JOB CONTROL : Sending Job details to master slave");
 			  my_job_package.SendJobPackage(sock);
 
 		  }
@@ -545,7 +540,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 // which job is finished?
 
 			 int finished_job;
-			 sock->ReadMsg(&finished_job, 4);
+			 ReadFromSocket(sock, &finished_job, 4);
 
 			 // send the info to the gui
 
@@ -554,7 +549,6 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 		 else
 		 if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		 {
-			 //wxPrintf("controller: All got jobs finished from master\n");
 			 SendAllJobsFinished();
 		 }
 
@@ -569,7 +563,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
-	        //wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
+	        wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
 	        abort();
@@ -588,10 +582,10 @@ void JobControlApp::SendJobFinished(int job_number)
 
 	// get the next job..
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_job_finished, SOCKET_CODE_SIZE);
-	// send the job number of the current job..
-	//gui_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
-	gui_socket->WriteMsg(&job_number, 4);
+
+	WriteToSocket(gui_socket, socket_job_finished, SOCKET_CODE_SIZE);
+	WriteToSocket(gui_socket, &job_number, 4);
+
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 
@@ -601,8 +595,10 @@ void JobControlApp::SendJobResult(JobResult *job_to_send)
 
 	// sendjobresultcode
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_job_result, SOCKET_CODE_SIZE);
+
+	WriteToSocket(gui_socket, socket_job_result, SOCKET_CODE_SIZE);
 	job_to_send->SendToSocket(gui_socket);
+
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 
@@ -613,7 +609,9 @@ void JobControlApp::SendAllJobsFinished()
 
 	// get the next job..
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_all_jobs_finished, SOCKET_CODE_SIZE);
+
+	WriteToSocket(gui_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE);
+
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
@@ -624,9 +622,10 @@ void JobControlApp::SendNumberofConnections()
 
 	// get the next job..
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	gui_socket->WriteMsg(socket_number_of_connections, SOCKET_CODE_SIZE);
-	// send the job number of the current job..
-	gui_socket->WriteMsg(&number_of_slaves_already_connected, 4);
+
+	WriteToSocket(gui_socket, socket_number_of_connections, SOCKET_CODE_SIZE);
+	WriteToSocket(gui_socket, &number_of_slaves_already_connected, 4);
+
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 	if (number_of_slaves_already_connected == my_job_package.my_profile.ReturnTotalJobs())
@@ -664,23 +663,23 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->ReadMsg(&socket_input_buffer, SOCKET_CODE_SIZE);
+	      ReadFromSocket(sock, socket_input_buffer, SOCKET_CODE_SIZE);
+
 
 	      if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 	      {
 	    	  // send the job identification to complete the connection
-	    	  sock->WriteMsg(job_code, SOCKET_CODE_SIZE);
+	    	  WriteToSocket(sock, job_code, SOCKET_CODE_SIZE);
 	      }
 	      else
 	      if (memcmp(socket_input_buffer, socket_you_are_connected, SOCKET_CODE_SIZE) == 0) // we are connected to the relevant gui panel.
 	      {
-	    	  //MyDebugPrint("JOB CONTROL : Connected to Panel");
 	    	  gui_panel_is_connected = true;
 
 	    	  // ask the panel to send job details..
 
-	    	  //MyDebugPrint("JOB CONTROL : Asking for job details");
-	    	  sock->WriteMsg(socket_send_job_details, SOCKET_CODE_SIZE);
+	    	  WriteToSocket(sock, socket_send_job_details, SOCKET_CODE_SIZE);
+
 
 	      }
 	      else
@@ -688,18 +687,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 		  {
 			  // receive the job details..
 
-			  //MyDebugPrint("JOB CONTROL : Receiving Job Package");
 			  my_job_package.ReceiveJobPackage(sock);
-			  //MyDebugPrint("JOB CONTROL : Job Package Received, launching slaves");
-
-			  //MyDebugPrint("Filename = %s", my_job_package.jobs[0].arguments[0].string_argument[0]);
-
-			  // Now we have the job, we can launch the slaves..
-
-			  //LaunchRemoteJob();
-
-			  wxPrintf("Launching launch thread!\n");
-
 			  LaunchJobThread *launch_thread = new LaunchJobThread(this);
 
 			  if ( launch_thread->Run() != wxTHREAD_NO_ERROR )
@@ -709,8 +697,6 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 				  ExitMainLoop();
 				  return;
 			  }
-
-			  wxPrintf("Thread Launched!\n");
 		  }
 	      else
 		  if (memcmp(socket_input_buffer, socket_time_to_die, SOCKET_CODE_SIZE) == 0)
@@ -728,7 +714,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  if (have_assigned_master == true)
 			  {
 				  master_socket->Notify(false);
-				  master_socket->WriteMsg(socket_time_to_die, SOCKET_CODE_SIZE);
+				  WriteToSocket(master_socket, socket_time_to_die, SOCKET_CODE_SIZE);
 				  master_socket->Destroy();
 			  }
 
@@ -748,7 +734,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
-	        wxPrintf("JOB CONTROL : Socket Disconnected!!\n");
+	        wxPrintf("JOB CONTROL : GUI Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
 	        abort();

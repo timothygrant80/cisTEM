@@ -14,7 +14,7 @@ GuiJob::GuiJob()
 	is_active = false;
 	socket = NULL;
 	parent_panel = NULL;
-	launch_command = "guix_job_control";
+	launch_command = "cisTEM_job_control";
 }
 
 GuiJob::GuiJob(JobPanel *wanted_parent_panel)
@@ -22,7 +22,7 @@ GuiJob::GuiJob(JobPanel *wanted_parent_panel)
 	is_active = false;
 	socket = NULL;
 	parent_panel = wanted_parent_panel;
-	launch_command = "guix_job_control";
+	launch_command = "cisTEM_job_control";
 
 }
 
@@ -63,11 +63,11 @@ bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 
 	if (job_to_launch->gui_address == "")
 	{
-		executable = "guix_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
+		executable = "cisTEM_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
 	}
 	else
 	{
-		executable = "guix_job_control " + job_to_launch->gui_address + " " + main_frame->my_port_string + " ";
+		executable = "cisTEM_job_control " + job_to_launch->gui_address + " " + main_frame->my_port_string + " ";
 	}
 
 
@@ -173,7 +173,8 @@ void GuiJobController::KillJob(int job_to_kill)
 		if (job_list[job_to_kill].socket != NULL)
 		{
 			job_list[job_to_kill].socket->Notify(false);
-			job_list[job_to_kill].socket->Write(socket_time_to_die, SOCKET_CODE_SIZE);
+			WriteToSocket(job_list[job_to_kill].socket, socket_time_to_die, SOCKET_CODE_SIZE);
+
 			job_list[job_to_kill].socket->Destroy();
 		}
 		job_list[job_to_kill].socket = NULL;

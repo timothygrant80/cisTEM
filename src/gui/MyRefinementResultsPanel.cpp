@@ -123,7 +123,7 @@ void MyRefinementResultsPanel::FillAngles()
 		Refinement *current_refinement;
 		current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID( refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].refinement_ids[InputParametersComboBox->GetCurrentSelection()]);
 
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Plot Angles", "Plotting Angles", refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount(), this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Plot Angles", "Plotting Angles", refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount(), this);
 		AngularPlotPanel->Freeze();
 		AngularPlotPanel->Clear();
 		AngularPlotPanel->SetSymmetry(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry);

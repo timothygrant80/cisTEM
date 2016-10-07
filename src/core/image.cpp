@@ -924,12 +924,12 @@ void Image::Whiten(float resolution_limit)
 					}
 					else
 					{
-						complex_values[pixel_counter] = 0.0;
+						complex_values[pixel_counter] = 0.0 + I * 0.0;
 					}
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0;
+					complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 				pixel_counter++;
 			}
@@ -1093,7 +1093,7 @@ void Image::OptimalFilterSSNR(Curve &SSNR)
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0;
+					complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 				pixel_counter++;
 			}
@@ -1143,7 +1143,7 @@ void Image::OptimalFilterFSC(Curve &FSC)
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0;
+					complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 				pixel_counter++;
 			}
@@ -1465,7 +1465,7 @@ void Image::RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_inde
 
 	for (pixel_counter = 0; pixel_counter < rotated_image.real_memory_allocated / 2; pixel_counter++)
 	{
-		rotated_image.complex_values[pixel_counter] = 0.0;
+		rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
 		if (kernel_index[pixel_counter].pixel_index[0] != kernel_index[pixel_counter].pixel_index[3])
 		{
 			for (i = 0; i < 4; i++)
@@ -1728,7 +1728,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				}
 				else
 				{
-					rotated_image.complex_values[pixel_counter] = 0.0;
+					rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 			}
 		}
@@ -1748,9 +1748,9 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 			else
 			{
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				rotated_image.complex_values[pixel_counter] = 0.0;
+				rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = 0.0;
+				rotated_image.complex_values[pixel_counter2] = 0.0 + I * 0.0;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -1780,7 +1780,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				}
 				else
 				{
-					rotated_image.complex_values[pixel_counter] = 0.0;
+					rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 			}
 		}
@@ -1800,9 +1800,9 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 			else
 			{
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				rotated_image.complex_values[pixel_counter] = 0.0;
+				rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = 0.0;
+				rotated_image.complex_values[pixel_counter2] = 0.0+ I * 0.0;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -1817,7 +1817,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	rotated_image.complex_values[0] = 0.0;
+	rotated_image.complex_values[0] = 0.0 + I * 0.0;
 
 	rotated_image.is_in_real_space = false;
 }
@@ -1868,7 +1868,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 				}
 				else
 				{
-					image_to_extract.complex_values[pixel_counter] = 0.0;
+					image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				}
 			}
 		}
@@ -1888,9 +1888,9 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 			else
 			{
 				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0;
+				image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
 				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = 0.0;
+				image_to_extract.complex_values[pixel_counter2] = 0.0 + I * 0.0;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -1907,7 +1907,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 			else
 			{
 				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0;
+				image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
 			}
 		}
 	}
@@ -1947,7 +1947,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	image_to_extract.complex_values[0] = 0.0;
+	image_to_extract.complex_values[0] = 0.0 + I * 0.0;
 
 	image_to_extract.is_in_real_space = false;
 }
@@ -1964,11 +1964,11 @@ fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
 	if (x >= 0.0)
 	{
 		i_nearest = myroundint(x);
-		if (i_nearest > logical_upper_bound_complex_x) return 0.0;
+		if (i_nearest > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
 
 		j_nearest = myroundint(y);
-		if (j_nearest < logical_lower_bound_complex_y) return 0.0;
-		if (j_nearest > logical_upper_bound_complex_y) return 0.0;
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		if (j_nearest >= 0)
 		{
@@ -1983,11 +1983,11 @@ fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
 	else
 	{
 		i_nearest = myroundint(x);
-		if (i_nearest < logical_lower_bound_complex_x) return 0.0;
+		if (i_nearest < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
 
 		j_nearest = myroundint(y);
-		if (j_nearest < logical_lower_bound_complex_y) return 0.0;
-		if (j_nearest > logical_upper_bound_complex_y) return 0.0;
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		if (j_nearest > 0)
 		{
@@ -2007,7 +2007,7 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
 
-	fftwf_complex sum = 0.0;
+	fftwf_complex sum = 0.0 + I * 0.0;
 	int i;
 	int j;
 	int i_start;
@@ -2024,12 +2024,12 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 	{
 		i_start = int(floorf(x));
 		i_end = i_start + 1;
-		if (i_end > logical_upper_bound_complex_x) return 0.0;
+		if (i_end > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		for (j = j_start; j <= j_end; j++)
 		{
@@ -2053,13 +2053,13 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 	else
 	{
 		i_start = int(floorf(x));
-		if (i_start < logical_lower_bound_complex_x) return 0.0;
+		if (i_start < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
 		i_end = i_start + 1;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		for (j = j_start; j <= j_end; j++)
 		{
@@ -2088,7 +2088,7 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
 
-	fftwf_complex sum = 0.0;
+	fftwf_complex sum = 0.0 + I * 0.0;
 	int i;
 	int j;
 	int k;
@@ -2111,17 +2111,17 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	{
 		i_start = int(floorf(x));
 		i_end = i_start + 1;
-		if (i_end > logical_upper_bound_complex_x) return 0.0;
+		if (i_end > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		k_start = int(floorf(z));
-		if (k_start < logical_lower_bound_complex_z) return 0.0;
+		if (k_start < logical_lower_bound_complex_z) return 0.0 + I * 0.0;
 		k_end = k_start + 1;
-		if (k_end > logical_upper_bound_complex_z) return 0.0;
+		if (k_end > logical_upper_bound_complex_z) return 0.0 + I * 0.0;
 
 		for (k = k_start; k <= k_end; k++)
 		{
@@ -2158,18 +2158,18 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	else
 	{
 		i_start = int(floorf(x));
-		if (i_start < logical_lower_bound_complex_x) return 0.0;
+		if (i_start < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
 		i_end = i_start + 1;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
 
 		k_start = int(floorf(z));
-		if (k_start < logical_lower_bound_complex_z) return 0.0;
+		if (k_start < logical_lower_bound_complex_z) return 0.0 + I * 0.0;
 		k_end = k_start + 1;
-		if (k_end > logical_upper_bound_complex_z) return 0.0;
+		if (k_end > logical_upper_bound_complex_z) return 0.0 + I * 0.0;
 
 		for (k = k_start; k <= k_end; k++)
 		{
@@ -2335,7 +2335,7 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 			// Compute the square of the frequency
 			frequency_squared = powf(x_coordinate_2d, 2) + y_coord_sq;
 
-			complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth);
+			complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0;
 			pixel_counter++;
 		}
 	}
@@ -2353,8 +2353,8 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	int ii;
 	int jj;
 	int kk;
-	int outer_number_of_pixels;
-	int inner_number_of_pixels;
+	long outer_number_of_pixels;
+	long inner_number_of_pixels;
 
 	float x;
 	float y;
@@ -2615,8 +2615,8 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 						edge = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
 						complex_values[pixel_counter] *= edge;
 					}
-					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
-					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0;
+					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
+					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
 
 					pixel_counter++;
 				}
@@ -2829,7 +2829,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	int ii;
 	int jj;
 	int kk;
-	int number_of_pixels;
+	long number_of_pixels;
 
 	float x;
 	float y;
@@ -3071,11 +3071,11 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					}
 					if (invert)
 					{
-						if (frequency_squared <= mask_radius_squared) complex_values[pixel_counter] = 0.0;
+						if (frequency_squared <= mask_radius_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
 					}
 					else
 					{
-						if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0;
+						if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
 					}
 
 					pixel_counter++;
@@ -4762,7 +4762,7 @@ void Image::AverageRadially()
 					rad = sqrt(float(i_logi));
 					//
 
-					complex_values[address] = (average.ReturnLinearInterpolationFromX(rad),0.0);
+					complex_values[address] = (average.ReturnLinearInterpolationFromX(rad),0.0) + I * 0;
 
 					// Increment the address
 					address ++;
@@ -5929,7 +5929,7 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_w
 
 					//if (temp_logical_x > logical_upper_bound_complex_x || temp_logical_x < logical_lower_bound_complex_x) continue;
 
-					if (fill_with_noise == false) other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value);
+					if (fill_with_noise == false) other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value + I * 0);
 					else
 					{
 

@@ -913,6 +913,7 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 	  wxString s = _("OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
+	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
 	//  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
 
@@ -936,8 +937,8 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      sock->Read(&socket_input_buffer, SOCKET_CODE_SIZE);
-	      CheckSocketForError( sock );
+	      ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+
 
 	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 	      {
@@ -971,8 +972,8 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	 		 // which job is finished?
 
 	 		 int finished_job;
-	 		 sock->Read(&finished_job, 4);
-	 		CheckSocketForError( sock );
+	 		 ReadFromSocket(sock, &finished_job, 4);
+
 	 		 my_job_tracker.MarkJobFinished();
 
 //	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -995,8 +996,7 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			  // how many connections are there?
 
 			  int number_of_connections;
-              sock->Read(&number_of_connections, 4);
-              CheckSocketForError( sock );
+			  ReadFromSocket(sock, &number_of_connections, 4);
 
               my_job_tracker.AddConnection();
 
@@ -1235,6 +1235,11 @@ void RefinementManager::RunMerge3dJob()
 {
 	running_job_type = MERGE;
 
+	// start job..
+
+	if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
+	else
+	my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].gui_address);
 	my_parent->my_job_id = current_job_id;
@@ -1286,11 +1291,6 @@ void RefinementManager::RunMerge3dJob()
 		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
 
 		}
-
-		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
-		else
-		my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
-
 
 		my_parent->ProgressBar->Pulse();
 }
@@ -1390,8 +1390,26 @@ void RefinementManager::RunReconstructionJob()
 
 	// in the future store the reconstruction parameters..
 
+	// empty scratch directory..
+
+	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath());
 
 	// launch a controller
+
+
+	if (start_with_reconstruction == true)
+	{
+		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Initial Reconstructions...");
+		else my_parent->WriteBlueText("Calculating Initial Reconstruction...");
+
+	}
+	else
+	{
+		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Reconstructions...");
+		else my_parent->WriteBlueText("Calculating Reconstruction...");
+
+	}
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].gui_address);
 	my_parent->my_job_id = current_job_id;
@@ -1445,21 +1463,6 @@ void RefinementManager::RunReconstructionJob()
 		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
 
 	}
-
-	if (start_with_reconstruction == true)
-	{
-		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Initial Reconstructions...");
-		else my_parent->WriteBlueText("Calculating Initial Reconstruction...");
-
-	}
-	else
-	{
-		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Reconstructions...");
-		else my_parent->WriteBlueText("Calculating Reconstruction...");
-
-	}
-
-
 		my_parent->ProgressBar->Pulse();
 }
 
@@ -2059,8 +2062,8 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		}
 
-		wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath(), wxPATH_RMDIR_RECURSIVE);
-		wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath());
+		if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath(), wxPATH_RMDIR_RECURSIVE);
+		if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath());
 
 		my_parent->FSCResultsPanel->Show(true);
 		my_parent->AngularPlotPanel->Show(false);

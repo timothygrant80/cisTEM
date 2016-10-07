@@ -542,7 +542,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 				}
 				else
 				{ */
-				correlation_map->complex_values[0] = 0.0;
+				correlation_map->complex_values[0] = 0.0 + I * 0.0;
 				correlation_map->BackwardFFT();
 //				}
 	//			found_peak = sampled_image->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
@@ -591,7 +591,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 	//				correlation_map->SampleFFT(*sampled_image, sample_rate);
 	//				sampled_image->BackwardFFT();
 	//				found_peak = sampled_image->FindPeakAtOriginFast2D(0.5 * correlation_map->physical_address_of_box_center_x);
-					correlation_map->complex_values[0] = 0.0;
+					correlation_map->complex_values[0] = 0.0 + I * 0.0;
 					correlation_map->BackwardFFT();
 					found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
 //					wxPrintf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),

@@ -209,5 +209,14 @@ class RefinementParametersListCtrl: public wxListCtrl{
 };
 
 
+class OneSecondProgressDialog: public wxProgressDialog {
+
+	long time_of_last_update;
+
+	public :
+
+	OneSecondProgressDialog (const wxString &title, const wxString &message, int maximum=100, wxWindow *parent=NULL, int style=wxPD_APP_MODAL|wxPD_AUTO_HIDE);
+	bool Update	(int value, const wxString & newmsg = wxEmptyString, bool * skip = NULL);
+};
 
 #endif

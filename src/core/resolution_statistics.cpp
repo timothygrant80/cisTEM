@@ -263,7 +263,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 //				if (frequency_squared <= 0.25)
 //				{
-					temp_c = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
+					temp_c = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter])) + I * 0.0;
 					if (temp_c != 0.0)
 					{
 						if ((i != 0) || (i == 0 && zi > 0) || (i == 0 && yi > 0 && zi == 0))

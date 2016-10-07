@@ -253,7 +253,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // This is a new package
 	{
 		long number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this);
 
 		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
@@ -375,7 +375,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 //			wxPrintf ("x = %i, y = %i\n", current_x_pos + current_image.physical_address_of_box_center_x, current_y_pos + current_image.physical_address_of_box_center_y);
 
 			current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
-			cut_particle.Normalize();
+			cut_particle.ZeroFloatAndNormalize();
 			cut_particle.WriteSlice(&output_stack, position_in_stack);
 
 			// set the contained particles..
@@ -424,7 +424,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	{
 
 		long number_of_particles = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 1].contained_particles.GetCount();
-		wxProgressDialog *my_dialog = new wxProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this);
 
 		wxPrintf("Asking for ref pkg = %i\n", template_page->my_panel->GroupComboBox->GetSelection() - 1);
 		wxPrintf("Asking for parameter = %i\n", parameter_page->my_panel->GroupComboBox->GetSelection());

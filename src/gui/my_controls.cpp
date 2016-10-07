@@ -5,6 +5,25 @@
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 
+OneSecondProgressDialog::OneSecondProgressDialog(const wxString &title, const wxString &message, int maximum, wxWindow *parent, int style)
+:
+wxProgressDialog(title, message, maximum, parent, style)
+{
+	time_of_last_update = time(NULL);
+}
+
+bool OneSecondProgressDialog::Update(int value, const wxString & newmsg, bool * skip)
+{
+	if (time(NULL) - time_of_last_update > 0 || newmsg != wxEmptyString)
+	{
+		wxProgressDialog::Update(value, newmsg, skip);
+		if (newmsg != wxEmptyString) Fit();
+		time_of_last_update = time(NULL);
+	}
+
+}
+
+
 NumericTextCtrl::NumericTextCtrl(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
 :
 wxTextCtrl(parent, id, value, pos, size, style, validator, name)

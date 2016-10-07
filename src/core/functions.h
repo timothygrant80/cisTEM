@@ -32,6 +32,22 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes)
+{
+	MyDebugAssertTrue(socket->GetFlags() == (wxSOCKET_BLOCK | wxSOCKET_WAITALL ), "Socket flags not correctly set!");
+	socket->Write(buffer, nbytes);
+	MyDebugAssertTrue(socket->LastWriteCount() == nbytes , "Socket didn't write all bytes!");
+	MyDebugAssertTrue(socket->Error() == false, "socket write has an error!");
+}
+
+inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes)
+{
+	MyDebugAssertTrue(socket->GetFlags() == (wxSOCKET_BLOCK | wxSOCKET_WAITALL ), "Socket flags not correctly set!");
+	socket->Read(buffer, nbytes);
+	MyDebugAssertTrue(socket->LastReadCount() == nbytes , "Socket didn't read all bytes!");
+	MyDebugAssertTrue(socket->Error() == false, "socket write has an error!");
+}
+
 inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
 {
 	for (int counter = 0; counter < size_of_array; counter++)

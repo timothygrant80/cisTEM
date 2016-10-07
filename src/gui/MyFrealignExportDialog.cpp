@@ -65,7 +65,6 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 
 
 		micrograph.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(),1);
-		micrograph_mean = micrograph.ReturnAverageOfRealValues();
 
 		if (FlipCTFCheckBox->IsChecked())
 		{
@@ -74,6 +73,9 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 			micrograph.ApplyCTFPhaseFlip(my_ctf);
 			micrograph.BackwardFFT();
 		}
+
+		micrograph_mean = micrograph.ReturnAverageOfRealValues();
+		//if (NormalizeCheckBox->IsChecked()) micrograph.ZeroFloatAndNormalize();
 
 		if (image_counter == 0)
 		{

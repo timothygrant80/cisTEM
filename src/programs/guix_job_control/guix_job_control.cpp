@@ -7,6 +7,9 @@
 #include "../../core/core_headers.h"
 #include "../../core/socket_codes.h"
 
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
+
 #define SERVER_ID 100
 #define GUI_SOCKET_ID 101
 #define MASTER_SOCKET_ID 102
@@ -64,11 +67,13 @@ JobControlApp : public wxAppConsole
 	void SendAllJobsFinished();
 	void SendNumberofConnections();
 
+	void OnThreadLaunchJob(wxThreadEvent &event);
+	void OnThreadSendInfo(wxThreadEvent &event);
 
 
 	public:
 		virtual bool OnInit();
-		void LaunchRemoteJob();
+
 
 
 };
@@ -76,18 +81,37 @@ JobControlApp : public wxAppConsole
 class LaunchJobThread : public wxThread
 {
 	public:
-    	LaunchJobThread(JobControlApp *handler) : wxThread(wxTHREAD_DETACHED) { main_thread_pointer = handler; }
+    	LaunchJobThread(JobControlApp *handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char *wanted_job_code) : wxThread(wxTHREAD_DETACHED)
+		{
+    		main_thread_pointer = handler;
+    		current_run_profile = wanted_run_profile;
+    		ip_address = wanted_ip_address;
+    		port_number = wanted_port;
+
+    		for (int counter = 0; counter <= SOCKET_CODE_SIZE; counter++)
+    		{
+    			job_code[counter] = wanted_job_code[counter];
+    		}
+
+		}
     	//~LaunchJobThread();
 	protected:
 
     	JobControlApp *main_thread_pointer;
+    	RunProfile current_run_profile;
+    	wxString ip_address;
+    	wxString port_number;
+    	unsigned char job_code[SOCKET_CODE_SIZE];
+
+		void LaunchRemoteJob();
+	 	void QueueInfo(wxString info_to_queue);
     	virtual ExitCode Entry();
 };
 
 
 wxThread::ExitCode LaunchJobThread::Entry()
 {
-	main_thread_pointer->LaunchRemoteJob();
+	LaunchRemoteJob();
 	return (wxThread::ExitCode)0;     // success
 }
 
@@ -98,6 +122,7 @@ IMPLEMENT_APP(JobControlApp)
 bool JobControlApp::OnInit()
 {
 
+	wxPrintf("Running...\n");
 	long counter;
 	wxIPV4address my_address;
 
@@ -199,6 +224,12 @@ bool JobControlApp::OnInit()
 	gui_socket->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
 	gui_socket->Notify(true);
 
+
+	// Job launching event..
+
+	Bind(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB, &JobControlApp::OnThreadLaunchJob, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &JobControlApp::OnThreadSendInfo, this);
+
 	// Setup the connection timer, to check for connections periodically in case the events get missed..
 
 	Bind(wxEVT_TIMER, wxTimerEventHandler( JobControlApp::OnConnectionTimer ), this);
@@ -209,7 +240,7 @@ bool JobControlApp::OnInit()
 
 }
 
-void JobControlApp::LaunchRemoteJob()
+void LaunchJobThread::LaunchRemoteJob()
 {
 	long counter;
 	long command_counter;
@@ -224,13 +255,13 @@ void JobControlApp::LaunchRemoteJob()
 	wxString execution_command;
 
 
-	if(my_job_package.my_profile.controller_address == "")
+	if(current_run_profile.controller_address == "")
 	{
-		executable = my_job_package.my_profile.executable_name + " " + my_ip_address + " " + my_port_string + " ";
+		executable = current_run_profile.executable_name + " " + ip_address + " " + port_number + " ";
 	}
 	else
 	{
-		executable = my_job_package.my_profile.executable_name + " " + my_job_package.my_profile.controller_address + " " + my_port_string + " ";
+		executable = current_run_profile.executable_name + " " + current_run_profile.controller_address + " " + port_number + " ";
 	}
 
 	for (counter = 0; counter < SOCKET_CODE_SIZE; counter++)
@@ -241,27 +272,55 @@ void JobControlApp::LaunchRemoteJob()
 
 	wxMilliSleep(2000);
 
-		for (command_counter = 0; command_counter < my_job_package.my_profile.number_of_run_commands; command_counter++)
+	for (command_counter = 0; command_counter <  current_run_profile.number_of_run_commands; command_counter++)
 	{
 
-		execution_command = my_job_package.my_profile.run_commands[command_counter].command_to_run;
+		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
 		execution_command.Replace("$command", executable);
 
-		execution_command += "&";
+		//execution_command += "&";
 
-		SendInfo(wxString::Format("Job Control : Executing '%s' %i times.", execution_command, my_job_package.my_profile.run_commands[command_counter].number_of_copies));
+		QueueInfo(wxString::Format("Job Control : Executing '%s' %i times.", execution_command, current_run_profile.run_commands[command_counter].number_of_copies));
 
-		for (process_counter = 0; process_counter < my_job_package.my_profile.run_commands[command_counter].number_of_copies; process_counter++)
+		for (process_counter = 0; process_counter < current_run_profile.run_commands[command_counter].number_of_copies; process_counter++)
 		{
+
+			wxMilliSleep( current_run_profile.run_commands[command_counter].delay_time_in_ms);
+
+			wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB);
+			test_event->SetString(execution_command);
+
+			wxQueueEvent(main_thread_pointer, test_event);
 			//wxExecute(execution_command);
-			wxMilliSleep(my_job_package.my_profile.run_commands[command_counter].delay_time_in_ms);
-			system(execution_command.ToUTF8().data());
+			//system(execution_command.ToUTF8().data());
 		}
 
 	}
 
 	// now we wait for the connections - this is taken care of as server events..
 
+}
+
+void  LaunchJobThread::QueueInfo(wxString info_to_queue)
+{
+	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SENDINFO);
+	test_event->SetString(info_to_queue);
+
+	wxQueueEvent(main_thread_pointer, test_event);
+}
+
+
+void JobControlApp::OnThreadLaunchJob(wxThreadEvent &event)
+{
+	if (wxExecute(event.GetString()) == -1)
+	{
+		SendError(wxString::Format("Error: Failed to launch (%s)", event.GetString()));
+	}
+}
+
+void JobControlApp::OnThreadSendInfo(wxThreadEvent& my_event)
+{
+	SendInfo(my_event.GetString());
 }
 
 void JobControlApp::SendError(wxString error_to_send)
@@ -688,7 +747,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  // receive the job details..
 
 			  my_job_package.ReceiveJobPackage(sock);
-			  LaunchJobThread *launch_thread = new LaunchJobThread(this);
+			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, my_ip_address, my_port_string, job_code);
 
 			  if ( launch_thread->Run() != wxTHREAD_NO_ERROR )
 			  {

@@ -96,12 +96,14 @@ void MovieAsset::Recheck_if_valid()
 void MovieAsset::Update(wxString wanted_filename)
 {
 	filename = wanted_filename;
+	is_valid = false;
 	
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{
 		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
 	}
 	
+
 }
 
 
@@ -179,7 +181,7 @@ ImageAsset::ImageAsset(wxString wanted_filename)
 void ImageAsset::Update(wxString wanted_filename)
 {
 	filename = wanted_filename;
-
+	is_valid = false;
 	int number_in_stack;
 
 
@@ -317,7 +319,7 @@ VolumeAsset::VolumeAsset(wxString wanted_filename)
 void VolumeAsset::Update(wxString wanted_filename)
 {
 	filename = wanted_filename;
-
+	is_valid = false;
 
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{
@@ -415,11 +417,13 @@ void MovieAssetList::CheckMemory()
 
 }
 
-long MovieAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
+long MovieAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check)
 {
 	long found_position = -1;
 
-	for (long counter = 0; counter < number_of_assets; counter++)
+	if (max_asset_number_to_check == -1) max_asset_number_to_check = number_of_assets;
+
+	for (long counter = 0; counter < max_asset_number_to_check; counter++)
 	{
 		if (reinterpret_cast < MovieAsset *> (assets)[counter].filename == file_to_find)
 		{
@@ -586,11 +590,13 @@ void ImageAssetList::CheckMemory()
 
 }
 
-long ImageAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
+long ImageAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check)
 {
 	long found_position = -1;
 
-	for (long counter = 0; counter < number_of_assets; counter++)
+	if (max_asset_number_to_check == -1) max_asset_number_to_check = number_of_assets;
+
+	for (long counter = 0; counter < max_asset_number_to_check; counter++)
 	{
 		if (reinterpret_cast < ImageAsset *> (assets)[counter].filename == file_to_find)
 		{
@@ -916,11 +922,13 @@ void VolumeAssetList::CheckMemory()
 
 }
 
-long VolumeAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname)
+long VolumeAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check)
 {
 	long found_position = -1;
 
-	for (long counter = 0; counter < number_of_assets; counter++)
+	if (max_asset_number_to_check == -1) max_asset_number_to_check = number_of_assets;
+
+	for (long counter = 0; counter < max_asset_number_to_check; counter++)
 	{
 		if (reinterpret_cast < VolumeAsset *> (assets)[counter].filename == file_to_find)
 		{

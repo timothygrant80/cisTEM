@@ -177,7 +177,7 @@ public:
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
 	void RemoveAll();
-	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
 	void CheckMemory();
 
 };
@@ -202,7 +202,7 @@ public:
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
 	void RemoveAll();
-	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
 	void CheckMemory();
 
 };
@@ -253,7 +253,7 @@ public:
 	void AddAsset(Asset *asset_to_add);
 	void RemoveAsset(long number_to_remove);
 	void RemoveAll();
-	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false);
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
 	void CheckMemory();
 
 };

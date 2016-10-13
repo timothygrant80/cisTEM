@@ -78,22 +78,22 @@ bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 
 	execution_command = job_to_launch->launch_command;
 	execution_command.Replace("$command", executable);
-	execution_command += "&";
+	//execution_command += "&";
 
 	job_to_launch->parent_panel->WriteInfoText("Launching Job...\n(" + execution_command + ")\n");
 
-	/*
+
 	if (wxExecute(execution_command) == -1)
 	{
 		job_to_launch->parent_panel->WriteErrorText("Failed: Error launching job!\n\n");
 		return false;
 	}
-	else
-	{
-		job_to_launch->parent_panel->WriteInfoText("Success: Job launched!\n\n");
-	}*/
+	//else
+	//{
+		//job_to_launch->parent_panel->WriteInfoText("Success: Job launched!\n\n");
+	//}
 
-	system(execution_command.ToUTF8().data());
+	//system(execution_command.ToUTF8().data());
 
 	return true;
 }

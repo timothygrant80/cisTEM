@@ -85,7 +85,7 @@ public:
 
 	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
-	void AllocateAsPointingToSliceIn3D(Image *wanted3d, int wanted_slice);
+	void AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice);
 
 	void Deallocate();
 

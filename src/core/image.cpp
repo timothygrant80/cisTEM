@@ -3247,7 +3247,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, bool should_be_in_rea
 }
 
 
-void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, int wanted_slice)
+void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
 {
 	Deallocate();
 	is_in_real_space = wanted3d->is_in_real_space;
@@ -3258,7 +3258,7 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, int wanted_slice)
 
 	// we are not actually allocating, we are pointing..
 
-	int bytes_in_slice = wanted3d->real_memory_allocated / wanted3d->logical_z_dimension;
+	long bytes_in_slice = wanted3d->real_memory_allocated / wanted3d->logical_z_dimension;
 
 	image_memory_should_not_be_deallocated = true;
 	is_in_memory = true; // kind of a lie

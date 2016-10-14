@@ -54,7 +54,7 @@ MyApp : public wxAppConsole
 		wxSocketClient *controller_socket;
 		bool 			is_connected;
 		bool            currently_running_a_job;
-		wxIPV4address 	controller_address;
+		wxIPV4address 	active_controller_address;
 		long 			controller_port;
 		unsigned char   job_code[SOCKET_CODE_SIZE];
 		short int my_port;

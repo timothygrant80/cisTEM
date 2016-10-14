@@ -61,9 +61,17 @@ bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 	wxString execution_command;
 	wxString executable;
 
+
 	if (job_to_launch->gui_address == "")
 	{
-		executable = "cisTEM_job_control " + main_frame->my_ip_address + " " + main_frame->my_port_string + " ";
+		wxString ip_address_string;
+
+		for (counter = 0; counter < main_frame->all_my_ip_addresses.GetCount(); counter++)
+		{
+			if (counter != 0) ip_address_string += ",";
+			ip_address_string += main_frame->all_my_ip_addresses.Item(counter);
+		}
+		executable = "cisTEM_job_control " + ip_address_string + " " + main_frame->my_port_string + " ";
 	}
 	else
 	{

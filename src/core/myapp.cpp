@@ -29,6 +29,10 @@ bool MyApp::OnInit()
 	connection_timer = NULL;
 	zombie_timer = NULL;
 
+	wxString current_address;
+	wxArrayString possible_controller_addresses;
+	wxIPV4address junk_address;
+
 
 	// Bind the thread events
 
@@ -82,14 +86,21 @@ bool MyApp::OnInit()
 	is_running_locally = false;
 
 
-	// get the address and port of the gui (should be command line options).
+	// get the address and port of the job controller (should be command line options).
 
+	wxStringTokenizer controller_ip_address_tokens(command_line_parser.GetParam(0),",");
 
-	if (controller_address.Hostname(command_line_parser.GetParam(0)) == false)
+	while(controller_ip_address_tokens.HasMoreTokens() == true)
 	{
-		MyPrintWithDetails(" Error: Address (%s) - not recognized as an IP or hostname\n\n", command_line_parser.GetParam(0));
-		exit(-1);
-	};
+		current_address = controller_ip_address_tokens.GetNextToken();
+		possible_controller_addresses.Add(current_address);
+		if (junk_address.Hostname(current_address) == false)
+		{
+			MyDebugPrint(" Error: Address (%s) - not recognized as an IP or hostname\n\n", current_address);
+			exit(-1);
+		};
+	}
+
 
 	if (command_line_parser.GetParam(1).ToLong(&controller_port) == false)
 	{
@@ -119,7 +130,7 @@ bool MyApp::OnInit()
 
 	// Attempt to connect to the controller..
 
-	controller_address.Service(controller_port);
+	active_controller_address.Service(controller_port);
 	is_connected = false;
 
 	//MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 30 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
@@ -135,8 +146,23 @@ bool MyApp::OnInit()
 
 	wxSleep(2);
 
-	controller_socket->Connect(controller_address, false);
-	controller_socket->WaitOnConnect(120);
+	for (counter = 0; counter < possible_controller_addresses.GetCount(); counter++)
+	{
+		active_controller_address.Hostname(possible_controller_addresses.Item(counter));
+		controller_socket->Connect(active_controller_address, false);
+		controller_socket->WaitOnConnect(120);
+
+		if (controller_socket->IsConnected() == false)
+		{
+		   controller_socket->Close();
+		   //wxPrintf("Connection Failed.\n\n");
+		}
+		else
+		{
+			break;
+		}
+	}
+
 
 	if (controller_socket->IsConnected() == false || controller_socket->IsOk() == false)
 	{
@@ -310,15 +336,15 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  // connect to the new master..
 
 				  controller_socket = new wxSocketClient();
-				  controller_address.Hostname(master_ip_address);
-				  controller_address.Service(master_port);
+				  active_controller_address.Hostname(master_ip_address);
+				  active_controller_address.Service(master_port);
 
 				  // Setup the event handler and subscribe to most events
 				   controller_socket->SetEventHandler(*this, SOCKET_ID);
 				   controller_socket->SetNotify(wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
 				   controller_socket->Notify(true);
 
-				  controller_socket->Connect(controller_address, false);
+				  controller_socket->Connect(active_controller_address, false);
 				  controller_socket->WaitOnConnect(120);
 
 				  if (controller_socket->IsConnected() == false)

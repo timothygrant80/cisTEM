@@ -21,8 +21,9 @@ JobControlApp : public wxAppConsole
 {
 	wxTimer *connection_timer;
 	bool have_assigned_master;
+	wxArrayString possible_gui_addresses;
 
-	wxIPV4address gui_address;
+	wxIPV4address active_gui_address;
 	wxIPV4address my_address;
 	wxIPV4address master_process_address;
 
@@ -41,8 +42,9 @@ JobControlApp : public wxAppConsole
 
 	short int my_port;
 
+	wxArrayString my_possible_ip_addresses;
 	wxString my_port_string;
-	wxString my_ip_address;
+	wxString my_active_ip_address;
 	wxString master_ip_address;
 	wxString master_port;
 
@@ -125,6 +127,9 @@ bool JobControlApp::OnInit()
 	wxPrintf("Running...\n");
 	long counter;
 	wxIPV4address my_address;
+	wxIPV4address junk_address;
+	wxString current_address;
+	wxArrayString buffer_addresses;
 
 	// set up the parameters for passing the gui address..
 
@@ -147,12 +152,18 @@ bool JobControlApp::OnInit()
 
 	// get the address and port of the gui (should be command line options).
 
+	wxStringTokenizer gui_ip_address_tokens(command_line_parser.GetParam(0),",");
 
-	if (gui_address.Hostname(command_line_parser.GetParam(0)) == false)
+	while(gui_ip_address_tokens.HasMoreTokens() == true)
 	{
-		MyDebugPrint(" Error: Address (%s) - not recognized as an IP or hostname\n\n", command_line_parser.GetParam(0));
-		exit(-1);
-	};
+		current_address = gui_ip_address_tokens.GetNextToken();
+		possible_gui_addresses.Add(current_address);
+		if (junk_address.Hostname(current_address) == false)
+		{
+			MyDebugPrint(" Error: Address (%s) - not recognized as an IP or hostname\n\n", current_address);
+			exit(-1);
+		};
+	}
 
 	if (command_line_parser.GetParam(1).ToLong(&gui_port) == false)
 	{
@@ -186,7 +197,7 @@ bool JobControlApp::OnInit()
 
 	// Attempt to connect to the gui..
 
-	gui_address.Service(gui_port);
+	active_gui_address.Service(gui_port);
 	gui_socket = new wxSocketClient();
 
 	// Setup the event handler and subscribe to most events
@@ -195,16 +206,30 @@ bool JobControlApp::OnInit()
 	gui_socket_is_connected = false;
 	gui_panel_is_connected = false;
 
+	for (counter = 0; counter < possible_gui_addresses.GetCount(); counter++)
+	{
+		active_gui_address.Hostname(possible_gui_addresses.Item(counter));
+		wxPrintf("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 30 sec) ...\n", active_gui_address.IPAddress(), active_gui_address.Service());
 
-	wxPrintf("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 30 sec) ...\n", gui_address.IPAddress(), gui_address.Service());
+		gui_socket->Connect(active_gui_address, false);
+		gui_socket->WaitOnConnect(30);
 
-	gui_socket->Connect(gui_address, false);
-	gui_socket->WaitOnConnect(30);
+		if (gui_socket->IsConnected() == false)
+		{
+		   gui_socket->Close();
+		   wxPrintf("Connection Failed.\n\n");
+		}
+		else
+		{
+			break;
+		}
+	}
+
 
 	if (gui_socket->IsConnected() == false)
 	{
 	   gui_socket->Close();
-	   MyDebugPrint(" JOB CONTROL : Failed ! Unable to connect\n");
+	   wxPrintf("All connections Failed! Exiting...\n");
 	   return false;
 	}
 
@@ -214,7 +239,15 @@ bool JobControlApp::OnInit()
 
 	// we can use this socket to get our ip_address
 
-	my_ip_address = ReturnIPAddressFromSocket(gui_socket);
+	buffer_addresses = ReturnIPAddress();
+	current_address = ReturnIPAddressFromSocket(gui_socket);
+	if (current_address.IsEmpty() == false) my_possible_ip_addresses.Add(current_address);
+
+	for (counter = 0; counter < buffer_addresses.GetCount(); counter++)
+	{
+		if (buffer_addresses.Item(counter) != current_address) my_possible_ip_addresses.Add(buffer_addresses.Item(counter));
+	}
+
 	number_of_slaves_already_connected = 0;
 
 	// subscribe to gui events..
@@ -747,7 +780,16 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  // receive the job details..
 
 			  my_job_package.ReceiveJobPackage(sock);
-			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, my_ip_address, my_port_string, job_code);
+
+			  wxString ip_address_string;
+
+			  for (int counter = 0; counter < my_possible_ip_addresses.GetCount(); counter++)
+			  {
+			  		if (counter != 0) ip_address_string += ",";
+			  		ip_address_string += my_possible_ip_addresses.Item(counter);
+			  }
+
+			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, ip_address_string, my_port_string, job_code);
 
 			  if ( launch_thread->Run() != wxTHREAD_NO_ERROR )
 			  {

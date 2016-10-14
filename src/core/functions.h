@@ -115,7 +115,7 @@ inline bool IsOdd(int number)
 	else return true;
 }
 
-wxString ReturnIPAddress();
+wxArrayString ReturnIPAddress();
 wxString ReturnIPAddressFromSocket(wxSocketBase *socket);
 
 void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);

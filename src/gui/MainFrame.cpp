@@ -65,7 +65,7 @@ MyMainFrame::~MyMainFrame()
 void MyMainFrame::SetupServer()
 {
 	wxIPV4address my_address;
-	wxIPV4address buffer_address;
+//	wxIPV4address buffer_address;
 
 	for (short int current_port = START_PORT; current_port <= END_PORT; current_port++)
 	{
@@ -93,9 +93,9 @@ void MyMainFrame::SetupServer()
 
 		  	  this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
 
-			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
+//			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
 			 // my_ip_address = buffer_address.IPAddress();
-			  my_ip_address = ReturnIPAddress();
+		      all_my_ip_addresses = ReturnIPAddress();
 			  my_port_string = wxString::Format("%hi", my_port);
 
 			  break;

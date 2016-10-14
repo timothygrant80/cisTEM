@@ -147,7 +147,7 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 }
 
 
-wxString ReturnIPAddress()
+wxArrayString ReturnIPAddress()
 {
 
 	  	struct ifaddrs * ifAddrStruct=NULL;
@@ -155,14 +155,15 @@ wxString ReturnIPAddress()
 	    void * tmpAddrPtr=NULL;
         char addressBuffer[INET_ADDRSTRLEN];
 
+
+        wxArrayString all_ip_addresses;
+
         for (int counter = 0; counter < INET_ADDRSTRLEN; counter++)
         {
         	addressBuffer[counter] = 0;
         }
 
-        wxString ip_address = "";
-
-	    getifaddrs(&ifAddrStruct);
+        getifaddrs(&ifAddrStruct);
 
 	    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
 	    {
@@ -176,16 +177,26 @@ wxString ReturnIPAddress()
 	            tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
 
 	            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+	            //if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) ip_address = addressBuffer;
+	            if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) all_ip_addresses.Add(addressBuffer);
 
-	            if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) ip_address = addressBuffer;
 	        }
 
 	    }
+
+	    all_ip_addresses.Add("127.0.0.1");
+
+/*    wxPrintf("There are %li ip addresses\n", all_ip_addresses.GetCount());
+
+	    for (int counter = 0; counter < all_ip_addresses.GetCount(); counter++)
+	    {
+	    	wxPrintf("%i = %s\n", counter, all_ip_addresses.Item(counter));
+	    }*/
+
 	    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 
-	    if (ip_address == "") ip_address = "127.0.0.1";
 
-	    return ip_address;
+	    return all_ip_addresses;
 }
 
 wxString ReturnIPAddressFromSocket(wxSocketBase *socket)
@@ -200,7 +211,8 @@ wxString ReturnIPAddressFromSocket(wxSocketBase *socket)
 
 	if (ip_address == "127.0.0.1")
 	{
-		ip_address = ReturnIPAddress(); // last chance to get a non loopback address
+		ip_address = "";
+		//ip_address = ReturnIPAddress(); // last chance to get a non loopback address
 	}
 
 	return ip_address;

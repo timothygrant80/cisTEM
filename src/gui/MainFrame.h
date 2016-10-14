@@ -18,7 +18,7 @@ class MyMainFrame : public MainFrame
 
 		GuiJobController job_controller;
 
-		wxString my_ip_address;
+		wxArrayString all_my_ip_addresses;
 		wxString my_port_string;
 
 		Project current_project;

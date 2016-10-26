@@ -263,6 +263,7 @@ public:
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void InvertRealValues();
+	void TakeReciprocalRealValues();
 	void AddConstant(float constant_to_add);
 	void MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add);
 	void AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by);
@@ -324,7 +325,7 @@ public:
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
-	float ReturnMaximumValue(float inner_radius, float outer_radius);
+	float ReturnMaximumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);
 	void SetMaximumValue(float new_maximum_value);
 	void SetMinimumValue(float new_minimum_value);
 	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);

@@ -3547,6 +3547,18 @@ void Image::MultiplyByConstant(float constant_to_multiply_by)
 	}
 }
 
+void Image::TakeReciprocalRealValues()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+			real_values[pixel_counter] = 1.0 / real_values[pixel_counter];
+	}
+
+
+}
+
 void Image::InvertRealValues()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");

@@ -410,3 +410,58 @@ void CheckSocketForError(wxSocketBase *socket_to_check)
 		}
 	}
 }
+
+wxString ReturnSocketErrorText(wxSocketBase *socket_to_check)
+{
+	if (socket_to_check->Error() == true)
+	{
+		switch(socket_to_check->LastError())
+		{
+		    case wxSOCKET_NOERROR  :
+		       return "No Error!";
+		       break;
+
+		    case wxSOCKET_INVOP  :
+		       return "Invalid Operation.";
+		       break;
+
+		    case wxSOCKET_IOERR  :
+		       return "Input/Output error";
+		       break;
+
+		    case wxSOCKET_INVADDR  :
+		       return "Invalid address passed to wxSocket.";
+		       break;
+
+		    case wxSOCKET_INVSOCK  :
+		       return "Invalid socket (uninitialized).";
+		       break;
+
+		    case wxSOCKET_NOHOST  :
+				return "No corresponding host.";
+			break;
+
+		    case wxSOCKET_INVPORT  :
+				 return "Invalid port.";
+			break;
+
+		    case wxSOCKET_WOULDBLOCK  :
+				 return ("The socket is non-blocking and the operation would block");
+			break;
+
+		    case wxSOCKET_TIMEDOUT  :
+				 return "The timeout for this operation expired.";
+			break;
+
+		    case wxSOCKET_MEMERR  :
+				 return "Memory exhausted.";
+			break;
+		    // you can have any number of case statements.
+		    default :
+		    	return("Unknown error.");
+		}
+	}
+	else return "Error, not set.";
+
+}
+

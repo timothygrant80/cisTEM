@@ -310,7 +310,6 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 // now we should everything encoded, so send the information to the socket..
 	 // disable events on the socket..
 	 socket->SetNotify(wxSOCKET_LOST_FLAG);
-	 socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 	 // inform what we want to do..
 	 WriteToSocket(socket, socket_ready_to_send_job_package, SOCKET_CODE_SIZE);
 	 socket->WaitForRead(5);

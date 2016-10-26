@@ -233,7 +233,8 @@ bool JobControlApp::OnInit()
 	   return false;
 	}
 
-	gui_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	//gui_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	gui_socket->SetFlags(wxSOCKET_WAITALL);
 	wxPrintf(" JOB CONTROL: Succeeded - Connection established!\n\n");
 	gui_socket_is_connected = true;
 
@@ -444,14 +445,15 @@ void JobControlApp::CheckForConnections()
 
 		  if (sock == NULL) break;
 
-		  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+		  //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+		  sock->SetFlags(wxSOCKET_WAITALL);
 
 		  // request identification..
 		  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
-		  sock->WaitForRead(5);
+		//  sock->WaitForRead(5);
 
-		  if (sock->IsData() == true)
-		  {
+		  //if (sock->IsData() == true)
+		  //{
 			  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 			  // does this correspond to our job code?
@@ -484,27 +486,27 @@ void JobControlApp::CheckForConnections()
 
 					  // read the ip address and port..
 
-					  sock->WaitForRead(30);
-					  if (sock->IsData() == true)
-					  {
+					  //sock->WaitForRead(30);
+					//  if (sock->IsData() == true)
+					  //{
 						  master_ip_address = ReceivewxStringFromSocket(sock);
-					  }
-					  else
-					  {
-						  SendError("JOB CONTROL: Read Timeout waiting for ip address");
-						  abort();
-					  }
+				//	  }
+				//	  else
+					//  {
+				//		  SendError("JOB CONTROL: Read Timeout waiting for ip address");
+				//		  abort();
+				//	  }
 
-					  sock->WaitForRead(30);
-					  if (sock->IsData() == true)
-					  {
+					 // sock->WaitForRead(30);
+					//  if (sock->IsData() == true)
+					 // {
 						  master_port = ReceivewxStringFromSocket(sock);
-					  }
-					  else
-					  {
-						  SendError("JOB CONTROL: Read Timeout waiting for port");
-						  abort();
-					  }
+					  //}
+					  //else
+					  //{
+				//		  SendError("JOB CONTROL: Read Timeout waiting for port");
+				//		  abort();
+				//	  }
 
 
 					  // setup events on the master..
@@ -534,14 +536,14 @@ void JobControlApp::CheckForConnections()
 
 				  }
 			  }
-		  }
-		  else
-		  {
-			  SendError("JOB CONTROL : Read Timeout waiting for job ID");
-			  // time out - close the connection
-			  sock->Destroy();
-			  sock = NULL;
-		  }
+		//  }
+		 // else
+		  //{
+		//	  SendError("JOB CONTROL : Read Timeout waiting for job ID");
+		//	  // time out - close the connection
+		//	  sock->Destroy();
+		//	  sock = NULL;
+		 // }
 	  }
 
 
@@ -557,6 +559,8 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 {
 	//  wxString s = _("JOB CONTROL : OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
+//	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	  sock->SetFlags(wxSOCKET_WAITALL);
 
 	  MyDebugAssertTrue(sock == master_socket, "Master Socket event from Non Master socket??");
 
@@ -732,6 +736,8 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 {
 	  wxString s = _("JOB CONTROL : OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
+	 // sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	  sock->SetFlags(wxSOCKET_WAITALL);
 
 	  MyDebugAssertTrue(sock == gui_socket, "GUI Socket event from Non GUI socket??");
 

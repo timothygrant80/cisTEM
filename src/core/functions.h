@@ -32,21 +32,52 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
+
 inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes)
 {
-	MyDebugAssertTrue(socket->GetFlags() == (wxSOCKET_BLOCK | wxSOCKET_WAITALL ), "Socket flags not correctly set!");
+
+#ifdef DEBUG
+	bool should_abort = false;
+	//socket->SetFlags(wxSOCKET_WAITALL);
+	if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
+#endif
+
 	socket->Write(buffer, nbytes);
-	MyDebugAssertTrue(socket->LastWriteCount() == nbytes , "Socket didn't write all bytes!");
-	MyDebugAssertTrue(socket->Error() == false, "socket write has an error!");
+
+#ifdef DEBUG
+	if (socket->LastWriteCount() != nbytes) {MyPrintWithDetails("Socket didn't write all bytes! (%u / %u) ", socket->LastWriteCount(), nbytes); should_abort = true;}
+	if (socket->Error() == true) {MyPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+
+	if (should_abort == true) abort();
+
+#endif
+
 }
 
 inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes)
 {
-	MyDebugAssertTrue(socket->GetFlags() == (wxSOCKET_BLOCK | wxSOCKET_WAITALL ), "Socket flags not correctly set!");
+#ifdef DEBUG
+	bool should_abort = false;
+	//socket->SetFlags(wxSOCKET_WAITALL);
+	if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
+#endif
+
 	socket->Read(buffer, nbytes);
-	MyDebugAssertTrue(socket->LastReadCount() == nbytes , "Socket didn't read all bytes!");
-	MyDebugAssertTrue(socket->Error() == false, "socket write has an error!");
+
+#ifdef DEBUG
+	if (socket->LastReadCount() != nbytes) {MyPrintWithDetails("Socket didn't read all bytes! (%u / %u) ", socket->LastReadCount(), nbytes); should_abort = true;}
+	if (socket->Error() == true) {MyPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+
+	if (should_abort == true) abort();
+
+#endif
+
+
+
 }
+
+
 
 inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
 {

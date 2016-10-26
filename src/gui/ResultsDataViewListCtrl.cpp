@@ -1,7 +1,7 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-#include "icons/open_eye_icon_20.cpp"
+//#include "icons/open_eye_icon_20.cpp"
 #include "icons/checked_checkbox_icon_20.cpp"
 #include "icons/unchecked_checkbox_icon_20.cpp"
 #include "icons/checked_checkbox_eye_icon_20.cpp"
@@ -17,7 +17,7 @@ wxBitmap CheckboxRenderer::unchecked_eye_bmp;
 ResultsDataViewListCtrl::ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pt, const wxSize& sz, long style):
    wxDataViewListCtrl(parent, id, pt, sz, style)
 {
-
+	my_parent = parent;
 	currently_selected_row = -1;
 	currently_selected_column = -1;
 
@@ -32,7 +32,7 @@ ResultsDataViewListCtrl::ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id
 	// selection change event..
 
 	Bind(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler( ResultsDataViewListCtrl::OnSelectionChange), this);
-	Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler( ResultsDataViewListCtrl::OnContextMenu), this);
+//	Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler( ResultsDataViewListCtrl::OnContextMenu), this);
 	Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, wxDataViewEventHandler( ResultsDataViewListCtrl::OnValueChanged), this);
 	Bind(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler( ResultsDataViewListCtrl::OnHeaderClick), this);
 
@@ -42,7 +42,7 @@ ResultsDataViewListCtrl::ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id
 ResultsDataViewListCtrl::~ResultsDataViewListCtrl()
 {
 	Unbind(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler( ResultsDataViewListCtrl::OnSelectionChange), this);
-	Unbind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler( ResultsDataViewListCtrl::OnContextMenu), this);
+//	Unbind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler( ResultsDataViewListCtrl::OnContextMenu), this);
 	Unbind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, wxDataViewEventHandler( ResultsDataViewListCtrl::OnValueChanged), this);
 	Unbind(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler( ResultsDataViewListCtrl::OnHeaderClick), this);
 }
@@ -155,6 +155,14 @@ void ResultsDataViewListCtrl::OnValueChanged(wxDataViewEvent &event)
 	GetValue(temp_variant, row, column);
 	long value = temp_variant.GetLong();
 
+	if (value == CHECKED_WITH_EYE || value == UNCHECKED_WITH_EYE)
+	{
+		Deselect();
+		currently_selected_row = row;
+		currently_selected_column = column;
+	}
+
+
 	if (value == CHECKED || value == CHECKED_WITH_EYE) // make sure there are no other checked items in this row..
 	{
 		for (int column_counter = 2; column_counter < GetColumnCount(); column_counter++)
@@ -169,7 +177,6 @@ void ResultsDataViewListCtrl::OnValueChanged(wxDataViewEvent &event)
 		}
 	}
 
-	//wxPrintf("Value changed at %i, %i = %li\n", row, column, value);
 
 	event.Skip();
 
@@ -274,6 +281,24 @@ void ResultsDataViewListCtrl::OnContextMenu(wxDataViewEvent &event)
 	wxDataViewItem current_item;
 	wxDataViewColumn *current_column = NULL;
 	wxPoint position = wxGetMousePosition();
+
+	int scroll_amount = 0;
+
+	if (HasScrollbar(wxHORIZONTAL) == true)
+	{
+		int x_pixels_per_unit;
+		int y_pixels_per_unit;
+		//my_parent->GetScrollPixelsPerUnit(x_pixels_per_unit, y_pixels_per_unit);
+		scroll_amount = GetScrollPos(wxHORIZONTAL);
+		wxPrintf("scroll amount = %i\n", scroll_amount);
+
+	}
+	else
+	{
+		wxPrintf("no scroll - scroll amount = %i\n", scroll_amount);
+	}
+
+
 	wxPoint new_position = ScreenToClient(position);
 
 	HitTest	(ScreenToClient(wxGetMousePosition()), current_item, current_column);
@@ -333,7 +358,7 @@ bool CheckboxRenderer::ActivateCell	(const wxRect & cell, wxDataViewModel * 	mod
 	mouseEvent->GetPosition(&mouse_x, &mouse_y);
 	//wxPrintf("Activate, X=%i, Y=%i    Mouse X=%i, Mouse Y=%i\n", cell.x, cell.y, mouse_x, mouse_y);
 
-	if (mouse_x >= 0 && mouse_x <= 20)
+	if (mouse_x >= 0 && mouse_x <= 18)
 	{
 		//if (current_mode == CHECKED) model->ChangeValue(wxVariant(UNCHECKED), item, col);
 		//else
@@ -343,6 +368,16 @@ bool CheckboxRenderer::ActivateCell	(const wxRect & cell, wxDataViewModel * 	mod
 		//else
 		if (current_mode == UNCHECKED_WITH_EYE) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item, col);
 	}
+	else
+	if (mouse_x >= 20 && mouse_x <= 40)
+	{
+		if (current_mode == CHECKED) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item,col);
+		else
+		if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
+	}
+
+
+
 }
 
 

@@ -135,7 +135,8 @@ bool MyApp::OnInit()
 
 	//MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 30 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
 	controller_socket = new wxSocketClient();
-	controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+	//controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+	controller_socket->SetFlags(wxSOCKET_WAITALL );
 
 	// Setup the event handler and subscribe to most events
 
@@ -163,6 +164,8 @@ bool MyApp::OnInit()
 		}
 	}
 
+	//controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+	controller_socket->SetFlags(wxSOCKET_WAITALL );
 
 	if (controller_socket->IsConnected() == false || controller_socket->IsOk() == false)
 	{
@@ -198,7 +201,10 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 {
 	wxSocketBase *sock = event.GetSocket();
 
-	MyDebugAssertTrue(sock == controller_socket, "GUI Socket event from Non controller socket??");
+	MyDebugAssertTrue(sock == controller_socket, "Original Socket event from Non controller socket??");
+
+	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	sock->SetFlags(wxSOCKET_WAITALL);
 
 	// if we got here, we have actual communication, and therefore we are not a zombie..
 
@@ -235,11 +241,6 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  i_am_the_master = true;
 
-		    	  // redirect socket events appropriately
-
-				  Unbind(wxEVT_SOCKET,wxSocketEventHandler( MyApp::OnOriginalSocketEvent), this,  SOCKET_ID );
-				  Bind(wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnControllerSocketEvent), this,  SOCKET_ID );
-
 		    	  // we need to start a server so that the slaves can connect..
 
 		    	  SetupServer();
@@ -257,10 +258,10 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  // it should now send a conformation code followed by the package..
 
-		    	  sock->WaitForRead(10);
+		    	//  sock->WaitForRead(10);
 
-		    	  if (sock->IsData() == true)
-		    	  {
+		    	//  if (sock->IsData() == true)
+		    	  //{
 		    		  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 		    	 	  // is this correct?
@@ -290,16 +291,16 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 							  slave_sockets[counter] = NULL;
 						  }
 		    	 	  }
-		    	  }
-		    	  else
-		    	  {
-		    		  MyDebugPrintWithDetails(" JOB MASTER : ...Read Timeout waiting for job package \n\n");
-		    		  // time out - close the connection
-		    		  sock->Destroy();
-		    		  sock = NULL;
-		    		  ExitMainLoop();
-		    		  return;
-		    	  }
+		    	 // }
+		    	  //else
+		    	  //{
+		    	//	  MyDebugPrintWithDetails(" JOB MASTER : ...Read Timeout waiting for job package \n\n");
+		    	//	  // time out - close the connection
+		    	//	  sock->Destroy();
+		    	//	  sock = NULL;
+		    	//	  ExitMainLoop();
+		    	//	  return;
+		    	  //}
 
 
 		    	  // Setup a timer for any straggling connections..
@@ -310,6 +311,10 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 		    	  // Enable input events again
 			      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+		    	  // redirect socket events appropriately
+
+				  Unbind(wxEVT_SOCKET,wxSocketEventHandler( MyApp::OnOriginalSocketEvent), this,  SOCKET_ID );
+				  Bind(wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnControllerSocketEvent), this,  SOCKET_ID );
 
 		      }
 		      else
@@ -336,6 +341,9 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  // connect to the new master..
 
 				  controller_socket = new wxSocketClient();
+				  //controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+				  controller_socket->SetFlags(wxSOCKET_WAITALL );
+
 				  active_controller_address.Hostname(master_ip_address);
 				  active_controller_address.Service(master_port);
 
@@ -346,6 +354,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 				  controller_socket->Connect(active_controller_address, false);
 				  controller_socket->WaitOnConnect(120);
+				  //controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+				  controller_socket->SetFlags( wxSOCKET_WAITALL );
 
 				  if (controller_socket->IsConnected() == false)
 				  {
@@ -411,6 +421,9 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 
 	  wxString s = _("JOB MASTER : OnControllerSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
+
+	  //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	  sock->SetFlags(wxSOCKET_WAITALL);
 
 	  MyDebugAssertTrue(sock == controller_socket, "Controller Socket event from Non Controller socket??");
 
@@ -576,6 +589,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 	wxString s = _("JOB MASTER: OnSlaveSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
+	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	sock->SetFlags( wxSOCKET_WAITALL);
 
 	float *result;
 
@@ -730,7 +745,8 @@ void MyApp::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
-		socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+		//socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+		socket_server->SetFlags( wxSOCKET_WAITALL );
 
 		if (	socket_server->Ok())
 		{
@@ -793,13 +809,14 @@ void MyApp::CheckForConnections()
 
 		 if (sock == NULL) break;
 
-		 sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
+		 //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
+		 sock->SetFlags( wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
 		 WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
 
-		 sock->WaitForRead(5);
+//		 sock->WaitForRead(5);
 
-		 if (sock->IsData() == true)
-		 {
+	//	 if (sock->IsData() == true)
+	//	 {
 			  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 		   	  // does this correspond to our job code?
@@ -844,14 +861,14 @@ void MyApp::CheckForConnections()
 		 			SocketSendInfo("All slaves have re-connected to the master.");
 		 		}
 		   	  }
-		 }
-		 else
-		 {
-		 		SocketSendError("JOB MASTER : ...Read Timeout waiting for job ID");
-		 	 	// time out - close the connection
-		 		sock->Destroy();
-		 		sock = NULL;
-		 }
+		// }
+		 //else
+		 //{
+		 	//	SocketSendError("JOB MASTER : ...Read Timeout waiting for job ID");
+		 	// 	// time out - close the connection
+		 	//	sock->Destroy();
+		 	//	sock = NULL;
+		// }
 
 
 	 }
@@ -865,7 +882,8 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 	wxString s = _("JOB : OnMasterSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
+	sock->SetFlags( wxSOCKET_WAITALL );
 
 	MyDebugAssertTrue(sock == controller_socket, "Master Socket event from Non controller socket??");
 
@@ -910,12 +928,12 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			   	  // we are connected, request the first job..
 				 is_connected = true;
 				 //MyDebugPrint("JOB SLAVE : Requesting job");
-				 WriteToSocket(controller_socket, socket_send_next_job, SOCKET_CODE_SIZE);
+				 WriteToSocket(sock, socket_send_next_job, SOCKET_CODE_SIZE);
 
 				 JobResult temp_result; // dummy result for the initial request - not reallt very nice
 				 temp_result.job_number = -1;
 				 temp_result.result_size = 0;
-				 temp_result.SendToSocket(controller_socket);
+				 temp_result.SendToSocket(sock);
 
 
 			 }

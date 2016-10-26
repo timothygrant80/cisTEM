@@ -24,7 +24,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files apply_gain_ref
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -190,3 +190,15 @@ extract_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 extract_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 extract_particles_LDFLAGS = $(WX_LIBS_BASE)
 extract_particles_LDADD = libcore.a
+
+sum_all_mrc_files_SOURCES = programs/sum_all_mrc_files/sum_all_mrc_files.cpp
+sum_all_mrc_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+sum_all_mrc_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+sum_all_mrc_files_LDFLAGS = $(WX_LIBS_BASE)
+sum_all_mrc_files_LDADD = libcore.a
+
+apply_gain_ref_SOURCES = programs/apply_gain_ref/apply_gain_ref.cpp
+apply_gain_ref_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+apply_gain_ref_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+apply_gain_ref_LDFLAGS = $(WX_LIBS_BASE)
+apply_gain_ref_LDADD = libcore.a

@@ -13,6 +13,7 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl
 {
 	protected:
 
+	wxWindow *my_parent;
 	wxIcon checked_icon;
 	wxIcon unchecked_icon;
 	wxIcon checked_eye_icon;

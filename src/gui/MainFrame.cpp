@@ -277,10 +277,10 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
 
 	  //MyDebugPrint(" Waiting for reply...");
-  	  sock->WaitForRead(5);
+  //	  sock->WaitForRead(5);
 
-      if (sock->IsData() == true)
-      {
+    //  if (sock->IsData() == true)
+     // {
     	  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
     	  // does this correspond to one of our jobs?
@@ -311,14 +311,14 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
 	    	  sock->Notify(true);
 	      }
-      }
-      else
-   	  {
-	  	   	   MyDebugPrint(" ...Read Timeout \n\n");
-	  	   	   // time out - close the connection
-	    	   sock->Destroy();
-	    	   sock = NULL;
-	  }
+ //     }
+  //    else
+   //	  {
+	 // 	   	   MyDebugPrint(" ...Read Timeout \n\n");
+	  //	   	   // time out - close the connection
+	   // 	   sock->Destroy();
+	   // 	   sock = NULL;
+	  //}
 }
 
 void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
@@ -330,6 +330,23 @@ void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 	if (current_project.is_open == true)
 	{
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
+	}
+
+	// if there is a default run profiles, import it..
+
+	wxString default_run_profile_path = wxStandardPaths::Get().GetExecutablePath();
+	default_run_profile_path = default_run_profile_path.BeforeLast('/');
+	default_run_profile_path += "/default_run_profiles.txt";
+
+
+	if (DoesFileExist(default_run_profile_path) == true)
+	{
+	//	wxPrintf("Importing run profiles from '%s'\n", default_run_profile_path);
+		run_profiles_panel->ImportRunProfilesFromDisk(default_run_profile_path);
+	}
+	else
+	{
+	//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
 	}
 
 }

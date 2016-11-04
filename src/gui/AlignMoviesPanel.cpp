@@ -473,6 +473,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
 
+
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Prepare Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
 		// job is :-
@@ -526,7 +529,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 													current_acceleration_voltage,
 													current_dose_per_frame,
 													current_pre_exposure);
+
+		my_progress_dialog->Update(counter + 1);
 	}
+
+	my_progress_dialog->Destroy();
 
 	// launch a controller
 
@@ -890,6 +897,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 19, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
 
 	wxDateTime now = wxDateTime::Now();
+
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
+
+
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
 		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiii", alignment_id,
@@ -915,6 +926,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 		alignment_id++;
 
+		my_progress_dialog->Update(counter + 1);
 
 	}
 
@@ -937,6 +949,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 		main_frame->current_project.database.EndBatchInsert();
 		alignment_id++;
+
+		my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + counter + 1);
 
 	}
 
@@ -1006,7 +1020,11 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 			}
 
 			alignment_id++;
+
+			my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + my_job_tracker.total_number_of_jobs + counter + 1);
 	}
+
+	my_progress_dialog->Destroy();
 
 	main_frame->current_project.database.EndImageAssetInsert();
 

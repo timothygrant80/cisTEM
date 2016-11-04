@@ -36,6 +36,7 @@ FindParticlesPanel( parent )
 
 	//result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
+	FindParticlesSplitterWindow->Unsplit(LeftPanel);
 
 }
 
@@ -320,6 +321,7 @@ void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 	}
 
 	PickingAlgorithmComboBox->SetSelection(-1);
+	PickingAlgorithmComboBox->ChangeValue("Please Select...");
 
 	PickingAlgorithmComboBox->Thaw();
 }
@@ -337,6 +339,7 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 	case(0):
 			// Ab initio
 			PickingParametersPanel->Show(true);
+			FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, 528);
 			ExpertToggleButton->Enable(true);
 			break;
 	default:
@@ -997,6 +1000,9 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "find_particles", number_of_jobs);
 
+
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Prepare Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
 
@@ -1041,11 +1047,15 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 															algorithm_to_find_background,
 															number_of_background_boxes
 															);
+
+		my_progress_dialog->Update(counter + 1);
 	}
 
 	// launch a controller
 
 my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].gui_address);
+
+	my_progress_dialog->Destroy();
 
 	if (my_job_id != -1)
 	{
@@ -1430,7 +1440,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 
 
 	my_job_tracker.MarkJobFinished();
-//	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
 	// store the results..
 
@@ -1486,6 +1496,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	int picking_id = starting_picking_id + 1;
 	int picking_job_id =  main_frame->current_project.database.ReturnHighestPickingJobID() + 1;
 
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 3, this, wxPD_APP_MODAL);
 
 	// Record the parameters we used to pick
 	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
@@ -1521,6 +1532,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 																						NumberOfBackgroundBoxesSpinCtrl->GetValue(),
 																						0);
 		picking_id ++;
+		my_progress_dialog->Update(counter + 1);
 	}
 	main_frame->current_project.database.EndBatchInsert();
 
@@ -1534,6 +1546,8 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 			parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
 			main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,parent_id);
 		}
+
+		my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + group_counter);
 	}
 
 	// Remove from particle_position_assets assets which have a parent_id which is from picking_job_id that we've just done
@@ -1554,17 +1568,20 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		picking_id++;
 	}
 
-
+	my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 1);
 
 	// Now that we have our array of assets, let's add them to the database
 	main_frame->current_project.database.CreateParticlePickingResultsTable(picking_job_id);
 	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToResultsTable(picking_job_id,&array_of_assets);
 	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&array_of_assets);
 
+	my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 2);
 
 
 	// At this point, the database should be up-to-date
 	particle_position_asset_panel->ImportAllFromDatabase();
+
+	my_progress_dialog->Destroy();
 
 
 	particle_position_asset_panel->is_dirty = true;
@@ -1599,4 +1616,12 @@ ArrayOfParticlePositionAssets MyFindParticlesPanel::ParticlePositionsFromJobResu
 	}
 
 	return array_of_assets;
+}
+
+void MyFindParticlesPanel::UpdateProgressBar()
+{
+	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
+	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
+
+	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }

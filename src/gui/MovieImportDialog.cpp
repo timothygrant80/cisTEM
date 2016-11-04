@@ -173,23 +173,37 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 			// Check this movie is not already an asset..
 
+			wxDateTime start = wxDateTime::UNow();
+
 			if (movie_asset_panel->IsFileAnAsset(temp_asset.filename) == false)
 			{
+				wxDateTime end = wxDateTime::UNow();
+
+				wxPrintf("File searching took %li milliseconds\n", (end-start).GetMilliseconds());
+
 				if (temp_asset.is_valid == true)
+				{
+					if (temp_asset.number_of_frames < 3 )
 					{
+						my_error->ErrorText->AppendText(wxString::Format(wxT("%s contains less than 3 frames, skipping\n"), temp_asset.ReturnFullPathString()));
+						have_errors = true;
+					}
+					else
+					{
+
 						temp_asset.asset_id = movie_asset_panel->current_asset_number;
 						temp_asset.asset_name = temp_asset.filename.GetName();
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
 						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
-
 					}
-					else
-					{
-						my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
-						have_errors = true;
-					}
+				}
+				else
+				{
+					my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
+					have_errors = true;
+				}
 			}
 			else
 			{

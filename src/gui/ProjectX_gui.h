@@ -679,6 +679,7 @@ class FindParticlesPanel : public JobPanel
 		wxPanel* RightPanel;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
 		wxPanel* ProgressPanel;
 		wxGauge* ProgressBar;
 		wxStaticText* NumberConnectedText;
@@ -689,7 +690,6 @@ class FindParticlesPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		wxComboBox* RunProfileComboBox;
 		wxButton* StartPickingButton;
-		wxStaticLine* m_staticline11;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }

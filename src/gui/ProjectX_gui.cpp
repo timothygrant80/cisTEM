@@ -1724,6 +1724,8 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer44->Add( m_staticText211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	PickingAlgorithmComboBox->SetMinSize( wxSize( 150,-1 ) );
+	
 	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALL, 5 );
 	
 	
@@ -1754,11 +1756,13 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
 	
-	FindParticlesSplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	FindParticlesSplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
 	FindParticlesSplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
 	FindParticlesSplitterWindow->SetMinimumPaneSize( 10 );
 	
 	LeftPanel = new wxPanel( FindParticlesSplitterWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	LeftPanel->Hide();
+	
 	wxBoxSizer* bSizer214;
 	bSizer214 = new wxBoxSizer( wxVERTICAL );
 	
@@ -1802,7 +1806,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer212->Add( TestOnCurrentMicrographButton, 0, wxALL, 5 );
 	
 	AutoPickRefreshCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Auto preview"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer212->Add( AutoPickRefreshCheckBox, 0, wxALL, 5 );
+	bSizer212->Add( AutoPickRefreshCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	fgSizer1->Add( bSizer212, 1, wxEXPAND, 5 );
@@ -1811,7 +1815,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	fgSizer1->Add( ImageComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
+	InputSizer->Add( fgSizer1, 0, wxEXPAND, 5 );
 	
 	ExpertOptionsPanel = new wxPanel( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	ExpertOptionsPanel->Hide();
@@ -1923,7 +1927,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ExpertOptionsPanel->SetSizer( ExpertInputSizer );
 	ExpertOptionsPanel->Layout();
 	ExpertInputSizer->Fit( ExpertOptionsPanel );
-	InputSizer->Add( ExpertOptionsPanel, 1, wxALL|wxEXPAND, 0 );
+	InputSizer->Add( ExpertOptionsPanel, 0, wxALL|wxEXPAND, 0 );
 	
 	
 	PickingParametersPanel->SetSizer( InputSizer );
@@ -1978,6 +1982,9 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer215->Fit( RightPanel );
 	FindParticlesSplitterWindow->SplitVertically( LeftPanel, RightPanel, 528 );
 	bSizer43->Add( FindParticlesSplitterWindow, 1, wxEXPAND, 5 );
+	
+	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
 	
 	wxBoxSizer* bSizer48;
 	bSizer48 = new wxBoxSizer( wxHORIZONTAL );
@@ -2078,9 +2085,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	
 	bSizer43->Add( bSizer48, 0, wxEXPAND, 5 );
-	
-	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
 	
 	
 	this->SetSizer( bSizer43 );
@@ -5316,7 +5320,7 @@ LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWi
 	
 	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please enter the estimated molecular weight for the refinement.  In general, this should be the molecular weight of the coherent parts (e.g. micelle would not be included)."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please enter the estimated largest dimension of the particle. This will be used for autosizing masks and shift limits, it need not be exact, and it is better to err on the large size."), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	

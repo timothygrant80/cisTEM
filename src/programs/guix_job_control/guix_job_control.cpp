@@ -90,7 +90,7 @@ class LaunchJobThread : public wxThread
     		ip_address = wanted_ip_address;
     		port_number = wanted_port;
 
-    		for (int counter = 0; counter <= SOCKET_CODE_SIZE; counter++)
+    		for (int counter = 0; counter < SOCKET_CODE_SIZE; counter++)
     		{
     			job_code[counter] = wanted_job_code[counter];
     		}
@@ -130,6 +130,7 @@ bool JobControlApp::OnInit()
 	wxIPV4address junk_address;
 	wxString current_address;
 	wxArrayString buffer_addresses;
+	have_assigned_master = false;
 
 	// set up the parameters for passing the gui address..
 
@@ -346,7 +347,7 @@ void  LaunchJobThread::QueueInfo(wxString info_to_queue)
 
 void JobControlApp::OnThreadLaunchJob(wxThreadEvent &event)
 {
-	if (wxExecute(event.GetString()) == -1)
+	if (wxExecute(event.GetString()) == 0)
 	{
 		SendError(wxString::Format("Error: Failed to launch (%s)", event.GetString()));
 	}

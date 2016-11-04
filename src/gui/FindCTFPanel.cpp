@@ -549,6 +549,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	}
 
 
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Prepare Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "ctffind", number_of_jobs);
 
 	for (counter = 0; counter < number_of_jobs; counter++)
@@ -641,7 +642,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 													    known_astigmatism, // 21
 													    known_astigmatism_angle, // 22
 														resample_if_pixel_too_small); // 23
+
+		my_progress_dialog->Update(counter + 1);
 	}
+
+	my_progress_dialog->Destroy();
 
 	// launch a controller
 
@@ -1015,6 +1020,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	int ctf_estimation_id = starting_ctf_estimation_id + 1;
 	int ctf_estimation_job_id =  main_frame->current_project.database.ReturnHighestFindCTFJobID() + 1;
 
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 2, this, wxPD_APP_MODAL);
+
 	// loop over all the jobs, and add them..
 	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 31,
 			                                                                              "CTF_ESTIMATION_ID",
@@ -1117,6 +1124,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
 																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument()); // large astigmatism expected
 		ctf_estimation_id++;
+		my_progress_dialog->Update(counter + 1);
+
 	}
 
 	main_frame->current_project.database.EndBatchInsert();
@@ -1147,11 +1156,13 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		image_asset_panel->ReturnAssetPointer(current_asset)->ctf_estimation_id = ctf_estimation_id;
 
 		ctf_estimation_id++;
+		my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + counter + 1);
 
 
 	}
 
 	main_frame->current_project.database.EndImageAssetInsert();
+	my_progress_dialog->Destroy();
 	ctf_results_panel->is_dirty = true;
 
 }

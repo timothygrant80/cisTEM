@@ -208,7 +208,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 	else
 	if (event.GetPage() == molecular_weight_page)
 	{
-		if (template_page->my_panel->InfoText->has_autowrapped == false)
+		if (molecular_weight_page->my_panel->InfoText->has_autowrapped == false)
 		{
 			molecular_weight_page->Freeze();
 			molecular_weight_page->my_panel->InfoText->AutoWrap();
@@ -253,7 +253,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // This is a new package
 	{
 		long number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
-		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 
 		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();

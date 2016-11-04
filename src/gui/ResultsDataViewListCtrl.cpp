@@ -64,17 +64,25 @@ void ResultsDataViewListCtrl::SizeColumns()
 	int total_size_of_checkbox_columns;
 
 	GetClientSize(&my_width,&my_height);
+	my_width -=  wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
 	number_of_columns = GetColumnCount();
 
 	GetColumn(0)->SetWidth(60);
-	GetColumn(0)->SetMinWidth(60);
+
+	//GetColumn(0)->SetMinWidth(60);
 	//GetColumn(1)->SetWidth(wxCOL_WIDTH_AUTOSIZE);
 
 	if (number_of_columns > 2)
 	{
-		total_size_of_checkbox_columns = ((number_of_columns - 2) * 60) + 60;
 
-		GetColumn(1)->SetWidth(my_width-total_size_of_checkbox_columns-2);
+		total_size_of_checkbox_columns = ((number_of_columns - 2) * 53) + 60;
+
+		int new_width = my_width-total_size_of_checkbox_columns - 2;
+
+		if (new_width > 100) GetColumn(1)->SetWidth(new_width);
+		else
+		GetColumn(1)->SetWidth(100);
+
 		//GetColumn(1)->SetMinWidth(my_width-total_size_of_checkbox_columns-2);
 
 
@@ -263,9 +271,10 @@ void ResultsDataViewListCtrl::ChangeDisplayTo(const int row, const int column)
 				currently_selected_row = row;
 				currently_selected_column = column;
 
+
 				EnsureVisible(RowToItem(row), GetColumn(column));
-			//	Update();
-			//	Refresh();
+//				Update();
+	//			Refresh();
 
 			}
 

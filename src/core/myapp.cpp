@@ -73,7 +73,7 @@ bool MyApp::OnInit()
 		is_running_locally = true;
 		DoInteractiveUserInput();
 		DoCalculation();
-		return false;
+		exit(0);
 	}
 	else
 	if (number_of_arguments != 3)

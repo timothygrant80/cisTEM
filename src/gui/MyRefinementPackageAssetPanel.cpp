@@ -310,6 +310,7 @@ void MyRefinementPackageAssetPanel::OnVolumeListItemActivated( wxListEvent& even
 {
 	MyVolumeChooserDialog *dialog = new MyVolumeChooserDialog(this);
 	dialog->ComboBox->SetSelection(volume_asset_panel->ReturnArrayPositionFromAssetID(all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex())) + 1);
+	dialog->Fit();
 	if (dialog->ShowModal() == wxID_OK)
 	{
 		if (dialog->selected_volume_id != all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex()))

@@ -530,7 +530,11 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 
 		// select the first row..
 		doing_panel_fill = false;
-		if (number_of_assets > 0) ResultDataView->ChangeDisplayTo(0, ResultDataView->ReturnCheckedColumn(0));
+		if (number_of_assets > 0)
+		{
+			ResultDataView->ChangeDisplayTo(0, ResultDataView->ReturnCheckedColumn(0));
+			ResultDataView->EnsureVisible(ResultDataView->RowToItem(-1), ResultDataView->GetColumn(ResultDataView->ReturnCheckedColumn(0)));
+		}
 		ResultDataView->SizeColumns();
 		ResultDataView->Thaw();
 	}

@@ -335,6 +335,7 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 		if (number_of_assets > 0)
 		{
 			ResultDataView->ChangeDisplayTo(0, ResultDataView->ReturnCheckedColumn(0));
+			ResultDataView->EnsureVisible(ResultDataView->RowToItem(-1), ResultDataView->GetColumn(ResultDataView->ReturnCheckedColumn(0)));
 
 		}
 		ResultDataView->SizeColumns();

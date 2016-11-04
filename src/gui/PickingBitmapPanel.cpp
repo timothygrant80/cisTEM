@@ -288,18 +288,18 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 
 			if (should_high_pass && ! should_low_pass)
 			{
-				wxPrintf("High pass filtering: %f %f\n",high_pass_radius,filter_edge_width);
+		//		wxPrintf("High pass filtering: %f %f\n",high_pass_radius,filter_edge_width);
 				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
 			}
 			else if (should_low_pass && ! should_high_pass)
 			{
-				wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
+		//		wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
 				//image_in_bitmap.CosineMask(low_pass_radius,filter_edge_width,false);
 				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
 			}
 			else if (should_low_pass & should_high_pass)
 			{
-				wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
+			//	wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
 				//image_in_bitmap.CosineRingMask(high_pass_radius,low_pass_radius,filter_edge_width);
 				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
 				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);

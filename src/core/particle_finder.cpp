@@ -1168,7 +1168,7 @@ void ParticleFinder::GenerateATemplate()
 
 	template_image[0].Allocate(minimum_box_size_for_picking,minimum_box_size_for_picking,1);
 	template_image[0].SetToConstant(1.0);
-	template_image[0].CosineMask(typical_radius_in_pixels,typical_radius_in_pixels,false,true,0.0);
+	template_image[0].CosineMask(typical_radius_in_pixels,5.0,false,true,0.0);
 #ifdef dump_intermediate_files
 	template_image[0].QuickAndDirtyWriteSlice("dbg_template.mrc",1);
 #endif

@@ -4,6 +4,7 @@
 /** Implementing MainFrame */
 class MyMainFrame : public MainFrame
 {
+		bool is_fullscreen;
 	public:
 		/** Constructor */
 		MyMainFrame( wxWindow* parent );
@@ -38,6 +39,8 @@ class MyMainFrame : public MainFrame
 
 		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
 		void OnExportToFrealign( wxCommandEvent & event );
+
+		void OnCharHook( wxKeyEvent& event );
 
 		void OnServerEvent(wxSocketEvent& event);
 		void OnSocketEvent(wxSocketEvent& event);

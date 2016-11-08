@@ -33,6 +33,7 @@ MainFrame( parent )
 	// Add Movies..
 	//movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
+	is_fullscreen = false;
 	socket_server = NULL;
 	SetupServer();
 
@@ -52,6 +53,7 @@ MainFrame( parent )
 		SetSize(x_offset, y_offset, 1600, 980);
 	}
 
+    Connect(wxEVT_CHAR_HOOK, wxKeyEventHandler(MyMainFrame::OnCharHook));
 
 }
 
@@ -62,6 +64,28 @@ MyMainFrame::~MyMainFrame()
 		socket_server->Destroy();
 	}
 }
+
+
+void MyMainFrame::OnCharHook( wxKeyEvent& event )
+{
+
+	if (event.GetKeyCode() == WXK_F11)
+	{
+		if (is_fullscreen == true)
+		{
+			ShowFullScreen(false);
+			is_fullscreen = false;
+		}
+		else
+		{
+			ShowFullScreen(true);
+			is_fullscreen = true;
+		}
+	}
+
+	event.Skip();
+}
+
 void MyMainFrame::SetupServer()
 {
 	wxIPV4address my_address;
@@ -323,6 +347,15 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 
 void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 {
+	if (current_project.is_open)
+	{
+	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
+
+	    current_project.Close();
+		SetTitle("cisTEM");
+
+	}
+
 	MyNewProjectWizard *my_wizard = new MyNewProjectWizard(this);
 	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
 	my_wizard->RunWizard(my_wizard->m_pages.Item(0));

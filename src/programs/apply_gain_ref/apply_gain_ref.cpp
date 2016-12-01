@@ -42,7 +42,7 @@ void ApplyGainRef::DoInteractiveUserInput()
 
 	if (should_remove_outliers == true)
 	{
-		num_sigmas			             	=		my_input->GetFloatFromUser("Number of standard deviations","Pixels more than this number of standard deviations above or below the mean will be reset to the mean","6.0",0.0f);
+		num_sigmas			             	=		my_input->GetFloatFromUser("Number of standard deviations","Pixels more than this number of standard deviations above or below the mean will be reset to the mean","8.0",0.0f);
 	}
 
 	bool		zero_float_and_normalize	=		my_input->GetYesNoFromUser("Also zero-float and normalize?","After outlier pixels have been removed, zero-float and normalize images","no");
@@ -94,6 +94,7 @@ bool ApplyGainRef::DoCalculation()
 	{
 		my_image.ReadSlice(&my_input_file,image_counter+1);
 		my_image.MultiplyPixelWise(gain_reference);
+
 		my_image.ReplaceOutliersWithMean(num_sigmas);
 
 		if (should_resample == true)

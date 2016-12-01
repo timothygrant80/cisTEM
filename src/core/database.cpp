@@ -929,6 +929,12 @@ bool Database::GetFromBatchSelect(const char *column_format, ...)
 			va_arg(args, int *)[0] = sqlite3_column_int(batch_statement, argument_counter);
 		}
 		else
+		if (*column_format == 's') // single (float)
+		{
+			double temp_double =  sqlite3_column_double(batch_statement, argument_counter);
+			va_arg(args, float *)[0] = float(temp_double);
+		}
+		else
 		if (*column_format == 'l') // long
 		{
 			va_arg(args, long *)[0] = sqlite3_column_int64(batch_statement, argument_counter);
@@ -1549,6 +1555,8 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	float temp_part_ssnr;
 	float temp_rec_ssnr;
 
+	bool more_data;
+
 	ClassRefinementResults junk_class_results;
 	RefinementResult junk_result;
 
@@ -1622,34 +1630,31 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	{
 		temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Alloc(temp_refinement->number_of_particles);
 		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESULT_%li_%i", temp_refinement->refinement_id, class_counter + 1);
-		return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code, sql_select_command );
 
-		return_code = sqlite3_step(list_statement);
+		more_data = BeginBatchSelect(sql_select_command);
 
-		while (  return_code == SQLITE_ROW)
+		while (more_data == true)
 		{
-			temp_result.position_in_stack = sqlite3_column_int64(list_statement, 0);
-			temp_result.psi = sqlite3_column_double(list_statement, 1);
-			temp_result.theta = sqlite3_column_double(list_statement, 2);
-			temp_result.phi = sqlite3_column_double(list_statement, 3);
-			temp_result.xshift = sqlite3_column_double(list_statement, 4);
-			temp_result.yshift = sqlite3_column_double(list_statement, 5);
-			temp_result.defocus1 = sqlite3_column_double(list_statement, 6);
-			temp_result.defocus2 = sqlite3_column_double(list_statement, 7);
-			temp_result.defocus_angle = sqlite3_column_double(list_statement, 8);
-			temp_result.occupancy = sqlite3_column_double(list_statement, 9);
-			temp_result.logp =  sqlite3_column_double(list_statement, 10);
-			temp_result.sigma =  sqlite3_column_double(list_statement, 11);
-			temp_result.score =  sqlite3_column_double(list_statement, 12);
-			temp_result.score_change =  sqlite3_column_double(list_statement, 13);
+			more_data = GetFromBatchSelect("lsssssssssssss", &temp_result.position_in_stack,
+					                                                                              &temp_result.psi,
+																								  &temp_result.theta,
+																								  &temp_result.phi,
+																								  &temp_result.xshift,
+																								  &temp_result.yshift,
+																								  &temp_result.defocus1,
+																								  &temp_result.defocus2,
+																								  &temp_result.defocus_angle,
+																								  &temp_result.occupancy,
+																								  &temp_result.logp,
+																								  &temp_result.sigma,
+																								  &temp_result.score,
+																								  &temp_result.score_change);
 
 			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
-			return_code = sqlite3_step(list_statement);
 		}
 
-		MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
-		sqlite3_finalize(list_statement);
+		EndBatchSelect();
+
 	}
 
 	// resolution statistics
@@ -1658,31 +1663,22 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	{
 		temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.Init(temp_refinement->resolution_statistics_pixel_size, temp_refinement->resolution_statistics_box_size);
 
-		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESOLUTION_STATISTICS_%li_%i", temp_refinement->refinement_id, class_counter + 1);
-		return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+		sql_select_command = wxString::Format("SELECT RESOLUTION, FSC, PART_FSC, PART_SSNR, REC_SSNR FROM REFINEMENT_RESOLUTION_STATISTICS_%li_%i", temp_refinement->refinement_id, class_counter + 1);
+		more_data = BeginBatchSelect(sql_select_command);
 
-		return_code = sqlite3_step(list_statement);
-
-		while (  return_code == SQLITE_ROW)
+		while (more_data == true)
 		{
-			temp_resolution = sqlite3_column_double(list_statement, 1);
-			temp_fsc = sqlite3_column_double(list_statement, 2);
-			temp_part_fsc = sqlite3_column_double(list_statement, 3);
-			temp_part_ssnr = sqlite3_column_double(list_statement, 4);
-			temp_rec_ssnr = sqlite3_column_double(list_statement, 5);
+			more_data = GetFromBatchSelect("sssss", &temp_resolution, &temp_fsc, &temp_part_fsc, &temp_part_ssnr, &temp_rec_ssnr);
 
 			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.AddPoint(temp_resolution, temp_fsc);
 			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.AddPoint(temp_resolution, temp_part_fsc);
 			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.AddPoint(temp_resolution, temp_part_ssnr);
 			temp_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.AddPoint(temp_resolution, temp_rec_ssnr);
 
-
-			return_code = sqlite3_step(list_statement);
 		}
 
-		MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
-		sqlite3_finalize(list_statement);
+
+		EndBatchSelect();
 
 	}
 

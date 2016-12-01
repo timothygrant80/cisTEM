@@ -29,7 +29,8 @@ public :
 
 	float ReturnRadiusFromTheta(const float theta);
 	//void XYFromPhiTheta(const float phi, const float theta, int &x, int &y);
-	void SetSymmetry(wxString wanted_symmetry_symbol);
+	//void SetSymmetry(wxString wanted_symmetry_symbol);
+	void SetSymmetryAndNumber(wxString wanted_symmetry_symbol, long wanted_number_of_final_results);
 
 	ArrayOfRefinementResults refinement_results_to_plot;
 	wxBitmap buffer_bitmap;
@@ -39,6 +40,7 @@ public :
 
 	bool 	should_show;
 	float 	font_size_multiplier;
+	long number_of_final_results;
 
 	float		circle_center_x;
 	float		circle_center_y;
@@ -49,6 +51,8 @@ public :
 	float		margin_between_circles_and_theta_labels;
 
 	float		proj_circle_radius;
+
+	int colour_change_step;
 
 
 

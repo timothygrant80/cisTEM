@@ -114,6 +114,8 @@ public:
 
 	JobResult();
 	JobResult(int wanted_result_size, float *wanted_result_data);
+	JobResult( const JobResult &obj); // copy contructor
+
 	~JobResult();
 
 	JobResult & operator = (const JobResult &other_result);
@@ -127,3 +129,5 @@ public:
 
 WX_DECLARE_OBJARRAY(JobResult, ArrayofJobResults);
 
+void ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_array);
+void SendResultQueueToSocket(wxSocketBase *socket, ArrayofJobResults &my_array);

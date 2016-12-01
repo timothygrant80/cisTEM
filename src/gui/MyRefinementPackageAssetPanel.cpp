@@ -384,20 +384,30 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementsFromDatabase()
 
 	bool more_data;
 	long current_id;
+	int counter = 0;
 	Refinement *current_refinement;
 
 	all_refinements.Clear();
+	wxArrayLong refinement_ids;
 
 	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT DISTINCT REFINEMENT_ID FROM REFINEMENT_LIST");
 
 	while (more_data == true)
 	{
 		more_data = main_frame->current_project.database.GetFromBatchSelect("l", &current_id);
-		current_refinement = main_frame->current_project.database.GetRefinementByID(current_id);
-		all_refinements.Add(current_refinement);
+		refinement_ids.Add(current_id);
 	}
 
 	main_frame->current_project.database.EndBatchSelect();
+
+	for (counter = 0; counter < refinement_ids.GetCount(); counter++)
+	{
+		current_refinement = main_frame->current_project.database.GetRefinementByID(refinement_ids[counter]);
+		wxPrintf("Adding %s\n", current_refinement->name);
+		all_refinements.Add(current_refinement);
+	}
+
+
 }
 
 Refinement* MyRefinementPackageAssetPanel::ReturnPointerToRefinementByRefinementID(long wanted_id)

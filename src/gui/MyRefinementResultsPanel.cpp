@@ -20,7 +20,7 @@ void MyRefinementResultsPanel::OnClassComboBoxChange( wxCommandEvent& event )
 {
 	//wxPrintf("Changed\n");
 	current_class = FSCPlotPanel->ClassComboBox->GetSelection();
-	AngularPlotPanel->Clear();
+	FillAngles();
 	ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
 	FSCPlotPanel->PlotCurrentClass();
 	event.Skip();
@@ -86,8 +86,8 @@ void MyRefinementResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			is_dirty = false;
 			FillRefinementPackageComboBox();
-			AngularPlotPanel->Clear();
-			//FillAngles();
+			//AngularPlotPanel->Clear();
+			FillAngles();
 		}
 	}
 }
@@ -105,8 +105,8 @@ void MyRefinementResultsPanel::OnInputParametersComboBox( wxCommandEvent& event 
 	{
 		FillParameterListCtrl();
 		FSCPlotPanel->AddRefinement(refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages[refinement_results_panel->RefinementPackageComboBox->GetSelection()].refinement_ids[refinement_results_panel->InputParametersComboBox->GetSelection()]));
-		//FillAngles();
-		AngularPlotPanel->Clear();
+		FillAngles();
+		//AngularPlotPanel->Clear();
 	}
 
 }
@@ -123,19 +123,19 @@ void MyRefinementResultsPanel::FillAngles()
 		Refinement *current_refinement;
 		current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID( refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].refinement_ids[InputParametersComboBox->GetCurrentSelection()]);
 
-		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Plot Angles", "Plotting Angles", refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount(), this);
+		//OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Plot Angles", "Plotting Angles", refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount(), this);
 		AngularPlotPanel->Freeze();
 		AngularPlotPanel->Clear();
-		AngularPlotPanel->SetSymmetry(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry);
+		AngularPlotPanel->SetSymmetryAndNumber(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry, refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount());
 		for (long particle_counter = 0; particle_counter < refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount(); particle_counter++)
 		{
 			//wxPrintf("Adding Refinement \n");
 			AngularPlotPanel->AddRefinementResult(&current_refinement->class_refinement_results[current_class].particle_refinement_results[particle_counter]);
-			my_dialog->Update(particle_counter + 1);
+			//my_dialog->Update(particle_counter + 1);
 		}
 		AngularPlotPanel->Thaw();
 		AngularPlotPanel->Refresh();
-		delete my_dialog;
+	//	delete my_dialog;
 	}
 
 }

@@ -35,11 +35,16 @@ MyApp : public wxAppConsole
 
 		wxTimer *connection_timer;
 		wxTimer *zombie_timer;
-		bool i_am_a_zombie;
+		wxTimer *queue_timer;
 
+		bool i_am_a_zombie;
+		bool queue_timer_set;
+
+		int number_of_failed_connections;
 		void CheckForConnections();
 		void OnConnectionTimer(wxTimerEvent& event);
 		void OnZombieTimer(wxTimerEvent& event);
+		void OnQueueTimer(wxTimerEvent& event);
 
 	public:
 		virtual bool OnInit();
@@ -67,6 +72,8 @@ MyApp : public wxAppConsole
 
 		bool i_am_the_master;
 
+		int number_of_results_sent;
+
 		JobPackage my_job_package;
 		RunJob my_current_job;
 		RunJob global_job_parameters;
@@ -89,11 +96,13 @@ MyApp : public wxAppConsole
 
 		void SendError(wxString error_message);
 		void SendInfo(wxString error_message);
-		void SendIntermediateResult(JobResult *result);
+		void SendIntermediateResultQueue(ArrayofJobResults &queue_to_send);
 
 		CalculateThread *work_thread;
 		wxMutex job_lock;
 		int thread_next_action;
+
+		long time_of_last_queue_send;
 
 
 		void AddJobToResultQueue(JobResult *);
@@ -105,6 +114,8 @@ MyApp : public wxAppConsole
 
 		void SendJobFinished(int job_number);
 		void SendJobResult(JobResult *result);
+		void SendJobResultQueue(ArrayofJobResults &queue_to_send);
+		void MasterSendIntenalQueue();
 		void SendAllJobsFinished();
 
 

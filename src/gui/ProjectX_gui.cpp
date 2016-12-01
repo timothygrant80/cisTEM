@@ -3258,28 +3258,68 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	gSizer9->Add( InputParametersComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer200->Add( gSizer9, 1, wxEXPAND, 5 );
+	bSizer200->Add( gSizer9, 0, wxEXPAND, 5 );
+	
+	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer200->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
 	
 	wxGridSizer* gSizer10;
-	gSizer10 = new wxGridSizer( 0, 2, 0, 0 );
+	gSizer10 = new wxGridSizer( 0, 1, 0, 0 );
+	
+	wxBoxSizer* bSizer215;
+	bSizer215 = new wxBoxSizer( wxHORIZONTAL );
 	
 	LocalRefinementRadio = new wxRadioButton( this, wxID_ANY, wxT("Local Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
-	gSizer10->Add( LocalRefinementRadio, 0, wxALIGN_RIGHT|wxALL, 5 );
+	bSizer215->Add( LocalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	
+	bSizer215->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	GlobalRefinementRadio = new wxRadioButton( this, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
-	gSizer10->Add( GlobalRefinementRadio, 0, wxALIGN_RIGHT|wxALL, 5 );
+	bSizer215->Add( GlobalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	
+	gSizer10->Add( bSizer215, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer216;
+	bSizer216 = new wxBoxSizer( wxHORIZONTAL );
 	
 	m_staticText264 = new wxStaticText( this, wxID_ANY, wxT("No. of Cycles to Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText264->Wrap( -1 );
-	gSizer10->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	NumberRoundsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 1 );
-	NumberRoundsSpinCtrl->SetMinSize( wxSize( 170,-1 ) );
+	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
-	gSizer10->Add( NumberRoundsSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer200->Add( gSizer10, 1, wxEXPAND, 5 );
+	gSizer10->Add( bSizer216, 1, wxEXPAND, 5 );
+	
+	
+	bSizer200->Add( gSizer10, 0, wxEXPAND, 5 );
+	
+	m_staticline54 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer200->Add( m_staticline54, 0, wxEXPAND | wxALL, 5 );
+	
+	wxGridSizer* gSizer11;
+	gSizer11 = new wxGridSizer( 2, 1, 0, 0 );
+	
+	wxBoxSizer* bSizer214;
+	bSizer214 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText188 = new wxStaticText( this, wxID_ANY, wxT("High-Resolution Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText188->Wrap( -1 );
+	bSizer214->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer214->Add( HighResolutionLimitTextCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	gSizer11->Add( bSizer214, 1, wxEXPAND, 5 );
+	
+	
+	bSizer200->Add( gSizer11, 0, wxEXPAND, 5 );
 	
 	
 	bSizer200->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -3378,13 +3418,6 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText188 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText188->Wrap( -1 );
-	fgSizer1->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( HighResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText196->Wrap( -1 );
@@ -3832,9 +3865,9 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
 	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
-	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
@@ -3847,9 +3880,9 @@ Refine3DPanel::~Refine3DPanel()
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
 	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
-	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );

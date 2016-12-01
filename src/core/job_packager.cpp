@@ -391,7 +391,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	// disable events on the socket..
 	socket->SetNotify(wxSOCKET_LOST_FLAG);
-	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+//	socket->SetFlags(wxSOCKET_BLOCK);
 	// Send a message saying we are ready to receive the package
 
 	WriteToSocket(socket, socket_send_job_package, SOCKET_CODE_SIZE);
@@ -1448,6 +1448,34 @@ JobResult::~JobResult()
 	}
 }
 
+JobResult::JobResult( const JobResult &obj) // copy contructor
+{
+	result_size = 0;
+	result_data = NULL;
+
+	job_number = obj.job_number;
+	SetResult(obj.result_size, obj.result_data);
+}
+
+JobResult & JobResult::operator = (const JobResult *other_result)
+{
+	  // Check for self assignment
+	   if(this != other_result)
+	   {
+		   job_number = other_result->job_number;
+		   SetResult(other_result->result_size, other_result->result_data);
+	   }
+
+	   return *this;
+}
+
+JobResult & JobResult::operator = (const JobResult &other_result)
+{
+	*this = &other_result;
+	return *this;
+}
+
+
 void JobResult::SetResult(int wanted_result_size, float *wanted_result_data)
 {
 	if (result_size != 0 || result_data != NULL)
@@ -1456,12 +1484,22 @@ void JobResult::SetResult(int wanted_result_size, float *wanted_result_data)
 	}
 
 	result_size = wanted_result_size;
-	result_data = new float[result_size];
 
-	for (int counter = 0; counter < result_size; counter++)
+	if (wanted_result_size > 0)
 	{
-		result_data[counter] = wanted_result_data[counter];
+
+		result_data = new float[result_size];
+
+		for (int counter = 0; counter < result_size; counter++)
+		{
+			result_data[counter] = wanted_result_data[counter];
+		}
 	}
+	else
+	{
+		result_data = NULL;
+	}
+
 }
 
 void JobResult::SendToSocket(wxSocketBase *wanted_socket)
@@ -1489,7 +1527,6 @@ void JobResult::SendToSocket(wxSocketBase *wanted_socket)
 	{
 		WriteToSocket(wanted_socket, result_data, result_size * 4);
 	}
-
 }
 
 void JobResult::ReceiveFromSocket(wxSocketBase *wanted_socket)
@@ -1539,22 +1576,183 @@ void JobResult::ReceiveFromSocket(wxSocketBase *wanted_socket)
 
 }
 
-JobResult & JobResult::operator = (const JobResult *other_result)
+void ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_array)
 {
-	  // Check for self assignment
-	   if(this != other_result)
-	   {
-		   SetResult(other_result->result_size, other_result->result_data);
-	   }
+	int total_number_of_bytes;
+	int number_of_jobs;
+	int job_counter;
+	int job_number;
+	int result_size;
+	int byte_counter;
+	unsigned char *byte_pointer;
+	int result_byte_counter;
+	JobResult temp_result;
 
-	   return *this;
+
+	// clear the array
+	my_array.Clear();
+
+	// recieve the total number of bytes..
+
+	ReadFromSocket(socket, &total_number_of_bytes, 4);
+	//wxPrintf("(Recieve) Total Size is %i bytes\n", total_number_of_bytes);
+	// make the array..
+
+	unsigned char *buffer_array = new unsigned char[total_number_of_bytes];
+
+	// receieve
+
+	ReadFromSocket(socket, buffer_array, total_number_of_bytes);
+	byte_pointer = (unsigned char*) &number_of_jobs;
+
+	byte_pointer[0] = buffer_array[0];
+	byte_pointer[1] = buffer_array[1];
+	byte_pointer[2] = buffer_array[2];
+	byte_pointer[3] = buffer_array[3];
+
+	byte_counter = 4;
+
+	for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
+	{
+		byte_pointer = (unsigned char*) &job_number;
+		byte_pointer[0] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[1] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[2] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[3] = buffer_array[byte_counter];
+		byte_counter++;
+
+		byte_pointer = (unsigned char*) &result_size;
+		byte_pointer[0] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[1] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[2] = buffer_array[byte_counter];
+		byte_counter++;
+		byte_pointer[3] = buffer_array[byte_counter];
+		byte_counter++;
+
+		temp_result.job_number = job_number;
+
+		if (temp_result.result_size != result_size)
+		{
+			if (temp_result.result_size != 0 && temp_result.result_data != NULL)
+			{
+				delete [] temp_result.result_data;
+			}
+
+			temp_result.result_size = result_size;
+
+			if (result_size == 0)
+			{
+				temp_result.result_data = NULL;
+			}
+			else temp_result.result_data = new float[result_size];
+
+		}
+
+		for (result_byte_counter = 0; result_byte_counter < result_size; result_byte_counter++)
+		{
+			byte_pointer = (unsigned char*) &temp_result.result_data[result_byte_counter];
+
+			if (byte_counter >= total_number_of_bytes) wxPrintf("byte_counter = %i/%i\n", byte_counter, total_number_of_bytes);
+			byte_pointer[0] = buffer_array[byte_counter];
+			byte_counter++;
+			byte_pointer[1] = buffer_array[byte_counter];
+			byte_counter++;
+			byte_pointer[2] = buffer_array[byte_counter];
+			byte_counter++;
+			byte_pointer[3] = buffer_array[byte_counter];
+			byte_counter++;
+		}
+
+		// add it to the array.
+
+		my_array.Add(temp_result);
+
+	}
+
+	delete [] buffer_array;
 }
 
-JobResult & JobResult::operator = (const JobResult &other_result)
+void SendResultQueueToSocket(wxSocketBase *socket, ArrayofJobResults &my_array)
 {
-	*this = &other_result;
-	return *this;
+	int total_number_of_bytes = 4; // number of results
 
+	int number_of_jobs = my_array.GetCount();
+
+	unsigned char *byte_pointer;
+	int byte_counter = 0;
+	int job_counter;
+	int result_byte_counter;
+
+	//wxPrintf("there are %i jobs\n", number_of_jobs);
+
+	for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
+	{
+		total_number_of_bytes += 8; // job_number, result_size
+		total_number_of_bytes += my_array.Item(job_counter).result_size * 4; // actual result
+	//	wxPrintf("result size for job %i = %i\n", job_counter, my_array.Item(job_counter).result_size);
+	}
+
+	//wxPrintf("(Write) Total Size is %i bytes\n", total_number_of_bytes);
+
+	unsigned char *buffer_array = new unsigned char[total_number_of_bytes];
+
+	byte_pointer = (unsigned char*) &number_of_jobs;
+
+	buffer_array[0] = byte_pointer[0];
+	buffer_array[1] = byte_pointer[1];
+	buffer_array[2] = byte_pointer[2];
+	buffer_array[3] = byte_pointer[3];
+
+	byte_counter = 4;
+
+	for (job_counter = 0; job_counter < number_of_jobs; job_counter++)
+	{
+		byte_pointer = (unsigned char*) &my_array.Item(job_counter).job_number;
+		buffer_array[byte_counter] = byte_pointer[0];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[1];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[2];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[3];
+		byte_counter++;
+
+		byte_pointer = (unsigned char*) &my_array.Item(job_counter).result_size;
+		buffer_array[byte_counter] = byte_pointer[0];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[1];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[2];
+		byte_counter++;
+		buffer_array[byte_counter] = byte_pointer[3];
+		byte_counter++;
+
+		for (result_byte_counter = 0; result_byte_counter < my_array.Item(job_counter).result_size; result_byte_counter++)
+		{
+			byte_pointer = (unsigned char*) &my_array.Item(job_counter).result_data[result_byte_counter];
+		//	wxPrintf("byte_counter = %i\n", byte_counter);
+			buffer_array[byte_counter] = byte_pointer[0];
+			byte_counter++;
+			buffer_array[byte_counter] = byte_pointer[1];
+			byte_counter++;
+			buffer_array[byte_counter] = byte_pointer[2];
+			byte_counter++;
+			buffer_array[byte_counter] = byte_pointer[3];
+			byte_counter++;
+		}
+	}
+
+
+	// send the number of bytes
+	WriteToSocket(socket, &total_number_of_bytes, 4);
+	// send the array..
+	WriteToSocket(socket, buffer_array, total_number_of_bytes);
+	delete [] buffer_array;
 }
 
 

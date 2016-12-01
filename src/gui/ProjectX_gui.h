@@ -1022,10 +1022,14 @@ class Refine3DPanel : public JobPanel
 		wxComboBox* RefinementPackageComboBox;
 		wxStaticText* m_staticText263;
 		wxComboBox* InputParametersComboBox;
+		wxStaticLine* m_staticline52;
 		wxRadioButton* LocalRefinementRadio;
 		wxRadioButton* GlobalRefinementRadio;
 		wxStaticText* m_staticText264;
 		wxSpinCtrl* NumberRoundsSpinCtrl;
+		wxStaticLine* m_staticline54;
+		wxStaticText* m_staticText188;
+		NumericTextCtrl* HighResolutionLimitTextCtrl;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticLine* m_staticline10;
 		wxScrolledWindow* ExpertPanel;
@@ -1040,8 +1044,6 @@ class Refine3DPanel : public JobPanel
 		wxStaticText* m_staticText202;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
-		wxStaticText* m_staticText188;
-		NumericTextCtrl* HighResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;
 		NumericTextCtrl* MaskRadiusTextCtrl;
 		wxStaticText* m_staticText317;
@@ -1119,9 +1121,9 @@ class Refine3DPanel : public JobPanel
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnRefinementPackageComboBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInputParametersComboBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHighResLimitChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnHighResLimitChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }

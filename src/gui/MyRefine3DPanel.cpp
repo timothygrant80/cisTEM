@@ -988,7 +988,19 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	    	  // send the result to the
 
 	    	  my_refinement_manager.ProcessJobResult(&temp_result);
+	    	  wxPrintf("Warning: Received socket_job_result - should this happen?");
 
+	 	  }
+	      else
+	      if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
+	 	  {
+	    	  ArrayofJobResults temp_queue;
+	    	  ReceiveResultQueueFromSocket(sock, temp_queue);
+
+	    	  for (int counter = 0; counter < temp_queue.GetCount(); counter++)
+	    	  {
+	    		  my_refinement_manager.ProcessJobResult(&temp_queue.Item(counter));
+	    	  }
 	 	  }
 	      else
 		  if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
@@ -1098,7 +1110,7 @@ void RefinementManager::RunRefinementJob()
 	number_of_received_particle_results = 0;
 
 	output_refinement->SizeAndFillWithEmpty(input_refinement->number_of_particles, input_refinement->number_of_classes);
-	wxPrintf("Output refinement has %li particles\n", output_refinement->number_of_particles);
+	wxPrintf("Output refinement has %li particles and %i classes\n", output_refinement->number_of_particles, input_refinement->number_of_classes);
 	current_output_refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
 
 	output_refinement->refinement_id = current_output_refinement_id;
@@ -1633,8 +1645,11 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 {
 	if (running_job_type == REFINEMENT)
 	{
+
 		int current_class = int(result_to_process->result_data[0] + 0.5);
 		long current_particle = long(result_to_process->result_data[1] + 0.5) - 1;
+
+		MyDebugAssertTrue(current_particle != -1 && current_class != -1, "Current Particle (%li) or Current Class(%i) = -1!", current_particle, current_class);
 
 	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
 		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
@@ -1663,7 +1678,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->AngularPlotPanel->SetSymmetry(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry);
+			my_parent->AngularPlotPanel->SetSymmetryAndNumber(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry,output_refinement->number_of_particles);
 			my_parent->AngularPlotPanel->Show(true);
 			my_parent->FSCResultsPanel->Show(false);
 			my_parent->Layout();
@@ -1706,7 +1721,6 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 	        }
 
 		}
-
 	}
 	else
 	if (running_job_type == RECONSTRUCTION)

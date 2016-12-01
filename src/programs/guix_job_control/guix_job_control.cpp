@@ -31,6 +31,8 @@ JobControlApp : public wxAppConsole
 	wxSocketClient *gui_socket;
 	wxSocketBase   *master_socket;
 
+	int number_of_received_jobs;
+
 	bool           gui_socket_is_busy;
 	bool 		   gui_socket_is_connected;
 	bool           gui_panel_is_connected;
@@ -65,6 +67,7 @@ JobControlApp : public wxAppConsole
 
 	void SendJobFinished(int job_number);
 	void SendJobResult(JobResult *result_to_send);
+	void SendJobResultQueue(ArrayofJobResults &queue_to_send);
 
 	void SendAllJobsFinished();
 	void SendNumberofConnections();
@@ -123,6 +126,7 @@ IMPLEMENT_APP(JobControlApp)
 
 bool JobControlApp::OnInit()
 {
+	number_of_received_jobs = 0;
 
 	wxPrintf("Running...\n");
 	long counter;
@@ -234,8 +238,8 @@ bool JobControlApp::OnInit()
 	   return false;
 	}
 
-	//gui_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	gui_socket->SetFlags(wxSOCKET_WAITALL);
+	gui_socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+	//gui_socket->SetFlags(wxSOCKET_WAITALL);
 	wxPrintf(" JOB CONTROL: Succeeded - Connection established!\n\n");
 	gui_socket_is_connected = true;
 
@@ -267,7 +271,7 @@ bool JobControlApp::OnInit()
 
 	// Setup the connection timer, to check for connections periodically in case the events get missed..
 
-	Bind(wxEVT_TIMER, wxTimerEventHandler( JobControlApp::OnConnectionTimer ), this);
+	Bind(wxEVT_TIMER, wxTimerEventHandler( JobControlApp::OnConnectionTimer ), this, 0);
 	connection_timer = new wxTimer(this, 0);
 	connection_timer->Start(5000);
 
@@ -313,7 +317,7 @@ void LaunchJobThread::LaunchRemoteJob()
 		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
 		execution_command.Replace("$command", executable);
 
-		//execution_command += "&";
+		execution_command += "&";
 
 		QueueInfo(wxString::Format("Job Control : Executing '%s' %i times.", execution_command, current_run_profile.run_commands[command_counter].number_of_copies));
 
@@ -322,12 +326,12 @@ void LaunchJobThread::LaunchRemoteJob()
 
 			wxMilliSleep( current_run_profile.run_commands[command_counter].delay_time_in_ms);
 
-			wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB);
-			test_event->SetString(execution_command);
+			//wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB);
+			//test_event->SetString(execution_command);
 
-			wxQueueEvent(main_thread_pointer, test_event);
+			//wxQueueEvent(main_thread_pointer, test_event);
 			//wxExecute(execution_command);
-			//system(execution_command.ToUTF8().data());
+			system(execution_command.ToUTF8().data());
 		}
 
 	}
@@ -408,7 +412,8 @@ void JobControlApp::SetupServer()
 		my_address.Service(my_port);
 
 
-		socket_server = new wxSocketServer(my_address, wxSOCKET_BLOCK);
+		socket_server = new wxSocketServer(my_address, wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+		socket_server->SetTimeout(5);
 
 		if (socket_server->IsOk() == true)
 		{
@@ -437,114 +442,79 @@ void JobControlApp::OnServerEvent(wxSocketEvent& event)
 
 void JobControlApp::CheckForConnections()
 {
-	  wxSocketBase *sock = NULL;
+	wxSocketBase *sock = NULL;
 
-	  while (1==1) // sometimes, multiple connections only seem to generate one event.. so we keep checking until there are no more connections..
-	  {
+	 while (1==1) // sometimes, multiple connections only seem to generate one event.. so we keep checking until there are no more connections..
+	 {
+		  if (socket_server == NULL) break;
 
 		  sock = socket_server->Accept(false);
 
 		  if (sock == NULL) break;
 
-		  //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-		  sock->SetFlags(wxSOCKET_WAITALL);
+		  sock->SetNotify(false);
+		  sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+		  //sock->SetFlags(wxSOCKET_WAITALL);
 
 		  // request identification..
 		  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
-		//  sock->WaitForRead(5);
+		  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
-		  //if (sock->IsData() == true)
-		  //{
-			  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+		  if ((memcmp(socket_input_buffer, job_code, SOCKET_CODE_SIZE) != 0) )
+		  {
 
-			  // does this correspond to our job code?
-
-			  if ((memcmp(socket_input_buffer, job_code, SOCKET_CODE_SIZE) != 0) )
-			  {
-				  SendError("JOB CONTROL : Unknown JOB ID - Closing Connection");
+			  SendError("JOB CONTROL : Unknown JOB ID - Closing Connection");
 
 				  // incorrect identification - close the connection..
 				  sock->Destroy();
 				  sock = NULL;
-			  }
-			  else
+		  }
+		  else
+		  {
+
+			  // one of the slaves has connected to us.  If it is the first one then
+			  // we need to make it the master, tell it to start a socket server
+			  // and send us the address so we can pass it on to all future slaves.
+			  // If we have already assigned the master, then we just need to send it
+			  // the masters address.
+
+			  if (have_assigned_master == false)  // we don't have a master, so assign it
 			  {
 
-				  // one of the slaves has connected to us.  If it is the first one then
-				  // we need to make it the master, tell it to start a socket server
-				  // and send us the address so we can pass it on to all future slaves.
+				  master_socket = sock;
+				  have_assigned_master = true;
 
-				  // If we have already assigned the master, then we just need to send it
-				  // the masters address.
+				  WriteToSocket(sock, socket_you_are_the_master, SOCKET_CODE_SIZE);
+				  master_ip_address = ReceivewxStringFromSocket(sock);
+				  master_port = ReceivewxStringFromSocket(sock);
 
-				  if (have_assigned_master == false)  // we don't have a master, so assign it
-				  {
+				  // setup events on the master..
 
-					  master_socket = sock;
-					  have_assigned_master = true;
+				  Bind(wxEVT_SOCKET, wxSocketEventHandler( JobControlApp::OnMasterSocketEvent), this,  MASTER_SOCKET_ID);
 
-					  WriteToSocket(sock, socket_you_are_the_master, SOCKET_CODE_SIZE);
+				  sock->SetEventHandler(*this, MASTER_SOCKET_ID);
+				  sock->SetNotify(wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
+				  sock->Notify(true);
 
-					  // read the ip address and port..
+				  number_of_slaves_already_connected++;
+				  SendNumberofConnections();
 
-					  //sock->WaitForRead(30);
-					//  if (sock->IsData() == true)
-					  //{
-						  master_ip_address = ReceivewxStringFromSocket(sock);
-				//	  }
-				//	  else
-					//  {
-				//		  SendError("JOB CONTROL: Read Timeout waiting for ip address");
-				//		  abort();
-				//	  }
-
-					 // sock->WaitForRead(30);
-					//  if (sock->IsData() == true)
-					 // {
-						  master_port = ReceivewxStringFromSocket(sock);
-					  //}
-					  //else
-					  //{
-				//		  SendError("JOB CONTROL: Read Timeout waiting for port");
-				//		  abort();
-				//	  }
-
-
-					  // setup events on the master..
-
-					  Bind(wxEVT_SOCKET, wxSocketEventHandler( JobControlApp::OnMasterSocketEvent), this,  MASTER_SOCKET_ID);
-
-					  sock->SetEventHandler(*this, MASTER_SOCKET_ID);
-					  sock->SetNotify(wxSOCKET_CONNECTION_FLAG |wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
-					  sock->Notify(true);
-
-					  number_of_slaves_already_connected++;
-					  SendNumberofConnections();
-
-				  }
-				  else  // we have a master, tell this slave who it's master is.
-				  {
-					  WriteToSocket(sock, socket_you_are_a_slave, SOCKET_CODE_SIZE);
-					  SendwxStringToSocket(&master_ip_address, sock);
-					  SendwxStringToSocket(&master_port, sock);
-
-					  // that should be the end of our interactions with the slave
-					  // it should disconnect itself, we won't even bother
-					  // setting up events for it..
-
-					  number_of_slaves_already_connected++;
-					  SendNumberofConnections();
-
-				  }
 			  }
-		//  }
-		 // else
-		  //{
-		//	  SendError("JOB CONTROL : Read Timeout waiting for job ID");
-		//	  // time out - close the connection
-		//	  sock->Destroy();
-		//	  sock = NULL;
-		 // }
+			  else  // we have a master, tell this slave who it's master is.
+			  {
+				  WriteToSocket(sock, socket_you_are_a_slave, SOCKET_CODE_SIZE);
+				  SendwxStringToSocket(&master_ip_address, sock);
+				  SendwxStringToSocket(&master_port, sock);
+
+				  // that should be the end of our interactions with the slave
+				  // it should disconnect itself, we won't even bother
+				  // setting up events for it..
+
+				  number_of_slaves_already_connected++;
+				  SendNumberofConnections();
+
+			  }
+		  }
 	  }
 
 
@@ -552,7 +522,7 @@ void JobControlApp::CheckForConnections()
 
 void JobControlApp::OnConnectionTimer(wxTimerEvent& event)
 {
-	//wxPrintf("Timer Fired\n");
+	wxPrintf("Connection Timer Fired\n");
 	CheckForConnections();
 }
 
@@ -560,8 +530,9 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 {
 	//  wxString s = _("JOB CONTROL : OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
-//	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	  sock->SetFlags(wxSOCKET_WAITALL);
+
+	  sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+	  //sock->SetFlags(wxSOCKET_WAITALL);
 
 	  MyDebugAssertTrue(sock == master_socket, "Master Socket event from Non Master socket??");
 
@@ -625,10 +596,25 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 
 
-			 if (temp_job.result_size > 0)
-			 {
+			// if (temp_job.result_size > 0)
+			 //{
 				 SendJobResult(&temp_job);
-			 }
+			 //}
+
+		 }
+		 else
+		 if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
+		 {
+			// wxPrintf("(Controller) - Received socket_job_result_queue, recieving queue\n");
+			 ArrayofJobResults temp_array;
+
+			 ReceiveResultQueueFromSocket(sock, temp_array);
+			 //wxPrintf("(Controller) - Received queue of %li jobs (%i), sending on to GUI\n", temp_array.GetCount(), temp_array.Item(0).job_number);
+			 SendJobResultQueue(temp_array);
+			 //wxPrintf("(Controller) - Finished Sending to GUI\n");
+
+			 number_of_received_jobs+=temp_array.GetCount();
+			 //wxPrintf("Have received and sent on %i jobs\n", number_of_received_jobs);
 
 		 }
 		 else
@@ -667,7 +653,9 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 	        break;
 	    }
-	    default: ;
+	    default:
+	    	wxPrintf("weird socket communication\n");
+	    	abort();
 	  }
 
 
@@ -695,6 +683,16 @@ void JobControlApp::SendJobResult(JobResult *job_to_send)
 
 	WriteToSocket(gui_socket, socket_job_result, SOCKET_CODE_SIZE);
 	job_to_send->SendToSocket(gui_socket);
+
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
+void JobControlApp::SendJobResultQueue(ArrayofJobResults &queue_to_send)
+{
+	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+	WriteToSocket(gui_socket, socket_job_result_queue, SOCKET_CODE_SIZE);
+	SendResultQueueToSocket(gui_socket, queue_to_send);
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
@@ -727,9 +725,15 @@ void JobControlApp::SendNumberofConnections()
 
 	if (number_of_slaves_already_connected == my_job_package.my_profile.ReturnTotalJobs())
 	{
+		wxPrintf("All connections completed\n");
 		connection_timer->Stop();
 		Unbind(wxEVT_TIMER, wxTimerEventHandler( JobControlApp::OnConnectionTimer ), this);
 		delete connection_timer;
+		Unbind(wxEVT_SOCKET,wxSocketEventHandler( JobControlApp::OnServerEvent), this,  SERVER_ID);
+		socket_server->Destroy();
+		socket_server=NULL;
+		wxPrintf("Socket Server is now NULL\n");
+
 	}
 }
 
@@ -737,8 +741,9 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 {
 	  wxString s = _("JOB CONTROL : OnSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
-	 // sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	  sock->SetFlags(wxSOCKET_WAITALL);
+
+	  sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+	  //sock->SetFlags(wxSOCKET_WAITALL);
 
 	  MyDebugAssertTrue(sock == gui_socket, "GUI Socket event from Non GUI socket??");
 
@@ -811,7 +816,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 		  {
 			  // destroy the server..
 
-			  socket_server->Destroy();
+			  if (socket_server != NULL) socket_server->Destroy();
 
 			  // close Gui connection..
 
@@ -829,6 +834,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  // exit..
 
 			  ExitMainLoop();
+			  abort();
 			  return;
 		  }
 

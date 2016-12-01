@@ -22,6 +22,7 @@ const unsigned char socket_job_finished [] = "jNA[3!VdLdkb$LwM";
 const unsigned char socket_number_of_connections [] = "Uu6tsQ,z}M''T`7f";
 const unsigned char socket_all_jobs_finished [] = "aL)yaH[$3s;9Ymk6";
 const unsigned char socket_job_result [] = "3F6E_.``L6YC^q[U";
+const unsigned char socket_job_result_queue [] = "^}`@pF9m;{m9k=$F";
 
 
 #endif

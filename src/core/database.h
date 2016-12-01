@@ -126,6 +126,7 @@ public :
 	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_counter) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_counter), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
 
 
+	void DoVacuum() {ExecuteSQL("VACUUM");}
 
 	// Convenience select functions...
 

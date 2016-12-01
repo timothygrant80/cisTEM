@@ -28,6 +28,12 @@ bool MyApp::OnInit()
 
 	connection_timer = NULL;
 	zombie_timer = NULL;
+	queue_timer = NULL;
+
+	queue_timer_set = false;
+
+	time_of_last_queue_send = 0;
+	number_of_results_sent = 0;
 
 	wxString current_address;
 	wxArrayString possible_controller_addresses;
@@ -41,7 +47,6 @@ bool MyApp::OnInit()
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &MyApp::OnThreadSendInfo, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
-
 
 	// Connect to the controller program..
 
@@ -135,8 +140,8 @@ bool MyApp::OnInit()
 
 	//MyDebugPrint("\n JOB : Trying to connect to %s:%i (timeout = 30 sec) ...\n", controller_address.IPAddress(), controller_address.Service());
 	controller_socket = new wxSocketClient();
-	//controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-	controller_socket->SetFlags(wxSOCKET_WAITALL );
+
+	controller_socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 	// Setup the event handler and subscribe to most events
 
@@ -164,8 +169,8 @@ bool MyApp::OnInit()
 		}
 	}
 
-	//controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-	controller_socket->SetFlags(wxSOCKET_WAITALL );
+
+	controller_socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 	if (controller_socket->IsConnected() == false || controller_socket->IsOk() == false)
 	{
@@ -175,16 +180,13 @@ bool MyApp::OnInit()
 	}
 
 	// we are apparently connected, but this can be a lie as a certain number of connections appear to just be accepted by the operating
-	// system - if the port if valid.  So if we don't get any events from this socket within 120 seconds, we are going to assume something
-	// went wrong and die...
+	// system - if the port if valid.  So if we don't get any events from this socket within 10 seconds, we are going to try again...
 
+	number_of_failed_connections = 0;
 	i_am_a_zombie = true;
 	Bind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnZombieTimer ), this, 1);
 	zombie_timer = new wxTimer(this, 1);
-	zombie_timer->Start(120000, true);
-
-
-
+	zombie_timer->StartOnce(10000);
 
 	// go into the event loop
 
@@ -203,8 +205,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 	MyDebugAssertTrue(sock == controller_socket, "Original Socket event from Non controller socket??");
 
-	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	sock->SetFlags(wxSOCKET_WAITALL);
+
+	sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 
 	// if we got here, we have actual communication, and therefore we are not a zombie..
 
@@ -316,6 +318,11 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  Unbind(wxEVT_SOCKET,wxSocketEventHandler( MyApp::OnOriginalSocketEvent), this,  SOCKET_ID );
 				  Bind(wxEVT_SOCKET, wxSocketEventHandler( MyApp::OnControllerSocketEvent), this,  SOCKET_ID );
 
+				  // queue timer event
+
+				  Bind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnQueueTimer ), this, 2);
+
+
 		      }
 		      else
 			  if (memcmp(socket_input_buffer, socket_you_are_a_slave, SOCKET_CODE_SIZE) == 0) // i'm a slave.. who is the master
@@ -341,8 +348,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  // connect to the new master..
 
 				  controller_socket = new wxSocketClient();
-				  //controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-				  controller_socket->SetFlags(wxSOCKET_WAITALL );
+
+				  controller_socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 				  active_controller_address.Hostname(master_ip_address);
 				  active_controller_address.Service(master_port);
@@ -354,8 +361,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 				  controller_socket->Connect(active_controller_address, false);
 				  controller_socket->WaitOnConnect(120);
-				  //controller_socket->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-				  controller_socket->SetFlags( wxSOCKET_WAITALL );
+
+				  controller_socket->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 				  if (controller_socket->IsConnected() == false)
 				  {
@@ -422,8 +429,8 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	  wxString s = _("JOB MASTER : OnControllerSocketEvent: ");
 	  wxSocketBase *sock = event.GetSocket();
 
-	  //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	  sock->SetFlags(wxSOCKET_WAITALL);
+
+	  sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 
 	  MyDebugAssertTrue(sock == controller_socket, "Controller Socket event from Non Controller socket??");
 
@@ -472,7 +479,10 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 
 	    	  }
 
+	    	  sock->Destroy();
 	    	  ExitMainLoop();
+	    	  abort();
+
 	    	  return;
 
 		  }
@@ -556,26 +566,39 @@ void MyApp::SendJobResult(JobResult *result)
 	result->SendToSocket(controller_socket);
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
 }
 
-void MyApp::SendIntermediateResult(JobResult *result)
+void MyApp::SendJobResultQueue(ArrayofJobResults &queue_to_send)
 {
-	MyDebugAssertTrue(i_am_the_master == false, "SendIntermediateResult called by master!");
+	MyDebugAssertTrue(i_am_the_master == true, "SendJobResultQueue called by a slave!");
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
-	WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE);
-	result->SendToSocket(controller_socket);
+	WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE);
+	SendResultQueueToSocket(controller_socket, queue_to_send);
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
+
+void MyApp::MasterSendIntenalQueue()
+{
+//	wxPrintf("(Master) Sending internal queue of %li jobs (%i), sending on to controller\n", job_queue.GetCount(), job_queue.Item(0).job_number);
+	SendJobResultQueue(job_queue);
+	job_queue.Clear();
+	time_of_last_queue_send = time(NULL);
+    //wxPrintf("(Master) Queue sent\n");
+
+}
+
 
 void MyApp::SendAllJobsFinished()
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
 
-	// get the next job..
+	 // we will send all jobs finished - but first we need to ensure we have sent any results in the result queue
+
+	if (job_queue.GetCount() != 0) MasterSendIntenalQueue();
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE);
@@ -589,18 +612,18 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 	wxString s = _("JOB MASTER: OnSlaveSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
-	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-	sock->SetFlags( wxSOCKET_WAITALL);
+
+	sock->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 
 	float *result;
 
 	// First, print a message
-	switch(event.GetSocketEvent())
+/*	switch(event.GetSocketEvent())
 	{
 	   case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
 	   case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
 	   default             : s.Append(_("Unexpected event !\n")); break;
-	}
+	}*/
 
 	//MyDebugPrint(s);
 
@@ -616,7 +639,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 			 if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
 			 {
-				 //MyDebugPrint("JOB MASTER : SEND NEXT JOB");
+				// MyDebugPrint("JOB MASTER : SEND NEXT JOB");
 
 				 // if there is a result to send on, get it..
 
@@ -642,6 +665,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 		    		 if (number_of_finished_jobs == my_job_package.number_of_jobs)
 		    		 {
+
 		    			 SendAllJobsFinished();
 
 		    			 //wxPrintf("Sending all jobs finished\n");
@@ -686,6 +710,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 				SocketSendInfo(info_message);
 			 }
+			 else
 			 if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 				 JobResult temp_result;
@@ -693,6 +718,29 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 			   // wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
 			     SendJobResult(&temp_result);
 			 }
+			 else
+			 if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
+			 {
+				 ArrayofJobResults temp_array;
+				 //wxPrintf("(Master) Receieved socket_job_result_queue - receiving queue from slave\n");
+				 ReceiveResultQueueFromSocket(sock, temp_array);
+
+				 // copy these results to our own result queue
+
+				 for (int counter = 0; counter < temp_array.GetCount(); counter++)
+				 {
+						job_queue.Add(temp_array.Item(counter));
+				 }
+
+				 if (queue_timer_set == false)
+				 {
+						 queue_timer_set = true;
+ 						 queue_timer = new wxTimer(this, 2);
+ 						 queue_timer->StartOnce(1000);
+				 }
+
+			 }
+
 
 
 
@@ -745,8 +793,8 @@ void MyApp::SetupServer()
 		my_address.Service(my_port);
 
 		socket_server = new wxSocketServer(my_address);
-		//socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-		socket_server->SetFlags( wxSOCKET_WAITALL );
+
+		socket_server->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 		if (	socket_server->Ok())
 		{
@@ -783,11 +831,47 @@ void MyApp::OnZombieTimer(wxTimerEvent& event)
 {
 	if (i_am_a_zombie == true)
 	{
-		// hmm..
+		number_of_failed_connections++;
 
-		ExitMainLoop();
+		if (number_of_failed_connections >= 5) ExitMainLoop();
+
+		controller_socket->Close();
+		controller_socket->Connect(active_controller_address, false);
+		controller_socket->WaitOnConnect(120);
+
+		if (controller_socket->IsConnected() == false)
+		{
+		   controller_socket->Close();
+		   //wxPrintf("Connection Failed.\n\n");
+		}
+
+		controller_socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK );
+
+		if (controller_socket->IsConnected() == false || controller_socket->IsOk() == false)
+		{
+		   controller_socket->Close();
+		   MyDebugPrint(" JOB : Failed ! Unable to connect\n");
+		   ExitMainLoop();
+		}
+
+		// once again, we are parently connected, but this can be a lie as a certain number of connections appear to just be accepted by the operating
+		// system - if the port if valid.  So if we don't get any events from this socket within 10 seconds, we are going to try again...
+
+		zombie_timer = new wxTimer(this, 1);
+		zombie_timer->StartOnce(10000);
 	}
+}
 
+void MyApp::OnQueueTimer(wxTimerEvent& event)
+{
+	//wxPrintf("Queue timer fired\n");
+	if (job_queue.GetCount() > 0)
+	{
+	//	wxPrintf("sending from timer\n");
+		MasterSendIntenalQueue();
+	}
+	queue_timer_set = false;
+	delete queue_timer;
 }
 
 void MyApp::OnServerEvent(wxSocketEvent& event) // this should only be called by the master
@@ -809,8 +893,8 @@ void MyApp::CheckForConnections()
 
 		 if (sock == NULL) break;
 
-		 //sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
-		 sock->SetFlags( wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
+
+		 sock->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 		 WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
 
 //		 sock->WaitForRead(5);
@@ -882,8 +966,8 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 	wxString s = _("JOB : OnMasterSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
-	//sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );
-	sock->SetFlags( wxSOCKET_WAITALL );
+
+	sock->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 
 	MyDebugAssertTrue(sock == controller_socket, "Master Socket event from Non controller socket??");
 
@@ -1095,22 +1179,60 @@ void MyApp::OnThreadIntermediateResultAvailable(wxThreadEvent& my_event)
 
 void MyApp::SendAllResultsFromResultQueue()
 {
-	//wxPrintf("MyApp::Sending All Results..\n");
+	// have we sent results within the last second? if so wait 1s
+
+	ArrayofJobResults my_queue_array;
+
+	// we want to pop off all the jobs, and send them in one big lump..
+
 	while (1==1)
 	{
 		JobResult *popped_job = PopJobFromResultQueue();
 
 		if (popped_job == NULL)
 		{
-		//	wxPrintf("popped job is null\n");
 			break;
 		}
 		else
 		{
-			SendIntermediateResult(popped_job);
+			my_queue_array.Add(*popped_job);
 			delete popped_job;
 		}
 	}
+
+	// ok, send them all..
+
+	if (my_queue_array.GetCount() > 0)
+	{
+		if (time(NULL) - time_of_last_queue_send < 1)
+		{
+			wxSleep(1);
+		}
+
+		SendIntermediateResultQueue(my_queue_array);
+		time_of_last_queue_send = time(NULL);
+	}
+
+
+}
+
+
+void MyApp::SendIntermediateResultQueue(ArrayofJobResults &queue_to_send)
+{
+	MyDebugAssertTrue(i_am_the_master == false, "SendIntermediateResultQueue called by master!");
+
+	if (queue_to_send.GetCount() > 0)
+	{
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+
+		WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE);
+		SendResultQueueToSocket(controller_socket, queue_to_send);
+
+		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+	}
+
+
 }
 
 void MyApp::SocketSendError(wxString error_to_send)

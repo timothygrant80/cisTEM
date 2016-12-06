@@ -845,7 +845,7 @@ wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) con
 
 	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && refinement_results_panel->RefinementPackageComboBox->GetCount() > 0)
 	{
-		Refinement *current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages[refinement_results_panel->RefinementPackageComboBox->GetSelection()].refinement_ids[refinement_results_panel->InputParametersComboBox->GetSelection()]);
+		Refinement *current_refinement = refinement_results_panel->currently_displayed_refinement;
 
 		//wxPrintf("getting text for column %li column\n", column);
 

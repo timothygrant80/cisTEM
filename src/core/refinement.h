@@ -84,3 +84,23 @@ public :
 };
 
 WX_DECLARE_OBJARRAY(Refinement, ArrayofRefinements);
+
+class ShortRefinementInfo {
+
+public :
+	ShortRefinementInfo();
+
+	long refinement_id;
+	long refinement_package_asset_id;
+	wxString name;
+	long number_of_particles;
+	int number_of_classes;
+
+	ShortRefinementInfo & operator = (const Refinement &other_refinement);
+	ShortRefinementInfo & operator = (const Refinement *other_other_refinement);
+};
+
+WX_DECLARE_OBJARRAY(ShortRefinementInfo, ArrayofShortRefinementInfos);
+
+
+

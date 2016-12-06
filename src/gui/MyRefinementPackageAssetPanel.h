@@ -43,9 +43,12 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void OnVolumeListItemActivated( wxListEvent& event );
 		void ReDrawActiveReferences();
 
-		Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
-		void ImportAllRefinementsFromDatabase();
-		ArrayofRefinements all_refinements;
+	//	Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
+		ShortRefinementInfo* ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id);
+		void ImportAllRefinementInfosFromDatabase();
+		ArrayofShortRefinementInfos all_refinement_short_infos;
+		//ArrayofRefinements all_refinements;
+
 };
 
 

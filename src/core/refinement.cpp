@@ -3,6 +3,7 @@
 WX_DEFINE_OBJARRAY(ArrayofRefinementResults);
 WX_DEFINE_OBJARRAY(ArrayofClassRefinementResults);
 WX_DEFINE_OBJARRAY(ArrayofRefinements);
+WX_DEFINE_OBJARRAY(ArrayofShortRefinementInfos);
 
 RefinementResult::RefinementResult()
 {
@@ -26,6 +27,33 @@ RefinementResult::RefinementResult()
 RefinementResult::~RefinementResult()
 {
 
+}
+
+ShortRefinementInfo::ShortRefinementInfo()
+{
+
+	refinement_id = -1;
+	refinement_package_asset_id = -1;
+	name = wxEmptyString;
+	number_of_particles = 0;
+	number_of_classes = 0;
+}
+
+ShortRefinementInfo & ShortRefinementInfo::operator = (const Refinement &other_refinement)
+{
+	*this = &other_refinement;
+	return *this;
+}
+
+ShortRefinementInfo & ShortRefinementInfo::operator = (const Refinement *other_refinement)
+{
+	refinement_id = other_refinement->refinement_id;
+	refinement_package_asset_id = other_refinement->refinement_package_asset_id;
+	name = other_refinement->name;
+	number_of_particles = other_refinement->number_of_particles;
+	number_of_classes = other_refinement->number_of_particles;
+
+	return *this;
 }
 
 Refinement::Refinement()

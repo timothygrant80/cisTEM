@@ -50,6 +50,8 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 
 	//wxPrintf("output files: %s %s\n",output_stack_filename.GetFullPath(), frealign_txt_filename.GetFullPath());
 
+	OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Export To Frealign", "Extracting Particles...", number_of_images_in_group, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
 	for (int image_counter = 0; image_counter < number_of_images_in_group; image_counter ++ )
 	{
 		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(),image_counter));
@@ -112,7 +114,11 @@ void MyFrealignExportDialog::OnExportButtonClick( wxCommandEvent & event )
 
 		}
 
+		my_dialog->Update(image_counter + 1);
+
 	}
+
+	my_dialog->Destroy();
 
 	output_stack->CloseFile();
 	delete frealign_txt_file;

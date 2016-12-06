@@ -45,11 +45,11 @@ class UnblurResultsPanel;
 #include <wx/frame.h>
 #include <wx/stattext.h>
 #include <wx/combobox.h>
-#include <wx/button.h>
 #include <wx/splitter.h>
 #include <wx/radiobut.h>
 #include <wx/statline.h>
 #include <wx/checkbox.h>
+#include <wx/button.h>
 #include <wx/dataview.h>
 #include <wx/tglbtn.h>
 #include <wx/textctrl.h>
@@ -116,14 +116,12 @@ class RefinementResultsPanel : public wxPanel
 		RefinementParametersListCtrl* ParameterListCtrl;
 		wxPanel* m_panel49;
 		MyFSCPanel* FSCPlotPanel;
-		wxButton* PlotAngleButton;
 		AngularDistributionPlotPanel* AngularPlotPanel;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnRefinementPackageComboBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInputParametersComboBox( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnPlotButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -135,7 +133,7 @@ class RefinementResultsPanel : public wxPanel
 		
 		void m_splitter7OnIdle( wxIdleEvent& )
 		{
-			m_splitter7->SetSashPosition( 550 );
+			m_splitter7->SetSashPosition( 800 );
 			m_splitter7->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter7OnIdle ), NULL, this );
 		}
 	

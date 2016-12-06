@@ -417,9 +417,9 @@ void MyRefine3DPanel::SetDefaults()
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids[InputParametersComboBox->GetSelection()];
 	calculated_high_resolution_cutoff = 0;
 
-	for (int class_counter = 0; class_counter < refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->number_of_classes; class_counter++)
+	for (int class_counter = 0; class_counter < refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(current_input_refinement_id)->number_of_classes; class_counter++)
 	{
-		if (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() > calculated_high_resolution_cutoff) calculated_high_resolution_cutoff = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p8Resolution();
+		//if (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() > calculated_high_resolution_cutoff) calculated_high_resolution_cutoff = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p8Resolution();
 	}
 
 	local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
@@ -755,7 +755,7 @@ void MyRefine3DPanel::FillInputParamsComboBox()
 		for (long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.GetCount(); counter++)
 			{
 				//wxPrintf("ID = %li\n",refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter));
-				InputParametersComboBox->Append(refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter))->name);
+				InputParametersComboBox->Append(refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter))->name);
 			}
 
 		InputParametersComboBox->SetSelection(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.GetCount() - 1);
@@ -2025,7 +2025,7 @@ void RefinementManager::ProcessAllJobsFinished()
 		//	my_parent->SetDefaults();
 			refinement_results_panel->is_dirty = true;
 
-			Refinement *current_refinement = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(output_refinement->refinement_id);
+			Refinement *current_refinement = main_frame->current_project.database.GetRefinementByID(output_refinement->refinement_id);
 			//update resolution statistics in database and gui..
 
 			main_frame->current_project.database.UpdateRefinementResolutionStatistics(output_refinement);
@@ -2049,12 +2049,14 @@ void RefinementManager::ProcessAllJobsFinished()
 			}
 
 
-			my_parent->FSCResultsPanel->AddRefinement(refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(output_refinement->refinement_id));
+			my_parent->FSCResultsPanel->AddRefinement(output_refinement);
 		}
 		else
 		{
 			main_frame->current_project.database.AddRefinement(output_refinement);
-			refinement_package_asset_panel->all_refinements.Add(*output_refinement);
+			ShortRefinementInfo temp_info;
+			temp_info = output_refinement;
+			refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
 
 			// add this refinment to the refinement package..
 
@@ -2070,7 +2072,7 @@ void RefinementManager::ProcessAllJobsFinished()
 	//		my_parent->SetDefaults();
 			refinement_results_panel->is_dirty = true;
 
-			my_parent->FSCResultsPanel->AddRefinement(&refinement_package_asset_panel->all_refinements.Item(refinement_package_asset_panel->all_refinements.GetCount() - 1));
+			my_parent->FSCResultsPanel->AddRefinement(output_refinement);
 
 
 

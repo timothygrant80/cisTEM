@@ -153,12 +153,12 @@ wxArrayString ReturnIPAddress()
 	  	struct ifaddrs * ifAddrStruct=NULL;
 	    struct ifaddrs * ifa=NULL;
 	    void * tmpAddrPtr=NULL;
-        char addressBuffer[INET_ADDRSTRLEN];
+        char addressBuffer[INET_ADDRSTRLEN + 1];
 
-
+        wxString ip_address;
         wxArrayString all_ip_addresses;
 
-        for (int counter = 0; counter < INET_ADDRSTRLEN; counter++)
+        for (int counter = 0; counter <= INET_ADDRSTRLEN; counter++)
         {
         	addressBuffer[counter] = 0;
         }
@@ -177,8 +177,15 @@ wxArrayString ReturnIPAddress()
 	            tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
 
 	            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+
+	            ip_address = addressBuffer;
+	            ip_address.Trim();
+	            ip_address.Trim(false);
+
+	            if (ip_address.Find("127.0.0.1") == wxNOT_FOUND) all_ip_addresses.Add(ip_address);
+
 	            //if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) ip_address = addressBuffer;
-	            if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) all_ip_addresses.Add(addressBuffer);
+	            //if (memcmp(addressBuffer, "127.0.0.1", INET_ADDRSTRLEN) != 0) all_ip_addresses.Add(addressBuffer);
 
 	        }
 
@@ -208,12 +215,12 @@ wxString ReturnIPAddressFromSocket(wxSocketBase *socket)
 	ip_address = my_address.IPAddress();
 
 	// is this 127.0.0.1 - in which case it may cause trouble..
-
+/*
 	if (ip_address == "127.0.0.1")
 	{
 		ip_address = "";
 		//ip_address = ReturnIPAddress(); // last chance to get a non loopback address
-	}
+	}*/
 
 	return ip_address;
 

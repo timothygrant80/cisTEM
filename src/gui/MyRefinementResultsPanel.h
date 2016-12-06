@@ -5,6 +5,7 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 	public:
 
 	bool is_dirty;
+	Refinement *currently_displayed_refinement;
 
 	MyRefinementResultsPanel( wxWindow* parent );
 	void FillRefinementPackageComboBox(void);
@@ -21,6 +22,8 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 
 	void OnPlotButtonClick( wxCommandEvent& event );
 	void OnClassComboBoxChange( wxCommandEvent& event );
+
+	void UpdateCachedRefinement();
 
 
 };

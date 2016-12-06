@@ -247,7 +247,8 @@ void MyRefinementPackageAssetPanel::ImportAllFromDatabase()
 
 	main_frame->current_project.database.EndAllRefinementPackagesSelect();
 
-	ImportAllRefinementsFromDatabase();
+	ImportAllRefinementInfosFromDatabase();
+
 
 	main_frame->DirtyRefinementPackages();
 }
@@ -379,37 +380,46 @@ long MyRefinementPackageAssetPanel::ReturnArrayPositionFromAssetID(long wanted_a
 
 }
 
-void MyRefinementPackageAssetPanel::ImportAllRefinementsFromDatabase()
+void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 {
 
 	bool more_data;
 	long current_id;
 	int counter = 0;
-	Refinement *current_refinement;
+	ShortRefinementInfo temp_info;
+	all_refinement_short_infos.Clear();
 
-	all_refinements.Clear();
-	wxArrayLong refinement_ids;
-
-	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT DISTINCT REFINEMENT_ID FROM REFINEMENT_LIST");
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT REFINEMENT_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM REFINEMENT_LIST");
 
 	while (more_data == true)
 	{
-		more_data = main_frame->current_project.database.GetFromBatchSelect("l", &current_id);
-		refinement_ids.Add(current_id);
+		more_data = main_frame->current_project.database.GetFromBatchSelect("lltli", &temp_info.refinement_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.number_of_particles, &temp_info.number_of_classes);
+		all_refinement_short_infos.Add(temp_info);
 	}
 
 	main_frame->current_project.database.EndBatchSelect();
 
-	for (counter = 0; counter < refinement_ids.GetCount(); counter++)
-	{
-		current_refinement = main_frame->current_project.database.GetRefinementByID(refinement_ids[counter]);
-		wxPrintf("Adding %s\n", current_refinement->name);
-		all_refinements.Add(current_refinement);
-	}
-
-
 }
 
+ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id)
+{
+	long counter;
+
+	//wxPrintf("looking for %li\n", wanted_id);
+	for (counter = 0; counter < all_refinement_short_infos.GetCount(); counter++)
+	{
+		if (all_refinement_short_infos[counter].refinement_id == wanted_id)
+		{
+		//wxPrintf("found refinement\n");
+			return &all_refinement_short_infos.Item(counter);
+		}
+	}
+
+	//wxPrintf("returning NULL\n");
+	return NULL;
+}
+
+/*
 Refinement* MyRefinementPackageAssetPanel::ReturnPointerToRefinementByRefinementID(long wanted_id)
 {
 	long counter;
@@ -427,5 +437,5 @@ Refinement* MyRefinementPackageAssetPanel::ReturnPointerToRefinementByRefinement
 	wxPrintf("returning NULL\n");
 	return NULL;
 
-}
+}*/
 

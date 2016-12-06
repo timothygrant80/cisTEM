@@ -131,7 +131,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 	//	wxPrintf("filling\n");
 	 	 for (int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection() - 1).refinement_ids.GetCount(); counter++)
 	 	 {
-	 		parameter_page->my_panel->GroupComboBox->Append (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection() - 1).refinement_ids[counter])->name);
+	 		parameter_page->my_panel->GroupComboBox->Append (refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection() - 1).refinement_ids[counter])->name);
 	 	 }
 	 //	 wxPrintf("filled\n");
 
@@ -430,7 +430,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		wxPrintf("Asking for parameter = %i\n", parameter_page->my_panel->GroupComboBox->GetSelection());
 		wxPrintf("Ref ID = %li\n", refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 1].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection()]);
 
-		Refinement *refinement_to_copy = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 1].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection()]);
+		Refinement *refinement_to_copy = main_frame->current_project.database.GetRefinementByID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 1].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection()]);
 
 		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
@@ -523,6 +523,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			}
 
 		my_dialog->Destroy();
+		delete refinement_to_copy;
 
 	}
 
@@ -539,7 +540,15 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	}
 
 	main_frame->current_project.database.AddRefinement(&temp_refinement);
-	refinement_package_asset_panel->all_refinements.Add(temp_refinement);
+
+	ShortRefinementInfo temp_info;
+	temp_info.refinement_id = temp_refinement.refinement_id;
+	temp_info.name = temp_refinement.name;
+	temp_info.number_of_classes = temp_refinement.number_of_classes;
+	temp_info.number_of_particles = temp_refinement.number_of_particles;
+	temp_info.refinement_package_asset_id = temp_refinement.refinement_package_asset_id;
+
+	refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
 	//delete temp_refinement_package;
 
 

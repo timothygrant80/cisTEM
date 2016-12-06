@@ -212,7 +212,7 @@ bool UnBlurApp::DoCalculation()
 	pre_binning_factor = int(myround(5. / original_pixel_size));
 	if (pre_binning_factor < 1) pre_binning_factor = 1;
 
-	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
+//	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
 
 	// if we are going to be binning, we need to allocate the unbinned array..
 
@@ -341,7 +341,7 @@ bool UnBlurApp::DoCalculation()
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
 		sum_image.AddImage(&image_stack[image_counter]);
-		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
+//		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
 	}
 
 	// if we are restoring the power - do it here..
@@ -371,7 +371,7 @@ bool UnBlurApp::DoCalculation()
 		result_array[image_counter] = x_shifts[image_counter] * original_pixel_size;
 		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * original_pixel_size;
 
-		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+	//	wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 	}
 
 	my_result.SetResult(number_of_input_images * 2, result_array);
@@ -438,7 +438,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 	for (iteration_counter = 1; iteration_counter <= max_iterations; iteration_counter++)
 	{
-		wxPrintf("Starting iteration number %li\n\n", iteration_counter);
+	//	wxPrintf("Starting iteration number %li\n\n", iteration_counter);
 		max_shift = -FLT_MAX;
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
@@ -488,7 +488,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		{
 			current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
 			current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
-			wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+		//	wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
 		}
 
 
@@ -522,14 +522,14 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 		if (iteration_counter >= max_iterations || max_shift <= max_shift_convergence_threshold)
 		{
-			wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+		//	wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 			delete [] current_x_shifts;
 			delete [] current_y_shifts;
 			return;
 		}
 		else
 		{
-			wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+		//	wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 
 		}
 

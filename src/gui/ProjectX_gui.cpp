@@ -171,9 +171,6 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	wxBoxSizer* bSizer208;
 	bSizer208 = new wxBoxSizer( wxHORIZONTAL );
 	
-	PlotAngleButton = new wxButton( m_panel49, wxID_ANY, wxT("Plot Angles"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer208->Add( PlotAngleButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
 	AngularPlotPanel = new AngularDistributionPlotPanel( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	bSizer208->Add( AngularPlotPanel, 100, wxEXPAND | wxALL, 5 );
 	
@@ -184,7 +181,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	m_panel49->SetSizer( bSizer206 );
 	m_panel49->Layout();
 	bSizer206->Fit( m_panel49 );
-	m_splitter7->SplitVertically( m_panel48, m_panel49, 550 );
+	m_splitter7->SplitVertically( m_panel48, m_panel49, 800 );
 	bSizer202->Add( m_splitter7, 1, wxEXPAND, 5 );
 	
 	
@@ -195,7 +192,6 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnRefinementPackageComboBox ), NULL, this );
 	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnInputParametersComboBox ), NULL, this );
-	PlotAngleButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnPlotButtonClick ), NULL, this );
 }
 
 RefinementResultsPanel::~RefinementResultsPanel()
@@ -204,7 +200,6 @@ RefinementResultsPanel::~RefinementResultsPanel()
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
 	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnRefinementPackageComboBox ), NULL, this );
 	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( RefinementResultsPanel::OnInputParametersComboBox ), NULL, this );
-	PlotAngleButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnPlotButtonClick ), NULL, this );
 	
 }
 
@@ -4884,8 +4879,8 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 	wxStaticBoxSizer* sbSizer4;
 	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Output image stack") ), wxVERTICAL );
 	
-	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE );
-	sbSizer4->Add( OutputImageStackPicker, 0, wxALL, 5 );
+	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE|wxFLP_USE_TEXTCTRL );
+	sbSizer4->Add( OutputImageStackPicker, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );

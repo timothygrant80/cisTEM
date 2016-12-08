@@ -71,6 +71,7 @@ typedef struct Kernel2D {
 #include "frealign_parameter_file.h"
 #include "particle_finder.h"
 #include "myapp.h"
+#include "image_file.h"
 #ifdef MKL
 #include <mkl.h>
 #endif

@@ -1,7 +1,7 @@
 AC_INIT(ctffind, 4.1.5)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_FILES([Makefile])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 INPUT_CPPFLAGS="$CXXFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
@@ -21,22 +21,22 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 
 # set up initial flags
 
-if test "x$CXX" = "xicpc"; then		
+if test "x$CXX" = "xicpc"; then
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"		
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-	
+
 	#sqlite needs dl on gcc
-	
+
 	LIBS="$LIBS -ldl"
 fi
 
 # Use all available processor instruction sets
 AC_ARG_ENABLE(latest-instruction-set, [  --enable-latest-instruction-set     Use latest available CPU instruction set [[default=yes]]],[
   if test "$enableval" = yes; then
-	if test "x$CXX" = "xicpc"; then	
+	if test "x$CXX" = "xicpc"; then
 		CXXFLAGS="$CXXFLAGS -xHost"
 	fi
   fi
@@ -60,12 +60,12 @@ AC_ARG_ENABLE(staticmode, [  --enable-staticmode     Link statically [[default=n
   fi
   ])
 
-	
+
 AC_MSG_NOTICE(static_link = $static_link)
 AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 
-# wx-config 
+# wx-config
 
 WXCONFIG=wx-config
 AC_ARG_WITH(wx-config,
@@ -98,7 +98,7 @@ AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[defa
 # fftw
 
 AC_ARG_WITH(fftw-dir,
-[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its 
+[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its
                           current location is not system accessible ]],
 [
     if test "$withval" != "yes" -a "$withval" != ""; then
@@ -167,7 +167,7 @@ fi
 if test "x$HAVE_MKL" = "xyes"; then
 
 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
-	
+
 	CXXFLAGS="$CXXFLAGS -DMKL"
 	CPPFLAGS="$CPPFLAGS -DMKL"
 
@@ -204,7 +204,7 @@ fi
 #AC_ARG_ENABLE(textonly, [  --enable-textonly       Do not compile wxWidgets applications [[default=no]]],[
 #  if test "$enableval" = yes; then
 #  wx_is_available=0
-#  fi  
+#  fi
 #  ])
 
 

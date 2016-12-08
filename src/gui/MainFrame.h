@@ -39,6 +39,7 @@ class MyMainFrame : public MainFrame
 
 		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
 		void OnExportToFrealign( wxCommandEvent & event );
+		void OnExportToRelion( wxCommandEvent & event );
 
 		void OnCharHook( wxKeyEvent& event );
 

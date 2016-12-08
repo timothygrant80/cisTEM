@@ -884,7 +884,7 @@ bool CtffindApp::DoCalculation()
 		} // end of test of whether we were given amplitude spectra on input
 
 
-		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
 
 
 		// Filter the amplitude spectrum, remove background
@@ -895,7 +895,7 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->DivideByConstant(sigma);
 			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
 
-			average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
 			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );

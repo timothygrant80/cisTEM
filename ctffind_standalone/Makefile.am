@@ -35,11 +35,21 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/euler_search.h \
                  src/core/frealign_parameter_file.h \
                  src/core/myapp.h \
-                 src/core/f2c.h
+                 src/core/f2c.h \
+                 src/core/refinement_package.h \
+                 src/core/refinement.h \
+                 src/core/particle_finder.h \
+                 src/core/image_file.h \
+                 src/core/sqlite/sqlite3.h
 
-bin_PROGRAMS = ctffind 
+bin_PROGRAMS = ctffind
 
-dist_bin_SCRIPTS = scripts/ctffind_plot_results.sh
+dist_bin_SCRIPTS = 	scripts/ctffind_plot_results.sh \
+                        install-sh \
+                        config.sub \
+                        config.guess \
+                        ltmain.sh \
+                        depcomp
 
 image_trim.cpp:
 	if [ -e $(top_srcdir)/src/core/image.cpp ]; then \

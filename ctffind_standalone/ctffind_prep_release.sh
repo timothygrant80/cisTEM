@@ -14,7 +14,7 @@
 #
 # This script should be run on the Janelia cluster rather than workstations to ensure compatibility
 #
-version=4.1.5
+version=4.1.6
 svn_loc="svn+ssh://praha.hhmi.org/groups/grigorieff/home/grantt/Apps/svnrepos/projectx"
 configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
@@ -22,7 +22,17 @@ number_of_cores=8
 installation_username="grigoriefflab"
 installation_prefix="$GWARE/ctffind_${version}"
 
-if [ ${USER} != ${installation_username} ]; then
+
+# Override for tests on laptop
+if [[ $(hostname) == "stitt" ]]; then
+  installation_username="rohoua"
+  installation_prefix="$HOME/work/software/ctffind_${version}"
+  SCRATCH="/tmp"
+  configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
+  configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
+fi
+
+if [ "${USER}" != "${installation_username}" ]; then
   echo "This script must be run as user ${installation_username}"
   exit
 fi
@@ -39,11 +49,17 @@ cd $version
 unset SHELL
 
 # Check out ctffind from SVN
-echo "Checking out from SVN..."
-#svn co ${svn_loc}/tags/ctffind_${version} . > checkout.log 2>&1
-svn co ${svn_loc} . > checkout.log 2>&1
+if [[ $(hostname) == "stitt" ]]; then
+  echo "Copying from workspace..."
+  cp -rp ~/work/workspace/ProjectX/* . > cp.log 2>&1
+else
+  echo "Checking out from SVN..."
+  #svn co ${svn_loc}/tags/ctffind_${version} . > checkout.log 2>&1
+  svn co ${svn_loc} . > checkout.log 2>&1
+fi
 
-libtoolize --force > libtoolize.log 2>&1
+#libtoolize --force > libtoolize.log 2>&1
+source regenerate_project.b
 cd ctffind_standalone
 
 # make sure we are using the latest Intel compiler
@@ -51,9 +67,10 @@ if [ -f /usr/local/INTEL2016.sh ]; then
   . /usr/local/INTEL2016.sh
 fi
 # Prepare for building
-libtoolize --force > libtoolize.log 2>&1
-aclocal > aclocal.log 2>&1
-autoreconf > autoreconf.log 2>&1
+source ../regenerate_project.b
+#libtoolize --force > libtoolize.log 2>&1
+#aclocal > aclocal.log 2>&1
+#autoreconf > autoreconf.log 2>&1
 
 
 # Configure

@@ -79,6 +79,7 @@
 #include "../gui/PickingResultsPanel.h"
 #include "../gui/MyParticlePositionExportDialog.h"
 #include "../gui/MyFrealignExportDialog.h"
+#include "../gui/MyRelionExportDialog.h"
 #include "../gui/MyRefinementPackageAssetPanel.h"
 #include "../gui/MyRenameDialog.h"
 #include "../gui/MyVolumeChooserDialog.h"

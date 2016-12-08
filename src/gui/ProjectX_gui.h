@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -29,6 +29,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -90,6 +91,7 @@ class MainFrame : public wxFrame
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportCoordinatesToImagic( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportToFrealign( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportToRelion( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -1484,6 +1486,45 @@ class FrealignExportDialog : public wxDialog
 		
 		FrealignExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Frealign"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~FrealignExportDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RelionExportDialog
+///////////////////////////////////////////////////////////////////////////////
+class RelionExportDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxPanel* m_panel38;
+		wxComboBox* GroupComboBox;
+		wxStaticText* m_staticText202;
+		wxSpinCtrl* DownsamplingFactorSpinCtrl;
+		wxStaticText* m_staticText203;
+		wxSpinCtrl* BoxSizeSpinCtrl;
+		wxCheckBox* NormalizeCheckBox;
+		wxStaticText* particleRadiusStaticText;
+		wxTextCtrl* particleRadiusTextCtrl;
+		wxCheckBox* FlipCTFCheckBox;
+		wxFilePickerCtrl* OutputImageStackPicker;
+		wxStaticText* FileNameStaticText;
+		wxStaticText* WarningText;
+		wxButton* CancelButton;
+		wxButton* ExportButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnNormalizeCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFlipCTFCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOutputImageStackFileChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		RelionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Relion"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~RelionExportDialog();
 	
 };
 

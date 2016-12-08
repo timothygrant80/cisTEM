@@ -491,3 +491,9 @@ void MyMainFrame::OnExportToFrealign ( wxCommandEvent & event )
 	MyFrealignExportDialog *export_dialog = new MyFrealignExportDialog(this);
 	export_dialog->ShowModal();
 }
+
+void MyMainFrame::OnExportToRelion ( wxCommandEvent & event )
+{
+	MyRelionExportDialog *export_dialog = new MyRelionExportDialog(this);
+	export_dialog->ShowModal();
+}

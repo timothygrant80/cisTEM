@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -15,7 +15,6 @@
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
 #include "UnblurResultsPanel.h"
-#include "job_panel.h"
 #include "my_controls.h"
 
 #include "ProjectX_gui.h"
@@ -86,6 +85,10 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	ExportToFrealign = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export to Frealign") ) , wxEmptyString, wxITEM_NORMAL );
 	ExportMenu->Append( ExportToFrealign );
 	
+	wxMenuItem* ExportToRelion;
+	ExportToRelion = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export to Relion") ) , wxEmptyString, wxITEM_NORMAL );
+	ExportMenu->Append( ExportToRelion );
+	
 	m_menubar1->Append( ExportMenu, wxT("Export") ); 
 	
 	this->SetMenuBar( m_menubar1 );
@@ -102,6 +105,7 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Connect( FileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
 	this->Connect( ExportCoordinatesToImagic->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
 	this->Connect( ExportToFrealign->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
+	this->Connect( ExportToRelion->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToRelion ) );
 }
 
 MainFrame::~MainFrame()
@@ -115,6 +119,7 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
+	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToRelion ) );
 	
 }
 
@@ -4940,6 +4945,184 @@ FrealignExportDialog::~FrealignExportDialog()
 	OutputImageStackPicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( FrealignExportDialog::OnOutputImageStackFileChanged ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FrealignExportDialog::OnExportButtonClick ), NULL, this );
+	
+}
+
+RelionExportDialog::RelionExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer133;
+	bSizer133 = new wxBoxSizer( wxVERTICAL );
+	
+	m_panel38 = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer135;
+	bSizer135 = new wxBoxSizer( wxVERTICAL );
+	
+	wxStaticBoxSizer* sbSizer3;
+	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
+	
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( sbSizer3, 0, wxEXPAND, 25 );
+	
+	wxBoxSizer* bSizer141;
+	bSizer141 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer142;
+	bSizer142 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText202 = new wxStaticText( m_panel38, wxID_ANY, wxT("Downsampling factor : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText202->Wrap( -1 );
+	bSizer142->Add( m_staticText202, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DownsamplingFactorSpinCtrl = new wxSpinCtrl( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10, 1 );
+	bSizer142->Add( DownsamplingFactorSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer141->Add( bSizer142, 0, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( bSizer141, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer145;
+	bSizer145 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer143;
+	bSizer143 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText203 = new wxStaticText( m_panel38, wxID_ANY, wxT("Box size after downsampling : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText203->Wrap( -1 );
+	bSizer143->Add( m_staticText203, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	BoxSizeSpinCtrl = new wxSpinCtrl( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 512 );
+	bSizer143->Add( BoxSizeSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer145->Add( bSizer143, 1, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( bSizer145, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer140;
+	bSizer140 = new wxBoxSizer( wxVERTICAL );
+	
+	NormalizeCheckBox = new wxCheckBox( m_panel38, wxID_ANY, wxT("Normalize images"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer140->Add( NormalizeCheckBox, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer140, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer1451;
+	bSizer1451 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer1431;
+	bSizer1431 = new wxBoxSizer( wxHORIZONTAL );
+	
+	particleRadiusStaticText = new wxStaticText( m_panel38, wxID_ANY, wxT("Particle radius (A) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	particleRadiusStaticText->Wrap( -1 );
+	particleRadiusStaticText->Enable( false );
+	
+	bSizer1431->Add( particleRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	particleRadiusTextCtrl = new wxTextCtrl( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	particleRadiusTextCtrl->Enable( false );
+	
+	bSizer1431->Add( particleRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer1451->Add( bSizer1431, 1, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( bSizer1451, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer213;
+	bSizer213 = new wxBoxSizer( wxVERTICAL );
+	
+	FlipCTFCheckBox = new wxCheckBox( m_panel38, wxID_ANY, wxT("Flip CTF"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer213->Add( FlipCTFCheckBox, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer213, 1, wxEXPAND, 5 );
+	
+	wxStaticBoxSizer* sbSizer4;
+	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Output image stack") ), wxVERTICAL );
+	
+	wxBoxSizer* bSizer229;
+	bSizer229 = new wxBoxSizer( wxHORIZONTAL );
+	
+	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrcs)|*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE );
+	bSizer229->Add( OutputImageStackPicker, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	FileNameStaticText = new wxStaticText( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	FileNameStaticText->Wrap( -1 );
+	bSizer229->Add( FileNameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	
+	sbSizer4->Add( bSizer229, 1, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );
+	
+	
+	bSizer135->Add( 0, 0, 0, wxEXPAND, 5 );
+	
+	WarningText = new wxStaticText( m_panel38, wxID_ANY, wxT("Warning: running jobs \nmay affect exported coordinates"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	WarningText->Wrap( -1 );
+	WarningText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	WarningText->Hide();
+	
+	bSizer135->Add( WarningText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer137;
+	bSizer137 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer137->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	CancelButton = new wxButton( m_panel38, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer137->Add( CancelButton, 0, wxALL, 5 );
+	
+	ExportButton = new wxButton( m_panel38, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExportButton->SetDefault(); 
+	ExportButton->Enable( false );
+	
+	bSizer137->Add( ExportButton, 0, wxALL, 5 );
+	
+	
+	bSizer135->Add( bSizer137, 0, wxEXPAND, 5 );
+	
+	
+	m_panel38->SetSizer( bSizer135 );
+	m_panel38->Layout();
+	bSizer135->Fit( m_panel38 );
+	bSizer133->Add( m_panel38, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	this->SetSizer( bSizer133 );
+	this->Layout();
+	bSizer133->Fit( this );
+	
+	this->Centre( wxBOTH );
+	
+	// Connect Events
+	NormalizeCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RelionExportDialog::OnNormalizeCheckBox ), NULL, this );
+	FlipCTFCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RelionExportDialog::OnFlipCTFCheckBox ), NULL, this );
+	OutputImageStackPicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( RelionExportDialog::OnOutputImageStackFileChanged ), NULL, this );
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RelionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RelionExportDialog::OnExportButtonClick ), NULL, this );
+}
+
+RelionExportDialog::~RelionExportDialog()
+{
+	// Disconnect Events
+	NormalizeCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RelionExportDialog::OnNormalizeCheckBox ), NULL, this );
+	FlipCTFCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RelionExportDialog::OnFlipCTFCheckBox ), NULL, this );
+	OutputImageStackPicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( RelionExportDialog::OnOutputImageStackFileChanged ), NULL, this );
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RelionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RelionExportDialog::OnExportButtonClick ), NULL, this );
 	
 }
 

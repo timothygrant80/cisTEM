@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 #
 #
 # Plot the results from ctffind using gnuplot
@@ -21,7 +21,8 @@ fi
 
 input_fn=$1
 output_fn=${1%%.???}.pdf
-input_summary_fn=$(ls ${1%%_avrot.???}.${1##*.})
+#input_summary_fn=$(ls ${1%%_avrot.???}.${1##*.})
+input_summary_fn="${1%%_avrot.???}.${1##*.}"
 
 # Check whether gnuplot is available
 if ! hash gnuplot 2>/dev/null; then
@@ -50,7 +51,7 @@ gawk '
 	}
 }
 NF>p { p = NF }
-END {    
+END {
     for(j=1; j<=p; j++) {
         str=a[1,j]
         for(i=2; i<=NR; i++){
@@ -69,6 +70,7 @@ pixel_size=$(gawk 'match($0,/Pixel size: ([0-9.]*)/,a) {print a[1]}' $input_fn)
 number_of_micrographs=$(gawk 'match($0,/Number of micrographs: ([0-9]*)/,a) {print a[1]}' $input_fn)
 lines_per_micrograph=6
 
+if [ -f $input_summary_fn ]; then
 # Let's grab values from the summary file
 i=0
 while read -a myArray
@@ -82,8 +84,14 @@ do
 		maxres=[i]=${myArray[6]}
 	fi
 done < $input_summary_fn
-
-echo ${df_one[0]}
+else
+df_one[0]="0"
+df_two[0]="0"
+angast[0]="0"
+pshift[0]="0"
+score[0]="0"
+maxres[0]="0"
+fi
 
 # Run Gnuplot
 gnuplot > /dev/null 2>&1  <<EOF
@@ -141,8 +149,10 @@ if hash pdftk 2>/dev/null; then
 	echo "InfoValue: $1" >> /tmp/pdftemp.txt
 	mv ${output_fn} /tmp/tmp.pdf
 	pdftk /tmp/tmp.pdf update_info /tmp/pdftemp.txt output $output_fn
+elif hash exiftool 2>/dev/null; then
+	exiftool -Title="$1" ${output_fn}
 else
-	echo "pdftk was not found on your system. Please install it to get improved metadata in your output PDF file."
+	echo "Neither pdftk nor exiftool were found on your system. Please install one of them to get improved metadata in your output PDF file."
 fi
 
 # Make a PNG version

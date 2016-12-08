@@ -6,6 +6,81 @@ noinst_HEADERS = core/asset_group.h \
                  core/mrc_file.h \
                  core/mrc_header.h \
                  core/dm_file.h \
+                 core/sqlite/sqlite3.h \
+                 core/assets.h \
+                 core/socket_codes.h \
+                 core/userinput.h \
+                 core/randomnumbergenerator.h \
+                 core/matrix.h \
+                 core/symmetry_matrix.h \
+                 core/ctf.h \
+                 core/curve.h \
+                 core/angles_and_shifts.h \
+                 core/parameter_constraints.h \
+                 core/empirical_distribution.h \
+                 core/resolution_statistics.h \
+                 core/reconstructed_volume.h \
+                 core/particle.h \
+                 core/reconstruct_3d.h \
+                 core/electron_dose.h \
+                 core/run_profiles.h \
+                 core/refinement_package.h \
+                 core/refinement.h \
+                 core/database.h \
+                 core/project.h \
+                 core/job_packager.h \
+                 core/job_tracker.h \
+                 core/numeric_text_file.h \
+                 core/progressbar.h \
+                 core/downhill_simplex.h \
+                 core/brute_force_search.h \
+                 core/conjugate_gradient.h \
+                 core/euler_search.h \
+                 core/frealign_parameter_file.h \
+                 core/particle_finder.h \
+                 core/myapp.h \
+                 core/image_file.h \
+                 core/f2c.h \
+                 core/gui_core_headers.h \
+                 core/gui_job_controller.h \
+                 gui/job_panel.h \
+                 gui/gui_functions.h \
+                 gui/ResultsDataViewListCtrl.h \
+                 gui/BitmapPanel.h \
+                 gui/PickingBitmapPanel.h \
+                 gui/my_controls.h \
+                 gui/UnblurResultsPanel.h \
+                 gui/CTF1DPanel.h \
+                 gui/MyAssetParentPanel.h \
+                 gui/MyImageAssetPanel.h \
+                 gui/MyParticlePositionAssetPanel.h \
+                 gui/MyVolumeAssetPanel.h \
+                 gui/MyVolumeImportDialog.h \
+                 gui/MyMovieFilterDialog.h \
+                 gui/MyImageImportDialog.h \
+                 gui/ShowCTFResultsPanel.h \
+                 gui/FindCTFPanel.h \
+                 gui/FindParticlesPanel.h \
+                 gui/MyMovieAlignResultsPanel.h \
+                 gui/MyFindCTFResultsPanel.h \
+                 gui/PickingResultsDisplayPanel.h \
+                 gui/MyRunProfilesPanel.h \
+                 gui/MyAddRunCommandDialog.h \
+                 gui/MyNewProjectWizard.h \
+                 gui/MyNewRefinementPackageWizard.h \
+                 gui/MyResultsPanel.h \
+                 gui/PickingResultsPanel.h \
+                 gui/MyParticlePositionExportDialog.h \
+                 gui/MyFrealignExportDialog.h \
+                 gui/MyRelionExportDialog.h \
+                 gui/MyRefinementPackageAssetPanel.h \
+                 gui/MyRenameDialog.h \
+                 gui/MyVolumeChooserDialog.h \
+                 gui/MyRefine3DPanel.h \
+                 gui/PlotFSCPanel.h \
+                 gui/MyFSCPanel.h \
+                 gui/MyRefinementResultsPanel.h \
+                 gui/AngularDistributionPlotPanel.h \
                  gui/AlignMoviesPanel.h \
                  gui/ErrorDialog.h \
                  gui/MainFrame.h \
@@ -19,7 +94,32 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/image_icon.cpp \
                  gui/icons/movie_align_icon.cpp \
                  gui/icons/movie_icon.cpp \
-                 gui/icons/overview_icon.cpp 
+                 gui/icons/overview_icon.cpp \
+                 gui/icons/results_icon.cpp \
+                 gui/icons/settings_icon.cpp \
+                 gui/icons/particle_position_icon.cpp \
+                 gui/icons/virus_icon.cpp \
+                 gui/icons/refinement_package_icon.cpp \
+                 gui/icons/growth.cpp \
+                 gui/icons/run_profiles_icon.cpp \
+                 gui/icons/open_eye_icon_20.cpp \
+                 gui/icons/checked_checkbox_icon_20.cpp \
+                 gui/icons/unchecked_checkbox_icon_20.cpp \
+                 gui/icons/checked_checkbox_eye_icon_20.cpp \
+                 gui/icons/unchecked_checkbox_eye_icon_20.cpp \
+                 gui/icons/dlp_alignment.cpp \
+                 gui/icons/ctffind_definitions.cpp \
+                 gui/icons/ctffind_diagnostic_image.cpp \
+                 gui/icons/ctffind_example_1dfit.cpp \
+                 gui/icons/niko_picture1.cpp \
+                 gui/icons/niko_picture2.cpp \
+                 programs/console_test/hiv_image_80x80x1.cpp \
+                 programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
+                 programs/console_test/sine_128x128x1.cpp
+
+                 
+
+
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
@@ -43,6 +143,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/mrc_file.cpp \
                        core/mrc_header.cpp \
                        core/dm_file.cpp \
+                       core/image_file.cpp \
                        core/sqlite/sqlite3.c \
                        core/database.cpp \
                        core/project.cpp \
@@ -76,7 +177,7 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
-cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp
+cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)

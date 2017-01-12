@@ -8,13 +8,51 @@ ProgressBar::ProgressBar(void)
 
 ProgressBar::~ProgressBar(void)
 {
+	// How long did the process take?
+	long total_seconds;
+	long total_minutes = 0;
+	long total_hours = 0;
+
+	total_seconds = last_update_time - start_time;
+	if (total_seconds > 3600) total_hours = total_seconds / 3600;
+	if ((total_seconds - total_hours * 3600) > 60) total_minutes = total_seconds / 60 - total_hours * 60;
+	total_seconds = total_seconds - total_hours * 3600 - total_minutes * 60;
+	if (total_seconds < 0)
+	{
+		total_seconds = 0;
+	}
+
+
 	// Set to 100% and end the line..
 
 	if (total_number_of_ticks > 1)
 	{
-		wxPrintf("   100% [==============================] done!          \n");
+		wxPrintf("   100% [=================] done! ");
 	}
 
+	// Print out how long it took
+
+	if (total_hours > 999)
+	{
+		wxPrintf("(999h:99m:99s)             \n");
+	}
+	else
+	{
+		wxPrintf("(%lih:",total_hours);
+
+		// minutes, if less than ten do a preceding 0
+
+		wxPrintf("%02lim",total_minutes);
+
+
+		// similiar for the seconds
+
+		wxPrintf("%02lis)                \n", total_seconds);
+		fflush(stdout);
+
+		// we are done so flush and CR!
+
+	}
 }
 
 ProgressBar::ProgressBar(long wanted_total_number_of_ticks)

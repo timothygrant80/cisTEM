@@ -1249,38 +1249,6 @@ class FindCTFPanel : public JobPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class AddRunCommandDialog
-///////////////////////////////////////////////////////////////////////////////
-class AddRunCommandDialog : public wxDialog 
-{
-	private:
-	
-	protected:
-		wxStaticText* m_staticText45;
-		wxStaticText* m_staticText46;
-		wxStaticText* m_staticText58;
-		wxStaticText* ErrorStaticText;
-		wxStaticLine* m_staticline14;
-		wxButton* OKButton;
-		wxButton* CancelButton;
-		
-		// Virtual event handlers, overide them in your derived class
-		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
-	public:
-		wxTextCtrl* CommandTextCtrl;
-		wxSpinCtrl* NumberCopiesSpinCtrl;
-		wxSpinCtrl* DelayTimeSpinCtrl;
-		
-		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
-		~AddRunCommandDialog();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class NewProjectWizard
 ///////////////////////////////////////////////////////////////////////////////
 class NewProjectWizard : public wxWizard 
@@ -1310,6 +1278,38 @@ class NewProjectWizard : public wxWizard
 		NewProjectWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~NewProjectWizard();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class AddRunCommandDialog
+///////////////////////////////////////////////////////////////////////////////
+class AddRunCommandDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText45;
+		wxStaticText* m_staticText46;
+		wxStaticText* m_staticText58;
+		wxStaticText* ErrorStaticText;
+		wxStaticLine* m_staticline14;
+		wxButton* OKButton;
+		wxButton* CancelButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		wxTextCtrl* CommandTextCtrl;
+		wxSpinCtrl* NumberCopiesSpinCtrl;
+		wxSpinCtrl* DelayTimeSpinCtrl;
+		
+		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~AddRunCommandDialog();
 	
 };
 

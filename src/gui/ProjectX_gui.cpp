@@ -82,11 +82,11 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	ExportMenu->Append( ExportCoordinatesToImagic );
 	
 	wxMenuItem* ExportToFrealign;
-	ExportToFrealign = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export to Frealign") ) , wxEmptyString, wxITEM_NORMAL );
+	ExportToFrealign = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export particles to Frealign") ) , wxEmptyString, wxITEM_NORMAL );
 	ExportMenu->Append( ExportToFrealign );
 	
 	wxMenuItem* ExportToRelion;
-	ExportToRelion = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export to Relion") ) , wxEmptyString, wxITEM_NORMAL );
+	ExportToRelion = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export particles to Relion") ) , wxEmptyString, wxITEM_NORMAL );
 	ExportMenu->Append( ExportToRelion );
 	
 	m_menubar1->Append( ExportMenu, wxT("Export") ); 
@@ -3650,7 +3650,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText333->Wrap( -1 );
 	fgSizer1->Add( m_staticText333, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	ReconstructioScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	ReconstructioScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( ReconstructioScoreThreshold, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText334 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -4324,6 +4324,88 @@ FindCTFPanel::~FindCTFPanel()
 	
 }
 
+NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
+{
+	this->Create( parent, id, title, bitmap, pos, style );
+	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
+	
+	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
+	m_pages.Add( m_wizPage1 );
+	
+	wxBoxSizer* bSizer47;
+	bSizer47 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText41 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Name :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText41->Wrap( -1 );
+	bSizer47->Add( m_staticText41, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ProjectNameTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxT("New_Project"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	ProjectNameTextCtrl->SetMinSize( wxSize( 500,-1 ) );
+	
+	bSizer47->Add( ProjectNameTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText42 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Parent Directory :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText42->Wrap( -1 );
+	bSizer47->Add( m_staticText42, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer50;
+	bSizer50 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ParentDirTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer50->Add( ParentDirTextCtrl, 1, wxALL, 5 );
+	
+	m_button24 = new wxButton( m_wizPage1, wxID_ANY, wxT("Browse..."), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer50->Add( m_button24, 0, wxALL, 5 );
+	
+	
+	bSizer47->Add( bSizer50, 0, wxEXPAND, 5 );
+	
+	m_staticText45 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Resulting project path :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText45->Wrap( -1 );
+	bSizer47->Add( m_staticText45, 0, wxALL, 5 );
+	
+	ProjectPathTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxT("/tmp/New_Project"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer47->Add( ProjectPathTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	ErrorText = new wxStaticText( m_wizPage1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ErrorText->Wrap( -1 );
+	ErrorText->SetForegroundColour( wxColour( 255, 0, 0 ) );
+	
+	bSizer47->Add( ErrorText, 0, wxALL, 5 );
+	
+	
+	m_wizPage1->SetSizer( bSizer47 );
+	m_wizPage1->Layout();
+	bSizer47->Fit( m_wizPage1 );
+	
+	this->Centre( wxBOTH );
+	
+	for ( unsigned int i = 1; i < m_pages.GetCount(); i++ )
+	{
+		m_pages.Item( i )->SetPrev( m_pages.Item( i - 1 ) );
+		m_pages.Item( i - 1 )->SetNext( m_pages.Item( i ) );
+	}
+	
+	// Connect Events
+	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewProjectWizard::OnFinished ) );
+	ProjectNameTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectTextChange ), NULL, this );
+	ParentDirTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnParentDirChange ), NULL, this );
+	m_button24->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( NewProjectWizard::OnBrowseButtonClick ), NULL, this );
+	ProjectPathTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectPathChange ), NULL, this );
+}
+
+NewProjectWizard::~NewProjectWizard()
+{
+	// Disconnect Events
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewProjectWizard::OnFinished ) );
+	ProjectNameTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectTextChange ), NULL, this );
+	ParentDirTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnParentDirChange ), NULL, this );
+	m_button24->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( NewProjectWizard::OnBrowseButtonClick ), NULL, this );
+	ProjectPathTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectPathChange ), NULL, this );
+	
+	m_pages.Clear();
+}
+
 AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
@@ -4405,88 +4487,6 @@ AddRunCommandDialog::~AddRunCommandDialog()
 	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnCancelClick ), NULL, this );
 	
-}
-
-NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
-{
-	this->Create( parent, id, title, bitmap, pos, style );
-	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
-	
-	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
-	m_pages.Add( m_wizPage1 );
-	
-	wxBoxSizer* bSizer47;
-	bSizer47 = new wxBoxSizer( wxVERTICAL );
-	
-	m_staticText41 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Name :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText41->Wrap( -1 );
-	bSizer47->Add( m_staticText41, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	ProjectNameTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxT("New_Project"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
-	ProjectNameTextCtrl->SetMinSize( wxSize( 500,-1 ) );
-	
-	bSizer47->Add( ProjectNameTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText42 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Parent Directory :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText42->Wrap( -1 );
-	bSizer47->Add( m_staticText42, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	wxBoxSizer* bSizer50;
-	bSizer50 = new wxBoxSizer( wxHORIZONTAL );
-	
-	ParentDirTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer50->Add( ParentDirTextCtrl, 1, wxALL, 5 );
-	
-	m_button24 = new wxButton( m_wizPage1, wxID_ANY, wxT("Browse..."), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer50->Add( m_button24, 0, wxALL, 5 );
-	
-	
-	bSizer47->Add( bSizer50, 0, wxEXPAND, 5 );
-	
-	m_staticText45 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Resulting project path :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText45->Wrap( -1 );
-	bSizer47->Add( m_staticText45, 0, wxALL, 5 );
-	
-	ProjectPathTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxT("/tmp/New_Project"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer47->Add( ProjectPathTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	ErrorText = new wxStaticText( m_wizPage1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	ErrorText->Wrap( -1 );
-	ErrorText->SetForegroundColour( wxColour( 255, 0, 0 ) );
-	
-	bSizer47->Add( ErrorText, 0, wxALL, 5 );
-	
-	
-	m_wizPage1->SetSizer( bSizer47 );
-	m_wizPage1->Layout();
-	bSizer47->Fit( m_wizPage1 );
-	
-	this->Centre( wxBOTH );
-	
-	for ( unsigned int i = 1; i < m_pages.GetCount(); i++ )
-	{
-		m_pages.Item( i )->SetPrev( m_pages.Item( i - 1 ) );
-		m_pages.Item( i - 1 )->SetNext( m_pages.Item( i ) );
-	}
-	
-	// Connect Events
-	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewProjectWizard::OnFinished ) );
-	ProjectNameTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectTextChange ), NULL, this );
-	ParentDirTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnParentDirChange ), NULL, this );
-	m_button24->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( NewProjectWizard::OnBrowseButtonClick ), NULL, this );
-	ProjectPathTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectPathChange ), NULL, this );
-}
-
-NewProjectWizard::~NewProjectWizard()
-{
-	// Disconnect Events
-	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewProjectWizard::OnFinished ) );
-	ProjectNameTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectTextChange ), NULL, this );
-	ParentDirTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnParentDirChange ), NULL, this );
-	m_button24->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( NewProjectWizard::OnBrowseButtonClick ), NULL, this );
-	ProjectPathTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( NewProjectWizard::OnProjectPathChange ), NULL, this );
-	
-	m_pages.Clear();
 }
 
 RenameDialog::RenameDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )

@@ -1,4 +1,4 @@
-AC_INIT(ProjectX, 0.1)
+AC_INIT(cisTEM, 0.1)
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -199,6 +199,9 @@ if test "x$static_link" = "xtrue"; then
 	LDFLAGS="$LDFLAGS -static"
  fi
 fi
+
+# tiff
+AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)],[-ltiff])
 
 # make it so we can turn off gui
 

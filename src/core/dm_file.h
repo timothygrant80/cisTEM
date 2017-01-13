@@ -58,7 +58,7 @@ enum DataType {
 #endif
 
 
-class DMFile {
+class DMFile : public AbstractImageFile {
 
 private:
 	wxString 		filename;
@@ -161,15 +161,32 @@ public:
 	// Constructors, destructors
 	DMFile();
 	DMFile(wxString wanted_filename);
+	DMFile(std::string filename, bool overwrite = false);
 	~DMFile();
 
 	//
+	int ReturnXSize() { return x; };
+	int ReturnYSize() { return y; };
+	int ReturnZSize() { return z; };
+	int ReturnNumberOfSlices() { return z; };
+
+	bool IsOpen();
+
+	void OpenFile(std::string filename, bool overwrite = false);
+	void CloseFile();
+
 	void ReadSliceFromDisk(int wanted_slice, float *output_array);
+	void ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array);
+
+	void WriteSliceToDisk(int slice_number, float *input_array) { wxPrintf("WriteSliceToDisk not yet implemented for DM files\n"); abort; };
+	void WriteSlicesToDisk(int start_slice, int end_slice, float *input_array) { wxPrintf("WriteSlicesToDisk not yet implemented for DM files\n"); abort; };
+
+	void PrintInfo() { wxPrintf("PrintInfo not yet implemented for DM files\n"); abort; };
+
+private:
+
+	//
 	int readDM(wxString wanted_filename, unsigned char *p, bool readdata = true, int img_select = -1);
-
-	int ReturnZSize() const { ReturnNumberOfSlices(); };
-
-	void PrintInfo() { wxPrintf("PrintInfo not yet implemented for DM files\n"); };
 
 	//
 	size_t sizeX() const {
@@ -180,9 +197,6 @@ public:
 	}
 	size_t sizeZ() const {
 		return z;
-	}
-	int ReturnNumberOfSlices() const {
-		return int(z);
 	}
 	size_t data_type_size();
 };

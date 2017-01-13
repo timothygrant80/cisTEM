@@ -11,8 +11,23 @@
 
 DMFile::DMFile()
 {
-	MyDebugPrint("DMFile: Do not use this constructor");
-	abort;
+	version = 0;
+	show = 0;
+	level = 0;
+	sb = 0;
+	endianness = 1;
+	keep = 0;
+}
+
+DMFile::DMFile(std::string wanted_filename, bool overwrite)
+{
+	version = 0;
+	show = 0;
+	level = 0;
+	sb = 0;
+	endianness = 1;
+	keep = 0;
+	OpenFile(wanted_filename);
 }
 
 DMFile::DMFile(wxString wanted_filename)
@@ -23,15 +38,37 @@ DMFile::DMFile(wxString wanted_filename)
 	sb = 0;
 	endianness = 1;
 	keep = 0;
-	unsigned char *fake_pointer;
-	readDM(wanted_filename, fake_pointer, false);
-	filename = wanted_filename;
+	OpenFile(wanted_filename.ToStdString());
 }
 
 
 DMFile::~DMFile()
 {
+	CloseFile();
 	true;
+}
+
+void DMFile::OpenFile(std::string wanted_filename, bool overwrite)
+{
+	MyDebugAssertFalse(overwrite,"Overwriting is not supported for DM files");
+	unsigned char *fake_pointer;
+	readDM(wxString(wanted_filename), fake_pointer, false);
+	filename = wxString(wanted_filename);
+}
+
+void DMFile::CloseFile()
+{
+	filename = "";
+}
+
+bool DMFile::IsOpen(){
+	return filename != "";
+}
+
+void DMFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array)
+{
+	MyDebugAssertTrue(start_slice==end_slice, "Can only read single slice at a time from DM files. Sorry");
+	ReadSliceFromDisk(start_slice,output_array);
 }
 
 // Wanted_slice should be numbered from 0. It's assumed output_array is already allocated to correct dimensions

@@ -39,6 +39,8 @@ noinst_HEADERS = core/asset_group.h \
                  core/frealign_parameter_file.h \
                  core/particle_finder.h \
                  core/myapp.h \
+                 core/abstract_image_file.h \
+                 core/tiff_file.h \
                  core/image_file.h \
                  core/f2c.h \
                  core/gui_core_headers.h \
@@ -140,8 +142,10 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/electron_dose.cpp \
                        core/matrix.cpp \
                        core/symmetry_matrix.cpp \
-                       core/mrc_file.cpp \
+                       core/abstract_image_file.cpp \
                        core/mrc_header.cpp \
+                       core/mrc_file.cpp \
+                       core/tiff_file.cpp \
                        core/dm_file.cpp \
                        core/image_file.cpp \
                        core/sqlite/sqlite3.c \

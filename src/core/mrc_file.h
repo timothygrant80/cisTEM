@@ -1,7 +1,7 @@
 //  \brief  Object for manipulating MRC Files..
 //
 
-class MRCFile {
+class MRCFile : public AbstractImageFile {
 
 	public:
 
@@ -10,6 +10,7 @@ class MRCFile {
 	wxString filename;
 
 	bool rewrite_header_on_close;
+
 
 	MRCFile();
 	MRCFile(std::string filename, bool overwrite = false);
@@ -20,8 +21,7 @@ class MRCFile {
 	inline int ReturnZSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
 	inline int ReturnNumberOfSlices() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
 
-
-
+	inline bool IsOpen() {return my_file.is_open();}
 
 	void OpenFile(std::string filename, bool overwrite = false);
 	void CloseFile();
@@ -39,4 +39,3 @@ class MRCFile {
 	void SetPixelSize(float wanted_pixel_size);
 
 };
-

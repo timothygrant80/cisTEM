@@ -39,9 +39,13 @@ typedef struct Kernel2D {
 #include "userinput.h"
 #include "functions.h"
 #include "randomnumbergenerator.h"
+#include <tiffio.h>
+#include "abstract_image_file.h"
 #include "mrc_header.h"
 #include "mrc_file.h"
 #include "dm_file.h"
+#include "tiff_file.h"
+#include "image_file.h"
 #include "matrix.h"
 #include "symmetry_matrix.h"
 #include "ctf.h"
@@ -71,7 +75,6 @@ typedef struct Kernel2D {
 #include "frealign_parameter_file.h"
 #include "particle_finder.h"
 #include "myapp.h"
-#include "image_file.h"
 #ifdef MKL
 #include <mkl.h>
 #endif

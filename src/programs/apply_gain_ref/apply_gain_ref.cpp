@@ -77,9 +77,12 @@ bool ApplyGainRef::DoCalculation()
 	bool zero_float_and_normalize		        	= my_current_job.arguments[8].ReturnBoolArgument();
 
 
-	MRCFile my_input_file(input_filename,false);
+
+	//wxFileName input_wx_filename(input_filename);
+
+	ImageFile my_input_file(input_filename,false);
 	MRCFile my_output_file(output_filename,true);
-	MRCFile my_gain_file(input_gain_filename,false);
+	ImageFile my_gain_file(input_gain_filename,false);
 
 	Image my_image;
 	Image gain_reference;

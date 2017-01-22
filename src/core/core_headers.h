@@ -39,7 +39,7 @@ typedef struct Kernel2D {
 #include "userinput.h"
 #include "functions.h"
 #include "randomnumbergenerator.h"
-#include <tiffio.h>
+#include "tiff/tiffio.h"
 #include "abstract_image_file.h"
 #include "mrc_header.h"
 #include "mrc_file.h"

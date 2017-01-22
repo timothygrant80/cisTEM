@@ -200,8 +200,8 @@ if test "x$static_link" = "xtrue"; then
  fi
 fi
 
-# tiff
-AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)],[-ltiff])
+# tiff (if we're not using wx's builtin tiff support)
+AC_CHECK_LIB([wxtiff-3.0],[TIFFOpen],[WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"],[AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])],`$WXCONFIG --libs base`)
 
 # make it so we can turn off gui
 
@@ -226,5 +226,6 @@ AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)
 AC_SUBST(WX_CPPFLAGS_BASE)
 
+AC_CONFIG_FILES([Makefile src/Makefile])
 
-AC_OUTPUT(Makefile src/Makefile)
+AC_OUTPUT

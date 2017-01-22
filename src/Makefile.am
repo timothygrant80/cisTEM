@@ -185,8 +185,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinem
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
-cisTEM_LDFLAGS = $(WX_LIBS)
-cisTEM_LDADD = libguicore.a libcore.a
+cisTEM_LDFLAGS = libguicore.a libcore.a $(WX_LIBS)
 
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -197,119 +196,100 @@ cisTEM_job_control_LDADD = libcore.a
 console_test_SOURCES = programs/console_test/console_test.cpp 
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-console_test_LDFLAGS = $(WX_LIBS_BASE)
-console_test_LDADD = libcore.a
+console_test_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-unblur_LDFLAGS = $(WX_LIBS_BASE)
-unblur_LDADD = libcore.a
+unblur_LDFLAGS = libcore.a $(LIBS) $(WX_LIBS_BASE)
+
 
 applyctf_SOURCES = programs/applyctf/applyctf.cpp
 applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-applyctf_LDFLAGS = $(WX_LIBS_BASE)
-applyctf_LDADD = libcore.a
+applyctf_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 ctffind_SOURCES = programs/ctffind/ctffind.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-ctffind_LDFLAGS = $(WX_LIBS_BASE)
-ctffind_LDADD = libcore.a
+ctffind_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-reconstruct3d_LDFLAGS = $(WX_LIBS_BASE)
-reconstruct3d_LDADD = libcore.a
+reconstruct3d_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 merge3d_SOURCES = programs/merge3d/merge3d.cpp
 merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_LDFLAGS = $(WX_LIBS_BASE)
-merge3d_LDADD = libcore.a
+merge3d_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 calc_occ_SOURCES = programs/calc_occ/calc_occ.cpp
 calc_occ_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calc_occ_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-calc_occ_LDFLAGS = $(WX_LIBS_BASE)
-calc_occ_LDADD = libcore.a
+calc_occ_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 project3d_SOURCES = programs/project3d/project3d.cpp
 project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 project3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-project3d_LDFLAGS = $(WX_LIBS_BASE)
-project3d_LDADD = libcore.a
+project3d_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 refine3d_SOURCES = programs/refine3d/refine3d.cpp
 refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine3d_LDFLAGS = $(WX_LIBS_BASE)
-refine3d_LDADD = libcore.a
+refine3d_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 remove_outlier_pixels_SOURCES = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
 remove_outlier_pixels_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_outlier_pixels_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-remove_outlier_pixels_LDFLAGS = $(WX_LIBS_BASE)
-remove_outlier_pixels_LDADD = libcore.a
+remove_outlier_pixels_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 resize_SOURCES = programs/resize/resize.cpp
 resize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 resize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-resize_LDFLAGS = $(WX_LIBS_BASE)
-resize_LDADD = libcore.a
+resize_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 resample_SOURCES = programs/resample/resample.cpp
 resample_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 resample_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-resample_LDFLAGS = $(WX_LIBS_BASE)
-resample_LDADD = libcore.a
+resample_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
 estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 estimate_dataset_ssnr_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-estimate_dataset_ssnr_LDFLAGS = $(WX_LIBS_BASE)
-estimate_dataset_ssnr_LDADD = libcore.a
+estimate_dataset_ssnr_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 reset_mrc_header_SOURCES = programs/reset_mrc_header/reset_mrc_header.cpp
 reset_mrc_header_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reset_mrc_header_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-reset_mrc_header_LDFLAGS = $(WX_LIBS_BASE)
-reset_mrc_header_LDADD = libcore.a
+reset_mrc_header_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 find_particles_SOURCES = programs/find_particles/find_particles.cpp
 find_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 find_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-find_particles_LDFLAGS = $(WX_LIBS_BASE)
-find_particles_LDADD = libcore.a
+find_particles_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 montage_SOURCES = programs/montage/montage.cpp
 montage_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 montage_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-montage_LDFLAGS = $(WX_LIBS_BASE)
-montage_LDADD = libcore.a
+montage_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 extract_particles_SOURCES = programs/extract_particles/extract_particles.cpp
 extract_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 extract_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-extract_particles_LDFLAGS = $(WX_LIBS_BASE)
-extract_particles_LDADD = libcore.a
+extract_particles_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 sum_all_mrc_files_SOURCES = programs/sum_all_mrc_files/sum_all_mrc_files.cpp
 sum_all_mrc_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_mrc_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sum_all_mrc_files_LDFLAGS = $(WX_LIBS_BASE)
-sum_all_mrc_files_LDADD = libcore.a
+sum_all_mrc_files_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 apply_gain_ref_SOURCES = programs/apply_gain_ref/apply_gain_ref.cpp
 apply_gain_ref_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_gain_ref_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-apply_gain_ref_LDFLAGS = $(WX_LIBS_BASE)
-apply_gain_ref_LDADD = libcore.a
+apply_gain_ref_LDFLAGS = libcore.a $(WX_LIBS_BASE)
 
 scale_with_mask_SOURCES = programs/scale_with_mask/scale_with_mask.cpp
 scale_with_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 scale_with_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-scale_with_mask_LDFLAGS = $(WX_LIBS_BASE)
-scale_with_mask_LDADD = libcore.a
+scale_with_mask_LDFLAGS = libcore.a $(WX_LIBS_BASE)

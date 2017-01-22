@@ -1,3 +1,4 @@
+rm -fr m4
 mkdir m4
 aclocal
 autoconf

@@ -20,7 +20,7 @@ private:
 	DMFile dm_file;
 
 
-	int file_type = UNSUPPORTED_FILE_TYPE;
+	int file_type;
 	wxString file_type_string;
 	void SetFileTypeFromExtension();
 

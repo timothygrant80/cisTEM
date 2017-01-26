@@ -40,6 +40,10 @@ noinst_HEADERS = core/asset_group.h \
                  core/particle_finder.h \
                  core/myapp.h \
                  core/abstract_image_file.h \
+                 core/tiff/tiff.h \
+                 core/tiff/tiffconf.h \
+                 core/tiff/tiffio.h \
+                 core/tiff/tiffvers.h \
                  core/tiff_file.h \
                  core/image_file.h \
                  core/f2c.h \

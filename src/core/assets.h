@@ -45,6 +45,8 @@ class MovieAsset : public Asset {
 
 	wxString gain_filename;
 
+	int super_resolution_factor; // If this is a super-resolution movie, but we never intend to use the "super resolution" part of the spectrum, this factor should be > 1
+
 	void Update(wxString wanted_filename);
 	//void Recheck_if_valid();
 	void CopyFrom(Asset *other_asset);

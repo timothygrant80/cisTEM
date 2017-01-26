@@ -428,6 +428,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	wxString output_filename;
 	wxFileName buffer_filename;
 	bool movie_is_gain_corrected;
+	int output_binning_factor;
 
 	// read the options form the gui..
 
@@ -517,25 +518,27 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 		movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
+		output_binning_factor = movie_asset_panel->ReturnAssetSuperResolutionFactor(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 
-		my_job_package.AddJob("ssfffbbfifbiifffbs",	current_filename.c_str(),
-													output_filename.ToUTF8().data(),
-													current_pixel_size,
-													float(minimum_shift),
-													float(maximum_shift),
-													should_dose_filter,
-													should_restore_power,
-													float(termination_threshold),
-													max_iterations,
-													float(bfactor),
-													should_mask_central_cross,
-													horizontal_mask,
-													vertical_mask,
-													current_acceleration_voltage,
-													current_dose_per_frame,
-													current_pre_exposure,
-													movie_is_gain_corrected,
-													current_gain_filename.ToStdString().c_str());
+		my_job_package.AddJob("ssfffbbfifbiifffbsi",	current_filename.c_str(), //0
+														output_filename.ToUTF8().data(),
+														current_pixel_size,
+														float(minimum_shift),
+														float(maximum_shift),
+														should_dose_filter, //5
+														should_restore_power,
+														float(termination_threshold),
+														max_iterations,
+														float(bfactor),
+														should_mask_central_cross, //10
+														horizontal_mask,
+														vertical_mask,
+														current_acceleration_voltage,
+														current_dose_per_frame,
+														current_pre_exposure, //15
+														movie_is_gain_corrected,
+														current_gain_filename.ToStdString().c_str(),
+														output_binning_factor);
 
 		my_progress_dialog->Update(counter + 1);
 	}
@@ -987,7 +990,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					temp_asset.parent_id = parent_id;
 					temp_asset.alignment_id = alignment_id;
 					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					temp_asset.pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
+					temp_asset.pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * float(my_job_package.jobs[counter].arguments[18].ReturnIntegerArgument());
 					temp_asset.position_in_stack = 1;
 					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					image_asset_panel->AddAsset(&temp_asset);
@@ -1001,7 +1004,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * float(my_job_package.jobs[counter].arguments[18].ReturnIntegerArgument());
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,

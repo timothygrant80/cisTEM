@@ -40,6 +40,7 @@ void UnBlurApp::DoInteractiveUserInput()
 	float pre_exposure_amount = 0.0;
 	bool movie_is_gain_corrected = true;
 	wxString gain_filename = "";
+	int output_binning_factor = 1;
 
 	bool set_expert_options;
 
@@ -50,7 +51,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );
 	 output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
 	 original_pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
-	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "YES");
+	 output_binning_factor = my_input->GetIntFromUser("Output binning factor", "Output images will be binned (downsampled) by this factor relative to the input images", "1", 1);
+	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "yes");
 
 	 if (should_dose_filter == true)
 	 {
@@ -65,7 +67,7 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 pre_exposure_amount = 0.0;
 	 }
 
-	 set_expert_options = my_input->GetYesNoFromUser("Set Expert Options?", "Set these for more control, hopefully not needed", "NO");
+	 set_expert_options = my_input->GetYesNoFromUser("Set Expert Options?", "Set these for more control, hopefully not needed", "no");
 
 	 if (set_expert_options == true)
 	 {
@@ -78,8 +80,9 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 max_iterations = my_input->GetIntFromUser("Maximum number of iterations", "Alignment will stop at this number, even if the threshold shift is not reached", "20", 0);
 
 	 	 if (should_dose_filter == true)
+
 	 	 {
-	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "YES");
+	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "yes");
 	 	 }
 	 	 movie_is_gain_corrected = my_input->GetYesNoFromUser("Input stack is gain-corrected?", "The input frames are already gain-corrected", "yes");
 	 	 if (!movie_is_gain_corrected)
@@ -89,12 +92,12 @@ void UnBlurApp::DoInteractiveUserInput()
  	 }
  	 else
  	 {
- 		 minimum_shift_in_angstroms = original_pixel_size + 0.001;
+ 		 minimum_shift_in_angstroms = original_pixel_size * output_binning_factor + 0.001;
  		 maximum_shift_in_angstroms = 100.0;
  		 bfactor_in_angstroms = 1500.0;
  		 vertical_mask_size = 1;
  		 horizontal_mask_size = 1;
- 		 termination_threshold_in_angstroms = original_pixel_size / 2;
+ 		 termination_threshold_in_angstroms = original_pixel_size * output_binning_factor / 2;
  		 max_iterations = 20;
  		 should_restore_power = true;
  		 movie_is_gain_corrected = true;
@@ -104,7 +107,7 @@ void UnBlurApp::DoInteractiveUserInput()
 	 delete my_input;
 
 	 my_current_job.Reset(18);
-	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbs",	input_filename.c_str(),
+	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbsi",	 input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -121,7 +124,8 @@ void UnBlurApp::DoInteractiveUserInput()
 																 exposure_per_frame,
 																 pre_exposure_amount,
 																 movie_is_gain_corrected,
-																 gain_filename.ToStdString().c_str());
+																 gain_filename.ToStdString().c_str(),
+																 output_binning_factor);
 
 
 }
@@ -163,8 +167,25 @@ bool UnBlurApp::DoCalculation()
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 	bool		movie_is_gain_corrected				= my_current_job.arguments[16].ReturnBoolArgument();
 	wxString	gain_filename						= my_current_job.arguments[17].ReturnStringArgument();
+	int			output_binning_factor				= my_current_job.arguments[18].ReturnIntegerArgument();
 
 	//my_current_job.PrintAllArguments();
+
+
+	float 		output_pixel_size = original_pixel_size * float(output_binning_factor);
+
+	// Profiling
+	wxDateTime	overall_start = wxDateTime::Now();
+	wxDateTime 	overall_finish;
+	wxDateTime 	read_frames_start;
+	wxDateTime	read_frames_finish;
+	wxDateTime	first_alignment_start;
+	wxDateTime	first_alignment_finish;
+	wxDateTime	main_alignment_start;
+	wxDateTime	main_alignment_finish;
+	wxDateTime	final_alignment_start;
+	wxDateTime	final_alignment_finish;
+
 
 	// The Files
 
@@ -175,9 +196,6 @@ bool UnBlurApp::DoCalculation()
 
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
 
-	// Arrays to hold the input images
-
-	Image whole_movie;
 	long slice_byte_size;
 
 	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
@@ -199,7 +217,7 @@ bool UnBlurApp::DoCalculation()
 
 	ElectronDose *my_electron_dose;
 
-	if (should_dose_filter == true) my_electron_dose = new ElectronDose(acceleration_voltage, original_pixel_size);
+	if (should_dose_filter == true) my_electron_dose = new ElectronDose(acceleration_voltage, output_pixel_size);
 
 	// some quick checks..
 
@@ -212,35 +230,45 @@ bool UnBlurApp::DoCalculation()
 	// Read in gain reference
 	if (!movie_is_gain_corrected) { gain_image.ReadSlice(&gain_file,1);	}
 
-	// Read in and FFT all the images..
+	// Read in, gain-correct, FFT and resample all the images..
 
-	whole_movie.ReadSlices(&input_file, 1, number_of_input_images);
-
+	read_frames_start = wxDateTime::Now();
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
-		//image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
-		image_stack[image_counter].AllocateAsPointingToSliceIn3D(&whole_movie, image_counter + 1);
+		// Read from disk
+		image_stack[image_counter].ReadSlice(&input_file,image_counter+1);
 
-		if (!movie_is_gain_corrected)
+		// Gain correction
+		if (! movie_is_gain_corrected)
 		{
 			if (! image_stack[image_counter].HasSameDimensionsAs(&gain_image))
 			{
 				SendError(wxString::Format("Error: location %i of input file does not have same dimensions as the gain image",image_counter+1));
 				ExitMainLoop();
 			}
+			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter].MultiplyPixelWise(gain_image);
 		}
 
+		// FT
 		image_stack[image_counter].ForwardFFT(true);
 
+		// Resize the FT (binning)
+		if (output_binning_factor > 1)
+		{
+			image_stack[image_counter].Resize(image_stack[image_counter].logical_x_dimension/output_binning_factor,image_stack[image_counter].logical_y_dimension/output_binning_factor,1);
+		}
+
+		// Init shifts
 		x_shifts[image_counter] = 0.0;
 		y_shifts[image_counter] = 0.0;
-
 	}
+	read_frames_finish = wxDateTime::Now();
+
 
 	// if we are binning - choose a binning factor..
 
-	pre_binning_factor = int(myround(5. / original_pixel_size));
+	pre_binning_factor = int(myround(5. / output_pixel_size));
 	if (pre_binning_factor < 1) pre_binning_factor = 1;
 
 //	wxPrintf("Prebinning factor = %i\n", pre_binning_factor);
@@ -251,11 +279,11 @@ bool UnBlurApp::DoCalculation()
 	{
 		unbinned_image_stack = image_stack;
 		image_stack = new Image[number_of_input_images];
-		pixel_size = original_pixel_size * pre_binning_factor;
+		pixel_size = output_pixel_size * pre_binning_factor;
 	}
 	else
 	{
-		pixel_size = original_pixel_size;
+		pixel_size = output_pixel_size;
 	}
 
 	// convert shifts to pixels..
@@ -287,23 +315,27 @@ bool UnBlurApp::DoCalculation()
 	}
 
 	// do the initial refinement (only 1 round - with the min shift)
-
+	first_alignment_start = wxDateTime::Now();
+	//SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
 	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+	first_alignment_finish = wxDateTime::Now();
 
 	// now do the actual refinement..
-
+	main_alignment_start = wxDateTime::Now();
+	//SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
 	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+	main_alignment_finish = wxDateTime::Now();
 
 
 	// if we have been using pre-binning, we need to do a refinment on the unbinned data..
-
+	final_alignment_start = wxDateTime::Now();
 	if (pre_binning_factor > 1)
 	{
 		// we don't need the binned images anymore..
 
 		delete [] image_stack;
 		image_stack = unbinned_image_stack;
-		pixel_size = original_pixel_size;
+		pixel_size = output_pixel_size;
 
 		// Adjust the shifts, then phase shift the original images
 
@@ -317,23 +349,24 @@ bool UnBlurApp::DoCalculation()
 
 		// convert parameters to pixels with new pixel size..
 
-		min_shift_in_pixels = minumum_shift_in_angstroms / original_pixel_size;
-		max_shift_in_pixels = maximum_shift_in_angstroms / original_pixel_size;
-		termination_threshold_in_pixels = termination_threshold_in_angstoms / original_pixel_size;
+		min_shift_in_pixels = minumum_shift_in_angstroms / output_pixel_size;
+		max_shift_in_pixels = maximum_shift_in_angstroms / output_pixel_size;
+		termination_threshold_in_pixels = termination_threshold_in_angstoms / output_pixel_size;
 
 		// recalculate the bfactor
 
-		unitless_bfactor = bfactor_in_angstoms / pow(original_pixel_size, 2);
+		unitless_bfactor = bfactor_in_angstoms / pow(output_pixel_size, 2);
 
 		// do the refinement..
-
-		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, original_pixel_size, x_shifts, y_shifts);
+		//SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
+		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, x_shifts, y_shifts);
 
 		// if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
 
 
 
 	}
+	final_alignment_finish = wxDateTime::Now();
 
 	// we should be finished with alignment, now we just need to make the final sum..
 
@@ -399,8 +432,8 @@ bool UnBlurApp::DoCalculation()
 
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
-		result_array[image_counter] = x_shifts[image_counter] * original_pixel_size;
-		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * original_pixel_size;
+		result_array[image_counter] = x_shifts[image_counter] * output_pixel_size;
+		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
 
 	//	wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 	}
@@ -420,6 +453,10 @@ bool UnBlurApp::DoCalculation()
 		delete [] dose_filter;
 		delete [] dose_filter_sum_of_squares;
 	}
+
+	overall_finish = wxDateTime::Now();
+
+	SendInfo(wxString::Format("Timings for %s: Overall: %s; reading, gain, FT, resampling of stack: %s; initial ali: %s; main ali: %s; unbinned ali: %s\n",input_filename,(overall_finish-overall_start).Format(),(read_frames_finish-read_frames_start).Format(),(first_alignment_finish-first_alignment_start).Format(),(main_alignment_finish-main_alignment_start).Format(),(final_alignment_finish-final_alignment_start).Format()));
 
 	return true;
 }

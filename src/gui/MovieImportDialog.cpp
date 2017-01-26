@@ -140,6 +140,12 @@ void MyMovieImportDialog::OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & eve
 	CheckImportButtonStatus();
 }
 
+void MyMovieImportDialog::OnUseFullResolutionCheckBox( wxCommandEvent & event )
+{
+	SuperResolutionFactorStaticText->Enable(! UseFullResolutionCheckBox->IsChecked());
+	SuperResolutionFactorSpinCtrl->Enable(! UseFullResolutionCheckBox->IsChecked());
+	SuperResolutionFactorSpinCtrl->SetValue(1);
+}
 
 void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 {
@@ -182,6 +188,15 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			temp_asset.gain_filename = GainFilePicker->GetFileName().GetFullPath();
 		}
 
+		if (UseFullResolutionCheckBox->IsChecked())
+		{
+			temp_asset.super_resolution_factor = 1;
+		}
+		else
+		{
+			temp_asset.super_resolution_factor = SuperResolutionFactorSpinCtrl->GetValue();
+		}
+
 		// ProgressBar..
 
 		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Import Movie",	"Importing Movies...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_ELAPSED_TIME);
@@ -220,7 +235,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.super_resolution_factor);
 					}
 				}
 				else

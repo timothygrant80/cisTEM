@@ -199,6 +199,7 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(9, "Gain filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(10,"Super-res. factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -251,6 +252,8 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    case 9  :
 	    	return wxFileName(all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->gain_filename).GetFullName();
 	    	break;
+	    case 10:
+	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->super_resolution_factor);
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
@@ -290,6 +293,11 @@ float MyMovieAssetPanel::ReturnAssetSphericalAbberation(long wanted_asset)
 wxString MyMovieAssetPanel::ReturnAssetGainFilename(long wanted_asset)
 {
 	return wxString(all_assets_list->ReturnMovieAssetPointer(wanted_asset)->gain_filename);
+}
+
+int MyMovieAssetPanel::ReturnAssetSuperResolutionFactor(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->super_resolution_factor;
 }
 
 int MyMovieAssetPanel::ReturnAssetID(long wanted_asset)

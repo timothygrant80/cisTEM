@@ -50,6 +50,10 @@ MovieAsset::MovieAsset()
 	filename = wxEmptyString;
 	asset_name = wxEmptyString;
 	
+	gain_filename = wxEmptyString;
+
+	super_resolution_factor = 1;
+
 	is_valid = false;
 
 }
@@ -76,6 +80,10 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	total_dose = 0;
 	gain_filename = "";
 	
+	gain_filename = wxEmptyString;
+
+	super_resolution_factor = 1;
+
 	Update(wanted_filename); // this checks filename is OK, reads dimensions from headers
 	
 }
@@ -139,6 +147,7 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	total_dose = casted_asset->total_dose;
 	asset_name = casted_asset->asset_name;
 	gain_filename = casted_asset->gain_filename;
+	super_resolution_factor = casted_asset->super_resolution_factor;
 }
 
 // Image asset///

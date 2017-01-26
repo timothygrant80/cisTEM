@@ -55,8 +55,8 @@ class UnblurResultsPanel;
 #include <wx/tglbtn.h>
 #include <wx/textctrl.h>
 #include <wx/filepicker.h>
-#include <wx/dialog.h>
 #include <wx/spinctrl.h>
+#include <wx/dialog.h>
 #include <wx/choice.h>
 #include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
@@ -572,6 +572,9 @@ class MovieImportDialog : public wxDialog
 		wxCheckBox* MoviesAreGainCorrectedCheckBox;
 		wxStaticText* GainFileStaticText;
 		wxFilePickerCtrl* GainFilePicker;
+		wxCheckBox* UseFullResolutionCheckBox;
+		wxStaticText* SuperResolutionFactorStaticText;
+		wxSpinCtrl* SuperResolutionFactorSpinCtrl;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -584,13 +587,14 @@ class MovieImportDialog : public wxDialog
 		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMoviesAreGainCorrectedCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnGainFilePickerChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnUseFullResolutionCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		
-		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,601 ), long style = wxCLOSE_BOX ); 
 		~MovieImportDialog();
 	
 };

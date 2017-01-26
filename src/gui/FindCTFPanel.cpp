@@ -588,13 +588,14 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		{
 			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
 			input_filename = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id))->filename.GetFullPath().ToStdString();
+			pixel_size = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id))->pixel_size;
 		}
 		else
 		{
 			input_filename = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->filename.GetFullPath().ToStdString();
+			pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->pixel_size;
 		}
 
-		pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->pixel_size;
 		acceleration_voltage = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->microscope_voltage;
 		spherical_aberration = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->spherical_aberration;
 

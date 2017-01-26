@@ -198,6 +198,7 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(6, "Exp. per frame", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(9, "Gain filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -247,7 +248,9 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    case 8  :
 	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->microscope_voltage);
 	    	break;
-
+	    case 9  :
+	    	return wxFileName(all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->gain_filename).GetFullName();
+	    	break;
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
@@ -284,6 +287,10 @@ float MyMovieAssetPanel::ReturnAssetSphericalAbberation(long wanted_asset)
 
 }
 
+wxString MyMovieAssetPanel::ReturnAssetGainFilename(long wanted_asset)
+{
+	return wxString(all_assets_list->ReturnMovieAssetPointer(wanted_asset)->gain_filename);
+}
 
 int MyMovieAssetPanel::ReturnAssetID(long wanted_asset)
 {

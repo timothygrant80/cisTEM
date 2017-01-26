@@ -561,6 +561,7 @@ void Image::MultiplyPixelWise(Image &other_image)
 	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
 	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
+	MyDebugAssertTrue(HasSameDimensionsAs(&other_image),"Images do not have same dimensions");
 
 	int i;
 	long pixel_counter;

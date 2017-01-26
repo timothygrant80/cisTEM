@@ -1528,7 +1528,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	wxBoxSizer* bSizer32;
 	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText22 = new wxStaticText( this, wxID_ANY, wxT("Dose per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT );
+	m_staticText22 = new wxStaticText( this, wxID_ANY, wxT("Dose per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText22->Wrap( -1 );
 	bSizer32->Add( m_staticText22, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -1537,6 +1537,36 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	
 	bSizer26->Add( bSizer32, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer321;
+	bSizer321 = new wxBoxSizer( wxHORIZONTAL );
+	
+	MoviesAreGainCorrectedCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Movies are gain corrected"), wxDefaultPosition, wxDefaultSize, 0 );
+	MoviesAreGainCorrectedCheckBox->SetValue(true); 
+	bSizer321->Add( MoviesAreGainCorrectedCheckBox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer321->Add( 0, 0, 50, wxEXPAND, 5 );
+	
+	
+	bSizer26->Add( bSizer321, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer229;
+	bSizer229 = new wxBoxSizer( wxHORIZONTAL );
+	
+	GainFileStaticText = new wxStaticText( this, wxID_ANY, wxT("        Camera gain image :"), wxDefaultPosition, wxDefaultSize, 0 );
+	GainFileStaticText->Wrap( -1 );
+	GainFileStaticText->Enable( false );
+	
+	bSizer229->Add( GainFileStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	GainFilePicker = new wxFilePickerCtrl( this, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("Any supported type (*.mrc;*.tif;*.dm;*.dm3;*.dm4)|*.mrc;*.tif;*.dm;*.dm3;*.dm4|MRC files (*.mrc) | *.mrc |TIFF files (*.tif) | *.tif | DM files (*.dm;*.dm3;*.dm4)|*.dm;*.dm3;*.dm4"), wxDefaultPosition, wxDefaultSize, wxFLP_DEFAULT_STYLE );
+	GainFilePicker->Enable( false );
+	
+	bSizer229->Add( GainFilePicker, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer229, 1, wxEXPAND, 5 );
 	
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
@@ -1579,6 +1609,8 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	MoviesAreGainCorrectedCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	GainFilePicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 }
@@ -1597,6 +1629,8 @@ MovieImportDialog::~MovieImportDialog()
 	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	MoviesAreGainCorrectedCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	GainFilePicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 	

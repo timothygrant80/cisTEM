@@ -38,6 +38,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	float exposure_per_frame = 0.0;
 	float acceleration_voltage = 300.0;
 	float pre_exposure_amount = 0.0;
+	bool movie_is_gain_corrected = true;
+	wxString gain_filename = "";
 
 	bool set_expert_options;
 
@@ -79,6 +81,11 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 {
 	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "YES");
 	 	 }
+	 	 movie_is_gain_corrected = my_input->GetYesNoFromUser("Input stack is gain-corrected?", "The input frames are already gain-corrected", "yes");
+	 	 if (!movie_is_gain_corrected)
+	 	 {
+		 gain_filename = my_input->GetFilenameFromUser("Gain image filename", "The filename of the camera's gain reference image", "my_gain_reference.dm4", true);
+	 	 }
  	 }
  	 else
  	 {
@@ -90,27 +97,31 @@ void UnBlurApp::DoInteractiveUserInput()
  		 termination_threshold_in_angstroms = original_pixel_size / 2;
  		 max_iterations = 20;
  		 should_restore_power = true;
+ 		 movie_is_gain_corrected = true;
+ 		 gain_filename = "";
  	 }
 
 	 delete my_input;
 
-	 my_current_job.Reset(16);
-	 my_current_job.ManualSetArguments("ttfffbbfifbiifff",  input_filename.c_str(),
-			 	 	 	 	 	 	 	 	 	 	 	 output_filename.c_str(),
-														 original_pixel_size,
-														 minimum_shift_in_angstroms,
-														 maximum_shift_in_angstroms,
-														 should_dose_filter,
-														 should_restore_power,
-														 termination_threshold_in_angstroms,
-														 max_iterations,
-														 bfactor_in_angstroms,
-														 should_mask_central_cross,
-														 horizontal_mask_size,
-														 vertical_mask_size,
-														 acceleration_voltage,
-														 exposure_per_frame,
-														 pre_exposure_amount);
+	 my_current_job.Reset(18);
+	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbs",	input_filename.c_str(),
+																 output_filename.c_str(),
+																 original_pixel_size,
+																 minimum_shift_in_angstroms,
+																 maximum_shift_in_angstroms,
+																 should_dose_filter,
+																 should_restore_power,
+																 termination_threshold_in_angstroms,
+																 max_iterations,
+																 bfactor_in_angstroms,
+																 should_mask_central_cross,
+																 horizontal_mask_size,
+																 vertical_mask_size,
+																 acceleration_voltage,
+																 exposure_per_frame,
+																 pre_exposure_amount,
+																 movie_is_gain_corrected,
+																 gain_filename.ToStdString().c_str());
 
 
 }
@@ -150,13 +161,17 @@ bool UnBlurApp::DoCalculation()
 	float       acceleration_voltage				= my_current_job.arguments[13].ReturnFloatArgument();
 	float       exposure_per_frame                  = my_current_job.arguments[14].ReturnFloatArgument();
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
+	bool		movie_is_gain_corrected				= my_current_job.arguments[16].ReturnBoolArgument();
+	wxString	gain_filename						= my_current_job.arguments[17].ReturnStringArgument();
 
 	//my_current_job.PrintAllArguments();
 
 	// The Files
 
-	MRCFile input_file(input_filename, false);
+	ImageFile input_file(input_filename, false);
 	MRCFile output_file(output_filename, true);
+	ImageFile gain_file;
+	if (! movie_is_gain_corrected) gain_file.OpenFile(gain_filename.ToStdString(), false);
 
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
 
@@ -167,6 +182,8 @@ bool UnBlurApp::DoCalculation()
 
 	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
 	Image *image_stack = new Image[number_of_input_images];
+
+	Image gain_image;
 
 	// Arrays to hold the shifts..
 
@@ -192,6 +209,9 @@ bool UnBlurApp::DoCalculation()
 		ExitMainLoop();
 	}
 
+	// Read in gain reference
+	if (!movie_is_gain_corrected) { gain_image.ReadSlice(&gain_file,1);	}
+
 	// Read in and FFT all the images..
 
 	whole_movie.ReadSlices(&input_file, 1, number_of_input_images);
@@ -200,6 +220,17 @@ bool UnBlurApp::DoCalculation()
 	{
 		//image_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
 		image_stack[image_counter].AllocateAsPointingToSliceIn3D(&whole_movie, image_counter + 1);
+
+		if (!movie_is_gain_corrected)
+		{
+			if (! image_stack[image_counter].HasSameDimensionsAs(&gain_image))
+			{
+				SendError(wxString::Format("Error: location %i of input file does not have same dimensions as the gain image",image_counter+1));
+				ExitMainLoop();
+			}
+			image_stack[image_counter].MultiplyPixelWise(gain_image);
+		}
+
 		image_stack[image_counter].ForwardFFT(true);
 
 		x_shifts[image_counter] = 0.0;

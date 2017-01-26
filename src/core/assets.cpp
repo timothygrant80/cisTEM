@@ -74,11 +74,9 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	dose_per_frame = 0;
 	spherical_aberration = 0;
 	total_dose = 0;
+	gain_filename = "";
 	
-	if (filename.IsOk() == true && filename.FileExists() == true)
-	{
-		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
-	}
+	Update(wanted_filename); // this checks filename is OK, reads dimensions from headers
 	
 }
 
@@ -100,7 +98,23 @@ void MovieAsset::Update(wxString wanted_filename)
 	
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{
-		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
+		if (filename.GetExt().IsSameAs("mrc",false))
+		{
+			is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
+		}
+		else if (filename.GetExt().IsSameAs("tif",false))
+		{
+			TiffFile temp_tif;
+			is_valid = temp_tif.OpenFile(filename.GetFullPath().ToStdString(), false);
+			x_size = temp_tif.ReturnXSize();
+			y_size = temp_tif.ReturnYSize();
+			number_of_frames = temp_tif.ReturnNumberOfSlices();
+			temp_tif.CloseFile();
+		}
+		else
+		{
+			is_valid = false;
+		}
 	}
 	
 
@@ -124,6 +138,7 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	is_valid = casted_asset->is_valid;
 	total_dose = casted_asset->total_dose;
 	asset_name = casted_asset->asset_name;
+	gain_filename = casted_asset->gain_filename;
 }
 
 // Image asset///

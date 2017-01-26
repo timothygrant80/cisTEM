@@ -28,7 +28,7 @@ void ImageFile::SetFileTypeFromExtension()
 		file_type = TIFF_FILE;
 		file_type_string = "TIFF";
 	}
-	else if (ext.IsSameAs("mrc") || ext.IsSameAs("mrcs" || ext.IsSameAs("ccp4")))
+	else if (ext.IsSameAs("mrc") || ext.IsSameAs("mrcs") || ext.IsSameAs("ccp4"))
 	{
 		file_type = MRC_FILE;
 		file_type_string = "MRC";
@@ -45,17 +45,19 @@ void ImageFile::SetFileTypeFromExtension()
 	}
 }
 
-void ImageFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite)
 {
+	bool file_seems_ok = false;
 	filename = wanted_filename;
 	SetFileTypeFromExtension();
 	switch(file_type)
 	{
-	case TIFF_FILE: tiff_file.OpenFile(wanted_filename, overwrite); break;
-	case MRC_FILE: mrc_file.OpenFile(wanted_filename, overwrite); break;
-	case DM_FILE: dm_file.OpenFile(wanted_filename, overwrite); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite); break;
+	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite); break;
+	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); MyDebugAssertTrue(false,"Unsupported file type: %s",filename.GetFullPath().ToStdString()); abort; break;
 	}
+	return file_seems_ok;
 }
 
 void ImageFile::CloseFile()
@@ -65,7 +67,6 @@ void ImageFile::CloseFile()
 	case TIFF_FILE: tiff_file.CloseFile(); break;
 	case MRC_FILE: mrc_file.CloseFile(); break;
 	case DM_FILE: dm_file.CloseFile(); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
 	}
 }
 
@@ -81,7 +82,7 @@ void ImageFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output
 	case TIFF_FILE: tiff_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case MRC_FILE: mrc_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case DM_FILE: dm_file.ReadSlicesFromDisk(start_slice-1, end_slice-1, output_array); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -97,7 +98,7 @@ void ImageFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_a
 	case TIFF_FILE: tiff_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
 	case MRC_FILE: mrc_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
 	case DM_FILE: dm_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -109,7 +110,7 @@ int ImageFile::ReturnXSize()
 	case TIFF_FILE: return tiff_file.ReturnXSize(); break;
 	case MRC_FILE: return mrc_file.ReturnXSize(); break;
 	case DM_FILE: return dm_file.ReturnXSize(); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -120,7 +121,7 @@ int ImageFile::ReturnYSize()
 	case TIFF_FILE: return tiff_file.ReturnYSize(); break;
 	case MRC_FILE: return mrc_file.ReturnYSize(); break;
 	case DM_FILE: return dm_file.ReturnYSize(); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -131,7 +132,7 @@ int ImageFile::ReturnZSize()
 	case TIFF_FILE: return tiff_file.ReturnZSize(); break;
 	case MRC_FILE: return mrc_file.ReturnZSize(); break;
 	case DM_FILE: return dm_file.ReturnZSize(); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -142,7 +143,7 @@ int ImageFile::ReturnNumberOfSlices()
 	case TIFF_FILE: return tiff_file.ReturnNumberOfSlices(); break;
 	case MRC_FILE: return mrc_file.ReturnNumberOfSlices(); break;
 	case DM_FILE: return dm_file.ReturnNumberOfSlices(); break;
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 
@@ -153,7 +154,7 @@ bool ImageFile::IsOpen()
 	case TIFF_FILE: return tiff_file.IsOpen(); break;
 	case MRC_FILE: return mrc_file.IsOpen(); break;
 	case DM_FILE: return dm_file.IsOpen();
-	default: MyPrintWithDetails("Unsupported file type"); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
 }
 

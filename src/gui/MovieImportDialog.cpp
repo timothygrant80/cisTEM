@@ -17,7 +17,7 @@ MovieImportDialog( parent )
 
 void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select MRC files"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN |wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
+    wxFileDialog openFileDialog(this, _("Select movie files"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif)|*.mrc;*.mrcs;*.tif", wxFD_OPEN |wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
 
 
 
@@ -116,13 +116,29 @@ void MyMovieImportDialog::CheckImportButtonStatus()
 
 	if (VoltageCombo->IsTextEmpty() == true || PixelSizeText->GetLineLength(0) == 0 || CsText->GetLineLength (0) == 0 || DoseText->GetLineLength(0) == 0) enable_import_box = false;
 
-	if (enable_import_box == true) ImportButton->Enable(true);
-	else  ImportButton->Enable(false);
+	if ((! MoviesAreGainCorrectedCheckBox->IsChecked()) && (! GainFilePicker->GetFileName().Exists()) ) enable_import_box = false;
+
+	if ((! MoviesAreGainCorrectedCheckBox->IsChecked())) wxPrintf("Movies are not gain corrected\n");
+	if (GainFilePicker->GetFileName().Exists()) wxPrintf("Gain file exists\n");
+
+	ImportButton->Enable(enable_import_box);
 
 	Update();
 	Refresh();
 }
 
+void MyMovieImportDialog::OnGainFilePickerChanged(wxFileDirPickerEvent & event )
+{
+	CheckImportButtonStatus();
+}
+
+
+void MyMovieImportDialog::OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & event )
+{
+	GainFilePicker->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+	GainFileStaticText->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+	CheckImportButtonStatus();
+}
 
 
 void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
@@ -157,6 +173,14 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
+		if (MoviesAreGainCorrectedCheckBox->IsChecked())
+		{
+			temp_asset.gain_filename = "";
+		}
+		else
+		{
+			temp_asset.gain_filename = GainFilePicker->GetFileName().GetFullPath();
+		}
 
 		// ProgressBar..
 
@@ -196,12 +220,12 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename);
 					}
 				}
 				else
 				{
-					my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
+					my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid image file, skipping\n"), temp_asset.ReturnFullPathString()));
 					have_errors = true;
 				}
 			}

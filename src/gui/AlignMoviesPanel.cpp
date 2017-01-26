@@ -424,8 +424,10 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	time_of_last_graph_update = 0;
 
 	std::string current_filename;
+	wxString current_gain_filename;
 	wxString output_filename;
 	wxFileName buffer_filename;
+	bool movie_is_gain_corrected;
 
 	// read the options form the gui..
 
@@ -512,8 +514,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 
+		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
-		my_job_package.AddJob("ssfffbbfifbiifff",	current_filename.c_str(),
+
+		my_job_package.AddJob("ssfffbbfifbiifffbs",	current_filename.c_str(),
 													output_filename.ToUTF8().data(),
 													current_pixel_size,
 													float(minimum_shift),
@@ -528,7 +533,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 													vertical_mask,
 													current_acceleration_voltage,
 													current_dose_per_frame,
-													current_pre_exposure);
+													current_pre_exposure,
+													movie_is_gain_corrected,
+													current_gain_filename.ToStdString().c_str());
 
 		my_progress_dialog->Update(counter + 1);
 	}

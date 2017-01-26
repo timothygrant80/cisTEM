@@ -48,12 +48,15 @@ DMFile::~DMFile()
 	true;
 }
 
-void DMFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool DMFile::OpenFile(std::string wanted_filename, bool overwrite)
 {
 	MyDebugAssertFalse(overwrite,"Overwriting is not supported for DM files");
 	unsigned char *fake_pointer;
 	readDM(wxString(wanted_filename), fake_pointer, false);
 	filename = wxString(wanted_filename);
+
+	// TODO: return false if something is fishy about this file
+	return true;
 }
 
 void DMFile::CloseFile()

@@ -25,7 +25,7 @@ void MRCFile::CloseFile()
 	}
 }
 
-void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 {
 	MyDebugAssertFalse(my_file.is_open(), "File Already Open: %s",wanted_filename);
 
@@ -80,6 +80,9 @@ void MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
 	rewrite_header_on_close = false;
 
 	filename = wanted_filename;
+
+	// TODO: return false is something is wrong about this file
+	return true;
 }
 
 void MRCFile::PrintInfo()

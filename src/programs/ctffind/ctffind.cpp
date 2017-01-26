@@ -229,6 +229,8 @@ void CtffindApp::DoInteractiveUserInput()
 	float additional_phase_shift_search_step;
 	bool give_expert_options;
 	bool resample_if_pixel_too_small;
+	bool movie_is_gain_corrected;
+	wxString gain_filename;
 
 	// Things we need for old school input
 	double temp_double;
@@ -246,6 +248,8 @@ void CtffindApp::DoInteractiveUserInput()
 		known_astigmatism = 0.0;
 		known_astigmatism_angle = 0.0;
 		resample_if_pixel_too_small = true;
+		movie_is_gain_corrected = true;
+		gain_filename = "";
 
 		char buf[4096];
 		wxString my_string;
@@ -459,7 +463,7 @@ void CtffindApp::DoInteractiveUserInput()
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
-		MRCFile input_file(input_filename,false);
+		ImageFile input_file(input_filename,false);
 		if (input_file.ReturnZSize() > 1)
 		{
 			input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","no");
@@ -531,6 +535,22 @@ void CtffindApp::DoInteractiveUserInput()
 		if (give_expert_options)
 		{
 			resample_if_pixel_too_small 		= my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?","When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed","yes");
+			if (input_is_a_movie)
+			{
+				movie_is_gain_corrected			= my_input->GetYesNoFromUser("Movie is gain-corrected?", "If the movie is not gain-corrected, you will need to provide a gain reference image", "yes");
+				if (movie_is_gain_corrected)
+				{
+					gain_filename 				= "";
+				}
+				else
+				{
+					gain_filename 				= my_input->GetFilenameFromUser("Gain image filename", "The filename of the gain reference image for the detector/camera", "gain.dm4", true);
+				}
+			}
+			else
+			{
+				movie_is_gain_corrected 		= true;
+			}
 		}
 		else
 		{
@@ -541,31 +561,33 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(24);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffb",input_filename.c_str(),
-													 	 	 	input_is_a_movie,
-																number_of_frames_to_average,
-																output_diagnostic_filename.c_str(),
-																pixel_size,
-																acceleration_voltage,
-																spherical_aberration,
-																amplitude_contrast,
-																box_size,
-																minimum_resolution,
-																maximum_resolution,
-																minimum_defocus,
-																maximum_defocus,
-																defocus_search_step,
-																large_astigmatism_expected,
-																astigmatism_tolerance,
-																find_additional_phase_shift,
-																minimum_additional_phase_shift,
-																maximum_additional_phase_shift,
-																additional_phase_shift_search_step,
-																astigmatism_is_known,
-																known_astigmatism,
-																known_astigmatism_angle,
-																resample_if_pixel_too_small);
+	my_current_job.Reset(26);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbs",	input_filename.c_str(),
+																	input_is_a_movie,
+																	number_of_frames_to_average,
+																	output_diagnostic_filename.c_str(),
+																	pixel_size,
+																	acceleration_voltage,
+																	spherical_aberration,
+																	amplitude_contrast,
+																	box_size,
+																	minimum_resolution,
+																	maximum_resolution,
+																	minimum_defocus,
+																	maximum_defocus,
+																	defocus_search_step,
+																	large_astigmatism_expected,
+																	astigmatism_tolerance,
+																	find_additional_phase_shift,
+																	minimum_additional_phase_shift,
+																	maximum_additional_phase_shift,
+																	additional_phase_shift_search_step,
+																	astigmatism_is_known,
+																	known_astigmatism,
+																	known_astigmatism_angle,
+																	resample_if_pixel_too_small,
+																	movie_is_gain_corrected,
+																	gain_filename.ToStdString().c_str());
 
 
 }
@@ -614,6 +636,8 @@ bool CtffindApp::DoCalculation()
 	const float 		known_astigmatism					= my_current_job.arguments[21].ReturnFloatArgument();
 	const float 		known_astigmatism_angle				= my_current_job.arguments[22].ReturnFloatArgument();
 	const bool			resample_if_pixel_too_small			= my_current_job.arguments[23].ReturnBoolArgument();
+	const bool			movie_is_gain_corrected				= my_current_job.arguments[24].ReturnBoolArgument();
+	const wxString		gain_filename						= my_current_job.arguments[25].ReturnStringArgument();
 
 	// These variables will be set by command-line options
 	const bool			old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
@@ -641,7 +665,7 @@ bool CtffindApp::DoCalculation()
 	// Other variables
 	int					number_of_movie_frames;
 	int         		number_of_micrographs;
-	MRCFile				input_file(input_filename,false);
+	ImageFile			input_file(input_filename,false);
 	Image				*average_spectrum = new Image();
 	wxString			output_text_fn;
 	ProgressBar			*my_progress_bar;
@@ -694,6 +718,8 @@ bool CtffindApp::DoCalculation()
 	double 				*values_to_write_out = new double[7];
 	float				best_score_after_initial_phase;
 	int					last_bin_without_aliasing;
+	ImageFile			gain_file;
+	Image				*gain = new Image();
 
 
 
@@ -755,7 +781,12 @@ bool CtffindApp::DoCalculation()
 	}
 
 
-
+	// Prepare the gain_reference
+	if (input_is_a_movie && ! movie_is_gain_corrected)
+	{
+		gain_file.OpenFile(gain_filename.ToStdString(), false);
+		gain->ReadSlice(&gain_file,1);
+	}
 
 	// Prepare the average spectrum image
 	average_spectrum->Allocate(box_size,box_size,true);
@@ -785,11 +816,23 @@ bool CtffindApp::DoCalculation()
 				{
 					current_input_location = current_first_frame_within_average + number_of_movie_frames * (current_micrograph_number-1) + (current_frame_within_average-1);
 					if (current_input_location > number_of_movie_frames * current_micrograph_number) continue;
+					// Read the image in
 					current_input_image->ReadSlice(&input_file,current_input_location);
 					if (current_input_image->IsConstant())
 					{
 						SendError(wxString::Format("Error: location %i of input file %s is blank",current_input_location, input_filename));
 						ExitMainLoop();
+					}
+
+					// Apply gain reference
+					if (input_is_a_movie && ! movie_is_gain_corrected)
+					{
+						if (! current_input_image->HasSameDimensionsAs(gain))
+						{
+							SendError(wxString::Format("Error: location %i of input file %s does not have same dimensions as the gain image",current_input_location,input_filename));
+							ExitMainLoop();
+						}
+						current_input_image->MultiplyPixelWise(*gain);
 					}
 					// Make the image square
 					micrograph_square_dimension = std::max(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension);

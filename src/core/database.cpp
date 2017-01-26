@@ -802,12 +802,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 11, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("MOVIE_ASSETS", 12, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename)
 {
-	AddToBatchInsert("ittiiiirrrr", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration);
+	AddToBatchInsert("ittiiiirrrrt", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data());
 }
 
 /*
@@ -1361,7 +1361,7 @@ MovieAsset Database::GetNextMovieAsset()
 {
 	MovieAsset temp_asset;
 
-	GetFromBatchSelect("itfiiiirrrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration);
+	GetFromBatchSelect("itfiiiirrrrt", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename);
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;
 }

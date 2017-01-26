@@ -54,6 +54,7 @@ class UnblurResultsPanel;
 #include <wx/dataview.h>
 #include <wx/tglbtn.h>
 #include <wx/textctrl.h>
+#include <wx/filepicker.h>
 #include <wx/dialog.h>
 #include <wx/spinctrl.h>
 #include <wx/choice.h>
@@ -65,7 +66,6 @@ class UnblurResultsPanel;
 #include <wx/dynarray.h>
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 #include <wx/statbox.h>
-#include <wx/filepicker.h>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -569,6 +569,9 @@ class MovieImportDialog : public wxDialog
 		wxTextCtrl* PixelSizeText;
 		wxStaticText* m_staticText22;
 		wxTextCtrl* DoseText;
+		wxCheckBox* MoviesAreGainCorrectedCheckBox;
+		wxStaticText* GainFileStaticText;
+		wxFilePickerCtrl* GainFilePicker;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -579,6 +582,8 @@ class MovieImportDialog : public wxDialog
 		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
 		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMoviesAreGainCorrectedCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnGainFilePickerChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
 		

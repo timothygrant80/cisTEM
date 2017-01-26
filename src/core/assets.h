@@ -43,6 +43,8 @@ class MovieAsset : public Asset {
 	double dose_per_frame;
 	double total_dose;
 
+	wxString gain_filename;
+
 	void Update(wxString wanted_filename);
 	//void Recheck_if_valid();
 	void CopyFrom(Asset *other_asset);

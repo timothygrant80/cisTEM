@@ -25,6 +25,9 @@ class MyMovieImportDialog : public MovieImportDialog
 		void OnTextKeyPress( wxKeyEvent& event );
 		void CheckImportButtonStatus();
 		void TextChanged( wxCommandEvent& event);
+
+		void OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & event );
+		void OnGainFilePickerChanged( wxFileDirPickerEvent & event );
 };
 
 

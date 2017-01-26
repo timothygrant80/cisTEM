@@ -5,7 +5,7 @@ private:
 	int logical_dimension_y;
 	int number_of_images;
 
-	void ReadLogicalDimensionsFromDisk();
+	bool ReadLogicalDimensionsFromDisk();
 
 public:
 	TiffFile();
@@ -19,7 +19,7 @@ public:
 
 	inline bool IsOpen() {if (tif) {return true;} else { return false;}};
 
-	void OpenFile(std::string filename, bool overwrite = false);
+	bool OpenFile(std::string filename, bool overwrite = false);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int slice_number, float *output_array);

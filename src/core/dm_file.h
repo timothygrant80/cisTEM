@@ -172,7 +172,7 @@ public:
 
 	bool IsOpen();
 
-	void OpenFile(std::string filename, bool overwrite = false);
+	bool OpenFile(std::string filename, bool overwrite = false);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int wanted_slice, float *output_array);

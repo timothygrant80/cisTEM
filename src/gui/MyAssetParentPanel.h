@@ -29,6 +29,7 @@ private:
 		void NewGroupClick( wxCommandEvent& event );
 		void RemoveGroupClick( wxCommandEvent& event );
 		void RenameGroupClick( wxCommandEvent& event );
+		void InvertGroupClick( wxCommandEvent& event );
 
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void MouseVeto( wxMouseEvent& event );

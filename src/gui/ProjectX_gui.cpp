@@ -2399,6 +2399,9 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	RemoveGroupButton = new wxButton( m_panel4, wxID_ANY, wxT("Remove"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer49->Add( RemoveGroupButton, 0, wxALL, 5 );
 	
+	InvertGroupButton = new wxButton( m_panel4, wxID_ANY, wxT("Invert"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer49->Add( InvertGroupButton, 0, wxALL, 5 );
+	
 	
 	bSizer27->Add( bSizer49, 0, wxEXPAND, 5 );
 	
@@ -2459,7 +2462,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_panel3->SetSizer( bSizer30 );
 	m_panel3->Layout();
 	bSizer30->Fit( m_panel3 );
-	m_splitter2->SplitVertically( m_panel4, m_panel3, 300 );
+	m_splitter2->SplitVertically( m_panel4, m_panel3, 405 );
 	bSizer20->Add( m_splitter2, 100, wxEXPAND, 5 );
 	
 	
@@ -2615,6 +2618,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	AddGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
 	RenameGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
 	RemoveGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
+	InvertGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::InvertGroupClick ), NULL, this );
 	ContentsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
 	ContentsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
 	ContentsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
@@ -2656,6 +2660,7 @@ AssetParentPanel::~AssetParentPanel()
 	AddGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
 	RenameGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
 	RemoveGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
+	InvertGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::InvertGroupClick ), NULL, this );
 	ContentsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
 	ContentsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
 	ContentsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );

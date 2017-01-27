@@ -801,6 +801,7 @@ class AssetParentPanel : public wxPanel
 		wxButton* AddGroupButton;
 		wxButton* RenameGroupButton;
 		wxButton* RemoveGroupButton;
+		wxButton* InvertGroupButton;
 		wxPanel* m_panel3;
 		wxStaticText* AssetTypeText;
 		wxButton* ImportAsset;
@@ -842,6 +843,7 @@ class AssetParentPanel : public wxPanel
 		virtual void NewGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RenameGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void InvertGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void MouseCheckContentsVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginContentsDrag( wxListEvent& event ) { event.Skip(); }
 		virtual void OnContentsSelected( wxListEvent& event ) { event.Skip(); }
@@ -863,7 +865,7 @@ class AssetParentPanel : public wxPanel
 		
 		void m_splitter2OnIdle( wxIdleEvent& )
 		{
-			m_splitter2->SetSashPosition( 300 );
+			m_splitter2->SetSashPosition( 405 );
 			m_splitter2->Disconnect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::m_splitter2OnIdle ), NULL, this );
 		}
 	

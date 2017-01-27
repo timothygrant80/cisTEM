@@ -377,6 +377,50 @@ void MyAssetParentPanel::RenameGroupClick( wxCommandEvent& event )
 	GroupListBox->EditLabel(selected_group);
 }
 
+void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
+{
+	// Build bool array to work out which assets currently belong to the group, and invert the logic
+	bool group_membership[all_assets_list->number_of_assets];
+	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
+	{
+		group_membership[counter] = true;
+	}
+	for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter ++ )
+	{
+		group_membership[all_groups_list->groups[selected_group].members[counter]] = false;
+	}
+
+	// Create a new group
+	all_groups_list->AddGroup(all_groups_list->groups[selected_group].name);
+	all_groups_list->groups[all_groups_list->number_of_groups - 1].id = current_group_number;
+	AddGroupToDatabase(current_group_number,all_groups_list->groups[selected_group].name,current_group_number);
+	current_group_number++;
+
+	// Add its members
+	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
+	{
+		if (group_membership[counter])
+		{
+			AddArrayItemToGroup(all_groups_list->number_of_groups-1, counter);
+		}
+	}
+
+	// Remove the original group
+	if (selected_group != 0)
+	{
+		RemoveGroupFromDatabase(ReturnGroupID(selected_group));
+
+		all_groups_list->RemoveGroup(selected_group);
+
+	}
+
+	FillGroupList();
+	SetSelectedGroup(all_groups_list->number_of_groups-1);
+	DirtyGroups();
+	main_frame->RecalculateAssetBrowser();
+
+}
+
 void MyAssetParentPanel::OnGroupActivated( wxListEvent& event )
 {
 	GroupListBox->EditLabel(event.GetIndex());
@@ -838,11 +882,13 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RemoveGroupButton->Enable(false);
 			RenameGroupButton->Enable(false);
 			RenameGroupButton->Enable(false);
+			InvertGroupButton->Enable(false);
 		}
 		else
 		{
 			RemoveGroupButton->Enable(true);
 			RenameGroupButton->Enable(true);
+			InvertGroupButton->Enable(true);
 		}
 
 		if (ContentsListBox->GetItemCount() < 1)

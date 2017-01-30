@@ -594,7 +594,7 @@ class MovieImportDialog : public wxDialog
 	
 	public:
 		
-		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,601 ), long style = wxCLOSE_BOX ); 
+		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,779 ), long style = wxCLOSE_BOX ); 
 		~MovieImportDialog();
 	
 };
@@ -802,6 +802,7 @@ class AssetParentPanel : public wxPanel
 		wxButton* RenameGroupButton;
 		wxButton* RemoveGroupButton;
 		wxButton* InvertGroupButton;
+		wxButton* NewFromParentButton;
 		wxPanel* m_panel3;
 		wxStaticText* AssetTypeText;
 		wxButton* ImportAsset;
@@ -844,6 +845,7 @@ class AssetParentPanel : public wxPanel
 		virtual void RenameGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void InvertGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void NewFromParentClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void MouseCheckContentsVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginContentsDrag( wxListEvent& event ) { event.Skip(); }
 		virtual void OnContentsSelected( wxListEvent& event ) { event.Skip(); }

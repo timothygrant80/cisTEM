@@ -315,11 +315,12 @@ void MyAssetParentPanel::NewGroupClick( wxCommandEvent& event )
 {
 	// Add a new Group - called New Group
 
+	current_group_number++;
+
 	all_groups_list->AddGroup("New Group");
 	all_groups_list->groups[all_groups_list->number_of_groups - 1].id = current_group_number;
 
 	AddGroupToDatabase(current_group_number, "New Group", current_group_number);
-	current_group_number++;
 
 	// Database.
 
@@ -379,24 +380,32 @@ void MyAssetParentPanel::RenameGroupClick( wxCommandEvent& event )
 
 void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 {
+	//
+	int group_to_invert = selected_group;
+	int id_of_group_to_invert = all_groups_list->groups[group_to_invert].id;
+
 	// Build bool array to work out which assets currently belong to the group, and invert the logic
 	bool group_membership[all_assets_list->number_of_assets];
 	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
 	{
 		group_membership[counter] = true;
 	}
-	for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter ++ )
+	for (long counter = 0; counter < all_groups_list->groups[group_to_invert].number_of_members; counter ++ )
 	{
-		group_membership[all_groups_list->groups[selected_group].members[counter]] = false;
+		group_membership[all_groups_list->groups[group_to_invert].members[counter]] = false;
 	}
 
 	// Create a new group
-	all_groups_list->AddGroup(all_groups_list->groups[selected_group].name);
-	all_groups_list->groups[all_groups_list->number_of_groups - 1].id = current_group_number;
-	AddGroupToDatabase(current_group_number,all_groups_list->groups[selected_group].name,current_group_number);
 	current_group_number++;
+	all_groups_list->AddGroup(all_groups_list->groups[group_to_invert].name);
+	all_groups_list->groups[all_groups_list->number_of_groups - 1].id = current_group_number;
+	AddGroupToDatabase(current_group_number,all_groups_list->groups[group_to_invert].name,current_group_number);
+
+
+	FillGroupList();
 
 	// Add its members
+	// TODO: progress bar
 	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
 	{
 		if (group_membership[counter])
@@ -406,19 +415,22 @@ void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 	}
 
 	// Remove the original group
-	if (selected_group != 0)
+	if (group_to_invert != 0)
 	{
-		RemoveGroupFromDatabase(ReturnGroupID(selected_group));
+		RemoveGroupFromDatabase(id_of_group_to_invert);
 
-		all_groups_list->RemoveGroup(selected_group);
+		all_groups_list->RemoveGroup(group_to_invert);
 
 	}
 
-	FillGroupList();
 	SetSelectedGroup(all_groups_list->number_of_groups-1);
 	DirtyGroups();
-	main_frame->RecalculateAssetBrowser();
 
+}
+
+void MyAssetParentPanel::NewFromParentClick ( wxCommandEvent & event )
+{
+	MyDebugAssertTrue(false,"Oops, this method should never be called. You need to override it in the panel class");
 }
 
 void MyAssetParentPanel::OnGroupActivated( wxListEvent& event )

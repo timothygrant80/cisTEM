@@ -1,3 +1,5 @@
+extern MyMovieAssetPanel *movie_asset_panel;
+
 class MyImageAssetPanel : public MyAssetParentPanel
 {
 
@@ -11,6 +13,7 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		~MyImageAssetPanel();
 
 		void ImportAssetClick( wxCommandEvent& event );
+		void NewFromParentClick( wxCommandEvent & event );
 
 		void RemoveAssetFromDatabase(long wanted_asset);
 		void RemoveFromGroupInDatabase(int wanted_group_id, int wanted_asset_id);

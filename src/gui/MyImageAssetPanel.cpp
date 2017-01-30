@@ -18,6 +18,9 @@ MyAssetParentPanel( parent )
 
 	AssetTypeText->SetLabel("Images");
 
+	NewFromParentButton->SetLabel("New from\nmovie group");
+	NewFromParentButton->Enable(true);
+
 	all_groups_list->groups[0].SetName("All Images");
 	all_assets_list = new ImageAssetList;
 	FillGroupList();
@@ -258,5 +261,107 @@ void MyImageAssetPanel::ImportAssetClick( wxCommandEvent& event )
 
 	MyImageImportDialog *import_dialog = new MyImageImportDialog(this);
 	import_dialog->ShowModal();
+
+}
+
+void MyImageAssetPanel::NewFromParentClick( wxCommandEvent & event )
+{
+	MyDebugAssertTrue(movie_asset_panel->ReturnNumberOfGroups() > 1,"No movie groups to work from. Button should have been disabled");
+
+	// Ask the user which movie group they want to "copy"
+	// We can only allow them to copy a group where each member has a corresponding image (output by unblur, with the corresponding parent_id)
+	wxArrayString my_choices;
+	wxArrayInt choice_group_numbers;
+	bool all_movies_have_children[movie_asset_panel->ReturnNumberOfGroups()-1];
+	for (long group_counter = 1; group_counter < movie_asset_panel->ReturnNumberOfGroups(); group_counter ++ )
+	{
+		// check whether all of the members of this group of movies have image children
+		int movie_ids[movie_asset_panel->ReturnGroupSize(group_counter)];
+		bool movie_has_child[movie_asset_panel->ReturnGroupSize(group_counter)];
+		for (long counter = 0; counter < movie_asset_panel->ReturnGroupSize(group_counter); counter ++ )
+		{
+			movie_ids[counter] = movie_asset_panel->ReturnGroupMemberID(group_counter, counter);
+			movie_has_child[counter] = false;
+			//
+		}
+		int current_parent_id;
+		for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ )
+		{
+			current_parent_id = ReturnAssetPointer(image_counter)->parent_id;
+			for (long movie_counter = 0; movie_counter < movie_asset_panel->ReturnGroupSize(group_counter); movie_counter ++ )
+			{
+				if (movie_ids[movie_counter] == current_parent_id) movie_has_child[movie_counter] = true;
+			}
+		}
+		all_movies_have_children[group_counter] = true;
+		for (long counter = 0; counter < movie_asset_panel->ReturnGroupSize(group_counter); counter ++ )
+		{
+			if (! movie_has_child[counter]) all_movies_have_children[group_counter] = false;
+		}
+
+		// if all movies in the current group have image asset children, add to the list the user can choose from
+		if (all_movies_have_children[group_counter])
+		{
+			my_choices.Add(movie_asset_panel->ReturnGroupName(group_counter));
+			choice_group_numbers.Add(group_counter);
+		}
+	}
+
+	// Generate a dialog for the user
+	wxSingleChoiceDialog	*group_choice = new wxSingleChoiceDialog(this, "Copy which group of movies?", "Select Group", my_choices);
+
+	// Assuming the user chose a group, generate a new image group
+	int selected_group_number;
+	if (group_choice->ShowModal() ==  wxID_OK)
+	{
+		wxPrintf("Would add group now\n");
+		selected_group_number = choice_group_numbers.Item(group_choice->GetSelection());
+		wxPrintf("Using movie group %i as parent, which has %li members\n",selected_group_number,movie_asset_panel->ReturnGroupSize(selected_group_number));
+
+		// Create a new group
+		{
+			wxString new_group_name = movie_asset_panel->ReturnGroupName(selected_group_number);
+			current_group_number++;
+			all_groups_list->AddGroup(new_group_name);
+			all_groups_list->groups[all_groups_list->number_of_groups-1].id  = current_group_number;
+			AddGroupToDatabase(current_group_number, new_group_name, current_group_number);
+			FillGroupList();
+			DirtyGroups();
+		}
+
+		// Work out who belongs in that group
+		// TODO: progress bar
+		bool image_has_parent_in_group[ReturnNumberOfAssets()];
+		for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ ) { image_has_parent_in_group[image_counter] = false; }
+		MovieAsset *current_movie_asset;
+		ImageAsset *current_image_asset;
+		for (long movie_counter = 0; movie_counter < movie_asset_panel->ReturnGroupSize(selected_group_number); movie_counter ++ )
+		{
+			current_movie_asset = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnGroupMember(selected_group_number, movie_counter));
+			for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ )
+			{
+				current_image_asset = all_assets_list->ReturnImageAssetPointer(image_counter);
+				if (current_image_asset->parent_id == current_movie_asset->asset_id) image_has_parent_in_group[image_counter] = true;
+			}
+		}
+
+		// Add members to the new group
+		// TODO: progress bar
+		for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ )
+		{
+			if (image_has_parent_in_group[image_counter])
+			{
+				AddArrayItemToGroup(all_groups_list->number_of_groups-1,image_counter);
+			}
+		}
+
+		FillGroupList();
+		FillContentsList();
+		DirtyGroups();
+		main_frame->RecalculateAssetBrowser();
+
+	}
+
+	group_choice->Destroy();
 
 }

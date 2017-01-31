@@ -43,6 +43,7 @@ public:
 	void CopyFrom(Curve *other_curve);
 	void ClearData();
 	void MultiplyByConstant(float constant_to_multiply_by);
+	void MultiplyXByConstant(float constant_to_multiply_by);
 	void AddPoint(float x_value, float y_value);
 	void FitPolynomialToData(int wanted_polynomial_order = 6);
 	void FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order);
@@ -61,5 +62,6 @@ public:
 	void ZeroYData();
 	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);
 	void SquareRoot();
+	void Reciprocal();
 	void ZeroAfterIndex(int index);
 };

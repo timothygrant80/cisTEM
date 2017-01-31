@@ -472,3 +472,25 @@ wxString ReturnSocketErrorText(wxSocketBase *socket_to_check)
 
 }
 
+
+float ReturnSumOfLogP(float logp1, float logp2, float log_range = 20.0)
+{
+	float logp;
+
+	if (logp2 < logp1 - log_range)
+	{
+		logp = logp1;
+	}
+	else
+	if (logp1 < logp2 - log_range)
+	{
+		logp = logp2;
+	}
+	else
+	{
+		logp = logp1 + log(double(1.0) + exp(double(logp2) - double(logp1)));
+	}
+
+	return logp;
+}
+

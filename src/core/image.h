@@ -92,13 +92,14 @@ public:
 	int ReturnSmallestLogicalDimension();
 	int ReturnLargestLogicalDimension();
 	void SampleFFT(Image &sampled_image, int sample_rate);
-	float ReturnSumOfSquares();
+	float ReturnSumOfSquares(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
+	float ReturnSigmaNoise();
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
 	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins, float signed_CC_limit);
 	void PhaseFlipPixelWise(Image &other_image);
-	void MultiplyPixelWiseReal(Image &other_image);
+	void MultiplyPixelWiseReal(Image &other_image, bool absolute = false);
 	void MultiplyPixelWise(Image &other_image);
 	void ConjugateMultiplyPixelWise(Image &other_image);
 	void DividePixelWise(Image &other_image);
@@ -118,7 +119,8 @@ public:
 	void MultiplyByWeightsCurve(Curve &weights, float scale_factor = 1.0);
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
-	float Correct3D(float wanted_mask_radius = 0.0);
+	//float Correct3D(float wanted_mask_radius = 0.0);
+	float CorrectSinc(float wanted_mask_radius = 0.0, float padding_factor = 1.0);
 	void MirrorXFourier2D(Image &mirrored_image);
 	void MirrorYFourier2D(Image &mirrored_image);
 	void RotateQuadrants(Image &rotated_image, int quad_i);
@@ -129,6 +131,9 @@ public:
 	void RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
 	Kernel2D ReturnLinearInterpolatedFourierKernel2D(float &x, float &y);
 	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit_in_reciprocal_pixels = 1.0, bool use_nearest_neighbor = false);
+	void Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
+	void Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
+	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
 	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);
@@ -141,6 +146,7 @@ public:
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
+	bool ContainsBlankEdges(float mask_radius = 0.0);
 
 
 	inline long ReturnVolumeInRealSpace()

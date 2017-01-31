@@ -1,6 +1,6 @@
 #include "core_headers.h"
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_bfactor_conversion)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -12,8 +12,8 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	pixel_size = wanted_pixel_size;
 	original_pixel_size = 0.0;
 	average_occupancy = wanted_average_occupancy;
-	average_score = wanted_average_score;
-	score_bfactor_conversion = wanted_score_bfactor_conversion;
+	average_sigma = wanted_average_sigma;
+	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
 
 	ctf_reconstruction = NULL;
 
@@ -21,7 +21,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	edge_terms_were_added = false;
 }
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_bfactor_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion, wxString wanted_symmetry)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -33,8 +33,8 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	pixel_size = wanted_pixel_size;
 	original_pixel_size = 0.0;
 	average_occupancy = wanted_average_occupancy;
-	average_score = wanted_average_score;
-	score_bfactor_conversion = wanted_score_bfactor_conversion;
+	average_sigma = wanted_average_sigma;
+	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
 
 	ctf_reconstruction = NULL;
 
@@ -42,10 +42,10 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	edge_terms_were_added = false;
 }
 
-Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_bfactor_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion, wxString wanted_symmetry)
 {
 	ctf_reconstruction = NULL;
-	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_bfactor_conversion);
+	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_sigma, wanted_sigma_bfactor_conversion);
 
 	symmetry_matrices.Init(wanted_symmetry);
 }
@@ -58,7 +58,7 @@ Reconstruct3D::~Reconstruct3D()
 	}
 }
 
-void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_bfactor_conversion)
+void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion)
 {
 	logical_x_dimension = wanted_logical_x_dimension;
 	logical_y_dimension = wanted_logical_y_dimension;
@@ -66,8 +66,8 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 
 	pixel_size = wanted_pixel_size;
 	average_occupancy = wanted_average_occupancy;
-	average_score = wanted_average_score;
-	score_bfactor_conversion = wanted_score_bfactor_conversion;
+	average_sigma = wanted_average_sigma;
+	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
 
 	image_reconstruction.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, false);
 
@@ -104,7 +104,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 //	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
-	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13],2);
+	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / (particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13]);
 //	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	if (particle_weight > 0.0)
@@ -130,8 +130,8 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 		float frequency_squared;
 		float azimuth;
 		float weight;
-		float score_bfactor_conversion4 = score_bfactor_conversion / powf(pixel_size,2) * 0.25;
-		float bfactor_conversion = (particle_to_insert.particle_score - average_score) * score_bfactor_conversion4;
+		float sigma_bfactor_conversion4 = sigma_bfactor_conversion / powf(pixel_size,2) * 0.25;
+		float bfactor_conversion = (average_sigma - particle_to_insert.sigma_noise) * sigma_bfactor_conversion4;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
 		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
@@ -248,14 +248,14 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 
 		float frequency_squared;
 		float weight;
-		float score_bfactor_conversion4 = score_bfactor_conversion / powf(pixel_size,2) * 0.25;
-		float bfactor_conversion = (particle_to_insert.particle_score - average_score) * score_bfactor_conversion4;
+		float sigma_bfactor_conversion4 = sigma_bfactor_conversion / powf(pixel_size,2) * 0.25;
+		float bfactor_conversion = (average_sigma - particle_to_insert.sigma_noise) * sigma_bfactor_conversion4;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
 		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
 		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
 
-		fftwf_complex ctf_value = 1.0 + I * 0.0;
+		fftwf_complex ctf_value = 1.0;
 
 		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
@@ -477,7 +477,7 @@ void Reconstruct3D::CompleteEdges()
 		}
 // Deal with term at origin
 		physical_coord_1 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, 0, 0);
-		image_reconstruction.complex_values[physical_coord_1] = (2.0 * crealf(image_reconstruction.complex_values[physical_coord_1])) + I * 0.0;
+		image_reconstruction.complex_values[physical_coord_1] = 2.0 * crealf(image_reconstruction.complex_values[physical_coord_1]);
 		ctf_reconstruction[physical_coord_1] = 2.0 * ctf_reconstruction[physical_coord_1];
 
 		edge_terms_were_added = true;
@@ -491,11 +491,11 @@ float Reconstruct3D::Correct3DCTF(Image &buffer3d)
 
 	buffer3d.is_in_real_space = false;
 
-	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) buffer3d.complex_values[i] = ctf_reconstruction[i] + I * 0.0;
+	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) buffer3d.complex_values[i] = ctf_reconstruction[i];
 
 	buffer3d.SwapRealSpaceQuadrants();
 	buffer3d.BackwardFFT();
-	correction_factor = buffer3d.Correct3D();
+	correction_factor = buffer3d.CorrectSinc();
 	buffer3d.ForwardFFT();
 	buffer3d.SwapRealSpaceQuadrants();
 
@@ -532,9 +532,9 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
-	char_pointer = (char *) &average_score;
+	char_pointer = (char *) &average_sigma;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
-	char_pointer = (char *) &score_bfactor_conversion;
+	char_pointer = (char *) &sigma_bfactor_conversion;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	for (i = 0; i < 4; i++) temp_char[count + i] = ' ';
 	for (i = 0; i < symmetry_matrices.symmetry_symbol.length(); i++) temp_char[count + i] = symmetry_matrices.symmetry_symbol.GetChar(i);
@@ -549,12 +549,13 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 
 	char_pointer = (char *) ctf_reconstruction;
 	b_stream.write(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated / 2);
+
 	b_stream.close();
 }
 
 void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension,
 		int &original_x_dimension, int &original_y_dimension, int &original_z_dimension, float &pixel_size, float &original_pixel_size,
-		float &average_occupancy, float &average_score, float &score_bfactor_conversion, wxString &symmetry_symbol, bool &insert_even)
+		float &average_occupancy, float &average_sigma, float &sigma_bfactor_conversion, wxString &symmetry_symbol, bool &insert_even)
 {
 	int i;
 	int count = 7 * sizeof(int) + 5 * sizeof(float) + 4;
@@ -584,9 +585,9 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &average_score;
+	char_pointer = (char *) &average_sigma;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &score_bfactor_conversion;
+	char_pointer = (char *) &sigma_bfactor_conversion;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	symmetry_symbol = "";
 	for (i = 0; i < 4; i++) symmetry_symbol += temp_char[count + i];
@@ -596,6 +597,7 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	insert_even = false; if (oddeven == 2) {insert_even = true;};
 
 	symmetry_matrices.Init(symmetry_symbol);
+
 	b_stream.close();
 }
 
@@ -609,8 +611,8 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	float input_pixel_size;
 	float input_original_pixel_size;
 	float input_average_occupancy;
-	float input_average_score;
-	float input_score_bfactor_conversion;
+	float input_average_sigma;
+	float input_sigma_bfactor_conversion;
 	int input_logical_x_dimension;
 	int input_logical_y_dimension;
 	int input_logical_z_dimension;
@@ -641,9 +643,9 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &input_average_score;
+	char_pointer = (char *) &input_average_sigma;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &input_score_bfactor_conversion;
+	char_pointer = (char *) &input_sigma_bfactor_conversion;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	input_symmetry_symbol = "";
 	for (i = 0; i < 4; i++) input_symmetry_symbol += temp_char[count + i];
@@ -661,6 +663,7 @@ void Reconstruct3D::ReadArrays(wxString filename)
 
 	char_pointer = (char *) ctf_reconstruction;
 	b_stream.read(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated / 2);
+
 	b_stream.close();
 }
 

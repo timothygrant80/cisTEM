@@ -1409,7 +1409,7 @@ void ParticleFinder::PrepareTemplateForMatching(Image *template_image, Image &pr
 				temporary_image.BackwardFFT();
 				temporary_image.NormalizeFT();
 			}
-			temporary_image.Correct3D();
+			temporary_image.CorrectSinc();
 		}
 
 		if (temporary_image.is_in_real_space)

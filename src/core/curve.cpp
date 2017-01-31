@@ -773,6 +773,31 @@ void Curve::FitPolynomialToData(int wanted_polynomial_order)
 	LS_POLY(data_x, data_y, number_of_points, polynomial_order, polynomial_fit, polynomial_coefficients); // weird old code to do the fit
 }
 
+void Curve::Reciprocal()
+{
+#ifdef DEBUG
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] < 0.0) MyDebugAssertTrue(false,"This routine assumes all Y values are positive, but value %i is %f\n",counter,data_y[counter]);
+	}
+#endif
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] != 0.0) data_y[counter] = 1.0 / data_y[counter];
+	}
+}
+
+
+void Curve::MultiplyXByConstant(float constant_to_multiply_by)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_x[counter] *= constant_to_multiply_by;
+	}
+}
 
 
 /***************************************************

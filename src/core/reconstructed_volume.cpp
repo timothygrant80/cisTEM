@@ -121,7 +121,7 @@ void ReconstructedVolume::PrepareForProjections(float resolution_limit, bool app
 	int fourier_size_y;
 	int fourier_size_z;
 
-	density_map.Correct3D();
+	density_map.CorrectSinc();
 	density_map.ForwardFFT();
 	binning_factor = resolution_limit / pixel_size / 2.0;
 	if (approximate_binning)
@@ -150,6 +150,8 @@ void ReconstructedVolume::PrepareForProjections(float resolution_limit, bool app
 		pixel_size *= binning_factor;
 	}
 	density_map.SwapRealSpaceQuadrants();
+
+	density_map.CosineMask(pixel_size / resolution_limit, pixel_size / 100.0);
 }
 
 void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection,
@@ -161,6 +163,8 @@ void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, Ang
 	MyDebugAssertTrue(projection.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(density_map.IsCubic(), "Image volume to project is not cubic");
 	MyDebugAssertTrue(! density_map.object_is_centred_in_box, "Image volume quadrants not swapped");
+
+	float var_A;
 
 	if (current_phi != angles_and_shifts_of_projection.ReturnPhiAngle() || current_theta != angles_and_shifts_of_projection.ReturnThetaAngle()
 		|| current_psi != angles_and_shifts_of_projection.ReturnPsiAngle() || current_resolution_limit != resolution_limit)
@@ -181,7 +185,9 @@ void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, Ang
 
 		if (whiten)
 		{
-			projection.Whiten(resolution_limit);
+			var_A = projection.ReturnSumOfSquares();
+			projection.MultiplyByConstant(sqrtf(projection.number_of_real_space_pixels / var_A));
+//!!!			projection.Whiten(resolution_limit);
 //			projection.PhaseFlipPixelWise(CTF);
 //			projection.BackwardFFT();
 //			projection.ZeroFloatOutside(0.5 * projection.logical_x_dimension - 1.0);
@@ -219,7 +225,9 @@ void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, Ang
 
 			if (whiten)
 			{
-				projection.Whiten(resolution_limit);
+				var_A = projection.ReturnSumOfSquares();
+				projection.MultiplyByConstant(sqrtf(projection.number_of_real_space_pixels / var_A));
+//!!!				projection.Whiten(resolution_limit);
 //				projection.PhaseFlipPixelWise(CTF);
 //				projection.BackwardFFT();
 //				projection.ZeroFloatOutside(0.5 * projection.logical_x_dimension - 1.0);
@@ -279,7 +287,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 				}
 				else
 				{
-					density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
+					density_map.complex_values[pixel_counter] = 0.0;
 				}
 				pixel_counter++;
 			}
@@ -350,12 +358,12 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 					}
 					else
 					{
-						density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
+						density_map.complex_values[pixel_counter] = 0.0;
 					}
 				}
 				else
 				{
-					density_map.complex_values[pixel_counter] = 0.0 + I * 0.0;
+					density_map.complex_values[pixel_counter] = 0.0;
 				}
 				pixel_counter++;
 			}
@@ -380,7 +388,7 @@ void ReconstructedVolume::CosineMask(float wanted_mask_radius, float wanted_mask
 float ReconstructedVolume::Correct3D(float mask_radius)
 {
 	was_corrected = true;
-	return density_map.Correct3D(mask_radius);
+	return density_map.CorrectSinc(mask_radius);
 }
 
 void ReconstructedVolume::OptimalFilter(ResolutionStatistics &statistics)

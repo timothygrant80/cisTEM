@@ -91,34 +91,34 @@ void FrealignParameterFile::WriteLine(float *parameters, bool comment)
 	{
 		if (comment)
 		{
-			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %10.4f %7.2f %7.2f\n",
+			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %8.4f %9i %7i\n",
 					float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), int(parameters[12]), float(parameters[13]), float(parameters[14]), float(parameters[15]));
+					float(parameters[11]), int(parameters[12]), float(parameters[13]), int(parameters[14]), int(parameters[15]));
 		}
 		else
 		{
-			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %10.4f %7.2f %7.2f\n",
+			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %8.4f %9i %7i\n",
 					int(parameters[0]), float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), int(parameters[12]), float(parameters[13]), float(parameters[14]), float(parameters[15]));
+					float(parameters[11]), int(parameters[12]), float(parameters[13]), int(parameters[14]), int(parameters[15]));
 		}
 	}
 	else
 	{
 		if (comment)
 		{
-			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %10.4f %7.2f\n",
+			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %8.4f %9i\n",
 					float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), int(parameters[12]), float(parameters[13]), float(parameters[14]));
+					float(parameters[11]), int(parameters[12]), float(parameters[13]), int(parameters[14]));
 		}
 		else
 		{
-			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %10.4f %7.2f\n",
+			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %9i %8.4f %9i\n",
 					int(parameters[0]), float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), int(parameters[12]), float(parameters[13]), float(parameters[14]));
+					float(parameters[11]), int(parameters[12]), float(parameters[13]), int(parameters[14]));
 		}
 	}
 	number_of_lines++;
@@ -177,6 +177,7 @@ int FrealignParameterFile::ReadFile()
 void FrealignParameterFile::ReadLine(float *parameters)
 {
 	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+	MyDebugAssertTrue(current_line <= number_of_lines, "End of Frealign file reached");
 
 	int i;
 	int elements_read = records_per_line * current_line;
@@ -210,7 +211,7 @@ void FrealignParameterFile::Rewind()
 
 float FrealignParameterFile::ReturnThreshold(float wanted_percentage)
 {
-	MyDebugAssertTrue(wanted_percentage < 1.0 && wanted_percentage >= 0.0, "Percentage out of range");
+//	MyDebugAssertTrue(wanted_percentage < 1.0 && wanted_percentage >= 0.0, "Percentage out of range");
 
 	int i;
 	int line;
@@ -218,20 +219,30 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage)
 	int number_of_bins = 10000;
 	float average_occ = 0.0;
 	float sum_occ;
-	float increment = 100.0 / float(number_of_bins);
+//	float increment = 100.0 / float(number_of_bins);
+	float increment;
 	float threshold;
 	float percentage;
+	float min, max;
 
+	min =  std::numeric_limits<float>::max();
+	max = -std::numeric_limits<float>::max();
 	for (line = 0; line < number_of_lines; line++)
 	{
-		average_occ += parameter_cache[11 + records_per_line * line];
+		index = records_per_line * line;
+		average_occ += parameter_cache[11 + index];
+		if (min > parameter_cache[14 + index]) min = parameter_cache[14 + index];
+		if (min < parameter_cache[14 + index]) max = parameter_cache[14 + index];
 	}
 	average_occ /= number_of_lines;
+	increment = (min - max) / (number_of_bins - 1);
+	if (increment == 0.0) return min;
 
-	for (i = number_of_bins; i > 0; i--)
+//	for (i = number_of_bins; i > 0; i--)
+	for (i = 0; i < number_of_bins; i++)
 	{
 		sum_occ = 0.0;
-		threshold = float(i) * increment;
+		threshold = float(i) * increment + max;
 		for (line = 0; line < number_of_lines; line++)
 		{
 			index = records_per_line * line;
@@ -253,17 +264,19 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage)
 void FrealignParameterFile::CalculateDefocusDependence()
 {
 	int line;
+	int index;
 	float s = 0.0, sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
 	float delta;
 
 	for (line = 0; line < number_of_lines; line++)
 	{
-		average_defocus = (parameter_cache[8 + records_per_line * line] + parameter_cache[9 + records_per_line * line]) / 2.0;
-		s += parameter_cache[11 + records_per_line * line];
-		sx += average_defocus * parameter_cache[11 + records_per_line * line];
-		sy += parameter_cache[14 + records_per_line * line] * parameter_cache[11 + records_per_line * line];
-		sxx += powf(average_defocus,2) * parameter_cache[11 + records_per_line * line];
-		sxy += average_defocus * parameter_cache[14 + records_per_line * line] * parameter_cache[11 + records_per_line * line];
+		index = records_per_line * line;
+		average_defocus = (parameter_cache[8 + index] + parameter_cache[9 + index]) / 2.0;
+		s += parameter_cache[11 + index];
+		sx += average_defocus * parameter_cache[11 + index];
+		sy += parameter_cache[13 + index] * parameter_cache[11 + index];
+		sxx += powf(average_defocus,2) * parameter_cache[11 + index];
+		sxy += average_defocus * parameter_cache[13 + index] * parameter_cache[11 + index];
 	}
 	average_defocus = sx / s;
 	delta = s * sxx - powf(sx,2);
@@ -275,12 +288,14 @@ void FrealignParameterFile::CalculateDefocusDependence()
 void FrealignParameterFile::AdjustScores()
 {
 	int line;
+	int index;
 	float defocus;
 
 	for (line = 0; line < number_of_lines; line++)
 	{
-		defocus = (parameter_cache[8 + records_per_line * line] + parameter_cache[9 + records_per_line * line]) / 2.0;
-		parameter_cache[14 + records_per_line * line] -= ReturnScoreAdjustment(defocus);
+		index = records_per_line * line;
+		defocus = (parameter_cache[8 + index] + parameter_cache[9 + index]) / 2.0;
+		parameter_cache[13 + index] -= ReturnScoreAdjustment(defocus);
 	}
 }
 

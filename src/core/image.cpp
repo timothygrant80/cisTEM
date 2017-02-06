@@ -622,6 +622,7 @@ void Image::ConjugateMultiplyPixelWise(Image &other_image)
 	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
 	MyDebugAssertFalse(is_in_real_space, "Image must be in Fourier space");
 	MyDebugAssertFalse(other_image.is_in_real_space, "Other image must be in Fourier space");
+	MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimensions");
 
 	long pixel_counter;
 
@@ -1588,7 +1589,7 @@ void Image::GenerateReferenceProjections(Image *projections, EulerSearch &parame
 	}
 }
 
-void Image::RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start)
+void Image::RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start, bool invert_angle)
 {
 	int psi_i;
 	int number_of_psi_positions;
@@ -1606,7 +1607,14 @@ void Image::RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max
 
 	for (psi_i = 0; psi_i < number_of_psi_positions; psi_i++)
 	{
-		angles.GenerateRotationMatrix2D(psi_i * psi_step + psi_start);
+		if (invert_angle)
+		{
+			angles.GenerateRotationMatrix2D(- psi_i * psi_step - psi_start);
+		}
+		else
+		{
+			angles.GenerateRotationMatrix2D(psi_i * psi_step + psi_start);
+		}
 		RotateFourier2DIndex(kernel_index[psi_i], angles);
 	}
 }
@@ -1999,6 +2007,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 	rotated_image.complex_values[0] = 0.0 + I * 0.0;
 
 	rotated_image.is_in_real_space = false;
+	rotated_image.object_is_centred_in_box = false;
 }
 
 void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit, bool apply_resolution_limit)
@@ -3107,7 +3116,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					else
 					if (invert)
 					{
-						if (distance_from_center_squared <= mask_radius)
+						if (distance_from_center_squared <= mask_radius_squared)
 						{
 							real_values[pixel_counter] = pixel_sum;
 						}
@@ -3260,9 +3269,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					pixel_counter++;
 				}
 			}
-
 		}
-
 	}
 	
 	return float(mask_volume);
@@ -5083,7 +5090,7 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 						rad = sqrt(float(i_logi));
 						//
 						average.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
-						number_of_values.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+						number_of_values.AddValueAtXUsingLinearInterpolation(rad,1.0,true);
 
 						// Increment the address
 						address ++;
@@ -7540,6 +7547,29 @@ float Image::ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, flo
 	return sum;
 }
 
+float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
+
+	if(wanted_physical_x_coordinate < 0 || wanted_physical_x_coordinate > logical_x_dimension - 1) return 0.0;
+	if(wanted_physical_y_coordinate < 0 || wanted_physical_y_coordinate > logical_y_dimension - 1) return 0.0;
+
+	int i_nearest;
+	int j_nearest;
+
+//	float weight_x;
+//	float weight_y;
+
+	i_nearest = int(wanted_physical_x_coordinate + 0.5);
+	j_nearest = int(wanted_physical_y_coordinate + 0.5);
+
+//	weight_x = (1.0 - fabsf(wanted_physical_x_coordinate - i_nearest));
+//	weight_y = (1.0 - fabsf(wanted_physical_y_coordinate - j_nearest));
+
+//	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest] * weight_x * weight_y;
+	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
+}
 
 
 /*

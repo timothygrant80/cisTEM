@@ -497,3 +497,152 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	output_file.SetPixelSize(original_pixel_size);
 	output_file.CloseFile();
 }
+
+void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2, Curve &signal_power_spectrum,
+		float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
+		wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics)
+{
+	int original_box_size = density_map_1.logical_x_dimension;
+	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
+	int box_size = reconstruction.logical_x_dimension;
+	float binning_factor = pixel_size / original_box_size;
+	float particle_area_in_pixels;
+	float mask_volume_fraction;
+	float resolution_limit = 0.0;
+	MRCFile output_file;
+	ResolutionStatistics statistics(original_pixel_size, original_box_size);
+	ResolutionStatistics cropped_statistics(pixel_size, box_size);
+	ResolutionStatistics temp_statistics(pixel_size, intermediate_box_size);
+
+	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
+
+	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	statistics.CalculateFSC(density_map_1, density_map_2);
+	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
+	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
+	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;
+	if (intermediate_box_size != box_size && binning_factor != 1.0)
+	{
+		temp_statistics.CopyFrom(statistics);
+		cropped_statistics.ResampleFrom(temp_statistics);
+	}
+	else
+	{
+		cropped_statistics.CopyFrom(statistics);
+	}
+	cropped_statistics.CalculateParticleSSNR(reconstruction.image_reconstruction, reconstruction.ctf_reconstruction, mask_volume_fraction);
+	if (intermediate_box_size != box_size && binning_factor != 1.0)
+	{
+		temp_statistics.ResampleParticleSSNR(cropped_statistics);
+		statistics.CopyParticleSSNR(temp_statistics);
+	}
+	else
+	{
+		statistics.CopyParticleSSNR(cropped_statistics);
+	}
+	statistics.ZeroToResolution(resolution_limit);
+	statistics.PrintStatistics();
+
+	statistics.WriteStatisticsToFile(output_statistics);
+	if (copy_of_statistics != NULL)
+	{
+		copy_of_statistics->Init(original_pixel_size, original_box_size);
+		copy_of_statistics->CopyFrom(statistics);
+	}
+
+	Calculate3DML(reconstruction, signal_power_spectrum);
+	density_map.SwapRealSpaceQuadrants();
+	if (intermediate_box_size != box_size)
+	{
+		density_map.BackwardFFT();
+		Correct3D();
+		density_map.Resize(intermediate_box_size, intermediate_box_size,
+				intermediate_box_size, density_map.ReturnAverageOfRealValuesOnEdges());
+		density_map.ForwardFFT();
+	}
+	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
+	density_map.CosineMask(0.5, 1.0 / 20.0);
+	density_map.BackwardFFT();
+	if (intermediate_box_size == box_size) Correct3D();
+	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	output_file.OpenFile(output_volume.ToStdString(), true);
+	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);
+	output_file.SetPixelSize(original_pixel_size);
+	output_file.CloseFile();
+}
+
+void ReconstructedVolume::Calculate3DML(Reconstruct3D &reconstruction, Curve &signal_power_spectrum)
+{
+	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");
+//	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
+	MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension() / 2 + 1) * sqrtf(3.0)) + 1 == signal_power_spectrum.number_of_points, "Error: signal_power_spectrum table incompatible with volume");
+
+	int i;
+	int j;
+	int k;
+	int bin;
+
+	long pixel_counter = 0;
+
+	float x;
+	float y;
+	float z;
+	float frequency_squared;
+//	float particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
+//	float pssnr_correction_factor = density_map.ReturnVolumeInRealSpace() / (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3))
+//			* particle_area_in_pixels / density_map.logical_x_dimension / density_map.logical_y_dimension;
+
+
+	int number_of_bins2 = reconstruction.image_reconstruction.ReturnSmallestLogicalDimension();
+
+	float *wiener_constant = new float[signal_power_spectrum.number_of_points];
+
+	reconstruction.CompleteEdges();
+
+// Now do the division by the CTF volume
+	pixel_counter = 0;
+
+	for (i = 0; i < signal_power_spectrum.number_of_points; i++)
+	{
+		if (signal_power_spectrum.data_y[i] != 0.0) wiener_constant[i] = 2.0 / signal_power_spectrum.data_y[i];
+	}
+
+	for (k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++)
+	{
+		z = powf(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * reconstruction.image_reconstruction.fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= reconstruction.image_reconstruction.physical_upper_bound_complex_y; j++)
+		{
+			y = powf(reconstruction.image_reconstruction.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * reconstruction.image_reconstruction.fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= reconstruction.image_reconstruction.physical_upper_bound_complex_x; i++)
+			{
+				if (reconstruction.ctf_reconstruction[pixel_counter] != 0.0)
+				{
+					x = powf(i * reconstruction.image_reconstruction.fourier_voxel_size_x, 2);
+					frequency_squared = x + y + z;
+
+// compute radius, in units of physical Fourier pixels
+					bin = int(sqrtf(frequency_squared) * number_of_bins2);
+
+					if (signal_power_spectrum.data_y[bin] != 0.0)
+					{
+						density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter]
+									/(reconstruction.ctf_reconstruction[pixel_counter] + wiener_constant[bin]);
+					}
+					else
+					{
+						density_map.complex_values[pixel_counter] = 0.0;
+					}
+				}
+				else
+				{
+					density_map.complex_values[pixel_counter] = 0.0;
+				}
+				pixel_counter++;
+			}
+		}
+	}
+
+	delete [] wiener_constant;
+}

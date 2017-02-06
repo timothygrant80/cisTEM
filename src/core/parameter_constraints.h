@@ -25,6 +25,9 @@ public:
 	inline float ReturnShiftXPenalty(float shift_x) {return - shift_x_noise_variance * ReturnShiftXLogP(shift_x);};
 	inline float ReturnShiftYPenalty(float shift_y) {return - shift_y_noise_variance * ReturnShiftYLogP(shift_y);};
 
+//	inline void SetAverageShiftX(float wanted_shift_x_average) {shift_x_average = wanted_shift_x_average;};
+//	inline void SetAverageShiftY(float wanted_shift_y_average) {shift_y_average = wanted_shift_y_average;};
+
 //private:
 
 	float 			phi_average;			// in degrees

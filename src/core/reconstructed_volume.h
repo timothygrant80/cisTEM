@@ -56,4 +56,8 @@ public:
 	void FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
+	void FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2, Curve &signal_power_spectrum,
+			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
+			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
+	void Calculate3DML(Reconstruct3D &reconstruction, Curve &signal_power_spectrum);
 };

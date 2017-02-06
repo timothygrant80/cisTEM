@@ -469,9 +469,13 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 		}
 		else
 		{
-			part_SSNR.AddPoint(0.0, 0.0);
+			part_SSNR.AddPoint(pixel_size * powf(float(number_of_bins2), 2), 0.0);
 		}
 	}
+
+	// Set value at i = 0 to 8 * value at i = 1 to allow reconstructions with non-zero offset
+	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
+//
 	delete [] sum_double;
 	delete [] sum_int;
 //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.number_of_points);
@@ -498,7 +502,7 @@ void ResolutionStatistics::PrintStatistics()
 {
 	MyDebugAssertTrue(FSC.number_of_points > 0, "Resolution statistics have not been fully calculated");
 
-	wxPrintf("C                                             Sqrt       Sqrt  \n");
+	wxPrintf("\nC                                             Sqrt       Sqrt  \n");
 	wxPrintf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
 	for (int i = 1; i < number_of_bins; i++)
 	{

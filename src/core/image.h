@@ -125,7 +125,7 @@ public:
 	void MirrorYFourier2D(Image &mirrored_image);
 	void RotateQuadrants(Image &rotated_image, int quad_i);
 	void GenerateReferenceProjections(Image *projections, EulerSearch &parameters, float resolution);
-	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start);
+	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start, bool invert_angle = false);
 	void RotateFourier2DDeleteIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
 	void RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_index);
 	void RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotation_angle, float resolution_limit = 1.0, float padding_factor = 1.0);
@@ -134,6 +134,7 @@ public:
 	void Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
 	void Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
+	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
 	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
 	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);

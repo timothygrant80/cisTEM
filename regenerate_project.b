@@ -3,6 +3,6 @@ mkdir m4
 aclocal
 autoconf
 libtoolize
-automake --add-missing
+automake --add-missing --copy
 
 

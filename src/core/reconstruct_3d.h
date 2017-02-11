@@ -35,7 +35,7 @@ public:
 	void Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion);
 	void InsertSliceWithCTF(Particle &particle_to_insert);
 	void InsertSliceNoCTF(Particle &particle_to_insert);
-	void AddByLinearInterpolation(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, fftwf_complex &wanted_value, fftwf_complex &ctf_value, float wanted_weight);
+	void AddByLinearInterpolation(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, std::complex<float> &wanted_value, std::complex<float> &ctf_value, float wanted_weight);
 	void CompleteEdges();
 	float Correct3DCTF(Image &buffer3d);
 	void DumpArrays(wxString filename, bool insert_even);

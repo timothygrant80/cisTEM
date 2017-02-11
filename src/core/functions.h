@@ -197,7 +197,7 @@ inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_or
 	return real_space_shift * distance_from_origin * 2.0 * PI / dimension_size;
 }
 
-inline fftwf_complex Return3DPhaseFromIndividualDimensions( float phase_x, float phase_y, float phase_z)
+inline std::complex<float> Return3DPhaseFromIndividualDimensions( float phase_x, float phase_y, float phase_z)
 {
 	float temp_phase = -phase_x-phase_y-phase_z;
 

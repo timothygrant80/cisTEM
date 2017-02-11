@@ -255,7 +255,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
 		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
 
-		fftwf_complex ctf_value = 1.0;
+		std::complex<float> ctf_value = 1.0;
 
 		for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
 		{
@@ -319,7 +319,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 	}
 }
 
-void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, float &wanted_logical_z_coordinate, fftwf_complex &input_value, fftwf_complex &ctf_value, float wanted_weight)
+void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, float &wanted_logical_z_coordinate, std::complex<float> &input_value, std::complex<float> &ctf_value, float wanted_weight)
 {
 	int i;
 	int j;
@@ -340,12 +340,12 @@ void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate,
 	float weight_x;
 	float weight_xy;
 
-	fftwf_complex conjugate;
+	std::complex<float> conjugate;
 
-	float ctf_real = crealf(ctf_value);
+	float ctf_real = real(ctf_value);
 	float ctf_squared = powf(ctf_real,2) * wanted_weight;
-	fftwf_complex value_to_insert = input_value * fabsf(ctf_real) * wanted_weight;
-//	fftwf_complex value_to_insert = input_value * ctf_value * wanted_weight;
+	std::complex<float> value_to_insert = input_value * fabsf(ctf_real) * wanted_weight;
+//	std::complex<float> value_to_insert = input_value * ctf_value * wanted_weight;
 
 	int_x_coordinate = int(floorf(wanted_logical_x_coordinate));
 	int_y_coordinate = int(floorf(wanted_logical_y_coordinate));
@@ -420,7 +420,7 @@ void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate,
 						}
 						weight = (1.0 - fabsf(wanted_logical_z_coordinate - k)) * weight_xy;
 						physical_coord = (upper_xy * physical_z_address) + physical_coord_xy;
-						conjugate = conjf(value_to_insert);
+						conjugate = conj(value_to_insert);
 						image_reconstruction.complex_values[physical_coord] = image_reconstruction.complex_values[physical_coord] + conjugate * weight;
 						ctf_reconstruction[physical_coord] = ctf_reconstruction[physical_coord] + ctf_squared * weight;
 					}
@@ -441,7 +441,7 @@ void Reconstruct3D::CompleteEdges()
 	long physical_coord_2;
 
 	int temp_int;
-	fftwf_complex temp_complex;
+	std::complex<float> temp_complex;
 	float temp_real;
 
 	if (! edge_terms_were_added)
@@ -456,8 +456,8 @@ void Reconstruct3D::CompleteEdges()
 					physical_coord_1 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, j, k);
 					physical_coord_2 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, -j, -k);
 					temp_complex = image_reconstruction.complex_values[physical_coord_1];
-					image_reconstruction.complex_values[physical_coord_1] = image_reconstruction.complex_values[physical_coord_1] + conjf(image_reconstruction.complex_values[physical_coord_2]);
-					image_reconstruction.complex_values[physical_coord_2] = image_reconstruction.complex_values[physical_coord_2] + conjf(temp_complex);
+					image_reconstruction.complex_values[physical_coord_1] = image_reconstruction.complex_values[physical_coord_1] + conj(image_reconstruction.complex_values[physical_coord_2]);
+					image_reconstruction.complex_values[physical_coord_2] = image_reconstruction.complex_values[physical_coord_2] + conj(temp_complex);
 					temp_real = ctf_reconstruction[physical_coord_1];
 					ctf_reconstruction[physical_coord_1] = ctf_reconstruction[physical_coord_1] + ctf_reconstruction[physical_coord_2];
 					ctf_reconstruction[physical_coord_2] = ctf_reconstruction[physical_coord_2] + temp_real;
@@ -469,15 +469,15 @@ void Reconstruct3D::CompleteEdges()
 			physical_coord_1 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, j, 0);
 			physical_coord_2 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, -j, 0);
 			temp_complex = image_reconstruction.complex_values[physical_coord_1];
-			image_reconstruction.complex_values[physical_coord_1] = image_reconstruction.complex_values[physical_coord_1] + conjf(image_reconstruction.complex_values[physical_coord_2]);
-			image_reconstruction.complex_values[physical_coord_2] = image_reconstruction.complex_values[physical_coord_2] + conjf(temp_complex);
+			image_reconstruction.complex_values[physical_coord_1] = image_reconstruction.complex_values[physical_coord_1] + conj(image_reconstruction.complex_values[physical_coord_2]);
+			image_reconstruction.complex_values[physical_coord_2] = image_reconstruction.complex_values[physical_coord_2] + conj(temp_complex);
 			temp_real = ctf_reconstruction[physical_coord_1];
 			ctf_reconstruction[physical_coord_1] = ctf_reconstruction[physical_coord_1] + ctf_reconstruction[physical_coord_2];
 			ctf_reconstruction[physical_coord_2] = ctf_reconstruction[physical_coord_2] + temp_real;
 		}
 // Deal with term at origin
 		physical_coord_1 = image_reconstruction.ReturnFourier1DAddressFromLogicalCoord(0, 0, 0);
-		image_reconstruction.complex_values[physical_coord_1] = 2.0 * crealf(image_reconstruction.complex_values[physical_coord_1]);
+		image_reconstruction.complex_values[physical_coord_1] = 2.0 * real(image_reconstruction.complex_values[physical_coord_1]);
 		ctf_reconstruction[physical_coord_1] = 2.0 * ctf_reconstruction[physical_coord_1];
 
 		edge_terms_were_added = true;
@@ -499,7 +499,7 @@ float Reconstruct3D::Correct3DCTF(Image &buffer3d)
 	buffer3d.ForwardFFT();
 	buffer3d.SwapRealSpaceQuadrants();
 
-	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) ctf_reconstruction[i] = crealf(buffer3d.complex_values[i]);
+	for (i = 0; i <= buffer3d.real_memory_allocated / 2; i++) ctf_reconstruction[i] = real(buffer3d.complex_values[i]);
 
 	return correction_factor;
 }

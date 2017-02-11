@@ -237,7 +237,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 	long pixel_counter = 0;
 
-	fftwf_complex temp_c;
+	std::complex<float> temp_c;
 
 	FSC.ClearData();
 
@@ -263,8 +263,8 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 //				if (frequency_squared <= 0.25)
 //				{
-					temp_c = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter])) + I * 0.0;
-					if (temp_c != 0.0)
+					temp_c = real(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter])) + I * 0.0f;
+					if (temp_c != 0.0f)
 					{
 						if ((i != 0) || (i == 0 && zi > 0) || (i == 0 && yi > 0 && zi == 0))
 						{
@@ -277,8 +277,8 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 							if ((i == 0 && yi != 0) || pixel_counter == 0)
 							{
-								current_sum1 = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter])) * 0.25;
-								current_sum2 = crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter])) * 0.25;
+								current_sum1 = real(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_1.complex_values[pixel_counter])) * 0.25;
+								current_sum2 = real(reconstructed_volume_2.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter])) * 0.25;
 
 								sum1[ibin] += current_sum1 * (1 - difference);
 								sum1[ibin + 1] += current_sum1 * difference;
@@ -286,21 +286,21 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 								sum2[ibin] += current_sum2 * (1 - difference);
 								sum2[ibin + 1] += current_sum2 * difference;
 
-								cross_terms[ibin] += crealf(temp_c) * (1 - difference) * 0.25;
-								cross_terms[ibin + 1] += crealf(temp_c) * difference * 0.25;
+								cross_terms[ibin] += real(temp_c) * (1 - difference) * 0.25;
+								cross_terms[ibin + 1] += real(temp_c) * difference * 0.25;
 
 								non_zero_count[ibin] += 1 - difference * 0.25;
 								non_zero_count[ibin + 1] += difference * 0.25;
 							}
 							else
 							{
-								//sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter]));
-								//sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
+								//sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_1.complex_values[pixel_counter]));
+								//sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter]));
 								//cross_terms[bin] += crealf(temp_c);
 								//non_zero_count[bin] += 1;
 
-								current_sum1 = crealf(reconstructed_volume_1.complex_values[pixel_counter] * conjf(reconstructed_volume_1.complex_values[pixel_counter]));
-								current_sum2 = crealf(reconstructed_volume_2.complex_values[pixel_counter] * conjf(reconstructed_volume_2.complex_values[pixel_counter]));
+								current_sum1 = real(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_1.complex_values[pixel_counter]));
+								current_sum2 = real(reconstructed_volume_2.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter]));
 
 								sum1[ibin] += current_sum1 * (1 - difference);
 								sum1[ibin + 1] += current_sum1 * difference;
@@ -308,8 +308,8 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 								sum2[ibin] += current_sum2 * (1 - difference);
 								sum2[ibin + 1] += current_sum2 * difference;
 
-								cross_terms[ibin] += crealf(temp_c) * (1 - difference);
-								cross_terms[ibin + 1] += crealf(temp_c) * difference;
+								cross_terms[ibin] += real(temp_c) * (1 - difference);
+								cross_terms[ibin + 1] += real(temp_c) * difference;
 
 								non_zero_count[ibin] += 1 - difference;
 								non_zero_count[ibin + 1] += difference;

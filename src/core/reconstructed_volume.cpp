@@ -282,7 +282,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 
 					// Use 100.0 as Wiener constant for 3DSimple since the SSNR near the resolution limit of high-resolution reconstructions is often close to 0.01.
 					// The final result is not strongly dependent on this constant and therefore, a value of 100.0 is a sufficiently good estimate.
-					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 100.0);
+					density_map.complex_values[pixel_counter] = reconstruction.image_reconstruction.complex_values[pixel_counter] / (reconstruction.ctf_reconstruction[pixel_counter] + 100.0f);
 //																		/ reconstruction.weights_reconstruction[pixel_counter] * reconstruction.number_of_measurements[pixel_counter];
 				}
 				else
@@ -495,6 +495,9 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	output_file.OpenFile(output_volume.ToStdString(), true);
 	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);
 	output_file.SetPixelSize(original_pixel_size);
+	EmpiricalDistribution density_distribution;
+	density_map.UpdateDistributionOfRealValues(&density_distribution);
+	output_file.SetDensityStatistics(density_distribution.GetMinimum(), density_distribution.GetMaximum(), density_distribution.GetSampleMean(), sqrtf(density_distribution.GetSampleVariance()));
 	output_file.CloseFile();
 }
 

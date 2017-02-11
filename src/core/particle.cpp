@@ -350,7 +350,7 @@ void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting)
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);
-	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
+	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conj(ctf_image->complex_values[i]);}
 	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
 	particle_image->OptimalFilterBySNRImage(*snr_image, include_reference_weighting);
 	is_ssnr_filtered = true;
@@ -383,7 +383,7 @@ void Particle::WeightBySSNR(Curve &SSNR, Image &projection_image)
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);
-	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conjf(ctf_image->complex_values[i]);}
+	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conj(ctf_image->complex_values[i]);}
 	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
 	particle_image->OptimalFilterBySNRImage(*snr_image, 0);
 	projection_image.OptimalFilterBySNRImage(*snr_image, -1);

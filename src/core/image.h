@@ -63,7 +63,7 @@ public:
 	// Arrays to hold voxel values
 
 	float 	 	 *real_values;									// !<  Real array to hold values for REAL images.
-	fftwf_complex *complex_values;								// !<  Complex array to hold values for COMP images.
+	std::complex<float> *complex_values;								// !<  Complex array to hold values for COMP images.
 	bool         is_in_memory;                                  // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
 
 
@@ -136,11 +136,11 @@ public:
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
-	fftwf_complex ReturnNearestFourier2D(float &x, float &y);
-	fftwf_complex ReturnLinearInterpolatedFourier2D(float &x, float &y);
-	fftwf_complex ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
+	std::complex<float> ReturnNearestFourier2D(float &x, float &y);
+	std::complex<float> ReturnLinearInterpolatedFourier2D(float &x, float &y);
+	std::complex<float> ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
 	void AddByLinearInterpolationReal(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, float &wanted_value);
-	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, fftwf_complex &wanted_value);
+	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, std::complex<float> &wanted_value);
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CircleMask(float wanted_mask_radius, bool invert = false);
@@ -231,7 +231,7 @@ public:
 		return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
 	};
 
-	fftwf_complex ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, fftwf_complex out_of_bounds_value)
+	std::complex<float> ReturnComplexPixelFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z, std::complex<float> out_of_bounds_value)
 	{
 		if (wanted_x < logical_lower_bound_complex_x || wanted_x > logical_upper_bound_complex_x || wanted_y < logical_lower_bound_complex_y ||wanted_y > logical_upper_bound_complex_y || wanted_z < logical_lower_bound_complex_z || wanted_z > logical_upper_bound_complex_z)
 		{

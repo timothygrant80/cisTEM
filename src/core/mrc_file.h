@@ -37,5 +37,6 @@ class MRCFile : public AbstractImageFile {
 	void PrintInfo();
 
 	void SetPixelSize(float wanted_pixel_size);
+	inline void SetDensityStatistics( float wanted_min, float wanted_max, float wanted_mean, float wanted_rms ){my_header.SetDensityStatistics(wanted_min, wanted_max, wanted_mean, wanted_rms);}
 
 };

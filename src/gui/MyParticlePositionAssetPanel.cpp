@@ -206,8 +206,13 @@ void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 
 		for (counter = 0; counter < temp_group.number_of_members; counter++)
 		{
-			temp_group.members[counter] = all_assets_list->ReturnArrayPositionFromID(temp_group.members[counter],last_found_position);
+			int asset_id = temp_group.members[counter];
+			temp_group.members[counter] = all_assets_list->ReturnArrayPositionFromID(asset_id,last_found_position);
 			last_found_position = temp_group.members[counter];
+			if (last_found_position == -1)
+			{
+				wxPrintf("Oops. Could not find array position of asset with ID %i\n",asset_id);
+			}
 		}
 
 		all_groups_list->AddGroup(&temp_group);

@@ -2,7 +2,7 @@
 
 //#define threshold_spectrum
 
-const std::string ctffind_version = "4.1.5";
+const std::string ctffind_version = "4.1.7";
 
 class
 CtffindApp : public MyApp
@@ -220,7 +220,7 @@ void CtffindApp::DoInteractiveUserInput()
 	bool astigmatism_is_known;
 	float known_astigmatism;
 	float known_astigmatism_angle;
-	bool large_astigmatism_expected;
+	bool slower_search;
 	bool should_restrain_astigmatism;
 	float astigmatism_tolerance;
 	bool find_additional_phase_shift;
@@ -482,29 +482,29 @@ void CtffindApp::DoInteractiveUserInput()
 			number_of_frames_to_average = 1;
 		}
 
-		output_diagnostic_filename	= my_input->GetFilenameFromUser("Output diagnostic image file name","Will contain the experimental power spectrum and the best CTF fit","diagnostic_output.mrc",false);
-		pixel_size 					= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0);
-		acceleration_voltage 		= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0);
-		spherical_aberration 		= my_input->GetFloatFromUser("Spherical aberration","in mm","2.70",0.0);
-		amplitude_contrast 			= my_input->GetFloatFromUser("Amplitude contrast","Fraction of amplitude contrast","0.07",0.0,1.0);
-		box_size 					= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128);
-		minimum_resolution 			= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowed_minimum_resolution);
-		maximum_resolution 			= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
-		minimum_defocus 			= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
-		maximum_defocus 			= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
-		defocus_search_step 		= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0);
-		astigmatism_is_known		= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
+		output_diagnostic_filename		= my_input->GetFilenameFromUser("Output diagnostic image file name","Will contain the experimental power spectrum and the best CTF fit","diagnostic_output.mrc",false);
+		pixel_size 						= my_input->GetFloatFromUser("Pixel size","In Angstroms","1.0",0.0);
+		acceleration_voltage 			= my_input->GetFloatFromUser("Acceleration voltage","in kV","300.0",0.0);
+		spherical_aberration 			= my_input->GetFloatFromUser("Spherical aberration","in mm","2.70",0.0);
+		amplitude_contrast 				= my_input->GetFloatFromUser("Amplitude contrast","Fraction of amplitude contrast","0.07",0.0,1.0);
+		box_size 						= my_input->GetIntFromUser("Size of amplitude spectrum to compute","in pixels","512",128);
+		minimum_resolution 				= my_input->GetFloatFromUser("Minimum resolution","Lowest resolution used for fitting CTF (Angstroms)","30.0",0.0,lowest_allowed_minimum_resolution);
+		maximum_resolution 				= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
+		minimum_defocus 				= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
+		maximum_defocus 				= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
+		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0);
+		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{
-			large_astigmatism_expected = false;
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","yes");;
 			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
-			known_astigmatism		= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
-			known_astigmatism_angle = my_input->GetFloatFromUser("Known astigmatism angle", "In degrees, the angle of astigmatism","0.0");
+			known_astigmatism			= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
+			known_astigmatism_angle 	= my_input->GetFloatFromUser("Known astigmatism angle", "In degrees, the angle of astigmatism","0.0");
 		}
 		else
 		{
-			large_astigmatism_expected	= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, much greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","no");
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","yes");
 			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","yes");
 			if (should_restrain_astigmatism)
 			{
@@ -576,7 +576,7 @@ void CtffindApp::DoInteractiveUserInput()
 																	minimum_defocus,
 																	maximum_defocus,
 																	defocus_search_step,
-																	large_astigmatism_expected,
+																	slower_search,
 																	astigmatism_tolerance,
 																	find_additional_phase_shift,
 																	minimum_additional_phase_shift,
@@ -626,7 +626,7 @@ bool CtffindApp::DoCalculation()
 	const float       	minimum_defocus						= my_current_job.arguments[11].ReturnFloatArgument();
 	const float       	maximum_defocus						= my_current_job.arguments[12].ReturnFloatArgument();
 	const float       	defocus_search_step					= my_current_job.arguments[13].ReturnFloatArgument();
-	const bool			large_astigmatism_expected			= my_current_job.arguments[14].ReturnBoolArgument();
+	const bool			slower_search						= my_current_job.arguments[14].ReturnBoolArgument();
 	const float       	astigmatism_tolerance               = my_current_job.arguments[15].ReturnFloatArgument();
 	const bool       	find_additional_phase_shift         = my_current_job.arguments[16].ReturnBoolArgument();
 	const float  		minimum_additional_phase_shift		= my_current_job.arguments[17].ReturnFloatArgument();
@@ -1017,7 +1017,7 @@ bool CtffindApp::DoCalculation()
 		/*
 		 * Initial brute-force search, either 2D (if large astigmatism) or 1D
 		 */
-		if (!large_astigmatism_expected)
+		if (!slower_search)
 		{
 
 			// 1D rotational average

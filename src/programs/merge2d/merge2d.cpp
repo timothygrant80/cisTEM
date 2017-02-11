@@ -146,7 +146,7 @@ bool Merge2DApp::DoCalculation()
 				filter_constant = occupancy * sum_snr / images_processed;
 				for (i = 0; i < class_averages[current_class].real_memory_allocated / 2; i++)
 				{
-					class_averages[current_class].complex_values[i] /= (cabsf(CTF_sums[current_class].complex_values[i]) + occupancy);
+					class_averages[current_class].complex_values[i] /= (abs(CTF_sums[current_class].complex_values[i]) + occupancy);
 				}
 				class_averages[current_class].BackwardFFT();
 			}

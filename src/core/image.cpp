@@ -270,9 +270,9 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				for (i = 0; i <= physical_upper_bound_complex_x; i++)
 				{
 					if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && (jj == 0 || (jj == logical_lower_bound_complex_y && x_is_even)) && (kk == 0 || (kk == logical_lower_bound_complex_z && x_is_even)))
-						sum += powf(cabsf(complex_values[address]),2) * 0.5;
-					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += powf(cabsf(complex_values[address]),2) * 0.25;
-					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += powf(cabsf(complex_values[address]),2);
+						sum += powf(abs(complex_values[address]),2) * 0.5;
+					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += powf(abs(complex_values[address]),2) * 0.25;
+					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += powf(abs(complex_values[address]),2);
 					address++;
 				}
 			}
@@ -459,7 +459,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 
 	long pixel_counter = 0;
 
-	fftwf_complex temp_c;
+	std::complex<float> temp_c;
 
 	ZeroDoubleArray(sum_a, number_of_bins);
 	ZeroIntArray(sum_b, number_of_bins);
@@ -500,14 +500,14 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 		bin = bins[pixel_counter];
 		if (bin >= 1)
 		{
-			temp_c = complex_values[pixel_counter] * conjf(projection_image.complex_values[pixel_counter]);
-			if (temp_c != 0.0)
+			temp_c = complex_values[pixel_counter] * conj(projection_image.complex_values[pixel_counter]);
+			if (temp_c != 0.0f)
 			{
-				sum_a[bin] += crealf(complex_values[pixel_counter] * conjf(complex_values[pixel_counter]));
+				sum_a[bin] += real(complex_values[pixel_counter] * conj(complex_values[pixel_counter]));
 //				sum_b[bin] += crealf(projection_image.complex_values[pixel_counter] * conjf(projection_image.complex_values[pixel_counter]));
 				// Since projection_image has been whitened, the sum in a resolution zone is simply the number of terms that are added
 				sum_b[bin] ++;
-				cross_terms[bin] += crealf(temp_c);
+				cross_terms[bin] += real(temp_c);
 			}
 		}
 	}
@@ -632,10 +632,12 @@ void Image::ConjugateMultiplyPixelWise(Image &other_image)
 #else
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
 	{
-		complex_values[pixel_counter] *= conjf(other_image.complex_values[pixel_counter]);
+		complex_values[pixel_counter] *= conj(other_image.complex_values[pixel_counter]);
 	}
 #endif
 }
+
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 void Image::MultiplyPixelWise(Image &other_image)
 {
@@ -663,6 +665,8 @@ void Image::MultiplyPixelWise(Image &other_image)
 		}
 	}
 }
+
+//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::DividePixelWise(Image &other_image)
 {
@@ -957,7 +961,7 @@ void Image::Whiten(float resolution_limit)
 
 			for (i = 0; i <= physical_upper_bound_complex_x; i++)
 			{
-				temp_float = powf(cabsf(complex_values[pixel_counter]),2);
+				temp_float = powf(abs(complex_values[pixel_counter]),2);
 				if (temp_float != 0.0)
 				{
 					x = powf(i * fourier_voxel_size_x, 2);
@@ -1006,12 +1010,12 @@ void Image::Whiten(float resolution_limit)
 					}
 					else
 					{
-						complex_values[pixel_counter] = 0.0 + I * 0.0;
+						complex_values[pixel_counter] = 0.0f + I * 0.0f;
 					}
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0 + I * 0.0;
+					complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 				pixel_counter++;
 			}
@@ -1175,7 +1179,7 @@ void Image::OptimalFilterSSNR(Curve &SSNR)
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0 + I * 0.0;
+					complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 				pixel_counter++;
 			}
@@ -1225,7 +1229,7 @@ void Image::OptimalFilterFSC(Curve &FSC)
 				}
 				else
 				{
-					complex_values[pixel_counter] = 0.0 + I * 0.0;
+					complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 				pixel_counter++;
 			}
@@ -1452,7 +1456,7 @@ void Image::MirrorYFourier2D(Image &mirrored_image)
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 	{
 		mirrored_counter = y_counter * fft_dim_x + x_counter;
-		mirrored_image.complex_values[pixel_counter] = conjf(complex_values[mirrored_counter]);
+		mirrored_image.complex_values[pixel_counter] = conj(complex_values[mirrored_counter]);
 		x_counter++;
 		if (x_counter >= fft_dim_x)
 		{
@@ -1491,7 +1495,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 
 	if (quad_i == 180)
 	{
-		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = conjf(complex_values[i]);};
+		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = conj(complex_values[i]);};
 		return;
 	}
 
@@ -1514,7 +1518,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 
 				if (j <= 0)
 				{
-					rotated_image.complex_values[pixel_counter2] = conjf(complex_values[pixel_counter]);
+					rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
 				}
 				else
 				{
@@ -1548,7 +1552,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 				}
 				else
 				{
-					rotated_image.complex_values[pixel_counter2] = conjf(complex_values[pixel_counter]);
+					rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
 				}
 			}
 		}
@@ -1652,7 +1656,7 @@ void Image::RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_inde
 
 	for (pixel_counter = 0; pixel_counter < rotated_image.real_memory_allocated / 2; pixel_counter++)
 	{
-		rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
+		rotated_image.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 		if (kernel_index[pixel_counter].pixel_index[0] != kernel_index[pixel_counter].pixel_index[3])
 		{
 			for (i = 0; i < 4; i++)
@@ -1661,7 +1665,7 @@ void Image::RotateFourier2DFromIndex(Image &rotated_image, Kernel2D *kernel_inde
 				weight = kernel_index[pixel_counter].pixel_weight[i];
 				if (weight < 0.0)
 				{
-					rotated_image.complex_values[pixel_counter] -= conjf(complex_values[index]) * weight;
+					rotated_image.complex_values[pixel_counter] -= conj(complex_values[index]) * weight;
 				}
 				else
 				{
@@ -1915,7 +1919,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				}
 				else
 				{
-					rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
+					rotated_image.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
@@ -1930,14 +1934,14 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 				rotated_image.complex_values[pixel_counter] = ReturnNearestFourier2D(x_coordinate_3d, y_coordinate_3d);
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+				rotated_image.complex_values[pixel_counter2] = conj(rotated_image.complex_values[pixel_counter]);
 			}
 			else
 			{
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
+				rotated_image.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = 0.0 + I * 0.0;
+				rotated_image.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -1967,7 +1971,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				}
 				else
 				{
-					rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
+					rotated_image.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
@@ -1982,14 +1986,14 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 				rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+				rotated_image.complex_values[pixel_counter2] = conj(rotated_image.complex_values[pixel_counter]);
 			}
 			else
 			{
 				pixel_counter = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				rotated_image.complex_values[pixel_counter] = 0.0 + I * 0.0;
+				rotated_image.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				rotated_image.complex_values[pixel_counter2] = 0.0+ I * 0.0;
+				rotated_image.complex_values[pixel_counter2] = 0.0f+ I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -2004,7 +2008,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	rotated_image.complex_values[0] = 0.0 + I * 0.0;
+	rotated_image.complex_values[0] = 0.0f + I * 0.0f;
 
 	rotated_image.is_in_real_space = false;
 	rotated_image.object_is_centred_in_box = false;
@@ -2056,7 +2060,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 				}
 				else
 				{
-					image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
+					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
@@ -2071,14 +2075,14 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = conjf(image_to_extract.complex_values[pixel_counter]);
+				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 			}
 			else
 			{
 				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = 0.0 + I * 0.0;
+				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
@@ -2095,7 +2099,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 			else
 			{
 				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0 + I * 0.0;
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 			}
 		}
 	}
@@ -2121,7 +2125,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-			image_to_extract.complex_values[pixel_counter2] = conjf(image_to_extract.complex_values[pixel_counter]);
+			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 		}
 // Deal with pixel at edge if image dimensions are even
 		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
@@ -2135,12 +2139,12 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	image_to_extract.complex_values[0] = 0.0 + I * 0.0;
+	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
 
 	image_to_extract.is_in_real_space = false;
 }
 
-fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
+std::complex<float> Image::ReturnNearestFourier2D(float &x, float &y)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
@@ -2152,11 +2156,11 @@ fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
 	if (x >= 0.0)
 	{
 		i_nearest = myroundint(x);
-		if (i_nearest > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_nearest > logical_upper_bound_complex_x) return 0.0f + I * 0.0f;
 
 		j_nearest = myroundint(y);
-		if (j_nearest < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
-		if (j_nearest > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		if (j_nearest >= 0)
 		{
@@ -2171,11 +2175,11 @@ fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
 	else
 	{
 		i_nearest = myroundint(x);
-		if (i_nearest < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_nearest < logical_lower_bound_complex_x) return 0.0f + I * 0.0f;
 
 		j_nearest = myroundint(y);
-		if (j_nearest < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
-		if (j_nearest > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_nearest < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
+		if (j_nearest > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		if (j_nearest > 0)
 		{
@@ -2185,17 +2189,17 @@ fftwf_complex Image::ReturnNearestFourier2D(float &x, float &y)
 		{
 			physical_y_address = -j_nearest;
 		}
-		return conjf(complex_values[(physical_upper_bound_complex_x + 1) * physical_y_address - i_nearest]);
+		return conj(complex_values[(physical_upper_bound_complex_x + 1) * physical_y_address - i_nearest]);
 	}
 }
 
 // Implementation of Frealign's ainterpo3ds
-fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
+std::complex<float> Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
 
-	fftwf_complex sum = 0.0 + I * 0.0;
+	std::complex<float> sum = 0.0f + I * 0.0f;
 	int i;
 	int j;
 	int i_start;
@@ -2212,12 +2216,12 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 	{
 		i_start = int(floorf(x));
 		i_end = i_start + 1;
-		if (i_end > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_end > logical_upper_bound_complex_x) return 0.0f + I * 0.0f;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		for (j = j_start; j <= j_end; j++)
 		{
@@ -2241,13 +2245,13 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 	else
 	{
 		i_start = int(floorf(x));
-		if (i_start < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_start < logical_lower_bound_complex_x) return 0.0f + I * 0.0f;
 		i_end = i_start + 1;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		for (j = j_start; j <= j_end; j++)
 		{
@@ -2264,19 +2268,19 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier2D(float &x, float &y)
 			for (i = i_start; i <= i_end; i++)
 			{
 				weight = (1.0 - fabsf(x - float(i))) * (1.0 - y_dist);
-				sum = sum + conjf(complex_values[jj - i]) * weight;
+				sum = sum + conj(complex_values[jj - i]) * weight;
 			}
 		}
 	}
 	return sum;
 }
 
-fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &z)
+std::complex<float> Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &z)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! is_in_real_space, "Must be in Fourier space");
 
-	fftwf_complex sum = 0.0 + I * 0.0;
+	std::complex<float> sum = 0.0f + I * 0.0f;
 	int i;
 	int j;
 	int k;
@@ -2299,17 +2303,17 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	{
 		i_start = int(floorf(x));
 		i_end = i_start + 1;
-		if (i_end > logical_upper_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_end > logical_upper_bound_complex_x) return 0.0f + I * 0.0f;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		k_start = int(floorf(z));
-		if (k_start < logical_lower_bound_complex_z) return 0.0 + I * 0.0;
+		if (k_start < logical_lower_bound_complex_z) return 0.0f + I * 0.0f;
 		k_end = k_start + 1;
-		if (k_end > logical_upper_bound_complex_z) return 0.0 + I * 0.0;
+		if (k_end > logical_upper_bound_complex_z) return 0.0f + I * 0.0f;
 
 		for (k = k_start; k <= k_end; k++)
 		{
@@ -2346,18 +2350,18 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 	else
 	{
 		i_start = int(floorf(x));
-		if (i_start < logical_lower_bound_complex_x) return 0.0 + I * 0.0;
+		if (i_start < logical_lower_bound_complex_x) return 0.0f + I * 0.0f;
 		i_end = i_start + 1;
 
 		j_start = int(floorf(y));
-		if (j_start < logical_lower_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_start < logical_lower_bound_complex_y) return 0.0f + I * 0.0f;
 		j_end = j_start + 1;
-		if (j_end > logical_upper_bound_complex_y) return 0.0 + I * 0.0;
+		if (j_end > logical_upper_bound_complex_y) return 0.0f + I * 0.0f;
 
 		k_start = int(floorf(z));
-		if (k_start < logical_lower_bound_complex_z) return 0.0 + I * 0.0;
+		if (k_start < logical_lower_bound_complex_z) return 0.0f + I * 0.0f;
 		k_end = k_start + 1;
-		if (k_end > logical_upper_bound_complex_z) return 0.0 + I * 0.0;
+		if (k_end > logical_upper_bound_complex_z) return 0.0f + I * 0.0f;
 
 		for (k = k_start; k <= k_end; k++)
 		{
@@ -2386,7 +2390,7 @@ fftwf_complex Image::ReturnLinearInterpolatedFourier(float &x, float &y, float &
 				for (i = i_start; i <= i_end; i++)
 				{
 					weight = (1.0 - fabsf(x - float(i))) * (1.0 - y_dist) * (1.0 - z_dist);
-					sum = sum + conjf(complex_values[jj - i]) * weight;
+					sum = sum + conj(complex_values[jj - i]) * weight;
 				}
 			}
 		}
@@ -2434,7 +2438,7 @@ void Image::AddByLinearInterpolationReal(float &wanted_physical_x_coordinate, fl
 	}
 }
 
-void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, fftwf_complex &wanted_value)
+void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, std::complex<float> &wanted_value)
 {
 	int i;
 	int j;
@@ -2446,7 +2450,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 	float weight_y;
 	float weight;
 
-	fftwf_complex conjugate;
+	std::complex<float> conjugate;
 
 	MyDebugAssertTrue(is_in_real_space != true, "Error: attempting COMPLEX insertion into REAL image");
 
@@ -2465,7 +2469,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 				physical_coord = ReturnFourier1DAddressFromLogicalCoord(i, j, 0);
 				if (i < 0)
 				{
-					conjugate = conjf(wanted_value);
+					conjugate = conj(wanted_value);
 					complex_values[physical_coord] = complex_values[physical_coord] + conjugate * weight;
 				}
 				else
@@ -2473,7 +2477,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 				{
 					complex_values[physical_coord] = complex_values[physical_coord] + wanted_value * weight;
 					physical_coord = ReturnFourier1DAddressFromLogicalCoord(i, -j, 0);
-					conjugate = conjf(wanted_value);
+					conjugate = conj(wanted_value);
 					complex_values[physical_coord] = complex_values[physical_coord] + conjugate * weight;
 				}
 				else
@@ -2523,7 +2527,7 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 			// Compute the square of the frequency
 			frequency_squared = powf(x_coordinate_2d, 2) + y_coord_sq;
 
-			complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0;
+			complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0.0f;
 			pixel_counter++;
 		}
 	}
@@ -2803,8 +2807,8 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 						edge = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
 						complex_values[pixel_counter] *= edge;
 					}
-					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
-					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
+					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
 
 					pixel_counter++;
 				}
@@ -3259,11 +3263,11 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					}
 					if (invert)
 					{
-						if (frequency_squared <= mask_radius_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
+						if (frequency_squared <= mask_radius_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
 					}
 					else
 					{
-						if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0 + I * 0.0;
+						if (frequency_squared >= mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
 					}
 
 					pixel_counter++;
@@ -3385,7 +3389,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 	real_memory_allocated *= 2; // room for complex
 
 	real_values = (float *) fftwf_malloc(sizeof(float) * real_memory_allocated);
-	complex_values = (fftwf_complex*) real_values;  // Set the complex_values to point at the newly allocated real values;
+	complex_values = (std::complex<float>*) real_values;  // Set the complex_values to point at the newly allocated real values;
 
 	is_in_memory = true;
 
@@ -3399,13 +3403,13 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
     {
     	if (logical_z_dimension > 1)
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
+    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
     	}
     	else
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
+    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
 
     	}
 
@@ -3453,7 +3457,7 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
 
 
 	real_values = wanted3d->real_values + (bytes_in_slice * (wanted_slice - 1)); // point to the 3d..
-	complex_values = (fftwf_complex*) real_values;  // Set the complex_values to point at the newly allocated real values;
+	complex_values = (std::complex<float>*) real_values;  // Set the complex_values to point at the newly allocated real values;
 
 	// Update addresses etc..
 
@@ -3465,13 +3469,13 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
     {
     	if (logical_z_dimension > 1)
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
+    		plan_bwd = fftwf_plan_dft_c2r_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
     	}
     	else
     	{
-    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, complex_values, FFTW_ESTIMATE);
-    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, complex_values, real_values, FFTW_ESTIMATE);
+    		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
+    	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
 
     	}
 
@@ -3659,7 +3663,7 @@ void Image::ForwardFFT(bool should_scale)
 	MyDebugAssertTrue(is_in_real_space, "Image already in Fourier space");
 	MyDebugAssertTrue(planned, "FFT's not planned");
 
-	fftwf_execute_dft_r2c(plan_fwd, real_values, complex_values);
+	fftwf_execute_dft_r2c(plan_fwd, real_values, reinterpret_cast<fftwf_complex*>(complex_values));
 
 	if (should_scale)
 	{
@@ -3676,7 +3680,7 @@ void Image::BackwardFFT()
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertFalse(is_in_real_space, "Image already in real space");
 
-	fftwf_execute_dft_c2r(plan_bwd, complex_values, real_values);
+	fftwf_execute_dft_c2r(plan_bwd, reinterpret_cast<fftwf_complex*>(complex_values), real_values);
 
     // Set the image type
 
@@ -3806,7 +3810,8 @@ bool Image::HasNan()
 		{
 			for ( int i = 0; i < logical_x_dimension; i ++ )
 			{
-				if (isnan(real_values[pixel_counter])) return true; // isnan() is part of C++11
+				//if (isnan(real_values[pixel_counter])) return true; // isnan() is part of C++11
+				if (std::isnan(real_values[pixel_counter])) return true; // std::isnan() is part of C++14
 				pixel_counter ++;
 			}
 			pixel_counter += padding_jump_value;
@@ -4219,11 +4224,11 @@ float Image::ReturnSigmaOfFourierValuesOnEdges()
 
     	  if (logical_x == logical_lower_bound_complex_x || y_counter == logical_lower_bound_complex_y || x_counter == logical_upper_bound_complex_x || y_counter == logical_upper_bound_complex_y)
     	  {
-    	      total += creal(complex_values[counter]);
-    	      total += cimag(complex_values[counter]);
+    	      total += real(complex_values[counter]);
+    	      total += imag(complex_values[counter]);
 
-    	      total_squared += powf(creal(complex_values[counter]), 2);
-    	      total_squared += powf(cimag(complex_values[counter]), 2);
+    	      total_squared += powf(real(complex_values[counter]), 2);
+    	      total_squared += powf(imag(complex_values[counter]), 2);
     	      number_of_pixels+=2;
     	   }
 
@@ -4280,11 +4285,11 @@ float Image::ReturnSigmaOfFourierValuesOnEdgesAndCorners()
 
 				if (frequency_squared >= 0.249)
 				{
-					total += creal(complex_values[counter]);
-					total += cimag(complex_values[counter]);
+					total += real(complex_values[counter]);
+					total += imag(complex_values[counter]);
 
-					total_squared += powf(creal(complex_values[counter]), 2);
-					total_squared += powf(cimag(complex_values[counter]), 2);
+					total_squared += powf(real(complex_values[counter]), 2);
+					total_squared += powf(imag(complex_values[counter]), 2);
 					number_of_pixels+=2;
 				}
 
@@ -4978,7 +4983,7 @@ void Image::AverageRadially()
 					rad = sqrt(float(i_logi));
 					//
 
-					complex_values[address] = (average.ReturnLinearInterpolationFromX(rad),0.0) + I * 0;
+					complex_values[address] = (average.ReturnLinearInterpolationFromX(rad),0.0f) + I * 0.0f;
 
 					// Increment the address
 					address ++;
@@ -5089,7 +5094,7 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 						if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
 						rad = sqrt(float(i_logi));
 						//
-						average.AddValueAtXUsingLinearInterpolation(rad,cabs(complex_values[address]),true);
+						average.AddValueAtXUsingLinearInterpolation(rad,abs(complex_values[address]),true);
 						number_of_values.AddValueAtXUsingLinearInterpolation(rad,1.0,true);
 
 						// Increment the address
@@ -5155,7 +5160,7 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 					spatial_frequency = sqrtf(sq_dist_x+sq_dist_y+sq_dist_z);
 
 					// TODO: this could be made faster by doing both interpolations in one go, so one wouldn't have to work out twice between which points the interpolation will happen
-					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,crealf(complex_values[address]) * crealf(complex_values[address]) + cimagf(complex_values[address]) * cimagf(complex_values[address]), true );
+					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address]), true );
 					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0, true);
 
 					address ++;
@@ -5281,7 +5286,7 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 			for (i = 0; i < amplitude_spectrum->logical_x_dimension; i++)
 			{
 				address_in_self = ReturnFourier1DAddressFromPhysicalCoord(i,j,k);
-				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = cabsf(complex_values[address_in_self]);
+				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
 				address_in_amplitude_spectrum++;
 			}
 			address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
@@ -5314,7 +5319,7 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 		for (ampl_addr_i = 0; ampl_addr_i < amplitude_spectrum->logical_x_dimension; ampl_addr_i++)
 		{
 			address_in_self = ReturnFourier1DAddressFromLogicalCoord(ampl_addr_i-amplitude_spectrum->physical_address_of_box_center_x,ampl_addr_j-amplitude_spectrum->physical_address_of_box_center_y,0);
-			amplitude_spectrum->real_values[address_in_amplitude_spectrum] = cabsf(complex_values[address_in_self]);
+			amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
 			address_in_amplitude_spectrum++;
 		}
 		address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
@@ -6145,7 +6150,7 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_w
 
 					//if (temp_logical_x > logical_upper_bound_complex_x || temp_logical_x < logical_lower_bound_complex_x) continue;
 
-					if (fill_with_noise == false) other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value + I * 0);
+					if (fill_with_noise == false) other_image->complex_values[pixel_counter] = ReturnComplexPixelFromLogicalCoord(temp_logical_x, temp_logical_y, temp_logical_z, wanted_padding_value + I * 0.0f);
 					else
 					{
 
@@ -6388,7 +6393,7 @@ void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_
 	float phase_y;
 	float phase_x;
 
-	fftwf_complex total_phase_shift;
+	std::complex<float> total_phase_shift;
 
 	if (is_in_real_space == true)
 	{
@@ -6468,7 +6473,7 @@ void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 
 			ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth);
 
-			if (ctf_value < 0.0) complex_values[pixel_counter] = - 1.0 * complex_values[pixel_counter];
+			if (ctf_value < 0.0) complex_values[pixel_counter] = - 1.0f * complex_values[pixel_counter];
 			pixel_counter++;
 		}
 	}
@@ -6589,7 +6594,7 @@ void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 		{
 			for (width_counter = -(horizontal_half_width - 1); width_counter <= (horizontal_half_width - 1); width_counter++)
 			{
-				complex_values[ReturnFourier1DAddressFromLogicalCoord(width_counter, pixel_counter, 0)] = 0.0 + 0.0 * I;
+				complex_values[ReturnFourier1DAddressFromLogicalCoord(width_counter, pixel_counter, 0)] = 0.0f + 0.0f * I;
 			}
 		}
 
@@ -6598,7 +6603,7 @@ void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 		{
 			for (width_counter = -(vertical_half_width - 1); width_counter <=  (vertical_half_width - 1); width_counter++)
 			{
-				complex_values[ReturnFourier1DAddressFromLogicalCoord(pixel_counter, width_counter, 0)] = 0.0 + 0.0 * I;
+				complex_values[ReturnFourier1DAddressFromLogicalCoord(pixel_counter, width_counter, 0)] = 0.0f + 0.0f * I;
 
 			}
 		}
@@ -6751,7 +6756,7 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 	{
-		complex_values[pixel_counter] *= conjf(other_image->complex_values[pixel_counter]);
+		complex_values[pixel_counter] *= conj(other_image->complex_values[pixel_counter]);
 	}
 
 	if (object_is_centred_in_box == true)

@@ -803,6 +803,7 @@ int ParticlePositionAssetList::ReturnAssetID(long wanted_asset)
 int ParticlePositionAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
 	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+	MyDebugAssertTrue(last_found_position >=0,"Bad last found position: %i < 0\n",last_found_position);
 
 	for (int counter = last_found_position; counter < number_of_assets; counter++)
 	{

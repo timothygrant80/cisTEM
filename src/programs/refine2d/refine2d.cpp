@@ -26,8 +26,12 @@ Refine2DApp : public MyApp
 	Image *CTF_sums;
 	wxString dump_file;
 
+	void SendRefineResult(float *current_params);
+
 	private:
 };
+
+
 
 IMPLEMENT_APP(Refine2DApp)
 
@@ -452,6 +456,7 @@ bool Refine2DApp::DoCalculation()
 			if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 			image_counter++;
 			my_progress->Update(image_counter);
+
 			input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
 			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
 			variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
@@ -547,25 +552,29 @@ bool Refine2DApp::DoCalculation()
 	my_progress = new ProgressBar(images_to_process);
 	for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
 	{
+
 		input_par_file.ReadLine(input_parameters);
 		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 		image_counter++;
-		input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
-		if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percent_used) || (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)))
+		if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percent_used))
 		{
 			input_parameters[7] = - fabsf(input_parameters[7]);
 			input_parameters[15] = 0.0;
 			output_par_file.WriteLine(input_parameters);
+			SendRefineResult(input_parameters);
 			my_progress->Update(image_counter);
 			continue;
 		}
-		else
+
+		input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
+
 		if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size))
 		{
 			number_of_blank_edges++;
 			input_parameters[7] = - fabsf(input_parameters[7]);
 			input_parameters[15] = 0.0;
 			output_par_file.WriteLine(input_parameters);
+			SendRefineResult(input_parameters);
 			my_progress->Update(image_counter);
 			continue;
 		}
@@ -575,6 +584,7 @@ bool Refine2DApp::DoCalculation()
 			temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		}
 		for (i = 0; i < input_particle.number_of_parameters; i++) {output_parameters[i] = input_parameters[i];}
+
 
 // Set up Particle object
 		input_particle.ResetImageFlags();
@@ -726,6 +736,7 @@ bool Refine2DApp::DoCalculation()
 		if (output_parameters[13] > 100.0) output_parameters[13] = 100.0;
 		output_parameters[15] = output_parameters[14] - input_parameters[14];
 		output_par_file.WriteLine(output_parameters);
+		SendRefineResult(output_parameters);
 		fflush(output_par_file.parameter_file);
 
 		images_processed++;
@@ -870,4 +881,26 @@ void Refine2DApp::DumpArrays()
 	}
 
 	b_stream.close();
+}
+
+void Refine2DApp::SendRefineResult(float *current_params)
+{
+	if (is_running_locally == false) // send results back to the gui..
+	{
+		float gui_result_params[7];
+
+		JobResult *intermediate_result = new JobResult;
+		intermediate_result->job_number = my_current_job.job_number;
+
+		gui_result_params[0] = current_params[0];
+		gui_result_params[1] = current_params[1];
+		gui_result_params[2] = current_params[4];
+		gui_result_params[3] = current_params[5];
+		gui_result_params[4] = current_params[7];
+		gui_result_params[5] = current_params[13];
+		gui_result_params[6] = current_params[12];
+
+		intermediate_result->SetResult(7, gui_result_params);
+		AddJobToResultQueue(intermediate_result);
+	}
 }

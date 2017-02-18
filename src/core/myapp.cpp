@@ -78,6 +78,7 @@ bool MyApp::OnInit()
 		is_running_locally = true;
 		DoInteractiveUserInput();
 		DoCalculation();
+		fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
 		exit(0);
 	}
 	else
@@ -1394,6 +1395,7 @@ wxThread::ExitCode CalculateThread::Entry()
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_ENDING);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
+
 
 	fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
     return (wxThread::ExitCode)0;     // success

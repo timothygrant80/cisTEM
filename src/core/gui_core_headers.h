@@ -39,6 +39,7 @@
 #include <wx/dateevt.h>
 #include <wx/dataview.h>
 #include <wx/graphics.h>
+#include <wx/aui/auibook.h>
 
 #include "../core/core_headers.h"
 
@@ -83,10 +84,17 @@
 #include "../gui/MyRefinementPackageAssetPanel.h"
 #include "../gui/MyRenameDialog.h"
 #include "../gui/MyVolumeChooserDialog.h"
+#include "../gui/MyRefine2DPanel.h"
 #include "../gui/MyRefine3DPanel.h"
 #include "../gui/PlotFSCPanel.h"
 #include "../gui/MyFSCPanel.h"
 #include "../gui/MyRefinementResultsPanel.h"
 #include "../gui/AngularDistributionPlotPanel.h"
+#include "../gui/DisplayPanel.h"
+#include "../gui/ClassificationPlotPanel.h"
+#include "../gui/Refine2DResultsPanel.h"
 
-
+#define REFINEMENT 0
+#define RECONSTRUCTION 1
+#define MERGE 2
+#define STARTUP 3

@@ -4700,6 +4700,35 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 
 }
 
+void Image::ZeroCentralPixel()
+{
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
+	if (is_in_real_space == false)
+	{
+		complex_values[0] = 0.0f * I + 0.0f;
+	}
+	else
+	{
+		int i,j;
+		long address = 0;
+
+		for (j=0;j<logical_y_dimension;j++)
+		{
+			for (i=0;i<logical_x_dimension;i++)
+			{
+				if (j==physical_address_of_box_center_y && i==physical_address_of_box_center_x)
+				{
+					real_values[address] = 0;
+				}
+				address++;
+			}
+			address += padding_jump_value;
+		}
+
+	}
+}
+
 
 void Image::SetMaximumValueOnCentralCross(float maximum_value)
 {

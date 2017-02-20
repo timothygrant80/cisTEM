@@ -19,7 +19,7 @@ RefinementPackageParticleInfo::RefinementPackageParticleInfo()
 	defocus_angle = 0;;
 	spherical_aberration = 0;
 	microscope_voltage = 0;
-	amplitude_contrast = 0.0;
+	amplitude_contrast = 0.07;
 }
 
 RefinementPackageParticleInfo::~RefinementPackageParticleInfo()

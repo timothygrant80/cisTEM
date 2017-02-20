@@ -175,6 +175,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/frealign_parameter_file.cpp \
                        core/refinement_package.cpp \
                        core/refinement.cpp \
+                       core/classification.cpp \
                        core/particle_finder.cpp
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -185,7 +186,7 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
-cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp
+cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)

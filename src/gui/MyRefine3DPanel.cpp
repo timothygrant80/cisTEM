@@ -1135,7 +1135,7 @@ void RefinementManager::RunRefinementJob()
 	output_refinement->number_results_to_refine = my_parent->NumberToRefineSpinCtrl->GetValue();
 	output_refinement->angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
 	output_refinement->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-	output_refinement->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
+	output_refinement->search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
 	output_refinement->classification_resolution_limit = my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
 	output_refinement->should_focus_classify = my_parent->SphereClassificatonYesRadio->GetValue();
 	output_refinement->sphere_x_coord = my_parent->SphereXTextCtrl->ReturnValue();

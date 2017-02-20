@@ -48,6 +48,7 @@ class RefinementPackage {
 
 	wxArrayLong references_for_next_refinement;
 	wxArrayLong refinement_ids;
+	wxArrayLong classification_ids;
 
 	ArrayOfRefinmentPackageParticleInfos contained_particles;
 

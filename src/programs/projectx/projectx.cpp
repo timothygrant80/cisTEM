@@ -18,6 +18,7 @@ MyMainFrame *main_frame;
 MyAlignMoviesPanel *align_movies_panel;
 MyFindCTFPanel *findctf_panel;
 MyFindParticlesPanel *findparticles_panel;
+MyRefine2DPanel *classification_panel;
 MyRefine3DPanel *refine_3d_panel;
 
 OverviewPanel *overview_panel;
@@ -35,6 +36,7 @@ MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 MyMovieAlignResultsPanel *movie_results_panel;
 MyFindCTFResultsPanel *ctf_results_panel;
 MyPickingResultsPanel *picking_results_panel;
+Refine2DResultsPanel *refine2d_results_panel;
 MyRefinementResultsPanel *refinement_results_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
@@ -69,6 +71,7 @@ bool MyGuiApp::OnInit()
 
 	#include "../../gui/icons/movie_align_icon.cpp"
 	#include "../../gui/icons/ctf_icon.cpp"
+	#include "../../gui/icons/2d_classification_icon.cpp"
 	#include "../../gui/icons/growth.cpp"
 
 	#include "../../gui/icons/run_profiles_icon.cpp"
@@ -103,11 +106,13 @@ bool MyGuiApp::OnInit()
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
 	findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
 	findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
+	classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
 	refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
 	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
 	picking_results_panel = new MyPickingResultsPanel(results_panel->ResultsBook);
+	refine2d_results_panel = new Refine2DResultsPanel(results_panel->ResultsBook);
 	refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
 
 	// Setup list books
@@ -134,6 +139,7 @@ bool MyGuiApp::OnInit()
 	wxBitmap movie_align_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_align_icon);
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
 	wxBitmap find_particles_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
+	wxBitmap classification_icon_bmp = wxBITMAP_PNG_FROM_DATA(classification_icon);
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
@@ -150,6 +156,7 @@ bool MyGuiApp::OnInit()
 	ActionsBookIconImages->Add(movie_align_icon_bmp);
 	ActionsBookIconImages->Add(ctf_icon_bmp);
 	ActionsBookIconImages->Add(find_particles_icon_bmp);
+	ActionsBookIconImages->Add(classification_icon_bmp);
 	ActionsBookIconImages->Add(refine3d_icon_bmp);
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
@@ -161,6 +168,7 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
 	ResultsBookIconImages->Add(ctf_icon_bmp);
 	ResultsBookIconImages->Add(particle_position_icon_bmp);
+	ResultsBookIconImages->Add(classification_icon_bmp);
 	ResultsBookIconImages->Add(refine3d_icon_bmp);
 
 		SettingsBookIconImages->Add(run_profiles_icon_bmp);
@@ -187,12 +195,14 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
 	actions_panel->ActionsBook->AddPage(findparticles_panel,"Find Particles",false,2);
-	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Refine",false,3);
+	actions_panel->ActionsBook->AddPage(classification_panel,"2D Classify",false,3);
+	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Refine",false, 4);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
 	results_panel->ResultsBook->AddPage(picking_results_panel, "Find Particles",false,2);
-	results_panel->ResultsBook->AddPage(refinement_results_panel, "Refinement", false, 3);
+	results_panel->ResultsBook->AddPage(refine2d_results_panel, "2D Classification",false,3);
+	results_panel->ResultsBook->AddPage(refinement_results_panel, "Refinement", false, 4);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
 

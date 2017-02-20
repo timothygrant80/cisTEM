@@ -178,10 +178,10 @@ public:
 	void ReadSliceFromDisk(int wanted_slice, float *output_array);
 	void ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array);
 
-	void WriteSliceToDisk(int slice_number, float *input_array) { wxPrintf("WriteSliceToDisk not yet implemented for DM files\n"); abort; };
-	void WriteSlicesToDisk(int start_slice, int end_slice, float *input_array) { wxPrintf("WriteSlicesToDisk not yet implemented for DM files\n"); abort; };
+	void WriteSliceToDisk(int slice_number, float *input_array) { wxPrintf("WriteSliceToDisk not yet implemented for DM files\n"); abort(); };
+	void WriteSlicesToDisk(int start_slice, int end_slice, float *input_array) { wxPrintf("WriteSlicesToDisk not yet implemented for DM files\n"); abort(); };
 
-	void PrintInfo() { wxPrintf("PrintInfo not yet implemented for DM files\n"); abort; };
+	void PrintInfo() { wxPrintf("PrintInfo not yet implemented for DM files\n"); abort(); };
 
 private:
 

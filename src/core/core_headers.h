@@ -63,6 +63,7 @@ const std::complex<float> I(0.0,1.0);
 #include "run_profiles.h"
 #include "refinement_package.h"
 #include "refinement.h"
+#include "classification.h"
 #include "database.h"
 #include "project.h"
 #include "job_packager.h"

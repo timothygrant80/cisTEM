@@ -209,6 +209,11 @@ inline bool DoublesAreAlmostTheSame(double a, double b)
 	return (fabs(a-b) < 0.000001);
 }
 
+inline bool FloatsAreAlmostTheSame(float a, float b)
+{
+	return (fabs(a-b) < 0.0001);
+}
+
 inline bool InputIsATerminal()
 {
    return isatty(fileno(stdin));

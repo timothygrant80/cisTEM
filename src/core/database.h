@@ -45,6 +45,7 @@ public :
 	// Get various id numbers and counts
 
 	long ReturnHighestRefinementID();
+	long ReturnHighestClassificationID();
 	int ReturnHighestAlignmentID();
 	int ReturnHighestAlignmentJobID();
 	int ReturnHighestFindCTFID();
@@ -69,6 +70,8 @@ public :
 	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle);
 
 	void AddRefinementPackageAsset(RefinementPackage *asset_to_add);
+
+	wxArrayLong Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
 
 	//Convenience insertion functions..
 
@@ -119,11 +122,15 @@ public :
 	bool CreateRefinementPackageContainedParticlesTable(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", refinement_package_asset_id), "piirrrrrrrr", "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");};
 	bool CreateRefinementPackageCurrent3DReferencesTable(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", refinement_package_asset_id), "pi", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
 	bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID");};
+	bool CreateRefinementPackageClassificationsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", refinement_package_asset_id), "pl", "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID");};
 
 	bool CreateRefinementListTable() {return CreateTable("REFINEMENT_LIST", "Pltillllrrrrrrirrrrirrrrirrir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE");};
 	bool CreateRefinementResultTable(const long refinement_id, const int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrr", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "SCORE_CHANGE");};
 	bool CreateRefinementReferenceVolumeIDsTable(const long refinement_id) {return CreateTable(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", refinement_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
 	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_counter) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_counter), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
+
+	bool CreateClassificationListTable() {return CreateTable("CLASSIFICATION_LIST", "Plttilllirrrrrrriir", "CLASSIFICATION_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "CLASS_AVERAGE_FILE", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_CLASSIFICATION_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "SMOOTHING_FACTOR", "EXCLUDE_BLANK_EDGES", "AUTO_PERCENT_USED", "PERCENT_USED" );	};
+	bool CreateClassificationResultTable(const long classification_id) {return CreateTable(wxString::Format("CLASSIFICATION_RESULT_%li", classification_id), "Prrrirr", "POSITION_IN_STACK", "PSI", "XSHIFT", "YSHIFT", "BEST_CLASS", "SIGMA", "LOGP");};
 
 
 	void DoVacuum() {ExecuteSQL("VACUUM");}
@@ -194,6 +201,10 @@ public :
 	void UpdateRefinementResolutionStatistics(Refinement *refinement_to_update);
 
 	Refinement *GetRefinementByID(long wanted_refinement_id);
+
+	void AddClassification(Classification *classification_to_add);
+	Classification *GetClassificationByID(long wanted_classification_id);
+
 
 
 

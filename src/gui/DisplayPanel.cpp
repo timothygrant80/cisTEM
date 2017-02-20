@@ -1,0 +1,2981 @@
+#include "../core/gui_core_headers.h"
+
+DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: DisplayPanelParent(parent, id, pos, size, style)
+{
+
+	toolbar_location_text = NULL;
+	toolbar_number_of_locations_text = NULL;
+	toolbar_scale_combo = NULL;
+	my_notebook = NULL;
+	StatusText = NULL;
+
+	panel_counter = 0;
+
+	popup_exists = false;
+
+	Bind(wxEVT_MENU, &DisplayPanel::OnAuto, this, Toolbar_Auto);
+	Bind(wxEVT_MENU, &DisplayPanel::OnLocal, this, Toolbar_Local);
+	Bind(wxEVT_MENU, &DisplayPanel::OnGlobal, this, Toolbar_Global);
+	Bind(wxEVT_MENU, &DisplayPanel::OnPrevious, this, Toolbar_Previous);
+	Bind(wxEVT_MENU, &DisplayPanel::OnNext, this, Toolbar_Next);
+	Bind(wxEVT_MENU, &DisplayPanel::OnManual, this, Toolbar_Manual);
+	Bind(wxEVT_MENU, &DisplayPanel::OnHistogram, this, Toolbar_Histogram);
+	Bind(wxEVT_MENU, &DisplayPanel::OnFFT, this, Toolbar_FFT);
+	Bind(wxEVT_MENU, &DisplayPanel::OnInvert, this, Toolbar_Invert);
+
+	Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeLocation, this, Toolbar_Location_Text);
+	Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
+	Bind(wxEVT_COMBOBOX, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
+
+
+}
+
+void DisplayPanel::Initialise(int wanted_style_flags)
+{
+
+	#include "icons/display_open_icon.cpp"
+	#include "icons/display_previous_icon.cpp"
+	#include "icons/display_next_icon.cpp"
+	#include "icons/display_local_icon.cpp"
+	#include "icons/display_auto_icon.cpp"
+	#include "icons/display_global_icon.cpp"
+	#include "icons/display_manual_icon.cpp"
+	#include "icons/display_histogram_icon.cpp"
+	#include "icons/display_refresh_icon.cpp"
+	#include "icons/display_fft_icon.cpp"
+	#include "icons/display_invert_icon.cpp"
+
+	style_flags = wanted_style_flags;
+
+	if (my_notebook != NULL) delete my_notebook;
+
+	if ((style_flags & CAN_CLOSE_TABS) == CAN_CLOSE_TABS)
+	{
+		my_notebook = new DisplayNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_CLOSE_ON_ACTIVE_TAB|wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_TAB_MOVE|wxAUI_NB_TOP|wxAUI_NB_WINDOWLIST_BUTTON );
+	}
+	else
+	{
+		my_notebook = new DisplayNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_TAB_MOVE|wxAUI_NB_TOP|wxAUI_NB_WINDOWLIST_BUTTON );
+	}
+
+	MainSizer->Add( my_notebook, 1, wxEXPAND | wxALL, 5 );
+
+	if (StatusText != NULL) delete StatusText;
+
+	StatusText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	StatusText->Wrap( -1 );
+	MainSizer->Add( StatusText, 0, wxALL|wxEXPAND, 5 );
+
+	Layout();
+
+
+	// setup the toolbar..
+
+	if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE)
+	{
+		 Toolbar->AddTool(Toolbar_Open, wxT("Open Image file"), wxBITMAP_PNG_FROM_DATA(display_open_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Open Image File"), wxT("Open an new image file in a new tab"));
+		 Toolbar->AddSeparator();
+		 Toolbar->EnableTool(Toolbar_Open, true);
+
+	}
+
+	if (toolbar_location_text != NULL) delete toolbar_location_text;
+	toolbar_location_text = new wxTextCtrl(Toolbar, Toolbar_Location_Text, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTE_CENTRE, wxDefaultValidator, wxTextCtrlNameStr);
+	toolbar_location_text->Enable(false);
+
+	if (toolbar_number_of_locations_text != NULL) delete toolbar_number_of_locations_text;
+	toolbar_number_of_locations_text = new wxStaticText(Toolbar, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(-1, -1));
+
+	Toolbar->AddTool(Toolbar_Previous, wxT("Previous"), wxBITMAP_PNG_FROM_DATA(display_previous_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Previous"), wxT("Move to the previous set of images"));
+	Toolbar->EnableTool(Toolbar_Previous, false);
+
+	Toolbar->AddControl(toolbar_location_text);
+	Toolbar->AddControl(toolbar_number_of_locations_text);
+
+	Toolbar->AddTool(Toolbar_Next, wxT("Next"), wxBITMAP_PNG_FROM_DATA(display_next_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Next"), wxT("Move to the next set of images"));
+    Toolbar->EnableTool(Toolbar_Next, false);
+
+	wxString combo_choices[9];
+    combo_choices[0] = wxT("300%");
+    combo_choices[1] = wxT("200%");
+    combo_choices[2] = wxT("150%");
+    combo_choices[3] = wxT("100%");
+    combo_choices[4] = wxT("66%");
+    combo_choices[5] = wxT("50%");
+    combo_choices[6] = wxT("33%");
+    combo_choices[7] = wxT("25%");
+    combo_choices[8] = wxT("10%");
+
+    Toolbar->AddSeparator();
+
+    if (toolbar_scale_combo != NULL) delete toolbar_scale_combo;
+	toolbar_scale_combo = new wxComboBox(Toolbar, Toolbar_Scale_Combo_Control, wxT(""), wxDefaultPosition, wxSize(100, -1), 9, combo_choices, wxTE_PROCESS_ENTER, wxDefaultValidator, wxT("comboBox"));
+	toolbar_scale_combo->Enable(false);
+	Toolbar->AddControl(toolbar_scale_combo);
+
+
+	Toolbar->AddSeparator();
+
+	Toolbar->AddTool(Toolbar_Local, wxT("Local Greys"), wxBITMAP_PNG_FROM_DATA(display_local_icon), wxNullBitmap, wxITEM_RADIO, wxT("Local Greys"), wxT("Set the grey value to a local survey"));
+    Toolbar->EnableTool(Toolbar_Local, false);
+
+	Toolbar->AddTool(Toolbar_Auto, wxT("Auto Greys"), wxBITMAP_PNG_FROM_DATA(display_auto_icon), wxNullBitmap, wxITEM_RADIO, wxT("Auto Greys"), wxT("Set the grey values via automatic contrast"));
+	Toolbar->EnableTool(Toolbar_Auto, false);
+
+
+	Toolbar->AddTool(Toolbar_Global, wxT("Global Greys"), wxBITMAP_PNG_FROM_DATA(display_global_icon), wxNullBitmap, wxITEM_RADIO, wxT("Global Greys"), wxT("Set the grey value to a global survey"));
+	Toolbar->EnableTool(Toolbar_Global, false);
+	Toolbar->AddTool(Toolbar_Manual, wxT("Manual Greys"), wxBITMAP_PNG_FROM_DATA(display_manual_icon), wxNullBitmap, wxITEM_RADIO, wxT("Manual Greys"), wxT("Set the grey values to those you have manually chosen"));
+	Toolbar->EnableTool(Toolbar_Manual, false);
+
+    Toolbar->ToggleTool(Toolbar_Local, true);
+
+	Toolbar->AddSeparator();
+
+	Toolbar->AddTool(Toolbar_Histogram, wxT("Grey Histogram"), wxBITMAP_PNG_FROM_DATA(display_histogram_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Grey Histogram"), wxT("See Histogram and set the manual grey values"));
+	Toolbar->EnableTool(Toolbar_Histogram, false);
+
+	Toolbar->AddTool(Toolbar_Invert, wxT("Invert Contrast"), wxBITMAP_PNG_FROM_DATA(display_invert_icon), wxNullBitmap, wxITEM_CHECK , wxT("Invert Image Contrast"), wxT("Invert Image Contrast"));
+	Toolbar->EnableTool(Toolbar_Invert, false);
+
+	Toolbar->AddSeparator();
+
+	if ((style_flags & CAN_FFT) == CAN_FFT)
+	{
+		Toolbar->AddTool(Toolbar_FFT, wxT("FFT"), wxBITMAP_PNG_FROM_DATA(display_fft_icon), wxNullBitmap, wxITEM_CHECK , wxT("FFT Images"), wxT("Fourier Transform Images"));
+		Toolbar->EnableTool(Toolbar_FFT, false);
+	}
+
+
+
+	if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE)
+	{
+		Toolbar->AddTool(Toolbar_Refresh, wxT("Refresh"), wxBITMAP_PNG_FROM_DATA(display_refresh_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Refresh"), wxT("Refresh the current view"));
+		Toolbar->EnableTool(Toolbar_Refresh, false);
+	}
+
+
+    Toolbar->Realize();
+    Layout();
+}
+
+void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event))
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	long set_location;
+
+	// get what the current value is.. if it can be converted to a valid number then
+	// change the current location to that number and redraw.. otherwise set the
+	// value back to the previous value..
+
+	wxString current_string = toolbar_location_text->GetValue();
+    bool has_worked = current_string.ToLong(&set_location);
+
+    if (has_worked == true)
+    {
+    	// is this number valid?
+
+    	if (set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount())
+    	{
+    		current_panel->current_location = set_location;
+    		UpdateToolbar();
+    		current_panel->panel_image_has_correct_greys = false;
+    		current_panel->ReDrawPanel();
+    	}
+    	else has_worked = false;
+    }
+
+    // if for some reason it hasn't worked - set it back to it's previous value..
+
+    if (has_worked == false)
+    {
+    	toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_panel->current_location));
+    	Refresh();
+    	Update();
+    }
+
+    ChangeFocusToPanel();
+}
+
+void DisplayPanel::Clear()
+{
+	CloseAllTabs();
+}
+
+
+void DisplayPanel::CloseAllTabs()
+{
+	my_notebook->DeleteAllPages();
+}
+
+void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event))
+{
+	// need to get the value and strip it of it's % character if it has one..
+
+
+	bool convert_success = false;
+	long new_value;
+	wxString combo_value = toolbar_scale_combo->GetValue();
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if (combo_value.Right(1).IsSameAs(wxT("%")) == true)
+	{
+		combo_value.RemoveLast();
+	}
+
+	convert_success = combo_value.ToLong(&new_value);
+
+	if (convert_success == true && new_value > 0 && double(new_value) / 100. != current_panel->desired_scale_factor)
+	{
+		current_panel->desired_scale_factor = double(new_value) / 100.;
+		current_panel->panel_image_has_correct_scale = false;
+		UpdateToolbar();
+		current_panel->ReDrawPanel();
+
+	}
+	else
+	{
+		// something went wrong to replace the value with what it was before..
+		wxString temp_string;
+		temp_string = wxString::Format(wxT("%i"), int(myround(current_panel->desired_scale_factor * 100)));
+		temp_string +=wxT("%");
+		toolbar_scale_combo->SetValue(temp_string);
+    	Refresh();
+    	Update();
+	}
+
+	//notebook->SetFocus();
+	ChangeFocusToPanel();
+}
+
+void DisplayPanel::OnFFT( wxCommandEvent& WXUNUSED(event))
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if (current_panel->use_fft == true) current_panel->use_fft = false;
+	else
+	{
+		current_panel->use_fft = true;
+	}
+
+	current_panel->should_refresh = true;
+	current_panel->ReDrawPanel();
+}
+
+void DisplayPanel::OnInvert( wxCommandEvent& WXUNUSED(event))
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if (current_panel->invert_contrast == true) current_panel->invert_contrast = false;
+	else
+	{
+		current_panel->invert_contrast = true;
+	}
+
+	current_panel->should_refresh = true;
+	current_panel->ReDrawPanel();
+}
+
+void DisplayPanel::OnManual( wxCommandEvent& WXUNUSED(event) )
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if ((current_panel->manual_low_grey == 0 && current_panel->manual_high_grey == 0) || current_panel->grey_values_decided_by == MANUAL_GREYS)
+	{
+		DisplayManualDialog *my_dialog = new DisplayManualDialog(this, wxID_ANY, wxT("Histogram /  Grey Settings"));
+		my_dialog->ShowModal();
+
+	}
+	else
+	{
+		current_panel->low_grey_value = current_panel->manual_low_grey;
+		current_panel->high_grey_value = current_panel->manual_high_grey;
+		current_panel->grey_values_decided_by = MANUAL_GREYS;
+		current_panel->panel_image_has_correct_greys = false;
+		current_panel->ReDrawPanel();
+	}
+}
+
+void DisplayPanel::OnHistogram( wxCommandEvent& WXUNUSED(event) )
+{
+	DisplayManualDialog *my_dialog = new DisplayManualDialog(this, wxID_ANY, wxT("Histogram /  Grey Settings"));
+	my_dialog->ShowModal();
+}
+
+
+
+void DisplayPanel::OnPrevious( wxCommandEvent& WXUNUSED(event) )
+{
+	// if we are drawing a popup - or we are drawing a selection square - STOP.
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if (popup_exists == true)
+	{
+		ReleaseMouse();
+		current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+		popup->Destroy();
+    	popup_exists = false;
+	}
+/*
+	if (drawing_selection_square == true)
+	{
+		drawing_selection_square = false;
+	}
+*/
+	current_panel->current_location -= current_panel->images_in_current_view;
+	if (current_panel->current_location < 1) current_panel->current_location = 1;
+
+	UpdateToolbar();
+	current_panel->panel_image_has_correct_greys = false;
+	current_panel->ReDrawPanel();
+}
+
+
+void DisplayPanel::OnNext( wxCommandEvent& WXUNUSED(event) )
+{
+	// if we are drawing a popup - or we are drawing a selection square - STOP.
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	if (popup_exists == true)
+	{
+		ReleaseMouse();
+		current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+		popup->Destroy();
+    	popup_exists = false;
+
+	}
+/*
+	if (drawing_selection_square == true)
+	{
+		drawing_selection_square = false;
+	}*/
+
+	current_panel->current_location += current_panel->images_in_current_view;
+	if (current_panel->current_location > current_panel->included_image_numbers.GetCount()) current_panel->current_location = current_panel->included_image_numbers.GetCount();
+
+	UpdateToolbar();
+	current_panel->panel_image_has_correct_greys = false;
+	current_panel->ReDrawPanel();
+}
+
+void DisplayPanel::OnAuto( wxCommandEvent& WXUNUSED(event) )
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+	if (current_panel->grey_values_decided_by == AUTO_GREYS)
+	{
+
+	}
+	else
+	{
+		current_panel->grey_values_decided_by = AUTO_GREYS;
+		current_panel->panel_image_has_correct_greys = false;
+		current_panel->ReDrawPanel();
+	}
+}
+
+void DisplayPanel::OnLocal( wxCommandEvent& WXUNUSED(event) )
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+	if (current_panel->grey_values_decided_by == LOCAL_GREYS)
+	{
+
+	}
+	else
+	{
+		current_panel->grey_values_decided_by = LOCAL_GREYS;
+		current_panel->low_grey_value = 0;
+		current_panel->high_grey_value = 0;
+		current_panel->panel_image_has_correct_greys = false;
+		current_panel->ReDrawPanel();
+	}
+}
+
+void DisplayPanel::OnGlobal( wxCommandEvent& WXUNUSED(event) )
+{
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+	// do we already have the global values?
+
+	if (current_panel->global_low_grey == 0 && current_panel->global_high_grey == 0)
+	{
+		bool success = 	current_panel->SetGlobalGreys();
+
+		if (success == true)
+		{
+			current_panel->low_grey_value = current_panel->global_low_grey;
+			current_panel->high_grey_value = current_panel->global_high_grey;
+			current_panel->grey_values_decided_by = GLOBAL_GREYS;
+			current_panel->panel_image_has_correct_greys = false;
+			current_panel->ReDrawPanel();
+
+		}
+
+	}
+	else
+	{
+		current_panel->low_grey_value = current_panel->global_low_grey;
+		current_panel->high_grey_value = current_panel->global_high_grey;
+		current_panel->grey_values_decided_by = GLOBAL_GREYS;
+		current_panel->panel_image_has_correct_greys = false;
+		current_panel->ReDrawPanel();
+	}
+
+}
+
+void DisplayPanel::ChangeFocusToPanel(void)
+{
+
+	//my_notebook->SetFocus();
+
+	if (my_notebook->GetPageCount() != 0)
+	{
+		DisplayNotebookPanel *current_panel;
+
+		current_panel = reinterpret_cast <DisplayNotebookPanel*> (my_notebook->GetCurrentPage());
+		current_panel->SetFocus();
+	}
+
+}
+
+void DisplayPanel::UpdateToolbar(void)
+{
+	// get the current_tab..
+
+	if (my_notebook->GetPageCount() == 0)
+	{
+		toolbar_location_text->SetValue(wxT(""));
+	    toolbar_location_text->Disable();
+	    toolbar_scale_combo->SetValue(wxT(""));
+	    toolbar_scale_combo->Disable();
+
+	    if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE) Toolbar->EnableTool(Toolbar_Open, true);
+	    //Toolbar->EnableTool(Toolbar_Save, false);
+	    Toolbar->EnableTool(Toolbar_Previous, false);
+	    Toolbar->EnableTool(Toolbar_Next, false);
+	    Toolbar->EnableTool(Toolbar_Histogram, false);
+	    if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE) Toolbar->EnableTool(Toolbar_Refresh, false);
+	    toolbar_number_of_locations_text->SetLabel(wxT(""));
+	    Toolbar->EnableTool(Toolbar_Local, false);
+	    Toolbar->EnableTool(Toolbar_Auto, false);
+	    Toolbar->EnableTool(Toolbar_Global, false);
+	    Toolbar->EnableTool(Toolbar_Manual, false);
+	    Toolbar->ToggleTool(Toolbar_Local, true);
+
+	}
+	else
+	{
+		if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE) Toolbar->EnableTool(Toolbar_Open, true);
+
+		// there must be a tab then, so get the selected displayPanel..
+
+		DisplayNotebookPanel *current_panel;
+		current_panel = (DisplayNotebookPanel*) my_notebook->GetCurrentPage();
+
+		if (current_panel != NULL)
+		{
+
+			/*
+		    if (current_panel->have_plt_filename == true)
+		    {
+		    	toolbar->EnableTool(Toolbar_Save, true);
+		    }
+		    else
+		    {
+		    	toolbar->EnableTool(Toolbar_Save, false);
+		    }
+		    */
+
+			if (current_panel->current_location > 1) Toolbar->EnableTool(Toolbar_Previous, true);
+			else
+			Toolbar->EnableTool(Toolbar_Previous, false);
+
+			if (current_panel->current_location + current_panel->images_in_current_view <= current_panel->included_image_numbers.GetCount()) Toolbar->EnableTool(Toolbar_Next, true);
+			else
+			Toolbar->EnableTool(Toolbar_Next, false);
+
+			// Enable the Previous/Next filament buttons
+
+			toolbar_location_text->Enable();
+			toolbar_location_text->SetValue(wxString::Format(wxT("%i"), int(current_panel->current_location)));
+			wxString temp_string = wxT(" / ");
+			temp_string += wxString::Format(wxT("%i"), int(current_panel->included_image_numbers.GetCount()));
+
+			toolbar_number_of_locations_text->SetLabel(temp_string);
+
+			toolbar_scale_combo->Enable();
+			temp_string = wxString::Format(wxT("%i"), int(myround(current_panel->actual_scale_factor * 100)));
+			temp_string +=wxT("%");
+			toolbar_scale_combo->SetValue(temp_string);
+
+			Toolbar->EnableTool(Toolbar_Local, true);
+			Toolbar->EnableTool(Toolbar_Auto, true);
+			Toolbar->EnableTool(Toolbar_Global, true);
+			Toolbar->EnableTool(Toolbar_Manual, true);
+			if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE) Toolbar->EnableTool(Toolbar_Refresh, true);
+			Toolbar->EnableTool(Toolbar_Histogram, true);
+
+			if ((style_flags & CAN_FFT) == CAN_FFT)
+			{
+				 Toolbar->EnableTool(Toolbar_FFT, true);
+
+				 if (current_panel->use_fft == true)
+				 {
+					 Toolbar->ToggleTool(Toolbar_FFT, true);
+				 }
+				 else
+				 {
+					 Toolbar->ToggleTool(Toolbar_FFT, false);
+				 }
+
+			}
+
+			Toolbar->EnableTool(Toolbar_Invert, true);
+
+			if (current_panel->invert_contrast == true)
+			{
+				Toolbar->ToggleTool(Toolbar_Invert, true);
+			}
+			else
+			{
+				Toolbar->ToggleTool(Toolbar_Invert, false);
+			}
+
+			if (current_panel->grey_values_decided_by == LOCAL_GREYS)
+			{
+			  	Toolbar->ToggleTool(Toolbar_Local, true);
+			  	Toolbar->EnableTool(Toolbar_Histogram, false);
+			}
+			else
+			if (current_panel->grey_values_decided_by == GLOBAL_GREYS)
+			{
+			  	Toolbar->ToggleTool(Toolbar_Global,true);
+			  	Toolbar->EnableTool(Toolbar_Histogram, false);
+			}
+			if (current_panel->grey_values_decided_by == MANUAL_GREYS)
+			{
+			  	Toolbar->ToggleTool(Toolbar_Manual,true);
+			  	Toolbar->EnableTool(Toolbar_Histogram, true);
+			}
+			else
+			if (current_panel->grey_values_decided_by == AUTO_GREYS)
+			{
+			  	Toolbar->ToggleTool(Toolbar_Auto,true);
+			  	Toolbar->EnableTool(Toolbar_Histogram, false);
+			}
+
+
+
+		}
+
+	}
+
+	Layout();
+	Refresh();
+	Update();
+
+	ChangeFocusToPanel();
+
+}
+
+
+void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
+{
+	if (DoesFileExist(wanted_filename) == false)
+	{
+		wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_filename), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
+		return;
+	}
+
+	panel_counter++;
+	DisplayNotebookPanel *my_panel = new DisplayNotebookPanel(my_notebook, panel_counter);
+
+	my_panel->my_file.OpenFile(wanted_filename.ToStdString(), false);
+
+	if (my_panel->my_file.IsOpen() == false)
+	{
+		wxMessageBox(wxString::Format("Error, Cannot open file (%s)", wanted_filename), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
+		return;
+	}
+
+
+	// which images are we including..
+
+	if (wanted_included_image_numbers == NULL)
+	{
+		for (long counter = 1; counter <= my_panel->my_file.ReturnNumberOfSlices(); counter++)
+		{
+			my_panel->included_image_numbers.Add(counter);
+		}
+	}
+	else
+	{
+		for (long counter = 0; counter < wanted_included_image_numbers->GetCount(); counter++)
+		{
+			MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= my_panel->my_file.ReturnNumberOfSlices(), "trying to add image numbers that don't exist")
+			my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
+		}
+	}
+
+
+	// setup the panel attributes...
+
+	my_panel->filename = wanted_filename;
+
+	/*my_panel->image_is_selected = new bool[my_panel->first_header.number_following + 2];
+
+	for (int mycounter = 0; mycounter < my_panel->first_header.number_following + 2; mycounter++)
+	{
+		my_panel->image_is_selected[mycounter] = false;
+	}*/
+
+	// add the panel
+
+	my_panel->panel_image = new wxImage(int(my_panel->my_file.ReturnXSize()), int(my_panel->my_file.ReturnYSize()));
+	my_panel->tab_title = wanted_tab_title;
+
+	my_notebook->Freeze();
+	my_notebook->AddPage(my_panel, wanted_tab_title, true);
+
+	// we have switched focus so update toolbar..
+
+	UpdateToolbar();
+
+	// we can directly call the drawing now..
+
+	Refresh();
+	Update();
+	my_notebook->Thaw();
+
+	// if there is only one image, then set single image mode to true by default
+
+
+	if (my_panel->included_image_numbers.GetCount() == 1)
+	{
+		my_panel->single_image = true;
+		//my_panel->picking_mode = COORDS_PICK;
+	}
+
+	my_panel->ReDrawPanel();
+	//notebook->SetFocus();
+	ChangeFocusToPanel();
+}
+
+
+
+DisplayNotebook::DisplayNotebook(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxAuiNotebook(parent, id, pos, size, style)
+{
+	parent_display_panel = reinterpret_cast < DisplayPanel *> (parent);
+
+	Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &DisplayNotebook::OnSelectionChange, this);
+	Bind(wxEVT_AUINOTEBOOK_END_DRAG, &DisplayNotebook::OnDragEnd, this);
+	Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSED, &DisplayNotebook::OnClosed, this);
+	Bind(wxEVT_CHILD_FOCUS, &DisplayNotebook::ChildGotFocus, this);
+	Bind(wxEVT_SET_FOCUS, &DisplayNotebook::GotFocus, this);
+}
+
+void DisplayNotebook::OnSelectionChange(wxAuiNotebookEvent& event)
+{
+	parent_display_panel->UpdateToolbar();
+	event.Skip();
+}
+
+void DisplayNotebook::OnDragEnd(wxAuiNotebookEvent& event)
+{
+	parent_display_panel->UpdateToolbar();
+	event.Skip();
+}
+
+void DisplayNotebook::OnClosed(wxAuiNotebookEvent& event)
+{
+	parent_display_panel->UpdateToolbar();
+	event.Skip();
+}
+
+void DisplayNotebook::ChildGotFocus(wxChildFocusEvent& event)
+{
+	//wxPrintf("Child focus\n");
+	parent_display_panel->ChangeFocusToPanel();
+}
+
+void DisplayNotebook::GotFocus(wxFocusEvent& event)
+{
+	parent_display_panel->ChangeFocusToPanel();
+}
+
+
+
+DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel(parent, id, pos, size, style)
+{
+	image_memory_buffer = NULL;
+	number_allocated_for_buffer = 0;
+
+	parent_display_panel = reinterpret_cast < DisplayNotebook *> (parent)->parent_display_panel;
+
+	Bind(wxEVT_PAINT, &DisplayNotebookPanel::OnPaint, this);
+	Bind(wxEVT_ERASE_BACKGROUND, &DisplayNotebookPanel::OnEraseBackground, this);
+	Bind(wxEVT_SIZE, &DisplayNotebookPanel::OnSize, this);
+	Bind(wxEVT_RIGHT_DOWN, &DisplayNotebookPanel::OnRightDown, this);
+	Bind(wxEVT_RIGHT_UP, &DisplayNotebookPanel::OnRightUp, this);
+	Bind(wxEVT_MOTION, &DisplayNotebookPanel::OnMotion, this);
+	Bind(wxEVT_KEY_DOWN, &DisplayNotebookPanel::OnKeyDown, this);
+	Bind(wxEVT_KEY_UP, &DisplayNotebookPanel::OnKeyUp, this);
+	Bind(wxEVT_LEAVE_WINDOW, &DisplayNotebookPanel::OnLeaveWindow, this);
+
+
+	////////////////////////////
+
+	show_label = true;
+	show_crosshair = false;
+	single_image = false;
+	use_7bit_greys = false;
+	show_selection_distances = false;
+	resolution_instead_of_radius = false;
+
+	if ((parent_display_panel->style_flags & START_WITH_INVERTED_CONTRAST) == START_WITH_INVERTED_CONTRAST)
+	{
+		invert_contrast = true;
+	}
+	else invert_contrast = false;
+
+
+	selected_point_size = 3;
+	should_refresh = false;
+	use_fft = false;
+
+	pixel_size = 1;
+
+	selected_distance = 0;
+
+	single_image_x = 0.;
+	single_image_y = 0.;
+
+	number_of_selections = 0;
+
+//	label_mode = Menu_Label_Nothing;
+	SetBackgroundColour(*wxBLACK);
+	current_location = 1;
+	desired_scale_factor = 1;
+	actual_scale_factor = 1;
+	low_grey_value = 0;
+	high_grey_value = 0;
+	global_low_grey = 0;
+	global_high_grey = 0;
+	manual_low_grey = 0.;
+	manual_high_grey = 0.;
+
+	if ((parent_display_panel->style_flags & START_WITH_AUTO_CONTRAST) == START_WITH_AUTO_CONTRAST) grey_values_decided_by = AUTO_GREYS;
+	else grey_values_decided_by = LOCAL_GREYS;
+
+	panel_image_has_correct_greys = false;
+	panel_image_has_correct_scale = false;
+
+
+	location_on_last_draw = 0;
+	images_in_x_on_last_draw = 0;
+	images_in_y_on_last_draw = 0;
+
+	integrate_box_x_pos = -1;
+	integrate_box_y_pos = -1;
+	integrated_value = -1;
+
+//	picking_mode = IMAGES_PICK;
+	have_plt_filename = false;
+	plt_is_saved = false;
+	have_waypoints_filename = false;
+	waypoints_is_saved = false;
+	selected_filament_number = 1;
+
+	int window_x_size;
+	int window_y_size;
+
+	// create panel..
+
+	this->GetClientSize(&window_x_size, &window_y_size);
+
+	// size the draw bitmap to the client size..
+
+	this->panel_bitmap.Create(window_x_size, window_y_size);
+
+	current_location = 1;
+
+	images_in_current_view = 0;
+
+	images_in_x = 0;
+	images_in_y = 0;
+	current_x_size = window_x_size;
+	current_y_size = window_y_size;
+
+	SetCursor(wxCursor(wxCURSOR_CROSS));
+}
+
+void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos)
+{
+	 long max_x = images_in_x * current_x_size;
+	 long max_y = images_in_y * current_y_size;
+	 double current_resolution;
+
+	 if (single_image == true)
+	 {
+		int current_x_pos = single_image_x + (x_pos / actual_scale_factor);// - 1;
+		int current_y_pos = single_image_y + (y_pos / actual_scale_factor);// - 1;
+
+		current_y_pos = my_file.ReturnYSize() - 1 - current_y_pos;
+
+		int current_image = current_location;
+
+		int current_radius = sqrtf(pow(current_x_pos - (my_file.ReturnXSize() / 2), 2) + pow(current_y_pos - (my_file.ReturnYSize() / 2), 2));
+
+		if (my_file.ReturnXSize() > my_file.ReturnYSize()) current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
+		else current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
+
+	 	if (current_x_pos >= 0 && current_x_pos < my_file.ReturnXSize() - 1 && current_y_pos >= 0 && current_y_pos < my_file.ReturnYSize() - 1)
+	 	{
+	 		float raw_pixel_value = image_memory_buffer[0].ReturnRealPixelFromPhysicalCoord(current_x_pos, current_y_pos, 0);
+
+	 		wxString StatusText;
+	 		StatusText = wxT("Image: ") + wxString::Format(wxT("%i"), current_image) + wxT("  - X=") + wxString::Format(wxT("%i"), current_x_pos) + wxT(", Y=") + wxString::Format(wxT("%i"), current_y_pos);
+
+	 		if (resolution_instead_of_radius == true) StatusText += wxT(", Res=") + wxString::Format(wxT("%.2f"), current_resolution) + wxT("Å");
+	 		else StatusText += wxT(", Rad=") + wxString::Format(wxT("%i"), current_radius);
+
+	 		StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
+
+	 		//if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+	 		//if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+	 		parent_display_panel->StatusText->SetLabel(StatusText);
+	 	}
+	 	else
+		{
+	 		wxString StatusText = wxT("");
+
+	 		//if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+	 	//	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+	 		parent_display_panel->StatusText->SetLabel(StatusText);
+		}
+	}
+	else
+	{
+		 if (x_pos < max_x && y_pos < max_y && x_pos >=0 && y_pos >=0)
+		 {
+		 	// turn the position into "co-ordinates"
+
+
+
+		 	int image_x_coord = x_pos /  current_x_size;
+		 	int image_y_coord = y_pos /  current_y_size;
+		 	int current_image = (images_in_x * (image_y_coord)) + image_x_coord + current_location;
+		 	int current_x_pos = (x_pos - (current_x_size * image_x_coord)) / actual_scale_factor;
+		 	int current_y_pos = (y_pos - (current_y_size * image_y_coord)) / actual_scale_factor;
+
+			current_y_pos = my_file.ReturnYSize() - 1 - current_y_pos;
+
+
+		 	int current_radius = sqrt(pow(current_x_pos - (my_file.ReturnXSize() / 2), 2) + pow(current_y_pos - (my_file.ReturnYSize() / 2), 2));
+
+			if (my_file.ReturnXSize() > my_file.ReturnYSize()) current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
+			else current_resolution = (pixel_size * my_file.ReturnYSize()) / current_radius;
+
+		 	if (current_image > 0 && current_image <= images_in_current_view + current_image && current_image <= included_image_numbers.GetCount())
+		 	{
+		 		float raw_pixel_value = image_memory_buffer[(images_in_x * (image_y_coord)) + image_x_coord].ReturnRealPixelFromPhysicalCoord(current_x_pos, current_y_pos, 0);
+
+		 		wxString StatusText;
+		 		StatusText = wxT("Image: ") + wxString::Format(wxT("%i"), current_image) + wxT("  - X=") + wxString::Format(wxT("%i"), current_x_pos) + wxT(", Y=") + wxString::Format(wxT("%i"), current_y_pos);
+
+		 		if (resolution_instead_of_radius == true) StatusText += wxT(", Res=") + wxString::Format(wxT("%.2f"), current_resolution) + wxT("Å");
+		 		else StatusText += wxT(", Rad=") + wxString::Format(wxT("%i"), current_radius);
+
+		 		StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
+
+		 	//	if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+		 	//	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+		 		parent_display_panel->StatusText->SetLabel(StatusText);
+
+		 	}
+		 	else
+			{
+		 		wxString StatusText = wxT("");
+
+		 	//	if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+		 	//	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+		 		parent_display_panel->StatusText->SetLabel(StatusText);
+			}
+		 }
+		 else
+		 {
+		 		wxString StatusText = wxT("");
+
+		// 		if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+		// 		if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(" Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+		 		parent_display_panel->StatusText->SetLabel(StatusText);
+		 }
+	}
+
+}
+
+
+void DisplayNotebookPanel::OnKeyDown( wxKeyEvent& event)
+{
+	int current_keycode = event.GetKeyCode();
+
+
+	wxCommandEvent null_event;
+
+	if (current_keycode == WXK_TAB)
+	{
+		event.Skip();
+	}
+	else
+	if (current_keycode == WXK_LEFT)
+	{
+		int current_page = parent_display_panel->my_notebook->GetSelection();
+		current_page--;
+		if (current_page < 0) current_page = parent_display_panel->my_notebook->GetPageCount()-1;
+		parent_display_panel->my_notebook->SetSelection(current_page);
+	}
+	else
+	if (current_keycode == WXK_RIGHT)
+	{
+		int current_page = parent_display_panel->my_notebook->GetSelection();
+		current_page++;
+		if (current_page > parent_display_panel->my_notebook->GetPageCount()-1) current_page = 0;
+		parent_display_panel->my_notebook->SetSelection(current_page);
+	}
+	else
+	if (current_keycode == WXK_UP)
+	{
+		parent_display_panel->OnNext(null_event);
+	}
+	else
+	if (current_keycode == WXK_DOWN)
+	{
+		parent_display_panel->OnPrevious(null_event);
+	}
+	else
+	if (current_keycode == 44)
+	{
+		parent_display_panel->OnPrevious(null_event);
+	}
+	else
+	if (current_keycode == 46)
+	{
+		parent_display_panel->OnNext(null_event);
+	}
+}
+
+void DisplayNotebookPanel::OnKeyUp( wxKeyEvent& event)
+{
+	/*
+	int current_keycode = event.GetKeyCode();
+
+	displayPanel *current_panel = (displayPanel*) notebook->GetCurrentPage();
+
+	wxCommandEvent null_event;
+
+	if (current_keycode == WXK_SPACE && suspend_overlays == true)
+	{
+		suspend_overlays = false;
+
+		current_panel->Refresh();
+		current_panel->Update();
+	}
+
+	if (current_keycode == WXK_CONTROL && drawing_selection_square == true)
+	{
+		drawing_selection_square = false;
+		current_panel->Refresh();
+		current_panel->Update();
+	}
+
+
+	event.Skip();*/
+
+}
+
+
+
+bool DisplayNotebookPanel::SetGlobalGreys(void)
+{
+	// so now we have to work out the global grey value..
+	// best use a progress dialog..
+
+	Image buffer_image;
+
+	if (CheckFileStillValid() == true)
+	{
+		float global_min;
+		float global_max;
+		float current_min;
+		float current_max;
+
+		buffer_image.ReadSlice(&my_file, included_image_numbers.Item(0));
+		buffer_image.GetMinMax(global_min, global_max);
+
+		bool should_continue = true;
+
+		wxProgressDialog my_progress(wxT("Calculating..."), wxT("Performing Global Survey"), included_image_numbers.GetCount(), parent_display_panel, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
+
+		for (long counter = 0; counter < included_image_numbers.GetCount(); counter++)
+		{
+			buffer_image.ReadSlice(&my_file, included_image_numbers.Item(counter));
+			buffer_image.GetMinMax(current_min, current_max);
+
+			if (current_max > global_max) global_max = current_max;
+			if (current_min < global_min) global_min = current_min;
+
+			should_continue = my_progress.Update(counter);
+
+			if (should_continue == false)
+			{
+				continue;
+			}
+
+		}
+
+		if (should_continue == true)
+		{
+			global_low_grey = global_min;
+			global_high_grey = global_max;
+			return true;
+		}
+		else return false;
+
+		return false;
+
+
+	}
+	else return false;
+
+}
+
+DisplayNotebookPanel::~DisplayNotebookPanel()
+{
+	if (image_memory_buffer != NULL) delete [] image_memory_buffer;
+}
+
+void DisplayNotebookPanel::OnSize(wxSizeEvent& event)
+{
+
+	parent_display_panel->Refresh();
+	event.Skip();
+}
+
+void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event)
+{
+
+
+	long x_pos;
+	long y_pos;
+
+	event.GetPosition(&x_pos, &y_pos);
+
+	int client_x = int(x_pos);
+	int client_y = int(y_pos);
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) parent_display_panel->my_notebook->GetCurrentPage();
+	current_panel->ClientToScreen(&client_x, &client_y);
+
+	// At the time of writing, when the popupwindow goes off the size of screen
+	// it's draw direction is reveresed.. For this reason i've included this
+	// rather dodgy get around, of just adding the box size when the box goes
+	// off the edge.. hopefully it will hold up.
+
+	int screen_x_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_X);
+	int screen_y_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_Y);
+
+	if (client_x + 256 > screen_x_size) client_x += 256;
+	if (client_y + 256 > screen_y_size) client_y += 256;
+
+	if (parent_display_panel->popup_exists == false)
+	{
+		SetCursor(wxCursor(wxCURSOR_BLANK));
+
+		current_panel->CaptureMouse();
+		parent_display_panel->popup = new DisplayPopup(parent_display_panel);
+		parent_display_panel->popup->SetClientSize(256,256);
+		parent_display_panel->popup->Position(wxPoint(client_x - 128, client_y - 128), wxSize(0, 0) );
+		parent_display_panel->popup->x_pos = x_pos - 128;
+		parent_display_panel->popup->y_pos = y_pos - 128;
+		parent_display_panel->popup->SetCursor(wxCursor(wxCURSOR_BLANK));
+		parent_display_panel->popup->Show();
+		parent_display_panel->popup->Refresh();
+		parent_display_panel->popup->Update();
+
+		parent_display_panel->popup_exists = true;
+	}
+
+	event.Skip();
+
+}
+
+
+void DisplayNotebookPanel::OnRightUp(wxMouseEvent& event)
+{
+	if (parent_display_panel->popup_exists == true)
+	{
+
+		DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) parent_display_panel->my_notebook->GetCurrentPage();
+		current_panel->ReleaseMouse();
+		SetCursor(wxCursor(wxCURSOR_CROSS));
+		parent_display_panel->popup->Destroy();
+		parent_display_panel->popup_exists = false;
+	}
+
+	event.Skip();
+
+}
+
+void DisplayNotebookPanel::OnLeaveWindow(wxMouseEvent& event)
+{
+	parent_display_panel->StatusText->SetLabel("");
+	event.Skip();
+
+}
+
+
+void DisplayNotebookPanel::OnMotion(wxMouseEvent& event)
+{
+	 long x_pos;
+	 long y_pos;
+
+	 event.GetPosition(&x_pos, &y_pos);
+
+
+	 DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) parent_display_panel->my_notebook->GetCurrentPage();
+
+	 int client_x = int(x_pos);
+	 int client_y = int(y_pos);
+	 current_panel->ClientToScreen(&client_x, &client_y);
+
+
+	 // if left button is down, and we are drawing a selections square, update to coords..
+/*
+	 if (event.m_leftDown == true && drawing_selection_square == true)
+	 {
+		 // in coordinate selection mode - do not let the square leave the initial image, as otherwise, it becomes too complicated..
+
+		 long max_x = images_in_x * current_x_size;
+		 long max_y = images_in_y * current_y_size;
+
+		 // convert the coords into image info..
+
+		 int image_x_coord;
+		 int image_y_coord;
+		 int current_x_pos;
+		 int current_y_pos;
+		 int current_image;
+
+		 int max_image_x_pos;
+		 int max_image_y_pos;
+
+		 int min_image_x_pos;
+		 int min_image_y_pos;
+
+		 if (single_image == true)
+		 {
+			 current_x_pos = single_image_x + (x_pos / actual_scale_factor) - 1;
+			 current_y_pos = single_image_y + (y_pos / actual_scale_factor) - 1;
+			 current_image = current_location;
+
+			 max_image_x_pos = (first_header.x_size - single_image_x) * actual_scale_factor;
+			 max_image_y_pos = (first_header.y_size - single_image_y) * actual_scale_factor;
+
+			 min_image_x_pos = 0;
+			 min_image_y_pos = 0;
+		 }
+		 else
+		 {
+			 image_x_coord = selection_square_start_x /  current_x_size;
+			 image_y_coord = selection_square_start_y /  current_y_size;
+			// current_image = (images_in_x * (image_y_coord)) + image_x_coord + current_location;
+			 //current_x_pos = (x_pos - (current_x_size * image_x_coord)) / actual_scale_factor;
+			 //current_y_pos = (y_pos - (current_y_size * image_y_coord)) / actual_scale_factor;
+
+			 min_image_x_pos = (image_x_coord) * current_x_size;
+			 min_image_y_pos = (image_y_coord) * current_y_size;
+
+			 max_image_x_pos = min_image_x_pos + current_x_size;
+			 max_image_y_pos = min_image_y_pos + current_y_size;
+
+
+		 }
+
+		 selection_square_current_x = x_pos;
+		 selection_square_current_y = y_pos;
+
+		 if (selection_square_current_x > max_image_x_pos) selection_square_current_x = max_image_x_pos;
+		 if (selection_square_current_y > max_image_y_pos) selection_square_current_y = max_image_y_pos;
+
+		 if (selection_square_current_x < min_image_x_pos) selection_square_current_x = min_image_x_pos;
+		 if (selection_square_current_y < min_image_y_pos) selection_square_current_y = min_image_y_pos;
+
+		 Refresh();
+		 Update();
+	 }
+	 else // if the right button is down and the popup exists move it..*/
+	 if (event.m_rightDown == true && parent_display_panel->popup_exists == true)
+	 {
+		 // At the time of writing, when the popupwindow goes off the size of screen
+		 // it's draw direction is reveresed.. For this reason i've included this
+		 // rather dodgy get around, of just adding the box size when the box goes
+		 // off the edge.. hopefully it will hold up.
+
+		 int screen_x_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_X);
+		 int screen_y_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_Y);
+
+		 if (client_x + 256 > screen_x_size) client_x += 256;
+		 if (client_y + 256 > screen_y_size) client_y += 256;
+
+		 parent_display_panel->popup->Position(wxPoint(client_x - 128, client_y - 128), wxSize(0, 0) );
+		 parent_display_panel->popup->x_pos = x_pos - 128;
+		 parent_display_panel->popup->y_pos = y_pos - 128;
+		 parent_display_panel->popup->Show();
+		 parent_display_panel->popup->Refresh();
+		 parent_display_panel->popup->Update();
+		 parent_display_panel->Update();
+	 }
+/*	 else
+     if (event.m_middleDown == true && current_panel->single_image == true)
+	 {
+		 if (old_mouse_x == -9999 || old_mouse_y == -9999)
+		 {
+			 old_mouse_x = x_pos;
+			 old_mouse_y = y_pos;
+		 }
+		 else
+		 {
+			 current_panel->single_image_x += (old_mouse_x - x_pos) / actual_scale_factor;
+			 current_panel->single_image_y += (old_mouse_y - y_pos) / actual_scale_factor;
+
+			 if (current_panel->single_image_x < 0) current_panel->single_image_x = 0;
+			 else
+			 if (current_panel->single_image_x > current_panel->first_header.x_size - 1) current_panel->single_image_x = current_panel->first_header.x_size - 1;
+
+			 if (current_panel->single_image_y < 0) current_panel->single_image_y = 0;
+			 else
+			 if (current_panel->single_image_y > current_panel->first_header.y_size - 1) current_panel->single_image_y = current_panel->first_header.y_size - 1;
+
+			 old_mouse_x = x_pos;
+			 old_mouse_y = y_pos;
+
+
+
+			 current_panel->DrawPanel();
+		 }
+	 }
+     else
+     if (event.m_leftDown == true && something_is_being_grabbed == true)
+     {
+    	 if (picking_mode == WAYPOINTS_PICK)
+    	 {
+    		 float actual_x, actual_y, dist;
+    		 float local_single_image_x, local_single_image_y;
+    		 local_single_image_x = 0.0e0;
+    		 local_single_image_y = 0.0e0;
+    		 if (single_image == true) {
+    			 local_single_image_x = single_image_x;
+    			 local_single_image_y = single_image_y;
+    		 }
+    		 // Find waypoint we are grabbing
+    		 for (int waypoint_counter = 0; waypoint_counter < waypoint_tracker.number_of_waypoints; waypoint_counter++)
+    		 {
+    			 if (waypoint_tracker.waypoints[waypoint_counter].tangent_vector_grabbed == true)
+    			 {
+    				 actual_x = (waypoint_tracker.waypoints[waypoint_counter].x - local_single_image_x) * actual_scale_factor;
+    				 actual_y = (waypoint_tracker.waypoints[waypoint_counter].y - local_single_image_y) * actual_scale_factor;
+    				 dist     = sqrt(pow((x_pos-actual_x),2.0)+pow((y_pos-actual_y),2.0));
+    				 waypoint_tracker.waypoints[waypoint_counter].tangent_x = (actual_x - x_pos)/dist;
+    				 waypoint_tracker.waypoints[waypoint_counter].tangent_y = (actual_y - y_pos)/dist;
+    				 waypoint_tracker.waypoints[waypoint_counter].psi = -180.0e0 / PI * atan2(-waypoint_tracker.waypoints[waypoint_counter].tangent_y,waypoint_tracker.waypoints[waypoint_counter].tangent_x);
+
+    				 Refresh();
+    				 Update();
+    			}
+    			else
+    			if (waypoint_tracker.waypoints[waypoint_counter].grabbed == true)
+				{
+    				waypoint_tracker.waypoints[waypoint_counter].x = x_pos / actual_scale_factor + local_single_image_x;
+    				waypoint_tracker.waypoints[waypoint_counter].y = y_pos / actual_scale_factor + local_single_image_y;
+
+    				Refresh();
+    				Update();
+				}
+    		 }
+
+    	 }
+
+     }
+
+	 // write the current position to the status bar..
+	*/
+
+
+	 UpdateImageStatusInfo(x_pos, y_pos);
+	 event.Skip();
+}
+
+bool DisplayNotebookPanel::CheckFileStillValid()
+{
+
+	ImageFile buffer_file;
+	buffer_file.OpenFile(filename.ToStdString(), false);
+
+    if (buffer_file.ReturnNumberOfSlices() == my_file.ReturnNumberOfSlices() && buffer_file.ReturnXSize() == my_file.ReturnXSize() && buffer_file.ReturnYSize() == my_file.ReturnYSize())
+    {
+    	return true;
+    }
+    else
+    {
+    	wxMessageBox( wxT( "The current file is no longer accessible, or has changed number/size/type!!" ), wxT( "Error!!" ), wxOK | wxICON_INFORMATION, this);
+    	parent_display_panel->my_notebook->DeletePage(parent_display_panel->my_notebook->GetSelection());
+    	parent_display_panel->UpdateToolbar();
+    	return false;
+    }
+}
+
+void DisplayNotebookPanel::ReDrawPanel(void)
+{
+
+	int window_x_size;
+	int window_y_size;
+
+	long scaled_x_size;
+	long scaled_y_size;
+
+	long counter;
+
+	long red_counter;
+	long blue_counter;
+	long green_counter;
+	long image_counter;
+	long current_value;
+
+	long cut_x_size;
+	long cut_y_size;
+
+	float current_low_grey_value = low_grey_value;
+	float current_high_grey_value = low_grey_value;
+
+	double image_total;
+	double image_total_squared;
+	double image_average_density;
+	double image_variance;
+	double image_stdev;
+
+	long number_of_pixels;
+	float range;
+
+	int i, j, k;
+	long address = 0;
+
+	wxImage FrameImage;
+	wxBitmap *DrawBitmap;
+
+	wxPen red_dashed_pen(*wxRED, long(myround(desired_scale_factor)), wxLONG_DASH);
+
+	wxString LabelText;
+
+	// get the device context..
+
+	wxImage ScaledImage;
+
+	// Get ready for text writing..
+
+	wxMemoryDC memDC;
+	wxMemoryDC dc;
+
+	// we need to know how many images we are going to read in.. first get the current size of the window..
+
+	GetClientSize(&window_x_size, &window_y_size);
+
+	if (window_x_size > 10 && window_y_size > 10)
+	{
+	//wxBeginBusyCursor();
+	//wxYield();
+
+	// size the draw bitmap to the client size..
+
+	if (window_x_size != panel_bitmap.GetWidth() || window_y_size != panel_bitmap.GetHeight())
+	{
+		Refresh();
+	}
+
+	if (included_image_numbers.GetCount() - current_location < images_in_current_view) Refresh();
+
+	panel_bitmap.Create(window_x_size, window_y_size);
+
+	dc.SelectObject(panel_bitmap);
+	dc.SetBackground(*wxBLACK_BRUSH);
+	dc.Clear();
+	dc.SelectObject(wxNullBitmap);
+
+	//Update();
+
+	// how big are the images going to be, and how many will fit..
+
+	scaled_x_size = long(myround(my_file.ReturnXSize() * desired_scale_factor));
+	scaled_y_size = long(myround(my_file.ReturnYSize() * desired_scale_factor));
+
+	if (single_image == true)
+	{
+		actual_scale_factor = desired_scale_factor;
+	}
+	else // single image mode is false...
+	{
+		images_in_x = window_x_size / scaled_x_size;
+		images_in_y = window_y_size / scaled_y_size;
+
+		if (images_in_x < 1 || images_in_y < 1)
+		{
+			// none fit, so we should scale it so that 1 image fits...
+			// determine if the X or Y is the limiting factor..
+
+			if (double(window_x_size) / double(scaled_x_size) >= double(window_y_size) / double(scaled_y_size))
+			{
+				// this means that the limiting dimension is the y.. so scale appropriately..
+				actual_scale_factor = double(window_y_size) / double(my_file.ReturnYSize());
+
+			}
+			else actual_scale_factor = double(window_x_size) / double(my_file.ReturnXSize());
+
+			scaled_x_size = long(myround(my_file.ReturnXSize() * actual_scale_factor));
+			scaled_y_size = long(myround(my_file.ReturnYSize() * actual_scale_factor));
+
+			images_in_x = 1;
+			images_in_y = 1;
+		}
+		else actual_scale_factor = desired_scale_factor;
+	}
+
+	current_x_size = scaled_x_size;
+	current_y_size = scaled_y_size;
+
+	if (single_image == true)
+	{
+		images_in_current_view = 1;
+		images_in_x = 1;
+		images_in_y = 1;
+	}
+	else images_in_current_view = images_in_x * images_in_y;
+
+    if (current_location != location_on_last_draw || images_in_x != images_in_x_on_last_draw || images_in_y != images_in_y_on_last_draw)
+    {
+    	//dc.Clear();
+    	if (CheckFileStillValid() == true)
+    	{
+
+    		if (number_allocated_for_buffer < images_in_current_view)
+        	{
+        		if (image_memory_buffer != NULL) delete [] image_memory_buffer;
+        		image_memory_buffer = new Image[images_in_current_view];
+        		number_allocated_for_buffer = images_in_current_view;
+       		}
+
+    		for (image_counter = 0; image_counter < images_in_current_view; image_counter++)
+    		{
+    			if (current_location + image_counter <= included_image_numbers.GetCount())
+    			{
+
+    				image_memory_buffer[image_counter].ReadSlice(&my_file, included_image_numbers.Item(current_location + image_counter - 1));
+
+    				if (use_fft == true)
+    				{
+    					Image buffer_image;
+    					buffer_image.CopyFrom(&image_memory_buffer[image_counter]);
+    					buffer_image.ForwardFFT(false);
+    					buffer_image.DivideByConstant(sqrt(buffer_image.number_of_real_space_pixels));
+    					buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
+    					image_memory_buffer[image_counter].ZeroCentralPixel();
+    				}
+    			}
+    		}
+    	}
+    	else return;
+
+    	location_on_last_draw = current_location;
+    	images_in_x_on_last_draw = images_in_x;
+    	images_in_y_on_last_draw = images_in_y;
+
+
+
+    }
+
+    if (should_refresh == true)
+    {
+    	// check none of the file attributes have changed..
+
+    	if (CheckFileStillValid() == true)
+    	{
+    		// we should be safe to reload..
+
+    		//dc.Clear();
+
+    		if (number_allocated_for_buffer < images_in_current_view)
+    		{
+    			if (image_memory_buffer != NULL) delete [] image_memory_buffer;
+    			image_memory_buffer = new Image[images_in_current_view];
+    			number_allocated_for_buffer = images_in_current_view;
+
+    		}
+
+	  		for (image_counter = 0; image_counter < images_in_current_view; image_counter++)
+	    	{
+	  			if (this->current_location + image_counter <= included_image_numbers.GetCount())
+	  			{
+	  				image_memory_buffer[image_counter].ReadSlice(&my_file, included_image_numbers.Item(current_location + image_counter - 1));
+
+	  				if (use_fft == true)
+	  				{
+	  					Image buffer_image;
+	  					buffer_image.CopyFrom(&image_memory_buffer[image_counter]);
+	  					buffer_image.ForwardFFT(false);
+	  					buffer_image.DivideByConstant(sqrt(buffer_image.number_of_real_space_pixels));
+	  					buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
+	  					image_memory_buffer[image_counter].ZeroCentralPixel();
+	  				}
+	  			}
+	    	}
+
+	    	location_on_last_draw = current_location;
+	    	images_in_x_on_last_draw = images_in_x;
+	    	images_in_y_on_last_draw = images_in_y;
+
+	    	panel_image_has_correct_greys = false;
+
+
+
+    	}
+    	else return;
+
+    	should_refresh = false;
+
+    }
+
+
+	image_counter = 0;
+
+	for (int big_y = 0; big_y < images_in_y; big_y++)
+	{
+		for (int big_x = 0; big_x < images_in_x; big_x++)
+		{
+
+			if (this->current_location + image_counter <= included_image_numbers.GetCount())
+			{
+
+				if (panel_image_has_correct_greys == false || panel_image_has_correct_scale == false || single_image == false)
+				{
+					// drawing speed is critical so we'll do it by directly writing the data,
+					// this gives us a pointer to the image data..
+
+					panel_image->Resize(wxSize(my_file.ReturnXSize(), my_file.ReturnYSize()), wxPoint(0,0));
+					unsigned char *image_data = panel_image->GetData();
+
+					// are we locally scaling?
+
+					if (this->grey_values_decided_by == LOCAL_GREYS)
+					{
+						image_memory_buffer[image_counter].GetMinMax(current_low_grey_value, current_high_grey_value);
+					}
+					else
+					if (this->grey_values_decided_by == AUTO_GREYS) // auto contrast
+					{
+						// work out mean, and stdev..
+
+						image_total = 0;
+						image_total_squared = 0;
+						number_of_pixels = 0;
+
+						address = 0;
+
+						for (j = 0; j < image_memory_buffer[image_counter].logical_y_dimension; j++)
+						{
+							for (i = 0; i < image_memory_buffer[image_counter].logical_x_dimension; i++)
+							{
+								 if (image_memory_buffer[image_counter].real_values[address] != 0.)
+								 {
+								     image_total += image_memory_buffer[image_counter].real_values[address];
+								     image_total_squared += pow(image_memory_buffer[image_counter].real_values[address], 2);
+								     number_of_pixels++;
+								 }
+
+								address++;
+							}
+
+							address += image_memory_buffer[image_counter].padding_jump_value;
+						}
+
+						if (image_total_squared == 0)
+						{
+							current_low_grey_value = 0;
+							current_high_grey_value = 0;
+						}
+						else
+						{
+						   image_average_density = image_total / number_of_pixels;
+						   image_variance = (image_total_squared / number_of_pixels) - pow(image_average_density, 2);
+						   image_stdev = sqrt(image_variance);
+
+						   if (actual_scale_factor < 1)
+						   {
+							   current_low_grey_value = image_average_density - ((image_stdev * 2.5));// * actual_scale_factor);
+							   current_high_grey_value = image_average_density + ((image_stdev * 2.5));// * actual_scale_factor);
+						   }
+						   else
+						   {
+							   current_low_grey_value = image_average_density - (image_stdev * 2.5);
+							   current_high_grey_value = image_average_density + (image_stdev * 2.5);
+						   }
+					   }
+					}
+					else
+					{
+						//  we aren't scaling locally, so threshold to the global values..
+
+						current_low_grey_value = this->low_grey_value;
+						current_high_grey_value = this->high_grey_value;
+
+						//this->first_header.Threshold(current_low_grey_value, current_high_grey_value);
+
+					}
+
+					// scale to grey values and draw..
+
+					if (invert_contrast == true && use_fft == false)
+					{
+						float buffer = current_low_grey_value;
+						current_low_grey_value = current_high_grey_value;
+						current_high_grey_value = buffer;
+					}
+
+					range = current_high_grey_value - current_low_grey_value;
+					range /=256.0;
+
+					counter = 0;
+					red_counter = 0;
+					green_counter = 1;
+					blue_counter = 2;
+
+					//address = image_memory_buffer[image_counter].real_memory_allocated - 1;
+					for (j = 0; j < image_memory_buffer[image_counter].logical_y_dimension; j++)
+					{
+						address = (image_memory_buffer[image_counter].logical_y_dimension - 1 - j) * (image_memory_buffer[image_counter].logical_x_dimension + image_memory_buffer[image_counter].padding_jump_value);
+
+						for (i = 0; i < image_memory_buffer[image_counter].logical_x_dimension; i++)
+						{
+							if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+							else
+							current_value = int(myround((image_memory_buffer[image_counter].real_values[address] - current_low_grey_value) / range));
+
+							if (current_value > 255) current_value = 255;
+							else
+							if (current_value < 0) current_value = 0;
+
+							image_data[red_counter] = (unsigned char)(current_value);
+							image_data[green_counter] = (unsigned char)(current_value);
+							image_data[blue_counter] = (unsigned char)(current_value);
+
+							red_counter+=3;
+							green_counter+=3;
+							blue_counter+=3;
+
+							address++;
+						}
+
+
+					}
+
+
+					if (scaled_x_size > my_file.ReturnXSize()) panel_image->Rescale(scaled_x_size, scaled_y_size, wxIMAGE_QUALITY_NORMAL);
+					else panel_image->Rescale(scaled_x_size, scaled_y_size, wxIMAGE_QUALITY_HIGH);
+
+					panel_image_has_correct_scale = true;
+					panel_image_has_correct_greys = true;
+
+
+				}
+
+				// Here we convert the image to a bitmap (after first scaling it if need be), then
+				// we write the appropriate text on it, and blit it to the memory bitmap, in the
+				// case of "single image mode" things are different as in this case we cut out a sub-bitmap
+				// and only blit that..
+
+				if (single_image == true)
+				{
+					cut_x_size = window_x_size;
+					cut_y_size = window_y_size;
+
+					// cut out the appropriate section taking the scaling factor into account.
+					// prevent cutting outside the size of the image..
+
+					if (single_image_x  * actual_scale_factor + window_x_size > panel_image->GetWidth()) cut_x_size = panel_image->GetWidth() - single_image_x * actual_scale_factor;
+					if (single_image_y  * actual_scale_factor + window_y_size > panel_image->GetHeight()) cut_y_size = panel_image->GetHeight() - single_image_y * actual_scale_factor;
+
+					FrameImage = panel_image->GetSubImage(wxRect(single_image_x * actual_scale_factor, single_image_y * actual_scale_factor, cut_x_size, cut_y_size));
+
+				}
+				else
+				{
+					FrameImage = panel_image->Copy();
+/*
+					if (image_memory_buffer[image_counter].x_size != scaled_x_size || image_memory_buffer[image_counter].y_size != scaled_y_size)
+					{
+						// first copy it, then scale it appropriately..
+
+						FrameImage.Rescale(scaled_x_size, scaled_y_size);
+
+					}*/
+
+
+				}
+
+				//convert into a bitmap..
+
+				DrawBitmap = new wxBitmap(FrameImage);
+
+				// prepare the pen, prepare the label, then write it on..
+
+				memDC.SelectObject(*DrawBitmap);
+				memDC.SetPen(red_dashed_pen);
+				memDC.SetBackgroundMode( wxSOLID );
+				memDC.SetTextForeground( *wxWHITE );
+				memDC.SetTextBackground( *wxBLACK );
+
+				#ifndef __WXMSW__
+				memDC.SetFont(*wxSMALL_FONT);
+				#else
+				memDC.SetFont(*wxNORMAL_FONT);
+				#endif
+
+				if (this->show_label == true)
+				{
+					LabelText = wxString::Format(wxT("%i"), int(this->current_location + image_counter));
+				}
+				else LabelText = wxT("");
+
+				// write on the text..
+
+				memDC.DrawText(LabelText, 0, DrawBitmap->GetHeight() - memDC.GetCharHeight());
+
+				// draw on crosshair if desired..
+
+				/*
+				if (show_crosshair == true)
+				{
+					memDC.CrossHair(DrawBitmap->GetWidth() / 2, DrawBitmap->GetHeight() / 2);
+				}*/
+
+				//memDC.SetPen(wxNullPen);
+                memDC.SelectObject(wxNullBitmap);
+				// blit it on..
+
+                dc.SelectObject(panel_bitmap);
+				dc.DrawBitmap(*DrawBitmap, big_x * scaled_x_size, big_y * scaled_y_size);
+				dc.SelectObject(wxNullBitmap);
+
+				// invalidate only the freshly drawn section, the paint event will
+				// then only redraw that area which should be much faster..
+
+				wxRect DrawnArea(big_x * scaled_x_size, big_y * scaled_y_size, scaled_x_size, scaled_y_size);
+
+				this->Refresh(false, &DrawnArea);
+				Update();
+
+				/*
+				// if we scaled it, we need to set it back to it's original size and re-get the
+				// data pointer..
+
+				if (this->first_header.x_size != scaled_x_size || first_header.y_size != scaled_y_size)
+				{
+					BufferImage.Create(int(this->first_header.x_size), int(this->first_header.y_size), false);
+					image_data = BufferImage.GetData();
+				}
+*/
+				image_counter++;
+
+				delete DrawBitmap;
+
+
+			}
+		}
+
+	}
+
+
+	  // do a final refresh for neatness..
+
+	parent_display_panel->UpdateToolbar();
+	Update();
+
+//	wxEndBusyCursor();
+	parent_display_panel->ChangeFocusToPanel();
+	}
+}
+
+void DisplayNotebookPanel::OnEraseBackground(wxEraseEvent& event)
+{
+	//event.Skip();
+
+}
+
+
+void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
+{
+	wxPaintDC dc(this);
+
+	int window_x_size;
+	int window_y_size;
+	//int point_size = 3 * actual_scale_factor;
+
+	//if (point_size < 3) point_size = 3;
+
+	int point_size = selected_point_size;
+
+	long counter;
+	long coord_counter;
+	long waypoint_counter;
+
+	wxCoord actual_x, actual_y;
+	float tangent_x, tangent_y;
+
+	GetClientSize(&window_x_size,&window_y_size);
+
+	// is our stored bitmap the correct size? if not redraw
+
+	if (window_x_size != panel_bitmap.GetWidth() || window_y_size != panel_bitmap.GetHeight()) ReDrawPanel();
+	else
+	{
+		//just redraw the areas that have changed..
+
+		int vX,vY,vW,vH;                 // Dimensions of client area in pixels
+		wxRegionIterator upd(GetUpdateRegion()); // get the update rect list
+
+		while (upd)
+		{
+			vX = upd.GetX();
+			vY = upd.GetY();
+			vW = upd.GetW();
+			vH = upd.GetH();
+
+			// Repaint this rectangle
+
+			if (vX + vW <= panel_bitmap.GetWidth() && vY + vH <= panel_bitmap.GetHeight()) dc.DrawBitmap(panel_bitmap.GetSubBitmap(wxRect(vX, vY, vW, vH)), vX, vY);
+
+			upd ++ ;
+
+		}
+
+		// if we are drawing a selection box - draw it..
+
+		/*
+		if (drawing_selection_square == true)
+		{
+			wxPen selection_pen(*wxRED, 1, wxSHORT_DASH);
+			dc.SetPen(selection_pen);
+			dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+
+			dc.DrawRectangle(selection_square_start_x, selection_square_start_y, selection_square_current_x - selection_square_start_x, selection_square_current_y - selection_square_start_y);
+		}*/
+
+
+
+		// check if any of the current images are selected, if they are then
+		// put a funky little red box around them.. or if coords mode is
+		// selected.. draw coords. -UNLESS SUSPENDED
+
+/*
+		if (suspend_overlays == false)
+		{
+			dc.SetPen(*wxRED);
+			if (picking_mode == IMAGES_PICK || picking_mode == INTEGRATE_PICK) dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+			else dc.SetBrush(wxBrush(*wxRED, wxSOLID));
+
+			counter = current_location;
+
+			for (int y = 0; y < images_in_y; y++)
+			{
+				for (int x = 0; x < images_in_x; x++)
+				{
+					if (first_header.number_following + 1 >= counter)
+					{
+						if (picking_mode == IMAGES_PICK && image_is_selected[counter] == true )
+						{
+							// draw a rectangle around the image..
+
+							if (single_image == true)
+							{
+								dc.DrawRoundedRectangle(0, 0, window_x_size, window_y_size, -.5);
+							}
+							else dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
+
+						}
+						else if (picking_mode == COORDS_PICK)
+						{
+							// find all the coordinates for this image..
+
+							for (coord_counter = 0; coord_counter < coord_tracker.number_of_coords; coord_counter++)
+							{
+								if (coord_tracker.coords[coord_counter].image_number == counter)
+								{
+									// draw the point on..
+
+									if (single_image == true)
+									{
+										// we need to check if the co-ordinate is inside the current view, and if so, draw it.
+
+										if (coord_tracker.coords[coord_counter].x_pos > single_image_x && coord_tracker.coords[coord_counter].x_pos < single_image_x + window_x_size / actual_scale_factor && coord_tracker.coords[coord_counter].y_pos > single_image_y && coord_tracker.coords[coord_counter].y_pos < single_image_y + window_y_size / actual_scale_factor)
+										{
+											dc.DrawCircle((coord_tracker.coords[coord_counter].x_pos  - single_image_x) * actual_scale_factor, (coord_tracker.coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, point_size);
+										}
+
+										// if this coord is the last coord, and show selection distances is true, show the distance.
+
+										if (coord_counter == coord_tracker.number_of_coords - 1 && coord_tracker.number_of_coords > 1 && show_selection_distances == true && coord_tracker.coords[coord_counter].image_number == coord_tracker.coords[coord_counter - 1].image_number)
+										{
+											dc.DrawLine((coord_tracker.coords[coord_counter].x_pos  - single_image_x) * actual_scale_factor, (coord_tracker.coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, (coord_tracker.coords[coord_counter - 1].x_pos  - single_image_x) * actual_scale_factor, (coord_tracker.coords[coord_counter - 1].y_pos - single_image_y) * actual_scale_factor);
+										}
+
+									}
+									else
+									{
+										dc.DrawCircle(x * current_x_size + (coord_tracker.coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker.coords[coord_counter].y_pos * actual_scale_factor), point_size);
+
+										if (coord_counter == coord_tracker.number_of_coords - 1 && coord_tracker.number_of_coords > 1 && show_selection_distances == true && coord_tracker.coords[coord_counter].image_number == coord_tracker.coords[coord_counter - 1].image_number)
+										{
+											dc.DrawLine(x * current_x_size + (coord_tracker.coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker.coords[coord_counter].y_pos * actual_scale_factor), x * current_x_size + (coord_tracker.coords[coord_counter - 1].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker.coords[coord_counter - 1].y_pos * actual_scale_factor));
+										}
+									}
+								}
+							}
+						}
+						else if (picking_mode == WAYPOINTS_PICK)
+						{
+							wxColour *bright_red = new wxColour(255,0,0,255);
+							wxColour *dim_red = new wxColour(168,105,105,255);
+							//wxColour *dim_red = new wxColour(255,0,0,50);
+							wxColour *current_filament_colour;
+							wxBrush  *brush_before = new wxBrush(dc.GetBrush());
+							wxPen    *pen_before = new wxPen(dc.GetPen());
+
+							for (waypoint_counter = 0; waypoint_counter < waypoint_tracker.number_of_waypoints; waypoint_counter++)
+							{
+								if (waypoint_tracker.waypoints[waypoint_counter].image_number == counter)
+								{
+									// draw the point on..
+
+									if (waypoint_tracker.waypoints[waypoint_counter].filament_number == selected_filament_number) {
+										current_filament_colour = bright_red;
+									}
+									else {
+										current_filament_colour = dim_red;
+									}
+
+									if (single_image == true)
+									{
+										if (waypoint_tracker.waypoints[waypoint_counter].filament_number == selected_filament_number || only_show_selected_filament == false)
+										{
+											// we need to check if the co-ordinate is inside the current view, and if so, draw it.
+
+											if (waypoint_tracker.waypoints[waypoint_counter].x > single_image_x && waypoint_tracker.waypoints[waypoint_counter].x < single_image_x + window_x_size / actual_scale_factor && waypoint_tracker.waypoints[waypoint_counter].y > single_image_y && waypoint_tracker.waypoints[waypoint_counter].y < single_image_y + window_y_size / actual_scale_factor)
+											{
+												actual_x = (waypoint_tracker.waypoints[waypoint_counter].x  - single_image_x) * actual_scale_factor;
+												actual_y = (waypoint_tracker.waypoints[waypoint_counter].y - single_image_y) * actual_scale_factor;
+												dc.SetBrush(wxBrush(*current_filament_colour,wxSOLID));
+												dc.SetPen(wxPen(*current_filament_colour));
+												dc.DrawCircle( actual_x, actual_y , point_size);
+												dc.SetBrush(wxBrush(*current_filament_colour, wxTRANSPARENT));
+												dc.DrawCircle( actual_x - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x,actual_y - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y,point_size);
+												dc.SetBrush(wxBrush(*current_filament_colour, wxSOLID));
+												dc.DrawLine( actual_x - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x, actual_y - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y, actual_x + tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x, actual_y + tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y);
+											}
+
+											// if this waypoint is the last waypoint, and show selection distances is true, show the distance.
+
+											if (waypoint_counter == waypoint_tracker.number_of_waypoints - 1 && waypoint_tracker.number_of_waypoints > 1 && show_selection_distances == true && waypoint_tracker.waypoints[waypoint_counter].image_number == waypoint_tracker.waypoints[waypoint_counter - 1].image_number)
+											{
+												dc.DrawLine((waypoint_tracker.waypoints[waypoint_counter].x  - single_image_x) * actual_scale_factor, (waypoint_tracker.waypoints[waypoint_counter].y - single_image_y) * actual_scale_factor, (waypoint_tracker.waypoints[waypoint_counter - 1].x  - single_image_x) * actual_scale_factor, (waypoint_tracker.waypoints[waypoint_counter - 1].y - single_image_y) * actual_scale_factor);
+											}
+										}
+
+									}
+									else
+									{
+										if (waypoint_tracker.waypoints[waypoint_counter].filament_number == selected_filament_number  || only_show_selected_filament == false)
+										{
+											//printf("Drawing waypoint %i\n",waypoint_counter);
+											actual_x = (waypoint_tracker.waypoints[waypoint_counter].x) * actual_scale_factor;
+											actual_y = (waypoint_tracker.waypoints[waypoint_counter].y) * actual_scale_factor;
+											dc.SetBrush(wxBrush(*current_filament_colour,wxSOLID));
+											dc.SetPen(wxPen(*current_filament_colour));
+											dc.DrawCircle(actual_x, actual_y, point_size);
+											dc.SetBrush(wxBrush(*current_filament_colour, wxTRANSPARENT));
+											dc.DrawCircle( actual_x - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x,actual_y - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y,point_size);
+											dc.SetBrush(wxBrush(*current_filament_colour, wxSOLID));
+											dc.DrawLine( actual_x - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x, actual_y - tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y, actual_x + tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_x, actual_y + tangent_vector_length * actual_scale_factor * waypoint_tracker.waypoints[waypoint_counter].tangent_y);
+
+											if (waypoint_counter == waypoint_tracker.number_of_waypoints - 1 && waypoint_tracker.number_of_waypoints > 1 && show_selection_distances == true && waypoint_tracker.waypoints[waypoint_counter].image_number == waypoint_tracker.waypoints[waypoint_counter - 1].image_number)
+											{
+												dc.DrawLine(x * current_x_size + (waypoint_tracker.waypoints[waypoint_counter].x * actual_scale_factor), y * current_y_size + (waypoint_tracker.waypoints[waypoint_counter].y * actual_scale_factor), x * current_x_size + (waypoint_tracker.waypoints[waypoint_counter - 1].x * actual_scale_factor), y * current_y_size + (waypoint_tracker.waypoints[waypoint_counter - 1].y * actual_scale_factor));
+											}
+										}
+									}
+								}
+							}
+							// Make sure we leave the brush in the state we found it
+							dc.SetBrush(*brush_before);
+							dc.SetPen(*pen_before);
+							//
+							delete bright_red;
+							delete dim_red;
+							delete pen_before;
+							delete brush_before;
+						}
+						else
+						if (picking_mode == INTEGRATE_PICK)
+						{
+							if (integrate_box_x_pos != -1 && integrate_box_y_pos != -1 && integrate_image != -1)
+							{
+								if (single_image == true)
+								{
+									// we need to check if the co-ordinate is inside the current view, and if so, draw it.
+
+									if (integrate_box_x_pos > single_image_x && integrate_box_x_pos < single_image_x + window_x_size / actual_scale_factor && integrate_box_y_pos > single_image_y && integrate_box_y_pos < single_image_y + window_y_size / actual_scale_factor)
+									{
+										dc.DrawRectangle((integrate_box_x_pos - (integrate_box_size / 2)  - single_image_x) * actual_scale_factor, (integrate_box_y_pos - (integrate_box_size / 2) - single_image_y) * actual_scale_factor, integrate_box_size * actual_scale_factor, integrate_box_size * actual_scale_factor);
+									}
+								}
+								else
+								{
+									if (integrate_image == counter - 1)
+									{
+										dc.DrawRectangle(x * current_x_size + (integrate_box_x_pos - (integrate_box_size / 2) * actual_scale_factor), y * current_y_size + (integrate_box_y_pos - (integrate_box_size / 2) * actual_scale_factor), integrate_box_size * actual_scale_factor, integrate_box_size * actual_scale_factor);
+									}
+								}
+							}
+						}
+					}
+
+					counter++;
+
+				}
+			}
+		}*/
+	}
+}
+
+DisplayPopup::DisplayPopup(wxWindow * parent, int flags)
+	: wxPopupWindow(parent, flags)
+{
+	Bind(wxEVT_PAINT, &DisplayPopup::OnPaint, this);
+	Bind(wxEVT_ERASE_BACKGROUND, &DisplayPopup::OnEraseBackground, this);
+
+
+	parent_display_panel = reinterpret_cast <DisplayPanel *> (parent);
+	SetBackgroundColour(*wxBLACK);
+
+}
+
+void DisplayPopup::OnPaint(wxPaintEvent& evt )
+{
+	wxPaintDC dc(this);
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) parent_display_panel->my_notebook->GetCurrentPage();
+
+	// We are going to grab the section of the panel bitmap which corresponds to
+	// a 128x128 square under the panel.  It is made slightly more complicated by the
+	// fact that if we request part of a bitmap which does not exist the entire square
+	// will be blank, so we have to do some bounds checking..
+
+	int sub_bitmap_x_pos = x_pos + 64;
+	int sub_bitmap_y_pos = y_pos + 64;
+	int sub_bitmap_x_size = 128;
+	int sub_bitmap_y_size = 128;
+	int sub_bitmap_x_offset = 0;
+	int sub_bitmap_y_offset = 0;
+
+	if (sub_bitmap_x_pos < 0) { sub_bitmap_x_offset = abs(sub_bitmap_x_pos); sub_bitmap_x_size -= sub_bitmap_x_offset;}
+	else
+	if (sub_bitmap_x_pos >= current_panel->panel_bitmap.GetWidth() - 128 && sub_bitmap_x_pos < current_panel->panel_bitmap.GetWidth()) sub_bitmap_x_size = current_panel->panel_bitmap.GetWidth() - sub_bitmap_x_pos;
+
+	if (sub_bitmap_y_pos < 0 && sub_bitmap_y_pos > -128) { sub_bitmap_y_offset = abs(sub_bitmap_y_pos); sub_bitmap_y_size -= sub_bitmap_y_offset;}
+	else
+	if (sub_bitmap_y_pos >= current_panel->panel_bitmap.GetHeight() - 128 && sub_bitmap_y_pos < current_panel->panel_bitmap.GetHeight()) sub_bitmap_y_size = current_panel->panel_bitmap.GetHeight() - sub_bitmap_y_pos;
+
+
+	// the following line is a whole host of checks designed to not grab a dodgy bit of bitmap
+
+	if (sub_bitmap_x_pos + sub_bitmap_x_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset < current_panel->panel_bitmap.GetHeight() && sub_bitmap_x_pos + sub_bitmap_x_offset < current_panel->panel_bitmap.GetWidth() && sub_bitmap_x_size > 0 && sub_bitmap_y_size > 0)
+	{
+		wxBitmap section = current_panel->panel_bitmap.GetSubBitmap(wxRect(sub_bitmap_x_pos + sub_bitmap_x_offset, sub_bitmap_y_pos + sub_bitmap_y_offset, sub_bitmap_x_size, sub_bitmap_y_size));
+		wxImage paintimage = section.ConvertToImage();
+		paintimage.Rescale(section.GetWidth() * 2, section.GetHeight() * 2);
+		wxBitmap topaint(paintimage);
+
+		dc.DrawBitmap(topaint, sub_bitmap_x_offset * 2, sub_bitmap_y_offset * 2);
+		dc.SetPen(wxPen(*wxRED, 2, wxLONG_DASH));
+		dc.CrossHair(128, 128);
+	}
+
+	//evt.Skip();
+
+}
+
+void DisplayPopup::OnEraseBackground(wxEraseEvent& event)
+{
+
+	//event.Skip();
+}
+
+DisplayManualDialog::DisplayManualDialog(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
+DisplayManualDialogParent(parent, id, title, pos, size, wxDEFAULT_DIALOG_STYLE)
+{
+
+	#include "icons/display_previous_icon.cpp"
+	#include "icons/display_next_icon.cpp"
+
+
+
+	current_location = 1;
+
+    wxString temp_string;
+    my_parent = (DisplayPanel*) parent;
+    DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+    current_grey_method = current_panel->grey_values_decided_by;
+
+    temp_string = wxString::Format(wxT("%i"), int(current_panel->current_location));
+    wxStaticText *junk_text = new wxStaticText(Toolbar, wxID_ANY, "Image : ", wxDefaultPosition, wxSize(-1, -1));
+    toolbar_location_text = new wxTextCtrl(Toolbar, Toolbar_Location_Text, temp_string, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTE_CENTRE, wxDefaultValidator, wxTextCtrlNameStr);
+
+   	temp_string = wxString::Format(wxT(" / %i"), int(current_panel->included_image_numbers.GetCount()));
+
+    toolbar_number_of_locations_text = new wxStaticText(Toolbar, wxID_ANY, temp_string, wxDefaultPosition, wxSize(-1, -1));
+
+    Toolbar->AddControl(junk_text);
+    Toolbar->AddTool(Toolbar_Previous, wxT("Previous"), wxBITMAP_PNG_FROM_DATA(display_previous_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Previous"), wxT("Move to the previous set of images"));
+    Toolbar->EnableTool(Toolbar_Previous, false);
+
+    Toolbar->AddControl(toolbar_location_text);
+    Toolbar->AddControl(toolbar_number_of_locations_text);
+
+    Toolbar->AddTool(Toolbar_Next, wxT("Next"), wxBITMAP_PNG_FROM_DATA(display_next_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Next"), wxT("Move to the next set of images"));
+    Toolbar->EnableTool(Toolbar_Next, true);
+
+    // events
+
+    Bind(wxEVT_TEXT_ENTER, &DisplayManualDialog::OnImageChange, this, Toolbar_Location_Text);
+	Bind(wxEVT_MENU, &DisplayManualDialog::OnPrevious, this, Toolbar_Previous);
+	Bind(wxEVT_MENU, &DisplayManualDialog::OnNext, this, Toolbar_Next);
+
+    InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(current_panel->current_location - 1));
+
+    // if we have no manual values set, then min/max the input image - otherwise load them..
+
+    if (current_panel->manual_low_grey == 0 && current_panel->manual_high_grey == 0)
+    {
+    	float min_density;
+    	float max_density;
+
+        InputImage.GetMinMax(min_density, max_density);
+        temp_string = wxString::Format(wxT("%f"), min_density);
+        minimum_text_ctrl->SetValue(temp_string);
+        temp_string = wxString::Format(wxT("%f"), max_density);
+        maximum_text_ctrl->SetValue(temp_string);
+    }
+    else
+    {
+        temp_string = wxString::Format(wxT("%f"), float(current_panel->manual_low_grey));
+        minimum_text_ctrl->SetValue(temp_string);
+        temp_string = wxString::Format(wxT("%f"), float(current_panel->manual_high_grey));
+        maximum_text_ctrl->SetValue(temp_string);
+    }
+
+
+    Layout();
+    MainSizer->Fit(this);
+
+    int width_of_dialog;
+    int height_of_dialog;
+
+    have_global_histogram = false;
+
+    GetClientSize(&width_of_dialog, &height_of_dialog);
+
+    histogram = new float[width_of_dialog];
+    global_histogram = new float[width_of_dialog];
+    histogram_bitmap.Create(width_of_dialog, 200);
+
+
+    GetLocalHistogram();
+    PaintHistogram();
+}
+
+void DisplayManualDialog::GetLocalHistogram(void)
+{
+
+	long address = 0;
+	int i,j;
+
+	float grey_level = 0;
+
+	long grey_level_index;
+	long counter;
+
+
+
+	int width_of_dialog;
+	int height_of_dialog;
+
+	GetClientSize(&width_of_dialog, &height_of_dialog);
+
+	for (counter = 0; counter < width_of_dialog; counter++)
+	{
+		histogram[counter] = 0;
+	}
+
+	InputImage.GetMinMax(min_grey_level, max_grey_level);
+
+			// Set-up grey level increment between bins
+	grey_level_increment = (max_grey_level - min_grey_level) / double(width_of_dialog);
+
+
+	for (j = 0; j < InputImage.logical_y_dimension; j++)
+	{
+		for (i = 0; i < InputImage.logical_x_dimension; i++)
+		{
+	         grey_level = InputImage.real_values[address];
+
+	         if (grey_level != 0)
+	         {
+	        	 grey_level_index = (int) floor(0.5 + ((grey_level - min_grey_level) / grey_level_increment));
+
+	        	 // Check for bounds
+	        	 if(grey_level_index < 0 ) grey_level_index = 0;
+	        	 if(grey_level_index >= width_of_dialog) grey_level_index = width_of_dialog - 1;
+
+	        	 // Increment count
+	        	 histogram[grey_level_index] += 1.0;
+	         }
+	         address++;
+		}
+
+		address += InputImage.padding_jump_value;
+	}
+
+	Refresh();
+	Update();
+}
+
+void DisplayManualDialog::PaintHistogram(void)
+{
+	  wxMemoryDC dc(histogram_bitmap);
+	  dc.SetBackground( *wxWHITE_BRUSH);
+	  dc.Clear();
+
+	  wxPen mypen;
+	  mypen.SetColour(0, 0, 0);
+      dc.SetPen(mypen);
+
+      int width_of_dialog;
+      int height_of_dialog;
+
+      float max_value = 0;
+
+      GetClientSize(&width_of_dialog, &height_of_dialog);
+
+      float *current_histogram = new float[width_of_dialog];
+
+      for (int counter = 0; counter < width_of_dialog; counter++)
+      {
+    	  if (histogram_checkbox->IsChecked() == true) current_histogram[counter] = global_histogram[counter];
+    	  else current_histogram[counter] = histogram[counter];
+      }
+
+	  for (int x = 0; x < width_of_dialog; x++)
+	  {
+		if (current_histogram[x] > max_value) max_value = current_histogram[x];
+	  }
+
+	  float scale_factor = 200. / max_value;
+
+
+	  for (int y = 0; y < 200; y++)
+	  {
+		  for (int x = 0; x < width_of_dialog; x++)
+		  {
+			  if (current_histogram[x] * scale_factor > float(y)) dc.DrawPoint(x, 199 - y);
+		  }
+	  }
+
+	  dc.SelectObject(wxNullBitmap);
+
+	  Refresh();
+	  Update();
+
+	  delete[] current_histogram;
+}
+
+
+
+bool DisplayManualDialog::GetGlobalHistogram(void)
+{
+    DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	long number_of_images = current_panel->included_image_numbers.GetCount();
+	long address;
+	int i,j;
+	bool should_continue = false;
+
+	float grey_level = 0;
+
+	long grey_level_index;
+	long counter;
+	long image_counter;
+
+	int width_of_dialog;
+	int height_of_dialog;
+
+	GetClientSize(&width_of_dialog, &height_of_dialog);
+
+	for (counter = 0; counter < width_of_dialog; counter++)
+	{
+		global_histogram[counter] = 0;
+	}
+
+	// if the global grey values are set we will just use them.. otherwise
+	// we have to calculate them..
+
+	if (current_panel->global_low_grey == 0 && current_panel->global_high_grey == 0)
+	{
+		should_continue = current_panel->SetGlobalGreys();
+	}
+	else should_continue = true;
+
+	if (should_continue == true)
+	{
+		// Set-up grey level increment between bins
+		global_grey_level_increment = (current_panel->global_high_grey - current_panel->global_low_grey) / double(width_of_dialog);
+
+		// use a progress dialog..
+
+		wxProgressDialog my_progress(wxT("Calculating..."), wxT("Calculating Global Histogram"), current_panel->included_image_numbers.GetCount(), this, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
+
+		for (image_counter = 0; image_counter < number_of_images; image_counter++)
+		{
+			InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(image_counter));
+
+			address = 0;
+
+			for (j = 0; j < InputImage.logical_y_dimension; j++)
+			{
+				for (i = 0; i < InputImage.logical_x_dimension; i++)
+				{
+					grey_level = InputImage.real_values[address];
+
+					if (grey_level != 0.)
+					{
+						grey_level_index = (int) floor(0.5 + ((grey_level - current_panel->global_low_grey) / global_grey_level_increment));
+
+						// Check for bounds
+						if(grey_level_index < 0 ) grey_level_index = 0;
+						if(grey_level_index >= width_of_dialog) grey_level_index = width_of_dialog - 1;
+
+						// Increment count
+						global_histogram[grey_level_index] += 1.0;
+					}
+
+
+
+					address++;
+				}
+
+				address += InputImage.padding_jump_value;
+			}
+
+			should_continue = my_progress.Update(image_counter);
+
+			if (should_continue == false)
+			{
+				continue;
+
+			}
+
+
+		}
+
+		// if it is true set
+
+		if (should_continue == true)
+		{
+			have_global_histogram = true;
+		}
+	}
+
+	return should_continue;
+}
+
+void DisplayManualDialog::OnPaint(wxPaintEvent& evt )
+{
+	bool has_worked;
+	long current_x;
+
+	wxPaintDC dc(this);
+	wxPen mypen;
+
+	double min_grey;
+	double max_grey;
+
+	int width_of_dialog;
+	int height_of_dialog;
+
+	GetClientSize(&width_of_dialog, &height_of_dialog);
+
+	// draw on the histogram..
+
+	dc.DrawBitmap(histogram_bitmap, 0, 0);
+
+	// now draw on the bars to represent the grey values..
+
+//	wxTextCtrl *min_text = (wxTextCtrl*) FindWindow(Manual_Min_TextCtrl);
+//	wxTextCtrl *max_text = (wxTextCtrl*) FindWindow(Manual_Max_TextCtrl);
+//	wxCheckBox *current_box = (wxCheckBox*) FindWindow(Manual_Histogram_All_Check);
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	double this_grey_level_increment;
+	double this_min_grey_level;
+
+	if (histogram_checkbox->IsChecked() == true)
+	{
+		this_grey_level_increment = global_grey_level_increment;
+		this_min_grey_level = current_panel->global_low_grey;
+	}
+	else
+	{
+
+		this_grey_level_increment = grey_level_increment;
+		this_min_grey_level = min_grey_level;
+
+	}
+
+	wxString temp_string = minimum_text_ctrl->GetValue();
+	has_worked = temp_string.ToDouble(&min_grey);
+
+	if (has_worked != false)
+	{
+		temp_string = maximum_text_ctrl->GetValue();
+		has_worked = temp_string.ToDouble(&max_grey);
+	}
+
+	// if they both worked draw on the lines if not - do nothing..
+
+	if (has_worked != false)
+	{
+		// which x is the min_value on?
+
+	     current_x = (int) floor(0.5 + ((min_grey - this_min_grey_level) / this_grey_level_increment));
+
+	     // Check for bounds
+	     if(current_x >= 0 && current_x <= width_of_dialog )
+	     {
+	    	 mypen.SetColour(*wxGREEN);
+	    	 dc.SetPen(mypen);
+	    	 dc.DrawLine(current_x, 0, current_x, 201);
+	     }
+
+
+	     current_x = (int) floor(0.5 + ((max_grey - this_min_grey_level) / this_grey_level_increment));
+
+	     if(current_x >= 0 && current_x <= width_of_dialog )
+	     {
+	    	 mypen.SetColour(*wxRED);
+	    	 dc.SetPen(mypen);
+	    	 dc.DrawLine(current_x - 1, 0, current_x - 1, 201);
+	     }
+
+
+
+	}
+
+}
+
+void DisplayManualDialog::OnLeftDown(wxMouseEvent& event)
+{
+	long x_pos;
+	long y_pos;
+
+	event.GetPosition(&x_pos, &y_pos);
+
+
+	if (y_pos < 200)
+	{
+
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	double new_grey = current_panel->manual_low_grey;
+
+	double this_grey_level_increment;
+	double this_min_grey_level;
+
+	if (histogram_checkbox->IsChecked() == true)
+	{
+		this_grey_level_increment = global_grey_level_increment;
+		this_min_grey_level = current_panel->global_low_grey;
+	}
+	else
+	{
+
+		this_grey_level_increment = grey_level_increment;
+		this_min_grey_level = min_grey_level;
+
+	}
+
+		// so we need to work out the grey value of the current x
+		// then we can set it..
+
+		new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
+
+		// set the appropriate textctrl - this will also send a
+		// change notification which will repaint..
+
+
+		minimum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
+
+
+	if (new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked() == true)
+	{
+			current_panel->low_grey_value = new_grey;
+			current_panel->panel_image_has_correct_greys = false;
+			current_panel->grey_values_decided_by = MANUAL_GREYS;
+			current_panel->ReDrawPanel();
+	}
+
+		Refresh();
+	}
+}
+
+void DisplayManualDialog::OnRightDown(wxMouseEvent& event)
+{
+
+	long x_pos;
+	long y_pos;
+
+	event.GetPosition(&x_pos, &y_pos);
+
+	if (y_pos < 200)
+	{
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	double new_grey = current_panel->manual_high_grey;
+
+	double this_grey_level_increment;
+	double this_min_grey_level;
+
+	if (histogram_checkbox->IsChecked() == true)
+	{
+		this_grey_level_increment = global_grey_level_increment;
+		this_min_grey_level = current_panel->global_low_grey;
+	}
+	else
+	{
+
+		this_grey_level_increment = grey_level_increment;
+		this_min_grey_level = min_grey_level;
+
+	}
+
+
+		// so we need to work out the grey value of the current x
+		// then we can set it..
+
+		new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
+
+		// set the appropriate textctrl - this will also send a
+		// change notification which will repaint..
+
+		maximum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
+
+
+	if (new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked() == true)
+	{
+		current_panel->high_grey_value = new_grey;
+		current_panel->grey_values_decided_by = MANUAL_GREYS;
+		current_panel->panel_image_has_correct_greys = false;
+		current_panel->ReDrawPanel();
+	}
+
+	Refresh();
+
+	}
+}
+
+void DisplayManualDialog::OnMotion(wxMouseEvent& event)
+{
+	// check if the mouse is in the histogram window..
+
+	long x_pos;
+	long y_pos;
+
+	event.GetPosition(&x_pos, &y_pos);
+
+
+	if (y_pos < 200)
+	{
+		DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+		double this_grey_level_increment;
+		double this_min_grey_level;
+
+		if (histogram_checkbox->IsChecked() == true)
+		{
+			this_grey_level_increment = global_grey_level_increment;
+			this_min_grey_level = current_panel->global_low_grey;
+		}
+		else
+		{
+
+			this_grey_level_increment = grey_level_increment;
+			this_min_grey_level = min_grey_level;
+
+		}
+
+		// yes it is.. so check if a button is down..
+
+		if (event.m_leftDown == true && event.m_rightDown == false)
+		{
+
+			double new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
+
+			// set the appropriate textctrl - this will also send a
+			// change notification which will repaint..
+
+			minimum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
+
+			if (new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked() == true)
+			{
+				current_panel->low_grey_value = new_grey;
+				current_panel->panel_image_has_correct_greys = false;
+				current_panel->grey_values_decided_by = MANUAL_GREYS;
+				current_panel->ReDrawPanel();
+			}
+		}
+		else
+		if (event.m_rightDown == true && event.m_leftDown == false)
+		{
+			double new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
+
+			// set the appropriate textctrl - this will also send a
+			// change notification which will repaint..
+
+			maximum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
+
+			if (new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked() == true)
+			{
+				current_panel->high_grey_value = new_grey;
+				current_panel->panel_image_has_correct_greys = false;
+				current_panel->grey_values_decided_by = MANUAL_GREYS;
+				current_panel->ReDrawPanel();
+			}
+		}
+
+		Refresh();
+	}
+	event.Skip();
+
+}
+
+void DisplayManualDialog::OnButtonOK(wxCommandEvent& WXUNUSED( event ) )
+{
+	bool has_worked;
+
+	double wanted_min_grey;
+	double wanted_max_grey;
+
+	wxString temp_string = minimum_text_ctrl->GetValue();
+	has_worked = temp_string.ToDouble(&wanted_min_grey);
+
+	if (has_worked != false)
+	{
+		temp_string = maximum_text_ctrl->GetValue();
+		has_worked = temp_string.ToDouble(&wanted_max_grey);
+	}
+
+	if (has_worked != false)
+	{
+		DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+		if (wanted_min_grey != current_panel->manual_low_grey || wanted_max_grey != current_panel->manual_high_grey)
+		{
+			current_panel->manual_low_grey = wanted_min_grey;
+			current_panel->manual_high_grey = wanted_max_grey;
+
+			current_panel->panel_image_has_correct_greys = false;
+
+			Show(false);
+			current_panel->low_grey_value = wanted_min_grey;
+			current_panel->high_grey_value = wanted_max_grey;
+			current_panel->grey_values_decided_by = MANUAL_GREYS;
+			current_panel->ReDrawPanel();
+		}
+
+	}
+
+	Destroy();
+}
+
+void DisplayManualDialog::OnHistogramCheck(wxCommandEvent& WXUNUSED(event))
+{
+
+	// find out if it is checked or not.. if it is we may need to calculate
+	// if it isn't we can do nothing as the painting will sort it out..
+
+	bool should_continue = true;
+
+	if (histogram_checkbox->IsChecked() == true)
+	{
+		// first disable the image select box..
+
+		toolbar_location_text->Disable();
+
+		// we have just checked for a global histogram
+		// if it has already been calculated, then do nothing.
+		// Otherwise we need to calculate it..
+
+		if (have_global_histogram == false)
+		{
+			should_continue = GetGlobalHistogram();
+
+			if (should_continue == false)
+			{
+				// if should_continue is false, then the user cancelled so uncheck the box
+				// and also re-enable the image select box..
+
+				histogram_checkbox->SetValue(false);
+				toolbar_location_text->Enable();
+			}
+		}
+	}
+	else
+	{
+		// enable the image select box..
+		toolbar_location_text->Enable();
+
+	}
+
+	PaintHistogram();
+
+}
+
+void DisplayManualDialog::OnRealtimeCheck(wxCommandEvent& WXUNUSED(event))
+{
+	bool has_worked;
+	double wanted_min_grey;
+	double wanted_max_grey;
+
+	wxString temp_string = minimum_text_ctrl->GetValue();
+	has_worked = temp_string.ToDouble(&wanted_min_grey);
+
+	if (has_worked != false)
+	{
+		temp_string = maximum_text_ctrl->GetValue();
+		has_worked = temp_string.ToDouble(&wanted_max_grey);
+	}
+
+	if (has_worked != false)
+	{
+		DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+		if (wanted_min_grey != current_panel->manual_low_grey || wanted_max_grey != current_panel->manual_high_grey)
+		{
+			current_panel->manual_low_grey = wanted_min_grey;
+			current_panel->manual_high_grey = wanted_max_grey;
+
+			current_panel->panel_image_has_correct_greys = false;
+
+			current_panel->low_grey_value = wanted_min_grey;
+			current_panel->high_grey_value = wanted_max_grey;
+			current_panel->grey_values_decided_by = MANUAL_GREYS;
+			current_panel->ReDrawPanel();
+
+		}
+
+	}
+}
+
+void DisplayManualDialog::OnClose(wxCloseEvent& event)
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+	current_panel->grey_values_decided_by = current_grey_method;
+	current_panel->ReDrawPanel();
+
+	event.Skip();
+}
+
+void DisplayManualDialog::OnButtonCancel(wxCommandEvent& WXUNUSED( event ) )
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+	current_panel->grey_values_decided_by = current_grey_method;
+	current_panel->ReDrawPanel();
+	Destroy();
+}
+
+void DisplayManualDialog::OnLowChange(wxCommandEvent& WXUNUSED(event))
+{
+	Refresh();
+	Update();
+}
+
+void DisplayManualDialog::OnImageChange(wxCommandEvent& WXUNUSED(event))
+{
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	long set_location;
+
+	// get what the current value is.. if it can be converted to a valid number then
+	// change the current location to that number and redraw.. otherwise set the
+	// value back to the previous value..
+
+	wxString current_string = toolbar_location_text->GetValue();
+    bool has_worked = current_string.ToLong(&set_location);
+
+    if (has_worked == true)
+    {
+    	// is this number valid?
+
+    	if (set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount())
+    	{
+    		current_location = set_location;
+
+    		if (current_location == 1) Toolbar->EnableTool(Toolbar_Previous, false);
+    		else Toolbar->EnableTool(Toolbar_Previous, true);
+
+    		if (current_location == current_panel->included_image_numbers.GetCount()) Toolbar->EnableTool(Toolbar_Next, false);
+    	    else Toolbar->EnableTool(Toolbar_Next, true);
+
+    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+
+    		 GetLocalHistogram();
+    		 PaintHistogram();
+    	}
+    	else has_worked = false;
+    }
+
+    // if for some reason it hasn't worked - set it back to it's previous value..
+
+    if (has_worked == false)
+    {
+    	toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
+    	Refresh();
+    	Update();
+    }
+}
+
+void DisplayManualDialog::OnNext( wxCommandEvent& event )
+{
+
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	long set_location;
+
+	// get what the current value is.. if it can be converted to a valid number then
+	// change the current location to that number and redraw.. otherwise set the
+	// value back to the previous value..
+
+	wxString current_string = toolbar_location_text->GetValue();
+    bool has_worked = current_string.ToLong(&set_location);
+    set_location++;
+
+    if (has_worked == true)
+    {
+    	// is this number valid?
+
+    	if (set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount())
+    	{
+    		toolbar_location_text->ChangeValue(wxString::Format(wxT("%li"), set_location));
+    		current_location = set_location;
+    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+
+    		if (current_location == 1) Toolbar->EnableTool(Toolbar_Previous, false);
+    		else Toolbar->EnableTool(Toolbar_Previous, true);
+
+    		if (current_location == current_panel->included_image_numbers.GetCount()) Toolbar->EnableTool(Toolbar_Next, false);
+    	    else Toolbar->EnableTool(Toolbar_Next, true);
+
+    		 GetLocalHistogram();
+    		 PaintHistogram();
+    	}
+    	else has_worked = false;
+    }
+
+    // if for some reason it hasn't worked - set it back to it's previous value..
+
+    if (has_worked == false)
+    {
+    	toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
+    	Refresh();
+    	Update();
+    }
+}
+
+void DisplayManualDialog::OnPrevious( wxCommandEvent& event )
+{
+	DisplayNotebookPanel *current_panel = (DisplayNotebookPanel*) my_parent->my_notebook->GetCurrentPage();
+
+	long set_location;
+
+	// get what the current value is.. if it can be converted to a valid number then
+	// change the current location to that number and redraw.. otherwise set the
+	// value back to the previous value..
+
+	wxString current_string = toolbar_location_text->GetValue();
+    bool has_worked = current_string.ToLong(&set_location);
+    set_location--;
+
+    if (has_worked == true)
+    {
+    	// is this number valid?
+
+    	if (set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount())
+    	{
+    		toolbar_location_text->ChangeValue(wxString::Format(wxT("%li"), set_location));
+    		current_location = set_location;
+    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+
+    		if (current_location == 1) Toolbar->EnableTool(Toolbar_Previous, false);
+    		else Toolbar->EnableTool(Toolbar_Previous, true);
+
+    		if (current_location == current_panel->included_image_numbers.GetCount()) Toolbar->EnableTool(Toolbar_Next, false);
+    	    else Toolbar->EnableTool(Toolbar_Next, true);
+
+      		GetLocalHistogram();
+    		PaintHistogram();
+    	}
+    	else has_worked = false;
+    }
+
+    // if for some reason it hasn't worked - set it back to it's previous value..
+
+    if (has_worked == false)
+    {
+    	toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
+    	Refresh();
+    	Update();
+    }
+}
+
+void DisplayManualDialog::OnHighChange(wxCommandEvent& WXUNUSED(event))
+{
+	Refresh();
+	Update();
+}
+
+

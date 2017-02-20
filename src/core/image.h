@@ -319,6 +319,7 @@ public:
 	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
 	void ApplyCurveFilter(Curve *filter_to_apply);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
+	void ZeroCentralPixel();
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
 	void ComputeAmplitudeSpectrumFull2D(Image *other_image);

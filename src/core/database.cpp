@@ -138,6 +138,11 @@ long Database::ReturnHighestRefinementID()
 	return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
 }
 
+long Database::ReturnHighestClassificationID()
+{
+	return ReturnSingleLongFromSelectCommand("SELECT MAX(CLASSIFICATION_ID) FROM CLASSIFICATION_LIST");
+}
+
 int Database::ReturnHighestAlignmentID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
@@ -539,6 +544,7 @@ bool Database::CreateAllTables()
 	success = CreateVolumeGroupListTable();
 	success = CreateRefinementPackageAssetTable();
 	success = CreateRefinementListTable();
+	success = CreateClassificationListTable();
 
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
@@ -672,7 +678,7 @@ void Database::Close()
 
 void Database::BeginBatchInsert(const char *table_name, int number_of_columns, ...)
 {
-	MyDebugAssertTrue(is_open == true, "database not open!");
+	MyDebugAssertTrue(is_open == true, "da1414 tabase not open!");
 	MyDebugAssertTrue(in_batch_insert == false, "Starting batch insert but already in batch insert mode");
 	MyDebugAssertTrue(in_batch_select == false, "Starting batch insert but already in batch select mode");
 
@@ -1176,9 +1182,8 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 
 	sqlite3_finalize(list_statement);
 
-	// refinement list
 
-	// 3d references
+	// refinement list
 
 	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", temp_package->asset_id);
 
@@ -1196,6 +1201,27 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
 	sqlite3_finalize(list_statement);
+
+
+	// classification list
+
+	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", temp_package->asset_id);
+
+	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(list_statement);
+
+	while (  return_code == SQLITE_ROW)
+	{
+		temp_package->classification_ids.Add(sqlite3_column_int64(list_statement, 1));
+		return_code = sqlite3_step(list_statement);
+	}
+
+	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
+
+	sqlite3_finalize(list_statement);
+
 
 
 	return temp_package;
@@ -1357,6 +1383,26 @@ ArrayOfParticlePositionAssets Database::ReturnArrayOfParticlePositionAssetsFromA
 	return array_of_assets;
 }
 
+wxArrayLong  Database::Return2DClassMembers(long wanted_classifiction_id, int wanted_class_number)
+{
+	wxArrayLong class_members;
+	long temp_long;
+
+	BeginBatchSelect(wxString::Format("select POSITION_IN_STACK from classification_result_%li where BEST_CLASS = %i", wanted_classifiction_id, wanted_class_number));
+
+	while (last_return_code == SQLITE_ROW)
+	{
+		GetFromBatchSelect("l", &temp_long);
+		class_members.Add(temp_long);
+	}
+
+	EndBatchSelect();
+
+	return class_members;
+
+
+}
+
 MovieAsset Database::GetNextMovieAsset()
 {
 	MovieAsset temp_asset;
@@ -1423,6 +1469,7 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	CreateRefinementPackageContainedParticlesTable(asset_to_add->asset_id);
 	CreateRefinementPackageCurrent3DReferencesTable(asset_to_add->asset_id);
 	CreateRefinementPackageRefinementsList(asset_to_add->asset_id);
+	CreateRefinementPackageClassificationsList(asset_to_add->asset_id);
 
 
 	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 11 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");
@@ -1452,6 +1499,16 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	{
 
 		AddToBatchInsert("ll", counter + 1, asset_to_add->refinement_ids.Item(counter));
+	}
+
+	EndBatchInsert();
+
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", asset_to_add->asset_id), 2 , "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID");
+
+	for (long counter = 0; counter < asset_to_add->classification_ids.GetCount(); counter++)
+	{
+
+		AddToBatchInsert("ll", counter + 1, asset_to_add->classification_ids.Item(counter));
 	}
 
 	EndBatchInsert();
@@ -1687,4 +1744,94 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 
 }
 
+void Database::AddClassification(Classification *classification_to_add)
+{
+	MyDebugAssertTrue(classification_to_add->number_of_particles == classification_to_add->classification_results.GetCount(), "Number of results does not equal number of particles in this classification");
+	long counter;
+
+	InsertOrReplace("CLASSIFICATION_LIST", "Plttilllirrrrrrriir", "CLASSIFICATION_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "CLASS_AVERAGE_FILE", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_CLASSIFICATION_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "SMOOTHING_FACTOR", "EXCLUDE_BLANK_EDGES", "AUTO_PERCENT_USED", "PERCENT_USED", classification_to_add->classification_id, classification_to_add->refinement_package_asset_id, classification_to_add->name.ToUTF8().data(), classification_to_add->class_average_file.ToUTF8().data(), classification_to_add->classification_was_imported_or_generated, classification_to_add->datetime_of_run.GetAsDOS(), classification_to_add->starting_classification_id, classification_to_add->number_of_particles, classification_to_add->number_of_classes, classification_to_add->low_resolution_limit, classification_to_add->high_resolution_limit, classification_to_add->mask_radius, classification_to_add->angular_search_step, classification_to_add->search_range_x, classification_to_add->search_range_y, classification_to_add->smoothing_factor, classification_to_add->exclude_blank_edges, classification_to_add->auto_percent_used, classification_to_add->percent_used);
+	CreateClassificationResultTable(classification_to_add->classification_id);
+
+	BeginBatchInsert(wxString::Format("CLASSIFICATION_RESULT_%li", classification_to_add->classification_id), 7 , "POSITION_IN_STACK", "PSI", "XSHIFT", "YSHIFT", "BEST_CLASS", "SIGMA", "LOGP");
+
+	for ( counter = 0; counter < classification_to_add->classification_results.GetCount(); counter++)
+	{
+		AddToBatchInsert("lrrrirr", classification_to_add->classification_results[counter].position_in_stack, classification_to_add->classification_results[counter].psi, classification_to_add->classification_results[counter].xshift, classification_to_add->classification_results[counter].yshift, classification_to_add->classification_results[counter].best_class, classification_to_add->classification_results[counter].sigma, classification_to_add->classification_results[counter].logp);
+	}
+
+	EndBatchInsert();
+}
+
+Classification *Database::GetClassificationByID(long wanted_classification_id)
+{
+	wxString sql_select_command;
+	int return_code;
+	sqlite3_stmt *list_statement = NULL;
+	Classification *temp_classification = new Classification;
+	bool more_data;
+	long records_retrieved = 0;
+
+	ClassificationResult junk_result;
+
+	// general data
+
+	sql_select_command = wxString::Format("SELECT * FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=%li", wanted_classification_id);
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code , sql_select_command);
+	return_code = sqlite3_step(list_statement);
+
+	temp_classification->classification_id = sqlite3_column_int64(list_statement, 0);
+	temp_classification->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
+	temp_classification->name = sqlite3_column_text(list_statement, 2);
+	temp_classification->class_average_file = sqlite3_column_text(list_statement, 3);
+	temp_classification->classification_was_imported_or_generated = sqlite3_column_int(list_statement, 4);
+	temp_classification->datetime_of_run.SetFromDOS((unsigned long) sqlite3_column_int64(list_statement, 5));
+	temp_classification->starting_classification_id = sqlite3_column_int64(list_statement, 6);
+	temp_classification->number_of_particles = sqlite3_column_int64(list_statement, 7);
+	temp_classification->number_of_classes = sqlite3_column_int(list_statement, 8);
+	temp_classification->low_resolution_limit = sqlite3_column_double(list_statement, 9);
+	temp_classification->high_resolution_limit = sqlite3_column_double(list_statement, 10);
+	temp_classification->mask_radius = sqlite3_column_double(list_statement, 11);
+	temp_classification->angular_search_step = sqlite3_column_double(list_statement, 12);
+	temp_classification->search_range_x = sqlite3_column_double(list_statement, 13);
+	temp_classification->search_range_y = sqlite3_column_double(list_statement, 14);
+	temp_classification->smoothing_factor = sqlite3_column_double(list_statement, 15);
+	temp_classification->exclude_blank_edges = sqlite3_column_int(list_statement, 16);
+	temp_classification->auto_percent_used = sqlite3_column_int(list_statement, 17);
+	temp_classification->percent_used = sqlite3_column_double(list_statement, 18);
+
+	sqlite3_finalize(list_statement);
+
+	// now get all the parameters..
+
+	temp_classification->classification_results.Alloc(temp_classification->number_of_particles);
+
+	sql_select_command = wxString::Format("SELECT * FROM CLASSIFICATION_RESULT_%li", temp_classification->classification_id);
+	wxPrintf("Select command = %s\n", sql_select_command.ToUTF8().data());
+	more_data = BeginBatchSelect(sql_select_command);
+
+	while (more_data == true)
+	{
+
+		more_data = GetFromBatchSelect("lsssiss", 	&junk_result.position_in_stack,
+													&junk_result.psi,
+													&junk_result.xshift,
+													&junk_result.yshift,
+													&junk_result.best_class,
+													&junk_result.sigma,
+													&junk_result.logp);
+
+		temp_classification->classification_results.Add(junk_result);
+		records_retrieved++;
+
+		wxPrintf("Got info for particle %li\n", junk_result.position_in_stack);
+	}
+
+	MyDebugAssertTrue(records_retrieved == temp_classification->number_of_particles, "No of Retrieved Results != No of Particles");
+
+	EndBatchSelect();
+	return temp_classification;
+
+
+}
 

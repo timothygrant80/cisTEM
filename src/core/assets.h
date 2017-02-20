@@ -122,7 +122,19 @@ class VolumeAsset : public Asset {
 	void Update(wxString wanted_filename);
 	void CopyFrom(Asset *other_asset);
 };
+/*
+class ClassesAsset : public Asset {
 
+	public:
+
+	ClassesAsset();
+	~ClassesAsset();
+
+	long classification_job_id;
+	long refinement_package_id;
+
+	void CopyFrom(Asset *other_asset);
+};*/
 
 class AssetList {
 
@@ -261,6 +273,8 @@ public:
 	void CheckMemory();
 
 };
+
+
 
 
 #endif

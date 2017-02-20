@@ -52,11 +52,9 @@ void Merge2DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	int class_number_for_gui = 1;
-	my_current_job.Reset(4);
-	my_current_job.ManualSetArguments("tti",	ouput_class_averages.ToUTF8().data(),
-												dump_file_seed.ToUTF8().data(),
-												class_number_for_gui);
+	my_current_job.Reset(2);
+	my_current_job.ManualSetArguments("tt",	ouput_class_averages.ToUTF8().data(),
+												dump_file_seed.ToUTF8().data());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -65,7 +63,6 @@ bool Merge2DApp::DoCalculation()
 {
 	wxString ouput_class_averages				= my_current_job.arguments[0].ReturnStringArgument();
 	dump_file_seed 								= my_current_job.arguments[1].ReturnStringArgument();
-	int class_number_for_gui					= my_current_job.arguments[2].ReturnIntegerArgument();
 
 	int			i;
 	int			current_class;

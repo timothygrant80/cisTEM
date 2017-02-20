@@ -17,6 +17,7 @@ public :
 	wxFileName ctf_asset_directory;
 	wxFileName particle_position_asset_directory;
 	wxFileName particle_stack_directory;
+	wxFileName class_average_directory;
 
 	wxFileName parameter_file_directory;
 	wxFileName scratch_directory;

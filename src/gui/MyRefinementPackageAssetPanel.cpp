@@ -248,6 +248,7 @@ void MyRefinementPackageAssetPanel::ImportAllFromDatabase()
 	main_frame->current_project.database.EndAllRefinementPackagesSelect();
 
 	ImportAllRefinementInfosFromDatabase();
+	ImportAllClassificationInfosFromDatabase();
 
 
 	main_frame->DirtyRefinementPackages();
@@ -401,6 +402,27 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 
 }
 
+void MyRefinementPackageAssetPanel::ImportAllClassificationInfosFromDatabase()
+{
+
+	bool more_data;
+
+	ShortClassificationInfo temp_info;
+	all_classification_short_infos.Clear();
+
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT CLASSIFICATION_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM CLASSIFICATION_LIST");
+
+	while (more_data == true)
+	{
+		more_data = main_frame->current_project.database.GetFromBatchSelect("lltli", &temp_info.classification_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.number_of_particles, &temp_info.number_of_classes);
+		all_classification_short_infos.Add(temp_info);
+	}
+
+	main_frame->current_project.database.EndBatchSelect();
+
+}
+
+
 ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id)
 {
 	long counter;
@@ -417,6 +439,25 @@ ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefineme
 
 	//wxPrintf("returning NULL\n");
 	return NULL;
+}
+
+ShortClassificationInfo*  MyRefinementPackageAssetPanel::ReturnPointerToShortClassificationInfoByClassificationID(long wanted_id)
+{
+	long counter;
+
+	//wxPrintf("looking for %li\n", wanted_id);
+	for (counter = 0; counter < all_classification_short_infos.GetCount(); counter++)
+	{
+		if (all_classification_short_infos[counter].classification_id == wanted_id)
+		{
+		//wxPrintf("found refinement\n");
+			return &all_classification_short_infos.Item(counter);
+		}
+	}
+
+	//wxPrintf("returning NULL\n");
+	return NULL;
+
 }
 
 /*

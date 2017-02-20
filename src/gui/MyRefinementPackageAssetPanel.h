@@ -49,6 +49,10 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		ArrayofShortRefinementInfos all_refinement_short_infos;
 		//ArrayofRefinements all_refinements;
 
+		ShortClassificationInfo* ReturnPointerToShortClassificationInfoByClassificationID(long wanted_id);
+		void ImportAllClassificationInfosFromDatabase();
+		ArrayofShortClassificationInfos all_classification_short_infos;
+
 };
 
 

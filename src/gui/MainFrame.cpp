@@ -14,6 +14,7 @@ extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
+extern MyRefine2DPanel *classification_panel;
 extern MyRefine3DPanel *refine_3d_panel;
 
 extern MyRunProfilesPanel *run_profiles_panel;
@@ -246,6 +247,7 @@ void MyMainFrame::DirtyParticlePositionGroups()
 void MyMainFrame::DirtyRefinementPackages()
 {
 	refinement_package_asset_panel->is_dirty = true;
+	classification_panel->refinement_package_combo_is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
 	refinement_results_panel->is_dirty=true;
 }
@@ -261,6 +263,7 @@ void MyMainFrame::DirtyRunProfiles()
 	align_movies_panel->run_profiles_are_dirty = true;
 	findctf_panel->run_profiles_are_dirty = true;
 	findparticles_panel->run_profiles_are_dirty = true;
+	classification_panel->run_profiles_are_dirty = true;
 	refine_3d_panel->run_profiles_are_dirty = true;
 }
 

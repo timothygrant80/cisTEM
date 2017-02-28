@@ -554,7 +554,8 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 		else
 		{
-			resample_if_pixel_too_small			 = true;
+			resample_if_pixel_too_small			= true;
+			movie_is_gain_corrected				= true;
 		}
 
 		delete my_input;
@@ -562,7 +563,7 @@ void CtffindApp::DoInteractiveUserInput()
 	}
 
 	my_current_job.Reset(26);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbs",	input_filename.c_str(),
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbs",	input_filename.c_str(), //1
 																	input_is_a_movie,
 																	number_of_frames_to_average,
 																	output_diagnostic_filename.c_str(),
@@ -571,7 +572,7 @@ void CtffindApp::DoInteractiveUserInput()
 																	spherical_aberration,
 																	amplitude_contrast,
 																	box_size,
-																	minimum_resolution,
+																	minimum_resolution, //10
 																	maximum_resolution,
 																	minimum_defocus,
 																	maximum_defocus,
@@ -581,7 +582,7 @@ void CtffindApp::DoInteractiveUserInput()
 																	find_additional_phase_shift,
 																	minimum_additional_phase_shift,
 																	maximum_additional_phase_shift,
-																	additional_phase_shift_search_step,
+																	additional_phase_shift_search_step, //20
 																	astigmatism_is_known,
 																	known_astigmatism,
 																	known_astigmatism_angle,
@@ -981,15 +982,6 @@ bool CtffindApp::DoCalculation()
 		// Set up the comparison object
 		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
 		comparison_object_2D->SetImage(0,average_spectrum);
-		/*
-		comparison_object_2D.ctf = current_ctf;
-		comparison_object_2D.img = average_spectrum;
-		comparison_object_2D.pixel_size = pixel_size_for_fitting;
-		comparison_object_2D.find_phase_shift = find_additional_phase_shift;
-		comparison_object_2D.astigmatism_is_known = astigmatism_is_known;
-		comparison_object_2D.known_astigmatism = known_astigmatism / pixel_size_for_fitting;
-		comparison_object_2D.known_astigmatism_angle = known_astigmatism_angle / 180.0 * PI;
-		*/
 
 		if (is_running_locally && old_school_input)
 		{
@@ -1610,6 +1602,7 @@ bool CtffindApp::DoCalculation()
 	delete resampled_power_spectrum;
 	delete number_of_extrema_image;
 	delete ctf_values_image;
+	delete gain;
 	delete [] values_to_write_out;
 	if (is_running_locally) delete output_text;
 	if (compute_extra_stats)

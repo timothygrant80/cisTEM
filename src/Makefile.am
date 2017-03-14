@@ -49,6 +49,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/f2c.h \
                  core/gui_core_headers.h \
                  core/gui_job_controller.h \
+                 core/classification.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -93,6 +94,10 @@ noinst_HEADERS = core/asset_group.h \
                  gui/mathplot.h \
                  gui/MyMovieAssetPanel.h \
                  gui/MovieImportDialog.h \
+                 gui/MyRefine2DPanel.h \
+                 gui/Refine2DResultsPanel.h \
+                 gui/ClassificationPlotPanel.h \
+                 gui/DisplayPanel.h \
                  gui/ProjectX_gui.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
@@ -119,6 +124,23 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/ctffind_example_1dfit.cpp \
                  gui/icons/niko_picture1.cpp \
                  gui/icons/niko_picture2.cpp \
+                 gui/icons/2d_classification_icon.cpp \
+                 gui/icons/classification_infotext1.cpp \
+                 gui/icons/classification_infotext2.cpp \
+                 gui/icons/classification_infotext3.cpp \
+                 gui/icons/classification_infotext4.cpp \
+                 gui/icons/display_auto_icon.cpp \
+                 gui/icons/display_fft_icon.cpp \
+                 gui/icons/display_global_icon.cpp \
+                 gui/icons/display_histogram_icon.cpp \
+                 gui/icons/display_invert_icon.cpp \
+                 gui/icons/display_local_icon.cpp \
+                 gui/icons/display_manual_icon.cpp \
+                 gui/icons/display_next_icon.cpp \
+                 gui/icons/display_open_icon.cpp \
+                 gui/icons/display_previous_disabled_icon.cpp \
+                 gui/icons/display_previous_icon.cpp \
+                 gui/icons/display_refresh_icon.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp

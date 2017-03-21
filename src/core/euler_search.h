@@ -34,7 +34,7 @@ public:
 	void Init(float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep);
 	void InitGrid(wxString wanted_symmetry_symbol, float angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, bool *parameter_map, int wanted_parameters_to_keep);
 	void InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep);
-	void Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections, Kernel2D **kernel_index);
+	void Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections);
 	void CalculateGridSearchPositions();
 	void CalculateRandomSearchPositions();
 	void SetSymmetryLimits();

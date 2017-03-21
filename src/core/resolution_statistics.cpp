@@ -15,8 +15,8 @@ ResolutionStatistics::ResolutionStatistics(float wanted_pixel_size, int box_size
 ResolutionStatistics::ResolutionStatistics( const ResolutionStatistics &other_statistics) // copy constructor
 {
 	MyDebugPrint("Warning: copying a resolution statistics object");
-	 *this = other_statistics;
-	 //abort();
+	*this = other_statistics;
+	//abort();
 }
 
 
@@ -202,6 +202,30 @@ void ResolutionStatistics::Init(float wanted_pixel_size, int box_size)
 	number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
 }
 
+void ResolutionStatistics::NormalizeVolumeWithParticleSSNR(Image &reconstructed_volume)
+{
+//	MyDebugAssertTrue(reconstructed_volume.is_in_real_space == false, "reconstructed_volume not in Fourier space");
+	MyDebugAssertTrue(number_of_bins_extended == int((reconstructed_volume.logical_x_dimension / 2 + 1) * sqrtf(3.0)) + 1, "reconstructed_volume not compatible with resolution statistics");
+	MyDebugAssertTrue(part_SSNR.number_of_points > 0, "part_SSNR curve not calculated");
+
+	float ssq_in;
+	float ssq_out;
+	bool need_fft;
+	Curve temp_curve;
+
+	part_SSNR.SquareRoot();
+	need_fft = reconstructed_volume.is_in_real_space;
+	if (need_fft) reconstructed_volume.ForwardFFT();
+	ssq_in = reconstructed_volume.ReturnSumOfSquares();
+	reconstructed_volume.Whiten(0.5);
+	reconstructed_volume.MultiplyByWeightsCurve(part_SSNR);
+	ssq_out = reconstructed_volume.ReturnSumOfSquares();
+	reconstructed_volume.MultiplyByConstant(sqrtf(ssq_in / ssq_out));
+	if (need_fft) reconstructed_volume.BackwardFFT();
+	// If part_SSNR is used after this, it needs to be squared again
+//	part_SSNR.Square();
+}
+
 void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2)
 {
 	MyDebugAssertTrue(reconstructed_volume_1.is_in_real_space == false, "reconstructed_volume_1 not in Fourier space");
@@ -212,6 +236,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 	int yi, zi;
 	float bin;
 	int ibin;
+	int window = myroundint(20.0 / pixel_size);
 
 	float difference;
 	float current_sum1;
@@ -350,6 +375,21 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 			FSC.AddPoint(temp_float, 0.0);
 		}
 	}
+
+	if (window < 5) window = 5;
+	if (window > number_of_bins_extended / 10) window = number_of_bins_extended / 10;
+	FSC.data_y[0] = FSC.data_y[1];
+	FSC.FitSavitzkyGolayToData(window, 3);
+	for (i = 0; i < number_of_bins_extended; i++)
+	{
+//		wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
+		if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
+		// Make a smooth transition between original FSC curve and smoothed curve
+		else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
+		if (FSC.data_y[i] > 1.0) FSC.data_y[i] = 1.0;
+		if (FSC.data_y[i] < -1.0) FSC.data_y[i] = -1.0;
+	}
+
 	delete [] sum1;
 	delete [] sum2;
 	delete [] cross_terms;
@@ -469,13 +509,14 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 		}
 		else
 		{
-			part_SSNR.AddPoint(pixel_size * powf(float(number_of_bins2), 2), 0.0);
+//			part_SSNR.AddPoint(pixel_size * powf(float(number_of_bins2), 2), 0.0);
+			part_SSNR.AddPoint(0.0, 0.0);
 		}
 	}
 
 	// Set value at i = 0 to 8 * value at i = 1 to allow reconstructions with non-zero offset
-	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
-//
+//	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
+
 	delete [] sum_double;
 	delete [] sum_int;
 //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.number_of_points);

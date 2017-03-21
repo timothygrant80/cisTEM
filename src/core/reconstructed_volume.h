@@ -10,6 +10,7 @@ public:
 	float						pixel_size;
 	float						mask_volume_in_voxels;
 	float						molecular_mass_in_kDa;
+	float						mask_radius;
 	wxString 					symmetry_symbol;
 	SymmetryMatrix				symmetry_matrices;
 	Image						density_map;
@@ -43,8 +44,10 @@ public:
 	void Deallocate();
 	void InitWithReconstruct3D(Reconstruct3D &image_reconstruction, float wanted_pixel_size);
 	void InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, wxString = "C1");
-	void PrepareForProjections(float resolution_limit, bool approximate_binning = false);
-	void CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius = 0.0, float mask_falloff = 0.0, float resolution_limit = 1.0, bool swap_quadrants = true, bool whiten = false);
+	void PrepareForProjections(float low_resolution_limit, float high_resolution_limit, bool approximate_binning = false, bool apply_binning = true);
+//	void PrepareForProjections(float resolution_limit, bool approximate_binning = false, bool apply_binning = true);
+	void CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius = 0.0, float mask_falloff = 0.0,
+			float resolution_limit = 1.0, bool swap_quadrants = false, bool apply_shifts = false, bool whiten = false, bool apply_ctf = false, bool abolute_ctf = false);
 	void Calculate3DSimple(Reconstruct3D &reconstruction);
 	void Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics);
 	float Correct3D(float mask_radius = 0.0);
@@ -56,8 +59,8 @@ public:
 	void FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
-	void FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2, Curve &signal_power_spectrum,
+	void FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
-	void Calculate3DML(Reconstruct3D &reconstruction, Curve &signal_power_spectrum);
+	void Calculate3DML(Reconstruct3D &reconstruction);
 };

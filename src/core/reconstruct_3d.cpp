@@ -1,6 +1,6 @@
 #include "core_headers.h"
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -9,11 +9,13 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	original_y_dimension = 0;
 	original_z_dimension = 0;
 
+	images_processed = 0;
+
 	pixel_size = wanted_pixel_size;
 	original_pixel_size = 0.0;
 	average_occupancy = wanted_average_occupancy;
-	average_sigma = wanted_average_sigma;
-	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
+	average_score = wanted_average_score;
+	score_weights_conversion = wanted_score_weights_conversion;
 
 	ctf_reconstruction = NULL;
 
@@ -21,7 +23,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	edge_terms_were_added = false;
 }
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -30,11 +32,13 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	original_y_dimension = 0;
 	original_z_dimension = 0;
 
+	images_processed = 0;
+
 	pixel_size = wanted_pixel_size;
-	original_pixel_size = 0.0;
+	original_pixel_size = wanted_pixel_size;
 	average_occupancy = wanted_average_occupancy;
-	average_sigma = wanted_average_sigma;
-	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
+	average_score = wanted_average_score;
+	score_weights_conversion = wanted_score_weights_conversion;
 
 	ctf_reconstruction = NULL;
 
@@ -42,10 +46,10 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	edge_terms_were_added = false;
 }
 
-Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
 {
 	ctf_reconstruction = NULL;
-	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_sigma, wanted_sigma_bfactor_conversion);
+	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_weights_conversion);
 
 	symmetry_matrices.Init(wanted_symmetry);
 }
@@ -58,16 +62,22 @@ Reconstruct3D::~Reconstruct3D()
 	}
 }
 
-void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_sigma, float wanted_sigma_bfactor_conversion)
+void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion)
 {
 	logical_x_dimension = wanted_logical_x_dimension;
 	logical_y_dimension = wanted_logical_y_dimension;
 	logical_z_dimension = wanted_logical_z_dimension;
+	original_x_dimension = wanted_logical_x_dimension;
+	original_y_dimension = wanted_logical_y_dimension;
+	original_z_dimension = wanted_logical_z_dimension;
+
+	images_processed = 0;
 
 	pixel_size = wanted_pixel_size;
+	original_pixel_size = wanted_pixel_size;
 	average_occupancy = wanted_average_occupancy;
-	average_sigma = wanted_average_sigma;
-	sigma_bfactor_conversion = wanted_sigma_bfactor_conversion;
+	average_score = wanted_average_score;
+	score_weights_conversion = wanted_score_weights_conversion;
 
 	image_reconstruction.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, false);
 
@@ -104,8 +114,10 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 //	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
-	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / (particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13]);
+	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[12] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[14],2);
 //	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
+
+	images_processed++;
 
 	if (particle_weight > 0.0)
 	{
@@ -130,12 +142,12 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 		float frequency_squared;
 		float azimuth;
 		float weight;
-		float sigma_bfactor_conversion4 = sigma_bfactor_conversion / powf(pixel_size,2) * 0.25;
-		float bfactor_conversion = (average_sigma - particle_to_insert.sigma_noise) * sigma_bfactor_conversion4;
+		float score_weights_conversion4 = score_weights_conversion / powf(pixel_size,2) * 0.25;
+		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
-		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
-		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
+		if (weight_conversion > 60.0) {weight_conversion = 60.0;};
+		if (weight_conversion < -60.0) {weight_conversion = -60.0;};
 
 //		if (particle_to_insert.ctf_parameters.IsAlmostEqualTo(&current_ctf, 50.0 / pixel_size) == false)
 //		// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
@@ -153,7 +165,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 			{
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+				weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+				if (weight < 0.0) weight = 0.0;
+//				weight = particle_weight * expf(weight_conversion * frequency_squared);
 				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
@@ -165,7 +179,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-			weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+			weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+			if (weight < 0.0) weight = 0.0;
+//			weight = particle_weight * expf(weight_conversion * frequency_squared);
 			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
@@ -183,7 +199,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+						weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+						if (weight < 0.0) weight = 0.0;
+//						weight = particle_weight * expf(weight_conversion * frequency_squared);
 						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
@@ -196,7 +214,9 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-					weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+					weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+					if (weight < 0.0) weight = 0.0;
+//					weight = particle_weight * expf(weight_conversion * frequency_squared);
 					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
@@ -223,8 +243,10 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
-//	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[11] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[13],2);
+//	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[12] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[14],2);
 	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
+
+	images_processed++;
 
 	if (particle_weight > 0.0)
 	{
@@ -248,12 +270,12 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 
 		float frequency_squared;
 		float weight;
-		float sigma_bfactor_conversion4 = sigma_bfactor_conversion / powf(pixel_size,2) * 0.25;
-		float bfactor_conversion = (average_sigma - particle_to_insert.sigma_noise) * sigma_bfactor_conversion4;
+		float score_weights_conversion4 = score_weights_conversion / powf(pixel_size,2) * 0.25;
+		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
-		if (bfactor_conversion > 60.0) {bfactor_conversion = 60.0;};
-		if (bfactor_conversion < -60.0) {bfactor_conversion = -60.0;};
+		if (weight_conversion > 60.0) {weight_conversion = 60.0;};
+		if (weight_conversion < -60.0) {weight_conversion = -60.0;};
 
 		std::complex<float> ctf_value = 1.0;
 
@@ -265,7 +287,9 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 			{
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+				weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+				if (weight < 0.0) weight = 0.0;
+//				weight = particle_weight * expf(weight_conversion * frequency_squared);
 				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
@@ -277,7 +301,9 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-			weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+			weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+			if (weight < 0.0) weight = 0.0;
+//			weight = particle_weight * expf(weight_conversion * frequency_squared);
 			particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
 			AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], ctf_value, weight);
@@ -295,7 +321,9 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+						weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+						if (weight < 0.0) weight = 0.0;
+//						weight = particle_weight * expf(weight_conversion * frequency_squared);
 						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
@@ -308,7 +336,9 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-					weight = particle_weight * expf(bfactor_conversion * frequency_squared);
+					weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
+					if (weight < 0.0) weight = 0.0;
+//					weight = particle_weight * expf(weight_conversion * frequency_squared);
 					temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
 					temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
@@ -509,7 +539,7 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	int i;
 	int count = 0;
 	int oddeven;
-	char temp_char[7 * sizeof(int) + 5 * sizeof(float) + 4];
+	char temp_char[8 * sizeof(int) + 5 * sizeof(float) + 4];
 	char *char_pointer;
 
 	std::ofstream b_stream(filename.c_str(), std::fstream::out | std::fstream::binary);
@@ -526,15 +556,17 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &original_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
+	char_pointer = (char *) &images_processed;
+	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &pixel_size;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
-	char_pointer = (char *) &average_sigma;
+	char_pointer = (char *) &average_score;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
-	char_pointer = (char *) &sigma_bfactor_conversion;
+	char_pointer = (char *) &score_weights_conversion;
 	for (i = 0; i < sizeof(float); i++) {temp_char[count] = char_pointer[i]; count++;};
 	for (i = 0; i < 4; i++) temp_char[count + i] = ' ';
 	for (i = 0; i < symmetry_matrices.symmetry_symbol.length(); i++) temp_char[count + i] = symmetry_matrices.symmetry_symbol.GetChar(i);
@@ -554,11 +586,11 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 }
 
 void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension,
-		int &original_x_dimension, int &original_y_dimension, int &original_z_dimension, float &pixel_size, float &original_pixel_size,
-		float &average_occupancy, float &average_sigma, float &sigma_bfactor_conversion, wxString &symmetry_symbol, bool &insert_even)
+		int &original_x_dimension, int &original_y_dimension, int &original_z_dimension, int &images_processed, float &pixel_size, float &original_pixel_size,
+		float &average_occupancy, float &average_score, float &score_weights_conversion, wxString &symmetry_symbol, bool &insert_even)
 {
 	int i;
-	int count = 7 * sizeof(int) + 5 * sizeof(float) + 4;
+	int count = 8 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
 	char temp_char[count];
 	char *char_pointer;
@@ -579,15 +611,17 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &original_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &images_processed;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &average_sigma;
+	char_pointer = (char *) &average_score;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &sigma_bfactor_conversion;
+	char_pointer = (char *) &score_weights_conversion;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	symmetry_symbol = "";
 	for (i = 0; i < 4; i++) symmetry_symbol += temp_char[count + i];
@@ -604,21 +638,22 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 void Reconstruct3D::ReadArrays(wxString filename)
 {
 	int i;
-	int count = 7 * sizeof(int) + 5 * sizeof(float) + 4;
+	int count = 8 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
 	char temp_char[count];
 	char *char_pointer;
 	float input_pixel_size;
 	float input_original_pixel_size;
 	float input_average_occupancy;
-	float input_average_sigma;
-	float input_sigma_bfactor_conversion;
+	float input_average_score;
+	float input_score_weights_conversion;
 	int input_logical_x_dimension;
 	int input_logical_y_dimension;
 	int input_logical_z_dimension;
 	int input_original_x_dimension;
 	int input_original_y_dimension;
 	int input_original_z_dimension;
+//	int input_images_processed;
 	wxString input_symmetry_symbol;
 
 	std::ifstream b_stream(filename.c_str(), std::fstream::in | std::fstream::binary);
@@ -637,15 +672,17 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_original_z_dimension;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &images_processed;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_original_pixel_size;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	char_pointer = (char *) &input_average_occupancy;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &input_average_sigma;
+	char_pointer = (char *) &input_average_score;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
-	char_pointer = (char *) &input_sigma_bfactor_conversion;
+	char_pointer = (char *) &input_score_weights_conversion;
 	for (i = 0; i < sizeof(float); i++) {char_pointer[i] = temp_char[count]; count++;};
 	input_symmetry_symbol = "";
 	for (i = 0; i < 4; i++) input_symmetry_symbol += temp_char[count + i];
@@ -675,9 +712,9 @@ Reconstruct3D &Reconstruct3D::operator = (const Reconstruct3D &other)
 
 Reconstruct3D &Reconstruct3D::operator = (const Reconstruct3D *other)
 {
-   // Check for self assignment
-   if (this != other)
-   {
+	// Check for self assignment
+	if (this != other)
+	{
 		int i;
 		int j;
 		int k;
@@ -696,8 +733,11 @@ Reconstruct3D &Reconstruct3D::operator = (const Reconstruct3D *other)
 				}
 			}
 		}
-   }
-   return *this;
+	}
+
+	images_processed = other->images_processed;
+
+	return *this;
 }
 
 Reconstruct3D Reconstruct3D::operator + (const Reconstruct3D &other)
@@ -739,6 +779,8 @@ Reconstruct3D &Reconstruct3D::operator += (const Reconstruct3D *other)
 			}
 		}
 	}
+
+	images_processed += other->images_processed;
 
 	return *this;
 }

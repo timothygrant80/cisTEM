@@ -185,7 +185,7 @@ void EulerSearch::CalculateGridSearchPositions()
 	{
 		test_mirror = false;
 	}
-	wxPrintf("Number of global search views = %i\n", number_of_search_positions);
+	wxPrintf("\nNumber of global search views = %i\n", number_of_search_positions);
 }
 
 void EulerSearch::CalculateRandomSearchPositions()
@@ -349,7 +349,7 @@ void EulerSearch::SetSymmetryLimits()
 }
 
 // Run the search
-void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections, Kernel2D **kernel_index)
+void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections)
 {
 	MyDebugAssertTrue(number_of_search_positions > 0,"EulerSearch not initialized");
 	MyDebugAssertTrue(particle.particle_image->is_in_memory,"Particle image not allocated");
@@ -359,26 +359,30 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 	int i;
 	int j;
 	int k;
-	int sample_rate = 2;
+//	int sample_rate = 0;
 	int pixel_counter;
 	int psi_i;
 	int psi_m;
 	int number_of_psi_positions;
 	int max_pix_x = max_search_x / particle.pixel_size;
 	int max_pix_y = max_search_y / particle.pixel_size;
-	float psi;
+	int padding_factor_2d = 4;
+//	float psi;
 	float best_inplane_score;
 	float best_inplane_values[3];
 	float temp_float[6];
+	float effective_bfactor = 100.0;
 	bool mirrored_match;
 	Peak found_peak;
 	AnglesAndShifts angles;
 	Image *flipped_image = new Image;
+	Image *padded_image = new Image;
 	Image *projection_image = new Image;
 	Image *rotated_image = new Image;
 	Image *correlation_map = new Image;
 	Image *rotation_cache = NULL;
 	flipped_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
+	padded_image->Allocate(padding_factor_2d* flipped_image->logical_x_dimension, padding_factor_2d * flipped_image->logical_y_dimension, true);
 	projection_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 	rotated_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
 	correlation_map->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
@@ -397,6 +401,15 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 		real_r = correlation_map->real_values;
 		real_i = correlation_map->real_values + 1;
 	#endif
+
+//	if (resolution_limit != 0.0)
+//	{
+//		effective_bfactor = 2.0 * 4.0 * powf(1.0 / resolution_limit, 2);
+//	}
+//	else
+//	{
+//		effective_bfactor = 0.0;
+//	}
 
 	for (i = 0; i < best_parameters_to_keep + 1; ++i)
 	{
@@ -422,6 +435,13 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 	}
 
 	flipped_image->CopyFrom(particle.particle_image);
+//	flipped_image->MultiplyPixelWiseReal(*particle.ctf_image, particle.is_phase_flipped);
+	flipped_image->MultiplyPixelWiseReal(*particle.ctf_image, true);
+	flipped_image->ClipInto(padded_image);
+	// Not clear of CorrectSinc helps here since it might actually be better
+	// if the periphery of the image is a bit attenuated for the search
+//	padded_image.CorrectSinc();
+	padded_image->BackwardFFT();
 
 	psi_m = 0;
 	for (psi_i = 0; psi_i < number_of_psi_positions; psi_i++)
@@ -429,13 +449,18 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 //		wxPrintf("rotation_cache[psi_m].logical_z_dimension = %i\n", rotation_cache[psi_m].logical_z_dimension);
 		if (parameter_map[2])
 		{
-			flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
+//			flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
+			angles.GenerateRotationMatrix2D(psi_i * psi_step + psi_start);
 		}
 		else
 		{
 			angles.GenerateRotationMatrix2D(psi_start);
-			flipped_image->RotateFourier2D(rotation_cache[psi_m], angles);
+//			flipped_image->RotateFourier2D(rotation_cache[psi_m], angles);
 		}
+		padded_image->Rotate2DSample(rotation_cache[psi_m], angles);
+		rotation_cache[psi_m].ForwardFFT();
+		rotation_cache[psi_m].SwapRealSpaceQuadrants();
+
 		psi_m++;
 		if (test_mirror)
 		{
@@ -452,15 +477,20 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 			angles.Init(list_of_search_parameters[i][0], list_of_search_parameters[i][1], 0.0, 0.0, 0.0);
 			input_3d.ExtractSlice(*projection_image, angles, resolution_limit);
 			projection_image->Whiten(resolution_limit);
+			projection_image->ApplyBFactor(effective_bfactor);
 		}
-		else
-		{
-			projection_image->CopyFrom(&projections[i]);
-			#ifndef MKL
-				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k1[pixel_counter] = real_a[pixel_counter] + real_b[pixel_counter];};
-				for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k2[pixel_counter] = real_b[pixel_counter] - real_a[pixel_counter];};
-			#endif
-		}
+		else projection_image->CopyFrom(&projections[i]);
+
+		#ifndef MKL
+			for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k1[pixel_counter] = real_a[pixel_counter] + real_b[pixel_counter];};
+			for (pixel_counter = 0; pixel_counter < flipped_image->real_memory_allocated; pixel_counter += 2) {temp_k2[pixel_counter] = real_b[pixel_counter] - real_a[pixel_counter];};
+		#endif
+
+//		projection_image->SwapRealSpaceQuadrants();
+//		rotation_cache[0].SwapRealSpaceQuadrants();
+//		projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
+//		rotation_cache[0].QuickAndDirtyWriteSlice("part.mrc", 1);
+//		exit(0);
 
 		best_inplane_score = - std::numeric_limits<float>::max();
 		psi_m = 0;
@@ -482,6 +512,13 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 				correlation_map->complex_values[0] = 0.0;
 				correlation_map->BackwardFFT();
 				found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
+//				sample_rate++;
+//				projection_image->SwapRealSpaceQuadrants();
+//				rotation_cache[psi_m].SwapRealSpaceQuadrants();
+//				projection_image->QuickAndDirtyWriteSlice("proj.mrc", sample_rate);
+//				rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
+//				projection_image->SwapRealSpaceQuadrants();
+//				rotation_cache[psi_m].SwapRealSpaceQuadrants();
 //				wxPrintf("peak  = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
 //						list_of_search_parameters[i][1], list_of_search_parameters[i][0], found_peak.x, found_peak.y);
 				if (found_peak.value > best_inplane_score)
@@ -513,6 +550,13 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 					correlation_map->complex_values[0] = 0.0;
 					correlation_map->BackwardFFT();
 					found_peak = correlation_map->FindPeakAtOriginFast2D(max_pix_x, max_pix_y);
+//					sample_rate++;
+//					projection_image->SwapRealSpaceQuadrants();
+//					rotation_cache[psi_m].SwapRealSpaceQuadrants();
+//					projection_image->QuickAndDirtyWriteSlice("proj.mrc", sample_rate);
+//					rotation_cache[psi_m].QuickAndDirtyWriteSlice("part.mrc", sample_rate);
+//					projection_image->SwapRealSpaceQuadrants();
+//					rotation_cache[psi_m].SwapRealSpaceQuadrants();
 //					wxPrintf("peakm = %g  psi = %g  theta = %g  phi = %g  x = %g  y = %g\n", found_peak.value, 360.0 - (psi_i * psi_step + psi_start),
 //							list_of_search_parameters[i][1] + 180.0, list_of_search_parameters[i][0], found_peak.x, found_peak.y);
 					if (found_peak.value > best_inplane_score)
@@ -527,33 +571,34 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 //			}
 			psi_m++;
 		}
-		if (best_inplane_score > list_of_best_parameters[best_parameters_to_keep - 1][5])
+		if (best_inplane_score > list_of_best_parameters[best_parameters_to_keep][5])
 		{
-			list_of_best_parameters[best_parameters_to_keep - 1][5] =  best_inplane_score;
+			list_of_best_parameters[best_parameters_to_keep][5] =  best_inplane_score;
 			if (mirrored_match)
 			{
-				list_of_best_parameters[best_parameters_to_keep - 1][0] = list_of_search_parameters[i][0];
-				list_of_best_parameters[best_parameters_to_keep - 1][1] = list_of_search_parameters[i][1] + 180.0;
-				list_of_best_parameters[best_parameters_to_keep - 1][2] = best_inplane_values[0];
-				list_of_best_parameters[best_parameters_to_keep - 1][3] = (  best_inplane_values[1] * cosf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * sinf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
-				list_of_best_parameters[best_parameters_to_keep - 1][4] = (- best_inplane_values[1] * sinf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * cosf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
+				list_of_best_parameters[best_parameters_to_keep][0] = list_of_search_parameters[i][0];
+				list_of_best_parameters[best_parameters_to_keep][1] = list_of_search_parameters[i][1] + 180.0;
+				list_of_best_parameters[best_parameters_to_keep][2] = best_inplane_values[0];
+				list_of_best_parameters[best_parameters_to_keep][3] = (  best_inplane_values[1] * cosf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * sinf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
+				list_of_best_parameters[best_parameters_to_keep][4] = (- best_inplane_values[1] * sinf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * cosf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
 			}
 			else
 			{
-				list_of_best_parameters[best_parameters_to_keep - 1][0] = list_of_search_parameters[i][0];
-				list_of_best_parameters[best_parameters_to_keep - 1][1] = list_of_search_parameters[i][1];
-				list_of_best_parameters[best_parameters_to_keep - 1][2] = best_inplane_values[0];
-				list_of_best_parameters[best_parameters_to_keep - 1][3] = (- best_inplane_values[1] * cosf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * sinf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
-				list_of_best_parameters[best_parameters_to_keep - 1][4] = (  best_inplane_values[1] * sinf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * cosf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
+				list_of_best_parameters[best_parameters_to_keep][0] = list_of_search_parameters[i][0];
+				list_of_best_parameters[best_parameters_to_keep][1] = list_of_search_parameters[i][1];
+				list_of_best_parameters[best_parameters_to_keep][2] = best_inplane_values[0];
+				list_of_best_parameters[best_parameters_to_keep][3] = (- best_inplane_values[1] * cosf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * sinf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
+				list_of_best_parameters[best_parameters_to_keep][4] = (  best_inplane_values[1] * sinf(deg_2_rad(best_inplane_values[0])) - best_inplane_values[2] * cosf(deg_2_rad(best_inplane_values[0]))) * particle.pixel_size;
 			}
 		}
-		for (j = best_parameters_to_keep - 1; j > 0; j--)
+		for (j = best_parameters_to_keep; j > 1; j--)
 		{
 			if (list_of_best_parameters[j][5] > list_of_best_parameters[j - 1][5])
 			{
 				for (k = 0; k < 6; k++) {temp_float[k] = list_of_best_parameters[j - 1][k];}
 				for (k = 0; k < 6; k++) {list_of_best_parameters[j - 1][k] = list_of_best_parameters[j][k];}
 				for (k = 0; k < 6; k++) {list_of_best_parameters[j][k] = temp_float[k];}
+//				wxPrintf("best_inplane_score = %i %g\n", j - 1, list_of_best_parameters[j - 1][5]);
 			}
 			else
 			{
@@ -561,8 +606,19 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 			}
 		}
 	}
+// *******************************
+/*	if (particle.origin_micrograph < 0) particle.origin_micrograph = 0;
+	particle.origin_micrograph++;
+	particle.particle_image->QuickAndDirtyWriteSlice("part.mrc", particle.origin_micrograph);
+	angles.Init(list_of_best_parameters[1][0], list_of_best_parameters[1][1], list_of_best_parameters[1][2], list_of_best_parameters[1][3], list_of_best_parameters[1][4]);
+	wxPrintf("params, score = %i %g %g %g %g %g %g\n", particle.origin_micrograph, list_of_best_parameters[1][0], list_of_best_parameters[1][1], list_of_best_parameters[1][2], list_of_best_parameters[1][3], list_of_best_parameters[1][4], list_of_best_parameters[1][5]);
+	input_3d.ExtractSlice(*projection_image, angles, resolution_limit);
+	projection_image->PhaseShift(angles.ReturnShiftX() / particle.pixel_size, angles.ReturnShiftY() / particle.pixel_size);
+	projection_image->SwapRealSpaceQuadrants();
+	projection_image->QuickAndDirtyWriteSlice("proj.mrc", particle.origin_micrograph); */
 
 	delete flipped_image;
+	delete padded_image;
 	delete projection_image;
 	delete rotated_image;
 	delete correlation_map;

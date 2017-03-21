@@ -260,7 +260,6 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 	}
 	else
 	{
-		// This has only been tested for 2D images
 		for (k = 0; k <= physical_upper_bound_complex_z; k++)
 		{
 			kk = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k);
@@ -419,6 +418,35 @@ float Image::ReturnCorrelationCoefficientUnnormalized(Image &other_image, float 
 	return float(cross_terms / number_of_pixels - average1 / number_of_pixels * average2 / number_of_pixels);
 }
 
+float Image::ReturnPixelWiseProduct(Image &other_image)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+	MyDebugAssertTrue(other_image.is_in_real_space == is_in_real_space, "Images not in the same space");
+
+	int i;
+	int j;
+	int k;
+	long pixel_counter = 0;
+	double cross_terms = 0.0;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	return float(cross_terms / number_of_real_space_pixels);
+}
+
 // Frealign weighted correlation coefficient
 // float GetWeightedCorrelationWithImage(Image &projection_image, float low_limit, float high_limit, int &bins)
 float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins, float signed_CC_limit)
@@ -454,7 +482,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 
 	double *sum_a = new double[number_of_bins];
-	int *sum_b = new int[number_of_bins];
+	double *sum_b = new double[number_of_bins];
 	double *cross_terms = new double[number_of_bins];
 
 	long pixel_counter = 0;
@@ -462,7 +490,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 	std::complex<float> temp_c;
 
 	ZeroDoubleArray(sum_a, number_of_bins);
-	ZeroIntArray(sum_b, number_of_bins);
+	ZeroDoubleArray(sum_b, number_of_bins);
 	ZeroDoubleArray(cross_terms, number_of_bins);
 
 /*	for (k = 0; k <= physical_upper_bound_complex_z; k++)
@@ -482,12 +510,12 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 				{
 					bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-					temp_c = crealf(complex_values[pixel_counter] * conjf(projection_image.complex_values[pixel_counter]));
+					temp_c = real(complex_values[pixel_counter] * conj(projection_image.complex_values[pixel_counter]));
 					if (temp_c != 0.0)
 					{
-						sum_a[bin] += crealf(complex_values[pixel_counter] * conjf(complex_values[pixel_counter]));
-						sum_b[bin] += crealf(projection_image.complex_values[pixel_counter] * conjf(projection_image.complex_values[pixel_counter]));
-						cross_terms[bin] += crealf(temp_c);
+						sum_a[bin] += real(complex_values[pixel_counter] * conj(complex_values[pixel_counter]));
+						sum_b[bin] += real(projection_image.complex_values[pixel_counter] * conj(projection_image.complex_values[pixel_counter]));
+						cross_terms[bin] += real(temp_c);
 					}
 				}
 				pixel_counter++;
@@ -504,9 +532,10 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 			if (temp_c != 0.0f)
 			{
 				sum_a[bin] += real(complex_values[pixel_counter] * conj(complex_values[pixel_counter]));
-//				sum_b[bin] += crealf(projection_image.complex_values[pixel_counter] * conjf(projection_image.complex_values[pixel_counter]));
+				sum_b[bin] += real(projection_image.complex_values[pixel_counter] * conj(projection_image.complex_values[pixel_counter]));
 				// Since projection_image has been whitened, the sum in a resolution zone is simply the number of terms that are added
-				sum_b[bin] ++;
+				// Not true in new code where projection could be non-white
+//				sum_b[bin] ++;
 				cross_terms[bin] += real(temp_c);
 			}
 		}
@@ -519,7 +548,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 	// Exclude last resolution bin since it may contain some incompletely calculated terms
 	for (i = 1; i < number_of_bins - 1; i++)
 	{
-		if (sum_b[i] != 0)
+		if (sum_b[i] != 0.0)
 		{
 			if (i <= bin_limit_signed)
 			{
@@ -1114,7 +1143,10 @@ void Image::OptimalFilterBySNRImage(Image &SNR_image, int include_reference_weig
 		// variance, i.e. multiply by sqrt(1+snr).
 		if (include_reference_weighting == 1)
 		{
-			weight = sqrtf(real_SNR_a[pixel_counter]) + real_SNR_a[pixel_counter];
+			// The line below is what was derived for the optimal filter
+			weight = sqrtf(real_SNR_a[pixel_counter] + powf(real_SNR_a[pixel_counter], 2));
+			// The line below was used in earlier versions but is slightly incorrect
+//			weight = sqrtf(real_SNR_a[pixel_counter]) + real_SNR_a[pixel_counter];
 		}
 		else
 		if (include_reference_weighting == 0)
@@ -1338,7 +1370,7 @@ float Image::CorrectSinc(float wanted_mask_radius, float padding_factor)
 
 	if (is_in_real_space)
 	{
-		average = ReturnAverageOfRealValues();
+		average = ReturnAverageOfRealValues(0.45 * logical_x_dimension, true);
 
 		if (wanted_mask_radius <= 0.0) mask_radius = logical_x_dimension + logical_y_dimension + logical_z_dimension;
 		mask_radius_squared = powf(mask_radius,2);
@@ -1423,8 +1455,8 @@ void Image::MirrorXFourier2D(Image &mirrored_image)
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
 	{
 		mirrored_counter = y_counter * fft_dim_x + x_counter;
-	//					correlation_map->complex_values[pixel_counter] = rotated_image->complex_values[mirrored_counter] * conjf(particle.particle_image->complex_values[pixel_counter]);
-	//					correlation_map->complex_values[pixel_counter] = conjf(rotated_image->complex_values[pixel_counter]);
+	//					correlation_map->complex_values[pixel_counter] = rotated_image->complex_values[mirrored_counter] * conj(particle.particle_image->complex_values[pixel_counter]);
+	//					correlation_map->complex_values[pixel_counter] = conj(rotated_image->complex_values[pixel_counter]);
 		mirrored_image.complex_values[pixel_counter] = complex_values[mirrored_counter];
 		x_counter++;
 		if (x_counter >= fft_dim_x)
@@ -1567,17 +1599,17 @@ void Image::GenerateReferenceProjections(Image *projections, EulerSearch &parame
 {
 	int i;
 	float variance;
-	float effective_bfactor;
+	float effective_bfactor = 100;
 	AnglesAndShifts angles;
 
-	if (resolution != 0.0)
-	{
-		effective_bfactor = 2.0 * 4.0 * powf(1.0 / resolution,2);
-	}
-	else
-	{
-		effective_bfactor = 0.0;
-	}
+//	if (resolution != 0.0)
+//	{
+//		effective_bfactor = 2.0 * 4.0 * powf(1.0 / resolution,2);
+//	}
+//	else
+//	{
+//		effective_bfactor = 0.0;
+//	}
 
 	for (i = 0; i < parameters.number_of_search_positions; i++)
 	{
@@ -1740,7 +1772,7 @@ void Image::RotateFourier2DIndex(Kernel2D *kernel_index, AnglesAndShifts &rotati
 //			rotated_image.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier2D(x_coordinate_3d, y_coordinate_3d);
 			kernel_index[pixel_counter] = ReturnLinearInterpolatedFourierKernel2D(x_coordinate_3d, y_coordinate_3d);
 			pixel_counter2 = ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-//			rotated_image.complex_values[pixel_counter2] = conjf(rotated_image.complex_values[pixel_counter]);
+//			rotated_image.complex_values[pixel_counter2] = conj(rotated_image.complex_values[pixel_counter]);
 			kernel_index[pixel_counter2] = kernel_index[pixel_counter];
 			kernel_index[pixel_counter2].pixel_weight[0] = - kernel_index[pixel_counter2].pixel_weight[0];
 			kernel_index[pixel_counter2].pixel_weight[1] = - kernel_index[pixel_counter2].pixel_weight[1];
@@ -1865,7 +1897,7 @@ Kernel2D Image::ReturnLinearInterpolatedFourierKernel2D(float &x, float &y)
 				kernel.pixel_index[i_coeff] = jj - i;
 				kernel.pixel_weight[i_coeff] = - weight;
 				i_coeff++;
-//				sum = sum + conjf(complex_values[jj - i]) * weight;
+//				sum = sum + conj(complex_values[jj - i]) * weight;
 			}
 		}
 	}
@@ -2140,6 +2172,8 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 
 // Set origin to zero to generate a projection with average set to zero
 	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
+// This was changed to make projections compatible with ML algorithm
+//	image_to_extract.complex_values[0] = complex_values[0];
 
 	image_to_extract.is_in_real_space = false;
 }
@@ -5251,7 +5285,7 @@ void Image::ComputeHistogramOfRealValuesCurve(Curve *histogram_curve)
 
 // Apply an arbitrary filter to an image.
 // The curve object should have X values in reciprocal pixels (Nyquist is 0.5, corner is ~sqrt(2.0)/2).
-void Image::ApplyCurveFilter(Curve *filter_to_apply)
+void Image::ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit)
 {
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
 	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
@@ -5259,10 +5293,11 @@ void Image::ApplyCurveFilter(Curve *filter_to_apply)
 	int i,j,k;
 	float sq_dist_x, sq_dist_y, sq_dist_z;
 	int counter;
-	long address;
+	long pixel_counter = 0;
 	float spatial_frequency;
+//	float resolution_limit_sq = powf(resolution_limit, 2);
+//	float resolution_limit_pixel = resolution_limit * logical_x_dimension;
 
-	address = 0;
 	for ( k = 0; k <= physical_upper_bound_complex_z; k ++ )
 	{
 		sq_dist_z = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
@@ -5274,8 +5309,12 @@ void Image::ApplyCurveFilter(Curve *filter_to_apply)
 				sq_dist_x = pow(i * fourier_voxel_size_x,2);
 				spatial_frequency = sqrt(sq_dist_x+sq_dist_y+sq_dist_z);
 
-				complex_values[address] *= filter_to_apply->ReturnLinearInterpolationFromX(spatial_frequency);
-				address ++;
+				if (spatial_frequency <= resolution_limit)
+				{
+					complex_values[pixel_counter] *= filter_to_apply->ReturnLinearInterpolationFromX(spatial_frequency);
+				}
+				else complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter ++;
 			}
 		}
 	}
@@ -6400,6 +6439,51 @@ void Image::Consume(Image *other_image) // copy the parameters then directly ste
 
 }
 
+void Image::RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	int i, j, k;
+	long pixel_counter = 0;
+	long shifted_counter;
+	float *buffer = new float[number_of_real_space_pixels];
+
+	shifted_counter = - wanted_x_shift - logical_x_dimension * (wanted_y_shift + logical_y_dimension * wanted_z_shift);
+	shifted_counter = remainderf(float(shifted_counter), float(number_of_real_space_pixels));
+	if (shifted_counter < 0) shifted_counter += number_of_real_space_pixels;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				buffer[shifted_counter] = real_values[pixel_counter];
+				pixel_counter++;
+				shifted_counter++;
+				if (shifted_counter >= number_of_real_space_pixels) shifted_counter -= number_of_real_space_pixels;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	shifted_counter = 0;
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				real_values[pixel_counter] = buffer[shifted_counter];
+				pixel_counter++;
+				shifted_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	delete [] buffer;
+}
 
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift)
 {

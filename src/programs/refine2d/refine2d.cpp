@@ -56,7 +56,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	float		angular_step = 5.0;
 	float		max_search_x = 0;
 	float		max_search_y = 0;
-	float		smoothing_factor = 0.5;
+	float		smoothing_factor = 1.0;
 	int			padding_factor = 1;
 	bool		normalize_particles = true;
 	bool		invert_contrast = false;
@@ -84,7 +84,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	angular_step = my_input->GetFloatFromUser("Angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
 	max_search_x = my_input->GetFloatFromUser("Search range in X (A) (0.0 = max)", "The maximum global peak search distance along X from the particle box center", "0.0", 0.0);
 	max_search_y = my_input->GetFloatFromUser("Search range in Y (A) (0.0 = max)", "The maximum global peak search distance along Y from the particle box center", "0.0", 0.0);
-	smoothing_factor = my_input->GetFloatFromUser("Tuning parameter: smoothing factor", "Factor for likelihood-weighting; values smaller than 1 will blur results more, larger values will emphasize peaks", "0.5", 0.01);
+	smoothing_factor = my_input->GetFloatFromUser("Tuning parameter: smoothing factor", "Factor for likelihood-weighting; values smaller than 1 will blur results more, larger values will emphasize peaks", "1.0", 0.01);
 	padding_factor = my_input->GetIntFromUser("Tuning parameter: padding factor for interpol.", "Factor determining how padding is used to improve interpolation for image rotation", "2", 1);
 	normalize_particles = my_input->GetYesNoFromUser("Normalize particles", "The input particle images should always be normalized unless they were pre-processed", "Yes");
 	invert_contrast = my_input->GetYesNoFromUser("Invert particle contrast", "Should the contrast in the particle images be inverted?", "No");
@@ -172,11 +172,8 @@ bool Refine2DApp::DoCalculation()
 	int best_class;
 	float input_parameters[input_particle.number_of_parameters];
 	float output_parameters[input_particle.number_of_parameters];
-	float search_parameters[input_particle.number_of_parameters];
 	float parameter_average[input_particle.number_of_parameters];
 	float parameter_variance[input_particle.number_of_parameters];
-	float output_parameter_average[input_particle.number_of_parameters];
-	float output_parameter_change[input_particle.number_of_parameters];
 	float binning_factor, binned_pixel_size;
 	float temp_float;
 	float psi;
@@ -198,11 +195,8 @@ bool Refine2DApp::DoCalculation()
 
 	ZeroFloatArray(input_parameters, input_particle.number_of_parameters);
 	ZeroFloatArray(output_parameters, input_particle.number_of_parameters);
-	ZeroFloatArray(search_parameters, input_particle.number_of_parameters);
 	ZeroFloatArray(parameter_average, input_particle.number_of_parameters);
 	ZeroFloatArray(parameter_variance, input_particle.number_of_parameters);
-	ZeroFloatArray(output_parameter_average, input_particle.number_of_parameters);
-	ZeroFloatArray(output_parameter_change, input_particle.number_of_parameters);
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
@@ -272,7 +266,6 @@ bool Refine2DApp::DoCalculation()
 
 			if (parameter_variance[i] < 0.001) input_particle.constraints_used[i] = false;
 		}
-
 	}
 	else
 	{
@@ -283,8 +276,8 @@ bool Refine2DApp::DoCalculation()
 	}
 
 	xy_dimensions = input_stack.ReturnXSize();
-	if (parameter_average[13] < 0.01) parameter_average[13] = 10.0;
-	average_snr = 1.0 / powf(parameter_average[13], 2);
+	if (parameter_average[14] < 0.01) parameter_average[14] = 10.0;
+	average_snr = 1.0 / powf(parameter_average[14], 2);
 // *****
 //	average_snr = 0.002;
 	wxPrintf("\nShift averages x, y = %g, %g, shift std x, y = %g, %g, average SNR = %g\n", parameter_average[4], parameter_average[5],
@@ -459,10 +452,15 @@ bool Refine2DApp::DoCalculation()
 
 			input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
 			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
-			variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
-			average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-			if (invert_contrast) input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
-			else input_image.AddMultiplyConstant(- average, - 1.0 / sqrtf(variance));
+			if (normalize_particles)
+			{
+				variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
+				average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
+				if (invert_contrast) input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+				else input_image.AddMultiplyConstant(- average, - 1.0 / sqrtf(variance));
+			}
+			else
+			if (! invert_contrast) input_image.MultiplyByConstant(- 1.0 );
 			for (current_class = 0; current_class < number_of_classes; current_class++)
 			{
 				if (global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 * percent_used / number_of_classes)
@@ -559,7 +557,7 @@ bool Refine2DApp::DoCalculation()
 		if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percent_used))
 		{
 			input_parameters[7] = - fabsf(input_parameters[7]);
-			input_parameters[15] = 0.0;
+			input_parameters[16] = 0.0;
 			output_par_file.WriteLine(input_parameters);
 			SendRefineResult(input_parameters);
 			my_progress->Update(image_counter);
@@ -572,7 +570,7 @@ bool Refine2DApp::DoCalculation()
 		{
 			number_of_blank_edges++;
 			input_parameters[7] = - fabsf(input_parameters[7]);
-			input_parameters[15] = 0.0;
+			input_parameters[16] = 0.0;
 			output_par_file.WriteLine(input_parameters);
 			SendRefineResult(input_parameters);
 			my_progress->Update(image_counter);
@@ -600,8 +598,8 @@ bool Refine2DApp::DoCalculation()
 
 		input_image.ReplaceOutliersWithMean(5.0);
 		if (invert_contrast) input_image.InvertRealValues();
-		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10]);
-		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, 0.0);
+		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
 		ctf_input_image.CalculateCTFImage(input_ctf);
 
 		if (normalize_particles)
@@ -732,9 +730,9 @@ bool Refine2DApp::DoCalculation()
 		temp_float = output_parameters[1]; output_parameters[1] = output_parameters[3]; output_parameters[3] = temp_float;
 		output_parameters[7] = list_of_nozero_classes[myroundint(output_parameters[7]) - 1] + 1.0;
 		// Multiply measured sigma noise in binned image by binning factor to obtain sigma noise of unbinned image
-		output_parameters[13] *= binning_factor;
-		if (output_parameters[13] > 100.0) output_parameters[13] = 100.0;
-		output_parameters[15] = output_parameters[14] - input_parameters[14];
+		output_parameters[14] *= binning_factor;
+		if (output_parameters[14] > 100.0) output_parameters[14] = 100.0;
+		output_parameters[16] = output_parameters[15] - input_parameters[15];
 		output_par_file.WriteLine(output_parameters);
 		SendRefineResult(output_parameters);
 		fflush(output_par_file.parameter_file);

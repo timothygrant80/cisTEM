@@ -104,6 +104,7 @@ bool Project3DApp::DoCalculation()
 	float variance;
 	float binning_factor = 1.0;
 	float max_particle_number = 0;
+	float mask_falloff = 10.0;
 
 	FrealignParameterFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
 	my_input_par_file.ReadFile();
@@ -130,7 +131,7 @@ bool Project3DApp::DoCalculation()
 	{
 		input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	}
-	input_3d.PrepareForProjections(2.0 * pixel_size * binning_factor);
+	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size * binning_factor);
 	projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	final_image.Allocate(input_file.ReturnXSize() / binning_factor, input_file.ReturnYSize() / binning_factor, true);
 
@@ -138,8 +139,8 @@ bool Project3DApp::DoCalculation()
 	for (current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++)
 	{
 		my_input_par_file.ReadLine(temp_float);
-		average_sigma += temp_float[13];
-		average_score += temp_float[14];
+		average_sigma += temp_float[14];
+		average_score += temp_float[15];
 		if (temp_float[0] > max_particle_number) max_particle_number = temp_float[0];
 		if (last_particle == 0)
 		{
@@ -168,7 +169,7 @@ bool Project3DApp::DoCalculation()
 		if (temp_float[0] < first_particle || temp_float[0] > last_particle) continue;
 		image_counter++;
 		my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
-		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, 0.0);
+		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11]);
 
 		input_3d.density_map.ExtractSlice(projection_image, my_parameters);
 

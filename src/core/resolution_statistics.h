@@ -30,6 +30,7 @@ public:
 	void CopyParticleSSNR(ResolutionStatistics &other_statistics, int wanted_number_of_bins = 0);
 	void ResampleParticleSSNR(ResolutionStatistics &other_statistics, int wanted_number_of_bins = 0);
 	void Init(float wanted_pixel_size, int box_size = 0);
+	void NormalizeVolumeWithParticleSSNR(Image &reconstructed_volume);
 	void CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2);
 	void CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_in_kDa);
 	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction, float wanted_mask_volume_fraction = 1.0);

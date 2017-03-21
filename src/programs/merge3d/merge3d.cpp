@@ -27,7 +27,7 @@ void Merge3DApp::DoInteractiveUserInput()
 	wxString	dump_file_seed_1;
 	wxString	dump_file_seed_2;
 
-	UserInput *my_input = new UserInput("Merge3D", 1.00);
+	UserInput *my_input = new UserInput("Merge3D", 1.01);
 
 	output_reconstruction_1 = my_input->GetFilenameFromUser("Output reconstruction 1", "The first output 3D reconstruction, calculated form half the data", "my_reconstruction_1.mrc", false);
 	output_reconstruction_2 = my_input->GetFilenameFromUser("Output reconstruction 2", "The second output 3D reconstruction, calculated form half the data", "my_reconstruction_2.mrc", false);
@@ -36,8 +36,8 @@ void Merge3DApp::DoInteractiveUserInput()
 	molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
 	inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the final reconstruction in Angstroms", "0.0", 0.0);
 	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
-	dump_file_seed_1 = my_input->GetFilenameFromUser("Seed for input dump filenames for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_seed_1_.dat", false);
-	dump_file_seed_2 = my_input->GetFilenameFromUser("Seed for input dump filenames for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_seed_2_.dat", false);
+	dump_file_seed_1 = my_input->GetFilenameFromUser("Seed for input dump filenames for odd particles", "The seed name of the first dump files with the intermediate reconstruction arrays", "dump_file_seed_1_.dat", false);
+	dump_file_seed_2 = my_input->GetFilenameFromUser("Seed for input dump filenames for even particles", "The seed name of the second dump files with the intermediate reconstruction arrays", "dump_file_seed_2_.dat", false);
 
 	delete my_input;
 
@@ -76,6 +76,7 @@ bool Merge3DApp::DoCalculation()
 	ReconstructedVolume output_3d1(molecular_mass_kDa);
 	ReconstructedVolume output_3d2(molecular_mass_kDa);
 
+	int			i;
 	int			logical_x_dimension;
 	int			logical_y_dimension;
 	int			logical_z_dimension;
@@ -83,21 +84,25 @@ bool Merge3DApp::DoCalculation()
 	int			original_y_dimension;
 	int			original_z_dimension;
 	int			count;
+	int 		intermediate_box_size;
+	int			images_processed;
 	float		mask_volume_fraction;
 	float		mask_falloff = 10.0;
 	float		pixel_size;
 	float		original_pixel_size;
 	float		average_occupancy;
-	float		average_score;
-	float		score_bfactor_conversion;
+	float		average_sigma;
+	float		sigma_bfactor_conversion;
 	float		particle_area_in_pixels;
 	float		scale;
+	float		binning_factor;
 	wxString	my_symmetry;
 	wxDateTime	my_time_in;
 	wxFileName	dump_file_name = wxFileName::FileName(dump_file_seed_1);
 	wxString	extension = dump_file_name.GetExt();
 	wxString	dump_file;
 	bool		insert_even;
+	bool		crop_images;
 
 	NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);
 
@@ -123,12 +128,12 @@ bool Merge3DApp::DoCalculation()
 
 	Reconstruct3D temp_reconstruction;
 	temp_reconstruction.ReadArrayHeader(dump_file, logical_x_dimension, logical_y_dimension, logical_z_dimension,
-			original_x_dimension, original_y_dimension, original_z_dimension, pixel_size, original_pixel_size,
-			average_occupancy, average_score, score_bfactor_conversion, my_symmetry, insert_even);
+			original_x_dimension, original_y_dimension, original_z_dimension, images_processed, pixel_size, original_pixel_size,
+			average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry, insert_even);
 	wxPrintf("\nReconstruction dimensions = %i, %i, %i, pixel size = %f, symmetry = %s\n", logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, my_symmetry);
-	temp_reconstruction.Init(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_score, score_bfactor_conversion);
-	Reconstruct3D my_reconstruction_1(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_score, score_bfactor_conversion, my_symmetry);
-	Reconstruct3D my_reconstruction_2(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_score, score_bfactor_conversion, my_symmetry);
+	temp_reconstruction.Init(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion);
+	Reconstruct3D my_reconstruction_1(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
+	Reconstruct3D my_reconstruction_2(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
 
 	wxPrintf("\nReading reconstruction arrays...\n\n");
 
@@ -152,7 +157,7 @@ bool Merge3DApp::DoCalculation()
 		count++;
 		dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
 	}
-	wxPrintf("\nFinished reading arrays\n\n");
+	wxPrintf("\nFinished reading arrays\n");
 
 	output_3d1.FinalizeSimple(my_reconstruction_1, original_x_dimension, original_pixel_size, pixel_size,
 			inner_mask_radius, outer_mask_radius, mask_falloff, output_reconstruction_1);

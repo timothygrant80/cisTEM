@@ -97,6 +97,7 @@ public:
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
+	float ReturnPixelWiseProduct(Image &other_image);
 	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins, float signed_CC_limit);
 	void PhaseFlipPixelWise(Image &other_image);
 	void MultiplyPixelWiseReal(Image &other_image, bool absolute = false);
@@ -309,6 +310,7 @@ public:
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
 	void Consume(Image *other_image);
+	void RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
 	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
 	void AddImage(Image *other_image);
@@ -317,7 +319,7 @@ public:
 	void ApplyBFactor(float bfactor);
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
-	void ApplyCurveFilter(Curve *filter_to_apply);
+	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void ZeroCentralPixel();
 	void CalculateCrossCorrelationImageWith(Image *other_image);

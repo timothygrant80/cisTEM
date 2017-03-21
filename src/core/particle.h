@@ -38,8 +38,10 @@ public:
 	Image						*ctf_image;
 	bool						ctf_image_calculated;
 	Image						*particle_image;
+	bool						includes_reference_ssnr_weighting;
 	bool						is_normalized;
 	float						normalized_sigma;
+	bool						is_phase_flipped;
 	bool						is_masked;
 	float						mask_radius;			// In A
 	float						mask_falloff;			// In A
@@ -61,7 +63,6 @@ public:
 	float						*current_parameters;
 	float						*parameter_average;
 	float						*parameter_variance;
-	float						*refined_parameters;
 	bool						*parameter_map;
 	bool						*constraints_used;
 	int							number_of_search_dimensions;
@@ -89,14 +90,14 @@ public:
 	void CosineMask(bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CenterInBox();
 	void CenterInCorner();
-	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
-	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle);
-	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle);
+	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
+	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
+	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
 	void PhaseFlipImage();
 	void CTFMultiplyImage();
-	void SetIndexForWeightedCorrelation();
+	void SetIndexForWeightedCorrelation(bool limit_resolution = true);
 	void WeightBySSNR(Curve &SSNR, int include_reference_weighting = 1);
-	void WeightBySSNR(Curve &SSNR, Image &projection_image);
+	void WeightBySSNR(Curve &SSNR, Image &projection_image, bool weight_particle_image = true, bool weight_projection_image = true);
 	void CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d);
 	void GetParameters(float *output_parameters);
 	void SetParameters(float *wanted_parameters, bool initialize_scores = false);
@@ -110,10 +111,11 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(float *output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	float ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionStatistics &statistics, Image &projection_image, float classification_resolution_limit, float &alpha, float &sigma);
-	float ReturnMaskedLogLikelihood(ReconstructedVolume &input_3d, Image &projection_image, float classification_resolution_limit);
+	float ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit);
+	void CalculateMaskedLogLikelihood(Image &projection_image, ReconstructedVolume &input_3d, float classification_resolution_limit);
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
 			int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,
-			float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only = false, bool uncrop = true, bool apply_ctf_to_classes = true);
+			float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only = false, bool uncrop = true, bool apply_ctf_to_classes = true,
+			Image *image_to_blur = NULL, Image *diff_image_to_blur = NULL);
 	void EstimateSigmaNoise();
 };

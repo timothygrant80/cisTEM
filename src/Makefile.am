@@ -212,7 +212,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinem
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
-cisTEM_LDFLAGS = libguicore.a libcore.a $(WX_LIBS)
+cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)

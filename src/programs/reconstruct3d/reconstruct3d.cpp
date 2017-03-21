@@ -165,6 +165,8 @@ bool Reconstruct3DApp::DoCalculation()
 	ProgressBar			*my_progress;
 
 	int i, j;
+	long pixel_counter1 = 0;
+	long pixel_counter2 = 0;
 	int current_image;
 	int images_to_process = 0;
 	int images_for_noise_power = 0;
@@ -412,6 +414,33 @@ bool Reconstruct3DApp::DoCalculation()
 		projection_image.Allocate(original_box_size, original_box_size, false);
 		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
 		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
+		// Check that the input 3D map has reasonable density values
+		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
+		for (j = 0; j < input_3d.density_map.logical_y_dimension * input_3d.density_map.logical_z_dimension; j++)
+		{
+			for (i = 0; i < input_3d.density_map.logical_x_dimension; i++)
+			{
+				if (pixel_counter1%10 == 0)
+				{
+					temp_3d[pixel_counter2] = input_3d.density_map.real_values[pixel_counter1];
+					pixel_counter2++;
+				}
+				pixel_counter1++;
+			}
+			pixel_counter1 += input_3d.density_map.padding_jump_value;
+		}
+		std::sort (temp_3d, temp_3d + pixel_counter2);
+		temp_float = 0.0;
+		pixel_counter1 = pixel_counter2 - 100;
+		if (pixel_counter1 < 0) pixel_counter1 = 0;
+		for (i = pixel_counter1; i < pixel_counter2; i++) temp_float += temp_3d[i];
+		temp_float /= (pixel_counter2 - pixel_counter1);
+		delete [] temp_3d;
+		if (temp_float < 1.0 || temp_float > 25)
+		{
+			SendInfo("input 3D densities out of range. Rescaling...");
+			input_3d.density_map.MultiplyByConstant(5.0 / temp_float);
+		}
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		if (padding != 1.0)
 		{

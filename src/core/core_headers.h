@@ -16,6 +16,7 @@ typedef struct Kernel2D {
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <cstring>
 #include <cstdarg>
 #include <cfloat>

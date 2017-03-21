@@ -262,7 +262,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 	long pixel_counter = 0;
 
-	std::complex<float> temp_c;
+	std::complex<double> temp_c;
 
 	FSC.ClearData();
 
@@ -289,7 +289,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 //				if (frequency_squared <= 0.25)
 //				{
 					temp_c = real(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter])) + I * 0.0f;
-					if (temp_c != 0.0f)
+					if (temp_c != 0.0)
 					{
 						if ((i != 0) || (i == 0 && zi > 0) || (i == 0 && yi > 0 && zi == 0))
 						{
@@ -319,8 +319,8 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 							}
 							else
 							{
-								//sum1[bin] += crealf(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_1.complex_values[pixel_counter]));
-								//sum2[bin] += crealf(reconstructed_volume_2.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter]));
+								//sum1[bin] += real(reconstructed_volume_1.complex_values[pixel_counter] * conj(reconstructed_volume_1.complex_values[pixel_counter]));
+								//sum2[bin] += real(reconstructed_volume_2.complex_values[pixel_counter] * conj(reconstructed_volume_2.complex_values[pixel_counter]));
 								//cross_terms[bin] += crealf(temp_c);
 								//non_zero_count[bin] += 1;
 

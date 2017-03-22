@@ -72,6 +72,7 @@ public:
 	float						mask_center_2d_z;
 	float						mask_radius_2d;
 	bool						apply_2D_masking;
+	bool						no_ctf_weighting;
 
 	Particle();
 	Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
@@ -96,7 +97,7 @@ public:
 	void PhaseFlipImage();
 	void CTFMultiplyImage();
 	void SetIndexForWeightedCorrelation(bool limit_resolution = true);
-	void WeightBySSNR(Curve &SSNR, int include_reference_weighting = 1);
+	void WeightBySSNR(Curve &SSNR, int include_reference_weighting = 1, bool no_ctf = false);
 	void WeightBySSNR(Curve &SSNR, Image &projection_image, bool weight_particle_image = true, bool weight_projection_image = true);
 	void CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d);
 	void GetParameters(float *output_parameters);

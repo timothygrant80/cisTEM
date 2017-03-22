@@ -107,6 +107,7 @@ void Particle::Init()
 	mask_center_2d_z = 0.0;
 	mask_radius_2d = 0.0;
 	apply_2D_masking = false;
+	no_ctf_weighting = false;
 }
 
 void Particle::AllocateImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension)
@@ -145,6 +146,7 @@ void Particle::ResetImageFlags()
 	shift_counter = 0;
 	logp = -std::numeric_limits<float>::max();;
 	insert_even = false;
+	no_ctf_weighting = false;
 }
 
 void Particle::PhaseShift()
@@ -326,7 +328,7 @@ void Particle::SetIndexForWeightedCorrelation(bool limit_resolution)
 	}
 }
 
-void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting)
+void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting, bool no_ctf)
 {
 	MyDebugAssertTrue(particle_image->is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(ctf_image->is_in_memory, "CTF image memory not allocated");
@@ -353,7 +355,16 @@ void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting)
 	particle_image->Whiten();
 
 //	snr_image->CopyFrom(ctf_image);
-	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conj(ctf_image->complex_values[i]);}
+	if (no_ctf)
+	{
+		snr_image->SetToConstant(1.0);
+		no_ctf_weighting = true;
+	}
+	else
+	{
+		for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conj(ctf_image->complex_values[i]);}
+		no_ctf_weighting = false;
+	}
 	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
 	particle_image->OptimalFilterBySNRImage(*snr_image, include_reference_weighting);
 	is_ssnr_filtered = true;

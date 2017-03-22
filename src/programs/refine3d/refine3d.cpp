@@ -30,7 +30,11 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 //	comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
 //			comparison_object->particle->alignment_parameters, 0.0, 0.0,
 //			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true);
-	if (comparison_object->particle->includes_reference_ssnr_weighting) comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
+
+	if (comparison_object->particle->no_ctf_weighting) comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
+			*comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
+			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, false, false, false, false);
+	else if (comparison_object->particle->includes_reference_ssnr_weighting) comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
 			*comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
 			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true, true, false, false);
 	else comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
@@ -659,7 +663,7 @@ bool Refine3DApp::DoCalculation()
 		refine_particle.ResetImageFlags();
 		refine_particle.mask_radius = mask_radius;
 		refine_particle.mask_falloff = mask_falloff;
-		refine_particle.filter_radius_low = low_resolution_limit;
+//		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.filter_radius_high = high_resolution_limit;
 		refine_particle.molecular_mass_kDa = molecular_mass_kDa;
 		refine_particle.signed_CC_limit = signed_CC_limit;
@@ -670,7 +674,7 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle.logp = -std::numeric_limits<float>::max();
 		refine_particle.SetParameters(input_parameters);
 		refine_particle.MapParameterAccuracy(cg_accuracy);
-		refine_particle.SetIndexForWeightedCorrelation();
+//		refine_particle.SetIndexForWeightedCorrelation();
 		refine_particle.SetParameterConstraints(powf(parameter_average[14],2));
 
 //		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
@@ -703,9 +707,11 @@ bool Refine3DApp::DoCalculation()
 		refine_particle.MapParameters(cg_starting_point);
 		refine_particle.PhaseShiftInverse();
 
-		if (ctf_refinement)
+		if (ctf_refinement && high_resolution_limit <= 20.0)
 		{
 //			wxPrintf("\nRefining defocus for parameter line %i\n", current_image);
+			refine_particle.filter_radius_low = 30.0;
+			refine_particle.SetIndexForWeightedCorrelation();
 			binned_image.CopyFrom(refine_particle.particle_image);
 			refine_particle.InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
 			best_score = - std::numeric_limits<float>::max();
@@ -714,7 +720,7 @@ bool Refine3DApp::DoCalculation()
 				refine_particle.SetDefocus(input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
 				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
 				if (normalize_input_3d) refine_particle.WeightBySSNR(input_statistics.part_SSNR, 1);
-				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
+//				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
 				else refine_particle.WeightBySSNR(input_statistics.part_SSNR, 0);
 				refine_particle.PhaseFlipImage();
 //				refine_particle.CosineMask(false, true, 0.0);
@@ -745,6 +751,8 @@ bool Refine3DApp::DoCalculation()
 		{
 			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
 		}
+		refine_particle.filter_radius_low = low_resolution_limit;
+		refine_particle.SetIndexForWeightedCorrelation();
 		if (normalize_input_3d) refine_particle.WeightBySSNR(input_statistics.part_SSNR, 1);
 		// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
 		else refine_particle.WeightBySSNR(input_statistics.part_SSNR, 0);

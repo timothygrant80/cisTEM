@@ -185,7 +185,7 @@ void EulerSearch::CalculateGridSearchPositions()
 	{
 		test_mirror = false;
 	}
-	wxPrintf("\nNumber of global search views = %i\n", number_of_search_positions);
+//	wxPrintf("\nNumber of global search views = %i\n", number_of_search_positions);
 }
 
 void EulerSearch::CalculateRandomSearchPositions()

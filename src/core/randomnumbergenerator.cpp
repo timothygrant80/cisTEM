@@ -14,7 +14,7 @@ RandomNumberGenerator::RandomNumberGenerator(int random_seed, bool internal) {
 // Set seed for random number generator
 void RandomNumberGenerator::SetSeed(int random_seed) {
 
-	if (random_seed < -1)
+	if (random_seed < 0)
 	{
 		this->random_seed = time(NULL);
 	}

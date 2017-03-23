@@ -7689,7 +7689,7 @@ float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_
 	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
 }
 
-void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)
+float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
@@ -7700,6 +7700,7 @@ void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_
 
 	int i, j, k;
 	int int_edge = ceil(cosine_edge_width);
+	int int_edge_z;
 	long pixel_counter;
 	float dx, dy, dz;
 	float radius_squared;
@@ -7707,11 +7708,15 @@ void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_
 	float edge;
 	float tiny = 1.0 / 1000.0;
 	double cos_volume;
+	double sum = 0.0;
 
 	Image *cosine_edge = new Image;
 	cosine_edge->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
 	Image *temp_image = new Image;
 	temp_image->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+
+	if (logical_z_dimension == 1) int_edge_z = 1;
+	else int_edge_z = int_edge;
 
 	// Binarize input
 	for (pixel_counter = 0; pixel_counter < mask_volume.real_memory_allocated; pixel_counter++)
@@ -7726,7 +7731,7 @@ void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_
 		cosine_edge->SetToConstant(0.0);
 		cosine_edge->real_values[0] = 1.0;
 		cos_volume = 1.0;
-		for (k = 0; k < int_edge; k++) {
+		for (k = 0; k < int_edge_z; k++) {
 			dz = powf(k, 2);
 			for (j = 0; j < int_edge; j++) {
 				dy = powf(j, 2);
@@ -7768,12 +7773,15 @@ void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 		{
 			real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter] + weight_outside_mask * (1.0 - temp_image->real_values[pixel_counter]) * cosine_edge->real_values[pixel_counter];
+			sum += temp_image->real_values[pixel_counter];
 		}
 	}
-	else for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter];
+	else for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) {real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter]; sum += temp_image->real_values[pixel_counter];}
 
 	delete cosine_edge;
 	delete temp_image;
+
+	return sum;
 }
 
 /*

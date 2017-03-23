@@ -149,7 +149,7 @@ public:
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false);
 	void CalculateCTFImage(CTF &ctf_of_image);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
-	void ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);
+	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);
 
 
 	inline long ReturnVolumeInRealSpace()

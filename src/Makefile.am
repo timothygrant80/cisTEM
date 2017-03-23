@@ -152,7 +152,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files apply_gain_ref scale_with_mask refine2d merge2d
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files apply_gain_ref scale_with_mask refine2d merge2d apply_mask
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -330,3 +330,8 @@ merge2d_SOURCES = programs/merge2d/merge2d.cpp
 merge2d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge2d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 merge2d_LDADD = libcore.a $(WX_LIBS_BASE)
+
+apply_mask_SOURCES = programs/apply_mask/apply_mask.cpp
+apply_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+apply_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+apply_mask_LDADD = libcore.a $(WX_LIBS_BASE)

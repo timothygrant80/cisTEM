@@ -58,42 +58,19 @@ bool ApplyMask::DoCalculation()
 	Image my_image;
 	Image my_mask;
 
-//	if (input3d_file.ReturnZSize() > 1)
-//	{
-		wxPrintf("\nMasking Image/Volume...\n");
-		my_image.ReadSlices(&input3d_file, 1, input3d_file.ReturnNumberOfSlices());
-		my_mask.ReadSlices(&input_mask_file, 1, input_mask_file.ReturnNumberOfSlices());
-		if (! my_image.HasSameDimensionsAs(&my_mask))
-		{
-			wxPrintf("\nImage/Volume and mask file have different dimensions\n");
-			exit(0);
-		}
-/*		if (! my_image.IsCubic())
-		{
-			wxPrintf("\nVolume is not cubic\n");
-			exit(0);
-		} */
-		mask_volume = my_image.ApplyMask(my_mask, cosine_edge / pixel_size, outside_weight, pixel_size / filter_radius, pixel_size / filter_edge);
-		my_image.WriteSlices(&output_file,1, input3d_file.ReturnNumberOfSlices());
-/*	}
-	else
+	if (input3d_file.ReturnZSize() > 1) wxPrintf("\nMasking Volume...\n");
+	else wxPrintf("\nMasking Image...\n");
+
+	my_image.ReadSlices(&input3d_file, 1, input3d_file.ReturnNumberOfSlices());
+	my_mask.ReadSlices(&input_mask_file, 1, input_mask_file.ReturnNumberOfSlices());
+	if (! my_image.HasSameDimensionsAs(&my_mask))
 	{
-		wxPrintf("\nMasking Images...\n\n");
-		my_image.ReadSlice(&input3d_file, 1);
-		my_mask.ReadSlice(&input_mask_file, 1);
-		if (! my_image.HasSameDimensionsAs(&my_mask))
-		{
-			wxPrintf("\nImage and mask file have different dimensions\n");
-			exit(0);
-		}
-		if (! my_image.IsSquare())
-		{
-			wxPrintf("\nImage is not square\n");
-			exit(0);
-		}
-		my_image.ApplyMask(my_mask, cosine_edge / pixel_size, outside_weight, pixel_size / filter_radius, pixel_size / filter_edge);
-		my_image.WriteSlices(&output_file,1, input3d_file.ReturnNumberOfSlices());
-	} */
+		if (input3d_file.ReturnZSize() > 1) wxPrintf("\nVolume and mask file have different dimensions\n");
+		else wxPrintf("\nImage and mask file have different dimensions\n");
+		exit(0);
+	}
+	mask_volume = my_image.ApplyMask(my_mask, cosine_edge / pixel_size, outside_weight, pixel_size / filter_radius, pixel_size / filter_edge);
+	my_image.WriteSlices(&output_file,1, input3d_file.ReturnNumberOfSlices());
 
 	wxPrintf("\nMask volume = %g\n\n", mask_volume);
 

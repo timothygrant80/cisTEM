@@ -7702,11 +7702,13 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	int int_edge = ceil(cosine_edge_width);
 	int int_edge_z;
 	long pixel_counter;
+	long edge_sum = 0;
 	float dx, dy, dz;
 	float radius_squared;
 	float edge_squared = powf(cosine_edge_width, 2);
 	float edge;
 	float tiny = 1.0 / 1000.0;
+	double edge_value = 0.0;
 	double cos_volume;
 	double sum = 0.0;
 
@@ -7764,6 +7766,18 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	}
 
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++) {
+		for (j = 0; j < logical_y_dimension; j++) {
+			for (i = 0; i < logical_x_dimension; i++) {
+				if (temp_image->real_values[pixel_counter] > tiny && temp_image->real_values[pixel_counter] < 1.0 - tiny) {edge_value += real_values[pixel_counter]; edge_sum++;}
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	if (edge_sum != 0) edge_value /= edge_sum;
+
 	if (low_pass_filter_radius > 0.0 && weight_outside_mask > 0.0 && cosine_edge_width > 0.0)
 	{
 		cosine_edge->CopyFrom(this);
@@ -7776,12 +7790,19 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 			sum += temp_image->real_values[pixel_counter];
 		}
 	}
-	else for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) {real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter]; sum += temp_image->real_values[pixel_counter];}
+	else
+	{
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			real_values[pixel_counter] = (1.0 - temp_image->real_values[pixel_counter]) * edge_value + temp_image->real_values[pixel_counter] * real_values[pixel_counter];
+			sum += temp_image->real_values[pixel_counter];
+		}
+	}
 
 	delete cosine_edge;
 	delete temp_image;
 
-	return sum;
+	return float(sum);
 }
 
 /*

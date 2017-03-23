@@ -452,6 +452,12 @@ bool Refine3DApp::DoCalculation()
 //	my_output_par_shifts_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score");
 	my_output_par_shifts_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE");
 
+	if (! refine_particle.parameter_map[1] && ! refine_particle.parameter_map[2] && ! refine_particle.parameter_map[3] && ! refine_particle.parameter_map[4] && ! refine_particle.parameter_map[5])
+	{
+		local_refinement = false;
+		global_search = false;
+	}
+
 	if (high_resolution_limit < 2.0 * pixel_size) high_resolution_limit = 2.0 * pixel_size;
 	if (classification_resolution_limit < 2.0 * pixel_size) classification_resolution_limit = 2.0 * pixel_size;
 	if (high_resolution_limit_search < 2.0 * pixel_size) high_resolution_limit_search = 2.0 * pixel_size;

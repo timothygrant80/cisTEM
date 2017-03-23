@@ -7689,6 +7689,92 @@ float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_
 	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
 }
 
+void Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
+	MyDebugAssertTrue(mask_volume.is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(mask_volume.is_in_real_space, "Is in Fourier space");
+	MyDebugAssertTrue(HasSameDimensionsAs(&mask_volume), "mask_volume has different dimensions");
+	MyDebugAssertTrue(cosine_edge_width < physical_address_of_box_center_x, "Edge too wide");
+
+	int i, j, k;
+	int int_edge = ceil(cosine_edge_width);
+	long pixel_counter;
+	float dx, dy, dz;
+	float radius_squared;
+	float edge_squared = powf(cosine_edge_width, 2);
+	float edge;
+	float tiny = 1.0 / 1000.0;
+	double cos_volume;
+
+	Image *cosine_edge = new Image;
+	cosine_edge->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+	Image *temp_image = new Image;
+	temp_image->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+
+	// Binarize input
+	for (pixel_counter = 0; pixel_counter < mask_volume.real_memory_allocated; pixel_counter++)
+	{
+		if (mask_volume.real_values[pixel_counter] > 0.0) temp_image->real_values[pixel_counter] = 1.0;
+		else temp_image->real_values[pixel_counter] = 0.0;
+	}
+
+	if (cosine_edge_width > 0.0)
+	{
+		// Create cosine kernel
+		cosine_edge->SetToConstant(0.0);
+		cosine_edge->real_values[0] = 1.0;
+		cos_volume = 1.0;
+		for (k = 0; k < int_edge; k++) {
+			dz = powf(k, 2);
+			for (j = 0; j < int_edge; j++) {
+				dy = powf(j, 2);
+				for (i = 0; i < int_edge; i++) {
+					if (i + j + k > 0) {
+						dx = powf(i, 2);
+						radius_squared = dx + dy + dz;
+						if (radius_squared <= edge_squared) {
+							edge = (1.0 + cosf(PI * sqrtf(radius_squared) / cosine_edge_width)) / 2.0;
+							pixel_counter = ReturnReal1DAddressFromPhysicalCoord(i,j,k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;
+							if (i > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension - i,j,k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (j > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension - j,k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (k > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(i,j,logical_z_dimension - k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (i > 0 && j > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension - i,logical_y_dimension - j,k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (i > 0 && k > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension - i,j,logical_z_dimension - k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (i > 0 && j > 0 && k > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(logical_x_dimension - i,logical_y_dimension - j,logical_z_dimension - k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+							if (j > 0 && k > 0) {pixel_counter = ReturnReal1DAddressFromPhysicalCoord(i,logical_y_dimension - j,logical_z_dimension - k); cosine_edge->real_values[pixel_counter] = edge; cos_volume += edge;}
+						}
+					}
+				}
+			}
+		}
+
+		temp_image->ForwardFFT();
+		cosine_edge->ForwardFFT(false);
+		temp_image->MultiplyPixelWise(*cosine_edge);
+		temp_image->BackwardFFT();
+		temp_image->MultiplyByConstant(1.0 / cos_volume);
+		for (pixel_counter = 0; pixel_counter < mask_volume.real_memory_allocated; pixel_counter++) if (fabsf(temp_image->real_values[pixel_counter]) < tiny) temp_image->real_values[pixel_counter] = 0.0;
+
+	}
+
+	if (low_pass_filter_radius > 0.0 && weight_outside_mask > 0.0 && cosine_edge_width > 0.0)
+	{
+		cosine_edge->CopyFrom(this);
+		cosine_edge->ForwardFFT();
+		cosine_edge->CosineMask(low_pass_filter_radius, filter_cosine_edge_width);
+		cosine_edge->BackwardFFT();
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter] + weight_outside_mask * (1.0 - temp_image->real_values[pixel_counter]) * cosine_edge->real_values[pixel_counter];
+		}
+	}
+	else for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter];
+
+	delete cosine_edge;
+	delete temp_image;
+}
 
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

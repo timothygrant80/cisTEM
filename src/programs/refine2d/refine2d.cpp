@@ -189,6 +189,7 @@ bool Refine2DApp::DoCalculation()
 	float mask_radius_for_noise;
 	float max_corr, max_logp_particle;
 	float percentage;
+	float random_shift;
 	int number_of_blank_edges;
 	int max_samples = 2000;
 	wxDateTime my_time_in;
@@ -442,6 +443,7 @@ bool Refine2DApp::DoCalculation()
 		my_progress = new ProgressBar(images_to_process);
 		number_of_blank_edges = 0;
 		image_counter = 0;
+		random_shift = mask_radius / pixel_size * 0.2;
 		for (current_class = 0; current_class < number_of_classes; current_class++) {list_of_nozero_classes[current_class] = 0;}
 		for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
 		{
@@ -465,6 +467,8 @@ bool Refine2DApp::DoCalculation()
 			{
 				if (global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 * percent_used / number_of_classes)
 				{
+					input_image.RealSpaceIntegerShift(myroundint(random_shift * global_random_number_generator.GetUniformRandom()),
+							myroundint(random_shift * global_random_number_generator.GetUniformRandom()));
 					class_averages[current_class].AddImage(&input_image);
 					list_of_nozero_classes[current_class]++;
 				}

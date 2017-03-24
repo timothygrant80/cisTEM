@@ -1835,7 +1835,7 @@ Classification *Database::GetClassificationByID(long wanted_classification_id)
 		temp_classification->classification_results.Add(junk_result);
 		records_retrieved++;
 
-		wxPrintf("Got info for particle %li\n", junk_result.position_in_stack);
+//		wxPrintf("Got info for particle %li\n", junk_result.position_in_stack);
 	}
 
 	MyDebugAssertTrue(records_retrieved == temp_classification->number_of_particles, "No of Retrieved Results != No of Particles");

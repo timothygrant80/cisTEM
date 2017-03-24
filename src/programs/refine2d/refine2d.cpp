@@ -63,7 +63,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	bool		exclude_blank_edges = true;
 	bool		dump_arrays = false;
 
-	UserInput *my_input = new UserInput("Refine2D", 1.01);
+	UserInput *my_input = new UserInput("Refine2D", 1.02);
 
 	input_particle_images = my_input->GetFilenameFromUser("Input particle images", "The input image stack, containing the experimental particle images", "my_image_stack.mrc", true);
 	input_parameter_file = my_input->GetFilenameFromUser("Input Frealign parameter filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.par", true);
@@ -699,7 +699,7 @@ bool Refine2DApp::DoCalculation()
 			sum_logp_particle = ReturnSumOfLogP(sum_logp_particle, logp[current_class], log_range);
 		}
 		sum_logp_total = ReturnSumOfLogP(sum_logp_total, sum_logp_particle, log_range);
-		if (input_particle.current_parameters[13] != 0.0) sum_snr += 1.0 / input_particle.current_parameters[13];
+		if (input_particle.current_parameters[14] != 0.0) sum_snr += 1.0 / input_particle.current_parameters[14];
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 		{
 			// Divide class likelihoods by summed likelihood; this is a simple subtraction of the log values
@@ -709,19 +709,19 @@ bool Refine2DApp::DoCalculation()
 				// Sum the class likelihoods (now divided by the summed likelihood)
 				class_logp[current_class] = ReturnSumOfLogP(class_logp[current_class], logp[current_class], log_range);
 				// Apply likelihood weight to blurred image
-				if (input_particle.current_parameters[13] > 0.0)
+				if (input_particle.current_parameters[14] > 0.0)
 				{
 					temp_float = expf(logp[current_class]);
 					// Need to divide here by sigma^2; already divided once on input, therefore divide only by sigma here.
-					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle.current_parameters[13]);
+					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle.current_parameters[14]);
 					// Add weighted image to class average
 					class_averages[current_class].AddImage(&blurred_images[current_class]);
 					// Copy and multiply CTF image
 					temp_image.CopyFrom(&ctf_input_image);
 					temp_image.MultiplyPixelWiseReal(ctf_input_image);
-					temp_image.MultiplyByConstant(temp_float / input_particle.current_parameters[13]);
+					temp_image.MultiplyByConstant(temp_float / input_particle.current_parameters[14]);
 					CTF_sums[current_class].AddImage(&temp_image);
-					if (current_class + 1 == input_particle.current_parameters[7]) input_particle.current_parameters[11] = 100.0 * temp_float;
+					if (current_class + 1 == input_particle.current_parameters[7]) input_particle.current_parameters[12] = 100.0 * temp_float;
 				}
 			}
 		}

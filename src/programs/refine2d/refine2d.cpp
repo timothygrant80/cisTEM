@@ -895,8 +895,8 @@ void Refine2DApp::SendRefineResult(float *current_params)
 		gui_result_params[2] = current_params[4];
 		gui_result_params[3] = current_params[5];
 		gui_result_params[4] = current_params[7];
-		gui_result_params[5] = current_params[13];
-		gui_result_params[6] = current_params[12];
+		gui_result_params[5] = current_params[14];
+		gui_result_params[6] = current_params[13];
 
 		intermediate_result->SetResult(7, gui_result_params);
 		AddJobToResultQueue(intermediate_result);

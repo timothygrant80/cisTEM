@@ -316,7 +316,7 @@ bool Refine2DApp::DoCalculation()
 	output_par_file.WriteCommentLine("C Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
 	output_par_file.WriteCommentLine("C Output dump filename:                    " + dump_file);
 	output_par_file.WriteCommentLine("C");
-	output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST     OCC      LogP    SIGMA     SCORE  CHANGE");
+	output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
 	fflush(output_par_file.parameter_file);
 
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);

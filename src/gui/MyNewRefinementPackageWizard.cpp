@@ -383,6 +383,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		float image_defocus_1;
 		float image_defocus_2;
 		float image_defocus_angle;
+		float image_phase_shift;
 
 		ImageAsset *current_image_asset = NULL;
 		ParticlePositionAsset *current_particle_position_asset = NULL;
@@ -475,7 +476,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				// we have to get the defocus stuff from the database..
 
-				main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle);
+				main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift);
 			}
 
 			// do the cutting..
@@ -508,6 +509,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			temp_particle_info.defocus_1 = image_defocus_1;
 			temp_particle_info.defocus_2 = image_defocus_2;
 			temp_particle_info.defocus_angle = image_defocus_angle;
+			temp_particle_info.phase_shift = image_phase_shift;
 
 			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // completely new..
 			{

@@ -42,7 +42,7 @@ ShortClassificationInfo & ShortClassificationInfo::operator = (const Classificat
 	refinement_package_asset_id = other_classification->refinement_package_asset_id;
 	name = other_classification->name;
 	number_of_particles = other_classification->number_of_particles;
-	number_of_classes = other_classification->number_of_particles;
+	number_of_classes = other_classification->number_of_classes;
 	class_average_file = other_classification->class_average_file;
 
 	return *this;

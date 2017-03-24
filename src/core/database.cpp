@@ -82,14 +82,14 @@ long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 	return value;
 }
 
-void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle)
+void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	int return_code;
 	sqlite3_stmt *current_statement;
 	int value;
-	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
+	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
 
 	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
@@ -104,6 +104,7 @@ void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defo
 	defocus_1 = float(sqlite3_column_double(current_statement, 0));
 	defocus_2 = float(sqlite3_column_double(current_statement, 1));
 	defocus_angle = float(sqlite3_column_double(current_statement, 2));
+	phase_shift = float(sqlite3_column_double(current_statement, 3));
 
 	sqlite3_finalize(current_statement);
 }

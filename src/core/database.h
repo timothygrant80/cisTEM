@@ -69,7 +69,7 @@ public :
 	void GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs);
 	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
 
-	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle);
+	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift);
 
 	void AddRefinementPackageAsset(RefinementPackage *asset_to_add);
 

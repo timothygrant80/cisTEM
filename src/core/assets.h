@@ -45,7 +45,12 @@ class MovieAsset : public Asset {
 
 	wxString gain_filename;
 
-	int super_resolution_factor; // If this is a super-resolution movie, but we never intend to use the "super resolution" part of the spectrum, this factor should be > 1
+	double output_binning_factor; // If this is a super-resolution movie, but we never intend to use the "super resolution" part of the spectrum, this factor should be > 1
+
+	bool correct_mag_distortion;
+	double mag_distortion_angle;
+	double mag_distortion_major_scale;
+	double mag_distortion_minor_scale;
 
 	void Update(wxString wanted_filename);
 	//void Recheck_if_valid();

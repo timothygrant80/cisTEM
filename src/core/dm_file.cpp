@@ -108,6 +108,8 @@ void DMFile::ReadSliceFromDisk(int wanted_slice, float *output_array)
 			mirror_address++;
 		}
 	}
+
+	delete [] p;
 }
 
 

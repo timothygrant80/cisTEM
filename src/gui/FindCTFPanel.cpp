@@ -96,9 +96,11 @@ void MyFindCTFPanel::SetInfo()
 	#include "icons/ctffind_diagnostic_image.cpp"
 	#include "icons/ctffind_example_1dfit.cpp"
 
+	wxLogNull *suppress_png_warnings = new wxLogNull;
 	wxBitmap definitions_bmp = wxBITMAP_PNG_FROM_DATA(ctffind_definitions);
 	wxBitmap diagnostic_image_bmp = wxBITMAP_PNG_FROM_DATA(ctffind_diagnostic_image);
 	wxBitmap example_1dfit_bmp = wxBITMAP_PNG_FROM_DATA(ctffind_example_1dfit);
+	delete suppress_png_warnings;
 
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -278,47 +280,12 @@ void MyFindCTFPanel::SetInfo()
 
 void MyFindCTFPanel::FillGroupComboBox()
 {
-
-	GroupComboBox->Freeze();
-	GroupComboBox->Clear();
-
-	for (long counter = 0; counter < image_asset_panel->ReturnNumberOfGroups(); counter++)
-	{
-		GroupComboBox->Append(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")");
-
-	}
-
-	GroupComboBox->SetSelection(0);
-
-	GroupComboBox->Thaw();
+	GroupComboBox->FillWithImageGroups();
 }
 
 void MyFindCTFPanel::FillRunProfileComboBox()
 {
-	int old_selection = 0;
-
-	// get the current selection..
-
-	if (RunProfileComboBox->GetCount() > 0) old_selection = RunProfileComboBox->GetSelection();
-
-	// refresh..
-
-	RunProfileComboBox->Freeze();
-	RunProfileComboBox->Clear();
-
-	for (long counter = 0; counter < run_profiles_panel->run_profile_manager.number_of_run_profiles; counter++)
-	{
-		RunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
-	}
-
-	if (RunProfileComboBox->GetCount() > 0)
-	{
-		if (RunProfileComboBox->GetCount() >= old_selection) RunProfileComboBox->SetSelection(old_selection);
-		else RunProfileComboBox->SetSelection(0);
-
-	}
-	RunProfileComboBox->Thaw();
-
+	RunProfileComboBox->FillWithRunProfiles();
 }
 
 void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
@@ -514,6 +481,12 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	wxString	current_gain_filename;
 	bool 		movie_is_gain_corrected;
 
+	bool        correct_movie_mag_distortion = false;
+	float       movie_mag_distortion_angle = 0.0;
+	float       movie_mag_distortion_major_scale = 1.0;
+	float       movie_mag_distortion_minor_scale = 1.0;
+
+
 	// allocate space for the buffered results..
 
 	buffered_results = new JobResult[number_of_jobs];
@@ -625,6 +598,22 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		{
 			current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 			movie_is_gain_corrected = current_gain_filename.IsEmpty();
+
+			correct_movie_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+
+			if (correct_movie_mag_distortion == true)
+			{
+				movie_mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+				movie_mag_distortion_major_scale = movie_asset_panel->ReturnMagDistortionMajorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+				movie_mag_distortion_minor_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+			}
+			else
+			{
+				movie_mag_distortion_angle = 0.0;
+				movie_mag_distortion_major_scale = 1.0;
+				movie_mag_distortion_minor_scale = 1.0;
+
+			}
 		}
 		else
 		{
@@ -633,7 +622,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		}
 
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbs",	input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfff",	input_filename.c_str(), // 0
 															input_is_a_movie, // 1
 															number_of_frames_to_average, //2
 															output_diagnostic_filename.c_str(), // 3
@@ -658,7 +647,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 															known_astigmatism_angle, // 22
 															resample_if_pixel_too_small,// 23
 															movie_is_gain_corrected,
-															current_gain_filename.ToStdString().c_str());
+															current_gain_filename.ToStdString().c_str(),
+															correct_movie_mag_distortion,
+															movie_mag_distortion_angle,
+															movie_mag_distortion_major_scale,
+															movie_mag_distortion_minor_scale);
 
 		my_progress_dialog->Update(counter + 1);
 	}

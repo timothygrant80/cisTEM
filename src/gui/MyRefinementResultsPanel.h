@@ -5,6 +5,7 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 	public:
 
 	bool is_dirty;
+	bool input_params_are_dirty;
 	Refinement *currently_displayed_refinement;
 
 	MyRefinementResultsPanel( wxWindow* parent );
@@ -24,6 +25,8 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 	void OnClassComboBoxChange( wxCommandEvent& event );
 
 	void UpdateCachedRefinement();
+
+
 
 
 };

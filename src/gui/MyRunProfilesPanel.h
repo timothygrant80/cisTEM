@@ -38,6 +38,7 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void CommandsSaveButtonClick( wxCommandEvent& event );
 		void OnImportButtonClick( wxCommandEvent& event );
 		void OnExportButtonClick( wxCommandEvent& event );
+		void OnDuplicateProfileClick( wxCommandEvent& event );
 
 		void GuiAddressAutoClick( wxCommandEvent& event );
 		void GuiAddressSpecifyClick( wxCommandEvent& event );

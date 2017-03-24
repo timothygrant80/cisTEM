@@ -8,6 +8,33 @@
 #ifndef __MyControls__
 #define __MyControls__
 
+class MemoryComboBox : public wxComboBox
+{
+public :
+	MemoryComboBox (wxWindow *parent, wxWindowID id, const wxString &value=wxEmptyString, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, int n=0, const wxString choices[]=NULL, long style=0, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxComboBoxNameStr);
+	~MemoryComboBox();
+
+	wxArrayLong associated_ids;
+
+	long selected_id_on_last_clear;
+	long currently_selected_id;
+
+	void Clear();
+	void Reset();
+	void AddMemoryItem(wxString wanted_text, long wanted_id);
+
+	bool FillWithRunProfiles();
+	bool FillWithRefinementPackages();
+	bool FillWithMovieGroups(bool include_all_movies_group = true);
+	bool FillWithImageGroups(bool include_all_images_group = true);
+	bool FillWithClassifications(long wanted_refinement_package, bool include_new_classification);
+	bool FillWithRefinements(long wanted_refinement_package);
+
+
+	void OnComboBox(wxCommandEvent& event);
+
+};
+
 class NumericTextCtrl : public wxTextCtrl
 {
 
@@ -18,8 +45,11 @@ public :
 
 	float max_value;
 	float min_value;
-
 	float previous_value;
+	int precision;
+
+	void SetPrecision(int wanted_precision);
+	void ChangeValueFloat(float wanted_float);
 
 	void OnKeyPress( wxKeyEvent& event );
 	void OnEnterPressed( wxCommandEvent& event);
@@ -205,6 +235,28 @@ class RefinementParametersListCtrl: public wxListCtrl{
 	wxString OnGetItemText(long item, long column) const;
 
 	int ReturnGuessAtColumnTextWidth(int wanted_column);
+
+};
+
+class ClassificationSelectionListCtrl: public wxListCtrl {
+	public:
+	ClassificationSelectionListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	wxString OnGetItemText(long item, long column) const;
+
+	int ReturnGuessAtColumnTextWidth(int wanted_column);
+	long ReturnCurrentSelection() {return current_selection;};
+	int ReturnCurrentSelectionOriginalArrayPosition() {if (current_selection == -1) return -1;else return original_classum_selection_array_positions.Item(current_selection);};
+
+	void OnClearAll(wxListEvent& event);
+
+	void Fill(long refinement_package_asset_id, long classification_id, bool select_latest = false);
+
+	long current_selection;
+	long current_selection_id;
+	long selection_id_upon_clear;
+
+	ArrayofClassificationSelections all_valid_selections;
+	wxArrayInt original_classum_selection_array_positions;
 
 };
 

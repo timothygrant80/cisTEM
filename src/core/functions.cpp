@@ -494,3 +494,8 @@ float ReturnSumOfLogP(float logp1, float logp2, float log_range = 20.0)
 	return logp;
 }
 
+float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float major_axis_scale, float minor_axis_scale)
+{
+	float average_scale = (major_axis_scale + minor_axis_scale) / 2.0;
+	return original_pixel_size / average_scale;
+}

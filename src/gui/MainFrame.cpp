@@ -22,6 +22,7 @@ extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyPickingResultsPanel *picking_results_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
+extern Refine2DResultsPanel *refine2d_results_panel;
 
 
 
@@ -43,15 +44,19 @@ MainFrame( parent )
 	int x_offset;
 	int y_offset;
 
-	if (screen_x_size >= 1920 && screen_y_size >= 1080)
+	if (screen_x_size > 1920 && screen_y_size > 1080)
 	{
-		x_offset = (screen_x_size - 1800) / 2;
-		y_offset = (screen_y_size - 1180) / 2;
+		x_offset = (screen_x_size - 1920) / 2;
+		y_offset = (screen_y_size - 1080) / 2;
 
 		if (x_offset < 0) x_offset = 0;
 		if (y_offset < 0) y_offset = 0;
 
-		SetSize(x_offset, y_offset, 1600, 980);
+		SetSize(x_offset, y_offset, 1920, 1080);
+	}
+	else
+	{
+		Maximize(true);
 	}
 
     Connect(wxEVT_CHAR_HOOK, wxKeyEventHandler(MyMainFrame::OnCharHook));
@@ -201,8 +206,8 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 {
 	// redo groups..
 
-	align_movies_panel->Refresh();
-	movie_results_panel->group_combo_is_dirty = true;
+	//align_movies_panel->Refresh();
+//	movie_results_panel->group_combo_is_dirty = true;
 
 	// We we were editing the particle picking results, and we move away from Results, we may need to do some database stuff
 	if ( event.GetOldSelection() == 3)
@@ -218,8 +223,10 @@ void MyMainFrame::DirtyEverything()
 	DirtyImageGroups();
 	DirtyRunProfiles();
 	DirtyRefinementPackages();
-	DirtyInputParameters();
+	DirtyRefinements();
 	DirtyParticlePositionGroups();
+	DirtyClassificationSelections();
+	DirtyClassifications();
 
 }
 
@@ -250,11 +257,23 @@ void MyMainFrame::DirtyRefinementPackages()
 	classification_panel->refinement_package_combo_is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
 	refinement_results_panel->is_dirty=true;
+	refine2d_results_panel->refinement_package_combo_is_dirty = true;
 }
 
-void MyMainFrame::DirtyInputParameters()
+void MyMainFrame::DirtyRefinements()
 {
 	refine_3d_panel->input_params_combo_is_dirty = true;
+	refinement_results_panel->input_params_are_dirty = true;
+}
+
+void MyMainFrame::DirtyClassifications()
+{
+	refine2d_results_panel->input_params_combo_is_dirty = true;
+}
+
+void MyMainFrame::DirtyClassificationSelections()
+{
+	refine2d_results_panel->classification_selections_are_dirty = true;
 }
 
 void MyMainFrame::DirtyRunProfiles()
@@ -366,23 +385,24 @@ void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 	if (current_project.is_open == true)
 	{
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
-	}
-
-	// if there is a default run profiles, import it..
-
-	wxString default_run_profile_path = wxStandardPaths::Get().GetExecutablePath();
-	default_run_profile_path = default_run_profile_path.BeforeLast('/');
-	default_run_profile_path += "/default_run_profiles.txt";
 
 
-	if (DoesFileExist(default_run_profile_path) == true)
-	{
-	//	wxPrintf("Importing run profiles from '%s'\n", default_run_profile_path);
-		run_profiles_panel->ImportRunProfilesFromDisk(default_run_profile_path);
-	}
-	else
-	{
-	//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
+		// if there is a default run profiles, import it..
+
+		wxString default_run_profile_path = wxStandardPaths::Get().GetExecutablePath();
+		default_run_profile_path = default_run_profile_path.BeforeLast('/');
+		default_run_profile_path += "/default_run_profiles.txt";
+
+
+		if (DoesFileExist(default_run_profile_path) == true)
+		{
+			//	wxPrintf("Importing run profiles from '%s'\n", default_run_profile_path);
+			run_profiles_panel->ImportRunProfilesFromDisk(default_run_profile_path);
+		}
+		else
+		{
+			//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
+		}
 	}
 
 }
@@ -461,6 +481,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	run_profiles_panel->Reset();
 	movie_results_panel->Clear();
 	ctf_results_panel->Clear();
+	refine2d_results_panel->Clear();
 	picking_results_panel->OnProjectClose();
 
 

@@ -259,12 +259,14 @@ void  MyRunProfilesPanel::OnUpdateIU( wxUpdateUIEvent& event )
 		{
 			RemoveProfileButton->Enable(false);
 			RenameProfileButton->Enable(false);
+			DuplicateProfileButton->Enable(false);
 			ExportButton->Enable(false);
 		}
 		else
 		{
 			RemoveProfileButton->Enable(true);
 			RenameProfileButton->Enable(true);
+			DuplicateProfileButton->Enable(true);
 			ExportButton->Enable(true);
 		}
 
@@ -315,6 +317,23 @@ void MyRunProfilesPanel::OnImportButtonClick( wxCommandEvent& event )
     		error_dialog.ShowModal();
     	}
     }
+
+}
+
+void MyRunProfilesPanel::OnDuplicateProfileClick( wxCommandEvent& event )
+{
+	RunProfile copy;
+	copy = run_profile_manager.run_profiles[selected_profile];
+
+	copy.id = run_profile_manager.current_id_number + 1;
+	copy.name = "Copy of " + copy.name;
+	run_profile_manager.AddProfile(&copy);
+
+	main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer());
+	main_frame->DirtyRunProfiles();
+
+	FillProfilesBox();
+	SetSelectedProfile(run_profile_manager.number_of_run_profiles - 1);
 
 }
 

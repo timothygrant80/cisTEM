@@ -231,25 +231,7 @@ void MyFindParticlesPanel::SetInfo()
 
 void MyFindParticlesPanel::FillGroupComboBox()
 {
-
-	GroupComboBox->Freeze();
-	GroupComboBox->Clear();
-
-	int number_of_groups = image_asset_panel->ReturnNumberOfGroups();
-
-	// Reallocate the array that keeps track for each group of whether it can be picked
-
-
-	for (long counter = 0; counter < number_of_groups; counter++)
-	{
-		GroupComboBox->Append(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")");
-		// Check whether this group is ready to be picked
-
-	}
-
-	GroupComboBox->SetSelection(0);
-
-	GroupComboBox->Thaw();
+	GroupComboBox->FillWithImageGroups(true);
 }
 
 void MyFindParticlesPanel::FillImageComboBox()
@@ -695,30 +677,7 @@ void MyFindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent
 
 void MyFindParticlesPanel::FillRunProfileComboBox()
 {
-	int old_selection = 0;
-
-	// get the current selection..
-
-	if (RunProfileComboBox->GetCount() > 0) old_selection = RunProfileComboBox->GetSelection();
-
-	// refresh..
-
-	RunProfileComboBox->Freeze();
-	RunProfileComboBox->Clear();
-
-	for (long counter = 0; counter < run_profiles_panel->run_profile_manager.number_of_run_profiles; counter++)
-	{
-		RunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
-	}
-
-	if (RunProfileComboBox->GetCount() > 0)
-	{
-		if (RunProfileComboBox->GetCount() >= old_selection) RunProfileComboBox->SetSelection(old_selection);
-		else RunProfileComboBox->SetSelection(0);
-
-	}
-	RunProfileComboBox->Thaw();
-
+	RunProfileComboBox->FillWithRunProfiles();
 }
 
 void MyFindParticlesPanel::OnGroupComboBox( wxCommandEvent& event )

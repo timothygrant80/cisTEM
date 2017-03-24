@@ -18,6 +18,7 @@ void MyRefinementPackageAssetPanel::OnCreateClick( wxCommandEvent& event )
 {
 	MyNewRefinementPackageWizard *my_wizard = new MyNewRefinementPackageWizard(this);
 	my_wizard->RunWizard(my_wizard->template_page);
+	my_wizard->Destroy();
 }
 
 void MyRefinementPackageAssetPanel::OnDisplayStackButton( wxCommandEvent& event )
@@ -51,18 +52,63 @@ void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 	{
 		wxMessageDialog *check_dialog = new wxMessageDialog(this, "This will remove the refinement package from your ENTIRE project!\n\nYou probably shouldn't do this if you have used it. Are you sure you want to continue?", "Are you sure?", wxYES_NO);
 
-			if (check_dialog->ShowModal() ==  wxID_YES)
-			{
-				main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
-				main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
-				main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+		if (check_dialog->ShowModal() ==  wxID_YES)
+		{
+			long counter;
+			int class_counter;
 
-				all_refinement_packages.RemoveAt(selected_refinement_package);
-				main_frame->DirtyRefinementPackages();
+			main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
+
+			// Delete Refinements
+
+			for (counter = all_refinement_short_infos.GetCount() - 1; counter >=0; counter-- )
+			{
+				if (all_refinement_short_infos.Item(counter).refinement_package_asset_id == all_refinement_packages.Item(selected_refinement_package).asset_id)
+				{
+					main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_LIST WHERE REFINEMENT_ID=%li", all_refinement_short_infos.Item(counter).refinement_id ));
+					main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", all_refinement_short_infos.Item(counter).refinement_id));
+
+					for (class_counter = 1; class_counter <= all_refinement_short_infos.Item(counter).number_of_classes; class_counter++)
+					{
+						main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_RESULT_%li_%i", all_refinement_short_infos.Item(counter).refinement_id, class_counter));
+						main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", all_refinement_short_infos.Item(counter).refinement_id, class_counter));
+					}
+					all_refinement_short_infos.RemoveAt(counter);
+				}
 			}
+
+			for (counter = all_classification_short_infos.GetCount() - 1; counter >= 0; counter --)
+			{
+				if (all_classification_short_infos.Item(counter).refinement_package_asset_id == all_refinement_packages.Item(selected_refinement_package).asset_id)
+				{
+					main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=%li", all_classification_short_infos.Item(counter).classification_id ));
+					main_frame->current_project.database.DeleteTable(wxString::Format("CLASSIFICATION_RESULT_%li", all_classification_short_infos.Item(counter).classification_id));
+
+					all_classification_short_infos.RemoveAt(counter);
+				}
+
+			}
+
+			for (counter = all_classification_selections.GetCount() - 1; counter >= 0; counter --)
+			{
+				if (all_classification_selections.Item(counter).refinement_package_asset_id == all_refinement_packages.Item(selected_refinement_package).asset_id)
+				{
+					main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM CLASSIFICATION_SELECTION_LIST WHERE SELECTION_ID=%li", all_classification_selections.Item(counter).selection_id ));
+					main_frame->current_project.database.DeleteTable(wxString::Format("CLASSIFICATION_SELECTION_%li", all_classification_selections.Item(counter).selection_id));
+
+					all_classification_selections.RemoveAt(counter);
+				}
+			}
+
+			all_refinement_packages.RemoveAt(selected_refinement_package);
+			main_frame->DirtyRefinementPackages();
+		}
 	}
 }
-
 
 
 void MyRefinementPackageAssetPanel::AddAsset(RefinementPackage *refinement_package)
@@ -127,6 +173,7 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 		ContainedParticlesListCtrl->InsertColumn(7, "Init. Defocus 1", wxLIST_FORMAT_LEFT);
 		ContainedParticlesListCtrl->InsertColumn(8, "Init. Defocus 2", wxLIST_FORMAT_LEFT);
 		ContainedParticlesListCtrl->InsertColumn(9, "Init. Defocus Angle", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(10, "Init. Phase Shift", wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(10, wxT("Init. Psi"), wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(11, wxT("Init. Theta"), wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(12, wxT("Init. Phi"), wxLIST_FORMAT_LEFT);
@@ -150,6 +197,7 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 			ContainedParticlesListCtrl->SetColumnWidth(7, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(7));
 			ContainedParticlesListCtrl->SetColumnWidth(8, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(8));
 			ContainedParticlesListCtrl->SetColumnWidth(9, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(9));
+			ContainedParticlesListCtrl->SetColumnWidth(10, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(10));
 		}
 
 		// 3D references..
@@ -249,6 +297,7 @@ void MyRefinementPackageAssetPanel::ImportAllFromDatabase()
 
 	ImportAllRefinementInfosFromDatabase();
 	ImportAllClassificationInfosFromDatabase();
+	ImportAllClassificationSelectionsFromDatabase();
 
 
 	main_frame->DirtyRefinementPackages();
@@ -410,15 +459,50 @@ void MyRefinementPackageAssetPanel::ImportAllClassificationInfosFromDatabase()
 	ShortClassificationInfo temp_info;
 	all_classification_short_infos.Clear();
 
-	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT CLASSIFICATION_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM CLASSIFICATION_LIST");
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT CLASSIFICATION_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, CLASS_AVERAGE_FILE, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM CLASSIFICATION_LIST");
 
 	while (more_data == true)
 	{
-		more_data = main_frame->current_project.database.GetFromBatchSelect("lltli", &temp_info.classification_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.number_of_particles, &temp_info.number_of_classes);
+		more_data = main_frame->current_project.database.GetFromBatchSelect("llttli", &temp_info.classification_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.class_average_file, &temp_info.number_of_particles, &temp_info.number_of_classes);
 		all_classification_short_infos.Add(temp_info);
 	}
 
 	main_frame->current_project.database.EndBatchSelect();
+
+}
+
+void MyRefinementPackageAssetPanel::ImportAllClassificationSelectionsFromDatabase()
+{
+
+	bool more_data;
+	long temp_long;
+
+	ClassificationSelection temp_selection;
+	all_classification_selections.Clear();
+
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT * FROM CLASSIFICATION_SELECTION_LIST");
+
+	while (more_data == true)
+	{
+		more_data = main_frame->current_project.database.GetFromBatchSelect("ltlllii", &temp_selection.selection_id, &temp_selection.name, &temp_long, &temp_selection.refinement_package_asset_id, &temp_selection.classification_id, &temp_selection.number_of_classes, &temp_selection.number_of_selections);
+		temp_selection.creation_date.SetFromDOS((unsigned long) temp_long);
+		all_classification_selections.Add(temp_selection);
+	}
+
+	main_frame->current_project.database.EndBatchSelect();
+
+	for (int counter = 0; counter < all_classification_selections.GetCount(); counter++)
+	{
+		more_data = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT CLASS_AVERAGE_NUMBER FROM CLASSIFICATION_SELECTION_%li", all_classification_selections.Item(counter).selection_id));
+
+		while(more_data == true)
+		{
+			more_data = main_frame->current_project.database.GetFromBatchSelect("l", &temp_long);
+			all_classification_selections.Item(counter).selections.Add(temp_long);
+		}
+
+		main_frame->current_project.database.EndBatchSelect();
+	}
 
 }
 
@@ -438,6 +522,7 @@ ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefineme
 	}
 
 	//wxPrintf("returning NULL\n");
+	MyDebugAssertFalse(1==1, "Returning NULL here..");
 	return NULL;
 }
 
@@ -456,6 +541,7 @@ ShortClassificationInfo*  MyRefinementPackageAssetPanel::ReturnPointerToShortCla
 	}
 
 	//wxPrintf("returning NULL\n");
+	MyDebugAssertFalse(1==1, "Returning NULL here..");
 	return NULL;
 
 }

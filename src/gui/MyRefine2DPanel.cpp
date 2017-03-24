@@ -23,7 +23,7 @@ Refine2DPanel( parent )
 
 	my_classification_manager.SetParent(this);
 
-	ResultDisplayPanel->Initialise(CAN_FFT);
+	ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING);
 
 	/*
 	buffered_results = NULL;
@@ -116,70 +116,15 @@ void MyRefine2DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 
 void MyRefine2DPanel::FillRefinementPackagesComboBox()
 {
-	RefinementPackageComboBox->Freeze();
-	RefinementPackageComboBox->Clear();
-	RefinementPackageComboBox->ChangeValue("");
-
-	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0)
-	{
-		long currently_selected_asset_id = -1;
-		bool selection_has_changed = true;
-
-         //TODO: move before the Clear()
-		if (selected_refinement_package >= 0 && selected_refinement_package <= RefinementPackageComboBox->GetCount() && RefinementPackageComboBox->GetCount() > 0)
-		{
-			currently_selected_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).asset_id;
-		}
-
-		AppendRefinementPackagesToComboBox(RefinementPackageComboBox);
-
-		if (currently_selected_asset_id == -1)
-		{
-			selected_refinement_package = RefinementPackageComboBox->GetCount() - 1;
-			RefinementPackageComboBox->SetSelection(selected_refinement_package);
-		}
-		else
-		{
-			selected_refinement_package = RefinementPackageComboBox->GetCount() - 1;
-						RefinementPackageComboBox->SetSelection(selected_refinement_package);
-			for (long counter = 0; counter < RefinementPackageComboBox->GetCount(); counter++)
-			{
-				if (refinement_package_asset_panel->all_refinement_packages.Item(counter).asset_id == currently_selected_asset_id)
-				{
-					selected_refinement_package = counter;
-					RefinementPackageComboBox->SetSelection(counter);
-					selection_has_changed = false;
-				}
-			}
-		}
-
-		if (selection_has_changed == true)
-		{
-			NewRefinementPackageSelected();
-		}
-	}
-
-	RefinementPackageComboBox->Thaw();
+	if (RefinementPackageComboBox->FillWithRefinementPackages() == false) NewRefinementPackageSelected();
 }
 
 void MyRefine2DPanel::FillInputParamsComboBox()
 {
-	InputParametersComboBox->Freeze();
-	InputParametersComboBox->Clear();
-
 	if (RefinementPackageComboBox->GetSelection() >= 0 && refinement_package_asset_panel->all_refinement_packages.GetCount() > 0)
 	{
-		InputParametersComboBox->Append("New Classification");
-		for (long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.GetCount(); counter++)
-		{
-				//wxPrintf("ID = %li\n",refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids.Item(counter));
-				InputParametersComboBox->Append(refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(counter))->name);
-			}
-
-		InputParametersComboBox->SetSelection(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.GetCount());
+		InputParametersComboBox->FillWithClassifications(RefinementPackageComboBox->GetSelection(), true);
 	}
-
-	InputParametersComboBox->Thaw();
 }
 
 
@@ -322,32 +267,7 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 void MyRefine2DPanel::FillRunProfileComboBoxes()
 {
-	int old_reconstruction_selection = 0;
-	int old_refinement_selection = 0;
-
-	// get the current selection..
-
-	if (RefinementRunProfileComboBox->GetCount() > 0) old_refinement_selection = RefinementRunProfileComboBox->GetSelection();
-
-	// refresh..
-
-	RefinementRunProfileComboBox->Freeze();
-
-	RefinementRunProfileComboBox->Clear();
-
-	for (long counter = 0; counter < run_profiles_panel->run_profile_manager.number_of_run_profiles; counter++)
-	{
-		RefinementRunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
-	}
-
-	if (RefinementRunProfileComboBox->GetCount() > 0)
-	{
-		if (RefinementRunProfileComboBox->GetCount() >= old_refinement_selection) RefinementRunProfileComboBox->SetSelection(old_refinement_selection);
-		else RefinementRunProfileComboBox->SetSelection(0);
-	}
-
-	RefinementRunProfileComboBox->Thaw();
-
+	RefinementRunProfileComboBox->FillWithRunProfiles();
 }
 
 
@@ -363,6 +283,7 @@ void MyRefine2DPanel::NewRefinementPackageSelected()
 void MyRefine2DPanel::SetInfo()
 {
 
+	wxLogNull *suppress_png_warnings = new wxLogNull;
 	#include "icons/classification_infotext1.cpp"
 	wxBitmap class_picture1_bmp = wxBITMAP_PNG_FROM_DATA(classification_infotext1);
 
@@ -374,6 +295,7 @@ void MyRefine2DPanel::SetInfo()
 
 	#include "icons/classification_infotext4.cpp"
 	wxBitmap class_picture4_bmp = wxBITMAP_PNG_FROM_DATA(classification_infotext4);
+	delete suppress_png_warnings;
 
 
 	InfoText->BeginSuppressUndo();
@@ -629,55 +551,55 @@ void MyRefine2DPanel::StartClassificationClick( wxCommandEvent& event )
 
 void MyRefine2DPanel::SetDefaults()
 {
-
-	ExpertPanel->Freeze();
-
-	if (InputParametersComboBox->GetSelection() > 0)
+	if (RefinementPackageComboBox->GetCount() > 0)
 	{
-		NumberClassesSpinCtrl->SetValue(refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->number_of_classes);
-	}
-	else
-	{
-		if (InputParametersComboBox->GetSelection() == 0)
+		ExpertPanel->Freeze();
+		if (InputParametersComboBox->GetSelection() > 0)
 		{
-			int calculated_number_of_classes = 	refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).contained_particles.GetCount() / 200;
-
-			if (calculated_number_of_classes > 50) calculated_number_of_classes = 50;
-			else
-			if (calculated_number_of_classes > 40) calculated_number_of_classes = 40;
-			else
-			if (calculated_number_of_classes > 30) calculated_number_of_classes = 30;
-			else
-			if (calculated_number_of_classes > 20) calculated_number_of_classes = 20;
-			else
-			if (calculated_number_of_classes > 10) calculated_number_of_classes = 10;
-			else
-			calculated_number_of_classes = 5;
-
-			NumberClassesSpinCtrl->SetValue(calculated_number_of_classes);
+			NumberClassesSpinCtrl->SetValue(refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->number_of_classes);
 		}
+		else
+		{
+			if (InputParametersComboBox->GetSelection() == 0)
+			{
+				int calculated_number_of_classes = 	refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).contained_particles.GetCount() / 200;
+
+				if (calculated_number_of_classes > 50) calculated_number_of_classes = 50;
+				else
+				if (calculated_number_of_classes > 40) calculated_number_of_classes = 40;
+				else
+				if (calculated_number_of_classes > 30) calculated_number_of_classes = 30;
+				else
+				if (calculated_number_of_classes > 20) calculated_number_of_classes = 20;
+				else
+				if (calculated_number_of_classes > 10) calculated_number_of_classes = 10;
+				else
+				calculated_number_of_classes = 5;
+
+				NumberClassesSpinCtrl->SetValue(calculated_number_of_classes);
+			}
+		}
+
+		NumberRoundsSpinCtrl->SetValue(20);
+
+		LowResolutionLimitTextCtrl->SetValue("300.00");
+		HighResolutionLimitTextCtrl->SetValue("8.00");
+
+		float local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
+		MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
+		AngularStepTextCtrl->SetValue("15.00");
+
+		float search_range = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5;
+
+		SearchRangeXTextCtrl->SetValue(wxString::Format("%.2f", search_range));
+		SearchRangeYTextCtrl->SetValue(wxString::Format("%.2f", search_range));
+
+		SmoothingFactorTextCtrl->SetValue("1.00");
+		ExcludeBlankEdgesYesRadio->SetValue(true);
+		AutoPercentUsedRadioYes->SetValue(true);
+		PercentUsedTextCtrl->SetValue("100.00");
+		ExpertPanel->Thaw();
 	}
-
-	NumberRoundsSpinCtrl->SetValue(20);
-
-	LowResolutionLimitTextCtrl->SetValue("300.00");
-	HighResolutionLimitTextCtrl->SetValue("8.00");
-
-	float local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
-	MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
-	AngularStepTextCtrl->SetValue("15.00");
-
-	float search_range = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5;
-
-	SearchRangeXTextCtrl->SetValue(wxString::Format("%.2f", search_range));
-	SearchRangeYTextCtrl->SetValue(wxString::Format("%.2f", search_range));
-
-	SmoothingFactorTextCtrl->SetValue("1.00");
-	ExcludeBlankEdgesYesRadio->SetValue(true);
-	AutoPercentUsedRadioYes->SetValue(true);
-	PercentUsedTextCtrl->SetValue("100.00");
-	ExpertPanel->Thaw();
-
 }
 
 void MyRefine2DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
@@ -2212,6 +2134,8 @@ void ClassificationManager::CycleRefinement()
 		}
 
 	}
+
+	main_frame->DirtyClassifications();
 }
 
 

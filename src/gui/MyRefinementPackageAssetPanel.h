@@ -53,6 +53,10 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void ImportAllClassificationInfosFromDatabase();
 		ArrayofShortClassificationInfos all_classification_short_infos;
 
+		void ImportAllClassificationSelectionsFromDatabase();
+		ArrayofClassificationSelections all_classification_selections;
+
+
 };
 
 

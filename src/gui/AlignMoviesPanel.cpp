@@ -52,7 +52,10 @@ void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event)
 void MyAlignMoviesPanel::SetInfo()
 {
 	#include "icons/dlp_alignment.cpp"
+
+	wxLogNull *suppress_png_warnings = new wxLogNull;
 	wxBitmap alignment_bmp = wxBITMAP_PNG_FROM_DATA(dlp_alignment);
+	delete suppress_png_warnings;
 
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -306,6 +309,18 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				StartAlignmentButton->Enable(false);
 			}
+
+			if (group_combo_is_dirty == true)
+			{
+				FillGroupComboBox();
+				group_combo_is_dirty = false;
+			}
+
+			if (run_profiles_are_dirty == true)
+			{
+				FillRunProfileComboBox();
+				run_profiles_are_dirty = false;
+			}
 		}
 		else
 		{
@@ -316,17 +331,7 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			//StartAlignmentButton->Enable(true);
 		}
 
-		if (group_combo_is_dirty == true)
-		{
-			FillGroupComboBox();
-			group_combo_is_dirty = false;
-		}
 
-		if (run_profiles_are_dirty == true)
-		{
-			FillRunProfileComboBox();
-			run_profiles_are_dirty = false;
-		}
 	}
 
 
@@ -337,18 +342,7 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 void MyAlignMoviesPanel::FillGroupComboBox()
 {
 
-	GroupComboBox->Freeze();
-	GroupComboBox->Clear();
-
-	for (long counter = 0; counter < movie_asset_panel->ReturnNumberOfGroups(); counter++)
-	{
-		GroupComboBox->Append(movie_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), movie_asset_panel->ReturnGroupSize(counter)) + ")");
-
-	}
-
-	GroupComboBox->SetSelection(0);
-
-	GroupComboBox->Thaw();
+	GroupComboBox->FillWithMovieGroups();
 }
 
 void MyAlignMoviesPanel::Refresh()
@@ -359,30 +353,7 @@ void MyAlignMoviesPanel::Refresh()
 
 void MyAlignMoviesPanel::FillRunProfileComboBox()
 {
-	int old_selection = 0;
-
-	// get the current selection..
-
-	if (RunProfileComboBox->GetCount() > 0) old_selection = RunProfileComboBox->GetSelection();
-
-	// refresh..
-
-	RunProfileComboBox->Freeze();
-	RunProfileComboBox->Clear();
-
-	for (long counter = 0; counter < run_profiles_panel->run_profile_manager.number_of_run_profiles; counter++)
-	{
-		RunProfileComboBox->Append(run_profiles_panel->run_profile_manager.ReturnProfileName(counter) + wxString::Format(" (%li)", run_profiles_panel->run_profile_manager.ReturnTotalJobs(counter)));
-	}
-
-	if (RunProfileComboBox->GetCount() > 0)
-	{
-		if (RunProfileComboBox->GetCount() >= old_selection) RunProfileComboBox->SetSelection(old_selection);
-		else RunProfileComboBox->SetSelection(0);
-
-	}
-	RunProfileComboBox->Thaw();
-
+	RunProfileComboBox->FillWithRunProfiles();
 }
 
 void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
@@ -428,7 +399,13 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	wxString output_filename;
 	wxFileName buffer_filename;
 	bool movie_is_gain_corrected;
-	int output_binning_factor;
+	float output_binning_factor;
+
+	bool correct_mag_distortion;
+	float mag_distortion_angle;
+	float mag_distortion_major_axis_scale;
+	float mag_distortion_minor_axis_scale;
+
 
 	// read the options form the gui..
 
@@ -518,9 +495,15 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 		movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
-		output_binning_factor = movie_asset_panel->ReturnAssetSuperResolutionFactor(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 
-		my_job_package.AddJob("ssfffbbfifbiifffbsi",	current_filename.c_str(), //0
+		correct_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		mag_distortion_major_axis_scale = movie_asset_panel->ReturnMagDistortionMajorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+
+
+		my_job_package.AddJob("ssfffbbfifbiifffbsfbfff",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -538,7 +521,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														current_pre_exposure, //15
 														movie_is_gain_corrected,
 														current_gain_filename.ToStdString().c_str(),
-														output_binning_factor);
+														output_binning_factor,
+														correct_mag_distortion,
+														mag_distortion_angle,
+														mag_distortion_major_axis_scale,
+														mag_distortion_minor_axis_scale);
 
 		my_progress_dialog->Update(counter + 1);
 	}
@@ -832,8 +819,9 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 	if (current_time - time_of_last_graph_update > 1)
 	{
-		GraphPanel->Clear();
+		GraphPanel->ClearGraph();
 		wxFileName current_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
+		wxFileName sum_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
 		GraphPanel->title->SetName(current_filename.GetFullName());
 
 		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
@@ -842,6 +830,8 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 		}
 
 		GraphPanel->Draw();
+
+		GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
 
 		if (graph_is_hidden == true)
 		{
@@ -893,6 +883,14 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 	int array_location;
 	int parent_id;
 	bool have_errors = false;
+
+	float x_bin_factor;
+	float y_bin_factor;
+	float average_bin_factor;
+
+	float corrected_pixel_size;
+
+
 	wxString current_table_name;
 	ImageAsset temp_asset;
 
@@ -979,6 +977,23 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 			if (temp_asset.is_valid == true)
 			{
 				parent_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+
+				// work out the corrected pixel size
+				// so the bin amount, might not be exactly the specified amount, as it is fixed by integer resizing of the image.
+
+				x_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->x_size) / float(temp_asset.x_size);
+				y_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->y_size) / float(temp_asset.y_size);
+				average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
+
+				corrected_pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * average_bin_factor;
+
+				// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
+
+				if (my_job_package.jobs[counter].arguments[19].ReturnBoolArgument() == true) // correct mag distortion
+				{
+					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, my_job_package.jobs[counter].arguments[21].ReturnFloatArgument(), my_job_package.jobs[counter].arguments[22].ReturnFloatArgument());
+				}
+
 				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
 
 				// is this image (or a previous version) already an asset?
@@ -990,7 +1005,9 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					temp_asset.parent_id = parent_id;
 					temp_asset.alignment_id = alignment_id;
 					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					temp_asset.pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * float(my_job_package.jobs[counter].arguments[18].ReturnIntegerArgument());
+
+					temp_asset.pixel_size = corrected_pixel_size;
+
 					temp_asset.position_in_stack = 1;
 					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					image_asset_panel->AddAsset(&temp_asset);
@@ -1004,9 +1021,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * float(my_job_package.jobs[counter].arguments[18].ReturnIntegerArgument());
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = corrected_pixel_size;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+
 					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_name,
 							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            my_job_package.jobs[counter].arguments[1].ReturnStringArgument(),

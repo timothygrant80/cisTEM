@@ -182,6 +182,8 @@ void MyMovieAssetPanel::ImportAllFromDatabase()
 	}
 
 	main_frame->current_project.database.EndAllMovieGroupsSelect();
+
+	main_frame->DirtyMovieGroups();
 	FillGroupList();
 	FillContentsList();
 }
@@ -199,7 +201,11 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(9, "Gain filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(10,"Super-res. factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(10,"Output bin. factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(11,"Correct Mag. Distortion?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(12,"Dist. angle", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(13,"Dist. major scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(14,"Dist. minor scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -253,7 +259,16 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxFileName(all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->gain_filename).GetFullName();
 	    	break;
 	    case 10:
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->super_resolution_factor);
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->output_binning_factor);
+	    case 11:
+	    	if ( all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->correct_mag_distortion == true) return "Yes";
+	    	else return "No";
+	    case 12:
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_angle);
+	    case 13:
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_major_scale);
+	    case 14:
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_minor_scale);
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
@@ -295,14 +310,34 @@ wxString MyMovieAssetPanel::ReturnAssetGainFilename(long wanted_asset)
 	return wxString(all_assets_list->ReturnMovieAssetPointer(wanted_asset)->gain_filename);
 }
 
-int MyMovieAssetPanel::ReturnAssetSuperResolutionFactor(long wanted_asset)
+float MyMovieAssetPanel::ReturnAssetBinningFactor(long wanted_asset)
 {
-	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->super_resolution_factor;
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->output_binning_factor;
 }
 
 int MyMovieAssetPanel::ReturnAssetID(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_id;
+}
+
+bool MyMovieAssetPanel::ReturnCorrectMagDistortion(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->correct_mag_distortion;
+}
+
+float MyMovieAssetPanel::ReturnMagDistortionAngle(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->mag_distortion_angle;
+}
+
+float MyMovieAssetPanel::ReturnMagDistortionMajorScale(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->mag_distortion_major_scale;
+}
+
+float MyMovieAssetPanel::ReturnMagDistortionMinorScale(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->mag_distortion_minor_scale;
 }
 
 double MyMovieAssetPanel::ReturnAssetPreExposureAmount(long wanted_asset)

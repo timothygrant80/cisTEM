@@ -8,6 +8,14 @@
 #define CAN_FFT                      4  // 2^2, bit 2
 #define START_WITH_INVERTED_CONTRAST 8
 #define START_WITH_AUTO_CONTRAST     16
+#define NO_NOTEBOOK                  32
+#define FIRST_LOCATION_ONLY          64
+#define START_WITH_FOURIER_SCALING   128
+#define DO_NOT_SHOW_STATUS_BAR       256
+#define CAN_SELECT_IMAGES            1024
+#define NO_POPUP                     2048
+#define START_WITH_NO_LABEL          4096
+#define SKIP_LEFTCLICK_TO_PARENT     8192
 
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1
@@ -16,6 +24,7 @@
 
 class DisplayPopup;
 class DisplayNotebook;
+class DisplayNotebookPanel;
 
 class
 DisplayPanel : public DisplayPanelParent
@@ -39,13 +48,25 @@ public:
 	wxStaticText *StatusText;
 	bool popup_exists;
 	DisplayPopup *popup;
+	DisplayNotebookPanel *no_notebook_panel;
 
 	DisplayPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 
 	void Initialise(int style_flags = 0);
 	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
+	void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
 	void UpdateToolbar();
 	void ChangeFocusToPanel(void);
+
+	void SetSelectionSquareLocation(long wanted_location);
+
+	void SetImageSelected(long wanted_image, bool refresh = true);
+	void SetImageNotSelected(long wanted_image, bool refresh = true);
+	void ToggleImageSelected(long wanted_image, bool refresh = true);
+	void ClearSelection(bool refresh = true);
+	bool IsImageSelected(long wanted_image);
+
+	void RefreshCurrentPanel();
 
 	void OnAuto( wxCommandEvent& event );
 	void OnLocal( wxCommandEvent& event );
@@ -58,8 +79,9 @@ public:
 	void OnPrevious( wxCommandEvent& event );
 	void ChangeLocation(wxCommandEvent& event);
 	void ChangeScaling(wxCommandEvent& event);
+	void OnHighQuality(wxCommandEvent& event);
 
-
+	DisplayNotebookPanel* ReturnCurrentPanel();
 
 	void Clear();
 	void CloseAllTabs();
@@ -135,11 +157,19 @@ DisplayNotebookPanel : public wxPanel
 	void ReDrawPanel();
 
 	Image *image_memory_buffer;
+	Image *scaled_image_memory_buffer;
+
 	int number_allocated_for_buffer;
+
+	void SetImageSelected(long wanted_image, bool refresh = true);
+	void SetImageNotSelected(long wanted_image, bool refresh = true);
+	void ToggleImageSelected(long wanted_image, bool refresh = true);
+	void ClearSelection(bool refresh = true);
 
 	void OnPaint(wxPaintEvent& evt );
 	void OnEraseBackground(wxEraseEvent& event);
 	void OnSize( wxSizeEvent& event);
+	void OnLeftDown(wxMouseEvent& event);
 	void OnRightDown(wxMouseEvent& event);
 	void OnRightUp(wxMouseEvent& event);
 	void OnMotion(wxMouseEvent& event);
@@ -171,6 +201,7 @@ DisplayNotebookPanel : public wxPanel
 	long original_y_size;
 
 	long current_location;
+	long blue_selection_square_location;
 
 	long location_on_last_draw;
 	long images_in_x_on_last_draw;
@@ -207,6 +238,9 @@ DisplayNotebookPanel : public wxPanel
 	bool should_refresh;
 	bool use_fft;
 	bool invert_contrast;
+	bool suspend_overlays;
+
+	bool use_fourier_scaling;
 
 	long images_in_current_view;
 
@@ -352,6 +386,7 @@ enum
 	Toolbar_Refresh,
 	Toolbar_Histogram,
 	Toolbar_FFT,
+	Toolbar_High_Quality,
 	Toolbar_Invert,
 //	Location_Text_Control,
 //	Filament_Number_Text_Control,

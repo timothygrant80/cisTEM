@@ -8,7 +8,7 @@
 class
 UnblurResultsPanel : public wxPanel
 {
-
+	wxBoxSizer* MainSizer;
 	wxBoxSizer* GraphSizer;
 
 	public:
@@ -16,7 +16,13 @@ UnblurResultsPanel : public wxPanel
 	UnblurResultsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
 	~UnblurResultsPanel();
 
+	wxAuiNotebook *my_notebook;
+	wxPanel *PlotPanel;
+	DisplayPanel *ImageDisplayPanel;
+
+
 	void Clear();
+	void ClearGraph();
 	void AddPoint(double dose, double x_movement, double y_movement);
 	void Draw();
 

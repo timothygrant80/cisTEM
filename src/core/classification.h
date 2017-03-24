@@ -58,6 +58,7 @@ public :
 	long classification_id;
 	long refinement_package_asset_id;
 	wxString name;
+	wxString class_average_file;
 	long number_of_particles;
 	int number_of_classes;
 

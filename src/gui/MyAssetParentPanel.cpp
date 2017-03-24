@@ -1008,7 +1008,8 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 		}
 
 
-		my_panel->FillGroupList();
+		my_panel->DirtyGroups();
+		//my_panel->FillGroupList();
 		main_frame->RecalculateAssetBrowser();
 		return wxDragCopy;
 	}

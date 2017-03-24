@@ -47,7 +47,7 @@ bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite)
 
 void TiffFile::CloseFile()
 {
-	if (tif) TIFFClose(tif);
+	if (tif != NULL) TIFFClose(tif);
 	tif = NULL;
 }
 
@@ -191,20 +191,22 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 			long address_of_start_of_slice = (directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize();
 			long address_of_start_of_line = address_of_start_of_slice;
 			long address_of_start_of_other_line = address_of_start_of_slice + (ReturnYSize()-1)*ReturnXSize();
+			long counter;
+
 			for (long line_counter = 0; line_counter < ReturnYSize()/2; line_counter++)
 			{
 				// Copy current line to a buffer
-				for (long counter = 0; counter < ReturnXSize(); counter ++ )
+				for (counter = 0; counter < ReturnXSize(); counter ++ )
 				{
 					temp_line[counter] = output_array[counter+address_of_start_of_line];
 				}
 				// Copy other line to current line
-				for (long counter = 0; counter < ReturnXSize(); counter ++ )
+				for (counter = 0; counter < ReturnXSize(); counter ++ )
 				{
 					output_array[counter+address_of_start_of_line] = output_array[counter+address_of_start_of_other_line];
 				}
 				// Copy line from buffer to other line
-				for (long counter = 0; counter < ReturnXSize(); counter ++ )
+				for (counter = 0; counter < ReturnXSize(); counter ++ )
 				{
 					output_array[counter+address_of_start_of_other_line] = temp_line[counter];
 				}
@@ -212,6 +214,8 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 				address_of_start_of_line += ReturnXSize();
 				address_of_start_of_other_line -= ReturnXSize();
 			}
+
+			delete [] temp_line;
 		}
 
 	} // end of loop over slices

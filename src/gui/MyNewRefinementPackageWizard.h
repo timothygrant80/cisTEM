@@ -154,6 +154,21 @@ class ClassesSetupWizardPage : public wxWizardPage
 
 };
 
+class ClassSelectionWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+
+	public:
+
+	ClassSelectionWizardPanel *my_panel;
+
+	ClassSelectionWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
 
 class MyNewRefinementPackageWizard : public NewRefinementPackageWizard
 {
@@ -172,6 +187,7 @@ public:
 		SymmetryWizardPage *symmetry_page;
 		MolecularWeightWizardPage *molecular_weight_page;
 		LargestDimensionWizardPage *largest_dimension_page;
+		ClassSelectionWizardPage *class_selection_page;
 
 		void DisableNextButton();
 		void EnableNextButton();

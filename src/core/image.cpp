@@ -7689,6 +7689,71 @@ float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_
 	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
 }
 
+void Image::CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis)
+{
+	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D Images supported");
+
+	long pixel_counter = 0;
+	float angle_in_radians = deg_2_rad(distortion_angle);
+
+	float x_scale_factor = 1.0 / distortion_major_axis;
+	float y_scale_factor = 1.0 / distortion_minor_axis;
+
+	float average_edge_value = ReturnAverageOfRealValuesOnEdges();
+
+	float new_x;
+	float new_y;
+
+	float final_x;
+	float final_y;
+
+	int x,y;
+
+	Image buffer_image;
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, is_in_real_space);
+	//buffer_image.CopyFrom(this);
+
+	for (y = 0; y < logical_y_dimension; y++)
+	{
+		for (x = 0; x < logical_x_dimension; x++)
+		{
+			// first rotation
+
+			new_x = float(y - physical_address_of_box_center_y) * sinf(-angle_in_radians) + float(x - physical_address_of_box_center_x) * cosf(-angle_in_radians);
+			new_y = float(y - physical_address_of_box_center_y) * cosf(-angle_in_radians) - float(x - physical_address_of_box_center_x) * sinf(-angle_in_radians);
+
+			// scale factor
+
+			new_x *= x_scale_factor;
+			new_y *= y_scale_factor;
+
+			new_x += physical_address_of_box_center_x;
+			new_y += physical_address_of_box_center_y;
+
+			// rotate back
+
+			final_x = float(new_y - physical_address_of_box_center_y) * sinf(angle_in_radians) + float(new_x - physical_address_of_box_center_x) * cosf(angle_in_radians);
+			final_y = float(new_y - physical_address_of_box_center_y) * cosf(angle_in_radians) - float(new_x - physical_address_of_box_center_x) * sinf(angle_in_radians);
+
+			final_x += physical_address_of_box_center_x;
+			final_y += physical_address_of_box_center_y;
+
+			if (final_x < 0 || final_x > logical_x_dimension - 1 || final_y < 0 || final_y > logical_y_dimension - 1) real_values[pixel_counter] = average_edge_value;
+			else
+			{
+				buffer_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(final_x, final_y);
+			}
+
+			pixel_counter++;
+		}
+
+		pixel_counter += padding_jump_value;
+	}
+
+	Consume(&buffer_image);
+}
+
+
 float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -7804,6 +7869,7 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	return float(sum);
 }
+
 
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

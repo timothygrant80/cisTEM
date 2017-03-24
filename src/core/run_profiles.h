@@ -66,6 +66,7 @@ public:
 	RunProfile * ReturnProfilePointer(int wanted_profile);
 
 	wxString ReturnProfileName(long wanted_profile);
+	long ReturnProfileID(long wanted_profile);
 	long ReturnTotalJobs(long wanted_profile);
 
 

@@ -13,6 +13,7 @@ public :
 	float defocus_1;
 	float defocus_2;
 	float defocus_angle;
+	float phase_shift;
 	float spherical_aberration;
 	float amplitude_contrast;
 	float microscope_voltage;
@@ -51,6 +52,8 @@ class RefinementPackage {
 	wxArrayLong classification_ids;
 
 	ArrayOfRefinmentPackageParticleInfos contained_particles;
+
+	RefinementPackageParticleInfo ReturnParticleInfoByPositionInStack(long wanted_position_in_stack);
 
 	long ReturnLastRefinementID();
 

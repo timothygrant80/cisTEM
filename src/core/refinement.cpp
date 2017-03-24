@@ -16,6 +16,7 @@ RefinementResult::RefinementResult()
 	defocus1 = 0;
 	defocus2 = 0;
 	defocus_angle = 0;
+	phase_shift = 0;
 	occupancy = 0;
 	logp = 0;
 	sigma = 0;
@@ -85,6 +86,7 @@ Refinement::Refinement()
 	should_refine_ctf = false;
 	defocus_search_range = 0;
 	defocus_search_step = 0;
+	percent_used = 0.0;
 
 
 }
@@ -98,8 +100,8 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 {
 	wxArrayString output_filenames;
 	wxString current_filename;
-	float output_parameters[16];
-	float parameter_average[16];
+	float output_parameters[17];
+	float parameter_average[17];
 
 	int class_counter;
 	long particle_counter;
@@ -108,8 +110,8 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-		ZeroFloatArray(output_parameters, 16);
-		ZeroFloatArray(parameter_average, 16);
+		ZeroFloatArray(output_parameters, 17);
+		ZeroFloatArray(parameter_average, 17);
 
 		current_filename = base_filename + wxString::Format("_%li_%i.par", refinement_id, class_counter + 1);
 		output_filenames.Add(current_filename);
@@ -130,13 +132,14 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 			output_parameters[8] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1;
 			output_parameters[9] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2;
 			output_parameters[10] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle;
-			output_parameters[11] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-			output_parameters[12] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-			output_parameters[13] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
-			output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score;
-			output_parameters[15] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score_change;
+			output_parameters[11] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift;
+			output_parameters[12] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+			output_parameters[13] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
+			output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
+			output_parameters[15] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score;
+			output_parameters[16] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score_change;
 
-			for (parameter_counter = 0; parameter_counter < 16; parameter_counter++)
+			for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
 			{
 				parameter_average[parameter_counter] += output_parameters[parameter_counter];
 			}
@@ -149,18 +152,16 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 		// NEED TO WRITE OUT AVERAGE SIGMA WEIGHTED BY OCC.
 
 
-		if (number_of_classes > 1) output_parameters[13] = average_sigma;
-
-		//
+		if (number_of_classes > 1) output_parameters[14] = average_sigma;
 
 
-		for (parameter_counter = 0; parameter_counter < 16; parameter_counter++)
+		for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
 		{
 			parameter_average[parameter_counter] /= float (number_of_particles);
 		}
 
 		my_output_par_file->WriteLine(parameter_average, true);
-		my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + wxString::Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[14], parameter_average[11]));
+		my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + wxString::Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[15], parameter_average[12]));
 
 		delete my_output_par_file;
 	}

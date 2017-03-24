@@ -13,6 +13,12 @@ MovieImportDialog( parent )
 
 	PathListCtrl->GetClientSize(&list_width, &list_height);
 	PathListCtrl->InsertColumn(0, "Files", wxLIST_FORMAT_LEFT, list_width);
+
+	DesiredPixelSizeTextCtrl->SetMinMaxValue(0, 100);
+	MajorScaleTextCtrl->SetMinMaxValue(0, FLT_MAX);
+	MinorScaleTextCtrl->SetMinMaxValue(0, FLT_MAX);
+	MajorScaleTextCtrl->SetPrecision(3);
+	MinorScaleTextCtrl->SetPrecision(3);
 }
 
 void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
@@ -64,6 +70,7 @@ void MyMovieImportDialog::AddDirectoryClick( wxCommandEvent& event )
     {
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
     	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
+    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.tif", wxDIR_FILES);
 
     	all_files.Sort();
 
@@ -111,6 +118,7 @@ void MyMovieImportDialog::CheckImportButtonStatus()
 {
 	bool enable_import_box = true;
 	double temp_double;
+	double current_pixel_size;
 
 	if (PathListCtrl->GetItemCount() < 1) enable_import_box = false;
 
@@ -118,8 +126,20 @@ void MyMovieImportDialog::CheckImportButtonStatus()
 
 	if ((! MoviesAreGainCorrectedCheckBox->IsChecked()) && (! GainFilePicker->GetFileName().Exists()) ) enable_import_box = false;
 
-	if ((! MoviesAreGainCorrectedCheckBox->IsChecked())) wxPrintf("Movies are not gain corrected\n");
-	if (GainFilePicker->GetFileName().Exists()) wxPrintf("Gain file exists\n");
+	//if ((! MoviesAreGainCorrectedCheckBox->IsChecked())) wxPrintf("Movies are not gain corrected\n");
+	//if (GainFilePicker->GetFileName().Exists()) wxPrintf("Gain file exists\n");
+
+	if (ResampleMoviesCheckBox->IsChecked() == true)
+	{
+		if (PixelSizeText->GetLineText(0).ToDouble(&current_pixel_size) == false) enable_import_box = false;
+		else
+		if (current_pixel_size >= DesiredPixelSizeTextCtrl->ReturnValue()) enable_import_box = false;
+	}
+
+	if (CorrectMagDistortionCheckBox->IsChecked() == true)
+	{
+		if (MajorScaleTextCtrl->ReturnValue() < MinorScaleTextCtrl->ReturnValue()) enable_import_box = false;
+	}
 
 	ImportButton->Enable(enable_import_box);
 
@@ -140,11 +160,24 @@ void MyMovieImportDialog::OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & eve
 	CheckImportButtonStatus();
 }
 
-void MyMovieImportDialog::OnUseFullResolutionCheckBox( wxCommandEvent & event )
+void MyMovieImportDialog::OnResampleMoviesCheckBox( wxCommandEvent & event )
 {
-	SuperResolutionFactorStaticText->Enable(! UseFullResolutionCheckBox->IsChecked());
-	SuperResolutionFactorSpinCtrl->Enable(! UseFullResolutionCheckBox->IsChecked());
-	SuperResolutionFactorSpinCtrl->SetValue(1);
+	DesiredPixelSizeStaticText->Enable(ResampleMoviesCheckBox->IsChecked());
+	DesiredPixelSizeTextCtrl->Enable(ResampleMoviesCheckBox->IsChecked());
+	//DesiredPixelSizeTextCtrl->ChangeValue("1.00");
+	CheckImportButtonStatus();
+}
+
+void MyMovieImportDialog::OnCorrectMagDistortionCheckBox( wxCommandEvent & event )
+{
+	DistortionAngleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+	MajorScaleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+	MinorScaleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+	DistortionAngleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+	MajorScaleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+	MinorScaleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+
+	CheckImportButtonStatus();
 }
 
 void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
@@ -158,6 +191,9 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 	double dose_per_frame;
 
 	bool have_errors = false;
+
+	int gain_ref_x_size = -1;
+	int gain_ref_y_size = -1;
 
 	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
 	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
@@ -179,6 +215,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
+
 		if (MoviesAreGainCorrectedCheckBox->IsChecked())
 		{
 			temp_asset.gain_filename = "";
@@ -186,20 +223,65 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		else
 		{
 			temp_asset.gain_filename = GainFilePicker->GetFileName().GetFullPath();
+
+			ImageFile gain_ref;
+			if (gain_ref.OpenFile(temp_asset.gain_filename.ToStdString(), false) == false)
+			{
+				my_error->ErrorText->AppendText(wxString::Format(wxT("cannot open gain reference file (%s)\n"), temp_asset.gain_filename));
+				have_errors = true;
+			}
+			else
+			{
+				gain_ref_x_size = gain_ref.ReturnXSize();
+				gain_ref_y_size = gain_ref.ReturnYSize();
+			}
+
 		}
 
-		if (UseFullResolutionCheckBox->IsChecked())
+		// get the size of the gain ref..
+
+
+
+		if (ResampleMoviesCheckBox->IsChecked() == false)
 		{
-			temp_asset.super_resolution_factor = 1;
+			temp_asset.output_binning_factor = 1;
 		}
 		else
 		{
-			temp_asset.super_resolution_factor = SuperResolutionFactorSpinCtrl->GetValue();
+			float desired_pixel_size = DesiredPixelSizeTextCtrl->ReturnValue();
+
+			// if we are correcting for a mag distortion - calculate the binning factor off the corrected pixel size
+
+			if (CorrectMagDistortionCheckBox->IsChecked() == false)
+			{
+				temp_asset.output_binning_factor = desired_pixel_size / temp_asset.pixel_size;
+			}
+			else
+			{
+				temp_asset.output_binning_factor = desired_pixel_size / ReturnMagDistortionCorrectedPixelSize(temp_asset.pixel_size, MajorScaleTextCtrl->ReturnValue(), MinorScaleTextCtrl->ReturnValue());
+			}
+
 		}
+
+		if (CorrectMagDistortionCheckBox->IsChecked() == false)
+		{
+			temp_asset.correct_mag_distortion = false;
+			temp_asset.mag_distortion_angle = 0.0;
+			temp_asset.mag_distortion_major_scale = 1.0;
+			temp_asset.mag_distortion_minor_scale = 1.0;
+		}
+		else
+		{
+			temp_asset.correct_mag_distortion = true;
+			temp_asset.mag_distortion_angle = DistortionAngleTextCtrl->ReturnValue();
+			temp_asset.mag_distortion_major_scale = MajorScaleTextCtrl->ReturnValue();
+			temp_asset.mag_distortion_minor_scale = MinorScaleTextCtrl->ReturnValue();
+
+					}
 
 		// ProgressBar..
 
-		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Import Movie",	"Importing Movies...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_ELAPSED_TIME);
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Import Movie",	"Importing Movies...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_REMAINING_TIME);
 
 		// loop through all the files and add them as assets..
 
@@ -209,12 +291,17 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		for (long counter = 0; counter < PathListCtrl->GetItemCount(); counter++)
 		{
 			temp_asset.Update(PathListCtrl->GetItemText(counter));
-
-			// Check this movie is not already an asset..
-
 			wxDateTime start = wxDateTime::UNow();
 
-			if (movie_asset_panel->IsFileAnAsset(temp_asset.filename) == false)
+			// check everything ok with gain_ref
+
+			if (CorrectMagDistortionCheckBox->IsChecked() == true && (temp_asset.x_size != gain_ref_x_size || temp_asset.y_size != gain_ref_y_size))
+			{
+				my_error->ErrorText->AppendText(wxString::Format(wxT("%s does not have the same size as the provided gain reference, skipping\n"), temp_asset.ReturnFullPathString()));
+				have_errors = true;
+			}
+			else
+			if (movie_asset_panel->IsFileAnAsset(temp_asset.filename) == false) // Check this movie is not already an asset..
 			{
 				wxDateTime end = wxDateTime::UNow();
 
@@ -235,7 +322,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.super_resolution_factor);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale);
 					}
 				}
 				else

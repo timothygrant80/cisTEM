@@ -126,20 +126,7 @@ int MyMovieAlignResultsPanel::GetFilter()
 
 void MyMovieAlignResultsPanel::FillGroupComboBox()
 {
-	GroupComboBox->Freeze();
-	GroupComboBox->ChangeValue("");
-	GroupComboBox->Clear();
-
-	for (long counter = 1; counter < movie_asset_panel->ReturnNumberOfGroups(); counter++)
-	{
-		GroupComboBox->Append(movie_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), movie_asset_panel->ReturnGroupSize(counter)) + ")");
-
-	}
-
-	if (GroupComboBox->GetCount() > 0) GroupComboBox->SetSelection(0);
-
-	GroupComboBox->Thaw();
-
+	GroupComboBox->FillWithMovieGroups(false);
 }
 
 
@@ -174,7 +161,7 @@ void MyMovieAlignResultsPanel::OnPreviousButtonClick( wxCommandEvent& event )
 
 void MyMovieAlignResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 {
-	movie_asset_panel->AddArrayItemToGroup(GroupComboBox->GetCurrentSelection() + 1, per_row_array_position[selected_row]);
+	movie_asset_panel->AddArrayItemToGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 
 }
 
@@ -259,7 +246,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	// now get the result, and draw it as we go..
 
 
-	ResultPanel->Clear();
+	ResultPanel->ClearGraph();
 
 	should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT * FROM MOVIE_ALIGNMENT_PARAMETERS_%i", alignment_id));
 
@@ -278,6 +265,8 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	main_frame->current_project.database.EndBatchSelect();
 
 	ResultPanel->Draw();
+	ResultPanel->ImageDisplayPanel->ChangeFile(output_file, wxFileName(output_file).GetShortPath());
+
 	RightPanel->Layout();
 	RightPanel->Thaw();
 

@@ -65,6 +65,7 @@ const std::complex<float> I(0.0,1.0);
 #include "refinement_package.h"
 #include "refinement.h"
 #include "classification.h"
+#include "classification_selection.h"
 #include "database.h"
 #include "project.h"
 #include "job_packager.h"
@@ -78,6 +79,7 @@ const std::complex<float> I(0.0,1.0);
 #include "frealign_parameter_file.h"
 #include "particle_finder.h"
 #include "myapp.h"
+
 #ifdef MKL
 #include <mkl.h>
 #endif

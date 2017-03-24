@@ -38,6 +38,7 @@ RunProfile::RunProfile()
 RunProfile::RunProfile( const RunProfile &obj) // copy contructor
 {
 	id = obj.id;
+	name = obj.name;
 	number_of_run_commands = obj.number_of_run_commands;
 	manager_command = obj.manager_command;
 	number_allocated = obj.number_allocated;
@@ -343,6 +344,11 @@ void RunProfileManager::RemoveAllProfiles()
 wxString RunProfileManager::ReturnProfileName(long wanted_profile)
 {
 	return run_profiles[wanted_profile].name;
+}
+
+long RunProfileManager::ReturnProfileID(long wanted_profile)
+{
+	return run_profiles[wanted_profile].id;
 }
 
 long RunProfileManager::ReturnTotalJobs(long wanted_profile)

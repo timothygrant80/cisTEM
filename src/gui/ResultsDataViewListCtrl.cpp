@@ -23,10 +23,12 @@ ResultsDataViewListCtrl::ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id
 
 	// set the icons..
 
+	wxLogNull *suppress_png_warnings = new wxLogNull;
 	CheckboxRenderer::checked_bmp = wxBITMAP_PNG_FROM_DATA(checked_checkbox_icon_20);
 	CheckboxRenderer::unchecked_bmp = wxBITMAP_PNG_FROM_DATA(unchecked_checkbox_icon_20);
 	CheckboxRenderer::checked_eye_bmp = wxBITMAP_PNG_FROM_DATA(checked_checkbox_eye_icon_20);
 	CheckboxRenderer::unchecked_eye_bmp = wxBITMAP_PNG_FROM_DATA(unchecked_checkbox_eye_icon_20);
+	delete suppress_png_warnings;
 
 
 	// selection change event..

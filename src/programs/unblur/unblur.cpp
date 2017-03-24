@@ -40,9 +40,13 @@ void UnBlurApp::DoInteractiveUserInput()
 	float pre_exposure_amount = 0.0;
 	bool movie_is_gain_corrected = true;
 	wxString gain_filename = "";
-	int output_binning_factor = 1;
+	float output_binning_factor = 1;
 
 	bool set_expert_options;
+	bool correct_mag_distortion;
+	float mag_distortion_angle;
+	float mag_distortion_major_scale;
+	float mag_distortion_minor_scale;
 
 
 
@@ -51,7 +55,7 @@ void UnBlurApp::DoInteractiveUserInput()
 	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );
 	 output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
 	 original_pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
-	 output_binning_factor = my_input->GetIntFromUser("Output binning factor", "Output images will be binned (downsampled) by this factor relative to the input images", "1", 1);
+	 output_binning_factor = my_input->GetFloatFromUser("Output binning factor", "Output images will be binned (downsampled) by this factor relative to the input images", "1", 1);
 	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "yes");
 
 	 if (should_dose_filter == true)
@@ -80,14 +84,15 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 max_iterations = my_input->GetIntFromUser("Maximum number of iterations", "Alignment will stop at this number, even if the threshold shift is not reached", "20", 0);
 
 	 	 if (should_dose_filter == true)
-
 	 	 {
 	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "yes");
 	 	 }
+
 	 	 movie_is_gain_corrected = my_input->GetYesNoFromUser("Input stack is gain-corrected?", "The input frames are already gain-corrected", "yes");
+
 	 	 if (!movie_is_gain_corrected)
 	 	 {
-		 gain_filename = my_input->GetFilenameFromUser("Gain image filename", "The filename of the camera's gain reference image", "my_gain_reference.dm4", true);
+	 		 gain_filename = my_input->GetFilenameFromUser("Gain image filename", "The filename of the camera's gain reference image", "my_gain_reference.dm4", true);
 	 	 }
  	 }
  	 else
@@ -104,10 +109,25 @@ void UnBlurApp::DoInteractiveUserInput()
  		 gain_filename = "";
  	 }
 
+	correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
+
+	if (correct_mag_distortion == true)
+	{
+		mag_distortion_angle = my_input->GetFloatFromUser("Distortion Angle (Degrees)", "The distortion angle in degrees", "0.0");
+		mag_distortion_major_scale = my_input->GetFloatFromUser("Major Scale", "The major axis scale factor", "1.0", 0.0);
+		mag_distortion_minor_scale = my_input->GetFloatFromUser("Minor Scale", "The minor axis scale factor", "1.0", 0.0);;
+	}
+	else
+	{
+		mag_distortion_angle = 0.0;
+		mag_distortion_major_scale = 1.0;
+		mag_distortion_minor_scale = 1.0;
+	}
+
 	 delete my_input;
 
-	 my_current_job.Reset(18);
-	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbsi",	 input_filename.c_str(),
+	 my_current_job.Reset(23);
+	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfff",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -125,7 +145,11 @@ void UnBlurApp::DoInteractiveUserInput()
 																 pre_exposure_amount,
 																 movie_is_gain_corrected,
 																 gain_filename.ToStdString().c_str(),
-																 output_binning_factor);
+																 output_binning_factor,
+																 correct_mag_distortion,
+																 mag_distortion_angle,
+																 mag_distortion_major_scale,
+																 mag_distortion_minor_scale);
 
 
 }
@@ -167,12 +191,14 @@ bool UnBlurApp::DoCalculation()
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 	bool		movie_is_gain_corrected				= my_current_job.arguments[16].ReturnBoolArgument();
 	wxString	gain_filename						= my_current_job.arguments[17].ReturnStringArgument();
-	int			output_binning_factor				= my_current_job.arguments[18].ReturnIntegerArgument();
+	float		output_binning_factor				= my_current_job.arguments[18].ReturnFloatArgument();
+	bool        correct_mag_distortion				= my_current_job.arguments[19].ReturnBoolArgument();
+    float       mag_distortion_angle				= my_current_job.arguments[20].ReturnFloatArgument();
+    float       mag_distortion_major_scale          = my_current_job.arguments[21].ReturnFloatArgument();
+	float       mag_distortion_minor_scale          = my_current_job.arguments[22].ReturnFloatArgument();
+
 
 	//my_current_job.PrintAllArguments();
-
-
-	float 		output_pixel_size = original_pixel_size * float(output_binning_factor);
 
 	// Profiling
 	wxDateTime	overall_start = wxDateTime::Now();
@@ -192,16 +218,48 @@ bool UnBlurApp::DoCalculation()
 	ImageFile input_file(input_filename, false);
 	MRCFile output_file(output_filename, true);
 	ImageFile gain_file;
-	if (! movie_is_gain_corrected) gain_file.OpenFile(gain_filename.ToStdString(), false);
 
+	if (! movie_is_gain_corrected) gain_file.OpenFile(gain_filename.ToStdString(), false);
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
 
 	long slice_byte_size;
 
 	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
 	Image *image_stack = new Image[number_of_input_images];
-
 	Image gain_image;
+
+	// output sizes..
+
+	int output_x_size;
+	int output_y_size;
+
+	if (output_binning_factor > 1.0001)
+	{
+		output_x_size = myroundint(float(input_file.ReturnXSize()) / output_binning_factor);
+		output_y_size = myroundint(float(input_file.ReturnYSize()) / output_binning_factor);
+	}
+	else
+	{
+		output_x_size = input_file.ReturnXSize();
+		output_y_size = input_file.ReturnYSize();
+	}
+
+
+	// work out the output pixel size..
+
+	float x_bin_factor = float(input_file.ReturnXSize()) / float(output_x_size);
+	float y_bin_factor = float(input_file.ReturnYSize()) / float(output_y_size);
+	float average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
+
+	float output_pixel_size = original_pixel_size * float(average_bin_factor);
+
+	// change if we need to correct for the distortion..
+
+	if (correct_mag_distortion == true)
+	{
+		output_pixel_size = ReturnMagDistortionCorrectedPixelSize(output_pixel_size, mag_distortion_major_scale, mag_distortion_minor_scale);
+	}
+
 
 	// Arrays to hold the shifts..
 
@@ -212,6 +270,8 @@ bool UnBlurApp::DoCalculation()
 
 	float *dose_filter;
 	float *dose_filter_sum_of_squares;
+
+
 
 	// Electron dose object for if dose filtering..
 
@@ -224,7 +284,8 @@ bool UnBlurApp::DoCalculation()
 	if (number_of_input_images <= 2)
 	{
 		SendError(wxString::Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
-		ExitMainLoop();
+		wxSleep(10);
+		abort();
 	}
 
 	// Read in gain reference
@@ -243,26 +304,36 @@ bool UnBlurApp::DoCalculation()
 		{
 			if (! image_stack[image_counter].HasSameDimensionsAs(&gain_image))
 			{
-				SendError(wxString::Format("Error: location %i of input file does not have same dimensions as the gain image",image_counter+1));
-				ExitMainLoop();
+				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter+1, input_filename, gain_filename));
+				wxSleep(10);
+				abort();
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter].MultiplyPixelWise(gain_image);
 		}
 
+		if (correct_mag_distortion == true)
+		{
+			image_stack[image_counter].CorrectMagnificationDistortion(mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
+		}
+
 		// FT
 		image_stack[image_counter].ForwardFFT(true);
+		image_stack[image_counter].ZeroCentralPixel();
 
 		// Resize the FT (binning)
-		if (output_binning_factor > 1)
+		if (output_binning_factor > 1.0001)
 		{
-			image_stack[image_counter].Resize(image_stack[image_counter].logical_x_dimension/output_binning_factor,image_stack[image_counter].logical_y_dimension/output_binning_factor,1);
+			image_stack[image_counter].Resize(myroundint(image_stack[image_counter].logical_x_dimension/output_binning_factor),myroundint(image_stack[image_counter].logical_y_dimension/output_binning_factor),1);
 		}
 
 		// Init shifts
 		x_shifts[image_counter] = 0.0;
 		y_shifts[image_counter] = 0.0;
 	}
+
+	input_file.CloseFile();
+
 	read_frames_finish = wxDateTime::Now();
 
 
@@ -440,23 +511,21 @@ bool UnBlurApp::DoCalculation()
 
 	my_result.SetResult(number_of_input_images * 2, result_array);
 
-	if (should_dose_filter == true) delete my_electron_dose;
-
 	delete [] result_array;
-
 	delete [] x_shifts;
 	delete [] y_shifts;
 	delete [] image_stack;
 
 	if (should_dose_filter == true)
 	{
+		delete my_electron_dose;
 		delete [] dose_filter;
 		delete [] dose_filter_sum_of_squares;
 	}
 
 	overall_finish = wxDateTime::Now();
 
-	SendInfo(wxString::Format("Timings for %s: Overall: %s; reading, gain, FT, resampling of stack: %s; initial ali: %s; main ali: %s; unbinned ali: %s\n",input_filename,(overall_finish-overall_start).Format(),(read_frames_finish-read_frames_start).Format(),(first_alignment_finish-first_alignment_start).Format(),(main_alignment_finish-main_alignment_start).Format(),(final_alignment_finish-final_alignment_start).Format()));
+	//SendInfo(wxString::Format("Timings for %s: Overall: %s; reading, gain, FT, resampling of stack: %s; initial ali: %s; main ali: %s; unbinned ali: %s\n",input_filename,(overall_finish-overall_start).Format(),(read_frames_finish-read_frames_start).Format(),(first_alignment_finish-first_alignment_start).Format(),(main_alignment_finish-main_alignment_start).Format(),(final_alignment_finish-final_alignment_start).Format()));
 
 	return true;
 }

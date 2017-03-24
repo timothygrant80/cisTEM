@@ -9,7 +9,8 @@ MyRefinementResultsPanel::MyRefinementResultsPanel( wxWindow* parent )
 :
 RefinementResultsPanel( parent )
 {
-	is_dirty = true;
+	is_dirty = false;
+	input_params_are_dirty = false;
 	current_class = 0;
 	FSCPlotPanel->Clear();
 	currently_displayed_refinement = NULL;
@@ -29,13 +30,7 @@ void MyRefinementResultsPanel::OnClassComboBoxChange( wxCommandEvent& event )
 
 void MyRefinementResultsPanel::FillRefinementPackageComboBox(void)
 {
-	RefinementPackageComboBox->Freeze();
-	RefinementPackageComboBox->Clear();
-	RefinementPackageComboBox->ChangeValue("");
-	AppendRefinementPackagesToComboBox(RefinementPackageComboBox);
-	RefinementPackageComboBox->SetSelection(RefinementPackageComboBox->GetCount() -1);
-	RefinementPackageComboBox->Thaw();
-
+	RefinementPackageComboBox->FillWithRefinementPackages();
 	FillInputParametersComboBox();
 }
 
@@ -43,27 +38,18 @@ void MyRefinementResultsPanel::FillInputParametersComboBox(void)
 {
 	if (RefinementPackageComboBox->GetSelection() >= 0)
 	{
-		InputParametersComboBox->Freeze();
-		InputParametersComboBox->Clear();
-		InputParametersComboBox->ChangeValue("");
-
-		for (int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].refinement_ids.GetCount(); counter++)
-		{
-			InputParametersComboBox->Append(refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].refinement_ids[counter])->name);
-		}
-
-		InputParametersComboBox->SetSelection(InputParametersComboBox->GetCount() - 1);
-		InputParametersComboBox->Thaw();
+		InputParametersComboBox->FillWithRefinements(RefinementPackageComboBox->GetSelection());
 
 		UpdateCachedRefinement();
 		FillParameterListCtrl();
 		FSCPlotPanel->AddRefinement(currently_displayed_refinement);
+		FillAngles();
 	}
 }
 
 void MyRefinementResultsPanel::UpdateCachedRefinement()
 {
-
+	wxPrintf("refinement package selection = %i, parameter selcetion = %i\n", refinement_results_panel->RefinementPackageComboBox->GetSelection(), refinement_results_panel->InputParametersComboBox->GetSelection());
 	if (currently_displayed_refinement == NULL || refinement_package_asset_panel->all_refinement_packages[refinement_results_panel->RefinementPackageComboBox->GetSelection()].refinement_ids[refinement_results_panel->InputParametersComboBox->GetSelection()] != currently_displayed_refinement->refinement_id)
 	{
 		wxProgressDialog progress_dialog("Please wait", "Retrieving refinement result from database...", 0, this);
@@ -98,7 +84,13 @@ void MyRefinementResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			is_dirty = false;
 			FillRefinementPackageComboBox();
 			//AngularPlotPanel->Clear();
-			FillAngles();
+		//	FillAngles();
+		}
+
+		if (input_params_are_dirty == true)
+		{
+			input_params_are_dirty = false;
+			FillInputParametersComboBox();
 		}
 	}
 }
@@ -166,11 +158,12 @@ void MyRefinementResultsPanel::FillParameterListCtrl()
 		ParameterListCtrl->InsertColumn(6, wxT("Defocus 1 (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 		ParameterListCtrl->InsertColumn(7, wxT("Defocus 2 (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 		ParameterListCtrl->InsertColumn(8, wxT("Defocus Angle (°)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(9, wxT("Occupancy"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(10, wxT("logP"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(11, wxT("Sigma"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(12, wxT("Score"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(13, wxT("Score Change"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(9, wxT("Phase Shift (rad)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(10, wxT("Occupancy"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(11, wxT("logP"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(12, wxT("Sigma"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(13, wxT("Score"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(14, wxT("Score Change"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 
 	    ParameterListCtrl->SetItemCount(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount());
 		//ParameterListCtrl->SetItemCount(1);

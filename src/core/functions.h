@@ -32,6 +32,8 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float major_axis_scale, float minor_axis_scale);
+
 wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
 
 inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes)

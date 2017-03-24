@@ -27,6 +27,7 @@ ShortClassificationInfo::ShortClassificationInfo()
 	name = wxEmptyString;
 	number_of_particles = 0;
 	number_of_classes = 0;
+	class_average_file = "";
 }
 
 ShortClassificationInfo & ShortClassificationInfo::operator = (const Classification &other_classification)
@@ -42,6 +43,7 @@ ShortClassificationInfo & ShortClassificationInfo::operator = (const Classificat
 	name = other_classification->name;
 	number_of_particles = other_classification->number_of_particles;
 	number_of_classes = other_classification->number_of_particles;
+	class_average_file = other_classification->class_average_file;
 
 	return *this;
 }
@@ -93,14 +95,14 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
 {
 	wxString output_filename;
 
-	float output_parameters[16];
-	float parameter_average[16];
+	float output_parameters[17];
+	float parameter_average[17];
 
 	long particle_counter;
 	int parameter_counter;
 
-	ZeroFloatArray(output_parameters, 16);
-	ZeroFloatArray(parameter_average, 16);
+	ZeroFloatArray(output_parameters, 17);
+	ZeroFloatArray(parameter_average, 17);
 
 	output_filename = base_filename + wxString::Format("_%li.par", classification_id);
 	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(output_filename, OPEN_TO_WRITE);
@@ -119,13 +121,14 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
 		output_parameters[8] = parent_refinement_package->contained_particles[particle_counter].defocus_1;
 		output_parameters[9] = parent_refinement_package->contained_particles[particle_counter].defocus_2;
 		output_parameters[10] = parent_refinement_package->contained_particles[particle_counter].defocus_angle;
-		output_parameters[11] = 100.0;
-		output_parameters[12] = classification_results[particle_counter].logp;
-		output_parameters[13] = classification_results[particle_counter].sigma;
-		output_parameters[14] = 0.0;
+		output_parameters[11] = parent_refinement_package->contained_particles[particle_counter].phase_shift;
+		output_parameters[12] = 100.0;
+		output_parameters[13] = classification_results[particle_counter].logp;
+		output_parameters[14] = classification_results[particle_counter].sigma;
 		output_parameters[15] = 0.0;
+		output_parameters[16] = 0.0;
 
-		for (parameter_counter = 0; parameter_counter < 16; parameter_counter++)
+		for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
 		{
 			parameter_average[parameter_counter] += output_parameters[parameter_counter];
 		}

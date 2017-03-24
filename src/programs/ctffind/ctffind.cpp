@@ -231,6 +231,11 @@ void CtffindApp::DoInteractiveUserInput()
 	bool resample_if_pixel_too_small;
 	bool movie_is_gain_corrected;
 	wxString gain_filename;
+	bool correct_movie_mag_distortion = false;
+	float movie_mag_distortion_angle = 0.0;
+	float movie_mag_distortion_major_scale = 1.0;
+	float movie_mag_distortion_minor_scale = 1.0;
+
 
 	// Things we need for old school input
 	double temp_double;
@@ -546,11 +551,31 @@ void CtffindApp::DoInteractiveUserInput()
 				{
 					gain_filename 				= my_input->GetFilenameFromUser("Gain image filename", "The filename of the gain reference image for the detector/camera", "gain.dm4", true);
 				}
+
+				correct_movie_mag_distortion = my_input->GetYesNoFromUser("Correct Movie Mag. Distortion?", "If the movie has a mag distortion you can specify the parameters to correct it prior to estimation", "no");
+
+				if (correct_movie_mag_distortion == true)
+				{
+					movie_mag_distortion_angle = my_input->GetFloatFromUser("Mag. distortion angle","The angle of the distortion","0.0");
+					movie_mag_distortion_major_scale = my_input->GetFloatFromUser("Mag. distortion major scale","The scale factor along the major axis","1.0");
+					movie_mag_distortion_minor_scale = my_input->GetFloatFromUser("Mag. distortion minor scale","The scale factor along the minor axis","1.0");;
+				}
+				else
+				{
+					movie_mag_distortion_angle = 0.0;
+					movie_mag_distortion_major_scale = 1.0;
+					movie_mag_distortion_minor_scale = 1.0;
+
+				}
+
+
 			}
 			else
 			{
 				movie_is_gain_corrected 		= true;
 			}
+
+
 		}
 		else
 		{
@@ -562,35 +587,37 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(26);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbs",	input_filename.c_str(), //1
-																	input_is_a_movie,
-																	number_of_frames_to_average,
-																	output_diagnostic_filename.c_str(),
-																	pixel_size,
-																	acceleration_voltage,
-																	spherical_aberration,
-																	amplitude_contrast,
-																	box_size,
-																	minimum_resolution, //10
-																	maximum_resolution,
-																	minimum_defocus,
-																	maximum_defocus,
-																	defocus_search_step,
-																	slower_search,
-																	astigmatism_tolerance,
-																	find_additional_phase_shift,
-																	minimum_additional_phase_shift,
-																	maximum_additional_phase_shift,
-																	additional_phase_shift_search_step, //20
-																	astigmatism_is_known,
-																	known_astigmatism,
-																	known_astigmatism_angle,
-																	resample_if_pixel_too_small,
-																	movie_is_gain_corrected,
-																	gain_filename.ToStdString().c_str());
-
-
+	my_current_job.Reset(30);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfff",	input_filename.c_str(), //1
+																		input_is_a_movie,
+																		number_of_frames_to_average,
+																		output_diagnostic_filename.c_str(),
+																		pixel_size,
+																		acceleration_voltage,
+																		spherical_aberration,
+																		amplitude_contrast,
+																		box_size,
+																		minimum_resolution, //10
+																		maximum_resolution,
+																		minimum_defocus,
+																		maximum_defocus,
+																		defocus_search_step,
+																		slower_search,
+																		astigmatism_tolerance,
+																		find_additional_phase_shift,
+																		minimum_additional_phase_shift,
+																		maximum_additional_phase_shift,
+																		additional_phase_shift_search_step, //20
+																		astigmatism_is_known,
+																		known_astigmatism,
+																		known_astigmatism_angle,
+																		resample_if_pixel_too_small,
+																		movie_is_gain_corrected,
+																		gain_filename.ToStdString().c_str(),
+																		correct_movie_mag_distortion,
+																		movie_mag_distortion_angle,
+																		movie_mag_distortion_major_scale,
+																		movie_mag_distortion_minor_scale);
 }
 
 
@@ -617,7 +644,7 @@ bool CtffindApp::DoCalculation()
 	const bool			input_is_a_movie 					= my_current_job.arguments[1].ReturnBoolArgument();
 	const int         	number_of_frames_to_average			= my_current_job.arguments[2].ReturnIntegerArgument();
 	const std::string 	output_diagnostic_filename			= my_current_job.arguments[3].ReturnStringArgument();
-	const float 		pixel_size_of_input_image			= my_current_job.arguments[4].ReturnFloatArgument();
+	float 				pixel_size_of_input_image			= my_current_job.arguments[4].ReturnFloatArgument(); // no longer const, as the mag distortion can change it.
 	const float 		acceleration_voltage				= my_current_job.arguments[5].ReturnFloatArgument();
 	const float       	spherical_aberration				= my_current_job.arguments[6].ReturnFloatArgument();
 	const float 		amplitude_contrast					= my_current_job.arguments[7].ReturnFloatArgument();
@@ -639,6 +666,17 @@ bool CtffindApp::DoCalculation()
 	const bool			resample_if_pixel_too_small			= my_current_job.arguments[23].ReturnBoolArgument();
 	const bool			movie_is_gain_corrected				= my_current_job.arguments[24].ReturnBoolArgument();
 	const wxString		gain_filename						= my_current_job.arguments[25].ReturnStringArgument();
+	const bool          correct_movie_mag_distortion 		= my_current_job.arguments[26].ReturnBoolArgument();
+	const float      	movie_mag_distortion_angle          = my_current_job.arguments[27].ReturnFloatArgument();
+	const float         movie_mag_distortion_major_scale    = my_current_job.arguments[28].ReturnFloatArgument();
+	const float         movie_mag_distortion_minor_scale    = my_current_job.arguments[29].ReturnFloatArgument();
+
+	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
+
+	if (input_is_a_movie && correct_movie_mag_distortion)
+	{
+		pixel_size_of_input_image = ReturnMagDistortionCorrectedPixelSize(pixel_size_of_input_image, movie_mag_distortion_major_scale, movie_mag_distortion_minor_scale);
+	}
 
 	// These variables will be set by command-line options
 	const bool			old_school_input = command_line_parser.FoundSwitch("old-school-input") || command_line_parser.FoundSwitch("old-school-input-ctffind4");
@@ -834,6 +872,11 @@ bool CtffindApp::DoCalculation()
 							ExitMainLoop();
 						}
 						current_input_image->MultiplyPixelWise(*gain);
+					}
+					// correct for mag distortion
+					if (input_is_a_movie && correct_movie_mag_distortion)
+					{
+						current_input_image->CorrectMagnificationDistortion(movie_mag_distortion_angle,  movie_mag_distortion_major_scale, movie_mag_distortion_minor_scale);
 					}
 					// Make the image square
 					micrograph_square_dimension = std::max(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension);
@@ -1139,7 +1182,6 @@ bool CtffindApp::DoCalculation()
 		{
 			// 2D fitting
 
-
 			// We can now look for the defocus value
 			if (astigmatism_is_known)
 			{
@@ -1237,7 +1279,10 @@ bool CtffindApp::DoCalculation()
 
 			delete brute_force_search;
 
-		} // end of test for whether expected astigmatism is low enough to do 1D search
+		}
+
+
+		// end of test for whether expected astigmatism is low enough to do 1D search
 
 
 		// Print out the results of brute force search

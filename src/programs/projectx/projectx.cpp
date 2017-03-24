@@ -123,6 +123,8 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages = new wxImageList();
 	SettingsBookIconImages = new wxImageList();
 
+	wxLogNull *suppress_png_warnings = new wxLogNull;
+
 	wxBitmap overview_icon_bmp = wxBITMAP_PNG_FROM_DATA(overview_icon);
 	wxBitmap assets_icon_bmp = wxBITMAP_PNG_FROM_DATA(assets_icon);
 	wxBitmap action_icon_bmp = wxBITMAP_PNG_FROM_DATA(action_icon);
@@ -143,6 +145,8 @@ bool MyGuiApp::OnInit()
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
+
+	delete suppress_png_warnings;
 
 
 
@@ -196,12 +200,12 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
 	actions_panel->ActionsBook->AddPage(findparticles_panel,"Find Particles",false,2);
 	actions_panel->ActionsBook->AddPage(classification_panel,"2D Classify",false,3);
-	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Refine",false, 4);
+	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Refinement",false, 4);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
 	results_panel->ResultsBook->AddPage(picking_results_panel, "Find Particles",false,2);
-	results_panel->ResultsBook->AddPage(refine2d_results_panel, "2D Classification",false,3);
+	results_panel->ResultsBook->AddPage(refine2d_results_panel, "2D Classify",false,3);
 	results_panel->ResultsBook->AddPage(refinement_results_panel, "Refinement", false, 4);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
@@ -236,6 +240,7 @@ bool MyGuiApp::OnInit()
 	//delete SettingsBookIconImages;
 
 	main_frame->Show();
+
 
 	return true;
 }

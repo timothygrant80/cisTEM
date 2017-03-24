@@ -52,7 +52,9 @@ class MyMainFrame : public MainFrame
 		void DirtyParticlePositionGroups();
 		void DirtyRunProfiles();
 		void DirtyRefinementPackages();
-		void DirtyInputParameters();
+		void DirtyRefinements();
+		void DirtyClassificationSelections();
+		void DirtyClassifications();
 
 		//LaunchJob(JobPanel *parent_panel, )
 

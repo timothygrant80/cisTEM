@@ -223,6 +223,11 @@ int Database::ReturnHighestPickingJobID()
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(PICKING_JOB_ID) FROM PARTICLE_PICKING_LIST");
 }
 
+long Database::ReturnHighestClassumSelectionID()
+{
+	return ReturnSingleLongFromSelectCommand("SELECT MAX(SELECTION_ID) FROM CLASSIFICATION_SELECTION_LIST");
+}
+
 int Database::ReturnNumberOfAlignmentJobs()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
@@ -545,6 +550,7 @@ bool Database::CreateAllTables()
 	success = CreateRefinementPackageAssetTable();
 	success = CreateRefinementListTable();
 	success = CreateClassificationListTable();
+	success = CreateClassificationSelectionListTable();
 
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
@@ -808,12 +814,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 12, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME","SUPER_RESOLUTION_FACTOR");
+	BeginBatchInsert("MOVIE_ASSETS", 17, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, int super_resolution_factor)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale)
 {
-	AddToBatchInsert("ittiiiirrrrt", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(),super_resolution_factor);
+	AddToBatchInsert("ittiiiirrrrtrirrr", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
 }
 
 /*
@@ -1151,8 +1157,9 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 		temp_info.defocus_1 = sqlite3_column_double(list_statement, 6);
 		temp_info.defocus_2 = sqlite3_column_double(list_statement, 7);
 		temp_info.defocus_angle = sqlite3_column_double(list_statement, 8);
-		temp_info.spherical_aberration = sqlite3_column_double(list_statement, 9);
-		temp_info.microscope_voltage = sqlite3_column_double(list_statement, 10);
+		temp_info.phase_shift = sqlite3_column_double(list_statement, 9);
+		temp_info.spherical_aberration = sqlite3_column_double(list_statement, 10);
+		temp_info.microscope_voltage = sqlite3_column_double(list_statement, 11);
 
 		temp_package->contained_particles.Add(temp_info);
 
@@ -1406,8 +1413,10 @@ wxArrayLong  Database::Return2DClassMembers(long wanted_classifiction_id, int wa
 MovieAsset Database::GetNextMovieAsset()
 {
 	MovieAsset temp_asset;
+	int correct_mag_distortion;
 
-	GetFromBatchSelect("itfiiiirrrrti", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename, & temp_asset.super_resolution_factor);
+	GetFromBatchSelect("itfiiiirrrrtrirrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale);
+	temp_asset.correct_mag_distortion = correct_mag_distortion;
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;
 }
@@ -1472,12 +1481,12 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	CreateRefinementPackageClassificationsList(asset_to_add->asset_id);
 
 
-	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 11 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 12 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");
 
 	for (long counter = 0; counter < asset_to_add->contained_particles.GetCount(); counter++)
 	{
 
-		AddToBatchInsert("lllrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage);
+		AddToBatchInsert("lllrrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).phase_shift, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage);
 	}
 
 	EndBatchInsert();
@@ -1541,11 +1550,11 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
-		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 14 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "SCORE_CHANGE");
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 15 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "SCORE_CHANGE");
 
 		for (counter = 0; counter < refinement_to_add->number_of_particles; counter++)
 		{
-			AddToBatchInsert("lrrrrrrrrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle,refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score_change);
+			AddToBatchInsert("lrrrrrrrrrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score_change);
 		}
 
 		EndBatchInsert();
@@ -1692,7 +1701,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 
 		while (more_data == true)
 		{
-			more_data = GetFromBatchSelect("lsssssssssssss", &temp_result.position_in_stack,
+			more_data = GetFromBatchSelect("lssssssssssssss", &temp_result.position_in_stack,
 					                                                                              &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
@@ -1701,6 +1710,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 																								  &temp_result.defocus1,
 																								  &temp_result.defocus2,
 																								  &temp_result.defocus_angle,
+																								  &temp_result.phase_shift,
 																								  &temp_result.occupancy,
 																								  &temp_result.logp,
 																								  &temp_result.sigma,
@@ -1831,7 +1841,20 @@ Classification *Database::GetClassificationByID(long wanted_classification_id)
 
 	EndBatchSelect();
 	return temp_classification;
+}
 
+void Database::AddClassificationSelection(ClassificationSelection *classification_selection_to_add)
+{
+	InsertOrReplace("CLASSIFICATION_SELECTION_LIST", "ltlllii", "SELECTION_ID", "SELECTION_NAME", "CREATION_DATE", "REFINEMENT_PACKAGE_ID", "CLASSIFICATION_ID", "NUMBER_OF_CLASSES", "NUMBER_OF_SELECTIONS", classification_selection_to_add->selection_id, classification_selection_to_add->name.ToUTF8().data(), classification_selection_to_add->creation_date.GetAsDOS(), classification_selection_to_add->refinement_package_asset_id, classification_selection_to_add->classification_id, classification_selection_to_add->number_of_classes, classification_selection_to_add->number_of_selections);
+	CreateClassificationSelectionTable(classification_selection_to_add->selection_id);
 
+	BeginBatchInsert(wxString::Format("CLASSIFICATION_SELECTION_%li", classification_selection_to_add->selection_id), 1, "CLASS_AVERAGE_NUMBER");
+
+	for (int counter = 0; counter < classification_selection_to_add->selections.GetCount(); counter++)
+	{
+		AddToBatchInsert("l", classification_selection_to_add->selections.Item(counter));
+	}
+
+	EndBatchInsert();
 }
 

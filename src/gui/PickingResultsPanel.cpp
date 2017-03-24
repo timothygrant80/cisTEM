@@ -51,7 +51,7 @@ void MyPickingResultsPanel::OnProjectClose()
 
 void MyPickingResultsPanel::FillGroupComboBox()
 {
-	FillGroupComboBoxSlave(GroupComboBox,false);
+	GroupComboBox->FillWithImageGroups(false);
 }
 
 void MyPickingResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )

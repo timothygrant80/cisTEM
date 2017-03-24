@@ -52,9 +52,14 @@ MovieAsset::MovieAsset()
 	
 	gain_filename = wxEmptyString;
 
-	super_resolution_factor = 1;
+	output_binning_factor = 1;
 
 	is_valid = false;
+
+	correct_mag_distortion = false;
+	mag_distortion_angle = 0.0;
+	mag_distortion_major_scale = 1.0;
+	mag_distortion_minor_scale = 1.0;
 
 }
 
@@ -82,10 +87,16 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	
 	gain_filename = wxEmptyString;
 
-	super_resolution_factor = 1;
+	output_binning_factor = 1;
+
+	correct_mag_distortion = false;
+	mag_distortion_angle = 0.0;
+	mag_distortion_major_scale = 1.0;
+	mag_distortion_minor_scale = 1.0;
 
 	Update(wanted_filename); // this checks filename is OK, reads dimensions from headers
 	
+
 }
 
 
@@ -124,8 +135,6 @@ void MovieAsset::Update(wxString wanted_filename)
 			is_valid = false;
 		}
 	}
-	
-
 }
 
 
@@ -147,7 +156,11 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	total_dose = casted_asset->total_dose;
 	asset_name = casted_asset->asset_name;
 	gain_filename = casted_asset->gain_filename;
-	super_resolution_factor = casted_asset->super_resolution_factor;
+	output_binning_factor = casted_asset->output_binning_factor;
+	correct_mag_distortion = casted_asset->correct_mag_distortion;
+	mag_distortion_angle = casted_asset->mag_distortion_angle;
+	mag_distortion_major_scale = casted_asset->mag_distortion_major_scale;
+	mag_distortion_minor_scale = casted_asset->mag_distortion_minor_scale;;
 }
 
 // Image asset///

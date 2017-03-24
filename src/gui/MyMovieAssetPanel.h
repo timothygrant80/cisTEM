@@ -34,7 +34,11 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		float ReturnAssetSphericalAbberation(long wanted_asset);
 		int ReturnAssetID(long wanted_asset);
 		wxString ReturnAssetGainFilename(long wanted_asset);
-		int ReturnAssetSuperResolutionFactor(long wanted_asset);
+		float ReturnAssetBinningFactor(long wanted_asset);
+		bool ReturnCorrectMagDistortion(long wanted_asset);
+		float ReturnMagDistortionAngle(long wanted_asset);
+		float ReturnMagDistortionMajorScale(long wanted_asset);
+		float ReturnMagDistortionMinorScale(long wanted_asset);
 
 		MovieAsset* ReturnAssetPointer(long wanted_asset);
 		wxString ReturnItemText(long item, long column) const;

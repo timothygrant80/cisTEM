@@ -27,8 +27,9 @@ class MyMovieImportDialog : public MovieImportDialog
 		void TextChanged( wxCommandEvent& event);
 
 		void OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & event );
+		void OnCorrectMagDistortionCheckBox( wxCommandEvent & event );
 		void OnGainFilePickerChanged( wxFileDirPickerEvent & event );
-		void OnUseFullResolutionCheckBox( wxCommandEvent & event );
+		void OnResampleMoviesCheckBox( wxCommandEvent & event );
 };
 
 

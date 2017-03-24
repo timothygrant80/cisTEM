@@ -152,7 +152,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files apply_gain_ref scale_with_mask refine2d merge2d apply_mask
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -198,7 +198,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/refinement_package.cpp \
                        core/refinement.cpp \
                        core/classification.cpp \
-                       core/particle_finder.cpp
+                       core/particle_finder.cpp \
+                       core/classification_selection.cpp
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -208,7 +209,7 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
-cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp
+cisTEM_SOURCES = programs/projectx/projectx.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
@@ -311,6 +312,11 @@ sum_all_mrc_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_mrc_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_mrc_files_LDADD = libcore.a $(WX_LIBS_BASE)
 
+sum_all_tif_files_SOURCES = programs/sum_all_tif_files/sum_all_tif_files.cpp
+sum_all_tif_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+sum_all_tif_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+sum_all_tif_files_LDADD = libcore.a $(WX_LIBS_BASE)
+
 apply_gain_ref_SOURCES = programs/apply_gain_ref/apply_gain_ref.cpp
 apply_gain_ref_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_gain_ref_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -331,7 +337,13 @@ merge2d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge2d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 merge2d_LDADD = libcore.a $(WX_LIBS_BASE)
 
+mag_distortion_correct_SOURCES = programs/mag_distortion_correct/mag_distortion_correct.cpp
+mag_distortion_correct_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+mag_distortion_correct_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+mag_distortion_correct_LDADD = libcore.a $(WX_LIBS_BASE)
+
 apply_mask_SOURCES = programs/apply_mask/apply_mask.cpp
 apply_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 apply_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+

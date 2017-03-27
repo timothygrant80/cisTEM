@@ -345,11 +345,11 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		main_frame->current_project.database.EndMovieAssetInsert();
 
 		my_progress_dialog->Destroy();
-
-		movie_asset_panel->SetSelectedGroup(0);
-		movie_asset_panel->FillGroupList();
-		movie_asset_panel->FillContentsList();
-		main_frame->RecalculateAssetBrowser();
+		main_frame->DirtyMovieGroups();
+//		movie_asset_panel->SetSelectedGroup(0);
+	//	movie_asset_panel->FillGroupList();
+		//movie_asset_panel->FillContentsList();
+		//main_frame->RecalculateAssetBrowser();
 	}
 
 

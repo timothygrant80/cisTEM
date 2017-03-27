@@ -51,7 +51,7 @@ ClassificationPlotPanel::ClassificationPlotPanel(wxWindow* parent, wxWindowID id
 	sigma_xaxis = new mpScaleX(wxT("Round No."), mpALIGN_BOTTOM, true, mpX_NORMAL);
 	percentage_moved_xaxis = new mpScaleX(wxT("Round No."), mpALIGN_BOTTOM, true, mpX_NORMAL);
 
-	likelihood_yaxis = new mpScaleY(wxT("Avg. -LogP"), mpALIGN_LEFT, true);
+	likelihood_yaxis = new mpScaleY(wxT("Avg. LogP"), mpALIGN_LEFT, true);
 	sigma_yaxis = new mpScaleY(wxT("Avg. σ"), mpALIGN_LEFT, true);
 	percentage_moved_yaxis = new mpScaleY(wxT("% Moved"), mpALIGN_LEFT, true);
 

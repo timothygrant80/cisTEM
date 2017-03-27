@@ -658,8 +658,6 @@ bool Refine3DApp::DoCalculation()
 			input_parameters[7] = - fabsf(input_parameters[7]);
 			input_parameters[16] = 0.0;
 			my_output_par_file.WriteLine(input_parameters);
-			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0;}
-			my_output_par_shifts_file.WriteLine(output_parameters);
 
 			if (is_running_locally == false) // send results back to the gui..
 			{
@@ -669,12 +667,17 @@ bool Refine3DApp::DoCalculation()
 				gui_result_parameters[0] = current_class;
 				for (result_parameter_counter = 1; result_parameter_counter < refine_particle.number_of_parameters + 1; result_parameter_counter++)
 				{
-					gui_result_parameters[result_parameter_counter] = output_parameters[result_parameter_counter - 1];
+					gui_result_parameters[result_parameter_counter] = input_parameters[result_parameter_counter - 1];
 				}
 
 				intermediate_result->SetResult(refine_particle.number_of_parameters + 1, gui_result_parameters);
 				AddJobToResultQueue(intermediate_result);
 			}
+
+			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0;}
+			my_output_par_shifts_file.WriteLine(output_parameters);
+
+
 
 			my_progress->Update(image_counter);
 			continue;

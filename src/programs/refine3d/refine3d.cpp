@@ -660,6 +660,22 @@ bool Refine3DApp::DoCalculation()
 			my_output_par_file.WriteLine(input_parameters);
 			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0;}
 			my_output_par_shifts_file.WriteLine(output_parameters);
+
+			if (is_running_locally == false) // send results back to the gui..
+			{
+				intermediate_result = new JobResult;
+				intermediate_result->job_number = my_current_job.job_number;
+
+				gui_result_parameters[0] = current_class;
+				for (result_parameter_counter = 1; result_parameter_counter < refine_particle.number_of_parameters + 1; result_parameter_counter++)
+				{
+					gui_result_parameters[result_parameter_counter] = output_parameters[result_parameter_counter - 1];
+				}
+
+				intermediate_result->SetResult(refine_particle.number_of_parameters + 1, gui_result_parameters);
+				AddJobToResultQueue(intermediate_result);
+			}
+
 			my_progress->Update(image_counter);
 			continue;
 		}

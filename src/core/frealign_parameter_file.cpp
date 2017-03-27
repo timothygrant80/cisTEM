@@ -137,6 +137,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 	int		lines_read = 0;
 	char	dataline[1000];
 	char	*char_pointer;
+	bool	one_warning = false;
 
 	file_size = ReturnFileSizeInBytes(filename);
 
@@ -161,7 +162,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 	{
 		if (dataline[0] != 'C')
 		{
-			if (strlen(dataline) != line_length) {wxPrintf("Warning: line %i has different length than first data line\n", lines_read);}
+			if (strlen(dataline) != line_length && ! one_warning) {wxPrintf("Warning: line %i has different length than first data line\n", lines_read); one_warning = true;}
 			elements_read = records_per_line * current_line;
 			char_pointer = dataline;
 			for (i = 0; i < records_per_line_in_file; i++) {parameter_cache[i + elements_read] = strtof(char_pointer, &char_pointer);}

@@ -4012,7 +4012,6 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 		input_file->rewrite_header_on_close = true;
 	}
 
-
 	MyDebugAssertTrue(logical_x_dimension == input_file->ReturnXSize() || logical_y_dimension == input_file->ReturnYSize(), "Image dimensions and file dimensions differ!");
 
 	// if the image is complex.. make a temp image and transform it..

@@ -357,11 +357,16 @@ bool Refine3DApp::DoCalculation()
 //	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	input_par_file.ReadFile();
-	random_particle.SetSeed(int(10000.0 * abs(input_par_file.ReturnAverage(15, true)))%10000);
+	random_particle.SetSeed(int(10000.0 * fabsf(input_par_file.ReturnAverage(15, true)))%10000);
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	MRCFile input_file(input_reconstruction.ToStdString(), false);
 	MRCFile *output_file;
+	if (percent_used < 1.0)
+	{
+		calculate_matching_projections = false;
+		wxPrintf("\nPercent of particles used < 1, matching projections not calculated.\n");
+	}
 	if (calculate_matching_projections) output_file = new MRCFile(ouput_matching_projections.ToStdString(), true);
 	FrealignParameterFile my_output_par_file(ouput_parameter_file, OPEN_TO_WRITE);
 	FrealignParameterFile my_output_par_shifts_file(ouput_shift_file, OPEN_TO_WRITE, 16);

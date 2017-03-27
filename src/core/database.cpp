@@ -1551,11 +1551,11 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
-		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 15 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "SCORE_CHANGE");
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 15 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE");
 
 		for (counter = 0; counter < refinement_to_add->number_of_particles; counter++)
 		{
-			AddToBatchInsert("lrrrrrrrrrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score_change);
+			AddToBatchInsert("lrrrrrrrrrrrrri", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_is_active);
 		}
 
 		EndBatchInsert();
@@ -1702,7 +1702,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 
 		while (more_data == true)
 		{
-			more_data = GetFromBatchSelect("lssssssssssssss", &temp_result.position_in_stack,
+			more_data = GetFromBatchSelect("lsssssssssssssi", &temp_result.position_in_stack,
 					                                                                              &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
@@ -1716,7 +1716,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 																								  &temp_result.logp,
 																								  &temp_result.sigma,
 																								  &temp_result.score,
-																								  &temp_result.score_change);
+																								  &temp_result.image_is_active);
 
 			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
 		}

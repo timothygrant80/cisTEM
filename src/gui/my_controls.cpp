@@ -1191,8 +1191,9 @@ wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) con
 		    case 13 : // score
 		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].score);
 		     	break;
-		    case 14 : // score_change
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].score_change);
+		    case 14 : // image is active
+		    	if (current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].image_is_active < 0) return "No";
+		    	else return "Yes";
 		     	break;
 		   default :
 		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);

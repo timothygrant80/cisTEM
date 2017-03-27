@@ -18,7 +18,7 @@ public:
 	float logp;
 	float sigma;
 	float score;
-	float score_change;
+	int image_is_active;
 };
 
 WX_DECLARE_OBJARRAY(RefinementResult, ArrayofRefinementResults);

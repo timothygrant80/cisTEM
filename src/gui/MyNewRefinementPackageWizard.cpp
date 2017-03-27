@@ -541,7 +541,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score_change = 0.0;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
 
 			}
@@ -646,7 +646,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].xshift = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].xshift;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].yshift = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].yshift;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].score;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score_change = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].score_change;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].image_is_active;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].sigma;
 
 				}

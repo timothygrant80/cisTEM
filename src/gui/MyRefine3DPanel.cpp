@@ -1651,7 +1651,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].logp = result_to_process->result_data[14];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[15];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[16];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score_change = result_to_process->result_data[17];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[7]);
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");

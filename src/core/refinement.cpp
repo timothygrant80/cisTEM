@@ -21,7 +21,7 @@ RefinementResult::RefinementResult()
 	logp = 0;
 	sigma = 0;
 	score = 0;
-	score_change = 0;
+	image_is_active = 1;
 
 }
 
@@ -127,7 +127,7 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 			output_parameters[3] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi;
 			output_parameters[4] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift;
 			output_parameters[5] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift;
-			output_parameters[6] = 0.0;
+			output_parameters[6] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active;
 			output_parameters[7] = 0.0;
 			output_parameters[8] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1;
 			output_parameters[9] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2;
@@ -137,7 +137,7 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 			output_parameters[13] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
 			output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
 			output_parameters[15] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score;
-			output_parameters[16] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score_change;
+			output_parameters[16] = 0.0;
 
 			for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
 			{

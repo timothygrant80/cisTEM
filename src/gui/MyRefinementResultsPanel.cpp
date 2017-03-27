@@ -163,7 +163,7 @@ void MyRefinementResultsPanel::FillParameterListCtrl()
 		ParameterListCtrl->InsertColumn(11, wxT("logP"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 		ParameterListCtrl->InsertColumn(12, wxT("Sigma"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 		ParameterListCtrl->InsertColumn(13, wxT("Score"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		ParameterListCtrl->InsertColumn(14, wxT("Score Change"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		ParameterListCtrl->InsertColumn(14, wxT("Image Active?"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 
 	    ParameterListCtrl->SetItemCount(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].contained_particles.GetCount());
 		//ParameterListCtrl->SetItemCount(1);

@@ -1503,7 +1503,8 @@ void RefinementManager::SetupRefinementJob()
 			long	 last_particle							= current_particle_counter;
 			current_particle_counter++;
 
-			float	 percent_used							= my_parent->PercentUsedTextCtrl->ReturnValue();
+			float	 percent_used							= my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0;
+
 
 			// for now we take the paramters of the first image!!!!
 

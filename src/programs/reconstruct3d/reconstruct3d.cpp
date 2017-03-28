@@ -361,7 +361,15 @@ bool Reconstruct3DApp::DoCalculation()
 	if (images_to_process == 0)
 	{
 		MyPrintWithDetails("Error: No particles to process\n");
-		abort();
+		if (dump_arrays)
+		{
+			wxPrintf("\nDumping reconstruction arrays...\n");
+			my_reconstruction_1.DumpArrays(dump_file_1, false);
+			my_reconstruction_2.DumpArrays(dump_file_2, true);
+
+			wxPrintf("\nReconstruct3D: Normal termination\n\n");
+		}
+		return true;
 	}
 
 	if (normalize_particles)

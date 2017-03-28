@@ -77,7 +77,7 @@ public :
 	wxArrayLong reference_volume_ids;
 	ArrayofClassRefinementResults class_refinement_results;
 
-	wxArrayString WriteFrealignParameterFiles(wxString base_filename);
+	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0);
 	void WriteResolutionStatistics(wxString base_filename);
 
 

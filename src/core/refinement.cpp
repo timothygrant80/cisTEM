@@ -96,17 +96,17 @@ Refinement::~Refinement()
 
 }
 
-wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
+wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide)
 {
 	wxArrayString output_filenames;
 	wxString current_filename;
 	float output_parameters[17];
 	float parameter_average[17];
+	float temp_float;
 
 	int class_counter;
 	long particle_counter;
 	int parameter_counter;
-
 
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
@@ -118,6 +118,8 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 
 		FrealignParameterFile *my_output_par_file = new FrealignParameterFile(current_filename, OPEN_TO_WRITE);
 
+
+
 		for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 		{
 
@@ -127,8 +129,25 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename)
 			output_parameters[3] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi;
 			output_parameters[4] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift;
 			output_parameters[5] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift;
-			output_parameters[6] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active;
-			output_parameters[7] = 0.0;
+			output_parameters[6] = 0.0;
+
+			if (percent_used_overide < 1.0)
+			{
+				temp_float = global_random_number_generator.GetUniformRandom();
+				if (temp_float < 1.0 - 2.0 * percent_used_overide)
+				{
+					output_parameters[7] = -1;
+				}
+				else
+				{
+					output_parameters[7] = 1;
+				}
+			}
+			else
+			{
+				output_parameters[7] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active;
+			}
+
 			output_parameters[8] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1;
 			output_parameters[9] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2;
 			output_parameters[10] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle;

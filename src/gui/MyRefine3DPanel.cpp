@@ -1237,7 +1237,11 @@ void RefinementManager::RunMerge3dJob()
 
 void RefinementManager::SetupReconstructionJob()
 {
-	wxArrayString written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par");
+	wxArrayString written_parameter_files;
+
+	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0);
+	else
+	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par");
 
 	int class_counter;
 	long counter;
@@ -1651,7 +1655,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].logp = result_to_process->result_data[14];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[15];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[16];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[7]);
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[8]);
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");

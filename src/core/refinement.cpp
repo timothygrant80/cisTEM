@@ -118,8 +118,6 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 
 		FrealignParameterFile *my_output_par_file = new FrealignParameterFile(current_filename, OPEN_TO_WRITE);
 
-
-
 		for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 		{
 

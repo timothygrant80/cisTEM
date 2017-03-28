@@ -94,6 +94,7 @@
 #include "../gui/ClassificationPlotPanel.h"
 #include "../gui/Refine2DResultsPanel.h"
 #include "../gui/ClassumSelectionCopyFromDialog.h"
+#include "../gui/MyOverviewPanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

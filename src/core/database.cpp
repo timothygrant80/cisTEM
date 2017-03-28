@@ -82,14 +82,14 @@ long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 	return value;
 }
 
-void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift)
+void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float &amplitude_contrast)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	int return_code;
 	sqlite3_stmt *current_statement;
 	int value;
-	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
+	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, AMPLITUDE_CONTRAST FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
 
 	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
@@ -105,6 +105,7 @@ void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defo
 	defocus_2 = float(sqlite3_column_double(current_statement, 1));
 	defocus_angle = float(sqlite3_column_double(current_statement, 2));
 	phase_shift = float(sqlite3_column_double(current_statement, 3));
+	amplitude_contrast = float(sqlite3_column_double(current_statement,4));
 
 	sqlite3_finalize(current_statement);
 }
@@ -1161,6 +1162,7 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 		temp_info.phase_shift = sqlite3_column_double(list_statement, 9);
 		temp_info.spherical_aberration = sqlite3_column_double(list_statement, 10);
 		temp_info.microscope_voltage = sqlite3_column_double(list_statement, 11);
+		temp_info.amplitude_contrast = sqlite3_column_double(list_statement, 12);
 
 		temp_package->contained_particles.Add(temp_info);
 
@@ -1482,12 +1484,12 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	CreateRefinementPackageClassificationsList(asset_to_add->asset_id);
 
 
-	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 12 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE");
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 13 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST");
 
 	for (long counter = 0; counter < asset_to_add->contained_particles.GetCount(); counter++)
 	{
 
-		AddToBatchInsert("lllrrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).phase_shift, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage);
+		AddToBatchInsert("lllrrrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).phase_shift, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage, asset_to_add->contained_particles.Item(counter).amplitude_contrast);
 	}
 
 	EndBatchInsert();

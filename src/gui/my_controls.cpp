@@ -981,15 +981,18 @@ wxString ContainedParticleListControl::OnGetItemText(long item, long column) con
 				return wxString::Format(wxT("%.2f kV"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).microscope_voltage);
 			   break;
 		    case 7  :
-		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_1);
+		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).amplitude_contrast);
 			   break;
 		    case 8  :
+		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_1);
+		     break;
+		    case 9  :
 		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_2);
 			   break;
-		    case 9  :
+		    case 10  :
 		    	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_angle);
 		    	break;
-		    case 10  :
+		    case 11  :
 		    	return wxString::Format(wxT("%.2f rad."), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phase_shift);
 		    	break;
 		 /*   case 10 :

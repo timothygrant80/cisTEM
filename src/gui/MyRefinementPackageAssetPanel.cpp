@@ -170,10 +170,11 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 		ContainedParticlesListCtrl->InsertColumn(4, "Pixel Size", wxLIST_FORMAT_LEFT);
 		ContainedParticlesListCtrl->InsertColumn(5, "Cs", wxLIST_FORMAT_LEFT);
 		ContainedParticlesListCtrl->InsertColumn(6, "Voltage", wxLIST_FORMAT_LEFT);
-		ContainedParticlesListCtrl->InsertColumn(7, "Init. Defocus 1", wxLIST_FORMAT_LEFT);
-		ContainedParticlesListCtrl->InsertColumn(8, "Init. Defocus 2", wxLIST_FORMAT_LEFT);
-		ContainedParticlesListCtrl->InsertColumn(9, "Init. Defocus Angle", wxLIST_FORMAT_LEFT);
-		ContainedParticlesListCtrl->InsertColumn(10, "Init. Phase Shift", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(7, "Amp. Contrast", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(8, "Init. Defocus 1", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(9, "Init. Defocus 2", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(10, "Init. Defocus Angle", wxLIST_FORMAT_LEFT);
+		ContainedParticlesListCtrl->InsertColumn(11, "Init. Phase Shift", wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(10, wxT("Init. Psi"), wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(11, wxT("Init. Theta"), wxLIST_FORMAT_LEFT);
 	//	ContainedParticlesListCtrl->InsertColumn(12, wxT("Init. Phi"), wxLIST_FORMAT_LEFT);
@@ -198,6 +199,7 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 			ContainedParticlesListCtrl->SetColumnWidth(8, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(8));
 			ContainedParticlesListCtrl->SetColumnWidth(9, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(9));
 			ContainedParticlesListCtrl->SetColumnWidth(10, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(10));
+			ContainedParticlesListCtrl->SetColumnWidth(11, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(11));
 		}
 
 		// 3D references..

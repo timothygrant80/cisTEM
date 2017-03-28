@@ -21,7 +21,7 @@ MyFindParticlesPanel *findparticles_panel;
 MyRefine2DPanel *classification_panel;
 MyRefine3DPanel *refine_3d_panel;
 
-OverviewPanel *overview_panel;
+MyOverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
 AssetsPanel *assets_panel;
 MyResultsPanel *results_panel;
@@ -88,7 +88,7 @@ bool MyGuiApp::OnInit()
 
 	// Left hand Panels
 
-	overview_panel = new OverviewPanel(main_frame->MenuBook, wxID_ANY);
+	overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
 	actions_panel = new ActionsPanel(main_frame->MenuBook, wxID_ANY);
 	assets_panel = new AssetsPanel(main_frame->MenuBook, wxID_ANY);
 	results_panel = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);

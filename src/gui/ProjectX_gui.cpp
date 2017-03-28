@@ -2288,26 +2288,35 @@ OverviewPanel::OverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	wxBoxSizer* bSizer198;
 	bSizer198 = new wxBoxSizer( wxVERTICAL );
 	
-	m_staticText1 = new wxStaticText( this, wxID_ANY, wxT("Welcome to cisTEM!"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
-	m_staticText1->Wrap( -1 );
-	m_staticText1->SetFont( wxFont( 24, 70, 90, 90, false, wxEmptyString ) );
+	WelcomePanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer281;
+	bSizer281 = new wxBoxSizer( wxVERTICAL );
 	
-	bSizer198->Add( m_staticText1, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	m_staticText279 = new wxStaticText( this, wxID_ANY, wxT("Please open an old, or start a new project to start processing."), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText279->Wrap( -1 );
-	bSizer198->Add( m_staticText279, 0, wxALIGN_CENTER|wxALL, 5 );
+	InfoText = new wxRichTextCtrl( WelcomePanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0|wxHSCROLL|wxVSCROLL|wxWANTS_CHARS );
+	bSizer281->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
 	
 	
-	bSizer10->Add( bSizer198, 0, wxALIGN_CENTER, 5 );
+	WelcomePanel->SetSizer( bSizer281 );
+	WelcomePanel->Layout();
+	bSizer281->Fit( WelcomePanel );
+	bSizer198->Add( WelcomePanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer10->Add( bSizer198, 1, wxALIGN_CENTER|wxEXPAND, 5 );
 	
 	
 	this->SetSizer( bSizer10 );
 	this->Layout();
+	
+	// Connect Events
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( OverviewPanel::OnInfoURL ), NULL, this );
 }
 
 OverviewPanel::~OverviewPanel()
 {
+	// Disconnect Events
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( OverviewPanel::OnInfoURL ), NULL, this );
+	
 }
 
 MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )

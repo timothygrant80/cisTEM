@@ -440,7 +440,10 @@ void MyRefine3DPanel::SetDefaults()
 		RefineXShiftCheckBox->SetValue(true);
 		RefineYShiftCheckBox->SetValue(true);
 
-		LowResolutionLimitTextCtrl->SetValue("300.00");
+		float low_res_limit = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
+		if (low_res_limit > 300.00) low_res_limit = 300.00;
+
+		LowResolutionLimitTextCtrl->SetValue(wxString::Format("%.2f", low_res_limit));
 		HighResolutionLimitTextCtrl->SetValue(wxString::Format("%.2f", calculated_high_resolution_cutoff));
 		MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
 		SignedCCResolutionTextCtrl->SetValue("0.00");
@@ -1288,7 +1291,7 @@ void RefinementManager::SetupReconstructionJob()
 			float 	 pixel_size							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
 			float    voltage_kV							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm			= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= 0.07; // refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
+			float    amplitude_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= my_parent->ReconstructionInnerRadiusTextCtrl->ReturnValue();
 			float    outer_mask_radius					= my_parent->ReconstructionOuterRadiusTextCtrl->ReturnValue();
@@ -1308,8 +1311,19 @@ void RefinementManager::SetupReconstructionJob()
 
 			if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true)
 			{
-				input_reconstruction = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
-				use_input_reconstruction = true;
+				// do we have a reference..
+
+				if (refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter] == -1)
+				{
+					input_reconstruction			= "/dev/null";
+					use_input_reconstruction		= false;
+				}
+				else
+				{
+					input_reconstruction = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
+					use_input_reconstruction = true;
+				}
+
 
 			}
 			else
@@ -1515,7 +1529,7 @@ void RefinementManager::SetupRefinementJob()
 			float 	 pixel_size								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
 			float    voltage_kV								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm				= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast						= 0.07; //refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
+			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    low_resolution_limit					= my_parent->LowResolutionLimitTextCtrl->ReturnValue();

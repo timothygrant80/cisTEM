@@ -63,6 +63,8 @@ void MyFindParticlesPanel::OnInfoURL(wxTextUrlEvent& event)
 void MyFindParticlesPanel::SetInfo()
 {
 
+	InfoText->GetCaret()->Hide();
+
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();

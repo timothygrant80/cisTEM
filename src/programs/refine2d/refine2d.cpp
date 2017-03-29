@@ -473,6 +473,15 @@ bool Refine2DApp::DoCalculation()
 					list_of_nozero_classes[current_class]++;
 				}
 			}
+
+			if (is_running_locally == false)
+			{
+				temp_float = current_image;
+				JobResult *temp_result = new JobResult;
+				temp_result->SetResult(1, &temp_float);
+				AddJobToResultQueue(temp_result);
+				//wxPrintf("Refine3D : Adding job to job queue..\n");
+			}
 		}
 		for (current_class = 0; current_class < number_of_classes; current_class++)
 		{

@@ -730,13 +730,13 @@ class OverviewPanel : public wxPanel
 	protected:
 		wxStaticLine* m_staticline2;
 		wxPanel* WelcomePanel;
-		wxRichTextCtrl* InfoText;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		
 	
 	public:
+		wxRichTextCtrl* InfoText;
 		
 		OverviewPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
 		~OverviewPanel();

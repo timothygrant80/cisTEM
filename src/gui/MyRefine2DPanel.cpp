@@ -297,6 +297,7 @@ void MyRefine2DPanel::SetInfo()
 	wxBitmap class_picture4_bmp = wxBITMAP_PNG_FROM_DATA(classification_infotext4);
 	delete suppress_png_warnings;
 
+	InfoText->GetCaret()->Hide();
 
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -897,6 +898,7 @@ void ClassificationManager::BeginRefinementCycle()
 void ClassificationManager::RunInitialStartJob()
 {
 	running_job_type = STARTUP;
+	number_of_received_particle_results = 0;
 
 	output_classification->classification_id = main_frame->current_project.database.ReturnHighestClassificationID() + 1;
 	output_classification->refinement_package_asset_id = current_refinement_package_asset_id;
@@ -1049,9 +1051,9 @@ void ClassificationManager::RunRefinementJob()
 {
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
-	long current_particle_counter;
+	float current_particle_counter;
 	long number_of_particles;
-	long particles_per_job;
+	float particles_per_job;
 	int job_counter;
 
 	running_job_type = REFINEMENT;
@@ -1153,25 +1155,31 @@ void ClassificationManager::RunRefinementJob()
 	number_of_refinement_processes = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].ReturnTotalJobs();
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
 	number_of_particles = output_classification->number_of_particles;
-	particles_per_job = ceil(number_of_particles / number_of_refinement_jobs);
+
+	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1.0;
+	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine2d", number_of_refinement_jobs);
-	current_particle_counter = 1;
+	current_particle_counter = 1.0;
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
 	{
 
 		wxString input_particle_images =  refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
 		wxString input_class_averages = input_classification->class_average_file;
-		wxString output_parameter_file = "/tmp/junk.par";
+
+		wxString output_parameter_file = "/dev/null";
 		wxString output_class_averages = main_frame->current_project.class_average_directory.GetFullPath() + wxString::Format("/class_averages_%li.mrc", output_classification->classification_id);
 		int number_of_classes = 0;
 
-		long	 first_particle							= current_particle_counter;
+		long	 first_particle							= myroundint(current_particle_counter);
 		current_particle_counter += particles_per_job;
 		if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
-		long	 last_particle							= current_particle_counter;
+		long	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
+
+		//output_parameter_file = wxString::Format("/tmp/out_%li_%li.par", first_particle, last_particle);
+		output_parameter_file = "/dev/null";
 
 		float percent_used = output_classification->percent_used / 100.00;
 		float pixel_size = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
@@ -1521,7 +1529,40 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 
 	if (running_job_type == STARTUP)
 	{
-		wxPrintf("Got result %i\n", int(result_to_process->result_data[0] + 0.5));
+		//wxPrintf("Got result %i\n", int(result_to_process->result_data[0] + 0.5));
+
+		long current_image = long(result_to_process->result_data[0] + 0.5) - 1;
+		number_of_received_particle_results++;
+		long current_time = time(NULL);
+
+		if (number_of_received_particle_results == 1)
+		{
+			current_job_starttime = current_time;
+			time_of_last_update = 0;
+		}
+		else
+		if (current_time != time_of_last_update)
+		{
+			int current_percentage = float(number_of_received_particle_results) / float(output_classification->number_of_particles) * 100.0;
+			time_of_last_update = current_time;
+			if (current_percentage > 100) current_percentage = 100;
+			my_parent->ProgressBar->SetValue(current_percentage);
+
+			long job_time = current_time - current_job_starttime;
+			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
+			long seconds_remaining = float((output_classification->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
+
+			TimeRemaining time_remaining;
+
+			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
+			else time_remaining.hours = 0;
+
+			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
+			else time_remaining.minutes = 0;
+
+			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+		}
 
 	}
 	else

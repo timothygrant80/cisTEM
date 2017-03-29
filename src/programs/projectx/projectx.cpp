@@ -47,7 +47,7 @@ wxImageList *AssetsBookIconImages;
 wxImageList *ResultsBookIconImages;
 wxImageList *SettingsBookIconImages;
 
-
+wxConfig *cistem_config;
 SETUP_SOCKET_CODES
 
 
@@ -85,6 +85,11 @@ bool MyGuiApp::OnInit()
 	wxImageList *SettingsBookIconImages;
 
 	main_frame = new MyMainFrame( (wxWindow*)NULL);
+
+	// global config..
+
+	cistem_config = new wxConfig("cisTEM", "TG");
+	wxConfig::Set(cistem_config);
 
 	// Left hand Panels
 
@@ -248,6 +253,7 @@ bool MyGuiApp::OnInit()
 int MyGuiApp::OnExit()
 {
 
+	delete cistem_config;
 /*	main_frame->Destroy();
 	overview_panel->Destroy();
 	actions_panel->Destroy();

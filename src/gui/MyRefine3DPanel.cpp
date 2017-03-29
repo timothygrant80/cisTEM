@@ -72,6 +72,8 @@ void MyRefine3DPanel::SetInfo()
 	wxBitmap niko_picture2_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture2);
 	delete suppress_png_warnings;
 
+	InfoText->GetCaret()->Hide();
+
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
@@ -419,7 +421,7 @@ void MyRefine3DPanel::SetDefaults()
 	// calculate high resolution limit..
 
 		long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids[InputParametersComboBox->GetSelection()];
-		calculated_high_resolution_cutoff = 0;
+		calculated_high_resolution_cutoff = 30.0;
 
 		for (int class_counter = 0; class_counter < refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(current_input_refinement_id)->number_of_classes; class_counter++)
 		{
@@ -1251,10 +1253,10 @@ void RefinementManager::SetupReconstructionJob()
 	int job_counter;
 	long number_of_reconstruction_jobs;
 	long number_of_reconstruction_processes;
-	long current_particle_counter;
+	float current_particle_counter;
 
 	long number_of_particles;
-	long particles_per_job;
+	float particles_per_job;
 
 	// for now, number of jobs is number of processes -1 (master)..
 
@@ -1262,13 +1264,15 @@ void RefinementManager::SetupReconstructionJob()
 	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
 
 	number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
-	particles_per_job = ceil(number_of_particles / number_of_reconstruction_jobs);
+
+	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
+	particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
 
 	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()], "reconstruct3d", number_of_reconstruction_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
 
 	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1;
+		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
@@ -1280,13 +1284,13 @@ void RefinementManager::SetupReconstructionJob()
 			wxString output_resolution_statistics		= "/dev/null";
 			wxString my_symmetry						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
 
-			long	 first_particle						= current_particle_counter;
+			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
 			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
 
-			long	 last_particle						= current_particle_counter;
-			current_particle_counter++;
+			long	 last_particle						= myroundint(current_particle_counter);
+			current_particle_counter+=1.0;
 
 			float 	 pixel_size							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
 			float    voltage_kV							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
@@ -1471,10 +1475,10 @@ void RefinementManager::SetupRefinementJob()
 	long counter;
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
-	long current_particle_counter;
+	float current_particle_counter;
 
 	long number_of_particles;
-	long particles_per_job;
+	float particles_per_job;
 
 	// get the last refinement for the currently selected refinement package..
 
@@ -1489,7 +1493,8 @@ void RefinementManager::SetupRefinementJob()
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
 
 	number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
-	particles_per_job = ceil(number_of_particles / number_of_refinement_jobs);
+	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
+	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
 
@@ -1513,12 +1518,12 @@ void RefinementManager::SetupRefinementJob()
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
-			long	 first_particle							= current_particle_counter;
+			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
 			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
 
-			long	 last_particle							= current_particle_counter;
+			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
 
 			float	 percent_used							= my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0;

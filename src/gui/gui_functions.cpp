@@ -105,6 +105,19 @@ void GetMultilineTextExtent	(wxDC *wanted_dc, const wxString & string, int &widt
 	}
 }
 
+wxArrayString GetRecentProjectsFromSettings()
+{
+	wxArrayString temp;
+
+	if (wxConfig::Get()->HasEntry("RecentProject1") == true) temp.Add(wxConfig::Get()->Read("RecentProject1"));
+	if (wxConfig::Get()->HasEntry("RecentProject2") == true) temp.Add(wxConfig::Get()->Read("RecentProject2"));
+	if (wxConfig::Get()->HasEntry("RecentProject3") == true) temp.Add(wxConfig::Get()->Read("RecentProject3"));
+	if (wxConfig::Get()->HasEntry("RecentProject4") == true) temp.Add(wxConfig::Get()->Read("RecentProject4"));
+	if (wxConfig::Get()->HasEntry("RecentProject5") == true) temp.Add(wxConfig::Get()->Read("RecentProject5"));
+
+	return temp;
+}
+
 void FillGroupComboBoxSlave( wxComboBox *GroupComboBox, bool include_all_images_group )
 {
 	extern MyImageAssetPanel *image_asset_panel;

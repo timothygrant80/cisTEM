@@ -24,6 +24,8 @@ extern MyPickingResultsPanel *picking_results_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
+extern MyOverviewPanel *overview_panel;
+
 
 
 MyMainFrame::MyMainFrame( wxWindow* parent )
@@ -369,6 +371,11 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 
 void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 {
+	StartNewProject();
+}
+
+void MyMainFrame::StartNewProject()
+{
 	if (current_project.is_open)
 	{
 	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
@@ -404,28 +411,12 @@ void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 			//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
 		}
 	}
-
 }
-
-void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
+void MyMainFrame::OpenProject(wxString project_filename)
 {
-	// find a DB file..
-
-	if (current_project.is_open)
+	if (current_project.OpenProjectFromFile(project_filename) == true)
 	{
-	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
-
-	    current_project.Close();
-		SetTitle("cisTEM");
-
-	}
-
-	wxFileDialog openFileDialog(this, _("Open db file"), "", "", "DB files (*.db)|*.db", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
-
-	if (openFileDialog.ShowModal() == wxID_CANCEL) return;     // the user changed idea...
-
-	if (current_project.OpenProjectFromFile(openFileDialog.GetPath()) == true)
-	{
+		int counter;
 		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
 
@@ -450,16 +441,62 @@ void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
 		my_dialog->Update(9, "Opening project (all done)");
 
 		DirtyEverything();
-
 		my_dialog->Destroy();
+
+		// ok, add this to recent projects..
+
+		wxArrayString recent_projects = GetRecentProjectsFromSettings();
+
+		recent_projects.Insert(project_filename, 0);
+		for (counter = recent_projects.GetCount() - 1; counter > 0; counter--)
+		{
+			if (recent_projects.Item(counter) == project_filename) recent_projects.RemoveAt(counter);
+		}
+
+		if (recent_projects.GetCount() > 5)
+		{
+			for (counter = 5; counter < recent_projects.GetCount();counter++)
+			{
+				recent_projects.RemoveAt(counter);
+			}
+		}
+
+		// set the recent projects in settings..
+
+		for (counter = 0; counter < recent_projects.GetCount(); counter++)
+		{
+			wxConfig::Get()->Write(wxString::Format("RecentProject%i", counter + 1), recent_projects.Item(counter));
+		}
+
+		wxConfig::Get()->Flush();
+		overview_panel->InfoText->Show(false);
 	}
 	else
 	{
 		MyPrintWithDetails("An error occured opening the database file..");
 	}
 
+}
 
+void MyMainFrame::GetFileAndOpenProject()
+{
+	// find a DB file..
+	if (current_project.is_open)
+	{
+	    if (wxMessageBox("The current project must be closed before opening a new project.\n\nClose it now?", "Please confirm", wxICON_QUESTION | wxYES_NO, this) == wxNO ) return;
+	    current_project.Close();
+		SetTitle("cisTEM");
+	}
 
+	wxFileDialog openFileDialog(this, _("Open db file"), "", "", "DB files (*.db)|*.db", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+
+	if (openFileDialog.ShowModal() == wxID_CANCEL) return;
+	OpenProject(openFileDialog.GetPath());
+}
+
+void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )
+{
+	GetFileAndOpenProject();
 }
 
 void MyMainFrame::OnFileExit( wxCommandEvent& event )
@@ -486,6 +523,9 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 
 
 	SetTitle("cisTEM");
+	MenuBook->SetSelection(0);
+	overview_panel->SetWelcomeInfo();
+	overview_panel->InfoText->Show(true);
 
 }
 void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )

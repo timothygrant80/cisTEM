@@ -908,7 +908,7 @@ void MyApp::CheckForConnections()
 
 		   	  if ((memcmp(socket_input_buffer, job_code, SOCKET_CODE_SIZE) != 0) )
 		 	  {
-		 	  	  	SocketSendError("JOB MASTER : received Unknown JOB ID - Closing Connection");
+		 	  	  	SocketSendError("Received Unknown Job ID (leftover process from a cancelled job?)- Closing Connection");
 
 		 	  	  	// incorrect identification - close the connection..
 		 		    sock->Destroy();
@@ -1095,7 +1095,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 delete lock;
 
 				 // give the thread some time to die..
-				 wxSleep(5);
+				 wxSleep(15);
 
 				 // process thread events in case it has done something
 				 Yield(); //(wxEVT_CATEGORY_THREAD);

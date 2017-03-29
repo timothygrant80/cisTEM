@@ -57,6 +57,8 @@ void MyAlignMoviesPanel::SetInfo()
 	wxBitmap alignment_bmp = wxBITMAP_PNG_FROM_DATA(dlp_alignment);
 	delete suppress_png_warnings;
 
+	InfoText->GetCaret()->Hide();
+
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();

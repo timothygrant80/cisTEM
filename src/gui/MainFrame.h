@@ -41,6 +41,10 @@ class MyMainFrame : public MainFrame
 		void OnExportToFrealign( wxCommandEvent & event );
 		void OnExportToRelion( wxCommandEvent & event );
 
+		void OpenProject(wxString project_filename);
+		void GetFileAndOpenProject();
+		void StartNewProject();
+
 		void OnCharHook( wxKeyEvent& event );
 
 		void OnServerEvent(wxSocketEvent& event);

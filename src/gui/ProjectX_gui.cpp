@@ -2292,7 +2292,7 @@ OverviewPanel::OverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	wxBoxSizer* bSizer281;
 	bSizer281 = new wxBoxSizer( wxVERTICAL );
 	
-	InfoText = new wxRichTextCtrl( WelcomePanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0|wxHSCROLL|wxVSCROLL|wxWANTS_CHARS );
+	InfoText = new wxRichTextCtrl( WelcomePanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY|wxHSCROLL|wxVSCROLL|wxWANTS_CHARS );
 	bSizer281->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
 	
 	
@@ -2392,7 +2392,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	wxBoxSizer* bSizer32;
 	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText22 = new wxStaticText( this, wxID_ANY, wxT("Dose per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText22 = new wxStaticText( this, wxID_ANY, wxT("Exposure per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText22->Wrap( -1 );
 	bSizer32->Add( m_staticText22, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -3948,8 +3948,6 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
 	
 	ExpertPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	ExpertPanel->Hide();
-	
 	wxBoxSizer* bSizer64;
 	bSizer64 = new wxBoxSizer( wxVERTICAL );
 	
@@ -3985,7 +3983,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	fgSizer1->Add( maximum_shift_text, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText44 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Dose Filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText44 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Exposure Filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText44->Wrap( -1 );
 	m_staticText44->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
@@ -3994,7 +3992,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	dose_filter_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Dose Filter Sums?"), wxDefaultPosition, wxDefaultSize, 0 );
+	dose_filter_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Exposure Filter Sums?"), wxDefaultPosition, wxDefaultSize, 0 );
 	dose_filter_checkbox->SetValue(true); 
 	dose_filter_checkbox->SetToolTip( wxT("Make a dose weighted sum") );
 	

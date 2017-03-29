@@ -102,6 +102,8 @@ void MyFindCTFPanel::SetInfo()
 	wxBitmap example_1dfit_bmp = wxBITMAP_PNG_FROM_DATA(ctffind_example_1dfit);
 	delete suppress_png_warnings;
 
+	InfoText->GetCaret()->Hide();
+
 	InfoText->BeginSuppressUndo();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();

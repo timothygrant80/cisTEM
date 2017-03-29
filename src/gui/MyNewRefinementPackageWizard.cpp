@@ -534,6 +534,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = image_defocus_1;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = image_defocus_2;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = image_defocus_angle;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = image_phase_shift;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
 
 				if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
@@ -628,6 +629,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			temp_particle_info.defocus_1 = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles[counter].defocus_1;
 			temp_particle_info.defocus_2 = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles[counter].defocus_2;
 			temp_particle_info.defocus_angle = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles[counter].defocus_angle;
+			temp_particle_info.phase_shift = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles[counter].phase_shift;
+			temp_particle_info.amplitude_contrast = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles[counter].amplitude_contrast;
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
@@ -637,6 +640,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].defocus1;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].defocus2;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].defocus_angle;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].phase_shift;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].logp;
 
 				if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;

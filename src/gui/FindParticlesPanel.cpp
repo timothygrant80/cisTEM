@@ -1020,7 +1020,8 @@ my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_prof
 
 	if (my_job_id != -1)
 	{
-		number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
+		if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_processes = my_job_package.number_of_jobs + 1;
+		else number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_processes >= 100000) length_of_process_number = 6;
 		else
@@ -1319,7 +1320,9 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
               // send the info to the gui
 
-              int total_processes = my_job_package.my_profile.ReturnTotalJobs();
+              int total_processes;
+              if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
+              else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
 
 		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
 

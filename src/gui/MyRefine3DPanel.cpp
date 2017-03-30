@@ -949,6 +949,9 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
               // send the info to the gui
 
               int total_processes = my_job_package.my_profile.ReturnTotalJobs();
+              if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
+              else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
+
 
 		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
 
@@ -1092,7 +1095,9 @@ void RefinementManager::RunRefinementJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+		long number_of_refinement_processes;
+	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else
@@ -1190,7 +1195,9 @@ void RefinementManager::RunMerge3dJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+		long number_of_refinement_processes;
+	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else
@@ -1419,7 +1426,9 @@ void RefinementManager::RunReconstructionJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+		long number_of_refinement_processes;
+	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else

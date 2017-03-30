@@ -86,12 +86,13 @@ JobControlApp : public wxAppConsole
 class LaunchJobThread : public wxThread
 {
 	public:
-    	LaunchJobThread(JobControlApp *handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char *wanted_job_code) : wxThread(wxTHREAD_DETACHED)
+    	LaunchJobThread(JobControlApp *handler, RunProfile wanted_run_profile, wxString wanted_ip_address, wxString wanted_port, const unsigned char *wanted_job_code, long wanted_actual_number_of_jobs) : wxThread(wxTHREAD_DETACHED)
 		{
     		main_thread_pointer = handler;
     		current_run_profile = wanted_run_profile;
     		ip_address = wanted_ip_address;
     		port_number = wanted_port;
+    		actual_number_of_jobs = wanted_actual_number_of_jobs;
 
     		for (int counter = 0; counter < SOCKET_CODE_SIZE; counter++)
     		{
@@ -106,6 +107,7 @@ class LaunchJobThread : public wxThread
     	RunProfile current_run_profile;
     	wxString ip_address;
     	wxString port_number;
+    	long actual_number_of_jobs;
     	unsigned char job_code[SOCKET_CODE_SIZE];
 
 		void LaunchRemoteJob();
@@ -284,6 +286,9 @@ void LaunchJobThread::LaunchRemoteJob()
 	long counter;
 	long command_counter;
 	long process_counter;
+	long number_of_commands_to_run;
+	long number_of_commands_run = 0;
+	long number_to_run_for_this_command;
 
 	wxIPV4address address;
 
@@ -311,17 +316,29 @@ void LaunchJobThread::LaunchRemoteJob()
 
 	wxMilliSleep(2000);
 
+
+
+	if (actual_number_of_jobs + 1 < current_run_profile.ReturnTotalJobs()) number_of_commands_to_run = actual_number_of_jobs + 1;
+	else
+	number_of_commands_to_run = current_run_profile.ReturnTotalJobs();
+
+	//wxPrintf("Actual = %li, running = %li\n", actual_number_of_jobs, number_of_commands_run);
+
+
 	for (command_counter = 0; command_counter <  current_run_profile.number_of_run_commands; command_counter++)
 	{
+
+		if (number_of_commands_to_run - number_of_commands_run < current_run_profile.run_commands[command_counter].number_of_copies) number_to_run_for_this_command = number_of_commands_to_run - number_of_commands_run;
+		else number_of_commands_to_run = current_run_profile.run_commands[command_counter].number_of_copies;
 
 		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
 		execution_command.Replace("$command", executable);
 
 		execution_command += "&";
 
-		QueueInfo(wxString::Format("Job Control : Executing '%s' %i times.", execution_command, current_run_profile.run_commands[command_counter].number_of_copies));
+		QueueInfo(wxString::Format("Job Control : Executing '%s' %li times.", execution_command, number_of_commands_to_run));
 
-		for (process_counter = 0; process_counter < current_run_profile.run_commands[command_counter].number_of_copies; process_counter++)
+		for (process_counter = 0; process_counter < number_of_commands_to_run; process_counter++)
 		{
 
 			wxMilliSleep( current_run_profile.run_commands[command_counter].delay_time_in_ms);
@@ -332,6 +349,7 @@ void LaunchJobThread::LaunchRemoteJob()
 			//wxQueueEvent(main_thread_pointer, test_event);
 			//wxExecute(execution_command);
 			system(execution_command.ToUTF8().data());
+			number_of_commands_run++;
 		}
 
 	}
@@ -801,7 +819,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  		ip_address_string += my_possible_ip_addresses.Item(counter);
 			  }
 
-			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, ip_address_string, my_port_string, job_code);
+			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, ip_address_string, my_port_string, job_code, my_job_package.number_of_jobs);
 
 			  if ( launch_thread->Run() != wxTHREAD_NO_ERROR )
 			  {

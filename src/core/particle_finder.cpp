@@ -1127,15 +1127,13 @@ void ParticleFinder::ReadAndResampleMicrograph()
 
 	// Phase flip
 	micrograph.ApplyCTFPhaseFlip(micrograph_ctf);
-	micrograph.QuickAndDirtyWriteSlice("/tmp/micro_ori.mrc", 1);
+
 	// High pass filter to remove density ramps (due to variations in ice thickness)
-	//micrograph.CosineMask(2.0/float(micrograph.logical_x_dimension),4.0/float(micrograph.logical_x_dimension),true);
-	micrograph.CosineMask(0.1/float(micrograph.logical_x_dimension), pixel_size / 50.0,true);
+	micrograph.CosineMask(2.0/float(micrograph.logical_x_dimension),4.0/float(micrograph.logical_x_dimension),true);
 
 	// Back to real space
 	micrograph.BackwardFFT();
 	micrograph.NormalizeFT();
-	micrograph.QuickAndDirtyWriteSlice("/tmp/micro.mrc", 1);
 
 	// Write the raw micrograph's spectrum to disk
 #ifdef dump_intermediate_files

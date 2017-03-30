@@ -3948,6 +3948,8 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
 	
 	ExpertPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ExpertPanel->Hide();
+	
 	wxBoxSizer* bSizer64;
 	bSizer64 = new wxBoxSizer( wxVERTICAL );
 	

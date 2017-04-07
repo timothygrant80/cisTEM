@@ -63,29 +63,30 @@ bool TiffFile::ReadLogicalDimensionsFromDisk()
 	// Loop through all the TIFF directories and check they all have the same x,y dimensions
 	int set_dir_ret = TIFFSetDirectory(tif,0);
 	bool return_value = (set_dir_ret == 1);
-	int dircount = 0;
+	int dircount = 1;
 	uint32 current_x = 0;
 	uint32 current_y = 0;
+
+	TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
+	TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
+
+	logical_dimension_x = current_x;
+	logical_dimension_y = current_y;
+
 	while (TIFFReadDirectory(tif))
 	{
 		dircount++;
 		TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
 		TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
-		if (dircount == 1)
+
+		if (logical_dimension_x != current_x || logical_dimension_y != current_y)
 		{
-			logical_dimension_x = current_x;
-			logical_dimension_y = current_y;
-		}
-		else if (dircount > 1)
-		{
-			if (logical_dimension_x != current_x || logical_dimension_y != current_y)
-			{
-				MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount+1,current_x,current_y,logical_dimension_x,logical_dimension_y);
-				return_value = false;
-			}
+			MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,logical_dimension_x,logical_dimension_y);
+			return_value = false;
 		}
 	}
-	number_of_images = dircount + 1;
+
+	number_of_images = dircount;
 
 	return return_value;
 }

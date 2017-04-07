@@ -152,7 +152,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -346,4 +346,11 @@ apply_mask_SOURCES = programs/apply_mask/apply_mask.cpp
 apply_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 apply_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+
+convert_tif_to_mrc_SOURCES = programs/convert_tif_to_mrc/convert_tif_to_mrc.cpp
+convert_tif_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+convert_tif_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+convert_tif_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
+
+
 

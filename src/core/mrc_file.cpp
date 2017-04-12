@@ -118,6 +118,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 	switch ( my_header.Mode() )
 	{
+		// 1-byte integer
 		case 0:
 		{
 			char *temp_char_array = new char [records_to_read];
@@ -132,6 +133,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		}
 		break;
 
+		// 2-byte integer
 		case 1:
 		{
 			short *temp_short_array = new short [records_to_read];
@@ -146,14 +148,16 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		}
 		break;
 
+		// 4-byte real
 		case 2:
 			my_file.read((char*)output_array, records_to_read * 4);
 		break;
 
+		// unsigned 2-byte integers
 		case 6:
 		{
-			int *temp_int_array = new int [records_to_read];
-			my_file.read((char*)temp_int_array, records_to_read * 4);
+			unsigned short int *temp_int_array = new unsigned short int [records_to_read];
+			my_file.read((char*)temp_int_array, records_to_read * 2);
 			for (long counter = 0; counter < records_to_read; counter++)
 			{
 				output_array[counter] = float(temp_int_array[counter]);

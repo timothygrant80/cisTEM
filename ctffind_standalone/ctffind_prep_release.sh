@@ -14,21 +14,21 @@
 #
 # This script should be run on the Janelia cluster rather than workstations to ensure compatibility
 #
-version=4.1.6
-svn_loc="svn+ssh://praha.hhmi.org/groups/grigorieff/home/grantt/Apps/svnrepos/projectx"
+version=4.1.8
+svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
 configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
-number_of_cores=8
+number_of_cores=4
 installation_username="grigoriefflab"
 installation_prefix="$GWARE/ctffind_${version}"
 
 
 # Override for tests on laptop
-if [[ $(hostname) == "stitt" ]]; then
+if [[ $(hostname) == "uroy" ]]; then
   installation_username="rohoua"
   installation_prefix="$HOME/work/software/ctffind_${version}"
   SCRATCH="/tmp"
-  configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
+  configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=gcc CXX=g++ "
   configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
 fi
 
@@ -49,17 +49,14 @@ cd $version
 unset SHELL
 
 # Check out ctffind from SVN
-if [[ $(hostname) == "stitt" ]]; then
-  echo "Copying from workspace..."
-  cp -rp ~/work/workspace/ProjectX/* . > cp.log 2>&1
-else
-  echo "Checking out from SVN..."
-  #svn co ${svn_loc}/tags/ctffind_${version} . > checkout.log 2>&1
-  svn co ${svn_loc} . > checkout.log 2>&1
-fi
+echo "Checking out from SVN..."
+#svn co ${svn_loc}/tags/ctffind_${version} . > checkout.log 2>&1
+svn co ${svn_loc} . > checkout.log 2>&1
+
 
 #libtoolize --force > libtoolize.log 2>&1
-source regenerate_project.b
+#source regenerate_project.b
+rm -f config.guess config.sub depcomp install-sh missing
 cd ctffind_standalone
 
 # make sure we are using the latest Intel compiler

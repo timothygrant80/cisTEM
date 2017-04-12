@@ -2,7 +2,7 @@
 
 //#define threshold_spectrum
 
-const std::string ctffind_version = "4.1.7";
+const std::string ctffind_version = "4.1.8";
 
 class
 CtffindApp : public MyApp

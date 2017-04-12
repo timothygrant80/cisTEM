@@ -7622,6 +7622,7 @@ void Image::Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle
 	rotated_image.object_is_centred_in_box = true;
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 float Image::ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -7663,6 +7664,7 @@ float Image::ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, flo
 
 	return sum;
 }
+//END_FOR_STAND_ALONE_CTFFIND
 
 float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate)
 {
@@ -7688,6 +7690,7 @@ float Image::ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_
 	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 void Image::CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis)
 {
 	MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D Images supported");
@@ -7751,6 +7754,7 @@ void Image::CorrectMagnificationDistortion(float distortion_angle, float distort
 
 	Consume(&buffer_image);
 }
+//END_FOR_STAND_ALONE_CTFFIND
 
 
 float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)

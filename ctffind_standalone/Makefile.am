@@ -39,7 +39,15 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/refinement_package.h \
                  src/core/refinement.h \
                  src/core/particle_finder.h \
+                 src/core/abstract_image_file.h \
+                 src/core/tiff/tiff.h \
+                 src/core/tiff/tiffconf.h \
+                 src/core/tiff/tiffio.h \
+                 src/core/tiff/tiffvers.h \
+                 src/core/tiff_file.h \
                  src/core/image_file.h \
+                 src/core/classification.h \
+                 src/core/classification_selection.h \
                  src/core/sqlite/sqlite3.h
 
 bin_PROGRAMS = ctffind
@@ -84,9 +92,12 @@ ctffind_SOURCES = src/programs/ctffind/ctffind.cpp \
                        image_trim.cpp \
                        src/core/matrix.cpp \
                        src/core/symmetry_matrix.cpp \
-                       src/core/mrc_file.cpp \
+                       src/core/abstract_image_file.cpp \
                        src/core/mrc_header.cpp \
+                       src/core/mrc_file.cpp \
+                       src/core/tiff_file.cpp \
                        src/core/dm_file.cpp \
+                       src/core/image_file.cpp \
                        src/core/job_packager.cpp \
                        src/core/job_tracker.cpp \
                        src/core/run_profiles.cpp \
@@ -102,3 +113,7 @@ ctffind_SOURCES = src/programs/ctffind/ctffind.cpp \
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDFLAGS = $(WX_LIBS_BASE)
+
+ACLOCAL_AMFLAGS = -I m4
+
+

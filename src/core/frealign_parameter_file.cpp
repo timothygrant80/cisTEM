@@ -391,7 +391,7 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage, bool exclu
 
 	min = ReturnMin(15, exclude_negative_film_numbers);
 	max = ReturnMax(15, exclude_negative_film_numbers);
-	average_occ = ReturnAverage(11, exclude_negative_film_numbers);
+	average_occ = ReturnAverage(12, exclude_negative_film_numbers);
 	increment = (min - max) / (number_of_bins - 1);
 	if (increment == 0.0) return min;
 

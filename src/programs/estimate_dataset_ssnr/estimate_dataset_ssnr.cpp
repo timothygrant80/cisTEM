@@ -90,6 +90,8 @@ bool EstimateDataSetSSNR::DoCalculation()
 		abort();
 	}
 
+	if (defocus_text.records_per_line == 4) wxPrintf("\nIncluding phase plate shifts in fourth column\n");
+
 	Image my_image;
 	Image scaled_image;
 	Image first_sampled_image;
@@ -142,7 +144,8 @@ bool EstimateDataSetSSNR::DoCalculation()
 
 	defocus_text.ReadLine(temp_float);
 	current_ctf.SetDefocus(temp_float[0] / pixel_size, temp_float[1] / pixel_size, deg_2_rad(temp_float[2]));
-	//wxPrintf("Defocus = %f, %f, %f\n", temp_float[0], temp_float[1], temp_float[2]);
+	if (defocus_text.records_per_line == 4) current_ctf.SetAdditionalPhaseShift(temp_float[3]);
+	//wxPrintf("Defocus = %f, %f, %f\n", temp_float[0], temp_float[1], temp_float[2], temp_float[3]);
 
 	for (counter = 0; counter < average_frc.number_of_points; counter++)
 	{
@@ -186,6 +189,7 @@ bool EstimateDataSetSSNR::DoCalculation()
 
 		defocus_text.ReadLine(temp_float);
 		current_ctf.SetDefocus(temp_float[0] / pixel_size, temp_float[1] / pixel_size, deg_2_rad(temp_float[2]));
+		if (defocus_text.records_per_line == 4) current_ctf.SetAdditionalPhaseShift(temp_float[3]);
 
 		current_azimuth = 0;
 

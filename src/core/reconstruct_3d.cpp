@@ -21,6 +21,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 
 	symmetry_matrices.Init("C1");
 	edge_terms_were_added = false;
+	center_mass = false;
 }
 
 Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
@@ -44,6 +45,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 
 	symmetry_matrices.Init(wanted_symmetry);
 	edge_terms_were_added = false;
+	center_mass = false;
 }
 
 Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
@@ -60,6 +62,16 @@ Reconstruct3D::~Reconstruct3D()
 	{
 		delete [] ctf_reconstruction;
 	}
+}
+
+void Reconstruct3D::FreeMemory()
+{
+	if (ctf_reconstruction != NULL)
+	{
+		delete [] ctf_reconstruction;
+		ctf_reconstruction != NULL;
+	}
+	image_reconstruction.Deallocate();
 }
 
 void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion)
@@ -95,6 +107,7 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 //	current_ctf_image.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
 
 	edge_terms_were_added = false;
+	center_mass = false;
 }
 
 void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
@@ -539,7 +552,8 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	int i;
 	int count = 0;
 	int oddeven;
-	char temp_char[8 * sizeof(int) + 5 * sizeof(float) + 4];
+	int center;
+	char temp_char[9 * sizeof(int) + 5 * sizeof(float) + 4];
 	char *char_pointer;
 
 	std::ofstream b_stream(filename.c_str(), std::fstream::out | std::fstream::binary);
@@ -574,6 +588,9 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 	oddeven = 1; if (insert_even) {oddeven = 2;};
 	char_pointer = (char *) &oddeven;
 	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
+	center = 1; if (center_mass) {center = 2;};
+	char_pointer = (char *) &center;
+	for (i = 0; i < sizeof(int); i++) {temp_char[count] = char_pointer[i]; count++;};
 	b_stream.write(temp_char, count);
 
 	char_pointer = (char *) image_reconstruction.real_values;
@@ -587,11 +604,12 @@ void Reconstruct3D::DumpArrays(wxString filename, bool insert_even)
 
 void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension, int &logical_y_dimension, int &logical_z_dimension,
 		int &original_x_dimension, int &original_y_dimension, int &original_z_dimension, int &images_processed, float &pixel_size, float &original_pixel_size,
-		float &average_occupancy, float &average_score, float &score_weights_conversion, wxString &symmetry_symbol, bool &insert_even)
+		float &average_occupancy, float &average_score, float &score_weights_conversion, wxString &symmetry_symbol, bool &insert_even, bool &center_mass)
 {
 	int i;
-	int count = 8 * sizeof(int) + 5 * sizeof(float) + 4;
+	int count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
+	int center;
 	char temp_char[count];
 	char *char_pointer;
 
@@ -629,6 +647,9 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 	char_pointer = (char *) &oddeven;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 	insert_even = false; if (oddeven == 2) {insert_even = true;};
+	char_pointer = (char *) &center;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	center_mass = false; if (center == 2) {center_mass = true;};
 
 	symmetry_matrices.Init(symmetry_symbol);
 
@@ -638,8 +659,9 @@ void Reconstruct3D::ReadArrayHeader(wxString filename, int &logical_x_dimension,
 void Reconstruct3D::ReadArrays(wxString filename)
 {
 	int i;
-	int count = 8 * sizeof(int) + 5 * sizeof(float) + 4;
+	int count = 9 * sizeof(int) + 5 * sizeof(float) + 4;
 	int oddeven;
+	int center;
 	char temp_char[count];
 	char *char_pointer;
 	float input_pixel_size;
@@ -688,6 +710,8 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	for (i = 0; i < 4; i++) input_symmetry_symbol += temp_char[count + i];
 	count += 4;
 	char_pointer = (char *) &oddeven;
+	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
+	char_pointer = (char *) &center;
 	for (i = 0; i < sizeof(int); i++) {char_pointer[i] = temp_char[count]; count++;};
 
 	if (input_logical_x_dimension != logical_x_dimension || input_logical_y_dimension != logical_y_dimension || input_logical_z_dimension != logical_z_dimension || input_pixel_size != pixel_size)

@@ -458,7 +458,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D &reconstruction, int &ori
 
 void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 		float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
-		wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics)
+		bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics)
 {
 	int original_box_size = density_map_1.logical_x_dimension;
 	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
@@ -467,15 +467,21 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	float particle_area_in_pixels;
 	float mask_volume_fraction;
 	float resolution_limit = 0.0;
+	float temp_float;
 	MRCFile output_file;
 	ResolutionStatistics statistics(original_pixel_size, original_box_size);
 	ResolutionStatistics cropped_statistics(pixel_size, box_size);
 	ResolutionStatistics temp_statistics(pixel_size, intermediate_box_size);
+	Peak center_of_mass;
+	wxChar symmetry_type;
+	long symmetry_number;
 
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
+	statistics.CalculateFSC(density_map_1, density_map_2, true);
+	density_map_1.Deallocate();
+	density_map_2.Deallocate();
 	InitWithReconstruct3D(reconstruction, original_pixel_size);
-	statistics.CalculateFSC(density_map_1, density_map_2);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
 	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;
@@ -525,6 +531,19 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	density_map.BackwardFFT();
 	if (intermediate_box_size == box_size) Correct3D();
 	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	if (center_mass)
+	{
+		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();
+		center_of_mass = density_map.CenterOfMass(temp_float, true);
+		symmetry_type = symmetry_symbol.Capitalize()[0];
+		if (symmetry_type == 'C' && center_of_mass.value > 0.0)
+		{
+			symmetry_symbol.Mid(1).ToLong(&symmetry_number);
+			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(int(center_of_mass.x) - density_map.physical_address_of_box_center_x,
+					int(center_of_mass.y) - density_map.physical_address_of_box_center_y, int(center_of_mass.z) - density_map.physical_address_of_box_center_z);
+			else density_map.RealSpaceIntegerShift(0, 0, int(center_of_mass.z) - density_map.physical_address_of_box_center_z);
+		}
+	}
 	output_file.OpenFile(output_volume.ToStdString(), true);
 	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);
 	output_file.SetPixelSize(original_pixel_size);
@@ -553,7 +572,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &densi
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
 	InitWithReconstruct3D(reconstruction, original_pixel_size);
-	statistics.CalculateFSC(density_map_1, density_map_2);
+	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
 	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;

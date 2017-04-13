@@ -102,6 +102,7 @@ bool Merge3DApp::DoCalculation()
 	wxString	extension = dump_file_name.GetExt();
 	wxString	dump_file;
 	bool		insert_even;
+	bool		center_mass;
 	bool		crop_images;
 
 	NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);
@@ -129,7 +130,7 @@ bool Merge3DApp::DoCalculation()
 	Reconstruct3D temp_reconstruction;
 	temp_reconstruction.ReadArrayHeader(dump_file, logical_x_dimension, logical_y_dimension, logical_z_dimension,
 			original_x_dimension, original_y_dimension, original_z_dimension, images_processed, pixel_size, original_pixel_size,
-			average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry, insert_even);
+			average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry, insert_even, center_mass);
 	wxPrintf("\nReconstruction dimensions = %i, %i, %i, pixel size = %f, symmetry = %s\n", logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, my_symmetry);
 	temp_reconstruction.Init(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion);
 	Reconstruct3D my_reconstruction_1(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
@@ -166,10 +167,11 @@ bool Merge3DApp::DoCalculation()
 
 	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
 	my_reconstruction_1 += my_reconstruction_2;
+	my_reconstruction_2.FreeMemory();
 
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-			output_reconstruction_filtered, output_statistics_file, gui_statistics);
+			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics);
 
 	if (is_running_locally == false)
 	{

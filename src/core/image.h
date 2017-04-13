@@ -151,6 +151,7 @@ public:
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
 	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);
+	Peak CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
 
 	inline long ReturnVolumeInRealSpace()
 	{

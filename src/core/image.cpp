@@ -7873,6 +7873,53 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	return float(sum);
 }
 
+Peak Image::CenterOfMass(float threshold, bool apply_threshold)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+
+	int i, j, k;
+	long pixel_counter = 0;
+	double sum_xd = 0.0;
+	double sum_yd = 0.0;
+	double sum_zd = 0.0;
+	double sum_d = 0.0;
+	Peak center_of_mass;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				if (real_values[pixel_counter] >= threshold || ! apply_threshold)
+				sum_xd += i * real_values[pixel_counter];
+				sum_yd += j * real_values[pixel_counter];
+				sum_zd += k * real_values[pixel_counter];
+				sum_d += real_values[pixel_counter];
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	if (sum_d > 0.0)
+	{
+		center_of_mass.x = sum_xd / sum_d;
+		center_of_mass.y = sum_yd / sum_d;
+		center_of_mass.z = sum_zd / sum_d;
+		center_of_mass.value = 1.0;
+	}
+	else
+	{
+		center_of_mass.x = 0.0;
+		center_of_mass.y = 0.0;
+		center_of_mass.z = 0.0;
+		center_of_mass.value = 0.0;
+	}
+
+	return center_of_mass;
+}
 
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

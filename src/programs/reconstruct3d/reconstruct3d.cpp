@@ -47,6 +47,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	bool		exclude_blank_edges = false;
 	bool		crop_images = false;
 	bool		split_even_odd = true;
+	bool		center_mass = false;
 	bool		dump_arrays = false;
 	wxString	dump_file_1;
 	wxString	dump_file_2;
@@ -83,14 +84,15 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	exclude_blank_edges = my_input->GetYesNoFromUser("Exclude images with blank edges", "Should particle images with blank edges be excluded from processing?", "No");
 	crop_images = my_input->GetYesNoFromUser("Crop particle images", "Should the particle images be cropped to speed up computation?", "No");
 	split_even_odd = my_input->GetYesNoFromUser("FSC calculation with even/odd particles", "Should the FSC half volumes be calulated using even and odd particles?", "Yes");
+	center_mass = my_input->GetYesNoFromUser("Center mass", "Should the calculated map be centered in the box according to the center of mass (only for C symmetry)?", "No");
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the 3D reconstruction arrays be dumped to a file for later merging with other jobs", "No");
 	dump_file_1 = my_input->GetFilenameFromUser("Output dump filename for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_1.dat", false);
 	dump_file_2 = my_input->GetFilenameFromUser("Output dump filename for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_2.dat", false);
 
 	delete my_input;
 
-	my_current_job.Reset(33);
-	my_current_job.ManualSetArguments("tttbtttttiifffffffffffffbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
+	my_current_job.Reset(34);
+	my_current_job.ManualSetArguments("tttbtttttiifffffffffffffbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
 																			input_parameter_file.ToUTF8().data(),
 																			input_reconstruction.ToUTF8().data(), use_input_reconstruction,
 																			output_reconstruction_1.ToUTF8().data(),
@@ -103,7 +105,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 																			molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 																			resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
 																			smoothing_factor, padding, normalize_particles, adjust_scores,
-																			invert_contrast, exclude_blank_edges, crop_images, split_even_odd, dump_arrays,
+																			invert_contrast, exclude_blank_edges, crop_images, split_even_odd, center_mass, dump_arrays,
 																			dump_file_1.ToUTF8().data(),
 																			dump_file_2.ToUTF8().data());
 }
@@ -142,9 +144,10 @@ bool Reconstruct3DApp::DoCalculation()
 	bool	 exclude_blank_edges				= my_current_job.arguments[27].ReturnBoolArgument();
 	bool	 crop_images						= my_current_job.arguments[28].ReturnBoolArgument();
 	bool	 split_even_odd						= my_current_job.arguments[29].ReturnBoolArgument();
-	bool	 dump_arrays						= my_current_job.arguments[30].ReturnBoolArgument();
-	wxString dump_file_1 						= my_current_job.arguments[31].ReturnStringArgument();
-	wxString dump_file_2 						= my_current_job.arguments[32].ReturnStringArgument();
+	bool	 center_mass						= my_current_job.arguments[30].ReturnBoolArgument();
+	bool	 dump_arrays						= my_current_job.arguments[31].ReturnBoolArgument();
+	wxString dump_file_1 						= my_current_job.arguments[32].ReturnStringArgument();
+	wxString dump_file_2 						= my_current_job.arguments[33].ReturnStringArgument();
 
 	ReconstructedVolume input_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d(molecular_mass_kDa);
@@ -158,10 +161,13 @@ bool Reconstruct3DApp::DoCalculation()
 	Image				padded_projection_image;
 	Image				cropped_projection_image;
 	Image				unmasked_image;
+	Image				padded_image;
+	Image				*rotation_cache = NULL;
 	CTF					current_ctf;
 	CTF					input_ctf;
 	Curve				noise_power_spectrum;
 	Curve				number_of_terms;
+	AnglesAndShifts 	rotation_angle;
 	ProgressBar			*my_progress;
 
 	int i, j;
@@ -178,6 +184,9 @@ bool Reconstruct3DApp::DoCalculation()
 	int max_samples = 2000;
 	int random_seed_multiplier = 2;
 	int fsc_particle_repeat = 2;
+	int padding_2d = 2;
+	int padded_box_size;
+	int number_of_rotations;
 	float temp_float;
 	float mask_volume_fraction;
 	float mask_falloff = 10.0;
@@ -189,6 +198,11 @@ bool Reconstruct3DApp::DoCalculation()
 	float mask_radius_for_noise;
 	float percentage;
 	float ssq_X;
+	float psi;
+	float psi_step;
+//	float psi_max;
+	float psi_start;
+	bool rotational_blurring = true;
 	wxDateTime my_time_in;
 
 	MRCFile input_file(input_particle_stack.ToStdString(), false);
@@ -350,17 +364,19 @@ bool Reconstruct3DApp::DoCalculation()
 	my_reconstruction_1.original_y_dimension = original_box_size;
 	my_reconstruction_1.original_z_dimension = original_box_size;
 	my_reconstruction_1.original_pixel_size = original_pixel_size;
+	my_reconstruction_1.center_mass = center_mass;
 	my_reconstruction_2.original_x_dimension = original_box_size;
 	my_reconstruction_2.original_y_dimension = original_box_size;
 	my_reconstruction_2.original_z_dimension = original_box_size;
 	my_reconstruction_2.original_pixel_size = original_pixel_size;
+	my_reconstruction_2.center_mass = center_mass;
 
 	wxPrintf("\nNumber of particles to reconstruct = %i, average sigma noise = %f, average LogP = %f\n", images_to_process, parameter_average[14], parameter_average[15]);
 	wxPrintf("Box size for reconstruction = %i, binning factor = %f\n", box_size, binning_factor);
 
 	if (images_to_process == 0)
 	{
-		MyPrintWithDetails("Error: No particles to process\n");
+		if (! dump_arrays) MyPrintWithDetails("Error: No particles to process\n");
 		if (dump_arrays)
 		{
 			wxPrintf("\nDumping reconstruction arrays...\n");
@@ -444,7 +460,7 @@ bool Reconstruct3DApp::DoCalculation()
 		for (i = pixel_counter1; i < pixel_counter2; i++) temp_float += temp_3d[i];
 		temp_float /= (pixel_counter2 - pixel_counter1);
 		delete [] temp_3d;
-		if (temp_float < 1.0 || temp_float > 25)
+		if (temp_float < 0.5 || temp_float > 25)
 		{
 			SendInfo("input 3D densities out of range. Rescaling...");
 			input_3d.density_map.MultiplyByConstant(5.0 / temp_float);
@@ -458,6 +474,26 @@ bool Reconstruct3DApp::DoCalculation()
 		input_3d.PrepareForProjections(0.0, resolution_limit_ref, false, false);
 		// Multiply by binning_factor to scale reference to be compatible with scaled binned image (see below)
 		if (binning_factor != 1.0) input_3d.density_map.MultiplyByConstant(binning_factor);
+
+		if (rotational_blurring)
+		{
+			padded_box_size = int(powf(2.0, float(padding_2d)) + 0.5) * box_size;
+			padded_image.Allocate(padded_box_size, padded_box_size, true);
+
+			psi_step = 2.0 * rad_2_deg(pixel_size / outer_mask_radius);
+			number_of_rotations = int(360.0 / psi_step + 0.5);
+			if (number_of_rotations % 2 == 0) number_of_rotations--;
+			psi_step = 360.0 / number_of_rotations;
+	//		psi_step = 2.0;
+			psi_start = - (number_of_rotations - 1) / 2.0 * psi_step;
+
+			rotation_cache = new Image [number_of_rotations];
+			for (i = 0; i < number_of_rotations; i++)
+			{
+				rotation_cache[i].Allocate(box_size, box_size, false);
+			}
+			wxPrintf("\nUsing %i rotations for image blurring with angular step %g\n", number_of_rotations, psi_step);
+		}
 	}
 
 	wxPrintf("\nCalculating reconstruction...\n\n");
@@ -539,7 +575,6 @@ bool Reconstruct3DApp::DoCalculation()
 			{
 				if (use_input_reconstruction)
 				{
-//					temp_image.RealSpaceIntegerShift(myroundint(input_parameters[4] / original_pixel_size), myroundint(input_parameters[5] / original_pixel_size));
 					if (normalize_particles) temp_image.ForwardFFT();
 					temp_image.ClipInto(&temp2_image);
 					temp2_image.BackwardFFT();
@@ -548,8 +583,6 @@ bool Reconstruct3DApp::DoCalculation()
 					input_particle.CosineMask(false, true, 0.0);
 					input_particle.ForwardFFT();
 					unmasked_image.ForwardFFT();
-//					input_particle.PhaseFlipImage();
-//					unmasked_image.PhaseFlipPixelWise(*input_particle.ctf_image);
 					projection_image.ClipInto(&temp2_image);
 					temp2_image.BackwardFFT();
 					temp2_image.ClipInto(&cropped_projection_image);
@@ -560,8 +593,37 @@ bool Reconstruct3DApp::DoCalculation()
 					input_particle.particle_image->MultiplyByConstant(binning_factor);
 					ssq_X = input_particle.particle_image->ReturnSumOfSquares();
 					temp_float = - std::numeric_limits<float>::max();
-					input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
-							smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					if (rotational_blurring)
+					{
+						input_particle.particle_image->ClipInto(&padded_image);
+						// Pre-correct for real-space interpolation errors
+						padded_image.CorrectSinc();
+						padded_image.BackwardFFT();
+						variance = input_particle.particle_image->ReturnSumOfSquares();
+						j = 0;
+						for (i = 0; i < number_of_rotations; i++)
+						{
+							psi = i * psi_step + psi_start;
+							if (fabsf(psi) < psi_step / 2.0) rotation_cache[0].CopyFrom(input_particle.particle_image);
+							else
+							{
+								j++;
+								rotation_angle.GenerateRotationMatrix2D(psi);
+								padded_image.Rotate2DSample(rotation_cache[j], rotation_angle);
+								rotation_cache[j].ForwardFFT();
+								// Correct variance for interpolation.
+								temp_float = rotation_cache[j].ReturnSumOfSquares();
+								rotation_cache[j].MultiplyByConstant(sqrtf(variance / temp_float));
+							}
+						}
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, rotation_cache, *input_particle.particle_image, 0,
+								number_of_rotations, psi_step, psi_start, smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
+					else
+					{
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
+								smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
 					input_particle.particle_image->object_is_centred_in_box = false;
 				}
 				else
@@ -578,14 +640,11 @@ bool Reconstruct3DApp::DoCalculation()
 			{
 				if (use_input_reconstruction)
 				{
-//					temp_image.RealSpaceIntegerShift(myroundint(input_parameters[4] / pixel_size), myroundint(input_parameters[5] / pixel_size));
 					temp_image.ClipInto(input_particle.particle_image);
 					unmasked_image.CopyFrom(input_particle.particle_image);
 					input_particle.CosineMask(false, true, 0.0);
 					input_particle.ForwardFFT();
 					unmasked_image.ForwardFFT();
-//					input_particle.PhaseFlipImage();
-//					unmasked_image.PhaseFlipPixelWise(*input_particle.ctf_image);
 					projection_image.BackwardFFT();
 					projection_image.ClipInto(&cropped_projection_image);
 					cropped_projection_image.ForwardFFT();
@@ -593,9 +652,37 @@ bool Reconstruct3DApp::DoCalculation()
 					cropped_projection_image.MultiplyPixelWiseReal(*input_particle.ctf_image, true);
 					ssq_X = input_particle.particle_image->ReturnSumOfSquares();
 					temp_float = - std::numeric_limits<float>::max();
-					// Could add smoothing (0.5) to reduce overfitting.
-					input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
-							smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					if (rotational_blurring)
+					{
+						input_particle.particle_image->ClipInto(&padded_image);
+						// Pre-correct for real-space interpolation errors
+						padded_image.CorrectSinc();
+						padded_image.BackwardFFT();
+						variance = input_particle.particle_image->ReturnSumOfSquares();
+						j = 0;
+						for (i = 0; i < number_of_rotations; i++)
+						{
+							psi = i * psi_step + psi_start;
+							if (fabsf(psi) < psi_step / 2.0) rotation_cache[0].CopyFrom(input_particle.particle_image);
+							else
+							{
+								j++;
+								rotation_angle.GenerateRotationMatrix2D(psi);
+								padded_image.Rotate2DSample(rotation_cache[j], rotation_angle);
+								rotation_cache[j].ForwardFFT();
+								// Correct variance for interpolation.
+								temp_float = rotation_cache[j].ReturnSumOfSquares();
+								rotation_cache[j].MultiplyByConstant(sqrtf(variance / temp_float));
+							}
+						}
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, rotation_cache, *input_particle.particle_image, 0,
+								number_of_rotations, psi_step, psi_start, smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
+					else
+					{
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
+								smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
 					input_particle.particle_image->object_is_centred_in_box = false;
 				}
 				else
@@ -637,23 +724,49 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 				if (use_input_reconstruction)
 				{
-//					temp_image.RealSpaceIntegerShift(myroundint(input_parameters[4] / original_pixel_size), myroundint(input_parameters[5] / original_pixel_size));
 					temp3_image.CopyFrom(&temp_image);
 					temp_image.CosineMask(outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size, false, true, 0.0);
 					temp_image.ForwardFFT();
 					temp3_image.ForwardFFT();
 					temp_image.ClipInto(input_particle.particle_image);
 					temp3_image.ClipInto(&unmasked_image);
-//					input_particle.PhaseFlipImage();
-//					unmasked_image.PhaseFlipPixelWise(*input_particle.ctf_image);
 					projection_image.ClipInto(&cropped_projection_image);
 					cropped_projection_image.MultiplyPixelWiseReal(*input_particle.ctf_image, true);
 					// Multiply by binning_factor to scale noise variance to 1 in binned image
 					input_particle.particle_image->MultiplyByConstant(binning_factor);
 					ssq_X = input_particle.particle_image->ReturnSumOfSquares();
 					temp_float = - std::numeric_limits<float>::max();
-					input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
-							smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					if (rotational_blurring)
+					{
+						input_particle.particle_image->ClipInto(&padded_image);
+						// Pre-correct for real-space interpolation errors
+						padded_image.CorrectSinc();
+						padded_image.BackwardFFT();
+						variance = input_particle.particle_image->ReturnSumOfSquares();
+						j = 0;
+						for (i = 0; i < number_of_rotations; i++)
+						{
+							psi = i * psi_step + psi_start;
+							if (fabsf(psi) < psi_step / 2.0) rotation_cache[0].CopyFrom(input_particle.particle_image);
+							else
+							{
+								j++;
+								rotation_angle.GenerateRotationMatrix2D(psi);
+								padded_image.Rotate2DSample(rotation_cache[j], rotation_angle);
+								rotation_cache[j].ForwardFFT();
+								// Correct variance for interpolation.
+								temp_float = rotation_cache[j].ReturnSumOfSquares();
+								rotation_cache[j].MultiplyByConstant(sqrtf(variance / temp_float));
+							}
+						}
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, rotation_cache, *input_particle.particle_image, 0,
+								number_of_rotations, psi_step, psi_start, smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
+					else
+					{
+						input_particle.MLBlur(&cropped_projection_image, ssq_X, cropped_projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
+								smoothing_factor, temp_float, -1, 0.0, cropped_projection_image, false, false, false, &unmasked_image);
+					}
 					input_particle.particle_image->object_is_centred_in_box = false;
 				}
 				else
@@ -693,19 +806,44 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 				if (use_input_reconstruction)
 				{
-//					input_particle.particle_image->RealSpaceIntegerShift(myroundint(input_parameters[4] / pixel_size), myroundint(input_parameters[5] / pixel_size));
 					unmasked_image.CopyFrom(input_particle.particle_image);
 					input_particle.CosineMask(false, true, 0.0);
 					input_particle.ForwardFFT();
 					unmasked_image.ForwardFFT();
-//					input_particle.PhaseFlipImage();
-//					unmasked_image.PhaseFlipPixelWise(*input_particle.ctf_image);
 					projection_image.MultiplyPixelWiseReal(*input_particle.ctf_image, true);
 					ssq_X = input_particle.particle_image->ReturnSumOfSquares();
 					temp_float = - std::numeric_limits<float>::max();
-					// Could add smoothing (0.5) to reduce overfitting.
-					input_particle.MLBlur(&projection_image, ssq_X, projection_image, input_particle.particle_image, *input_particle.particle_image, 0, 1, 0.0, 0.0,
-							smoothing_factor, temp_float, -1, 0.0, projection_image, false, false, false, &unmasked_image);
+					if (rotational_blurring)
+					{
+						input_particle.particle_image->ClipInto(&padded_image);
+						// Pre-correct for real-space interpolation errors
+						padded_image.CorrectSinc();
+						padded_image.BackwardFFT();
+						variance = input_particle.particle_image->ReturnSumOfSquares();
+						j = 0;
+						for (i = 0; i < number_of_rotations; i++)
+						{
+							psi = i * psi_step + psi_start;
+							if (fabsf(psi) < psi_step / 2.0) rotation_cache[0].CopyFrom(input_particle.particle_image);
+							else
+							{
+								j++;
+								rotation_angle.GenerateRotationMatrix2D(psi);
+								padded_image.Rotate2DSample(rotation_cache[j], rotation_angle);
+								rotation_cache[j].ForwardFFT();
+								// Correct variance for interpolation.
+								temp_float = rotation_cache[j].ReturnSumOfSquares();
+								rotation_cache[j].MultiplyByConstant(sqrtf(variance / temp_float));
+							}
+						}
+						input_particle.MLBlur(&projection_image, ssq_X, projection_image, rotation_cache, *input_particle.particle_image, 0,
+								number_of_rotations, psi_step, psi_start, smoothing_factor, temp_float, -1, 0.0, projection_image, false, false, false, &unmasked_image);
+					}
+					else
+					{
+						input_particle.MLBlur(&projection_image, ssq_X, projection_image, input_particle.particle_image, *input_particle.particle_image, 0,
+								1, 0.0, 0.0, smoothing_factor, temp_float, -1, 0.0, projection_image, false, false, false, &unmasked_image);
+					}
 					input_particle.particle_image->object_is_centred_in_box = false;
 				}
 				else
@@ -753,6 +891,12 @@ bool Reconstruct3DApp::DoCalculation()
 	}
 	delete my_progress;
 
+	if (use_input_reconstruction)
+	{
+		delete input_3d_file;
+		if (rotational_blurring) delete [] rotation_cache;
+	}
+
 	if (dump_arrays)
 	{
 		wxPrintf("\nDumping reconstruction arrays...\n");
@@ -771,12 +915,11 @@ bool Reconstruct3DApp::DoCalculation()
 
 	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
 	my_reconstruction_1 += my_reconstruction_2;
+	my_reconstruction_2.FreeMemory();
 
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-			output_reconstruction_filtered, output_statistics_file);
-
-	if (use_input_reconstruction) delete input_3d_file;
+			center_mass, output_reconstruction_filtered, output_statistics_file);
 
 	wxPrintf("\nReconstruct3D: Normal termination\n\n");
 

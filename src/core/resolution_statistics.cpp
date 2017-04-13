@@ -226,7 +226,7 @@ void ResolutionStatistics::NormalizeVolumeWithParticleSSNR(Image &reconstructed_
 //	part_SSNR.Square();
 }
 
-void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2)
+void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2, bool smooth_curve)
 {
 	MyDebugAssertTrue(reconstructed_volume_1.is_in_real_space == false, "reconstructed_volume_1 not in Fourier space");
 	MyDebugAssertTrue(reconstructed_volume_2.is_in_real_space == false, "reconstructed_volume_2 not in Fourier space");
@@ -246,7 +246,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 	float frequency;
 	float frequency_squared;
 
-	if (number_of_bins == 0 ) number_of_bins = reconstructed_volume_1.ReturnSmallestLogicalDimension() / 2 + 1;
+	if (number_of_bins <= 1 ) number_of_bins = reconstructed_volume_1.ReturnSmallestLogicalDimension() / 2 + 1;
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 
 // Extend table to include corners in 3D Fourier space
@@ -376,21 +376,24 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 		}
 	}
 
-	if (window < 5) window = 5;
-	if (window > number_of_bins_extended / 10) window = number_of_bins_extended / 10;
-
-	if (IsOdd(window) == false) window++;
-
-	FSC.data_y[0] = FSC.data_y[1];
-	FSC.FitSavitzkyGolayToData(window, 3);
-	for (i = 0; i < number_of_bins_extended; i++)
+	if (smooth_curve)
 	{
-//		wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
-		if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
-		// Make a smooth transition between original FSC curve and smoothed curve
-		else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
-		if (FSC.data_y[i] > 1.0) FSC.data_y[i] = 1.0;
-		if (FSC.data_y[i] < -1.0) FSC.data_y[i] = -1.0;
+		if (window < 5) window = 5;
+		if (window > number_of_bins_extended / 10) window = number_of_bins_extended / 10;
+
+		if (IsOdd(window) == false) window++;
+
+		FSC.data_y[0] = FSC.data_y[1];
+		FSC.FitSavitzkyGolayToData(window, 3);
+		for (i = 0; i < number_of_bins_extended; i++)
+		{
+	//		wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
+			if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
+			// Make a smooth transition between original FSC curve and smoothed curve
+			else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
+			if (FSC.data_y[i] > 1.0) FSC.data_y[i] = 1.0;
+			if (FSC.data_y[i] < -1.0) FSC.data_y[i] = -1.0;
+		}
 	}
 
 	delete [] sum1;
@@ -667,7 +670,7 @@ void ResolutionStatistics::GenerateDefaultStatistics(float molecular_mass_in_kDa
 		FSC.AddPoint(resolution, fsc);
 		part_FSC.AddPoint(resolution, fsc);
 		part_SSNR.AddPoint(resolution, ssnr);
-//		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
+		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
 		rec_SSNR.AddPoint(resolution, ssnr);
 	}
 }

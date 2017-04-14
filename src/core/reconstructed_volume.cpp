@@ -539,9 +539,9 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 		if (symmetry_type == 'C' && center_of_mass.value > 0.0)
 		{
 			symmetry_symbol.Mid(1).ToLong(&symmetry_number);
-			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(int(center_of_mass.x) - density_map.physical_address_of_box_center_x,
-					int(center_of_mass.y) - density_map.physical_address_of_box_center_y, int(center_of_mass.z) - density_map.physical_address_of_box_center_z);
-			else density_map.RealSpaceIntegerShift(0, 0, int(center_of_mass.z) - density_map.physical_address_of_box_center_z);
+			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(density_map.physical_address_of_box_center_x - int(center_of_mass.x),
+					density_map.physical_address_of_box_center_y - int(center_of_mass.y), density_map.physical_address_of_box_center_z - int(center_of_mass.z));
+			else density_map.RealSpaceIntegerShift(0, 0, density_map.physical_address_of_box_center_z - int(center_of_mass.z));
 		}
 	}
 	output_file.OpenFile(output_volume.ToStdString(), true);

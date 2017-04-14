@@ -61,6 +61,7 @@ Reconstruct3D::~Reconstruct3D()
 	if (ctf_reconstruction != NULL)
 	{
 		delete [] ctf_reconstruction;
+		ctf_reconstruction = NULL;
 	}
 }
 
@@ -69,7 +70,7 @@ void Reconstruct3D::FreeMemory()
 	if (ctf_reconstruction != NULL)
 	{
 		delete [] ctf_reconstruction;
-		ctf_reconstruction != NULL;
+		ctf_reconstruction = NULL;
 	}
 	image_reconstruction.Deallocate();
 }
@@ -96,6 +97,7 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 	if (ctf_reconstruction != NULL)
 	{
 		delete [] ctf_reconstruction;
+		ctf_reconstruction = NULL;
 	}
 	ctf_reconstruction = new float[image_reconstruction.real_memory_allocated / 2];
 	ZeroFloatArray(ctf_reconstruction, image_reconstruction.real_memory_allocated / 2);

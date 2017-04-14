@@ -460,7 +460,7 @@ bool Reconstruct3DApp::DoCalculation()
 		for (i = pixel_counter1; i < pixel_counter2; i++) temp_float += temp_3d[i];
 		temp_float /= (pixel_counter2 - pixel_counter1);
 		delete [] temp_3d;
-		if (temp_float < 0.5 || temp_float > 25)
+		if (temp_float < 0.1 || temp_float > 25)
 		{
 			SendInfo("input 3D densities out of range. Rescaling...");
 			input_3d.density_map.MultiplyByConstant(5.0 / temp_float);

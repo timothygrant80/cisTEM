@@ -290,8 +290,11 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		for (long counter = 0; counter < PathListCtrl->GetItemCount(); counter++)
 		{
-			temp_asset.Update(PathListCtrl->GetItemText(counter));
 			wxDateTime start = wxDateTime::UNow();
+			temp_asset.Update(PathListCtrl->GetItemText(counter));
+			wxDateTime end = wxDateTime::UNow();
+			wxPrintf("File parsing (disk access) took %li milliseconds\n", (end-start).GetMilliseconds());
+			start = wxDateTime::UNow();
 
 			// check everything ok with gain_ref
 
@@ -303,7 +306,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			else
 			if (movie_asset_panel->IsFileAnAsset(temp_asset.filename) == false) // Check this movie is not already an asset..
 			{
-				wxDateTime end = wxDateTime::UNow();
+				end = wxDateTime::UNow();
 
 				wxPrintf("File searching took %li milliseconds\n", (end-start).GetMilliseconds());
 

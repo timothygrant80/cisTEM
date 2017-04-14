@@ -55,6 +55,8 @@ public:
 	Curve results_height_template;
 	Curve results_rotation;
 
+	bool write_out_plt;
+
 
 private:
 	// Parameters from the user

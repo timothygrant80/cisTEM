@@ -31,6 +31,7 @@ private:
 		void RenameGroupClick( wxCommandEvent& event );
 		void InvertGroupClick( wxCommandEvent& event );
 		void NewFromParentClick( wxCommandEvent& event );
+		void EnableNewFromParentButton();
 
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void MouseVeto( wxMouseEvent& event );

@@ -879,6 +879,11 @@ void MyAssetParentPanel::Reset()
 
 }
 
+void MyAssetParentPanel::EnableNewFromParentButton()
+{
+	//NewFromParentButton->Enable(false);
+}
+
 void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	if (main_frame->current_project.is_open == false)
@@ -888,6 +893,9 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 	else
 	{
 		Enable(true);
+
+		// We leave it up to the panel itself to decide whether to enable the "New from parent" button
+		EnableNewFromParentButton();
 
 		if (selected_group == 0)
 		{

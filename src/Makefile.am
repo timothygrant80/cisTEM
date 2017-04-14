@@ -50,6 +50,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/gui_core_headers.h \
                  core/gui_job_controller.h \
                  core/classification.h \
+                 core/classification_selection.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -97,6 +98,8 @@ noinst_HEADERS = core/asset_group.h \
                  gui/MyRefine2DPanel.h \
                  gui/Refine2DResultsPanel.h \
                  gui/ClassificationPlotPanel.h \
+                 gui/ClassumSelectionCopyFromDialog.h \
+                 gui/MyOverviewPanel.h \
                  gui/DisplayPanel.h \
                  gui/ProjectX_gui.h \
                  gui/icons/action_icon.cpp \
@@ -141,6 +144,12 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/display_previous_disabled_icon.cpp \
                  gui/icons/display_previous_icon.cpp \
                  gui/icons/display_refresh_icon.cpp \
+                 gui/icons/display_high_quality_icon.cpp \
+                 gui/icons/display_fft_icon.cpp \
+                 gui/icons/add_file_icon.cpp \
+                 gui/icons/delete_file_icon.cpp \
+                 gui/icons/cistem_logo_600.cpp \
+                 gui/icons/cistem_logo_800.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp

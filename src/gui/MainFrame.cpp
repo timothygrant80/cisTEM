@@ -237,6 +237,7 @@ void MyMainFrame::DirtyMovieGroups()
 	movie_asset_panel->is_dirty = true;
 	align_movies_panel->group_combo_is_dirty = true;
 	movie_results_panel->group_combo_is_dirty = true;
+	image_asset_panel->EnableNewFromParentButton();
 }
 
 void MyMainFrame::DirtyImageGroups()

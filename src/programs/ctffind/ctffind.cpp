@@ -501,7 +501,7 @@ void CtffindApp::DoInteractiveUserInput()
 		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","yes");;
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","yes");;
 			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
 			known_astigmatism			= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);

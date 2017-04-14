@@ -19,7 +19,7 @@ MyAssetParentPanel( parent )
 	AssetTypeText->SetLabel("Images");
 
 	NewFromParentButton->SetLabel("New from\nmovie group");
-	NewFromParentButton->Enable(true);
+	EnableNewFromParentButton();
 
 	all_groups_list->groups[0].SetName("All Images");
 	all_assets_list = new ImageAssetList;
@@ -61,6 +61,21 @@ void MyImageAssetPanel::UpdateInfo()
 		Label9Text->SetLabel("");
 	}
 
+}
+
+void MyImageAssetPanel::EnableNewFromParentButton()
+{
+	/*
+	if (movie_asset_panel->ReturnNumberOfGroups() > 1)
+		{
+		wxPrintf("Enabling new from parent\n");
+		}
+	else
+	{
+		wxPrintf("Disabling new from parent\n");
+	}
+	*/
+	NewFromParentButton->Enable(movie_asset_panel->ReturnNumberOfGroups() > 1);
 }
 
 bool MyImageAssetPanel::IsFileAnAsset(wxFileName file_to_check)
@@ -329,12 +344,16 @@ void MyImageAssetPanel::NewFromParentClick( wxCommandEvent & event )
 			DirtyGroups();
 		}
 
+		// ProgressBar..
+
+
+
 		// Work out who belongs in that group
-		// TODO: progress bar
 		bool image_has_parent_in_group[ReturnNumberOfAssets()];
 		for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ ) { image_has_parent_in_group[image_counter] = false; }
 		MovieAsset *current_movie_asset;
 		ImageAsset *current_image_asset;
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Creating group",	"Selecting images...", movie_asset_panel->ReturnGroupSize(selected_group_number), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_REMAINING_TIME);
 		for (long movie_counter = 0; movie_counter < movie_asset_panel->ReturnGroupSize(selected_group_number); movie_counter ++ )
 		{
 			current_movie_asset = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnGroupMember(selected_group_number, movie_counter));
@@ -343,17 +362,21 @@ void MyImageAssetPanel::NewFromParentClick( wxCommandEvent & event )
 				current_image_asset = all_assets_list->ReturnImageAssetPointer(image_counter);
 				if (current_image_asset->parent_id == current_movie_asset->asset_id) image_has_parent_in_group[image_counter] = true;
 			}
+			my_progress_dialog->Update(movie_counter);
 		}
+		my_progress_dialog->Destroy();
 
 		// Add members to the new group
-		// TODO: progress bar
+		my_progress_dialog = new OneSecondProgressDialog("Creating group",	"Adding images...", ReturnNumberOfAssets(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_REMAINING_TIME);
 		for (long image_counter = 0; image_counter < ReturnNumberOfAssets(); image_counter ++ )
 		{
 			if (image_has_parent_in_group[image_counter])
 			{
 				AddArrayItemToGroup(all_groups_list->number_of_groups-1,image_counter);
 			}
+			my_progress_dialog->Update(image_counter);
 		}
+		my_progress_dialog->Destroy();
 
 		FillGroupList();
 		FillContentsList();

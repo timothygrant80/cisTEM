@@ -37,6 +37,7 @@ ParticleFinder::ParticleFinder()
 
 	// Other
 	number_of_background_boxes_to_skip = 0;
+	write_out_plt                                   =   false;
 
 }
 
@@ -591,85 +592,99 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 	// Let's find peaks in our scoring function and box candidate particles out
 	int index_of_matching_template;
 	float rotation_of_matching_template;
+	const int minimum_distance_from_edges_in_rescaled_pixels = minimum_distance_from_edges_in_pixels * original_micrograph_pixel_size / pixel_size +1;
+	int coo_to_ignore_x, coo_to_ignore_y;
+	const int min_x = minimum_distance_from_edges_in_rescaled_pixels;
+	const int min_y = minimum_distance_from_edges_in_rescaled_pixels;
+	const int max_x = maximum_score.logical_x_dimension - minimum_distance_from_edges_in_rescaled_pixels;
+	const int max_y = maximum_score.logical_y_dimension - minimum_distance_from_edges_in_rescaled_pixels;
 	Image box;
 	box.Deallocate();
 	if (output_stack_box_size > 0) box.Allocate(output_stack_box_size,output_stack_box_size,1,true);
 	if (output_stack_box_size > 0) micrograph.ReadSlice(&micrograph_file,1);
 	Peak my_peak;
 	int number_of_candidate_particles = 0;
-#ifdef write_out_plt_file
 	NumericTextFile *output_coos_file;
-#endif
 	MRCFile output_stack;
 	float highest_peak;
 	results_x_y.ClearData();
 	results_height_template.ClearData();
 	results_rotation.ClearData();
 	wxPrintf("\nFinding peaks & extracting particle images...\n");
+	float temp_float[5];
 	my_progress_bar = new ProgressBar(100);
 	while (true)
 	{
-		//my_peak    = maximum_score.FindPeakAtOriginFast2D(maximum_score.physical_address_of_box_center_x - box.physical_address_of_box_center_x - 1, maximum_score.physical_address_of_box_center_y - box.physical_address_of_box_center_y - 1);
-		my_peak	= maximum_score_modified.FindPeakWithIntegerCoordinates(0.0,FLT_MAX,minimum_distance_from_edges_in_pixels * original_micrograph_pixel_size / pixel_size +1);
+		// We allow ourselves to find peaks beyond our boundary (that way, if something is found just beyond the boundary, we will blank that area and we won't end up
+		// picking the edge of the object which falls within the boundary)
+		my_peak	= maximum_score_modified.FindPeakWithIntegerCoordinates(0.0,FLT_MAX,std::max(0,minimum_distance_from_edges_in_rescaled_pixels - int(maximum_radius_in_pixels) - 1));
 		if (my_peak.value < minimum_peak_height_for_candidate_particles) break;
 		if (number_of_candidate_particles == 0) highest_peak = my_peak.value;
-		// We have found a candidate particle
-		number_of_candidate_particles ++;
-		if (number_of_candidate_particles == 1 )
-		{
-			if (output_stack_box_size > 0) output_stack.OpenFile(output_stack_filename.ToStdString(),true);
-#ifdef write_out_plt_file
-			wxPrintf("about to open numeric text file with filename %s\n",FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"));
-			output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 3);
-#endif
-		}
-		if (output_stack_box_size > 0) micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
-		if (output_stack_box_size > 0) box.WriteSlice(&output_stack,number_of_candidate_particles);
 		// Zero an area around this peak to ensure we don't pick again near there
-		int coo_to_ignore_x, coo_to_ignore_y;
 		coo_to_ignore_x = int(my_peak.x) + maximum_score_modified.physical_address_of_box_center_x;
 		coo_to_ignore_y = int(my_peak.y) + maximum_score_modified.physical_address_of_box_center_y;
 		SetCircularAreaToIgnore(maximum_score_modified,coo_to_ignore_x,coo_to_ignore_y,2.0 * maximum_radius_in_pixels,0.0);
 		//maximum_score.QuickAndDirtyWriteSlice("dbg_latest_maximum_score.mrc",number_of_candidate_particles);
-		//wxPrintf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
-#ifdef write_out_plt_file
-		temp_float[1] =  maximum_score.logical_x_dimension - (maximum_score.physical_address_of_box_center_x + (my_peak.x));
-		temp_float[0] =  maximum_score.physical_address_of_box_center_y + (my_peak.y);
-		temp_float[1] =  temp_float[1] * pixel_size / original_micrograph_pixel_size + 1.0;
-		temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
-		temp_float[2] =  1.0;
-		output_coos_file->WriteLine(temp_float);
-#endif
+		// Now we do the actual check as to whether the peak is within our boundaries
+		if (coo_to_ignore_x >= min_x && coo_to_ignore_x <= max_x && coo_to_ignore_y >= min_y && coo_to_ignore_y <= max_y )
+		{
+			// We have found a candidate particle
+			number_of_candidate_particles ++;
+			if (number_of_candidate_particles == 1 )
+			{
+				if (output_stack_box_size > 0) output_stack.OpenFile(output_stack_filename.ToStdString(),true);
+				if (write_out_plt)
+				{
+					wxPrintf("about to open numeric text file with filename %s\n",FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"));
+					output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 5);
+				}
+			}
+			if (output_stack_box_size > 0) micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
+			if (output_stack_box_size > 0) box.WriteSlice(&output_stack,number_of_candidate_particles);
+			//wxPrintf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
+			if (write_out_plt)
+			{
+				temp_float[1] =  maximum_score.logical_x_dimension - (maximum_score.physical_address_of_box_center_x + (my_peak.x));
+				temp_float[0] =  maximum_score.physical_address_of_box_center_y + (my_peak.y);
+				temp_float[1] =  temp_float[1] * pixel_size / original_micrograph_pixel_size + 1.0;
+				temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
+				temp_float[2] =  1.0;
+				temp_float[3] =  float(index_of_matching_template);
+				temp_float[4] =  my_peak.value;
+				output_coos_file->WriteLine(temp_float);
+			}
 
-		// Find the matching template
-		index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
-		rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
+			// Find the matching template
+			index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
+			rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 
-		// Remember results
-		results_x_y.AddPoint(pixel_size * (float(maximum_score_modified.physical_address_of_box_center_x) - my_peak.x), pixel_size * (float(maximum_score_modified.physical_address_of_box_center_y) - my_peak.y));
-		results_height_template.AddPoint(my_peak.value,float(index_of_matching_template));
-		results_rotation.AddPoint(rotation_of_matching_template,0.0);
+			// Remember results
+			results_x_y.AddPoint(pixel_size * (float(maximum_score_modified.physical_address_of_box_center_x) - my_peak.x), pixel_size * (float(maximum_score_modified.physical_address_of_box_center_y) - my_peak.y));
+			results_height_template.AddPoint(my_peak.value,float(index_of_matching_template));
+			results_rotation.AddPoint(rotation_of_matching_template,0.0);
 
-/*
-		// Get ready for template matching
-		PrepareTemplateForMatching(&template_image[index_of_matching_template],template_medium,rotation_of_matching_template,&micrograph_ctf,&background_whitening_filter);
+			/*
+			// Get ready for template matching
+			PrepareTemplateForMatching(&template_image[index_of_matching_template],template_medium,rotation_of_matching_template,&micrograph_ctf,&background_whitening_filter);
 
-#ifdef dump_intermediate_files
-		template_medium.QuickAndDirtyWriteSlice("dbg_candidate_matched_templates.mrc",number_of_candidate_particles);
-#endif
+			#ifdef dump_intermediate_files
+			template_medium.QuickAndDirtyWriteSlice("dbg_candidate_matched_templates.mrc",number_of_candidate_particles);
+			#endif
 
-		template_medium.MultiplyByConstant(my_peak.value);
- 	 	box.SubtractImage(&template_medium);
-#ifdef dump_intermediate_files
-		box.QuickAndDirtyWriteSlice("dbg_candidate_particle_residuals.mrc",number_of_candidate_particles);
-#endif
-*/
+			template_medium.MultiplyByConstant(my_peak.value);
+			box.SubtractImage(&template_medium);
+			#ifdef dump_intermediate_files
+			box.QuickAndDirtyWriteSlice("dbg_candidate_particle_residuals.mrc",number_of_candidate_particles);
+			#endif
+	 	 	 */
 
 
-		//
-		my_progress_bar->Update(long((highest_peak - my_peak.value)/(highest_peak - minimum_peak_height_for_candidate_particles)*100.0)+1);
+			//
+			my_progress_bar->Update(long((highest_peak - my_peak.value)/(highest_peak - minimum_peak_height_for_candidate_particles)*100.0)+1);
+		}
 	}
 	delete my_progress_bar;
+	if (write_out_plt) delete output_coos_file;
 	wxPrintf("\nFound %i candidate particles\n",number_of_candidate_particles);
 
 }

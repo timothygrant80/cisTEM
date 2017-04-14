@@ -160,6 +160,9 @@ bool FindParticlesApp::DoCalculation()
 			                                algorithm_to_find_background,
 			                                number_of_background_boxes);
 
+	particle_finder.write_out_plt = is_running_locally;
+	if (is_running_locally) wxPrintf("Running locally. Should write PLT out.\n");
+
 	particle_finder.DoItAll();
 
 

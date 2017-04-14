@@ -5,7 +5,6 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 
 		void DirtyGroups() {main_frame->DirtyMovieGroups();};
 
-
 	public:
 
 		MyMovieAssetPanel( wxWindow* parent );

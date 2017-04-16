@@ -463,7 +463,7 @@ bool Reconstruct3DApp::DoCalculation()
 		if (temp_float < 0.1 || temp_float > 25)
 		{
 			SendInfo("input 3D densities out of range. Rescaling...");
-			input_3d.density_map.MultiplyByConstant(5.0 / temp_float);
+			input_3d.density_map.MultiplyByConstant(0.1 / temp_float);
 		}
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		if (padding != 1.0)

@@ -670,7 +670,7 @@ void ResolutionStatistics::GenerateDefaultStatistics(float molecular_mass_in_kDa
 		FSC.AddPoint(resolution, fsc);
 		part_FSC.AddPoint(resolution, fsc);
 		part_SSNR.AddPoint(resolution, ssnr);
-		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
+//		wxPrintf("i = %i, res = %g, sqrt(pssnr) = %g\n", i, resolution, sqrtf(ssnr));
 		rec_SSNR.AddPoint(resolution, ssnr);
 	}
 }

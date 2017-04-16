@@ -26,29 +26,24 @@ void NikoTestApp::DoInteractiveUserInput()
 
 bool NikoTestApp::DoCalculation()
 {
+	int i;
+	MRCFile input_stack("input.mrc", false);
+	MRCFile output_stack("output.mrc", true);
+	Image input_image;
 
-	Image test_image;
+	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+
 
 	wxDateTime before;
 	wxDateTime after;
 	wxLongLong average = 0;
 
-	test_image.QuickAndDirtyReadSlice("/tmp/image.mrc", 1);
-
-	for (long counter = 0; counter < 100; counter++)
+	for (i = 1; i <= input_stack.ReturnZSize(); i++)
 	{
-		before = wxDateTime::UNow();
-		test_image.ForwardFFT(false);
-		after = wxDateTime::UNow();
-
-		average += after.Subtract(before).GetMilliseconds();
-
-
+		input_image.ReadSlice(&input_stack, i);
+		input_image.RealSpaceIntegerShift(8,6,0);
+		input_image.WriteSlice(&output_stack, i);
 	}
-
-	wxPrintf("average time = %li ms\n", average / 100);
-
-
 
 	return true;
 }

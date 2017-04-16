@@ -161,7 +161,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc niko_test
 
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -361,5 +361,9 @@ convert_tif_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_tif_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 convert_tif_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
 
+niko_test_SOURCES = programs/niko_test/niko_test.cpp
+niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_LDADD = libcore.a $(WX_LIBS_BASE)
 
 

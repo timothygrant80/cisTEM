@@ -427,7 +427,8 @@ bool Refine2DApp::DoCalculation()
 			input_image.ReadSlice(input_classes, current_class + 1);
 			variance = input_image.ReturnSumOfSquares();
 			if (variance == 0.0 && input_classes != NULL) continue;
-			input_image.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size);
+			input_image.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+			input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
 			// Not clear if the following is the right thing to do here...
 //			input_image.AddConstant(- input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true));
 			input_image.MultiplyByConstant(binning_factor);
@@ -647,6 +648,7 @@ bool Refine2DApp::DoCalculation()
 //		input_particle.mask_volume = input_image.CosineMask(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
 		input_image.ClipInto(&cropped_input_image);
 		input_particle.mask_volume = cropped_input_image.CosineMask(cropped_input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+//		input_particle.mask_volume = cropped_input_image.number_of_real_space_pixels;
 		cropped_input_image.ForwardFFT();
 		// This ClipInto is needed as a filtering step to set Fourier terms outside the final binned image to zero.
 		cropped_input_image.ClipInto(input_particle.particle_image);

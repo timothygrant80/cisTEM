@@ -7921,6 +7921,52 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 	return center_of_mass;
 }
 
+float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_mask_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+
+	int i, j, k;
+	long pixel_counter1 = 0;
+	long pixel_counter2 = 0;
+	int mask_radius;
+	float average_density_max = 0.0;
+
+	if (wanted_mask_radius == 0.0) mask_radius = int(ReturnSmallestLogicalDimension() / 2.0);
+	else mask_radius = std::min(int(ReturnSmallestLogicalDimension() / 2.0), int(wanted_mask_radius));
+
+	float *temp_3d = new float [logical_x_dimension * logical_y_dimension + logical_x_dimension * logical_z_dimension + logical_y_dimension * logical_z_dimension];
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				if (   k >= physical_address_of_box_center_z - mask_radius && k < physical_address_of_box_center_z + mask_radius
+					&& j >= physical_address_of_box_center_y - mask_radius && j < physical_address_of_box_center_y + mask_radius
+					&& i >= physical_address_of_box_center_x - mask_radius && i < physical_address_of_box_center_x + mask_radius)
+				{
+					if (i == physical_address_of_box_center_x || j == physical_address_of_box_center_y  || k == physical_address_of_box_center_z)
+					{
+						temp_3d[pixel_counter2] = real_values[pixel_counter1];
+						pixel_counter2++;
+					}
+				}
+				pixel_counter1++;
+			}
+			pixel_counter1 += padding_jump_value;
+		}
+	}
+	std::sort (temp_3d, temp_3d + pixel_counter2);
+	pixel_counter1 = pixel_counter2 - number_of_pixels_to_average;
+	if (pixel_counter1 < 0) pixel_counter1 = 0;
+	for (i = pixel_counter1; i < pixel_counter2; i++) average_density_max += temp_3d[i];
+	average_density_max /= (pixel_counter2 - pixel_counter1);
+	delete [] temp_3d;
+
+	return average_density_max;
+}
+
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)
 {

@@ -401,6 +401,7 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 		}
 	}
 
+	density_map.is_in_real_space = false;
 	delete [] wiener_constant;
 }
 
@@ -463,11 +464,13 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	int original_box_size = density_map_1.logical_x_dimension;
 	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
 	int box_size = reconstruction.logical_x_dimension;
+	long pixel_counter;
 	float binning_factor = pixel_size / original_box_size;
 	float particle_area_in_pixels;
 	float mask_volume_fraction;
 	float resolution_limit = 0.0;
 	float temp_float;
+	float volume_fraction = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3) / mask_volume_in_voxels;
 	MRCFile output_file;
 	ResolutionStatistics statistics(original_pixel_size, original_box_size);
 	ResolutionStatistics cropped_statistics(pixel_size, box_size);
@@ -478,10 +481,29 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
-	statistics.CalculateFSC(density_map_1, density_map_2, true);
-	density_map_1.Deallocate();
-	density_map_2.Deallocate();
-	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	if (inner_mask_radius == 0.0 && volume_fraction < 0.5)
+	{
+		InitWithReconstruct3D(reconstruction, original_pixel_size);
+		for (pixel_counter = 0; pixel_counter < density_map.real_memory_allocated; pixel_counter++) density_map.real_values[pixel_counter] += density_map_1.real_values[pixel_counter] + density_map_1.real_values[pixel_counter];
+		density_map.CosineMask(pixel_size / 40.0, pixel_size / 10.0);
+		density_map_1.BackwardFFT();
+		density_map_2.BackwardFFT();
+		density_map.BackwardFFT();
+		mask_volume_in_voxels = density_map_1.ApplyMask(density_map, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
+		mask_volume_in_voxels = density_map_2.ApplyMask(density_map, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
+		density_map_1.ForwardFFT();
+		density_map_2.ForwardFFT();
+		statistics.CalculateFSC(density_map_1, density_map_2, true);
+		density_map_1.Deallocate();
+		density_map_2.Deallocate();
+	}
+	else
+	{
+		statistics.CalculateFSC(density_map_1, density_map_2, true);
+		density_map_1.Deallocate();
+		density_map_2.Deallocate();
+		InitWithReconstruct3D(reconstruction, original_pixel_size);
+	}
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
 	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;

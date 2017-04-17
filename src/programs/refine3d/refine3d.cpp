@@ -344,6 +344,7 @@ bool Refine3DApp::DoCalculation()
 	float percentage;
 	float variance;
 	float average;
+	float average_density_max;
 	wxDateTime my_time_in;
 //	wxDateTime my_time_out;
 
@@ -453,6 +454,7 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C Invert particle contrast:                " + BoolToYesNo(invert_contrast));
 	my_output_par_file.WriteCommentLine("C Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
 	my_output_par_file.WriteCommentLine("C Normalize input reconstruction:          " + BoolToYesNo(normalize_input_3d));
+	my_output_par_file.WriteCommentLine("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d));
 	my_output_par_file.WriteCommentLine("C");
 //	my_output_par_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score         Change");
 	my_output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
@@ -486,8 +488,13 @@ bool Refine3DApp::DoCalculation()
 	}
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
 //!!! This line is incompatible with ML !!!
-	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
-	if (threshold_input_3d) input_3d.density_map.SetMinimumValue(0.0);
+//	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
+	input_3d.density_map.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+	if (threshold_input_3d)
+	{
+		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
+		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
+	}
 
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	if (mask_radius > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) mask_radius = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
@@ -1020,6 +1027,7 @@ bool Refine3DApp::DoCalculation()
 		}
 		input_parameters[7] = fabsf(input_parameters[7]);
 		output_parameters[7] = input_parameters[7];
+		if (output_parameters[15] < 0.0) output_parameters[15] = 0.0;
 		my_output_par_file.WriteLine(output_parameters);
 
 		if (is_running_locally == false) // send results back to the gui..

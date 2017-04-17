@@ -171,8 +171,6 @@ bool Reconstruct3DApp::DoCalculation()
 	ProgressBar			*my_progress;
 
 	int i, j;
-	long pixel_counter1 = 0;
-	long pixel_counter2 = 0;
 	int current_image;
 	int images_to_process = 0;
 	int images_for_noise_power = 0;
@@ -195,14 +193,15 @@ bool Reconstruct3DApp::DoCalculation()
 	float variance;
 	float average;
 	float original_pixel_size = pixel_size;
-	float mask_radius_for_noise;
+	float outer_mask_in_pixels = outer_mask_radius / pixel_size;
+	float average_density_max;
 	float percentage;
 	float ssq_X;
 	float psi;
 	float psi_step;
 //	float psi_max;
 	float psi_start;
-	bool rotational_blurring = true;
+	bool rotational_blurring = false;
 	wxDateTime my_time_in;
 
 	MRCFile input_file(input_particle_stack.ToStdString(), false);
@@ -388,17 +387,17 @@ bool Reconstruct3DApp::DoCalculation()
 		return true;
 	}
 
+	if (2.0 * outer_mask_in_pixels + mask_falloff / original_pixel_size > 0.95 * original_box_size)
+	{
+		outer_mask_in_pixels = 0.95 * original_box_size / 2.0 - mask_falloff / 2.0 / original_pixel_size;
+	}
+
 	if (normalize_particles)
 	{
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
 		percentage = float(max_samples) / float(images_to_process);
 		temp3_image.SetToConstant(0.0);
-		mask_radius_for_noise = outer_mask_radius / original_pixel_size;
 		number_of_blank_edges = 0;
-		if (2.0 * mask_radius_for_noise + mask_falloff / original_pixel_size > 0.95 * original_box_size)
-		{
-			mask_radius_for_noise = 0.95 * original_box_size / 2.0 - mask_falloff / 2.0 / original_pixel_size;
-		}
 		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((temp3_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((temp3_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 		my_progress = new ProgressBar(images_for_noise_power);
@@ -439,33 +438,19 @@ bool Reconstruct3DApp::DoCalculation()
 		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
 		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
 		// Check that the input 3D map has reasonable density values
-		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
-		for (j = 0; j < input_3d.density_map.logical_y_dimension * input_3d.density_map.logical_z_dimension; j++)
-		{
-			for (i = 0; i < input_3d.density_map.logical_x_dimension; i++)
-			{
-				if (pixel_counter1%10 == 0)
-				{
-					temp_3d[pixel_counter2] = input_3d.density_map.real_values[pixel_counter1];
-					pixel_counter2++;
-				}
-				pixel_counter1++;
-			}
-			pixel_counter1 += input_3d.density_map.padding_jump_value;
-		}
-		std::sort (temp_3d, temp_3d + pixel_counter2);
-		temp_float = 0.0;
-		pixel_counter1 = pixel_counter2 - 100;
-		if (pixel_counter1 < 0) pixel_counter1 = 0;
-		for (i = pixel_counter1; i < pixel_counter2; i++) temp_float += temp_3d[i];
-		temp_float /= (pixel_counter2 - pixel_counter1);
-		delete [] temp_3d;
-		if (temp_float < 0.1 || temp_float > 25)
-		{
-			SendInfo("input 3D densities out of range. Rescaling...");
-			input_3d.density_map.MultiplyByConstant(0.1 / temp_float);
-		}
+//		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
+		input_3d.density_map.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, false, true, 0.0);
+		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
+		if (average_density_max < 0.1 || average_density_max > 25)
+		{
+
+			SendInfo(wxString::Format("Input 3D densities out of range (average max = %g). Rescaling...", average_density_max));
+			input_3d.density_map.MultiplyByConstant(0.1 / average_density_max);
+			average_density_max = 0.1;
+		}
+		// Threshold map to suppress negative noise
+		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
 		if (padding != 1.0)
 		{
 			input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
@@ -481,6 +466,7 @@ bool Reconstruct3DApp::DoCalculation()
 			padded_image.Allocate(padded_box_size, padded_box_size, true);
 
 			psi_step = 2.0 * rad_2_deg(pixel_size / outer_mask_radius);
+			if (psi_step < 15.0) psi_step = 15.0;
 			number_of_rotations = int(360.0 / psi_step + 0.5);
 			if (number_of_rotations % 2 == 0) number_of_rotations--;
 			psi_step = 360.0 / number_of_rotations;

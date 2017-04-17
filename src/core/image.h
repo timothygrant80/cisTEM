@@ -152,6 +152,7 @@ public:
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
 	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);
 	Peak CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
+	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 
 	inline long ReturnVolumeInRealSpace()
 	{

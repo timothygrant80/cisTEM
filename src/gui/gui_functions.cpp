@@ -118,6 +118,37 @@ wxArrayString GetRecentProjectsFromSettings()
 	return temp;
 }
 
+void AddProjectToRecentProjects(wxString project_to_add)
+{
+	int counter;
+	wxArrayString recent_projects = GetRecentProjectsFromSettings();
+
+	recent_projects.Insert(project_to_add, 0);
+	for (counter = recent_projects.GetCount() - 1; counter > 0; counter--)
+	{
+		if (recent_projects.Item(counter) == project_to_add) recent_projects.RemoveAt(counter);
+	}
+
+	if (recent_projects.GetCount() > 5)
+	{
+		for (counter = 5; counter < recent_projects.GetCount();counter++)
+		{
+			recent_projects.RemoveAt(counter);
+		}
+	}
+
+	// set the recent projects in settings..
+
+	for (counter = 0; counter < recent_projects.GetCount(); counter++)
+	{
+		wxConfig::Get()->Write(wxString::Format("RecentProject%i", counter + 1), recent_projects.Item(counter));
+	}
+
+	wxConfig::Get()->Flush();
+
+}
+
+
 void FillGroupComboBoxSlave( wxComboBox *GroupComboBox, bool include_all_images_group )
 {
 	extern MyImageAssetPanel *image_asset_panel;

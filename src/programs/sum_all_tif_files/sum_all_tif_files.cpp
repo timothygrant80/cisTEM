@@ -96,10 +96,10 @@ bool SumAllTIF::DoCalculation()
 
 	if (invert_and_scale == true)
 	{
-		sum_image.QuickAndDirtyWriteSlice("ori.mrc", 1);
+		//sum_image.QuickAndDirtyWriteSlice("ori.mrc", 1);
 		sum_image.TakeReciprocalRealValues();
 		float max_value = sum_image.ReturnMaximumValue();
-		wxPrintf("max value = %f", max_value);
+		//wxPrintf("max value = %f", max_value);
 		sum_image.QuickAndDirtyWriteSlice("reciprocal.mrc", 1);
 		sum_image.DivideByConstant(max_value);
 

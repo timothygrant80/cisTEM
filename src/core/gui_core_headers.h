@@ -95,6 +95,8 @@
 #include "../gui/Refine2DResultsPanel.h"
 #include "../gui/ClassumSelectionCopyFromDialog.h"
 #include "../gui/MyOverviewPanel.h"
+#include "../gui/AbInitio3DPanel.h"
+#include "../gui/AssetPickerComboPanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

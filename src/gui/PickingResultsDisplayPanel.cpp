@@ -9,7 +9,7 @@ PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindo
 
 	//CTF2DResultsPanel->font_size_multiplier = 1.5;
 
-
+	LowResFilterTextCtrl->SetMinMaxValue(0.1, FLT_MAX);
 
 }
 
@@ -88,6 +88,30 @@ void PickingResultsDisplayPanel::OnScaleBarCheckBox(wxCommandEvent & event)
 	}
 }
 
+void PickingResultsDisplayPanel::OnLowPassEnter(wxCommandEvent& event)
+{
+	if (PickingResultsImagePanel->should_low_pass == true)
+	{
+		PickingResultsImagePanel->low_res_filter_value = LowResFilterTextCtrl->ReturnValue();
+		PickingResultsImagePanel->UpdateImageInBitmap(true);
+		PickingResultsImagePanel->Refresh();
+	}
+	event.Skip();
+
+
+}
+
+void PickingResultsDisplayPanel::OnLowPassKillFocus(wxFocusEvent& event)
+{
+	if (PickingResultsImagePanel->should_low_pass == true)
+	{
+		PickingResultsImagePanel->low_res_filter_value = LowResFilterTextCtrl->ReturnValue();
+		PickingResultsImagePanel->UpdateImageInBitmap(true);
+		PickingResultsImagePanel->Refresh();
+	}
+	event.Skip();
+}
+
 void PickingResultsDisplayPanel::OnHighPassFilterCheckBox(wxCommandEvent & event)
 {
 	if (HighPassFilterCheckBox->IsChecked())
@@ -114,21 +138,22 @@ void PickingResultsDisplayPanel::OnLowPassFilterCheckBox(wxCommandEvent & event)
 {
 	if (LowPassFilterCheckBox->IsChecked())
 	{
-		if (! PickingResultsImagePanel->should_low_pass)
-		{
-			PickingResultsImagePanel->should_low_pass = true;
-			PickingResultsImagePanel->UpdateImageInBitmap(true);
-			PickingResultsImagePanel->Refresh();
-		}
+		LowResFilterTextCtrl->Enable(true);
+		LowAngstromStatic->Enable(true);
+
+		PickingResultsImagePanel->low_res_filter_value = LowResFilterTextCtrl->ReturnValue();
+
+		PickingResultsImagePanel->should_low_pass = true;
+		PickingResultsImagePanel->UpdateImageInBitmap(true);
+		PickingResultsImagePanel->Refresh();
+
 	}
 	else
 	{
-		if (PickingResultsImagePanel->should_low_pass)
-		{
-			PickingResultsImagePanel->should_low_pass = false;
-			PickingResultsImagePanel->UpdateImageInBitmap(true);
-			PickingResultsImagePanel->Refresh();
-		}
+		PickingResultsImagePanel->low_res_filter_value = -1.0;
+		PickingResultsImagePanel->should_low_pass = false;
+		PickingResultsImagePanel->UpdateImageInBitmap(true);
+		PickingResultsImagePanel->Refresh();
 	}
 }
 

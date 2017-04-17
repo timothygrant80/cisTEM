@@ -9,6 +9,7 @@ MyAssetParentPanel( parent )
 {
 	RenameAssetButton->Show(false);
 	DisplayButton->Show(false);
+	DisplayButton->Enable(false);
 	Layout();
 
 	Label0Title->SetLabel("");
@@ -37,6 +38,7 @@ MyParticlePositionAssetPanel::~MyParticlePositionAssetPanel()
 {
 	delete all_assets_list;
 }
+
 
 void MyParticlePositionAssetPanel::UpdateInfo()
 {
@@ -91,6 +93,25 @@ void MyParticlePositionAssetPanel::InsertGroupMemberToDatabase(int wanted_group,
 	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < all_assets_list->number_of_assets, "Requesting an partice position (%i) that doesn't exist!", wanted_asset);
 
 	main_frame->current_project.database.InsertOrReplace(wxString::Format("PARTICLE_POSITION_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data(), "ii", "MEMBER_NUMBER", "PARTICLE_POSITION_ASSET_ID", ReturnGroupSize(wanted_group), ReturnGroupMemberID(wanted_group, wanted_asset));
+}
+
+void MyParticlePositionAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog )
+{
+	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%i) that doesn't exist!", wanted_group);
+
+	int current_member_number = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(MEMBER_NUMBER) FROM PARTICLE_POSITION_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data());
+	main_frame->current_project.database.BeginBatchInsert(wxString::Format("PARTICLE_POSITION_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data(), 2, "MEMBER_NUMBER", "PARTICLE_POSITION_ASSET_ID");
+
+	for (long counter = 0; counter < wanted_array->GetCount(); counter++)
+	{
+		MyDebugAssertTrue(wanted_array->Item(counter) >= 0 && wanted_array->Item(counter) < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_array->Item(counter));
+		main_frame->current_project.database.AddToBatchInsert("ii", current_member_number, ReturnGroupMemberID(0, int(wanted_array->Item(counter))));
+		current_member_number++;
+		if (progress_dialog != NULL) progress_dialog->Update(counter);
+	}
+
+	main_frame->current_project.database.EndBatchInsert();
+
 }
 
 void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
@@ -262,10 +283,10 @@ wxString MyParticlePositionAssetPanel::ReturnItemText(long item, long column) co
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pick_job_id);
 	       break;
 	    case 3  :
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_position);
+	    	return wxString::Format(wxT("%.2f Å"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_position);
 	       break;
 	    case 4  :
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_position);
+	    	return wxString::Format(wxT("%.2f Å"), all_assets_list->ReturnParticlePositionAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_position);
 	       break;
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);

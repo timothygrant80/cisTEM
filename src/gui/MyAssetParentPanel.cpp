@@ -81,16 +81,23 @@ void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset)
 
 void MyAssetParentPanel::OnDisplayButtonClick( wxCommandEvent& event )
 {
-	wxString execution_command = wxStandardPaths::Get().GetExecutablePath();
-	execution_command = execution_command.BeforeLast('/');
-	execution_command += "/display";
+	DisplaySelectedItems();
+}
 
-	// get all selected..
-
-	long item = -1;
-
-	for ( ;; )
+void MyAssetParentPanel::DisplaySelectedItems()
+{
+	if (DisplayButton->IsEnabled() == true)
 	{
+		wxString execution_command = wxStandardPaths::Get().GetExecutablePath();
+		execution_command = execution_command.BeforeLast('/');
+		execution_command += "/display";
+
+		// get all selected..
+
+		long item = -1;
+
+		for ( ;; )
+		{
 			item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
 			if ( item == -1 )
 			break;
@@ -98,13 +105,14 @@ void MyAssetParentPanel::OnDisplayButtonClick( wxCommandEvent& event )
 			execution_command += " ";
 			execution_command += all_assets_list->ReturnAssetFullFilename(all_groups_list->ReturnGroupMember(selected_group, item));
 
+		}
+
+		execution_command += "&";
+		//wxPrintf("Launching %s\n", execution_command);
+		system(execution_command.ToUTF8().data());
 	}
-
-	execution_command += "&";
-	//wxPrintf("Launching %s\n", execution_command);
-	system(execution_command.ToUTF8().data());
-
 }
+
 void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 {
 	// How many assets are selected?
@@ -223,6 +231,29 @@ void MyAssetParentPanel::AddArrayItemToGroup(long wanted_group, long wanted_arra
 		InsertGroupMemberToDatabase(wanted_group, all_groups_list->groups[wanted_group].number_of_members - 1);
 		DirtyGroups();
 	}
+}
+
+void MyAssetParentPanel::AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog)
+{
+	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
+
+	wxArrayLong array_to_add_to_database; // copied so that duplicates are not added to the database..
+
+	for (long counter = 0; counter < array_of_wanted_items->GetCount(); counter++)
+	{
+		MyDebugAssertTrue(array_of_wanted_items->Item(counter) >= 0 && array_of_wanted_items->Item(counter) < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", array_of_wanted_items->Item(counter))
+		if (all_groups_list->groups[wanted_group].FindMember(array_of_wanted_items->Item(counter)) == -1)
+		{
+			all_groups_list->groups[wanted_group].AddMember(array_of_wanted_items->Item(counter));
+			//InsertGroupMemberToDatabase(wanted_group, all_groups_list->groups[wanted_group].number_of_members - 1);
+			array_to_add_to_database.Add(array_of_wanted_items->Item(counter));
+		}
+	}
+
+	InsertArrayofGroupMembersToDatabase(wanted_group, &array_to_add_to_database, progress_dialog);
+	DirtyGroups();
+
+
 }
 
 void MyAssetParentPanel::AddSelectedAssetClick( wxCommandEvent& event )
@@ -385,7 +416,8 @@ void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 	int id_of_group_to_invert = all_groups_list->groups[group_to_invert].id;
 
 	// Build bool array to work out which assets currently belong to the group, and invert the logic
-	bool group_membership[all_assets_list->number_of_assets];
+	bool *group_membership = new bool[all_assets_list->number_of_assets];
+
 	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
 	{
 		group_membership[counter] = true;
@@ -395,6 +427,7 @@ void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 		group_membership[all_groups_list->groups[group_to_invert].members[counter]] = false;
 	}
 
+	/* Alexis old code, I have changed it to the code below which i believe is considerably faster.  Also, It now adds a copy of the group.
 	// Create a new group
 	current_group_number++;
 	all_groups_list->AddGroup(all_groups_list->groups[group_to_invert].name);
@@ -421,10 +454,33 @@ void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 
 		all_groups_list->RemoveGroup(group_to_invert);
 
+	}*/
+
+	wxArrayLong included_group_members;
+
+	for (long counter = 0; counter < all_assets_list->number_of_assets; counter++)
+	{
+		if (group_membership[counter])
+		{
+			included_group_members.Add(counter);
+		}
 	}
 
-	SetSelectedGroup(all_groups_list->number_of_groups-1);
+	current_group_number++;
+	all_groups_list->AddGroup("Inverse of " + all_groups_list->groups[group_to_invert].name);
+	all_groups_list->groups[all_groups_list->number_of_groups - 1].id = current_group_number;
+	AddGroupToDatabase(current_group_number,all_groups_list->groups[all_groups_list->number_of_groups - 1].name,current_group_number);
+
+	// add to databse with progressbar
+
+	OneSecondProgressDialog *progress_bar = new OneSecondProgressDialog("Invert", "Inverting group", included_group_members.GetCount(), this, wxPD_APP_MODAL);
+	AddArrayofArrayItemsToGroup(all_groups_list->number_of_groups - 1, &included_group_members, progress_bar);
+
+	delete [] group_membership;
+	FillGroupList();
 	DirtyGroups();
+	SetSelectedGroup(all_groups_list->number_of_groups-1);
+	progress_bar->Destroy();
 
 }
 
@@ -436,6 +492,11 @@ void MyAssetParentPanel::NewFromParentClick ( wxCommandEvent & event )
 void MyAssetParentPanel::OnGroupActivated( wxListEvent& event )
 {
 	GroupListBox->EditLabel(event.GetIndex());
+}
+
+void MyAssetParentPanel::OnAssetActivated( wxListEvent& event )
+{
+	DisplaySelectedItems();
 }
 
 void MyAssetParentPanel::AddAsset(Asset *asset_to_add)
@@ -543,8 +604,6 @@ void MyAssetParentPanel::FillGroupList()
 	//wxColor my_grey(50,50,50);
 
 	wxFont current_font;
-
-	//long currently_selected = selected_group;
 
 	GroupListBox->Freeze();
 	GroupListBox->ClearAll();

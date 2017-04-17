@@ -81,6 +81,9 @@ public :
 	bool 		draw_scale_bar;
 	bool		allow_editing_of_coordinates;
 
+	float low_res_filter_value;
+	float high_res_filter_value;
+
 private:
 	wxString 	image_in_bitmap_filename;
 	Image		image_in_bitmap;

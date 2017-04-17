@@ -186,17 +186,26 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 	return output_filenames;
 }
 
-void Refinement::WriteResolutionStatistics(wxString base_filename)
+wxArrayString Refinement::WriteResolutionStatistics(wxString base_filename)
 {
 	NumericTextFile *current_plot;
 	int class_counter;
 
+	wxString current_filename;
+	wxArrayString output_filenames;
+
+
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-		current_plot = new NumericTextFile(base_filename + wxString::Format("_%li_%i.txt", refinement_id, class_counter + 1), OPEN_TO_WRITE, 7);
+		current_filename = base_filename + wxString::Format("_%li_%i.txt", refinement_id, class_counter + 1);
+		output_filenames.Add(current_filename);
+
+		current_plot = new NumericTextFile(current_filename, OPEN_TO_WRITE, 7);
 		class_refinement_results[class_counter].class_resolution_statistics.WriteStatisticsToFile(*current_plot);
 		delete current_plot;
 	}
+
+	return output_filenames;
 }
 
 void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wanted_number_of_classes)

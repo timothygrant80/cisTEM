@@ -364,31 +364,31 @@ CheckboxRenderer::CheckboxRenderer(const wxString &varianttype, wxDataViewCellMo
 
 bool CheckboxRenderer::ActivateCell	(const wxRect & cell, wxDataViewModel * 	model,	const wxDataViewItem & 	item,	unsigned int 	col,const wxMouseEvent * 	mouseEvent	)
 {
-	int mouse_x, mouse_y;
-
-	mouseEvent->GetPosition(&mouse_x, &mouse_y);
-	//wxPrintf("Activate, X=%i, Y=%i    Mouse X=%i, Mouse Y=%i\n", cell.x, cell.y, mouse_x, mouse_y);
-
-	if (mouse_x >= 0 && mouse_x <= 18)
+	if (mouseEvent != NULL)
 	{
-		//if (current_mode == CHECKED) model->ChangeValue(wxVariant(UNCHECKED), item, col);
-		//else
-		if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(CHECKED), item, col);
+		int mouse_x, mouse_y;
+
+		mouseEvent->GetPosition(&mouse_x, &mouse_y);
+		//wxPrintf("Activate, X=%i, Y=%i    Mouse X=%i, Mouse Y=%i\n", cell.x, cell.y, mouse_x, mouse_y);
+
+		if (mouse_x >= 0 && mouse_x <= 18)
+		{
+			//if (current_mode == CHECKED) model->ChangeValue(wxVariant(UNCHECKED), item, col);
+			//else
+			if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(CHECKED), item, col);
+			else
+			//if (current_mode == CHECKED_WITH_EYE) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
+			//else
+			if (current_mode == UNCHECKED_WITH_EYE) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item, col);
+		}
 		else
-		//if (current_mode == CHECKED_WITH_EYE) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
-		//else
-		if (current_mode == UNCHECKED_WITH_EYE) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item, col);
+		if (mouse_x >= 20 && mouse_x <= 40)
+		{
+			if (current_mode == CHECKED) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item,col);
+			else
+			if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
+		}
 	}
-	else
-	if (mouse_x >= 20 && mouse_x <= 40)
-	{
-		if (current_mode == CHECKED) model->ChangeValue(wxVariant(CHECKED_WITH_EYE), item,col);
-		else
-		if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
-	}
-
-
-
 }
 
 

@@ -20,6 +20,8 @@ MyAssetParentPanel( parent )
 
 	UpdateInfo();
 
+	SplitterWindow->Unsplit(LeftPanel);
+
 
 	AssetTypeText->SetLabel("Volumes");
 
@@ -88,6 +90,11 @@ void MyVolumeAssetPanel::InsertGroupMemberToDatabase(int wanted_group, int wante
 	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < all_assets_list->number_of_assets, "Requesting an partice position (%i) that doesn't exist!", wanted_asset);
 
 	main_frame->current_project.database.InsertOrReplace(wxString::Format("VOLUME_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data(), "ii", "MEMBER_NUMBER", "VOLUME_ASSET_ID", ReturnGroupSize(wanted_group), ReturnGroupMemberID(wanted_group, wanted_asset));
+}
+
+void MyVolumeAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog)
+{
+
 }
 
 void  MyVolumeAssetPanel::RemoveAllFromDatabase()

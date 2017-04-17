@@ -22,8 +22,6 @@ IMPLEMENT_APP(ConvertTIF2MRC)
 void ConvertTIF2MRC::DoInteractiveUserInput()
 {
 
-	int new_z_size = 1;
-
 	UserInput *my_input = new UserInput("ConvertTIF2MRC", 1.0);
 
 	std::string input_filename		=		my_input->GetFilenameFromUser("Input TIF file name", "Filename of input TIF image", "input.tif", true );
@@ -45,11 +43,6 @@ bool ConvertTIF2MRC::DoCalculation()
 	std::string	input_filename 					= my_current_job.arguments[0].ReturnStringArgument();
 	std::string	output_filename 					= my_current_job.arguments[1].ReturnStringArgument();
 
-
-	wxArrayString all_files;
-	wxDir::GetAllFiles 	( ".", &all_files, "*.tif", wxDIR_FILES);
-	all_files.Sort();
-
 	ImageFile input_file;
 	MRCFile output_file;
 
@@ -58,7 +51,7 @@ bool ConvertTIF2MRC::DoCalculation()
 	input_file.OpenFile(input_filename, false);
 	output_file.OpenFile(output_filename, true);
 
-	wxPrintf("Tif file = %ix%ix%i\n", input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize());
+//	wxPrintf("Tif file = %ix%ix%i\n", input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize());
 
 	wxPrintf("Converting File...\n\n");
 

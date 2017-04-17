@@ -238,6 +238,7 @@ int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforc
  */
 std::string FilenameReplaceExtension(std::string filename, std::string new_extension);
 std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add);
+void SplitFileIntoDirectoryAndFile(wxString &input_file, wxString &output_directory, wxString &output_file);
 
 void Allocate2DFloatArray(float **&array, int dim1, int dim2);
 void Deallocate2DFloatArray(float **&array, int dim1);

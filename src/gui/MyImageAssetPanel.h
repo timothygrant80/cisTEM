@@ -18,6 +18,7 @@ class MyImageAssetPanel : public MyAssetParentPanel
 
 		void RemoveAssetFromDatabase(long wanted_asset);
 		void RemoveFromGroupInDatabase(int wanted_group_id, int wanted_asset_id);
+		void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog = NULL);
 		void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset);
 		void RemoveAllFromDatabase();
 		void RemoveAllGroupMembersFromDatabase(int wanted_group_id);
@@ -27,6 +28,8 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		void ImportAllFromDatabase();
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
+
+
 
 		void RenameAsset(long wanted_asset, wxString wanted_name);
 

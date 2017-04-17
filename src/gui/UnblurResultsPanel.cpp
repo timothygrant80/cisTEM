@@ -2,27 +2,9 @@
 #include "../core/gui_core_headers.h"
 
 UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
-: wxPanel(parent, id, pos, size, style, name)
+: UnblurResultsPanelParent(parent, id, pos, size, style)
 {
-	MainSizer = new wxBoxSizer( wxVERTICAL );
-	GraphSizer = new wxBoxSizer( wxVERTICAL );
-
-	my_notebook = new wxAuiNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
-
-	PlotPanel = new wxPanel( my_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	my_notebook->AddPage( PlotPanel, wxT("X/Y Shift Plot"), true, wxNullBitmap );
-	ImageDisplayPanel = new DisplayPanel( my_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	my_notebook->AddPage( ImageDisplayPanel, wxT("Aligned Movie Sum"), false, wxNullBitmap );
-
-	my_notebook->SetSelection(0);
-
 	ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
-
-	MainSizer->Add( my_notebook, 1, wxEXPAND | wxALL, 5 );
-	SetSizer( MainSizer );
-	MainSizer->Fit (this);
-
-	// Create a mpFXYVector layer for the plot
 
 	current_x_shift_vector_layer = new mpFXYVector(("X-Shift"));
 	current_y_shift_vector_layer = new mpFXYVector(("Y-Shift"));
@@ -50,7 +32,9 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 	current_xaxis = new mpScaleX(wxT("Accumulated Exposure  (e¯/Å²)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
 	current_yaxis = new mpScaleY(wxT("Shifts (Å)"), mpALIGN_LEFT, true);
 
-	legend = new mpBottomInfoLegend;
+	//legend = new mpBottomInfoLegend;
+	legend = new mpTopInfoLegend();
+
 	title = new mpTitle("");
 
     current_xaxis->SetFont(graphFont);
@@ -58,7 +42,7 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
     current_xaxis->SetDrawOutsideMargins(false);
     current_yaxis->SetDrawOutsideMargins(false);
 
-    current_plot_window->SetMargins(30, 30, 100, 80);
+    current_plot_window->SetMargins(30, 30, 60, 80);
 
     current_plot_window->AddLayer(current_xaxis);
     current_plot_window->AddLayer(current_yaxis);
@@ -82,6 +66,8 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 	PlotPanel->SetSizer(GraphSizer);
 	GraphSizer->Fit( PlotPanel );
 
+	//legend->Move(wxPoint(current_plot_window->GetScrX() / 2,5));
+
 
 
 
@@ -102,6 +88,9 @@ void UnblurResultsPanel::Clear()
 {
 	ClearGraph();
 	ImageDisplayPanel->CloseAllTabs();
+	SpectraPanel->should_show = false;
+	SpectraPanel->PanelImage.Allocate(1,1,1);
+	SpectraPanel->Refresh();
 }
 
 

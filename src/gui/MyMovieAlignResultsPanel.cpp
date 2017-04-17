@@ -27,6 +27,25 @@ MovieAlignResultsPanel( parent )
 
 	FillGroupComboBox();
 
+	Bind(wxEVT_CHAR_HOOK, &MyMovieAlignResultsPanel::OnCharHook, this);
+
+	ResultPanel->SpectraPanel->use_auto_contrast = false;
+
+}
+
+void MyMovieAlignResultsPanel::OnCharHook( wxKeyEvent& event )
+{
+	if (event.GetUnicodeKey() == 'N')
+	{
+		ResultDataView->NextEye();
+	}
+	else
+	if (event.GetUnicodeKey() == 'P')
+	{
+		ResultDataView->PreviousEye();
+	}
+	else
+	event.Skip();
 }
 
 void MyMovieAlignResultsPanel::OnValueChanged(wxDataViewEvent &event)
@@ -173,8 +192,9 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 
 	int current_movie_id = per_row_asset_id[row];
 	int current_alignment_job_id = alignment_job_ids[column - 2];
+	MovieAsset *current_asset = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(current_movie_id));
 
-	float current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(movie_asset_panel->ReturnArrayPositionFromAssetID(current_movie_id));
+	float current_dose_per_frame = current_asset->dose_per_frame;
 
 	double current_x_shift;
 	double current_y_shift;
@@ -264,8 +284,58 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 
 	main_frame->current_project.database.EndBatchSelect();
 
+	float current_corrected_pixel_size = current_asset->pixel_size / current_asset->output_binning_factor;
+	// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
+
+	if (current_asset->correct_mag_distortion == true) // correct mag distortion
+	{
+		current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, current_asset->mag_distortion_major_scale, current_asset->mag_distortion_minor_scale);
+	}
+
+	float current_nyquist;
+
+	if (current_corrected_pixel_size < 1.4) current_nyquist = 2.8;
+	else current_nyquist = current_corrected_pixel_size * 2.0;
+
+	ResultPanel->SpectraNyquistStaticText->SetLabel(wxString::Format(wxT("%.2f Å)   "), current_nyquist));
+
+	wxString amplitude_spectrum_filename = main_frame->current_project.image_asset_directory.GetFullPath();;
+	amplitude_spectrum_filename += wxString::Format("/Spectra/%s", wxFileName(output_file).GetFullName());
+
+	ResultPanel->FilenameStaticText->SetLabel(wxString::Format("(%s)"        , wxFileName(output_file).GetFullName()));
+
+	// draw..
+
+	if (DoesFileExist(amplitude_spectrum_filename) == true)
+	{
+		ResultPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(amplitude_spectrum_filename.ToStdString(), 1);
+		ResultPanel->SpectraPanel->should_show = true;
+		ResultPanel->SpectraPanel->Refresh();
+	}
+	else
+	{
+		ResultPanel->SpectraPanel->should_show = false;
+		ResultPanel->SpectraPanel->Refresh();
+	}
+
+
+
 	ResultPanel->Draw();
-	ResultPanel->ImageDisplayPanel->ChangeFile(output_file, wxFileName(output_file).GetShortPath());
+
+	wxString small_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();;
+	small_image_filename += wxString::Format("/Scaled/%s", wxFileName(output_file).GetFullName());
+
+	if (DoesFileExist(small_image_filename) == true)
+	{
+		ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
+	}
+	else
+	if (DoesFileExist(output_file) == true)
+	{
+		ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
+	}
+
+
 
 	RightPanel->Layout();
 	RightPanel->Thaw();

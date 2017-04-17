@@ -29,6 +29,16 @@ void MemoryComboBox::OnComboBox(wxCommandEvent& event)
 	event.Skip();
 }
 
+void MemoryComboBox::SetSelection(int n)
+{
+	if (n >= 0 && n < GetCount() - 1)
+	{
+		currently_selected_id = associated_ids.Item(n);
+	}
+
+	wxComboBox::SetSelection(n);
+}
+
 void MemoryComboBox::Clear()
 {
 	associated_ids.clear();
@@ -188,6 +198,41 @@ bool MemoryComboBox::FillWithRefinementPackages()
 	if (GetCount() > 0)
 	{
 		if (new_selection == -1) SetSelection(GetCount() - 1);
+		else SetSelection(new_selection);
+	}
+
+	currently_selected_id = new_id;
+	Thaw();
+
+	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
+	else return false;
+}
+
+bool MemoryComboBox::FillWithVolumeAssets()
+{
+	extern MyVolumeAssetPanel *volume_asset_panel;
+
+	Freeze();
+	Clear();
+	ChangeValue("");
+
+	long new_selection = -1;
+	long new_id = -1;
+
+	for (long counter = 0; counter < volume_asset_panel->all_assets_list->number_of_assets; counter++)
+	{
+		AddMemoryItem(volume_asset_panel->ReturnAssetName(counter), volume_asset_panel->ReturnAssetID(counter));
+
+		if ( volume_asset_panel->ReturnAssetID(counter) == selected_id_on_last_clear)
+		{
+			new_selection = counter;
+			new_id = selected_id_on_last_clear;
+		}
+	}
+
+	if (GetCount() > 0)
+	{
+		if (new_selection == -1) SetSelection(0);
 		else SetSelection(new_selection);
 	}
 
@@ -966,10 +1011,10 @@ wxString ContainedParticleListControl::OnGetItemText(long item, long column) con
 		    	return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).parent_image_id);
 		       break;
 		    case 2  :
-		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_pos);
+		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_pos);
 		       break;
 		    case 3  :
-		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_pos);
+		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_pos);
 		       break;
 		    case 4  :
 		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).pixel_size);
@@ -993,7 +1038,7 @@ wxString ContainedParticleListControl::OnGetItemText(long item, long column) con
 		    	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_angle);
 		    	break;
 		    case 11  :
-		    	return wxString::Format(wxT("%.2f rad."), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phase_shift);
+		    	return wxString::Format(wxT("%.2f °"), rad_2_deg(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phase_shift));
 		    	break;
 		 /*   case 10 :
 			   	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).psi);

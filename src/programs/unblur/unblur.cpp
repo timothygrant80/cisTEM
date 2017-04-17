@@ -126,8 +126,14 @@ void UnBlurApp::DoInteractiveUserInput()
 
 	 delete my_input;
 
-	 my_current_job.Reset(23);
-	 my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfff",input_filename.c_str(),
+	// this are defaulted to off in the interactive version for now
+	bool write_out_amplitude_spectrum = false;
+	std::string amplitude_spectrum_filename = "/dev/null";
+	bool write_out_small_sum_image = false;
+	std::string small_sum_image_filename = "/dev/null";
+
+	my_current_job.Reset(23);
+	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfffbtbt",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -149,7 +155,11 @@ void UnBlurApp::DoInteractiveUserInput()
 																 correct_mag_distortion,
 																 mag_distortion_angle,
 																 mag_distortion_major_scale,
-																 mag_distortion_minor_scale);
+																 mag_distortion_minor_scale,
+																 write_out_amplitude_spectrum,
+																 amplitude_spectrum_filename.c_str(),
+																 write_out_small_sum_image,
+																 small_sum_image_filename.c_str());
 
 
 }
@@ -170,6 +180,7 @@ bool UnBlurApp::DoCalculation()
 	float termination_threshold_in_pixels;
 
 	Image sum_image;
+	Image sum_image_no_dose_filter;
 
 	// get the arguments for this job..
 
@@ -196,6 +207,10 @@ bool UnBlurApp::DoCalculation()
     float       mag_distortion_angle				= my_current_job.arguments[20].ReturnFloatArgument();
     float       mag_distortion_major_scale          = my_current_job.arguments[21].ReturnFloatArgument();
 	float       mag_distortion_minor_scale          = my_current_job.arguments[22].ReturnFloatArgument();
+	bool 		write_out_amplitude_spectrum 		= my_current_job.arguments[23].ReturnBoolArgument();
+	std::string amplitude_spectrum_filename 		= my_current_job.arguments[24].ReturnStringArgument();
+	bool 		write_out_small_sum_image 			= my_current_job.arguments[25].ReturnBoolArgument();
+	std::string small_sum_image_filename 			= my_current_job.arguments[26].ReturnStringArgument();
 
 
 	//my_current_job.PrintAllArguments();
@@ -216,7 +231,7 @@ bool UnBlurApp::DoCalculation()
 	// The Files
 
 	ImageFile input_file(input_filename, false);
-	MRCFile output_file(output_filename, true);
+	//MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
 	ImageFile gain_file;
 
 	if (! movie_is_gain_corrected) gain_file.OpenFile(gain_filename.ToStdString(), false);
@@ -441,8 +456,17 @@ bool UnBlurApp::DoCalculation()
 
 	// we should be finished with alignment, now we just need to make the final sum..
 
+	sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+	sum_image.SetToConstant(0.0);
+
 	if (should_dose_filter == true)
 	{
+		if (write_out_amplitude_spectrum == true)
+		{
+			sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+			sum_image_no_dose_filter.SetToConstant(0.0);
+		}
+
 		// allocate arrays for the filter, and the sum of squares..
 
 		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
@@ -460,24 +484,31 @@ bool UnBlurApp::DoCalculation()
 
 			// filter the image, and also calculate the sum of squares..
 
+			if (write_out_amplitude_spectrum == true)
+			{
+				sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
+			}
+
 			for (pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++)
 			{
 				image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
 				dose_filter_sum_of_squares[pixel_counter] += pow(dose_filter[pixel_counter], 2);
-
 				//if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
 			}
+
+			sum_image.AddImage(&image_stack[image_counter]);
+		}
+	}
+	else // just add them
+	{
+		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		{
+			sum_image.AddImage(&image_stack[image_counter]);
 		}
 	}
 
-	sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-	sum_image.SetToConstant(0.0);
 
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
-	{
-		sum_image.AddImage(&image_stack[image_counter]);
-//		wxPrintf("#%li = %f, %f\n", image_counter, x_shifts[image_counter] * pixel_size, y_shifts[image_counter] * pixel_size);
-	}
+
 
 	// if we are restoring the power - do it here..
 
@@ -492,9 +523,101 @@ bool UnBlurApp::DoCalculation()
 		}
 	}
 
+	// do we need to write out the amplitude spectra
+
+	if (write_out_amplitude_spectrum == true)
+	{
+		Image current_power_spectrum;
+		current_power_spectrum.Allocate(sum_image.logical_x_dimension,sum_image.logical_y_dimension,true);
+
+//		if (should_dose_filter == true) sum_image_no_dose_filter.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+	//	else sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+
+		sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+
+		// Set origin of amplitude spectrum to 0.0
+		current_power_spectrum.real_values[current_power_spectrum.ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum.physical_address_of_box_center_x,current_power_spectrum.physical_address_of_box_center_y,current_power_spectrum.physical_address_of_box_center_z)] = 0.0;
+
+		// Forward Transform
+		current_power_spectrum.ForwardFFT();
+
+		// make it square
+
+		int micrograph_square_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
+		if (IsOdd((micrograph_square_dimension))) micrograph_square_dimension++;
+
+		if (sum_image.logical_x_dimension != micrograph_square_dimension || sum_image.logical_y_dimension != micrograph_square_dimension)
+		{
+			Image current_input_image_square;
+			current_input_image_square.Allocate(micrograph_square_dimension,micrograph_square_dimension,false);
+			current_power_spectrum.ClipInto(&current_input_image_square, 0);
+			current_power_spectrum.Consume(&current_input_image_square);
+		}
+
+		// how big will the amplitude spectra have to be in total to have the central 512x512 be a 2.8 angstrom Nyquist?
+
+		// this is the (in the amplitudes real space) scale factor to make the nyquist 2.8 (inverse as real space)
+
+		float pixel_size_scale_factor;
+		if (output_pixel_size < 1.4) pixel_size_scale_factor = 1.4 /  output_pixel_size;
+		else pixel_size_scale_factor = 1.0;
+
+		// this is the scale factor to make the box 512
+		float box_size_scale_factor = 512.0  / float(micrograph_square_dimension);
+
+		// overall scale factor
+
+		float overall_scale_factor = pixel_size_scale_factor * box_size_scale_factor;
+
+		{
+			Image scaled_spectrum;
+			scaled_spectrum.Allocate(myroundint(micrograph_square_dimension * overall_scale_factor),myroundint(micrograph_square_dimension * overall_scale_factor),false);
+			current_power_spectrum.ClipInto(&scaled_spectrum, 0);
+			scaled_spectrum.BackwardFFT();
+			current_power_spectrum.Allocate(512, 512, 1, true);
+			scaled_spectrum.ClipInto(&current_power_spectrum, scaled_spectrum.ReturnAverageOfRealValuesOnEdges());
+		}
+
+		// now we need to filter it
+
+		float average;
+		float sigma;
+
+		current_power_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(float(current_power_spectrum.logical_x_dimension)*0.5,float(current_power_spectrum.logical_x_dimension),average,sigma,12);
+		current_power_spectrum.DivideByConstant(sigma);
+		current_power_spectrum.SetMaximumValueOnCentralCross(average/sigma+10.0);
+		current_power_spectrum.ForwardFFT();
+		current_power_spectrum.CosineMask(0, 0.05, true);
+		current_power_spectrum.BackwardFFT();
+		current_power_spectrum.SetMinimumAndMaximumValues(average - 1.0, average + 3.0);
+		//current_power_spectrum.CosineRingMask(0.05,0.45, 0.05);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+		current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1);
+	}
+
+	//  Shall we write out a scaled image?
+
+	if (write_out_small_sum_image == true)
+	{
+		// work out a good size..
+		int largest_dimension =  std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
+		float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+
+		if (scale_factor < 1.0)
+		{
+			Image buffer_image;
+			buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
+			sum_image.ClipInto(&buffer_image);
+			buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1);
+		}
+	}
+
 	// now we just need to write out the final sum..
 
-	sum_image.WriteSlice(&output_file, 1);
+	sum_image.QuickAndDirtyWriteSlice(output_filename, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
+	//sum_image.WriteSlice(&output_file, 1);
+
+
 
 	// fill the result..
 

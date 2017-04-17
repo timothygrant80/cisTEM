@@ -13,11 +13,26 @@ ImageImportDialog( parent )
 
 	PathListCtrl->GetClientSize(&list_width, &list_height);
 	PathListCtrl->InsertColumn(0, "Files", wxLIST_FORMAT_LEFT, list_width);
+
+	// do we have defaults?
+
+	if (main_frame->current_project.database.DoesTableExist("IMAGE_IMPORT_DEFAULTS") == true)
+	{
+		float default_voltage;
+		float default_spherical_aberration;
+		float default_pixel_size;
+
+		main_frame->current_project.database.GetImageImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size);
+
+		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
+		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
+		PixelSizeText->ChangeValue(wxString::Format("%.2f", default_pixel_size));
+	}
 }
 
 void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select MRC files"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN |wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
+    wxFileDialog openFileDialog(this, _("Select MRC files - basic wildcards are allowed"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN | wxFD_MULTIPLE);
 
 
 
@@ -30,7 +45,30 @@ void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
 
     	for (unsigned long counter = 0; counter < selected_paths.GetCount(); counter++)
     	{
-    		PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+    		// is this an actual filename, that exists - in which case add it.
+
+    		if (DoesFileExist(selected_paths.Item(counter)) == true) PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+    		else
+    		{
+    			// perhaps it is a wildcard..
+    			int wildcard_counter;
+    			wxArrayString wildcard_files;
+    			wxString directory_string;
+    			wxString file_string;
+    			wxString current_extension;
+
+    			SplitFileIntoDirectoryAndFile(selected_paths.Item(counter), directory_string, file_string);
+    			wxDir::GetAllFiles 	( directory_string, &wildcard_files, file_string, wxDIR_FILES);
+
+    			for (int wildcard_counter = 0; wildcard_counter < wildcard_files.GetCount(); wildcard_counter++)
+    			{
+    				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
+    				current_extension = current_extension.MakeLower();
+
+    				if ( current_extension == "mrc" || current_extension == "mrcs") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+    			}
+
+    		}
     	}
 
     	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
@@ -201,6 +239,11 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 		main_frame->current_project.database.EndImageAssetInsert();
 
 		my_progress_dialog->Destroy();
+		// write these values as future defaults..
+
+		main_frame->current_project.database.DeleteTable("IMAGE_IMPORT_DEFAULTS");
+		main_frame->current_project.database.CreateImageImportDefaultsTable();
+		main_frame->current_project.database.InsertOrReplace("IMAGE_IMPORT_DEFAULTS", "prrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", 1,  microscope_voltage, spherical_aberration, pixel_size);
 
 		image_asset_panel->SetSelectedGroup(0);
 		image_asset_panel->FillGroupList();

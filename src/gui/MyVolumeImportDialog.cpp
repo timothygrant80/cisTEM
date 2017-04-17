@@ -17,28 +17,50 @@ VolumeImportDialog( parent )
 
 void MyVolumeImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select MRC files"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN |wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
+	  wxFileDialog openFileDialog(this, _("Select MRC files - basic wildcards are allowed"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN | wxFD_MULTIPLE);
 
 
 
-    if (openFileDialog.ShowModal() == wxID_OK)
-    {
-    	wxArrayString selected_paths;
-    	openFileDialog.GetPaths(selected_paths);
+	    if (openFileDialog.ShowModal() == wxID_OK)
+	    {
+	    	wxArrayString selected_paths;
+	    	openFileDialog.GetPaths(selected_paths);
 
-      	PathListCtrl->Freeze();
+	      	PathListCtrl->Freeze();
 
-    	for (unsigned long counter = 0; counter < selected_paths.GetCount(); counter++)
-    	{
-    		PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
-    	}
+	    	for (unsigned long counter = 0; counter < selected_paths.GetCount(); counter++)
+	    	{
+	    		// is this an actual filename, that exists - in which case add it.
 
-    	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    	PathListCtrl->Thaw();
+	    		if (DoesFileExist(selected_paths.Item(counter)) == true) PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+	    		else
+	    		{
+	    			// perhaps it is a wildcard..
+	    			int wildcard_counter;
+	    			wxArrayString wildcard_files;
+	    			wxString directory_string;
+	    			wxString file_string;
+	    			wxString current_extension;
 
-    	CheckImportButtonStatus();
-    }
+	    			SplitFileIntoDirectoryAndFile(selected_paths.Item(counter), directory_string, file_string);
+	    			wxDir::GetAllFiles 	( directory_string, &wildcard_files, file_string, wxDIR_FILES);
 
+	    			for (int wildcard_counter = 0; wildcard_counter < wildcard_files.GetCount(); wildcard_counter++)
+	    			{
+	    				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
+	    				current_extension = current_extension.MakeLower();
+
+	    				if ( current_extension == "mrc" || current_extension == "mrcs") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+	    			}
+
+	    		}
+	    	}
+
+	    	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
+	    	PathListCtrl->Thaw();
+
+	    	CheckImportButtonStatus();
+	    }
 }
 
 void MyVolumeImportDialog::ClearClick( wxCommandEvent& event )

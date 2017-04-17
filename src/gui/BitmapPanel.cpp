@@ -6,8 +6,8 @@ BitmapPanel::BitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, co
 {
 
 	// create a 1 pixel white bitmap
-
-	PanelBitmap.Create(1, 1, 24);
+	PanelImage.Allocate(1,1,1);
+	//PanelBitmap.Create(1, 1, 24);
 	panel_text = "";
 	title_text = "";
 /*	wxNativePixelData pixel_data(PanelBitmap);
@@ -27,6 +27,7 @@ BitmapPanel::BitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, co
 
 	should_show = false;
 	font_size_multiplier = 1.0;
+	use_auto_contrast = true;
 
 	Bind(wxEVT_PAINT, &BitmapPanel::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &BitmapPanel::OnEraseBackground, this);
@@ -102,8 +103,8 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 		const int title_y_pad = 4;
 
 		GetClientSize(&window_x_size,&window_y_size);
-		bitmap_width = PanelBitmap.GetWidth();
-		bitmap_height = PanelBitmap.GetHeight();
+		bitmap_width = PanelImage.logical_x_dimension; //PanelBitmap.GetWidth();
+		bitmap_height = PanelImage.logical_y_dimension; //PanelBitmap.GetHeight();
 
 		if (panel_text.IsEmpty() == true)
 		{
@@ -138,7 +139,26 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 					x_offset = (window_x_size - ((bitmap_width  * scale_factor) + text_x_size )) / 2;
 					y_offset = (window_y_size - ((bitmap_height * scale_factor) + title_y_size)) / 2;
 
-					dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor)), x_offset, y_offset, false);
+					Image buffer_image;
+					float min_value;
+					float max_value;
+
+					buffer_image.CopyFrom(&PanelImage);
+					buffer_image.ForwardFFT(false);
+					buffer_image.DivideByConstant(sqrtf(buffer_image.number_of_real_space_pixels));
+					buffer_image.Resize(bitmap_width * scale_factor, bitmap_height * scale_factor, 1);
+					buffer_image.BackwardFFT();
+					buffer_image.DivideByConstant(sqrtf(buffer_image.number_of_real_space_pixels));
+
+					PanelImage.GetMinMax(min_value, max_value);
+					buffer_image.SetMinimumAndMaximumValues(min_value, max_value);
+
+					wxBitmap bitmap_to_draw;
+					bitmap_to_draw.Create(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, 24);
+					ConvertImageToBitmap(&buffer_image, &bitmap_to_draw, use_auto_contrast);
+					dc.DrawBitmap(bitmap_to_draw, x_offset, y_offset, false);
+
+					//dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor, wxIMAGE_QUALITY_HIGH )), x_offset, y_offset, false);
 
 
 
@@ -171,7 +191,26 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 					x_offset = (window_x_size - ((bitmap_width  * scale_factor) + text_x_size )) / 2;
 					y_offset = (window_y_size - ((bitmap_height * scale_factor) + title_y_size)) / 2;
 
-					dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor)), x_offset, y_offset, false);
+
+					Image buffer_image;
+					float min_value;
+					float max_value;
+					buffer_image.CopyFrom(&PanelImage);
+					buffer_image.ForwardFFT(false);
+					buffer_image.DivideByConstant(sqrtf(buffer_image.number_of_real_space_pixels));
+					buffer_image.Resize(bitmap_width * scale_factor, bitmap_height * scale_factor, 1);
+					buffer_image.BackwardFFT();
+					buffer_image.DivideByConstant(sqrtf(buffer_image.number_of_real_space_pixels));
+
+					PanelImage.GetMinMax(min_value, max_value);
+					buffer_image.SetMinimumAndMaximumValues(min_value, max_value);
+
+					wxBitmap bitmap_to_draw;
+					bitmap_to_draw.Create(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, 24);
+					ConvertImageToBitmap(&buffer_image, &bitmap_to_draw, use_auto_contrast);
+					dc.DrawBitmap(bitmap_to_draw, x_offset, y_offset, false);
+
+					//dc.DrawBitmap(wxBitmap(PanelBitmap.ConvertToImage().Scale(bitmap_width * scale_factor, bitmap_height * scale_factor, wxIMAGE_QUALITY_HIGH )), x_offset, y_offset, false);
 
 
 					text_y_offset = ((bitmap_height * scale_factor) - text_y_size) / 2;
@@ -202,8 +241,12 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 			x_offset = (window_x_size - ((bitmap_width)  + text_x_size )) / 2;
 			y_offset = (window_y_size - ((bitmap_height) + title_y_size)) / 2;
 
+			wxBitmap bitmap_to_draw;
+			bitmap_to_draw.Create(PanelImage.logical_x_dimension, PanelImage.logical_y_dimension, 24);
+			ConvertImageToBitmap(&PanelImage, &bitmap_to_draw, use_auto_contrast);
+			dc.DrawBitmap(bitmap_to_draw, x_offset, y_offset, false);
 
-			dc.DrawBitmap( PanelBitmap, x_offset, y_offset, false );
+//			dc.DrawBitmap( PanelBitmap, x_offset, y_offset, false );
 
 			text_y_offset = ((bitmap_height) - text_y_size) / 2;
 			if (text_y_offset > 0) dc.DrawText(panel_text, bitmap_width + x_offset, text_y_offset + y_offset);
@@ -223,6 +266,7 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 
 }
 
+/*
 void BitmapPanel::SetupPanelBitmap()
 {
 	int window_x_size;
@@ -242,4 +286,4 @@ void BitmapPanel::SetupPanelBitmap()
 
 
 
-}
+}*/

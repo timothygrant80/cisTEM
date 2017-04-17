@@ -27,7 +27,7 @@ class MyRunProfilesPanel : public RunProfilesPanel
 
 		void EditCommand();
 
-		void OnUpdateIU( wxUpdateUIEvent& event );
+		void OnUpdateUI( wxUpdateUIEvent& event );
 
 		void OnAddProfileClick( wxCommandEvent& event );
 		void OnRenameProfileClick( wxCommandEvent& event );

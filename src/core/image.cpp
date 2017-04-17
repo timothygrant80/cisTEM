@@ -3043,6 +3043,47 @@ void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, 
 	}
 }
 
+void Image::GaussianLowPassFilter(float half_width)
+{
+	MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
+
+	int i;
+	int j;
+	int k;
+
+	float x;
+	float y;
+	float z;
+
+	long pixel_counter = 0;
+
+	float frequency_squared;
+	float frequency;
+
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x + y + z;
+				frequency = sqrtf(frequency_squared);
+				complex_values[pixel_counter] *= exp(-(frequency_squared) / pow(half_width, 2));
+				pixel_counter++;
+
+			}
+		}
+	}
+}
 
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
@@ -3777,7 +3818,7 @@ void Image::TakeReciprocalRealValues()
 
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{
-			real_values[pixel_counter] = 1.0 / real_values[pixel_counter];
+			if (real_values[pixel_counter] != 0.0) real_values[pixel_counter] = 1.0 / real_values[pixel_counter];
 	}
 
 

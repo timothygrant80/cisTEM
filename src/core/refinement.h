@@ -78,7 +78,7 @@ public :
 	ArrayofClassRefinementResults class_refinement_results;
 
 	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0);
-	void WriteResolutionStatistics(wxString base_filename);
+	wxArrayString WriteResolutionStatistics(wxString base_filename);
 
 
 };

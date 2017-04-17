@@ -26,6 +26,7 @@ class MyPickingResultsPanel : public PickingResultsPanel
 		int GetFilter();
 		void OnAllMoviesSelect( wxCommandEvent& event );
 		void OnByFilterSelect( wxCommandEvent& event );
+		void OnCharHook( wxKeyEvent& event );
 
 
 		int *picking_job_ids;

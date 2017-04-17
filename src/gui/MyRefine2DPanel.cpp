@@ -168,6 +168,12 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RefinementRunProfileComboBox->ChangeValue("");
 		}
 
+		if (PleaseCreateRefinementPackageText->IsShown())
+		{
+			PleaseCreateRefinementPackageText->Show(false);
+			Layout();
+		}
+
 	}
 	else
 	{
@@ -185,6 +191,12 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				if (InputParametersComboBox->GetSelection() == 0) NumberClassesSpinCtrl->Enable(true);
 				else NumberClassesSpinCtrl->Enable(false);
 
+				if (PleaseCreateRefinementPackageText->IsShown())
+				{
+					PleaseCreateRefinementPackageText->Show(false);
+					Layout();
+				}
+
 			}
 			else
 			{
@@ -192,6 +204,12 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				RefinementPackageComboBox->Enable(false);
 				InputParametersComboBox->ChangeValue("");
 				InputParametersComboBox->Enable(false);
+
+				if (PleaseCreateRefinementPackageText->IsShown() == false)
+				{
+					PleaseCreateRefinementPackageText->Show(true);
+					Layout();
+				}
 			}
 
 			NumberRoundsSpinCtrl->Enable(true);
@@ -456,13 +474,13 @@ void MyRefine2DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Auto Percent Used? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Should the percent of included particles be adjusted automatically? A classification scheme using initially 200 particles/class, then 30% and then 100% is often sufficient to obtain good classes and this scheme will be used when this option is selected."));
+	InfoText->WriteText(wxT("Should the percent of included particles be adjusted automatically? A classification scheme using initially 300 particles/class, then 30% and then 100% is often sufficient to obtain good classes and this scheme will be used when this option is selected."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Percent Used : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The fraction of the dataset used for classification. Especially in the beginning, classification proceeds more rapidly when only a small number of particles are used per class, e.g. 200 (see example above). Later runs that refine the class averages should use a higher percentage and the final run(s) should use all the data. This option is only available when “Auto Percent Used” is not selected."));
+	InfoText->WriteText(wxT("The fraction of the dataset used for classification. Especially in the beginning, classification proceeds more rapidly when only a small number of particles are used per class, e.g. 300 (see example above). Later runs that refine the class averages should use a higher percentage and the final run(s) should use all the data. This option is only available when “Auto Percent Used” is not selected."));
 	InfoText->Newline();
 	InfoText->Newline();
 
@@ -563,7 +581,7 @@ void MyRefine2DPanel::SetDefaults()
 		{
 			if (InputParametersComboBox->GetSelection() == 0)
 			{
-				int calculated_number_of_classes = 	refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).contained_particles.GetCount() / 200;
+				int calculated_number_of_classes = 	refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).contained_particles.GetCount() / 300;
 
 				if (calculated_number_of_classes > 50) calculated_number_of_classes = 50;
 				else
@@ -919,7 +937,7 @@ void ClassificationManager::RunInitialStartJob()
 	output_classification->exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
 	output_classification->auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
 
-	output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+	output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 	if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 
 	output_classification->SizeAndFillWithEmpty(output_classification->number_of_particles);
@@ -1088,13 +1106,13 @@ void ClassificationManager::RunRefinementJob()
 		{
 			if (number_of_rounds_run < 5)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 			}
 			else
 			if (number_of_rounds_run < number_of_rounds_to_run - 5)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 				else
 				if (output_classification->percent_used < 30) output_classification->percent_used = 30.0;
@@ -1107,13 +1125,13 @@ void ClassificationManager::RunRefinementJob()
 		{
 			if (number_of_rounds_run < 10)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 			}
 			else
 			if (number_of_rounds_run < number_of_rounds_to_run - 5)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 				else
 				if (output_classification->percent_used < 30) output_classification->percent_used = 30.0;
@@ -1125,13 +1143,13 @@ void ClassificationManager::RunRefinementJob()
 		{
 			if (number_of_rounds_run < 15)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 			}
 			else
 			if (number_of_rounds_run < number_of_rounds_to_run - 5)
 			{
-				output_classification->percent_used = (float(output_classification->number_of_classes * 200) / float(output_classification->number_of_particles)) * 100.0;
+				output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 				if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
 				else
 				if (output_classification->percent_used < 30) output_classification->percent_used = 30.0;

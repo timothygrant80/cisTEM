@@ -938,7 +938,11 @@ void MyApp::CheckForConnections()
 
 		 		// if we have them all we can delete the timer..
 
-		 		if (number_of_connected_slaves == my_job_package.my_profile.ReturnTotalJobs() - 1)
+		   		int number_of_commands_to_run;
+	   			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_commands_to_run = my_job_package.number_of_jobs + 1;
+	   			else number_of_commands_to_run = my_job_package.my_profile.ReturnTotalJobs();
+
+		 		if (number_of_connected_slaves == number_of_commands_to_run - 1)
 		 		{
 		 			connection_timer->Stop();
 		 			Unbind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnConnectionTimer ), this);

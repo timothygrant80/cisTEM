@@ -7,9 +7,12 @@
 class BitmapPanel : public wxPanel
 {
 public :
-	wxBitmap PanelBitmap; // buffer for the panel size
+
+	Image PanelImage;
+	//wxBitmap PanelBitmap; // buffer for the panel size
 	wxString panel_text;
 	wxString title_text;
+	bool use_auto_contrast;
 
 
 	BitmapPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
@@ -17,7 +20,7 @@ public :
 
 	void OnPaint(wxPaintEvent & evt);
 	void OnEraseBackground(wxEraseEvent& event);
-	void SetupPanelBitmap();
+//	void SetupPanelBitmap();
 	void Clear();
 
 	bool should_show;

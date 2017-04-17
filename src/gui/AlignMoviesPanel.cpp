@@ -27,6 +27,8 @@ AlignMoviesPanel( parent )
 	group_combo_is_dirty = false;
 	run_profiles_are_dirty = false;
 
+	GraphPanel->SpectraPanel->use_auto_contrast = false;
+
 	SetInfo();
 
 }
@@ -400,6 +402,13 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	wxString current_gain_filename;
 	wxString output_filename;
 	wxFileName buffer_filename;
+
+	wxString amplitude_spectrum_filename;
+	bool write_out_amplitude_spectrum = true;
+
+	bool write_out_small_sum_image = SaveScaledSumCheckbox->GetValue();
+	wxString small_sum_image_filename;
+
 	bool movie_is_gain_corrected;
 	float output_binning_factor;
 
@@ -484,9 +493,21 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 		number_of_previous_alignments =  main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
 
-		output_filename = buffer_filename.GetName();
 		output_filename = main_frame->current_project.image_asset_directory.GetFullPath();
 		output_filename += wxString::Format("/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
+
+		amplitude_spectrum_filename = main_frame->current_project.image_asset_directory.GetFullPath();
+		amplitude_spectrum_filename += wxString::Format("/Spectra/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
+
+		if (write_out_small_sum_image == true)
+		{
+			small_sum_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();
+			small_sum_image_filename += wxString::Format("/Scaled/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
+		}
+		else
+		{
+			small_sum_image_filename = "/dev/null";
+		}
 
 		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
 		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
@@ -505,7 +526,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
 
 
-		my_job_package.AddJob("ssfffbbfifbiifffbsfbfff",current_filename.c_str(), //0
+		my_job_package.AddJob("ssfffbbfifbiifffbsfbfffbtbt",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -527,7 +548,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														correct_mag_distortion,
 														mag_distortion_angle,
 														mag_distortion_major_axis_scale,
-														mag_distortion_minor_axis_scale);
+														mag_distortion_minor_axis_scale,
+														write_out_amplitude_spectrum,
+														amplitude_spectrum_filename.ToStdString().c_str(),
+														write_out_small_sum_image,
+														small_sum_image_filename.ToStdString().c_str());
 
 		my_progress_dialog->Update(counter + 1);
 	}
@@ -827,7 +852,33 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 		GraphPanel->ClearGraph();
 		wxFileName current_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
 		wxFileName sum_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
-		GraphPanel->title->SetName(current_filename.GetFullName());
+		//GraphPanel->title->SetName(current_filename.GetFullName());
+
+		float current_corrected_pixel_size = my_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / my_job_package.jobs[result_to_process->job_number].arguments[18].ReturnFloatArgument();
+		// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
+
+		if (my_job_package.jobs[result_to_process->job_number].arguments[19].ReturnBoolArgument() == true) // correct mag distortion
+		{
+			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, my_job_package.jobs[result_to_process->job_number].arguments[21].ReturnFloatArgument(), my_job_package.jobs[result_to_process->job_number].arguments[22].ReturnFloatArgument());
+		}
+
+		float current_nyquist;
+
+		if (current_corrected_pixel_size < 1.4) current_nyquist = 2.8;
+		else current_nyquist = current_corrected_pixel_size * 2.0;
+
+		GraphPanel->SpectraNyquistStaticText->SetLabel(wxString::Format(wxT("%.2f Å)   "), current_nyquist));
+		GraphPanel->FilenameStaticText->SetLabel(wxString::Format("(%s)"        , current_filename.GetFullName()));
+
+		// draw..
+
+		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnStringArgument()) == true)
+		{
+			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnStringArgument(), 1);
+			GraphPanel->SpectraPanel->should_show = true;
+			GraphPanel->SpectraPanel->Refresh();
+		}
+
 
 		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
 		{
@@ -836,7 +887,12 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		GraphPanel->Draw();
 
-		GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
+		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
+		{
+			GraphPanel->ImageDisplayPanel->ChangeFile(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), "");
+		}
+		else
+		if (DoesFileExist(sum_filename.GetFullPath()) == true) GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
 
 		if (graph_is_hidden == true)
 		{

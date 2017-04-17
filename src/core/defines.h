@@ -15,6 +15,10 @@
 #define ANSI_BLINK_SLOW "\x1b[5m"
 #define ANSI_BLINK_OFF "\x1b[25m"
 
+#define SCALED_IMAGE_SIZE 1200
+
+#define CheckSuccess(bool_to_check) if (bool_to_check == false) {return false;};
+
 #define MyPrintWithDetails(...)	wxPrintf(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__);
 #define MyPrintfGreen(...)  wxPrintf(ANSI_COLOR_GREEN); wxPrintf(__VA_ARGS__); wxPrintf(ANSI_COLOR_RESET);
 #define MyPrintfCyan(...)  wxPrintf(ANSI_COLOR_CYAN); wxPrintf(__VA_ARGS__); wxPrintf(ANSI_COLOR_RESET);

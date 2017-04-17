@@ -16,6 +16,7 @@ extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
 extern MyRefine2DPanel *classification_panel;
 extern MyRefine3DPanel *refine_3d_panel;
+extern AbInitio3DPanel *ab_initio_3d_panel;
 
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
@@ -61,7 +62,8 @@ MainFrame( parent )
 		Maximize(true);
 	}
 
-    Connect(wxEVT_CHAR_HOOK, wxKeyEventHandler(MyMainFrame::OnCharHook));
+	Bind(wxEVT_CHAR_HOOK, &MyMainFrame::OnCharHook, this);
+
 
 }
 
@@ -229,6 +231,12 @@ void MyMainFrame::DirtyEverything()
 	DirtyParticlePositionGroups();
 	DirtyClassificationSelections();
 	DirtyClassifications();
+	DirtyVolumes();
+
+}
+void MyMainFrame::DirtyVolumes()
+{
+	refine_3d_panel->volumes_are_dirty = true;
 
 }
 
@@ -261,6 +269,7 @@ void MyMainFrame::DirtyRefinementPackages()
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
 	refinement_results_panel->is_dirty=true;
 	refine2d_results_panel->refinement_package_combo_is_dirty = true;
+	ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinements()
@@ -287,6 +296,7 @@ void MyMainFrame::DirtyRunProfiles()
 	findparticles_panel->run_profiles_are_dirty = true;
 	classification_panel->run_profiles_are_dirty = true;
 	refine_3d_panel->run_profiles_are_dirty = true;
+	ab_initio_3d_panel->run_profiles_are_dirty = true;
 }
 
 
@@ -411,6 +421,12 @@ void MyMainFrame::StartNewProject()
 		{
 			//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
 		}
+
+		AddProjectToRecentProjects(current_project.database.ReturnFilename());
+	}
+	else
+	{
+		wxMessageBox( wxString::Format("Error Creating database - Does the file already exist?"), "Cannot create database!", wxICON_ERROR);
 	}
 }
 void MyMainFrame::OpenProject(wxString project_filename)
@@ -444,36 +460,12 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		DirtyEverything();
 		my_dialog->Destroy();
 
-		// ok, add this to recent projects..
-
-		wxArrayString recent_projects = GetRecentProjectsFromSettings();
-
-		recent_projects.Insert(project_filename, 0);
-		for (counter = recent_projects.GetCount() - 1; counter > 0; counter--)
-		{
-			if (recent_projects.Item(counter) == project_filename) recent_projects.RemoveAt(counter);
-		}
-
-		if (recent_projects.GetCount() > 5)
-		{
-			for (counter = 5; counter < recent_projects.GetCount();counter++)
-			{
-				recent_projects.RemoveAt(counter);
-			}
-		}
-
-		// set the recent projects in settings..
-
-		for (counter = 0; counter < recent_projects.GetCount(); counter++)
-		{
-			wxConfig::Get()->Write(wxString::Format("RecentProject%i", counter + 1), recent_projects.Item(counter));
-		}
-
-		wxConfig::Get()->Flush();
+		AddProjectToRecentProjects(project_filename);
 		overview_panel->InfoText->Show(false);
 	}
 	else
 	{
+		wxMessageBox( wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist? Perhaps the database is already open somewhere else?", project_filename), "Cannot open database!", wxICON_ERROR);
 		MyPrintWithDetails("An error occured opening the database file..");
 	}
 

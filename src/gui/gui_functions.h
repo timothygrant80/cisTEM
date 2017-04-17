@@ -6,4 +6,5 @@ void FillParticlePositionsGroupComboBox(wxComboBox *GroupComboBox, bool include_
 void AppendVolumeAssetsToComboBox(wxComboBox *GroupComboBox);
 void AppendRefinementPackagesToComboBox(wxComboBox *GroupComboBox);
 wxArrayString GetRecentProjectsFromSettings();
+void AddProjectToRecentProjects(wxString project_to_add);
 

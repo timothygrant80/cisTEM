@@ -469,6 +469,119 @@ void mpBottomInfoLegend::Plot(wxDC & dc, mpWindow & w)
     }
 }
 
+/// my hacked top legend..
+
+mpTopInfoLegend::mpTopInfoLegend() : mpInfoLegend()
+{
+	my_line_width = 20;
+
+}
+
+mpTopInfoLegend::mpTopInfoLegend(wxRect rect, const wxBrush* brush) : mpInfoLegend(rect, brush)
+{
+
+}
+
+mpTopInfoLegend::~mpTopInfoLegend()
+{
+
+}
+
+void mpTopInfoLegend::UpdateInfo(mpWindow& w, wxEvent& event)
+{
+
+}
+
+void mpTopInfoLegend::Plot(wxDC & dc, mpWindow & w)
+{
+    if (m_visible) {
+        dc.SetBrush(m_brush);
+        dc.SetFont(m_font);
+        //const int baseWidth = (mpLEGEND_MARGIN*2 + mpLEGEND_LINEWIDTH);
+       // const int baseWidth = mpLEGEND_MARGIN*2;
+
+        //int textX = baseWidth, textY = mpLEGEND_MARGIN;
+
+        int legend_x_position;
+        int legend_y_position;
+
+        int textX = 0;
+        int textY = 0;
+        int y_height = 0;
+        int number_of_layers = 0;
+        int plotCount = 0;
+        int posY = 0;
+        int tmpX = 0, tmpY = 0;
+        int current_x_pos = mpLEGEND_MARGIN;
+        int minimum_y_pos;
+        mpLayer* ly = NULL;
+        wxPen lpen;
+        wxString label;
+
+        for (unsigned int p = 0; p < w.CountAllLayers(); p++) {
+            ly = w.GetLayer(p);
+            if ((ly->GetLayerType() == mpLAYER_PLOT) && (ly->IsVisible())) {
+                label = ly->GetName();
+                dc.GetTextExtent(label, &tmpX, &tmpY);
+                //textX = (textX > (tmpX + baseWidth)) ? textX : (tmpX + baseWidth + mpLEGEND_MARGIN);
+                //textY += (tmpY);
+                textX += tmpX;
+                if (tmpY > y_height) y_height = tmpY;
+                number_of_layers++;
+
+#ifdef MATHPLOT_DO_LOGGING
+                // wxLogMessage(_("mpInfoLegend::Plot() Adding layer %d: %s"), p, label.c_str());
+#endif
+            }
+        }
+
+        textX += (mpLEGEND_MARGIN*2) + (my_line_width * number_of_layers) + ((number_of_layers -1 )* (my_line_width * 2 + 5)) + mpLEGEND_MARGIN;
+        textY = y_height + mpLEGEND_MARGIN;
+
+        // auto position based on centre and bottom..
+
+        m_dim.x = (w.GetScrX() / 2) - (textX / 2);
+     //   minimum_y_pos = w.GetScrY() - (textY) - mpLEGEND_MARGIN;
+      //  m_dim.y = w.GetScrY() - (w.GetMarginBottom() / 2) - (textY / 2);
+       // if (m_dim.y > minimum_y_pos) m_dim.y = minimum_y_pos;
+
+        m_dim.y = mpLEGEND_MARGIN;
+
+        dc.SetPen(m_pen);
+        dc.SetBrush(m_brush);
+        m_dim.width = textX;
+		if (textY != mpLEGEND_MARGIN) { // Don't draw any thing if there are no visible layers
+			textY += mpLEGEND_MARGIN;
+			m_dim.height = textY;
+			dc.DrawRectangle(m_dim.x, m_dim.y, m_dim.width, m_dim.height);
+			for (unsigned int p2 = 0; p2 < w.CountAllLayers(); p2++) {
+				ly = w.GetLayer(p2);
+				if ((ly->GetLayerType() == mpLAYER_PLOT) && (ly->IsVisible())) {
+					label = ly->GetName();
+					lpen = ly->GetPen();
+					dc.GetTextExtent(label, &tmpX, &tmpY);
+					dc.SetPen(lpen);
+					//textX = (textX > (tmpX + baseWidth)) ? textX : (tmpX + baseWidth);
+					//textY += (tmpY + mpLEGEND_MARGIN);
+					//posY = m_dim.y + mpLEGEND_MARGIN + plotCount*tmpY + (tmpY>>1);
+					dc.DrawLine(m_dim.x + current_x_pos,   // X start coord
+							m_dim.y + mpLEGEND_MARGIN + (y_height / 2),                        // Y start coord
+								m_dim.x + my_line_width + current_x_pos, // X end coord
+								m_dim.y + mpLEGEND_MARGIN + (y_height / 2));
+
+					current_x_pos += my_line_width + 5;
+
+					//dc.DrawRectangle(m_dim.x + 5, m_dim.y + 5 + plotCount*tmpY, 5, 5);
+					dc.DrawText(label, m_dim.x + current_x_pos, m_dim.y + mpLEGEND_MARGIN);
+					current_x_pos += tmpX + (my_line_width * 2);
+					plotCount++;
+				}
+			}
+		}
+    }
+}
+
+
 //-----------------------------------------------------------------------------
 // mpLayer implementations - functions
 //-----------------------------------------------------------------------------

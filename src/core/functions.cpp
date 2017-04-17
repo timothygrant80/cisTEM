@@ -499,3 +499,18 @@ float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float maj
 	float average_scale = (major_axis_scale + minor_axis_scale) / 2.0;
 	return original_pixel_size / average_scale;
 }
+
+void SplitFileIntoDirectoryAndFile(wxString &input_file, wxString &output_directory, wxString &output_file)
+{
+	wxFileName current_filename = input_file;
+	wxArrayString directories = current_filename.GetDirs();
+	output_directory = "/";
+
+	for (int directory_counter = 0; directory_counter < directories.GetCount(); directory_counter++)
+	{
+		output_directory += directories.Item(directory_counter);
+		output_directory += "/";
+	}
+
+	output_file = current_filename.GetFullName();
+}

@@ -88,6 +88,8 @@ public:
 
 		int ReturnNumberOfJobsCurrentlyRunning();
 
+		int number_of_particles_picked;
+
 private:
 		ParticleFinder particle_finder;
 

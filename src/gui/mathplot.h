@@ -494,6 +494,39 @@ protected:
 
 };
 
+class WXDLLIMPEXP_MATHPLOT mpTopInfoLegend : public mpInfoLegend
+{
+public:
+    /** Default constructor */
+	mpTopInfoLegend();
+
+    /** Complete constructor, setting initial rectangle and background brush.
+        @param rect The initial bounding rectangle.
+        @param brush The wxBrush to be used for box background: default is transparent
+        @sa mpInfoLayer::mpInfoLayer */
+	mpTopInfoLegend(wxRect rect, const wxBrush* brush = wxTRANSPARENT_BRUSH);
+
+    /**  Default destructor */
+    ~mpTopInfoLegend();
+
+    /** Updates the content of the info box. Unused in this class.
+        @param w parent mpWindow from which to obtain information
+        @param event The event which called the update. */
+    virtual void UpdateInfo(mpWindow& w, wxEvent& event);
+
+    /** Plot method.
+        @param dc the device content where to plot
+        @param w the window to plot
+        @sa mpLayer::Plot */
+    virtual void   Plot(wxDC & dc, mpWindow & w);
+
+    int my_line_width;
+
+protected:
+
+};
+
+
 
 //-----------------------------------------------------------------------------
 // mpLayer implementations - functions

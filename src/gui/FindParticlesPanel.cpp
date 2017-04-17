@@ -715,6 +715,14 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		PickingAlgorithmComboBox->Enable(false);
 		ExpertToggleButton->Enable(false);
 		StartPickingButton->Enable(false);
+
+		if (PleaseEstimateCTFStaticText->IsShown())
+		{
+			PleaseEstimateCTFStaticText->Show(false);
+			Layout();
+			LeftPanel->Layout();
+			RightPanel->Layout();
+		}
 	}
 	else
 	{
@@ -815,13 +823,41 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 	const bool average_templates_radially = false;
 	const int number_of_template_rotations = 1;
 	const int output_stack_box_size = 0;
+	wxString image_file;
+	float pixel_size = 10;
+	float minimum_distance_from_edge;
 
 	current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), ImageComboBox->GetCurrentSelection()));
 
 	main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
 
-	particle_finder.SetAllUserParameters(   current_image_asset->filename.GetFullPath().ToStdString(),
-											current_image_asset->pixel_size,
+	// if we have a scaled version of the image, then use that instead..
+
+	wxString small_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();;
+	small_image_filename += wxString::Format("/Scaled/%s", current_image_asset->filename.GetFullName());
+
+	if (DoesFileExist(small_image_filename) == true)
+	{
+		image_file = small_image_filename;
+		int largest_dimension =  std::max(current_image_asset->x_size, current_image_asset->y_size);
+		float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+		pixel_size = current_image_asset->pixel_size / float(scale_factor);
+		minimum_distance_from_edge = MinimumDistanceFromEdgesSpinCtrl->GetValue() * scale_factor;
+	}
+
+	if (DoesFileExist(small_image_filename) == false || pixel_size > HighestResolutionNumericCtrl->ReturnValue() / 2)
+	{
+	//	wxPrintf("not using scaled, pixel size = %f\n", pixel_size);
+		image_file =  current_image_asset->filename.GetFullPath();
+		pixel_size = current_image_asset->pixel_size;
+		minimum_distance_from_edge = MinimumDistanceFromEdgesSpinCtrl->GetValue();
+
+
+	}
+
+
+	particle_finder.SetAllUserParameters(   image_file,
+											pixel_size,
 											current_image_asset->microscope_voltage,
 											current_image_asset->spherical_aberration,
 											amplitude_contrast,
@@ -838,7 +874,7 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 											HighestResolutionNumericCtrl->ReturnValue(),
 											"no_output_stack.mrc",
 											output_stack_box_size,
-											MinimumDistanceFromEdgesSpinCtrl->GetValue(),
+											minimum_distance_from_edge,
 											ThresholdPeakHeightNumericCtrl->ReturnValue(),
 											AvoidHighVarianceAreasCheckBox->IsChecked(),
 											AvoidAbnormalLocalMeanAreasCheckBox->IsChecked(),
@@ -1014,9 +1050,11 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 
 	// launch a controller
 
-my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].gui_address);
+	my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].gui_address);
 
 	my_progress_dialog->Destroy();
+
+	number_of_particles_picked = 0;
 
 	if (my_job_id != -1)
 	{
@@ -1341,7 +1379,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	      else
 		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		  {
-			 WriteInfoText("All Jobs have finished.");
+			 //WriteInfoText("All Jobs have finished.");
 			  /*
 			 WriteInfoText("All Jobs have finished.");
 			 ProgressBar->SetValue(100);
@@ -1376,60 +1414,57 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const int &wanted_job_number) // this will have to be overidden in the parent clas when i make it.
 {
-	int number_of_frames;
-	int frame_counter;
 
-	long current_time = time(NULL);
-	//wxString bitmap_string;
-	//wxString plot_string;
-	ArrayOfParticlePositionAssets array_of_assets;
-
-	int job_number = wanted_job_number;
-	if (result_to_process != NULL) job_number = result_to_process->job_number;
-
-
-	if (current_time - time_of_last_result_update > 3)
+	if (result_to_process != NULL)
 	{
-		//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
-		wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
+		long current_time = time(NULL);
+		int job_number = wanted_job_number;
 
-		if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
-		float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
-		float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
-		PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
-		PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
+		job_number = result_to_process->job_number;
+		number_of_particles_picked += result_to_process->result_size / 5;
 
-		time_of_last_result_update = time(NULL);
-	}
-
-
-	my_job_tracker.MarkJobFinished();
-	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-
-	// store the results..
-
-	if (result_to_process != NULL) buffered_results[result_to_process->job_number] = result_to_process;
-
-	if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
-	{
-		// job has really finished, so we can write to the database...
-
-		WriteResultToDataBase();
-
-		if (buffered_results != NULL)
+		if (current_time - time_of_last_result_update > 3)
 		{
-			delete [] buffered_results;
-			buffered_results = NULL;
+			ArrayOfParticlePositionAssets array_of_assets;
+			//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
+			wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
+
+			if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
+			float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
+			float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
+			PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
+			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
+
+			time_of_last_result_update = time(NULL);
 		}
 
-		WriteInfoText("All Jobs have finished.");
-		ProgressBar->SetValue(100);
-		TimeRemainingText->SetLabel("Time Remaining : All Done!");
-		CancelAlignmentButton->Show(false);
-		FinishButton->Show(true);
-		ProgressPanel->Layout();
-	}
+		my_job_tracker.MarkJobFinished();
+		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
+		// store the results..
+
+		buffered_results[result_to_process->job_number] = result_to_process;
+
+		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
+		{
+			// job has really finished, so we can write to the database...
+
+			WriteResultToDataBase();
+
+			if (buffered_results != NULL)
+			{
+				delete [] buffered_results;
+				buffered_results = NULL;
+			}
+
+			WriteInfoText(wxString::Format("All Jobs have finished. %i particles were picked.", number_of_particles_picked));
+			ProgressBar->SetValue(100);
+			TimeRemainingText->SetLabel("Time Remaining : All Done!");
+			CancelAlignmentButton->Show(false);
+			FinishButton->Show(true);
+			ProgressPanel->Layout();
+		}
+	}
 
 }
 

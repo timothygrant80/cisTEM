@@ -6,19 +6,12 @@
 #include <wx/panel.h>
 
 class
-UnblurResultsPanel : public wxPanel
+UnblurResultsPanel : public UnblurResultsPanelParent
 {
-	wxBoxSizer* MainSizer;
-	wxBoxSizer* GraphSizer;
-
 	public:
 
 	UnblurResultsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
 	~UnblurResultsPanel();
-
-	wxAuiNotebook *my_notebook;
-	wxPanel *PlotPanel;
-	DisplayPanel *ImageDisplayPanel;
 
 
 	void Clear();
@@ -32,7 +25,8 @@ UnblurResultsPanel : public wxPanel
 	std::vector<double> current_y_movement_data;
 
 	mpWindow        *current_plot_window;
-	mpBottomInfoLegend    *legend;
+	//mpBottomInfoLegend    *legend;
+	mpTopInfoLegend    *legend;
 	mpTitle         *title;
 	mpScaleX * current_xaxis;
 	mpScaleY * current_yaxis;
@@ -44,3 +38,4 @@ UnblurResultsPanel : public wxPanel
 
 
 #endif
+

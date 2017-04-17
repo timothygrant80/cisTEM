@@ -39,6 +39,7 @@ class MyFindCTFResultsPanel : public FindCTFResultsPanel
 		int GetFilter();
 		void OnAllMoviesSelect( wxCommandEvent& event );
 		void OnByFilterSelect( wxCommandEvent& event );
+		void OnCharHook( wxKeyEvent& event );
 
 
 		int *ctf_estimation_job_ids;

@@ -15,6 +15,7 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
 
 		void OnAllMoviesSelect( wxCommandEvent& event );
 		void OnByFilterSelect( wxCommandEvent& event );
+		void OnCharHook( wxKeyEvent& event );
 
 		int GetFilter();
 

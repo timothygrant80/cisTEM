@@ -21,6 +21,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 {
 	int return_code;
 	wxString directory_string;
+	bool success;
 
 
 	// is project already open?
@@ -45,8 +46,10 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 		return false;
 	}
 
-	database.CreateNewDatabase(wanted_database_file);
-	database.CreateAllTables();
+	success = database.CreateNewDatabase(wanted_database_file);
+	CheckSuccess(success);
+	success = database.CreateAllTables();
+	CheckSuccess(success);
 
 	project_name = wanted_project_name;
 	project_directory = wanted_project_directory;
@@ -66,6 +69,16 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	directory_string += "/Assets/Images";
 	image_asset_directory = directory_string;
 	wxFileName::Mkdir(image_asset_directory.GetFullPath());
+
+	// sub directories
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Spectra";
+	wxFileName::Mkdir(directory_string);
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Scaled";
+	wxFileName::Mkdir(directory_string);
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Volumes";
@@ -103,9 +116,6 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	scratch_directory = directory_string;
 	wxFileName::Mkdir(scratch_directory.GetFullPath());
 
-
-
-
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
 
@@ -132,7 +142,9 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	}
 
 	success = database.Open(file_to_open);
+	CheckSuccess(success);
 	success = ReadMasterSettings();
+	CheckSuccess(success);
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Movies";

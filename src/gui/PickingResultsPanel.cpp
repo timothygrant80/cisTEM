@@ -30,12 +30,29 @@ PickingResultsPanel( parent )
 
 	FillGroupComboBox();
 
+	Bind(wxEVT_CHAR_HOOK, &MyPickingResultsPanel::OnCharHook, this);
+
 }
 
 MyPickingResultsPanel::~MyPickingResultsPanel()
 {
 	// The destrictor is called when the application is closed, so we need to make sure we've saved any manual edits to the database
 	UpdateResultsFromBitmapPanel();
+}
+
+void MyPickingResultsPanel::OnCharHook( wxKeyEvent& event )
+{
+	if (event.GetUnicodeKey() == 'N')
+	{
+		ResultDataView->NextEye();
+	}
+	else
+	if (event.GetUnicodeKey() == 'P')
+	{
+		ResultDataView->PreviousEye();
+	}
+	else
+	event.Skip();
 }
 
 void MyPickingResultsPanel::OnProjectOpen()
@@ -530,6 +547,8 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 
 	// Get the filename of the image we will need to display
 
+	ImageAsset *current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_image_id));
+	/*
 	keep_going = main_frame->current_project.database.BeginBatchSelect(wxString::Format("select filename from image_assets where image_asset_id = %i",current_image_id));
 	if (!keep_going)
 	{
@@ -538,15 +557,40 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	}
 	main_frame->current_project.database.GetFromBatchSelect("t",&parent_image_filename);
 	main_frame->current_project.database.EndBatchSelect();
-
+*/
+	parent_image_filename = current_image_asset->filename.GetFullPath();
 
 	// Get the coordinates of picked particles
 	ArrayOfParticlePositionAssets array_of_particle_positions = main_frame->current_project.database.ReturnArrayOfParticlePositionAssetsFromResultsTable(current_picking_job_id,current_image_id);
 
 	float maximum_radius_of_particle = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select maximum_radius from particle_picking_list where picking_job_id = %i",current_picking_job_id));
-	float pixel_size = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from image_assets where image_asset_id = %i",current_image_id));
+	//float pixel_size = main_frame->current_project.database.ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from image_assets where image_asset_id = %i",current_image_id));
+	float image_pixel_size = current_image_asset->pixel_size;
 
-	ResultDisplayPanel->Draw(parent_image_filename,array_of_particle_positions, maximum_radius_of_particle, pixel_size);
+	// if we have a scaled version of the image, then use that instead..
+
+	wxString image_file;
+	float pixel_size;
+	wxString small_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();;
+	small_image_filename += wxString::Format("/Scaled/%s", wxFileName(parent_image_filename).GetFullName());
+
+	if (DoesFileExist(small_image_filename) == true)
+	{
+		image_file = small_image_filename;
+		int largest_dimension =  std::max(current_image_asset->x_size, current_image_asset->y_size);
+		float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+		pixel_size = current_image_asset->pixel_size / float(scale_factor);
+
+	}
+
+	if (DoesFileExist(small_image_filename) == false)
+	{
+		image_file = parent_image_filename;
+		pixel_size = image_pixel_size;
+	}
+
+
+	ResultDisplayPanel->Draw(image_file,array_of_particle_positions, maximum_radius_of_particle, pixel_size);
 	RightPanel->Layout();
 
 }

@@ -40,6 +40,9 @@ private:
 		void MouseCheckGroupsVeto( wxMouseEvent& event );
 		void MouseCheckContentsVeto( wxMouseEvent& event );
 		void OnGroupActivated( wxListEvent& event );
+		void OnAssetActivated( wxListEvent& event );
+
+		virtual void DisplaySelectedItems();
 
 		virtual void RemoveAssetFromDatabase(long wanted_asset) = 0;
 		virtual void RenameAsset(long wanted_asset, wxString wanted_name) = 0;
@@ -72,6 +75,7 @@ private:
 
 
 		virtual void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset) = 0;
+		virtual void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog = NULL) = 0;
 		long ReturnGroupMember(long wanted_group, long wanted_member);
 
 
@@ -80,6 +84,7 @@ private:
 		void AddAsset(Asset *asset_to_add);
 		void AddContentItemToGroup(long wanted_group, long wanted_content_item);
 		void AddArrayItemToGroup(long wanted_group, long wanted_array_item);
+		void AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog = NULL);
 
 		void OnGroupFocusChange( wxListEvent& event );
 		void OnContentsSelected( wxListEvent& event );

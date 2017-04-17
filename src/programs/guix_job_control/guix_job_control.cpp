@@ -329,16 +329,16 @@ void LaunchJobThread::LaunchRemoteJob()
 	{
 
 		if (number_of_commands_to_run - number_of_commands_run < current_run_profile.run_commands[command_counter].number_of_copies) number_to_run_for_this_command = number_of_commands_to_run - number_of_commands_run;
-		else number_of_commands_to_run = current_run_profile.run_commands[command_counter].number_of_copies;
+		else number_to_run_for_this_command = current_run_profile.run_commands[command_counter].number_of_copies;
 
 		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
 		execution_command.Replace("$command", executable);
 
 		execution_command += "&";
 
-		QueueInfo(wxString::Format("Job Control : Executing '%s' %li times.", execution_command, number_of_commands_to_run));
+		QueueInfo(wxString::Format("Job Control : Executing '%s' %li times.", execution_command, number_to_run_for_this_command));
 
-		for (process_counter = 0; process_counter < number_of_commands_to_run; process_counter++)
+		for (process_counter = 0; process_counter < number_to_run_for_this_command; process_counter++)
 		{
 
 			wxMilliSleep( current_run_profile.run_commands[command_counter].delay_time_in_ms);
@@ -741,9 +741,15 @@ void JobControlApp::SendNumberofConnections()
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
-	if (number_of_slaves_already_connected == my_job_package.my_profile.ReturnTotalJobs())
+	int number_of_commands_to_run;
+
+	if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_commands_to_run = my_job_package.number_of_jobs + 1;
+	else number_of_commands_to_run = my_job_package.my_profile.ReturnTotalJobs();
+
+	if (number_of_slaves_already_connected == number_of_commands_to_run)
 	{
-		wxPrintf("All connections completed\n");
+
+		//wxPrintf("All connections completed\n");
 		connection_timer->Stop();
 		Unbind(wxEVT_TIMER, wxTimerEventHandler( JobControlApp::OnConnectionTimer ), this);
 		delete connection_timer;

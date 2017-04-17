@@ -514,9 +514,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	if (AdditionalPhaseShiftCheckBox->IsChecked() == true)
 	{
 		find_additional_phase_shift = true;
-		minimum_additional_phase_shift = MinPhaseShiftNumericCtrl->ReturnValue();
-		maximum_additional_phase_shift = MaxPhaseShiftNumericCtrl->ReturnValue();
-		additional_phase_shift_search_step = PhaseShiftStepNumericCtrl->ReturnValue();
+		minimum_additional_phase_shift = deg_2_rad(MinPhaseShiftNumericCtrl->ReturnValue());
+		maximum_additional_phase_shift = deg_2_rad(MaxPhaseShiftNumericCtrl->ReturnValue());
+		additional_phase_shift_search_step = deg_2_rad(PhaseShiftStepNumericCtrl->ReturnValue());
 	}
 	else
 	{
@@ -971,7 +971,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 	if (current_time - time_of_last_result_update > 5)
 	{
-		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6]);
+		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], "");
 		time_of_last_result_update = time(NULL);
 	}
 

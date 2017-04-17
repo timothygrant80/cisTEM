@@ -202,6 +202,8 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 			ContainedParticlesListCtrl->SetColumnWidth(11, ContainedParticlesListCtrl->ReturnGuessAtColumnTextWidth(11));
 		}
 
+		ContainedParticlesStaticText->SetLabel(wxString::Format("Contained Particles (%li) : ", all_refinement_packages.Item(selected_refinement_package).contained_particles.GetCount()));
+
 		// 3D references..
 
 		ReDrawActiveReferences();
@@ -218,6 +220,8 @@ void MyRefinementPackageAssetPanel::FillRefinementPackages()
 		NumberofClassesText->SetLabel("");
 		NumberofRefinementsText->SetLabel("");
 		LastRefinementIDText->SetLabel("");
+
+		ContainedParticlesStaticText->SetLabel("Contained Particles : ");
 	}
 
 //	RefinementPackageListCtrl->Thaw();
@@ -347,6 +351,12 @@ void MyRefinementPackageAssetPanel::OnPackageFocusChange( wxListEvent& event )
 	{
 		selected_refinement_package = event.GetIndex();
 		is_dirty = true;
+
+		if (selected_refinement_package >= 0)
+		{
+			ContainedParticlesStaticText->SetLabel(wxString::Format("Contained Particles (%li) : ", all_refinement_packages.Item(selected_refinement_package).contained_particles.GetCount()));
+		}
+		else ContainedParticlesStaticText->SetLabel("Contained Particles : ");
 	}
 
 	//wxPrintf("Selected refinement package = %li\n", selected_refinement_package);
@@ -418,6 +428,7 @@ void MyRefinementPackageAssetPanel::Reset()
 {
 	all_refinement_packages.Clear();
 	main_frame->DirtyRefinementPackages();
+	ContainedParticlesStaticText->SetLabel("Contained Particles : ");
 }
 
 

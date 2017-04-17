@@ -57,7 +57,7 @@ void MyRunProfilesPanel::FillCommandsBox()
 
 		MyDebugAssertTrue(selected_profile >= 0 && selected_profile < run_profile_manager.number_of_run_profiles, "selected_profile appears incorrect!");
 
-		ManagerTextCtrl->SetValue(buffer_profile.manager_command);
+		ManagerTextCtrl->ChangeValue(buffer_profile.manager_command);
 
 		if (buffer_profile.gui_address == "")
 		{
@@ -112,7 +112,7 @@ void MyRunProfilesPanel::FillCommandsBox()
 	}
 	else
 	{
-		ManagerTextCtrl->SetValue("");
+		ManagerTextCtrl->ChangeValue("");
 		CommandErrorStaticText->SetLabel("");
 		NumberProcessesStaticText->SetLabel("");
 		CommandsPanel->Enable(false);
@@ -236,7 +236,7 @@ void MyRunProfilesPanel::OnEndProfileEdit( wxListEvent& event )
 
 }
 
-void  MyRunProfilesPanel::OnUpdateIU( wxUpdateUIEvent& event )
+void  MyRunProfilesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	if (main_frame->current_project.is_open == false)
 	{
@@ -675,6 +675,15 @@ void MyRunProfilesPanel::OnCommandsFocusChange( wxListEvent& event )
 void MyRunProfilesPanel::ManagerTextChanged( wxCommandEvent& event )
 {
 	command_panel_has_changed = true;
+	buffer_profile.manager_command = ManagerTextCtrl->GetValue();
+	if (ManagerTextCtrl->GetValue().Find("$command") ==  wxNOT_FOUND)
+	{
+		CommandErrorStaticText->SetLabel("Oops! - Command must contain \"$command\"");
+	}
+	else
+	{
+		CommandErrorStaticText->SetLabel("");
+	}
 	event.Skip();
 }
 

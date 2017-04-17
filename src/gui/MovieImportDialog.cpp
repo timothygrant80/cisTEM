@@ -19,32 +19,95 @@ MovieImportDialog( parent )
 	MinorScaleTextCtrl->SetMinMaxValue(0, FLT_MAX);
 	MajorScaleTextCtrl->SetPrecision(3);
 	MinorScaleTextCtrl->SetPrecision(3);
+
+	// do we have defaults?
+
+	if (main_frame->current_project.database.DoesTableExist("MOVIE_IMPORT_DEFAULTS") == true)
+	{
+		float default_voltage;
+		float default_spherical_aberration;
+		float default_pixel_size;
+		float default_exposure_per_frame;
+		bool default_movies_are_gain_corrected;
+		wxString default_gain_reference_filename;
+		bool default_resample_movies;
+		float default_desired_pixel_size;
+		bool  default_correct_mag_distortion;
+		float default_mag_distortion_angle;
+		float default_mag_distortion_major_scale;
+		float default_mag_distortion_minor_scale;
+
+		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale);
+
+		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
+		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
+		PixelSizeText->ChangeValue(wxString::Format("%.2f", default_pixel_size));
+		DoseText->ChangeValue(wxString::Format("%.2f", default_exposure_per_frame));
+
+		if (default_movies_are_gain_corrected == true) MoviesAreGainCorrectedCheckBox->SetValue(true);
+		else MoviesAreGainCorrectedCheckBox->SetValue(false);
+
+		// don't set the gain reference as this is likely to be different, and i want to force users to have to pick the correct one.
+
+		if (default_resample_movies == true) ResampleMoviesCheckBox->SetValue(true);
+		else ResampleMoviesCheckBox->SetValue(false);
+
+		DesiredPixelSizeTextCtrl->ChangeValueFloat(default_desired_pixel_size);
+
+		if (default_correct_mag_distortion == true)	CorrectMagDistortionCheckBox->SetValue(true);
+		else CorrectMagDistortionCheckBox->SetValue(false);
+
+		DistortionAngleTextCtrl->ChangeValueFloat(default_mag_distortion_angle);
+		MajorScaleTextCtrl->ChangeValueFloat(default_mag_distortion_major_scale);
+		MinorScaleTextCtrl->ChangeValueFloat(default_mag_distortion_minor_scale);
+	}
 }
 
 void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select movie files"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif)|*.mrc;*.mrcs;*.tif", wxFD_OPEN |wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
-
+    wxFileDialog openFileDialog(this, _("Select movie files - basic wildcards are allowed"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif)|*.mrc;*.mrcs;*.tif", wxFD_OPEN | wxFD_MULTIPLE);
 
 
     if (openFileDialog.ShowModal() == wxID_OK)
     {
     	wxArrayString selected_paths;
-    	openFileDialog.GetPaths(selected_paths);
+      	openFileDialog.GetPaths(selected_paths);
 
       	PathListCtrl->Freeze();
 
-    	for (unsigned long counter = 0; counter < selected_paths.GetCount(); counter++)
-    	{
-    		PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
-    	}
+      	for (unsigned long counter = 0; counter < selected_paths.GetCount(); counter++)
+      	{
+      		// is this an actual filename, that exists - in which case add it.
 
-    	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    	PathListCtrl->Thaw();
+      		if (DoesFileExist(selected_paths.Item(counter)) == true) PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+      		else
+      		{
+      			// perhaps it is a wildcard..
+      			int wildcard_counter;
+      			wxArrayString wildcard_files;
+      			wxString directory_string;
+      			wxString file_string;
+      			wxString current_extension;
 
-    	CheckImportButtonStatus();
-    }
+      			SplitFileIntoDirectoryAndFile(selected_paths.Item(counter), directory_string, file_string);
+      			wxDir::GetAllFiles 	( directory_string, &wildcard_files, file_string, wxDIR_FILES);
 
+      			for (int wildcard_counter = 0; wildcard_counter < wildcard_files.GetCount(); wildcard_counter++)
+      			{
+      				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
+      				current_extension = current_extension.MakeLower();
+
+      				if ( current_extension == "mrc" || current_extension == "mrcs" || current_extension == "tif") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+      			}
+
+      		}
+      	}
+
+      	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
+      	PathListCtrl->Thaw();
+
+      	CheckImportButtonStatus();
+   }
 }
 
 void MyMovieImportDialog::ClearClick( wxCommandEvent& event )
@@ -195,6 +258,12 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 	int gain_ref_x_size = -1;
 	int gain_ref_y_size = -1;
 
+	int movies_are_gain_corrected;
+	int resample_movies;
+	int correct_mag_distortion;
+
+	wxString gain_ref_filename;
+
 	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
 	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
 	PixelSizeText->GetLineText(0).ToDouble(&pixel_size);
@@ -216,13 +285,17 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
 
+		movies_are_gain_corrected = MoviesAreGainCorrectedCheckBox->IsChecked();
+
 		if (MoviesAreGainCorrectedCheckBox->IsChecked())
 		{
 			temp_asset.gain_filename = "";
+			gain_ref_filename = "";
 		}
 		else
 		{
 			temp_asset.gain_filename = GainFilePicker->GetFileName().GetFullPath();
+			gain_ref_filename = GainFilePicker->GetFileName().GetFullPath();
 
 			ImageFile gain_ref;
 			if (gain_ref.OpenFile(temp_asset.gain_filename.ToStdString(), false) == false)
@@ -241,7 +314,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		// get the size of the gain ref..
 
 
-
+		resample_movies = ResampleMoviesCheckBox->IsChecked();
 		if (ResampleMoviesCheckBox->IsChecked() == false)
 		{
 			temp_asset.output_binning_factor = 1;
@@ -263,6 +336,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		}
 
+		correct_mag_distortion = CorrectMagDistortionCheckBox->IsChecked();
 		if (CorrectMagDistortionCheckBox->IsChecked() == false)
 		{
 			temp_asset.correct_mag_distortion = false;
@@ -298,7 +372,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 			// check everything ok with gain_ref
 
-			if (CorrectMagDistortionCheckBox->IsChecked() == true && (temp_asset.x_size != gain_ref_x_size || temp_asset.y_size != gain_ref_y_size))
+			if (MoviesAreGainCorrectedCheckBox->IsChecked() == false && (temp_asset.x_size != gain_ref_x_size || temp_asset.y_size != gain_ref_y_size))
 			{
 				my_error->ErrorText->AppendText(wxString::Format(wxT("%s does not have the same size as the provided gain reference, skipping\n"), temp_asset.ReturnFullPathString()));
 				have_errors = true;
@@ -346,8 +420,15 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		// do database write..
 
 		main_frame->current_project.database.EndMovieAssetInsert();
-
 		my_progress_dialog->Destroy();
+
+		// write these values as future defaults..
+
+		main_frame->current_project.database.DeleteTable("MOVIE_IMPORT_DEFAULTS");
+		main_frame->current_project.database.CreateMovieImportDefaultsTable();
+		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritififff", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, DesiredPixelSizeTextCtrl->ReturnValue(), correct_mag_distortion, DistortionAngleTextCtrl->ReturnValue(), MajorScaleTextCtrl->ReturnValue(), MinorScaleTextCtrl->ReturnValue());
+
+
 		main_frame->DirtyMovieGroups();
 //		movie_asset_panel->SetSelectedGroup(0);
 	//	movie_asset_panel->FillGroupList();

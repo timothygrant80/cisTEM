@@ -34,6 +34,8 @@ public:
 	Refinement *input_refinement;
 	Refinement *output_refinement;
 
+	wxArrayString current_reference_filenames;
+
 	void SetParent(MyRefine3DPanel *wanted_parent);
 
 	void BeginRefinementCycle();
@@ -56,6 +58,9 @@ public:
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();
 
+	void OnMaskerThreadComplete();
+
+	void DoMasking();
 
 //	void StartRefinement();
 //	void StartReconstruction();
@@ -78,6 +83,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void StartRefinementClick( wxCommandEvent& event );
 		void ResetAllDefaultsClick( wxCommandEvent& event );
 		void OnHighResLimitChange( wxCommandEvent& event );
+		void OnUseMaskCheckBox( wxCommandEvent& event );
 
 		void OnJobSocketEvent(wxSocketEvent& event);
 
@@ -91,9 +97,11 @@ class MyRefine3DPanel : public Refine3DPanel
 
 
 		long time_of_last_result_update;
+
 		bool refinement_package_combo_is_dirty;
 		bool run_profiles_are_dirty;
 		bool input_params_combo_is_dirty;
+		bool volumes_are_dirty;
 
 		JobResult *buffered_results;
 		long my_job_id;
@@ -125,8 +133,37 @@ class MyRefine3DPanel : public Refine3DPanel
 		void OnRefinementPackageComboBox( wxCommandEvent& event );
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
+		void OnMaskerThreadComplete(wxThreadEvent& my_event);
+};
 
+class Refine3DMaskerThread : public wxThread
+{
+	public:
+	Refine3DMaskerThread(Refine3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_filter_cosine_edge_width) : wxThread(wxTHREAD_DETACHED)
+	{
+		main_thread_pointer = parent;
+		input_files = wanted_input_files;
+		output_files = wanted_output_files;
+		mask_filename = wanted_mask_filename;
+		cosine_edge_width = wanted_cosine_edge_width;
+		weight_outside_mask = wanted_weight_outside_mask;
+		low_pass_filter_radius = wanted_low_pass_filter_radius;
+		filter_cosine_edge_width = wanted_filter_cosine_edge_width;
+	}
 
+	protected:
+
+	Refine3DPanel *main_thread_pointer;
+	wxArrayString input_files;
+	wxArrayString output_files;
+	wxString mask_filename;
+
+	float cosine_edge_width;
+	float weight_outside_mask;
+	float low_pass_filter_radius;
+	float filter_cosine_edge_width;
+
+    virtual ExitCode Entry();
 };
 
 

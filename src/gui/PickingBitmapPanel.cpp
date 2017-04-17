@@ -73,6 +73,9 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	clicked_point_y_in_angstroms = 0.0;
 	current_step_in_history = 0;
 
+	low_res_filter_value = -1.0;
+	high_res_filter_value = -1.0;
+
 
 }
 
@@ -282,27 +285,41 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 			if (image_in_memory.is_in_real_space) image_in_memory.ForwardFFT();
 			image_in_bitmap.is_in_real_space = false;
 			image_in_memory.ClipInto(&image_in_bitmap);
-			const float high_pass_radius = image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms);
-			const float filter_edge_width = image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms);
-			const float low_pass_radius = image_in_bitmap_pixel_size / (0.5 * radius_of_circles_around_particles_in_angstroms);
+
+			//const float filter_edge_width = 0.2;//image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms);
+
+			float high_pass_radius;
+			float low_pass_radius;
+
+			if (high_res_filter_value < 0) high_pass_radius = image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms);
+			else high_pass_radius = image_in_bitmap_pixel_size / high_res_filter_value;
+
+			if (low_res_filter_value < 0) low_pass_radius = image_in_bitmap_pixel_size / 20;//(0.5 * radius_of_circles_around_particles_in_angstroms);
+			else low_pass_radius = image_in_bitmap_pixel_size / low_res_filter_value;
+
+
 
 			if (should_high_pass && ! should_low_pass)
 			{
 		//		wxPrintf("High pass filtering: %f %f\n",high_pass_radius,filter_edge_width);
-				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
+				image_in_bitmap.CosineMask(high_pass_radius,image_in_bitmap_pixel_size / 600.0,true);
 			}
 			else if (should_low_pass && ! should_high_pass)
 			{
 		//		wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
-				//image_in_bitmap.CosineMask(low_pass_radius,filter_edge_width,false);
-				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
+				image_in_bitmap.GaussianLowPassFilter(low_pass_radius);
+				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
+				//image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
 			}
 			else if (should_low_pass & should_high_pass)
 			{
 			//	wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
+				image_in_bitmap.CosineMask(high_pass_radius,image_in_bitmap_pixel_size / 600.0,true);
+				image_in_bitmap.GaussianLowPassFilter(low_pass_radius);
+				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
 				//image_in_bitmap.CosineRingMask(high_pass_radius,low_pass_radius,filter_edge_width);
-				image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
-				image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
+				//image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
+				//image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
 			}
 			image_in_bitmap.BackwardFFT();
 			image_in_bitmap_filename = image_in_memory_filename;

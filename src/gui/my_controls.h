@@ -22,9 +22,11 @@ public :
 	void Clear();
 	void Reset();
 	void AddMemoryItem(wxString wanted_text, long wanted_id);
+	void SetSelection(int n);
 
 	bool FillWithRunProfiles();
 	bool FillWithRefinementPackages();
+	bool FillWithVolumeAssets();
 	bool FillWithMovieGroups(bool include_all_movies_group = true);
 	bool FillWithImageGroups(bool include_all_images_group = true);
 	bool FillWithClassifications(long wanted_refinement_package, bool include_new_classification);

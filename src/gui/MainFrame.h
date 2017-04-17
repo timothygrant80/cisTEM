@@ -53,6 +53,7 @@ class MyMainFrame : public MainFrame
 		void DirtyEverything();
 		void DirtyMovieGroups();
 		void DirtyImageGroups();
+		void DirtyVolumes();
 		void DirtyParticlePositionGroups();
 		void DirtyRunProfiles();
 		void DirtyRefinementPackages();

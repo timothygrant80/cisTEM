@@ -397,7 +397,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 		temp_refinement_package->stack_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
 		temp_refinement_package->stack_filename = output_stack_filename.GetFullPath();
-		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue();
+		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
 		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
 		temp_refinement_package->estimated_particle_size_in_angstroms = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
 
@@ -574,9 +574,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 		temp_refinement_package->stack_box_size = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].stack_box_size;
 		temp_refinement_package->stack_filename = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].stack_filename;
-		temp_refinement_package->symmetry = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].symmetry;
-		temp_refinement_package->estimated_particle_weight_in_kda = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].estimated_particle_weight_in_kda;
-		temp_refinement_package->estimated_particle_size_in_angstroms = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].estimated_particle_size_in_angstroms;
+		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
+		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
+		temp_refinement_package->estimated_particle_size_in_angstroms = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
+
+
+//		temp_refinement_package->symmetry = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].symmetry.Upper();
+	//	temp_refinement_package->estimated_particle_weight_in_kda = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].estimated_particle_weight_in_kda;
+		//temp_refinement_package->estimated_particle_size_in_angstroms = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].estimated_particle_size_in_angstroms;
 
 
 		long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;

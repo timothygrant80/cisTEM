@@ -17,9 +17,9 @@ CTF1DPanel::CTF1DPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, cons
 	current_quality_of_fit_vector_layer = new mpFXYVector(("Quality of Fit"));
 	current_amplitude_vector_layer = new mpFXYVector(("Amplitude Spectrum"));
 
-	wxPen bluevectorpen(*wxBLUE, 2, wxSOLID);
-	wxPen redvectorpen(wxColor(232,162,12), 2, wxSOLID);
-	wxPen greenvectorpen(*wxGREEN, 2, wxSOLID);
+	wxPen bluevectorpen(*wxBLUE, 1, wxSOLID);
+	wxPen redvectorpen(wxColor(232,162,12), 1, wxSOLID);
+	wxPen greenvectorpen(*wxGREEN, 1, wxSOLID);
 
 	//current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
 	current_ctf_fit_vector_layer->SetContinuity(true);
@@ -44,17 +44,17 @@ CTF1DPanel::CTF1DPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, cons
 	mpScaleX* current_xaxis = new mpScaleX(wxT("Spatial Frequency  (1/Å)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
 	mpScaleY* current_yaxis = new mpScaleY(wxT("Amplitude (or Cross Correlation)"), mpALIGN_LEFT, true);
 
-	legend = new mpBottomInfoLegend;
+	legend = new mpTopInfoLegend;
 	//legend->my_line_width = 20;
 
-	title = new mpTitle;
+	//title = new mpTitle;
 
     current_xaxis->SetFont(graphFont);
     current_yaxis->SetFont(graphFont);
     current_xaxis->SetDrawOutsideMargins(false);
     current_yaxis->SetDrawOutsideMargins(false);
 
-    current_plot_window->SetMargins(50, 30, 100, 80);
+    current_plot_window->SetMargins(30, 30, 60, 80);
 
     current_plot_window->AddLayer(current_xaxis);
     current_plot_window->AddLayer(current_yaxis);
@@ -62,7 +62,7 @@ CTF1DPanel::CTF1DPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, cons
 	current_plot_window->AddLayer(current_quality_of_fit_vector_layer);
 	current_plot_window->AddLayer(current_amplitude_vector_layer);
 	current_plot_window->AddLayer(legend);
-	current_plot_window->AddLayer(title);
+	//current_plot_window->AddLayer(title);
 
 	GraphSizer->Add(current_plot_window, 1, wxEXPAND );
     current_plot_window->EnableDoubleBuffer(true);

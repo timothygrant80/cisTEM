@@ -29,6 +29,22 @@ FindCTFResultsPanel( parent )
 
 	FillGroupComboBox();
 
+	Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
+}
+
+void MyFindCTFResultsPanel::OnCharHook( wxKeyEvent& event )
+{
+	if (event.GetUnicodeKey() == 'N')
+	{
+		ResultDataView->NextEye();
+	}
+	else
+	if (event.GetUnicodeKey() == 'P')
+	{
+		ResultDataView->PreviousEye();
+	}
+	else
+	event.Skip();
 }
 
 void MyFindCTFResultsPanel::FillGroupComboBox()
@@ -442,9 +458,9 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		PhaseShiftStepStaticText->Show(true);
 		PhaseShiftStepLabel->Show(true);
 
-		MinPhaseShiftStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), min_phase_shift));
-		MaxPhaseshiftStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), max_phase_shift));
-		PhaseShiftStepStaticText->SetLabel(wxString::Format(wxT("%.2f rad"), phase_shift_step));
+		MinPhaseShiftStaticText->SetLabel(wxString::Format(wxT("%.2f °"), rad_2_deg(min_phase_shift)));
+		MaxPhaseshiftStaticText->SetLabel(wxString::Format(wxT("%.2f °"), rad_2_deg(max_phase_shift)));
+		PhaseShiftStepStaticText->SetLabel(wxString::Format(wxT("%.2f °"), rad_2_deg(phase_shift_step)));
 
 	}
 	else
@@ -461,7 +477,8 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 
 	// now get the result, and draw it as we go..
 
-	ResultPanel->Draw(output_diagnostic_file, find_additional_phase_shift, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution);
+	wxString ImageFile = image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromAssetID(current_image_id));
+	ResultPanel->Draw(output_diagnostic_file, find_additional_phase_shift, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, ImageFile);
 	RightPanel->Layout();
 
 }

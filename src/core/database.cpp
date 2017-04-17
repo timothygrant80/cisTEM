@@ -10,6 +10,8 @@ Database::Database()
 	in_batch_select = false;
 	batch_statement = NULL;
 
+	sqlite3_config(SQLITE_CONFIG_SINGLETHREAD); // we only need access from a single thread right now, and this should be a little faster as it avoids mutex checks;
+
 }
 
 Database::~Database()
@@ -17,7 +19,7 @@ Database::~Database()
 	Close();
 }
 
-bool Database::ExecuteSQL(const char *command)
+int Database::ExecuteSQL(const char *command)
 {
 	char *error_message = NULL;
 	int return_code = sqlite3_exec(sqlite_database, command, NULL, 0, &error_message);
@@ -26,10 +28,9 @@ bool Database::ExecuteSQL(const char *command)
 	{
 	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", error_message, command);
 	    sqlite3_free(error_message);
-	    return false;
 	}
 
-	return true;
+	return return_code;
 }
 
 int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
@@ -41,7 +42,7 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	int value;
 
 	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n(Select command = %s\n", return_code , select_command);
 
 	return_code = sqlite3_step(current_statement);
 
@@ -400,7 +401,30 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
         return false;
     }
 
-	// update project class details..
+	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
+	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
+	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
+	ExecuteSQL("PRAGMA main.page_size=4096;");
+	ExecuteSQL("PRAGMA main.cache_size=10000;");
+	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
+
+	// I want to lock the databse, and so i'm going to write to it.
+
+	return_code = ExecuteSQL("CREATE TABLE JUNK_TABLE(JUNK INTEGER PRIMARY KEY);");
+
+	if (return_code != SQLITE_OK)
+	{
+		return false;
+	}
+
+	return_code = ExecuteSQL("DROP TABLE JUNK_TABLE;");
+
+	if (return_code != SQLITE_OK)
+	{
+		return false;
+	}
+
+	// if we get here, we should have the database open, with an exclusive lock
 
 	database_file = wanted_database_file;
 	is_open = true;
@@ -436,6 +460,31 @@ bool Database::Open(wxFileName file_to_open)
 		MyPrintWithDetails("Can't open database: %s\n%s\n", database_file.GetFullPath().ToUTF8().data(), sqlite3_errmsg(sqlite_database));
 	    return false;
 	}
+
+	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
+	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
+	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
+	ExecuteSQL("PRAGMA main.page_size=4096;");
+	ExecuteSQL("PRAGMA main.cache_size=10000;");
+	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
+
+	// I want to lock the databse, and so i'm going to write to it.
+
+	return_code = ExecuteSQL("CREATE TABLE JUNK_TABLE(JUNK INTEGER PRIMARY KEY);");
+
+	if (return_code != SQLITE_OK)
+	{
+		return false;
+	}
+
+	return_code = ExecuteSQL("DROP TABLE JUNK_TABLE;");
+
+	if (return_code != SQLITE_OK)
+	{
+		return false;
+	}
+
+	// if we get here, we should have the database open, with an exclusive lock
 
 	database_file = file_to_open;
 	is_open = true;
@@ -534,26 +583,44 @@ bool Database::CreateAllTables()
 {
 	bool success;
 
+	// this succes thing won't work, as it needs to be checked each time - oh well!
+
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
+	CheckSuccess(success);
 	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
+	CheckSuccess(success);
 	success = CreateTable("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID");
+	CheckSuccess(success);
 	//success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
 	success = CreateMovieAssetTable();
+	CheckSuccess(success);
 	success = CreateImageAssetTable();
+	CheckSuccess(success);
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	CheckSuccess(success);
 	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	CheckSuccess(success);
 
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	CheckSuccess(success);
 	success = CreateParticlePickingListTable();
+	CheckSuccess(success);
 	success = CreateParticlePositionAssetTable();
+	CheckSuccess(success);
 	success = CreateParticlePositionGroupListTable();
+	CheckSuccess(success);
 	success = CreateVolumeAssetTable();
+	CheckSuccess(success);
 	success = CreateVolumeGroupListTable();
+	CheckSuccess(success);
 	success = CreateRefinementPackageAssetTable();
+	CheckSuccess(success);
 	success = CreateRefinementListTable();
+	CheckSuccess(success);
 	success = CreateClassificationListTable();
+	CheckSuccess(success);
 	success = CreateClassificationSelectionListTable();
-
+	CheckSuccess(success);
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
 	return success;
@@ -614,6 +681,11 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 			sql_command += wxString::Format("%li",  va_arg(args, long));
 		}
 		else
+		if (*column_format == 'f') // float
+		{
+			sql_command += wxString::Format("%f",  va_arg(args, float));
+		}
+		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
 			abort();
@@ -671,10 +743,77 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	return true;
 }
 
+bool Database::DoesTableExist(wxString table_name)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+	return (bool) ReturnSingleIntFromSelectCommand(wxString::Format("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='%s';", table_name));
+}
+
+void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	sqlite3_stmt *sqlite_statement;
+	int return_code;
+	wxString sql_command = "select * FROM MOVIE_IMPORT_DEFAULTS;";
+
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(sqlite_statement);
+
+	if (return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	voltage = sqlite3_column_double(sqlite_statement, 1);
+	spherical_aberration = sqlite3_column_double(sqlite_statement, 2);
+	pixel_size = sqlite3_column_double(sqlite_statement, 3);
+	exposure_per_frame = sqlite3_column_double(sqlite_statement, 4);
+	movies_are_gain_corrected = sqlite3_column_int(sqlite_statement, 5);
+	gain_reference_filename = sqlite3_column_text(sqlite_statement, 6);
+	resample_movies = sqlite3_column_int(sqlite_statement, 7);
+	desired_pixel_size = sqlite3_column_double(sqlite_statement, 8);
+	correct_mag_distortion = sqlite3_column_int(sqlite_statement, 9);
+	mag_distortion_angle = sqlite3_column_double(sqlite_statement, 10);
+	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 11);
+	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 12);
+
+	sqlite3_finalize(sqlite_statement);
+}
+
+
+void Database::GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	sqlite3_stmt *sqlite_statement;
+	int return_code;
+	wxString sql_command = "select * FROM IMAGE_IMPORT_DEFAULTS;";
+
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
+	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+
+	return_code = sqlite3_step(sqlite_statement);
+
+	if (return_code != SQLITE_ROW)
+	{
+		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
+	}
+
+	voltage = sqlite3_column_double(sqlite_statement, 1);
+	spherical_aberration = sqlite3_column_double(sqlite_statement, 2);
+	pixel_size = sqlite3_column_double(sqlite_statement, 3);
+	sqlite3_finalize(sqlite_statement);
+}
+
+
 void Database::Close()
 {
 	if (is_open == true)
 	{
+		ExecuteSQL("PRAGMA optimize");
 		int return_code = sqlite3_close(sqlite_database);
 		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL close error, return code : %i\n", return_code );
 	}
@@ -686,7 +825,7 @@ void Database::Close()
 
 void Database::BeginBatchInsert(const char *table_name, int number_of_columns, ...)
 {
-	MyDebugAssertTrue(is_open == true, "da1414 tabase not open!");
+	MyDebugAssertTrue(is_open == true, "database not open!");
 	MyDebugAssertTrue(in_batch_insert == false, "Starting batch insert but already in batch insert mode");
 	MyDebugAssertTrue(in_batch_select == false, "Starting batch insert but already in batch select mode");
 

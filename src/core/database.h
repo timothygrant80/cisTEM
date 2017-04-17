@@ -19,6 +19,8 @@ public :
 
 	void Close();
 
+	wxString ReturnFilename() {return database_file.GetFullPath();};
+
 	bool CreateNewDatabase(wxFileName database_file);
 	bool Open(wxFileName file_to_open);
 
@@ -37,10 +39,12 @@ public :
 	bool GetFromBatchSelect(const char *column_format, ...);
 	void EndBatchSelect();
 
-	bool ExecuteSQL(const char *command);
+	int ExecuteSQL(const char *command);
 	int ReturnSingleIntFromSelectCommand(wxString select_command);
 	long ReturnSingleLongFromSelectCommand(wxString select_command);
 	double ReturnSingleDoubleFromSelectCommand(wxString select_command);
+
+	bool DoesTableExist(wxString table_name);
 
 	// Get various id numbers and counts
 
@@ -68,6 +72,9 @@ public :
 	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
 	void GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs);
 	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
+
+	void GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale);
+	void GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size);
 
 	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float&amplitude_contrast);
 
@@ -136,6 +143,9 @@ public :
 
 	bool CreateClassificationSelectionListTable() {return CreateTable("CLASSIFICATION_SELECTION_LIST", "Ptlllii", "SELECTION_ID", "SELECTION_NAME", "CREATION_DATE", "REFINEMENT_PACKAGE_ID", "CLASSIFICATION_ID", "NUMBER_OF_CLASSES", "NUMBER_OF_SELECTIONS");};
 	bool CreateClassificationSelectionTable(const long selection_id) {return CreateTable(wxString::Format("CLASSIFICATION_SELECTION_%li", selection_id), "pl", "SELECTION_NUMBER", "CLASS_AVERAGE_NUMBER");};
+
+	bool CreateMovieImportDefaultsTable() {return CreateTable("MOVIE_IMPORT_DEFAULTS", "prrrritirirrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE" );};
+	bool CreateImageImportDefaultsTable() {return CreateTable("IMAGE_IMPORT_DEFAULTS", "prrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE");};
 
 	void DoVacuum() {ExecuteSQL("VACUUM");}
 

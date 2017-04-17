@@ -8,6 +8,9 @@ ShowCTFResultsPanel::ShowCTFResultsPanel(wxWindow* parent, wxWindowID id, const 
 	Bind(wxEVT_COMBOBOX, &ShowCTFResultsPanel::OnFitTypeRadioButton, this);
 
 	CTF2DResultsPanel->font_size_multiplier = 1.5;
+	CTF2DResultsPanel->use_auto_contrast = false;
+
+	ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
 
 
 
@@ -24,7 +27,7 @@ void ShowCTFResultsPanel::OnFitTypeRadioButton(wxCommandEvent& event)
 {
 	Freeze();
 
-	if (FitType2DRadioButton->GetValue() == true)
+/*	if (FitType2DRadioButton->GetValue() == true)
 	{
 		CTF2DResultsPanel->Show(true);
 		CTFPlotPanel->Show(false);
@@ -36,7 +39,7 @@ void ShowCTFResultsPanel::OnFitTypeRadioButton(wxCommandEvent& event)
 		CTFPlotPanel->Show(true);
 		Layout();
 	}
-
+*/
 	Thaw();
 }
 
@@ -47,48 +50,35 @@ void ShowCTFResultsPanel::Clear()
 	Refresh();
 }
 
-void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res)
+void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, wxString ImageFile)
 {
 	Image result_image;
 	wxString avrot_filename;
 
 	wxFileName image_filename = diagnostic_filename;
 
-	CTFPlotPanel->Clear();
-
-	CTF2DResultsPanel->title_text = wxString::Format(wxT("%s\n"),image_filename.GetFullName());
-
-	if (find_additional_phase_shift == false) // find phase shift
-	{
-		if (alias_res == 0.0)
-		{
-			CTF2DResultsPanel->panel_text = wxString::Format(wxT("     Defocus 1 :\t%i Å \n     Defocus 2 :\t%i Å \n     Angle :\t\t%.2f ° \n     Score :\t\t%.3f\n     Fit Res. :    \t%.2f Å \n     Alias. Res. :\tNone "), myroundint(defocus1), myroundint(defocus2), defocus_angle, score, fit_res);
-			CTFPlotPanel->title->SetName(wxString::Format(wxT("%s\nDefocus 1: %iÅ, Defocus 2: %iÅ, Angle: %.2f°, Score: %.3f, Fit Res: %.2fÅ, Alias Res: None"), image_filename.GetFullName(), myroundint(defocus1), myroundint(defocus2), defocus_angle, score, fit_res));
-		}
-		else
-		{
-			CTF2DResultsPanel->panel_text = wxString::Format(wxT("     Defocus 1 :\t%i Å \n     Defocus 2 :\t%i Å \n     Angle :\t\t%.2f ° \n     Score :\t\t%.3f\n     Fit Res. :    \t%.2f Å \n     Alias. Res. :\t%.2f Å "), myroundint(defocus1), myroundint(defocus2), defocus_angle, score, fit_res, alias_res );
-			CTFPlotPanel->title->SetName(wxString::Format(wxT("%s\nDefocus 1: %iÅ, Defocus 2: %iÅ, Angle: %.2f°, Score: %.3f, Fit Res: %.2fÅ, Alias Res: %.2fÅ"), image_filename.GetFullName(), myroundint(defocus1), myroundint(defocus2), defocus_angle, score, fit_res, alias_res));
-		}
-	}
-	else
-	{
-		if (alias_res == 0.0)
-		{
-			CTF2DResultsPanel->panel_text = wxString::Format(wxT("     Defocus 1 :\t%i Å \n     Defocus 2 :\t%i Å \n     Angle :\t\t%.2f ° \n     Phase Shift :\t%.2f rad \n     Score :\t\t%.3f\n     Fit Res. :    \t%.2f Å \n     Alias. Res. :\tNone "), myroundint(defocus1), myroundint(defocus2), defocus_angle, phase_shift, score, fit_res);
-			CTFPlotPanel->title->SetName(wxString::Format(wxT("%s\nDefocus 1: %iÅ, Defocus 2: %iÅ, Angle: %.2f°, Phase Shift: %.2frad, Score: %.3f, Fit Res: %.2fÅ, Alias Res: None"), image_filename.GetFullName(), myroundint(defocus1), myroundint(defocus2), defocus_angle, phase_shift, score, fit_res));
-		}
-		else
-		{
-			CTF2DResultsPanel->panel_text = wxString::Format(wxT("     Defocus 1 :\t%i Å \n     Defocus 2 :\t%i Å \n     Angle :\t\t%.2f ° \n     Phase Shift :\t%.2f rad \n     Score :\t\t%.3f\n     Fit Res. :    \t%.2f Å \n     Alias. Res. :\tNone "), myroundint(defocus1), myroundint(defocus2), defocus_angle, phase_shift, score, fit_res, alias_res);
-			CTFPlotPanel->title->SetName(wxString::Format(wxT("%s\nDefocus 1: %iÅ, Defocus 2: %iÅ, Angle: %.2f°, Phase Shift: %.2frad, Score: %.3f, Fit Res: %.2fÅ, Alias Res: None"), image_filename.GetFullName(), myroundint(defocus1), myroundint(defocus2), defocus_angle, phase_shift, score, fit_res, alias_res));
-		}
-	}
-
 	Freeze();
 
-	result_image.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString(), 1); // diagnostic image..
-	ConvertImageToBitmap(&result_image, &CTF2DResultsPanel->PanelBitmap, true);
+	CTFPlotPanel->Clear();
+
+	//CTF2DResultsPanel->title_text = wxString::Format(wxT("%s\n"),image_filename.GetFullName());
+	Defocus1Text->SetLabel(wxString::Format(wxT("%i Å"), myroundint(defocus1)));
+	Defocus2Text->SetLabel(wxString::Format(wxT("%i Å"), myroundint(defocus2)));
+	AngleText->SetLabel(wxString::Format(wxT("%.2f °"), defocus_angle));
+
+	if (find_additional_phase_shift == true) PhaseShiftText->SetLabel(wxString::Format(wxT("%.2f °"), rad_2_deg(phase_shift)));
+	else  PhaseShiftText->SetLabel(wxT("0.00 °"));
+
+	ScoreText->SetLabel(wxString::Format(wxT("%.3f"), score));
+	FitResText->SetLabel(wxString::Format(wxT("%.2f Å"), fit_res));
+
+	if (alias_res == 0.0) AliasResText->SetLabel("None");
+	else AliasResText->SetLabel(wxString::Format(wxT("%.2f Å"), alias_res));
+
+
+
+
+	CTF2DResultsPanel->PanelImage.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString(), 1);
 	CTF2DResultsPanel->should_show = true;
 	CTF2DResultsPanel->Refresh();
 
@@ -110,12 +100,41 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
 	ctf_plot_file.ReadLine(ctf_fit);
 	ctf_plot_file.ReadLine(quality_of_fit);
 
+	// smooth the amplitude spectra
+
+	Curve amplitude_plot;
+
 	for (int counter = 0; counter < number_of_points; counter++)
 	{
-		CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_spectrum[counter]);
+		amplitude_plot.AddPoint(spatial_frequency[counter], amplitude_spectrum[counter]);
+	}
+
+	amplitude_plot.FitSavitzkyGolayToData(7, 3);
+
+
+
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		//CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_spectrum[counter]);
+		CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_plot.savitzky_golay_fit[counter]);
 	}
 
 	CTFPlotPanel->Draw();
+
+	ImageFileText->SetLabel(wxString::Format("(%s)", wxFileName(ImageFile).GetFullName()));
+
+	wxString small_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();;
+	small_image_filename += wxString::Format("/Scaled/%s", wxFileName(ImageFile).GetFullName());
+
+	if (DoesFileExist(small_image_filename) == true)
+	{
+		ImageDisplayPanel->ChangeFile(small_image_filename, "");
+	}
+	else
+	if (DoesFileExist(ImageFile) == true)
+	{
+		ImageDisplayPanel->ChangeFile(ImageFile, "");
+	}
 
 	delete [] spatial_frequency;
 	delete [] ctf_fit;

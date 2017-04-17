@@ -26,7 +26,7 @@ CTF1DPanel : public wxPanel
 	std::vector<double> current_amplitude_spectrum;
 
 	mpWindow        *current_plot_window;
-	mpBottomInfoLegend    *legend;
+	mpTopInfoLegend    *legend;
 	mpTitle *title;
 
 	mpFXYVector* current_ctf_fit_vector_layer;

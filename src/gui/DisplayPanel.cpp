@@ -813,8 +813,9 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 	else
 	{
 		my_notebook->Freeze();
-		my_notebook->AddPage(my_panel, wanted_tab_title, true);
+		my_notebook->AddPage(my_panel, wanted_tab_title, false);
 		my_notebook->Thaw();
+		my_notebook->SetSelection(my_notebook->GetPageCount() - 1);
 	}
 
 	// we have switched focus so update toolbar..
@@ -998,11 +999,13 @@ void DisplayNotebook::ChildGotFocus(wxChildFocusEvent& event)
 {
 	//wxPrintf("Child focus\n");
 	parent_display_panel->ChangeFocusToPanel();
+	event.Skip();
 }
 
 void DisplayNotebook::GotFocus(wxFocusEvent& event)
 {
 	parent_display_panel->ChangeFocusToPanel();
+	event.Skip();
 }
 
 
@@ -1246,11 +1249,6 @@ void DisplayNotebookPanel::OnKeyDown( wxKeyEvent& event)
 
 	wxCommandEvent null_event;
 
-	if (current_keycode == WXK_TAB)
-	{
-		event.Skip();
-	}
-	else
 	if (current_keycode == WXK_LEFT)
 	{
 		if ((parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
@@ -1300,6 +1298,7 @@ void DisplayNotebookPanel::OnKeyDown( wxKeyEvent& event)
 	{
 		parent_display_panel->OnNext(null_event);
 	}
+	else event.Skip();
 }
 
 void DisplayNotebookPanel::OnKeyUp( wxKeyEvent& event)
@@ -1326,8 +1325,8 @@ void DisplayNotebookPanel::OnKeyUp( wxKeyEvent& event)
 		current_panel->Update();
 	}
 
-
-	event.Skip();*/
+*/
+	event.Skip();
 
 }
 
@@ -1484,7 +1483,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event)
 		parent_display_panel->popup_exists = true;
 	}
 
-
+	event.Skip();
 
 }
 
@@ -2721,6 +2720,8 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 			}
 		}
 	}
+
+	evt.Skip();
 }
 
 DisplayPopup::DisplayPopup(wxWindow * parent, int flags)
@@ -2776,7 +2777,7 @@ void DisplayPopup::OnPaint(wxPaintEvent& evt )
 		dc.CrossHair(128, 128);
 	}
 
-	//evt.Skip();
+	evt.Skip();
 
 }
 

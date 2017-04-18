@@ -7934,23 +7934,29 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 		{
 			for (i = 0; i < logical_x_dimension; i++)
 			{
-				if (real_values[pixel_counter] >= threshold || ! apply_threshold)
+				temp_float = real_values[pixel_counter];
+				if (apply_threshold)
 				{
-					temp_float = (i - physical_address_of_box_center_x);
-					if (temp_float > 0.0) sum_xd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
-					temp_float = (j - physical_address_of_box_center_y);
-					if (temp_float > 0.0) sum_yd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
-					temp_float = (k - physical_address_of_box_center_z);
-					if (temp_float > 0.0) sum_zd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
-					sum_d += real_values[pixel_counter];
+					temp_float = std::max(real_values[pixel_counter] - threshold, 0.0f);
 				}
+//				temp_float = (i - physical_address_of_box_center_x);
+//				if (fabsf(temp_float) > 0.0) sum_xd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+//				temp_float = (j - physical_address_of_box_center_y);
+//				if (fabsf(temp_float) > 0.0) sum_yd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+//				temp_float = (k - physical_address_of_box_center_z);
+//				if (fabsf(temp_float) > 0.0) sum_zd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+				sum_xd += (i - physical_address_of_box_center_x) * temp_float;
+				sum_yd += (j - physical_address_of_box_center_y) * temp_float;
+				sum_zd += (k - physical_address_of_box_center_z) * temp_float;
+				sum_d += temp_float;
+//				wxPrintf("%g %g %g %g\n", temp_float, powf(fabsf(temp_float), 0.66), real_values[pixel_counter], sum_xd);
 				pixel_counter++;
 			}
 			pixel_counter += padding_jump_value;
 		}
 	}
 
-	if (sum_d > 0.0)
+	if (sum_d != 0.0)
 	{
 		center_of_mass.x = sum_xd / sum_d;
 		center_of_mass.y = sum_yd / sum_d;

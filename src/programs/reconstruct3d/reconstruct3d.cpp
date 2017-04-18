@@ -201,7 +201,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float psi_step;
 //	float psi_max;
 	float psi_start;
-	bool rotational_blurring = false;
+	bool rotational_blurring = true;
 	wxDateTime my_time_in;
 
 	MRCFile input_file(input_particle_stack.ToStdString(), false);
@@ -442,15 +442,16 @@ bool Reconstruct3DApp::DoCalculation()
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		input_3d.density_map.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, false, true, 0.0);
 		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
-		if (average_density_max < 0.1 || average_density_max > 25)
+/*		if (average_density_max < 0.1 || average_density_max > 25)
 		{
 
 			SendInfo(wxString::Format("Input 3D densities out of range (average max = %g). Rescaling...", average_density_max));
 			input_3d.density_map.MultiplyByConstant(0.1 / average_density_max);
 			average_density_max = 0.1;
-		}
+		} */
 		// Threshold map to suppress negative noise
 		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
+//		input_3d.density_map.SetMinimumValue(input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		if (padding != 1.0)
 		{
 			input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
@@ -466,7 +467,7 @@ bool Reconstruct3DApp::DoCalculation()
 			padded_image.Allocate(padded_box_size, padded_box_size, true);
 
 			psi_step = 2.0 * rad_2_deg(pixel_size / outer_mask_radius);
-			if (psi_step < 15.0) psi_step = 15.0;
+			if (psi_step < 5.0) psi_step = 15.0;
 			number_of_rotations = int(360.0 / psi_step + 0.5);
 			if (number_of_rotations % 2 == 0) number_of_rotations--;
 			psi_step = 360.0 / number_of_rotations;

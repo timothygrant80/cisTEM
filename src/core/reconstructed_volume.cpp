@@ -483,27 +483,32 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	if (inner_mask_radius == 0.0 && volume_fraction < 0.5)
 	{
-		InitWithReconstruct3D(reconstruction, original_pixel_size);
-		for (pixel_counter = 0; pixel_counter < density_map.real_memory_allocated; pixel_counter++) density_map.real_values[pixel_counter] += density_map_1.real_values[pixel_counter] + density_map_1.real_values[pixel_counter];
-		density_map.CosineMask(pixel_size / 40.0, pixel_size / 10.0);
-		density_map_1.BackwardFFT();
-		density_map_2.BackwardFFT();
-		density_map.BackwardFFT();
-		mask_volume_in_voxels = density_map_1.ApplyMask(density_map, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
-		mask_volume_in_voxels = density_map_2.ApplyMask(density_map, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
-		density_map_1.ForwardFFT();
-		density_map_2.ForwardFFT();
-		statistics.CalculateFSC(density_map_1, density_map_2, true);
-		density_map_1.Deallocate();
-		density_map_2.Deallocate();
+		Image *temp_image = new Image;
+		temp_image->Allocate(density_map_1.logical_x_dimension, density_map_1.logical_y_dimension, density_map_1.logical_z_dimension, false);
+		for (pixel_counter = 0; pixel_counter < temp_image->real_memory_allocated; pixel_counter++) temp_image->real_values[pixel_counter] += density_map_1.real_values[pixel_counter] + density_map_2.real_values[pixel_counter];
+		temp_image->CosineMask(pixel_size / 40.0, pixel_size / 10.0);
+		temp_image->BackwardFFT();
+		temp_image->CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+		temp_image->SetMinimumValue(0.0);
+		temp_image->SetMaximumValue(1.0);
+		temp_float = 1.2 * temp_image->ReturnAverageOfRealValues() * temp_image->number_of_real_space_pixels;
+		if (temp_float > kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3))
+		{
+			density_map_1.BackwardFFT();
+			density_map_2.BackwardFFT();
+			mask_volume_in_voxels = density_map_1.ApplyMask(*temp_image, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
+			mask_volume_in_voxels = density_map_2.ApplyMask(*temp_image, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
+			density_map_1.ForwardFFT();
+			density_map_2.ForwardFFT();
+//			wxPrintf("Tight mask applied %g %g %g %g", temp_float, kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3), molecular_mass_in_kDa, pixel_size);
+		}
+//		else wxPrintf("Tight mask not applied %g %g", temp_float, kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3));
+		delete temp_image;
 	}
-	else
-	{
-		statistics.CalculateFSC(density_map_1, density_map_2, true);
-		density_map_1.Deallocate();
-		density_map_2.Deallocate();
-		InitWithReconstruct3D(reconstruction, original_pixel_size);
-	}
+	statistics.CalculateFSC(density_map_1, density_map_2, true);
+	density_map_1.Deallocate();
+	density_map_2.Deallocate();
+	InitWithReconstruct3D(reconstruction, original_pixel_size);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
 	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;
@@ -556,14 +561,14 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	if (center_mass)
 	{
 		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();
+//		temp_float = density_map.ReturnAverageOfRealValues();
 		center_of_mass = density_map.CenterOfMass(temp_float, true);
 		symmetry_type = symmetry_symbol.Capitalize()[0];
 		if (symmetry_type == 'C' && center_of_mass.value > 0.0)
 		{
 			symmetry_symbol.Mid(1).ToLong(&symmetry_number);
-			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(density_map.physical_address_of_box_center_x - int(center_of_mass.x),
-					density_map.physical_address_of_box_center_y - int(center_of_mass.y), density_map.physical_address_of_box_center_z - int(center_of_mass.z));
-			else density_map.RealSpaceIntegerShift(0, 0, density_map.physical_address_of_box_center_z - int(center_of_mass.z));
+			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(- int(center_of_mass.x), - int(center_of_mass.y), - int(center_of_mass.z));
+			else density_map.RealSpaceIntegerShift(0, 0, - int(center_of_mass.z));
 		}
 	}
 	output_file.OpenFile(output_volume.ToStdString(), true);

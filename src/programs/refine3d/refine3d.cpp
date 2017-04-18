@@ -494,6 +494,7 @@ bool Refine3DApp::DoCalculation()
 	{
 		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
 		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
+//		input_3d.density_map.SetMinimumValue(0.0);
 	}
 
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);

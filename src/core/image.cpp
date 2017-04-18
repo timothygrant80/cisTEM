@@ -7921,6 +7921,7 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 
 	int i, j, k;
 	long pixel_counter = 0;
+	float temp_float;
 	double sum_xd = 0.0;
 	double sum_yd = 0.0;
 	double sum_zd = 0.0;
@@ -7934,10 +7935,15 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 			for (i = 0; i < logical_x_dimension; i++)
 			{
 				if (real_values[pixel_counter] >= threshold || ! apply_threshold)
-				sum_xd += i * real_values[pixel_counter];
-				sum_yd += j * real_values[pixel_counter];
-				sum_zd += k * real_values[pixel_counter];
-				sum_d += real_values[pixel_counter];
+				{
+					temp_float = (i - physical_address_of_box_center_x);
+					if (temp_float > 0.0) sum_xd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+					temp_float = (j - physical_address_of_box_center_y);
+					if (temp_float > 0.0) sum_yd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+					temp_float = (k - physical_address_of_box_center_z);
+					if (temp_float > 0.0) sum_zd += temp_float / powf(fabsf(temp_float), 0.66) * real_values[pixel_counter];
+					sum_d += real_values[pixel_counter];
+				}
 				pixel_counter++;
 			}
 			pixel_counter += padding_jump_value;

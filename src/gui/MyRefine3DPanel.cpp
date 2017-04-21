@@ -1127,6 +1127,10 @@ void RefinementManager::BeginRefinementCycle()
 	current_reference_filenames.Clear();
 	current_reference_filenames.Add(blank_string, number_of_classes);
 
+	// check scratch directory.
+	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/", wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/");
+
 
 
 	// get the data..
@@ -1980,11 +1984,12 @@ void RefinementManager::ProcessAllJobsFinished()
 
 	if (running_job_type == REFINEMENT)
 	{
-		//wxPrintf("Refinement has finished\n");
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
-		//wxPrintf("Setting up reconstruction\n");
+
+		// calculate occupancies..
+		UpdateOccupancies(output_refinement);
+
 		SetupReconstructionJob();
-		//wxPrintf("Running reconstruction\n");
 		RunReconstructionJob();
 
 	}
@@ -2056,122 +2061,7 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
 
-		// Now calculate the occupancies..
-		wxPrintf("Calculating Occupancies\n");
-		if (output_refinement->number_of_classes > 1)
-		{
-			int class_counter;
-			int particle_counter;
-			int point_counter;
-
-			float sum_probabilities;
-			float occupancy;
-			float max_logp;
-			float average_occupancies[output_refinement->number_of_classes];
-			float sum_part_ssnr;
-			float sum_ave_occ;
-			float current_part_ssnr;
-
-
-			// calculate average occupancies
-			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-			{
-				average_occupancies[class_counter] = 0.0;
-
-				for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-				{
-					average_occupancies[class_counter] += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-				}
-
-				average_occupancies[class_counter] /= float(output_refinement->number_of_particles);
-			}
-
-
-			for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-			{
-				max_logp = -FLT_MAX;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-				}
-
-
-				sum_probabilities = 0.0;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (max_logp - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-					{
-						sum_probabilities += exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
-					}
-				}
-
-				output_refinement->average_sigma = 0.0;
-
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (max_logp -  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-					{
-						occupancy = exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
-					}
-					else
-					{
-						occupancy = 0.0;
-					}
-
-					occupancy = 1. * (occupancy - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
-					output_refinement->average_sigma +=  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
-				}
-
-			}
-
-			// Now work out the proper part_ssnr
-
-			sum_ave_occ = 0.0;
-
-			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-			{
-				sum_ave_occ += average_occupancies[class_counter];
-
-			}
-
-			//wxPrintf("For class %i there are %i points", class_counter, output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points);
-
-			for (point_counter = 0; point_counter < output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
-			{
-				sum_part_ssnr = 0;
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					sum_part_ssnr += output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
-				}
-
-				current_part_ssnr = sum_part_ssnr / sum_ave_occ;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
-				}
-
-			}
-
-
-
-		}
-		else
-		{
-			output_refinement->average_sigma = 0.0;
-			for (long particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-			{
-				output_refinement->average_sigma += output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
-			}
-
-			output_refinement->average_sigma /= float (output_refinement->number_of_particles);
-		}
-
-
+		UpdatePSSNR(output_refinement);
 
 		//wxPrintf("Writing to databse\n");
 		// write the refinement to the database
@@ -2251,6 +2141,127 @@ void RefinementManager::ProcessAllJobsFinished()
 		CycleRefinement();
 	}
 
+}
+
+void RefinementManager::UpdatePSSNR(Refinement *refinement_to_update)
+{
+	if (refinement_to_update->number_of_classes > 1)
+	{
+		float average_occupancies[refinement_to_update->number_of_classes];
+		float sum_ave_occ = 0.0f;
+		int class_counter;
+		long particle_counter;
+		int point_counter;
+		float sum_part_ssnr;
+		float current_part_ssnr;
+
+
+		for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+		{
+			average_occupancies[class_counter] = 0.0f;
+
+			for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
+			{
+				average_occupancies[class_counter] += refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+			}
+
+			average_occupancies[class_counter] /= float(refinement_to_update->number_of_particles);
+			sum_ave_occ += average_occupancies[class_counter];
+		}
+
+		for (point_counter = 0; point_counter < refinement_to_update->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
+		{
+			sum_part_ssnr = 0;
+			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+			{
+				sum_part_ssnr += refinement_to_update->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
+			}
+
+			current_part_ssnr = sum_part_ssnr / sum_ave_occ;
+
+			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+			{
+				refinement_to_update->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
+			}
+
+		}
+	}
+}
+
+void RefinementManager::UpdateOccupancies(Refinement *refinement_to_update)
+{
+	if (refinement_to_update->number_of_classes > 1)
+	{
+		int class_counter;
+		int particle_counter;
+		int point_counter;
+
+		float sum_probabilities;
+		float occupancy;
+		float max_logp;
+		float average_occupancies[refinement_to_update->number_of_classes];
+
+		// calculate average occupancies
+		for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+		{
+			average_occupancies[class_counter] = 0.0;
+
+			for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
+			{
+				average_occupancies[class_counter] += refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+			}
+
+			average_occupancies[class_counter] /= float(refinement_to_update->number_of_particles);
+		}
+
+		for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
+		{
+			max_logp = -FLT_MAX;
+
+			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+			{
+				if (refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
+			}
+
+			sum_probabilities = 0.0;
+
+			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+			{
+				if (max_logp - refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
+				{
+					sum_probabilities += exp(refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
+				}
+			}
+
+			refinement_to_update->average_sigma = 0.0;
+
+			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
+			{
+				if (max_logp -  refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
+				{
+					occupancy = exp(refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
+				}
+				else
+				{
+					occupancy = 0.0;
+				}
+
+				//occupancy = 1. * (occupancy - refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+				refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
+				refinement_to_update->average_sigma +=  refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
+			}
+		}
+	}
+	else
+	{
+		refinement_to_update->average_sigma = 0.0;
+		for (long particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
+		{
+			refinement_to_update->average_sigma += refinement_to_update->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
+		}
+
+		refinement_to_update->average_sigma /= float (output_refinement->number_of_particles);
+	}
 }
 
 void RefinementManager::DoMasking()

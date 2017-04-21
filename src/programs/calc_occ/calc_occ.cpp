@@ -56,8 +56,8 @@ bool CalcOccApp::DoCalculation()
 	float		average_sigma;
 	float		sum_probabilities;
 	float		occupancy;
-	wxFileName	parameter_file_name = wxFileName::FileName(input_file_seed);
-	wxString	extension = parameter_file_name.GetExt();
+	//wxFileName	parameter_file_name = input_file_seed;
+	wxString	extension = wxFileName(input_file_seed).GetExt();
 	wxString	parameter_file;
 
 	// count parameter files
@@ -98,7 +98,7 @@ bool CalcOccApp::DoCalculation()
 		particle_position = 0.0;
 		for (j = 0; j < input_parameter_files[i].number_of_lines; j++)
 		{
-			average_occupancies[i] += input_parameter_files[i].ReadParameter(j, 11);
+			average_occupancies[i] += input_parameter_files[i].ReadParameter(j, 12);
 			if (particle_position != input_parameter_files[i].ReadParameter(j, 0))
 			{
 				count++;
@@ -120,34 +120,34 @@ bool CalcOccApp::DoCalculation()
 				MyPrintWithDetails("Error: Inconsistent particle positions in line %i\n", j + 1);
 				abort();
 			}
-			max_logp = std::max(max_logp,input_parameter_files[i].ReadParameter(j, 12));
+			max_logp = std::max(max_logp,input_parameter_files[i].ReadParameter(j, 13));
 		}
 		sum_probabilities = 0.0;
 		for (i = 0; i < number_of_files; i++)
 		{
-			if (max_logp - input_parameter_files[i].ReadParameter(j, 12) < 10.0)
+			if (max_logp - input_parameter_files[i].ReadParameter(j, 13) < 10.0)
 			{
-				sum_probabilities += exp(input_parameter_files[i].ReadParameter(j, 12) - max_logp) * average_occupancies[i];
+				sum_probabilities += exp(input_parameter_files[i].ReadParameter(j, 13) - max_logp) * average_occupancies[i];
 			}
 		}
 		average_sigma = 0.0;
 		for (i = 0; i < number_of_files; i++)
 		{
-			if (max_logp - input_parameter_files[i].ReadParameter(j, 12) < 10.0)
+			if (max_logp - input_parameter_files[i].ReadParameter(j, 13) < 10.0)
 			{
-				occupancy = exp(input_parameter_files[i].ReadParameter(j, 12) - max_logp) * average_occupancies[i] / sum_probabilities *100.0;
+				occupancy = exp(input_parameter_files[i].ReadParameter(j, 13) - max_logp) * average_occupancies[i] / sum_probabilities *100.0;
 			}
 			else
 			{
 				occupancy = 0.0;
 			}
-			occupancy = occupancy_change_multiplier * (occupancy - input_parameter_files[i].ReadParameter(j, 11)) + input_parameter_files[i].ReadParameter(j, 11);
-			input_parameter_files[i].UpdateParameter(j, 11, occupancy);
-			average_sigma += input_parameter_files[i].ReadParameter(j, 13) * occupancy / 100.0;
+			occupancy = occupancy_change_multiplier * (occupancy - input_parameter_files[i].ReadParameter(j, 12)) + input_parameter_files[i].ReadParameter(j, 12);
+			input_parameter_files[i].UpdateParameter(j, 12, occupancy);
+			average_sigma += input_parameter_files[i].ReadParameter(j, 14) * occupancy / 100.0;
 		}
 		for (i = 0; i < number_of_files; i++)
 		{
-			input_parameter_files[i].UpdateParameter(j, 13, average_sigma);
+			input_parameter_files[i].UpdateParameter(j, 14, average_sigma);
 		}
 	}
 

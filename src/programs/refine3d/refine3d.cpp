@@ -191,7 +191,7 @@ void Refine3DApp::DoInteractiveUserInput()
 	delete my_input;
 
 	int current_class = 0;
-	my_current_job.Reset(51);
+	my_current_job.Reset(50);
 	my_current_job.ManualSetArguments("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbbi",	input_particle_images.ToUTF8().data(),
 																								input_parameter_file.ToUTF8().data(),
 																								input_reconstruction.ToUTF8().data(),
@@ -273,7 +273,7 @@ bool Refine3DApp::DoCalculation()
 	bool	 exclude_blank_edges				= my_current_job.arguments[47].ReturnBoolArgument();
 	bool	 normalize_input_3d					= my_current_job.arguments[48].ReturnBoolArgument();
 //	bool	 threshold_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[50].ReturnIntegerArgument(); // global - but ignore.
+	int		 current_class						= my_current_job.arguments[49].ReturnIntegerArgument(); // global - but ignore.
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts

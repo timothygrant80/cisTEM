@@ -126,11 +126,12 @@ bool Project3DApp::DoCalculation()
 
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, my_symmetry);
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
-	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
+//	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	if (padding != 1.0)
 	{
 		input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	}
+	input_3d.mask_radius = mask_radius;
 	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size * binning_factor);
 	projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	final_image.Allocate(input_file.ReturnXSize() / binning_factor, input_file.ReturnYSize() / binning_factor, true);

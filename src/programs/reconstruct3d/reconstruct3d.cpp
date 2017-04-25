@@ -194,7 +194,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float average;
 	float original_pixel_size = pixel_size;
 	float outer_mask_in_pixels = outer_mask_radius / pixel_size;
-	float average_density_max;
+//	float average_density_max;
 	float percentage;
 	float ssq_X;
 	float psi;
@@ -413,7 +413,7 @@ bool Reconstruct3DApp::DoCalculation()
 			variance = current_ctf_image.ReturnVarianceOfRealValues(outer_mask_radius / original_pixel_size, 0.0, 0.0, 0.0, true);
 			if (variance == 0.0) continue;
 			current_ctf_image.MultiplyByConstant(1.0 / sqrtf(variance));
-			current_ctf_image.CosineMask(outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size, true);
+			current_ctf_image.CosineMask(outer_mask_in_pixels, mask_falloff / original_pixel_size, true);
 			current_ctf_image.ForwardFFT();
 			temp_image.CopyFrom(&current_ctf_image);
 			temp_image.ConjugateMultiplyPixelWise(current_ctf_image);
@@ -433,6 +433,7 @@ bool Reconstruct3DApp::DoCalculation()
 
 	if (use_input_reconstruction)
 	{
+
 		input_3d.InitWithDimensions(original_box_size, original_box_size, original_box_size, pixel_size, my_symmetry);
 		projection_image.Allocate(original_box_size, original_box_size, false);
 		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
@@ -441,7 +442,8 @@ bool Reconstruct3DApp::DoCalculation()
 //		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		input_3d.density_map.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, false, true, 0.0);
-		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
+		for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
+//		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
 /*		if (average_density_max < 0.1 || average_density_max > 25)
 		{
 
@@ -450,13 +452,15 @@ bool Reconstruct3DApp::DoCalculation()
 			average_density_max = 0.1;
 		} */
 		// Threshold map to suppress negative noise
-		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
+//		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
 //		input_3d.density_map.SetMinimumValue(input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		if (padding != 1.0)
 		{
 			input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 			padded_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 		}
+		input_3d.mask_radius = outer_mask_radius;
+		if (input_3d.mask_radius > input_3d.density_map.physical_address_of_box_center_x * pixel_size- mask_falloff) input_3d.mask_radius = input_3d.density_map.physical_address_of_box_center_x * pixel_size- mask_falloff;
 		input_3d.PrepareForProjections(0.0, resolution_limit_ref, false, false);
 		// Multiply by binning_factor to scale reference to be compatible with scaled binned image (see below)
 		if (binning_factor != 1.0) input_3d.density_map.MultiplyByConstant(binning_factor);

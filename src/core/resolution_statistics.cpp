@@ -521,7 +521,7 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 	}
 
 	// Set value at i = 0 to 8 * value at i = 1 to allow reconstructions with non-zero offset
-//	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
+	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
 
 	delete [] sum_double;
 	delete [] sum_int;

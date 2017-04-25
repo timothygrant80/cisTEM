@@ -64,6 +64,7 @@ ReconstructedVolume & ReconstructedVolume::operator = (const ReconstructedVolume
 
 		mask_volume_in_voxels = other_volume->mask_volume_in_voxels;
 		molecular_mass_in_kDa = other_volume->molecular_mass_in_kDa;
+		mask_radius = other_volume->mask_radius;
 		has_masked_applied = other_volume->has_masked_applied;
 		was_corrected = other_volume->was_corrected;
 //		has_statistics = other_volume->has_statistics;
@@ -128,8 +129,11 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 	int fourier_size_y;
 	int fourier_size_z;
 	float binning_factor;
+	float average_density;
 
-	density_map.CorrectSinc();
+//	density_map.CorrectSinc();
+	// Correct3D amplifies noise at the edges. Maybe it is better not to do this...
+	Correct3D();
 //	if (mask_radius > 0.0) density_map.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
 //	else density_map.CosineMask(0.45 * density_map.logical_x_dimension, 10.0 / pixel_size, false, true, 0.0);
 //	density_map.CorrectSinc();
@@ -167,10 +171,21 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 		}
 	}
 
-	density_map.SwapRealSpaceQuadrants();
-
 	if (high_resolution_limit > 0.0) density_map.CosineMask(pixel_size / high_resolution_limit, pixel_size / 100.0);
 	if (low_resolution_limit > 0.0) density_map.CosineMask(pixel_size / low_resolution_limit, pixel_size / 100.0, true);
+
+/*	density_map.BackwardFFT();
+//	density_map.AddConstant(- density_map.ReturnAverageOfRealValuesOnEdges());
+
+//	average_density = density_map.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
+//	density_map.CosineMask(mask_radius / pixel_size, 10.0 / pixel_size, false, true, average_density);
+
+	density_map.CosineMask(mask_radius / pixel_size, 10.0 / pixel_size, false, true, 0.0);
+
+	average_density = density_map.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
+	density_map.SetMinimumValue(-0.3 * average_density);
+	density_map.ForwardFFT(); */
+	density_map.SwapRealSpaceQuadrants();
 }
 
 void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection,
@@ -481,7 +496,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
-	if (inner_mask_radius == 0.0 && volume_fraction < 0.5)
+/*	if (inner_mask_radius == 0.0 && volume_fraction < 0.5)
 	{
 		Image *temp_image = new Image;
 		temp_image->Allocate(density_map_1.logical_x_dimension, density_map_1.logical_y_dimension, density_map_1.logical_z_dimension, false);
@@ -504,7 +519,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 		}
 //		else wxPrintf("Tight mask not applied %g %g", temp_float, kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3));
 		delete temp_image;
-	}
+	} */
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	density_map_1.Deallocate();
 	density_map_2.Deallocate();
@@ -543,32 +558,42 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	Calculate3DOptimal(reconstruction, cropped_statistics);
 	density_map.SwapRealSpaceQuadrants();
+	// Check if cropping was used and resize reconstruction accordingly
 	if (intermediate_box_size != box_size)
 	{
 		density_map.BackwardFFT();
-		Correct3D();
+		// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
+//		Correct3D();
 		// Scaling factor needed to compensate for FFT normalization for different box sizes
 		density_map.MultiplyByConstant(float(intermediate_box_size) / float(box_size));
 		density_map.Resize(intermediate_box_size, intermediate_box_size,
 				intermediate_box_size, density_map.ReturnAverageOfRealValuesOnEdges());
 		density_map.ForwardFFT();
 	}
-	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
-	density_map.CosineMask(0.5, 1.0 / 20.0);
+	// Check if binning was used and resize reconstruction accordingly
+	if (pixel_size != original_pixel_size)
+	{
+		density_map.CosineMask(0.5 - pixel_size / 10.0, pixel_size / 5.0);
+		density_map.Resize(original_box_size, original_box_size, original_box_size);
+	}
+	else density_map.CosineMask(0.5 - original_pixel_size / 10.0, original_pixel_size / 5.0);
 	density_map.BackwardFFT();
-	if (intermediate_box_size == box_size) Correct3D();
-	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	// Need to run Correct3D is cropping was not used
+	// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
+//	if (intermediate_box_size == box_size) Correct3D();
+	// Now we have a full-size map with the final pixel size. Applying mask and center map in box...
+//	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
 	if (center_mass)
 	{
-		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();
-//		temp_float = density_map.ReturnAverageOfRealValues();
+//		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();
+		temp_float = density_map.ReturnAverageOfRealValues();
 		center_of_mass = density_map.CenterOfMass(temp_float, true);
 		symmetry_type = symmetry_symbol.Capitalize()[0];
 		if (symmetry_type == 'C' && center_of_mass.value > 0.0)
 		{
 			symmetry_symbol.Mid(1).ToLong(&symmetry_number);
-			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(- int(center_of_mass.x), - int(center_of_mass.y), - int(center_of_mass.z));
-			else density_map.RealSpaceIntegerShift(0, 0, - int(center_of_mass.z));
+			if (symmetry_number < 2) density_map.RealSpaceIntegerShift(int(center_of_mass.x), int(center_of_mass.y), int(center_of_mass.z));
+			else density_map.RealSpaceIntegerShift(0, 0, int(center_of_mass.z));
 		}
 	}
 	output_file.OpenFile(output_volume.ToStdString(), true);

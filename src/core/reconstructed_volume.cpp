@@ -129,7 +129,7 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 	int fourier_size_y;
 	int fourier_size_z;
 	float binning_factor;
-	float average_density;
+//	float average_density;
 
 //	density_map.CorrectSinc();
 	// Correct3D amplifies noise at the edges. Maybe it is better not to do this...

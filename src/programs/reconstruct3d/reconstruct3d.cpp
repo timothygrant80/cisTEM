@@ -20,7 +20,6 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	wxString	input_particle_stack;
 	wxString	input_parameter_file;
 	wxString	input_reconstruction;
-	bool		use_input_reconstruction = false;
 	wxString	output_reconstruction_1;
 	wxString	output_reconstruction_2;
 	wxString	output_reconstruction_filtered;
@@ -48,6 +47,8 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	bool		crop_images = false;
 	bool		split_even_odd = true;
 	bool		center_mass = false;
+	bool		use_input_reconstruction = false;
+	bool		threshold_input_3d = true;
 	bool		dump_arrays = false;
 	wxString	dump_file_1;
 	wxString	dump_file_2;
@@ -57,7 +58,6 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	input_particle_stack = my_input->GetFilenameFromUser("Input particle images", "The input particle image stack, containing the 2D images for each particle in the dataset", "my_particle_stack.mrc", true);
 	input_parameter_file = my_input->GetFilenameFromUser("Input Frealign parameter filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.par", true);
 	input_reconstruction = my_input->GetFilenameFromUser("Input reconstruction", "The 3D reconstruction from the previous refinement cycle to perform likelihood blurring", "my_input_reconstruction.mrc", false);
-	use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No");
 	output_reconstruction_1 = my_input->GetFilenameFromUser("Output reconstruction 1", "The first output 3D reconstruction, calculated form half the data", "my_reconstruction_1.mrc", false);
 	output_reconstruction_2 = my_input->GetFilenameFromUser("Output reconstruction 2", "The second output 3D reconstruction, calculated form half the data", "my_reconstruction_2.mrc", false);
 	output_reconstruction_filtered = my_input->GetFilenameFromUser("Output filtered reconstruction", "The final 3D reconstruction, containing from all data and optimally filtered", "my_filtered_reconstruction.mrc", false);
@@ -85,29 +85,32 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	crop_images = my_input->GetYesNoFromUser("Crop particle images", "Should the particle images be cropped to speed up computation?", "No");
 	split_even_odd = my_input->GetYesNoFromUser("FSC calculation with even/odd particles", "Should the FSC half volumes be calulated using even and odd particles?", "Yes");
 	center_mass = my_input->GetYesNoFromUser("Center mass", "Should the calculated map be centered in the box according to the center of mass (only for C symmetry)?", "No");
+	use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No");
+	threshold_input_3d = my_input->GetYesNoFromUser("Threshold input reconstruction", "Should the input reconstruction thresholded to suppress some of the background noise", "No");
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the 3D reconstruction arrays be dumped to a file for later merging with other jobs", "No");
 	dump_file_1 = my_input->GetFilenameFromUser("Output dump filename for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_1.dat", false);
 	dump_file_2 = my_input->GetFilenameFromUser("Output dump filename for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_2.dat", false);
 
 	delete my_input;
 
-	my_current_job.Reset(34);
-	my_current_job.ManualSetArguments("tttbtttttiifffffffffffffbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
-																			input_parameter_file.ToUTF8().data(),
-																			input_reconstruction.ToUTF8().data(), use_input_reconstruction,
-																			output_reconstruction_1.ToUTF8().data(),
-																			output_reconstruction_2.ToUTF8().data(),
-																			output_reconstruction_filtered.ToUTF8().data(),
-																			output_resolution_statistics.ToUTF8().data(),
-																			my_symmetry.ToUTF8().data(),
-																			first_particle, last_particle,
-																			pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
-																			molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
-																			resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
-																			smoothing_factor, padding, normalize_particles, adjust_scores,
-																			invert_contrast, exclude_blank_edges, crop_images, split_even_odd, center_mass, dump_arrays,
-																			dump_file_1.ToUTF8().data(),
-																			dump_file_2.ToUTF8().data());
+	my_current_job.Reset(35);
+	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
+																				input_parameter_file.ToUTF8().data(),
+																				input_reconstruction.ToUTF8().data(),
+																				output_reconstruction_1.ToUTF8().data(),
+																				output_reconstruction_2.ToUTF8().data(),
+																				output_reconstruction_filtered.ToUTF8().data(),
+																				output_resolution_statistics.ToUTF8().data(),
+																				my_symmetry.ToUTF8().data(),
+																				first_particle, last_particle,
+																				pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
+																				molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
+																				resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
+																				smoothing_factor, padding, normalize_particles, adjust_scores,
+																				invert_contrast, exclude_blank_edges, crop_images, split_even_odd, center_mass,
+																				use_input_reconstruction, threshold_input_3d, dump_arrays,
+																				dump_file_1.ToUTF8().data(),
+																				dump_file_2.ToUTF8().data());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -117,37 +120,38 @@ bool Reconstruct3DApp::DoCalculation()
 	wxString input_particle_stack 				= my_current_job.arguments[0].ReturnStringArgument();
 	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument();
 	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument();
-	bool	 use_input_reconstruction			= my_current_job.arguments[3].ReturnBoolArgument();
-	wxString output_reconstruction_1			= my_current_job.arguments[4].ReturnStringArgument();
-	wxString output_reconstruction_2			= my_current_job.arguments[5].ReturnStringArgument();
-	wxString output_reconstruction_filtered		= my_current_job.arguments[6].ReturnStringArgument();
-	wxString output_resolution_statistics		= my_current_job.arguments[7].ReturnStringArgument();
-	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument();
-	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument();
-	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument();
-	float 	 pixel_size							= my_current_job.arguments[11].ReturnFloatArgument();
-	float    voltage_kV							= my_current_job.arguments[12].ReturnFloatArgument();
-	float 	 spherical_aberration_mm			= my_current_job.arguments[13].ReturnFloatArgument();
-	float    amplitude_contrast					= my_current_job.arguments[14].ReturnFloatArgument();
-	float 	 molecular_mass_kDa					= my_current_job.arguments[15].ReturnFloatArgument();
-	float    inner_mask_radius					= my_current_job.arguments[16].ReturnFloatArgument();
-	float    outer_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument();
-	float    resolution_limit_rec				= my_current_job.arguments[18].ReturnFloatArgument();
-	float    resolution_limit_ref				= my_current_job.arguments[19].ReturnFloatArgument();
-	float    score_weight_conversion			= my_current_job.arguments[20].ReturnFloatArgument();
-	float    score_threshold					= my_current_job.arguments[21].ReturnFloatArgument();
-	float	 smoothing_factor					= my_current_job.arguments[22].ReturnFloatArgument();
-	float    padding							= my_current_job.arguments[23].ReturnFloatArgument();
-	bool	 normalize_particles				= my_current_job.arguments[24].ReturnBoolArgument();
-	bool	 adjust_scores						= my_current_job.arguments[25].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[26].ReturnBoolArgument();
-	bool	 exclude_blank_edges				= my_current_job.arguments[27].ReturnBoolArgument();
-	bool	 crop_images						= my_current_job.arguments[28].ReturnBoolArgument();
-	bool	 split_even_odd						= my_current_job.arguments[29].ReturnBoolArgument();
-	bool	 center_mass						= my_current_job.arguments[30].ReturnBoolArgument();
-	bool	 dump_arrays						= my_current_job.arguments[31].ReturnBoolArgument();
-	wxString dump_file_1 						= my_current_job.arguments[32].ReturnStringArgument();
-	wxString dump_file_2 						= my_current_job.arguments[33].ReturnStringArgument();
+	wxString output_reconstruction_1			= my_current_job.arguments[3].ReturnStringArgument();
+	wxString output_reconstruction_2			= my_current_job.arguments[4].ReturnStringArgument();
+	wxString output_reconstruction_filtered		= my_current_job.arguments[5].ReturnStringArgument();
+	wxString output_resolution_statistics		= my_current_job.arguments[6].ReturnStringArgument();
+	wxString my_symmetry						= my_current_job.arguments[7].ReturnStringArgument();
+	int		 first_particle						= my_current_job.arguments[8].ReturnIntegerArgument();
+	int		 last_particle						= my_current_job.arguments[9].ReturnIntegerArgument();
+	float 	 pixel_size							= my_current_job.arguments[10].ReturnFloatArgument();
+	float    voltage_kV							= my_current_job.arguments[11].ReturnFloatArgument();
+	float 	 spherical_aberration_mm			= my_current_job.arguments[12].ReturnFloatArgument();
+	float    amplitude_contrast					= my_current_job.arguments[13].ReturnFloatArgument();
+	float 	 molecular_mass_kDa					= my_current_job.arguments[14].ReturnFloatArgument();
+	float    inner_mask_radius					= my_current_job.arguments[15].ReturnFloatArgument();
+	float    outer_mask_radius					= my_current_job.arguments[16].ReturnFloatArgument();
+	float    resolution_limit_rec				= my_current_job.arguments[17].ReturnFloatArgument();
+	float    resolution_limit_ref				= my_current_job.arguments[18].ReturnFloatArgument();
+	float    score_weight_conversion			= my_current_job.arguments[19].ReturnFloatArgument();
+	float    score_threshold					= my_current_job.arguments[20].ReturnFloatArgument();
+	float	 smoothing_factor					= my_current_job.arguments[21].ReturnFloatArgument();
+	float    padding							= my_current_job.arguments[22].ReturnFloatArgument();
+	bool	 normalize_particles				= my_current_job.arguments[23].ReturnBoolArgument();
+	bool	 adjust_scores						= my_current_job.arguments[24].ReturnBoolArgument();
+	bool	 invert_contrast					= my_current_job.arguments[25].ReturnBoolArgument();
+	bool	 exclude_blank_edges				= my_current_job.arguments[26].ReturnBoolArgument();
+	bool	 crop_images						= my_current_job.arguments[27].ReturnBoolArgument();
+	bool	 split_even_odd						= my_current_job.arguments[28].ReturnBoolArgument();
+	bool	 center_mass						= my_current_job.arguments[29].ReturnBoolArgument();
+	bool	 use_input_reconstruction			= my_current_job.arguments[30].ReturnBoolArgument();
+	bool	 threshold_input_3d					= my_current_job.arguments[31].ReturnBoolArgument();
+	bool	 dump_arrays						= my_current_job.arguments[32].ReturnBoolArgument();
+	wxString dump_file_1 						= my_current_job.arguments[33].ReturnStringArgument();
+	wxString dump_file_2 						= my_current_job.arguments[34].ReturnStringArgument();
 
 	ReconstructedVolume input_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d(molecular_mass_kDa);
@@ -194,13 +198,14 @@ bool Reconstruct3DApp::DoCalculation()
 	float average;
 	float original_pixel_size = pixel_size;
 	float outer_mask_in_pixels = outer_mask_radius / pixel_size;
-//	float average_density_max;
+	float average_density_max;
 	float percentage;
 	float ssq_X;
 	float psi;
 	float psi_step;
 //	float psi_max;
 	float psi_start;
+	float symmetry_weight = 0.1;
 	bool rotational_blurring = true;
 	wxDateTime my_time_in;
 
@@ -249,7 +254,6 @@ bool Reconstruct3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C Input particle images:                   " + input_particle_stack);
 	output_statistics_file.WriteCommentLine("C Input Frealign parameter filename:       " + input_parameter_file);
 	output_statistics_file.WriteCommentLine("C Input reconstruction:                    " + input_reconstruction);
-	output_statistics_file.WriteCommentLine("C Apply likelihood blurring:               " + BoolToYesNo(use_input_reconstruction));
 	output_statistics_file.WriteCommentLine("C Output reconstruction 1:                 " + output_reconstruction_1);
 	output_statistics_file.WriteCommentLine("C Output reconstruction 2:                 " + output_reconstruction_2);
 	output_statistics_file.WriteCommentLine("C Output filtered reconstruction:          " + output_reconstruction_filtered);
@@ -276,6 +280,8 @@ bool Reconstruct3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
 	output_statistics_file.WriteCommentLine("C Crop particle images:                    " + BoolToYesNo(crop_images));
 	output_statistics_file.WriteCommentLine("C FSC with even/odd particles:             " + BoolToYesNo(split_even_odd));
+	output_statistics_file.WriteCommentLine("C Apply likelihood blurring:               " + BoolToYesNo(use_input_reconstruction));
+	output_statistics_file.WriteCommentLine("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d));
 	output_statistics_file.WriteCommentLine("C Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
 	output_statistics_file.WriteCommentLine("C Output dump filename for odd particles:  " + dump_file_1);
 	output_statistics_file.WriteCommentLine("C Output dump filename for even particles: " + dump_file_2);
@@ -442,7 +448,7 @@ bool Reconstruct3DApp::DoCalculation()
 //		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 		input_3d.density_map.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, false, true, 0.0);
-		for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
+//		for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
 //		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
 /*		if (average_density_max < 0.1 || average_density_max > 25)
 		{
@@ -451,9 +457,13 @@ bool Reconstruct3DApp::DoCalculation()
 			input_3d.density_map.MultiplyByConstant(0.1 / average_density_max);
 			average_density_max = 0.1;
 		} */
-		// Threshold map to suppress negative noise
-//		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
-//		input_3d.density_map.SetMinimumValue(input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
+		if (threshold_input_3d)
+		{
+			// Threshold map to suppress negative noise
+			average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
+			input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
+//			input_3d.density_map.SetMinimumValue(input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
+		}
 		if (padding != 1.0)
 		{
 			input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
@@ -863,11 +873,11 @@ bool Reconstruct3DApp::DoCalculation()
 
 		if (input_particle.insert_even)
 		{
-			my_reconstruction_2.InsertSliceWithCTF(input_particle);
+			my_reconstruction_2.InsertSliceWithCTF(input_particle, symmetry_weight);
 		}
 		else
 		{
-			my_reconstruction_1.InsertSliceWithCTF(input_particle);
+			my_reconstruction_1.InsertSliceWithCTF(input_particle, symmetry_weight);
 		}
 
 		if (is_running_locally == false)

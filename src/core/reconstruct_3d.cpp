@@ -112,7 +112,7 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 	center_mass = false;
 }
 
-void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
+void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symmetry_weight)
 {
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_x_dimension == logical_x_dimension && particle_to_insert.particle_image->logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
@@ -204,6 +204,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 
 		if (symmetry_matrices.number_of_matrices > 1)
 		{
+			particle_weight *= symmetry_weight;
 			for (k = 1; k < symmetry_matrices.number_of_matrices; k++)
 			{
 				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)
@@ -242,7 +243,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert)
 	}
 }
 
-void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
+void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetry_weight)
 {
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_x_dimension == logical_x_dimension && particle_to_insert.particle_image->logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(particle_to_insert.particle_image->logical_z_dimension == 1, "Error: attempting to insert 3D image into 3D reconstruction");
@@ -326,6 +327,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert)
 
 		if (symmetry_matrices.number_of_matrices > 1)
 		{
+			particle_weight *= symmetry_weight;
 			for (k = 1; k < symmetry_matrices.number_of_matrices; k++)
 			{
 				for (j = particle_to_insert.particle_image->logical_lower_bound_complex_y; j <= particle_to_insert.particle_image->logical_upper_bound_complex_y; j++)

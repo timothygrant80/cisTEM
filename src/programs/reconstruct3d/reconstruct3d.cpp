@@ -205,7 +205,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float psi_step;
 //	float psi_max;
 	float psi_start;
-	float symmetry_weight = 0.1;
+	float symmetry_weight = 1.0;
 	bool rotational_blurring = true;
 	wxDateTime my_time_in;
 

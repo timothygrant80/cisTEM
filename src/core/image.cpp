@@ -1621,7 +1621,8 @@ void Image::GenerateReferenceProjections(Image *projections, EulerSearch &parame
 //		variance = projections[i].ReturnSumOfSquares();
 		projections[i].Whiten(resolution);
 		projections[i].ApplyBFactor(effective_bfactor);
-//		if (variance > 0.0) projections[i].MultiplyByConstant(1.0 / sqrtf(variance));
+		variance = projections[i].ReturnSumOfSquares();
+		if (variance > 0.0) projections[i].MultiplyByConstant(1.0 / sqrtf(variance));
 	}
 }
 

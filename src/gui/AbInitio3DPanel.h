@@ -31,8 +31,16 @@ public:
 	Refinement *output_refinement;
 
 
-	float startup_percent_used;
+	//float startup_percent_used;
 	float current_high_res_limit;
+	float next_high_res_limit;
+
+	float start_percent_used;
+	float end_percent_used;
+	float current_percent_used;
+
+	int number_of_starts_to_run;
+	int number_of_starts_run;
 
 	wxArrayString current_reference_filenames;
 
@@ -59,6 +67,7 @@ public:
 	void ProcessAllJobsFinished();
 
 	void OnMaskerThreadComplete();
+	void DoMasking();
 
 };
 
@@ -121,13 +130,14 @@ public:
 class MaskerThread : public wxThread
 {
 	public:
-	MaskerThread(AbInitio3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_resolution) : wxThread(wxTHREAD_DETACHED)
+	MaskerThread(AbInitio3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_resolution, float wanted_mask_radius) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		input_files = wanted_input_files;
 		output_files = wanted_output_files;
 		pixel_size = wanted_pixel_size;
 		mask_resolution = wanted_mask_resolution;
+		mask_radius = wanted_mask_radius;
 	}
 
 	protected:
@@ -137,6 +147,7 @@ class MaskerThread : public wxThread
 	wxArrayString output_files;
 	float pixel_size;
 	float mask_resolution;
+	float mask_radius;
 
     virtual ExitCode Entry();
 };

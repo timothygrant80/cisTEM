@@ -192,11 +192,23 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	wxBoxSizer* bSizer216;
 	bSizer216 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText264 = new wxStaticText( this, wxID_ANY, wxT("No. of Cycles to Run for 1st Stage:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText415 = new wxStaticText( this, wxID_ANY, wxT("Number of Starts :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText415->Wrap( -1 );
+	bSizer216->Add( m_staticText415, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	NumberStartsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 1000, 0 );
+	NumberStartsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
+	
+	bSizer216->Add( NumberStartsSpinCtrl, 0, wxALL, 5 );
+	
+	m_staticline90 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer216->Add( m_staticline90, 0, wxEXPAND | wxALL, 5 );
+	
+	m_staticText264 = new wxStaticText( this, wxID_ANY, wxT("No. of Cycles per Start:"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText264->Wrap( -1 );
 	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	NumberRoundsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 5, 100, 40 );
+	NumberRoundsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 1000, 40 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
 	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
@@ -238,8 +250,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -1583,7 +1593,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	Defocus1Text->Wrap( -1 );
 	gSizer14->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
 	
@@ -1593,7 +1603,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	ScoreText->Wrap( -1 );
 	gSizer14->Add( ScoreText, 0, wxALL, 5 );
 	
@@ -1603,7 +1613,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	Defocus2Text = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus2Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	Defocus2Text->Wrap( -1 );
 	gSizer14->Add( Defocus2Text, 0, wxALL, 5 );
 	
@@ -1613,7 +1623,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	FitResText = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	FitResText->Wrap( -1 );
 	gSizer14->Add( FitResText, 0, wxALL, 5 );
 	
@@ -1623,7 +1633,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	AngleText = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	AngleText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	AngleText->Wrap( -1 );
 	gSizer14->Add( AngleText, 0, wxALL, 5 );
 	
@@ -1633,7 +1643,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	AliasResText = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	AliasResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	AliasResText->Wrap( -1 );
 	gSizer14->Add( AliasResText, 0, wxALL, 5 );
 	
@@ -1643,7 +1653,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	gSizer14->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
-	PhaseShiftText = new wxStaticText( m_panel86, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	PhaseShiftText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PhaseShiftText->Wrap( -1 );
 	gSizer14->Add( PhaseShiftText, 0, wxALL, 5 );
 	
@@ -5034,8 +5044,6 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -5703,6 +5711,8 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxFlexGridSizer* fgSizer1;
@@ -5890,7 +5900,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	OutputTextPanel->SetSizer( bSizer56 );
 	OutputTextPanel->Layout();
 	bSizer56->Fit( OutputTextPanel );
-	bSizer46->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( OutputTextPanel, 20, wxEXPAND | wxALL, 5 );
 	
 	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer61;
@@ -5908,7 +5918,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	CTFResultsPanel = new ShowCTFResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	CTFResultsPanel->Hide();
 	
-	bSizer46->Add( CTFResultsPanel, 50, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( CTFResultsPanel, 80, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );

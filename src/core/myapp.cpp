@@ -151,7 +151,7 @@ bool MyApp::OnInit()
 	controller_socket->SetNotify(wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
 	controller_socket->Notify(true);
 
-	wxSleep(2);
+	//wxSleep(2);
 
 	for (counter = 0; counter < possible_controller_addresses.GetCount(); counter++)
 	{

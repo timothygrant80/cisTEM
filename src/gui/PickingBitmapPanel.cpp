@@ -59,6 +59,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	allow_editing_of_coordinates = true;
 
 	draw_selection_rectangle = false;
+	doing_shift_delete = false;
 	selection_rectangle_current_x = 0;
 	selection_rectangle_current_y = 0;
 	selection_rectangle_start_x = 0;
@@ -499,6 +500,12 @@ void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
 		selection_rectangle_start_x = x_pos;
 		selection_rectangle_start_y = y_pos;
 	}
+	else
+	if (event.ShiftDown())
+	{
+		doing_shift_delete = true;
+	}
+
 	event.Skip();
 }
 
@@ -517,6 +524,12 @@ void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
 void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 {
 	extern MyPickingResultsPanel *picking_results_panel;
+
+	if (doing_shift_delete == true)
+	{
+		doing_shift_delete = false;
+	}
+	else
 	if (draw_selection_rectangle)
 	{
 		// Convert begin and end coordinates to Angstroms
@@ -573,6 +586,20 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent & event)
 	{
 		selection_rectangle_current_x = x_pos;
 		selection_rectangle_current_y = y_pos;
+	}
+	else
+	if (event.LeftIsDown() == true && event.ShiftDown()) // is the left button and shift down
+	{
+		event.GetPosition(&clicked_point_x,&clicked_point_y);
+		if (clicked_point_x > bitmap_x_offset && clicked_point_x < bitmap_x_offset + bitmap_width && clicked_point_y > bitmap_y_offset && clicked_point_y < bitmap_y_offset + bitmap_height)
+		{
+			clicked_point_x_in_angstroms = PixelToAngstromX(clicked_point_x);
+			clicked_point_y_in_angstroms = PixelToAngstromY(clicked_point_y);
+			if (allow_editing_of_coordinates)
+			{
+				RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint();
+			}
+		}
 	}
 	Refresh();
 	Update();

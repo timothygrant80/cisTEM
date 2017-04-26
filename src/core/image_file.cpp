@@ -55,7 +55,7 @@ bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite)
 	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite); break;
 	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite); break;
 	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite); break;
-	default: MyPrintWithDetails("Unsupported file type\n"); MyDebugAssertTrue(false,"Unsupported file type: %s",filename.GetFullPath().ToStdString()); abort; break;
+	default: MyPrintWithDetails("Unsupported file type\n"); MyDebugAssertTrue(false,"Unsupported file type: %s\n",filename.GetFullPath().ToStdString()); abort; break;
 	}
 	return file_seems_ok;
 }

@@ -140,6 +140,9 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticText* m_staticText262;
 		MemoryComboBox* RefinementPackageComboBox;
 		wxStaticLine* m_staticline52;
+		wxStaticText* m_staticText415;
+		wxSpinCtrl* NumberStartsSpinCtrl;
+		wxStaticLine* m_staticline90;
 		wxStaticText* m_staticText264;
 		wxSpinCtrl* NumberRoundsSpinCtrl;
 		wxToggleButton* ExpertToggleButton;
@@ -1522,7 +1525,7 @@ class Refine3DPanel : public JobPanel
 	public:
 		MyFSCPanel* FSCResultsPanel;
 		
-		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,1260 ), long style = wxTAB_TRAVERSAL ); 
+		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1216,660 ), long style = wxTAB_TRAVERSAL ); 
 		~Refine3DPanel();
 	
 };

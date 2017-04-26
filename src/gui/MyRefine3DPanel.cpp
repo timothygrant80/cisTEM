@@ -1491,11 +1491,12 @@ void RefinementManager::SetupReconstructionJob()
 			bool	 split_even_odd						= true;
 			bool     centre_mass                        = false;
 
-			my_parent->my_job_package.AddJob("tttbtttttiifffffffffffffbbbbbbbbtt",
+			bool threshold_input_3d = true;
+
+			my_parent->my_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
-																		use_input_reconstruction,
 																		output_reconstruction_1.ToUTF8().data(),
 																		output_reconstruction_2.ToUTF8().data(),
 																		output_reconstruction_filtered.ToUTF8().data(),
@@ -1523,9 +1524,13 @@ void RefinementManager::SetupReconstructionJob()
 																		crop_images,
 																		split_even_odd,
 																		centre_mass,
+																		use_input_reconstruction,
+																		threshold_input_3d,
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data());
+
+
 
 
 		}
@@ -1744,60 +1749,59 @@ void RefinementManager::SetupRefinementJob()
 			if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true) normalize_input_3d = false;
 			else normalize_input_3d = true;
 
-			bool threshold_input_3d = false;
-
+			bool threshold_input_3d = true;
 			my_parent->my_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbbi",
-																input_particle_images.ToUTF8().data(), 				// 0
-																input_parameter_file.ToUTF8().data(), 				// 1
-																input_reconstruction.ToUTF8().data(), 				// 2
-																input_reconstruction_statistics.ToUTF8().data(),	// 3
-																use_statistics, 									// 4
-																ouput_matching_projections.ToUTF8().data(),			// 5
-																output_parameter_file.ToUTF8().data(),				// 6
-																ouput_shift_file.ToUTF8().data(),					// 7
-																my_symmetry.ToUTF8().data(),						// 8
-																first_particle, 									// 9
-																last_particle,										// 10
-																percent_used,										// 11
-																pixel_size, 										// 12
-																voltage_kV,											// 13
-																spherical_aberration_mm,							// 14
-																amplitude_contrast,									// 15
-																molecular_mass_kDa,									// 16
-																mask_radius,										// 17
-																low_resolution_limit,								// 18
-																high_resolution_limit,								// 19
-																signed_CC_limit,									// 20
-																classification_resolution_limit,					// 21
-																mask_radius_search,									// 22
-																high_resolution_limit_search,						// 23
-																angular_step,										// 24
-																best_parameters_to_keep,							// 25
-																max_search_x,										// 26
-																max_search_y,										// 27
-																mask_center_2d_x,									// 28
-																mask_center_2d_y,									// 29
-																mask_center_2d_z,									// 30
-																mask_radius_2d,										// 31
-																defocus_search_range,								// 32
-																defocus_step,										// 33
-																padding,											// 34
-																global_search,										// 35
-																local_refinement,									// 36
-																refine_psi,											// 37
-																refine_theta,										// 38
-																refine_phi, 										// 39
-																refine_x_shift,										// 40
-																refine_y_shift,										// 41
-																calculate_matching_projections,						// 42
-																apply_2d_masking,									// 43
-																ctf_refinement,										// 44
-																normalize_particles,								// 45
-																invert_contrast,									// 46
-																exclude_blank_edges,								// 47
-																normalize_input_3d,									// 48
-																threshold_input_3d,									// 49
-																class_counter);										// 50
+																											input_particle_images.ToUTF8().data(),
+																											input_parameter_file.ToUTF8().data(),
+																											input_reconstruction.ToUTF8().data(),
+																											input_reconstruction_statistics.ToUTF8().data(),
+																											use_statistics,
+																											ouput_matching_projections.ToUTF8().data(),
+																											output_parameter_file.ToUTF8().data(),
+																											ouput_shift_file.ToUTF8().data(),
+																											my_symmetry.ToUTF8().data(),
+																											first_particle,
+																											last_particle,
+																											percent_used,
+																											pixel_size,
+																											voltage_kV,
+																											spherical_aberration_mm,
+																											amplitude_contrast,
+																											molecular_mass_kDa,
+																											mask_radius,
+																											low_resolution_limit,
+																											high_resolution_limit,
+																											signed_CC_limit,
+																											classification_resolution_limit,
+																											mask_radius_search,
+																											high_resolution_limit_search,
+																											angular_step,
+																											best_parameters_to_keep,
+																											max_search_x,
+																											max_search_y,
+																											mask_center_2d_x,
+																											mask_center_2d_y,
+																											mask_center_2d_z,
+																											mask_radius_2d,
+																											defocus_search_range,
+																											defocus_step,
+																											padding,
+																											global_search,
+																											local_refinement,
+																											refine_psi,
+																											refine_theta,
+																											refine_phi,
+																											refine_x_shift,
+																											refine_y_shift,
+																											calculate_matching_projections,
+																											apply_2d_masking,
+																											ctf_refinement,
+																											normalize_particles,
+																											invert_contrast,
+																											exclude_blank_edges,
+																											normalize_input_3d,
+																											threshold_input_3d,
+																											class_counter);
 
 
 		}

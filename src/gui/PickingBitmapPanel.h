@@ -69,6 +69,7 @@ public :
 	void OnLeftDown(wxMouseEvent & event);
 	void OnLeftUp(wxMouseEvent & event);
 	void OnMotion(wxMouseEvent & event);
+	wxCursor CreatePaintCursor();
 
 
 	//
@@ -101,6 +102,7 @@ private:
 
 	//
 	bool		draw_selection_rectangle;
+	bool        doing_shift_delete;
 	int			selection_rectangle_start_x;
 	int			selection_rectangle_start_y;
 	int			selection_rectangle_current_x;

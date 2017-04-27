@@ -213,7 +213,7 @@ bool Reconstruct3DApp::DoCalculation()
 	MRCFile *input_3d_file;
 	if (use_input_reconstruction) input_3d_file = new MRCFile(input_reconstruction.ToStdString(), false);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
-	input_par_file.ReadFile(true);
+	input_par_file.ReadFile(true, input_file.ReturnZSize());
 	// sigma values
 	input_par_file.RemoveOutliers(14, 2.0);
 	// score values

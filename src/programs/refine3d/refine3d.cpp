@@ -360,10 +360,11 @@ bool Refine3DApp::DoCalculation()
 
 //	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
-	input_par_file.ReadFile();
+	MRCFile input_stack(input_particle_images.ToStdString(), false);
+
+	input_par_file.ReadFile(false, input_stack.ReturnZSize());
 	random_particle.SetSeed(int(10000.0 * fabsf(input_par_file.ReturnAverage(14, true)))%10000);
 
-	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	MRCFile input_file(input_reconstruction.ToStdString(), false);
 	MRCFile *output_file;
 	if (percent_used < 1.0 && calculate_matching_projections)

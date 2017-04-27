@@ -23,7 +23,7 @@ public:
 	void Close();
 	void WriteCommentLine(wxString comment_string);
 	void WriteLine(float *parameters, bool comment = false);
-	int ReadFile(bool exclude_negative_film_numbers = false);
+	int ReadFile(bool exclude_negative_film_numbers = false, int particles_in_stack = -1);
 	void ReadLine(float *parameters);
 	float ReadParameter(int wanted_line_number, int wanted_parameter);
 	void UpdateParameter(int wanted_line_number, int wanted_parameter, float wanted_value);

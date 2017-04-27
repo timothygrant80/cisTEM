@@ -124,7 +124,7 @@ void FrealignParameterFile::WriteLine(float *parameters, bool comment)
 	number_of_lines++;
 }
 
-int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
+int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int particles_in_stack)
 {
 	MyDebugAssertTrue(access_type == 0, "File not opened for READ");
 
@@ -173,7 +173,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 				for (i = records_per_line - 1; i > 11; i--) {parameter_cache[i + elements_read] = parameter_cache[i - 1 + elements_read];}
 				parameter_cache[11 + elements_read] = 0.0;
 			}
-			if (parameter_cache[elements_read] < 1)
+			if (parameter_cache[elements_read] < 1 || (parameter_cache[elements_read] > particles_in_stack && particles_in_stack > -1))
 			{
 				if (! one_warning_range) {wxPrintf("Warning: particle location in line %i in out of range\n", lines_read); one_warning_range = true;}
 			}

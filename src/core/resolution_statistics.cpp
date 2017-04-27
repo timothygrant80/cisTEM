@@ -656,6 +656,11 @@ void ResolutionStatistics::GenerateDefaultStatistics(float molecular_mass_in_kDa
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 	int number_of_bins_extended = int((number_of_bins2 / 2 + 1) * sqrtf(3.0)) + 1;
 
+	FSC.ClearData();
+	part_FSC.ClearData();
+	part_SSNR.ClearData();
+	rec_SSNR.ClearData();
+
 	FSC.AddPoint(0.0, 1.0);
 	part_FSC.AddPoint(0.0, 1.0);
 	part_SSNR.AddPoint(0.0, 1000.0);

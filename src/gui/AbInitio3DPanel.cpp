@@ -574,7 +574,7 @@ void AbInitioManager::BeginRefinementCycle()
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
 		}
 
-		//input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda);
+		input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda);
 	}
 
 	// need to take into account symmetry
@@ -631,7 +631,7 @@ void AbInitioManager::BeginRefinementCycle()
 
 	// we want 10k asymmetric units per class
 
-	long wanted_start_number_of_asym_units = 5000 * number_of_classes;
+	long wanted_start_number_of_asym_units = 1000 * number_of_classes;
 	long wanted_end_number_of_asym_units = 10000 * number_of_classes;
 
 
@@ -1158,6 +1158,8 @@ void AbInitioManager::SetupRefinementJob()
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
 		}
+
+		input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda);
 	}
 
 

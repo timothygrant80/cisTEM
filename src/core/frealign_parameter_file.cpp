@@ -137,7 +137,8 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 	int		lines_read = 0;
 	char	dataline[1000];
 	char	*char_pointer;
-	bool	one_warning = false;
+	bool	one_warning_length = false;
+	bool	one_warning_range = false;
 
 	file_size = ReturnFileSizeInBytes(filename);
 
@@ -162,7 +163,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 	{
 		if (dataline[0] != 'C')
 		{
-			if (strlen(dataline) != line_length && ! one_warning) {wxPrintf("Warning: line %i has different length than first data line\n", lines_read); one_warning = true;}
+			if (strlen(dataline) != line_length && ! one_warning_length) {wxPrintf("Warning: line %i has different length than first data line\n", lines_read); one_warning_length = true;}
 			elements_read = records_per_line * current_line;
 			char_pointer = dataline;
 			for (i = 0; i < records_per_line_in_file; i++) {parameter_cache[i + elements_read] = strtof(char_pointer, &char_pointer);}
@@ -172,7 +173,11 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers)
 				for (i = records_per_line - 1; i > 11; i--) {parameter_cache[i + elements_read] = parameter_cache[i - 1 + elements_read];}
 				parameter_cache[11 + elements_read] = 0.0;
 			}
-			if (parameter_cache[7 + elements_read] >= 0 || ! exclude_negative_film_numbers) current_line++;
+			if (parameter_cache[elements_read] < 1)
+			{
+				if (! one_warning_range) {wxPrintf("Warning: particle location in line %i in out of range\n", lines_read); one_warning_range = true;}
+			}
+			else if (parameter_cache[7 + elements_read] >= 0 || ! exclude_negative_film_numbers) current_line++;
 		}
 		lines_read++;
 		if (fgets(dataline, sizeof dataline, parameter_file) == NULL) break;

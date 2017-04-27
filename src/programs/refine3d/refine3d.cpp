@@ -366,7 +366,7 @@ bool Refine3DApp::DoCalculation()
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	MRCFile input_file(input_reconstruction.ToStdString(), false);
 	MRCFile *output_file;
-	if (percent_used < 1.0)
+	if (percent_used < 1.0 && calculate_matching_projections)
 	{
 		calculate_matching_projections = false;
 		wxPrintf("\nPercent of particles used < 1, matching projections not calculated.\n");

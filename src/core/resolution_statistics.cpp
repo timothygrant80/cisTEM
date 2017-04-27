@@ -503,7 +503,7 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 			// The factor of 1 / 2 is due to the average weight in the trilinear interpolation
 			// Divide volume SSNR by float(sum_double[i]) / float(sum_int[i])
 			// Factor of 8.0 is due to 8-point trilinear interpolation
-//			wxPrintf("i = %i, sum_int = %g, sum_double = %g, ratio = %g\n", i, float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
+//			wxPrintf("i = %i, fsc, sum_int, sum_double, ratio = %g %g %g %g\n", i, FSC.data_y[i], float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
 //			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 8.0 * 4.0 * mask_volume_fraction * fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
 			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), mask_volume_fraction * fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
 //			wxPrintf("x = %g, y = %g\n", FSC.data_x[i], FSC.data_y[i]);

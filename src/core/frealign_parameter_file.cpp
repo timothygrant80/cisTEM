@@ -149,7 +149,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
 		lines_read++;
 	}
 	line_length = strlen(dataline);
-	number_of_lines = file_size / line_length;
+	number_of_lines = file_size / line_length + 1;
 	if (parameter_cache != NULL) delete [] parameter_cache;
 	parameter_cache = new float[records_per_line * number_of_lines];
 	records_per_line_in_file = records_per_line;
@@ -175,7 +175,7 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
 			}
 			if (parameter_cache[elements_read] < 1 || (parameter_cache[elements_read] > particles_in_stack && particles_in_stack > -1))
 			{
-				if (! one_warning_range) {wxPrintf("Warning: particle location in line %i in out of range\n", lines_read); one_warning_range = true;}
+				if (! one_warning_range) {wxPrintf("Warning: particle location in line %i is out of range\n", lines_read); one_warning_range = true;}
 			}
 			else if (parameter_cache[7 + elements_read] >= 0 || ! exclude_negative_film_numbers) current_line++;
 		}
@@ -203,22 +203,22 @@ void FrealignParameterFile::ReadLine(float *parameters)
 	current_line++;
 }
 
-float FrealignParameterFile::ReadParameter(int wanted_line_number, int wanted_parameter)
+float FrealignParameterFile::ReadParameter(int wanted_line_number, int wanted_index)
 {
 	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
 
 	int elements_read = records_per_line * wanted_line_number;
 
-	return parameter_cache[wanted_parameter + elements_read];
+	return parameter_cache[wanted_index + elements_read];
 }
 
-void FrealignParameterFile::UpdateParameter(int wanted_line_number, int wanted_parameter, float wanted_value)
+void FrealignParameterFile::UpdateParameter(int wanted_line_number, int wanted_index, float wanted_value)
 {
 	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
 
 	int elements_read = records_per_line * wanted_line_number;
 
-	parameter_cache[wanted_parameter + elements_read] = wanted_value;
+	parameter_cache[wanted_index + elements_read] = wanted_value;
 }
 
 void FrealignParameterFile::Rewind()
@@ -474,4 +474,181 @@ float FrealignParameterFile::ReturnScoreAdjustment(float defocus)
 	MyDebugAssertTrue(average_defocus != 0.0 || defocus_coeff_b != 0.0, "Defous coefficients not determined");
 
 	return (defocus - average_defocus) * defocus_coeff_b;
+}
+
+void FrealignParameterFile::ReduceAngles()
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+
+	int line;
+	int index;
+	float psi, theta, phi;
+
+	for (line = 0; line < number_of_lines; line++)
+	{
+		index = records_per_line * line;
+		psi = parameter_cache[1 + index];
+		theta = parameter_cache[2 + index];
+		phi = parameter_cache[3 + index];
+
+		theta = fmodf(theta, 360.0);
+		if (theta < 0.0) theta += 360.0;
+		if (theta >= 180.0)
+		{
+			theta = 360.0 - theta;
+			psi += 180.0;
+			phi += 180.0;
+		}
+		psi = fmodf(psi, 360.0);
+		if (psi < 0.0) psi += 360.0;
+		phi = fmodf(phi, 360.0);
+		if (phi < 0.0) phi += 360.0;
+		parameter_cache[1 + index] = psi;
+		parameter_cache[2 + index] = theta;
+		parameter_cache[3 + index] = phi;
+	}
+}
+
+float FrealignParameterFile::ReturnDistributionMax(int wanted_index, int selector, bool exclude_negative_film_numbers)
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+	MyDebugAssertTrue(wanted_index >= 0 && wanted_index < records_per_line, "Index out of range");
+
+	int bin;
+	int number_of_bins;
+	int max_bin;
+	int line;
+	int index;
+	int included_lines;
+	float sum;
+	float sum_max;
+	float min;
+	float max;
+	float step;
+	float temp_float;
+	bool is_angle = false;
+
+	if (selector > 0)
+	{
+		included_lines = 0;
+		for (line = 0; line < number_of_lines; line++)
+		{
+			index = records_per_line * line;
+			if (fabsf(parameter_cache[7 + index] - selector) < 0.01) included_lines++;
+		}
+	}
+	else included_lines = number_of_lines;
+
+	if (included_lines == 0) return 0.0;
+
+	number_of_bins = myroundint(included_lines / 100.0);
+	if (number_of_bins < 10) number_of_bins = std::min(included_lines, 10);
+	if (wanted_index >= 1 && wanted_index <= 3) is_angle = true;
+	if (is_angle)
+	{
+		min = 0.0;
+		max = 360.0;
+	}
+	else
+	{
+		min = ReturnMin(wanted_index, exclude_negative_film_numbers);
+		max = ReturnMax(wanted_index, exclude_negative_film_numbers);
+	}
+
+	if (min == max) return min;
+
+	int *bins = new int [number_of_bins];
+	float *bin_sum = new float [number_of_bins];
+	ZeroIntArray(bins, number_of_bins);
+	ZeroFloatArray(bin_sum, number_of_bins);
+	step = (max - min) / (number_of_bins - 1);
+
+	for (line = 0; line < number_of_lines; line++)
+	{
+		index = records_per_line * line;
+		if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
+		{
+			if (fabsf(parameter_cache[7 + index] - selector) < 0.01 || selector <= 0.0)
+			{
+				temp_float = parameter_cache[wanted_index + index];
+				if (is_angle)
+				{
+					temp_float = fmodf(temp_float, 360.0);
+					if (temp_float < 0.0) temp_float += 360.0;
+				}
+				bin = myroundint((temp_float - min) / step);
+				if (bin < 0) bin = 0;
+				if (bin >= number_of_bins) bin = number_of_bins - 1;
+				bins[bin]++;
+				bin_sum[bin] += temp_float;
+			}
+		}
+	}
+
+	max_bin = 0;
+	for (bin = 0; bin < number_of_bins; bin++) if (bins[bin] > bins[max_bin]) max_bin = bin;
+	temp_float = bin_sum[max_bin];
+	max_bin = bins[max_bin];
+
+	delete [] bins;
+	delete [] bin_sum;
+
+	return temp_float / max_bin;
+}
+
+float FrealignParameterFile::ReturnDistributionSigma(int wanted_index, float distribution_max, int selector, bool exclude_negative_film_numbers)
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+	MyDebugAssertTrue(wanted_index >= 0 && wanted_index < records_per_line, "Index out of range");
+
+	int line;
+	int index;
+	int count = 0;
+	float sum_of_squares = 0.0;
+	float temp_float;
+	bool is_angle = false;
+
+	if (wanted_index >= 1 && wanted_index <= 3) is_angle = true;
+
+	for (line = 0; line < number_of_lines; line++)
+	{
+		index = records_per_line * line;
+		if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
+		{
+			if (fabsf(parameter_cache[7 + index] - selector) < 0.01 || selector <= 0.0)
+			{
+				temp_float = parameter_cache[wanted_index + index] - distribution_max;
+				if (is_angle)
+				{
+					temp_float = fmodf(temp_float, 360.0);
+				}
+				sum_of_squares += powf(temp_float, 2);
+				count++;
+			}
+		}
+	}
+
+	if (count == 0) return 0.0;
+	else return sqrtf(sum_of_squares / count);
+}
+
+void FrealignParameterFile::SetParameters(int wanted_index, float wanted_value, float wanted_sigma, int selector, bool exclude_negative_film_numbers)
+{
+	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
+	MyDebugAssertTrue(wanted_index >= 0 && wanted_index < records_per_line, "Index out of range");
+
+	int line;
+	int index;
+
+	for (line = 0; line < number_of_lines; line++)
+	{
+		index = records_per_line * line;
+		if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
+		{
+			if (fabsf(parameter_cache[7 + index] - selector) < 0.01 || selector <= 0.0)
+			{
+				parameter_cache[wanted_index + index] = wanted_value + wanted_sigma * global_random_number_generator.GetNormalRandom();
+			}
+		}
+	}
 }

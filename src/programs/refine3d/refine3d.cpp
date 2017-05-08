@@ -34,9 +34,11 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 	if (comparison_object->particle->no_ctf_weighting) comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
 			*comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
 			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, false, false, false, false);
+	// Case for normal parameter refinement with weighting applied to particle images and 3D reference
 	else if (comparison_object->particle->includes_reference_ssnr_weighting) comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
 			*comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
 			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true, true, false, false);
+	// Case for normal parameter refinement with weighting applied only to particle images
 	else comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
 			*comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
 			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true, false, true, true);
@@ -98,7 +100,8 @@ void Refine3DApp::DoInteractiveUserInput()
 	float		spherical_aberration_mm = 2.7;
 	float		amplitude_contrast = 0.07;
 	float		molecular_mass_kDa = 1000.0;
-	float		mask_radius = 100.0;
+	float		inner_mask_radius = 0.0;
+	float		outer_mask_radius = 100.0;
 	float		low_resolution_limit = 300.0;
 	float		high_resolution_limit = 8.0;
 	float		signed_CC_limit = 0.0;
@@ -152,7 +155,8 @@ void Refine3DApp::DoInteractiveUserInput()
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
 	molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
-	mask_radius = my_input->GetFloatFromUser("Mask radius for refinement (A)", "Radius of a circular mask to be applied to the input images during refinement", "100.0", 0.0);
+	inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the input reconstruction in Angstroms", "0.0", 0.0);
+	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the input reconstruction and images during refinement, in Angstroms", "100.0", inner_mask_radius);
 	low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
 	high_resolution_limit = my_input->GetFloatFromUser("High resolution limit (A)", "High resolution limit of the data used for alignment in Angstroms", "8.0", 0.0);
 	signed_CC_limit = my_input->GetFloatFromUser("Resolution limit for signed CC (A) (0.0 = max)", "The absolute value of the weighted Fourier ring correlation will be used beyond this limit", "0.0", 0.0);
@@ -190,9 +194,10 @@ void Refine3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
+	bool local_global_refine = false;
 	int current_class = 0;
-	my_current_job.Reset(51);
-	my_current_job.ManualSetArguments("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbbi",	input_particle_images.ToUTF8().data(),
+	my_current_job.Reset(53);
+	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",	input_particle_images.ToUTF8().data(),
 																								input_parameter_file.ToUTF8().data(),
 																								input_reconstruction.ToUTF8().data(),
 																								input_reconstruction_statistics.ToUTF8().data(), use_statistics,
@@ -202,8 +207,8 @@ void Refine3DApp::DoInteractiveUserInput()
 																								my_symmetry.ToUTF8().data(),
 																								first_particle, last_particle, percent_used,
 																								pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
-																								molecular_mass_kDa, mask_radius, low_resolution_limit, high_resolution_limit,
-																								signed_CC_limit, classification_resolution_limit,
+																								molecular_mass_kDa, inner_mask_radius, outer_mask_radius, low_resolution_limit,
+																								high_resolution_limit, signed_CC_limit, classification_resolution_limit,
 																								mask_radius_search, high_resolution_limit_search, angular_step, best_parameters_to_keep,
 																								max_search_x, max_search_y,
 																								mask_center_2d_x, mask_center_2d_y, mask_center_2d_z, mask_radius_2d,
@@ -211,7 +216,8 @@ void Refine3DApp::DoInteractiveUserInput()
 																								global_search, local_refinement,
 																								refine_psi, refine_theta, refine_phi, refine_x, refine_y,
 																								calculate_matching_projections, apply_2D_masking, ctf_refinement, normalize_particles,
-																								invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d, current_class);
+																								invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d,
+																								local_global_refine, current_class);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -238,42 +244,44 @@ bool Refine3DApp::DoCalculation()
 	float 	 spherical_aberration_mm			= my_current_job.arguments[14].ReturnFloatArgument(); // local
 	float    amplitude_contrast					= my_current_job.arguments[15].ReturnFloatArgument(); // local
 	float	 molecular_mass_kDa					= my_current_job.arguments[16].ReturnFloatArgument(); // global
-	float    mask_radius						= my_current_job.arguments[17].ReturnFloatArgument(); // global
-	float    low_resolution_limit				= my_current_job.arguments[18].ReturnFloatArgument(); // global
-	float    high_resolution_limit				= my_current_job.arguments[19].ReturnFloatArgument(); // global
-	float	 signed_CC_limit					= my_current_job.arguments[20].ReturnFloatArgument(); // global
-	float	 classification_resolution_limit	= my_current_job.arguments[21].ReturnFloatArgument(); // global
-	float    mask_radius_search					= my_current_job.arguments[22].ReturnFloatArgument(); // global
-	float	 high_resolution_limit_search		= my_current_job.arguments[23].ReturnFloatArgument(); // global
-	float	 angular_step						= my_current_job.arguments[24].ReturnFloatArgument(); // global
-	int		 best_parameters_to_keep			= my_current_job.arguments[25].ReturnIntegerArgument(); // global
-	float	 max_search_x						= my_current_job.arguments[26].ReturnFloatArgument(); // global
-	float	 max_search_y						= my_current_job.arguments[27].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_x			= my_current_job.arguments[28].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_y			= my_current_job.arguments[29].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_z			= my_current_job.arguments[30].ReturnFloatArgument(); // global
-	refine_particle.mask_radius_2d				= my_current_job.arguments[31].ReturnFloatArgument(); // global
-	float	 defocus_search_range				= my_current_job.arguments[32].ReturnFloatArgument(); // global
-	float	 defocus_step						= my_current_job.arguments[33].ReturnFloatArgument(); // global
-	float	 padding							= my_current_job.arguments[34].ReturnFloatArgument(); // global
+	float    inner_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument(); // global
+	float    outer_mask_radius					= my_current_job.arguments[18].ReturnFloatArgument(); // global
+	float    low_resolution_limit				= my_current_job.arguments[19].ReturnFloatArgument(); // global
+	float    high_resolution_limit				= my_current_job.arguments[20].ReturnFloatArgument(); // global
+	float	 signed_CC_limit					= my_current_job.arguments[21].ReturnFloatArgument(); // global
+	float	 classification_resolution_limit	= my_current_job.arguments[22].ReturnFloatArgument(); // global
+	float    mask_radius_search					= my_current_job.arguments[23].ReturnFloatArgument(); // global
+	float	 high_resolution_limit_search		= my_current_job.arguments[24].ReturnFloatArgument(); // global
+	float	 angular_step						= my_current_job.arguments[25].ReturnFloatArgument(); // global
+	int		 best_parameters_to_keep			= my_current_job.arguments[26].ReturnIntegerArgument(); // global
+	float	 max_search_x						= my_current_job.arguments[27].ReturnFloatArgument(); // global
+	float	 max_search_y						= my_current_job.arguments[28].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_x			= my_current_job.arguments[29].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_y			= my_current_job.arguments[30].ReturnFloatArgument(); // global
+	refine_particle.mask_center_2d_z			= my_current_job.arguments[31].ReturnFloatArgument(); // global
+	refine_particle.mask_radius_2d				= my_current_job.arguments[32].ReturnFloatArgument(); // global
+	float	 defocus_search_range				= my_current_job.arguments[33].ReturnFloatArgument(); // global
+	float	 defocus_step						= my_current_job.arguments[34].ReturnFloatArgument(); // global
+	float	 padding							= my_current_job.arguments[35].ReturnFloatArgument(); // global
 //	float	 filter_constant					= my_current_job.arguments[35].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[35].ReturnBoolArgument(); // global
-	bool	 local_refinement					= my_current_job.arguments[36].ReturnBoolArgument(); // global
+	bool	 global_search						= my_current_job.arguments[36].ReturnBoolArgument(); // global
+	bool	 local_refinement					= my_current_job.arguments[37].ReturnBoolArgument(); // global
 // Psi, Theta, Phi, ShiftX, ShiftY
-	refine_particle.parameter_map[3]			= my_current_job.arguments[37].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[2]			= my_current_job.arguments[38].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[1]			= my_current_job.arguments[39].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[4]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[5]			= my_current_job.arguments[41].ReturnBoolArgument(); // global
-	bool 	 calculate_matching_projections		= my_current_job.arguments[42].ReturnBoolArgument(); // global - but ignore
-	refine_particle.apply_2D_masking			= my_current_job.arguments[43].ReturnBoolArgument(); // global
-	bool	 ctf_refinement						= my_current_job.arguments[44].ReturnBoolArgument(); // global
-	bool	 normalize_particles				= my_current_job.arguments[45].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[46].ReturnBoolArgument(); // global - but ignore.
-	bool	 exclude_blank_edges				= my_current_job.arguments[47].ReturnBoolArgument();
-	bool	 normalize_input_3d					= my_current_job.arguments[48].ReturnBoolArgument();
-	bool	 threshold_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[50].ReturnIntegerArgument(); // global - but ignore.
+	refine_particle.parameter_map[3]			= my_current_job.arguments[38].ReturnBoolArgument(); //global
+	refine_particle.parameter_map[2]			= my_current_job.arguments[39].ReturnBoolArgument(); //global
+	refine_particle.parameter_map[1]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
+	refine_particle.parameter_map[4]			= my_current_job.arguments[41].ReturnBoolArgument(); // global
+	refine_particle.parameter_map[5]			= my_current_job.arguments[42].ReturnBoolArgument(); // global
+	bool 	 calculate_matching_projections		= my_current_job.arguments[43].ReturnBoolArgument(); // global - but ignore
+	refine_particle.apply_2D_masking			= my_current_job.arguments[44].ReturnBoolArgument(); // global
+	bool	 ctf_refinement						= my_current_job.arguments[45].ReturnBoolArgument(); // global
+	bool	 normalize_particles				= my_current_job.arguments[46].ReturnBoolArgument();
+	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
+	bool	 exclude_blank_edges				= my_current_job.arguments[48].ReturnBoolArgument();
+	bool	 normalize_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
+	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
+	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
+	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts
@@ -423,7 +431,8 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
 	my_output_par_file.WriteCommentLine("C Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
 	my_output_par_file.WriteCommentLine("C Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
-	my_output_par_file.WriteCommentLine("C Mask radius for refinement (A):          " + wxString::Format("%f", mask_radius));
+	my_output_par_file.WriteCommentLine("C Inner mask radius for refinement (A):    " + wxString::Format("%f", inner_mask_radius));
+	my_output_par_file.WriteCommentLine("C Outer mask radius for refinement (A):    " + wxString::Format("%f", outer_mask_radius));
 	my_output_par_file.WriteCommentLine("C Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
 	my_output_par_file.WriteCommentLine("C High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
 	my_output_par_file.WriteCommentLine("C Resolution limit for signed CC (A):      " + wxString::Format("%f", signed_CC_limit));
@@ -470,6 +479,17 @@ bool Refine3DApp::DoCalculation()
 		global_search = false;
 	}
 
+	if (local_global_refine)
+	{
+		refine_particle.parameter_map[1] = true;
+		refine_particle.parameter_map[2] = true;
+		refine_particle.parameter_map[3] = true;
+		refine_particle.parameter_map[4] = true;
+		refine_particle.parameter_map[5] = true;
+		local_refinement = true;
+		global_search = true;
+	}
+
 	if (high_resolution_limit < 2.0 * pixel_size) high_resolution_limit = 2.0 * pixel_size;
 	if (classification_resolution_limit < 2.0 * pixel_size) classification_resolution_limit = 2.0 * pixel_size;
 	if (high_resolution_limit_search < 2.0 * pixel_size) high_resolution_limit_search = 2.0 * pixel_size;
@@ -490,21 +510,23 @@ bool Refine3DApp::DoCalculation()
 	}
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
 //!!! This line is incompatible with ML !!!
-//	input_3d.density_map.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size);
+//	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size);
 //	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
-	input_3d.density_map.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+	// Remove masking here to avoid edge artifacts later
+	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, 3.0 * mask_falloff / pixel_size, false, true, 0.0);
+	if (inner_mask_radius > 0.0) input_3d.density_map.CosineMask(inner_mask_radius / pixel_size, mask_falloff / pixel_size, true);
 //	for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
 	if (threshold_input_3d)
 	{
-		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
+		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_radius / pixel_size);
 		input_3d.density_map.SetMinimumValue(-0.3 * average_density_max);
 //		input_3d.density_map.SetMinimumValue(0.0);
 	}
 
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
-	if (mask_radius > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) mask_radius = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
+	if (outer_mask_radius > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) outer_mask_radius = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
 	if (mask_radius_search > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) mask_radius_search = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
-	input_3d.mask_radius = mask_radius;
+	input_3d.mask_radius = outer_mask_radius;
 
 	if (global_search)
 	{
@@ -524,9 +546,9 @@ bool Refine3DApp::DoCalculation()
 		binning_factor_search = search_reference_3d.pixel_size / pixel_size;
 		//Scale to make projections compatible with images for ML calculation
 		search_reference_3d.density_map.MultiplyByConstant(powf(powf(binning_factor_search, 1.0 / 3.0), 2));
-		//if (angular_step <= 0) angular_step = 360.0 * high_resolution_limit_search / PI / mask_radius;
-		if (angular_step <= 0) angular_step = CalculateAngularStep(high_resolution_limit_search, mask_radius);
-		psi_step = rad_2_deg(search_reference_3d.pixel_size / mask_radius);
+		//if (angular_step <= 0) angular_step = 360.0 * high_resolution_limit_search / PI / outer_mask_radius;
+		if (angular_step <= 0) angular_step = CalculateAngularStep(high_resolution_limit_search, outer_mask_radius);
+		psi_step = rad_2_deg(search_reference_3d.pixel_size / outer_mask_radius);
 		psi_step = 360.0 / int(360.0 / psi_step + 0.5);
 		psi_start = psi_step / 2.0 * global_random_number_generator.GetUniformRandom();
 		psi_max = 0.0;
@@ -590,7 +612,7 @@ bool Refine3DApp::DoCalculation()
 		wxPrintf("Calculating noise power spectrum...\n\n");
 		percentage = float(max_samples) / float(images_to_process);
 		sum_power.SetToConstant(0.0);
-		mask_radius_for_noise = mask_radius / pixel_size;
+		mask_radius_for_noise = outer_mask_radius / pixel_size;
 		number_of_blank_edges = 0;
 		if (2.0 * mask_radius_for_noise + mask_falloff / pixel_size > 0.95 * input_image.logical_x_dimension)
 		{
@@ -607,11 +629,11 @@ bool Refine3DApp::DoCalculation()
 			my_progress->Update(image_counter);
 			if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percentage)) continue;
 			input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
-			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
-			variance = input_image.ReturnVarianceOfRealValues(mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
+			if (exclude_blank_edges && input_image.ContainsBlankEdges(outer_mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
+			variance = input_image.ReturnVarianceOfRealValues(outer_mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
 			if (variance == 0.0) continue;
 			input_image.MultiplyByConstant(1.0 / sqrtf(variance));
-			input_image.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, true);
+			input_image.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size, true);
 			input_image.ForwardFFT();
 			temp_image.CopyFrom(&input_image);
 			temp_image.ConjugateMultiplyPixelWise(input_image);
@@ -691,10 +713,8 @@ bool Refine3DApp::DoCalculation()
 				AddJobToResultQueue(intermediate_result);
 			}
 
-			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0;}
+			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0; output_parameters[0] = input_parameters[0];}
 			my_output_par_shifts_file.WriteLine(output_parameters);
-
-
 
 			my_progress->Update(image_counter);
 			continue;
@@ -706,9 +726,15 @@ bool Refine3DApp::DoCalculation()
 		}
 		for (i = 0; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = input_parameters[i];}
 
+		if (local_global_refine)
+		{
+			if (input_parameters[7] == 0.0) {local_refinement = false; global_search = true;}
+			else {local_refinement = true; global_search = false;}
+		}
+
 // Set up Particle object
 		refine_particle.ResetImageFlags();
-		refine_particle.mask_radius = mask_radius;
+		refine_particle.mask_radius = outer_mask_radius;
 		refine_particle.mask_falloff = mask_falloff;
 //		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.filter_radius_high = high_resolution_limit;
@@ -899,7 +925,7 @@ bool Refine3DApp::DoCalculation()
 				search_particle.SetIndexForWeightedCorrelation();
 				search_particle.SetParameters(input_parameters);
 				search_particle.MapParameters(cg_starting_point);
-				search_particle.mask_radius = mask_radius;
+				search_particle.mask_radius = outer_mask_radius;
 //				output_parameters[15] = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 //				if (! local_refinement) input_parameters[15] = output_parameters[15];
 				search_particle.UnmapParametersToExternal(output_parameters, cg_starting_point);

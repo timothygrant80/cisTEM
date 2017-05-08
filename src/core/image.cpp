@@ -1338,7 +1338,7 @@ float Image::Correct3D(float wanted_mask_radius)
 	return pixel_sum / (4.0 / 3.0 * PI * powf(mask_radius,3));
 }*/
 
-float Image::CorrectSinc(float wanted_mask_radius, float padding_factor)
+float Image::CorrectSinc(float wanted_mask_radius, float padding_factor, bool force_background_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(is_in_real_space == true, "reconstruction to correct not in real space");
 	MyDebugAssertTrue(padding_factor >= 1, "invalid padding factor");
@@ -1362,6 +1362,7 @@ float Image::CorrectSinc(float wanted_mask_radius, float padding_factor)
 	long pixel_counter = 0;
 
 	float weight;
+	float weight_outside;
 	float weight_y;
 	float weight_z;
 	float scale_x = PI / int(logical_x_dimension * padding_factor + 0.5);
@@ -1370,47 +1371,52 @@ float Image::CorrectSinc(float wanted_mask_radius, float padding_factor)
 
 	if (is_in_real_space)
 	{
-		average = ReturnAverageOfRealValues(0.45 * logical_x_dimension, true);
+		if (force_background_value) average = wanted_mask_value;
+		else average = ReturnAverageOfRealValues(0.45 * logical_x_dimension, true);
 
 		if (wanted_mask_radius <= 0.0) mask_radius = logical_x_dimension + logical_y_dimension + logical_z_dimension;
 		mask_radius_squared = powf(mask_radius,2);
+
+		weight_outside = powf(sinc(mask_radius * scale_x), 2);
 
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			int_z_coordinate = k - physical_address_of_box_center_z;
 			z = powf(int_z_coordinate, 2);
-			weight_z = sinc(float(int_z_coordinate) * scale_z);
-
+			if (z < mask_radius_squared) weight_z = sinc(float(int_z_coordinate) * scale_z);
 			for (j = 0; j < logical_y_dimension; j++)
 			{
 				int_y_coordinate = j - physical_address_of_box_center_y;
 				y = powf(int_y_coordinate, 2);
-				weight_y = sinc(float(int_y_coordinate) * scale_y);
-
+				if (y < mask_radius_squared) weight_y = sinc(float(int_y_coordinate) * scale_y);
 				for (i = 0; i < logical_x_dimension; i++)
 				{
 					int_x_coordinate = i - physical_address_of_box_center_x;
 					x = powf(int_x_coordinate, 2);
-
-					weight = powf(sinc(float(int_x_coordinate) * scale_x) * weight_y * weight_z,2);
-
-					real_values[pixel_counter] = (real_values[pixel_counter] - average) / weight + average;
-
 					distance_from_center_squared = x + y + z;
-
-					if (distance_from_center_squared <= mask_radius_squared)
+					if (distance_from_center_squared < mask_radius_squared)
 					{
-						pixel_sum += powf(weight,2);
+						weight = powf(sinc(float(int_x_coordinate) * scale_x) * weight_y * weight_z, 2);
+						real_values[pixel_counter] = (real_values[pixel_counter] - average) / weight + average;
+
+//						distance_from_center_squared = x + y + z;
+
+//						if (distance_from_center_squared <= mask_radius_squared)
+//						{
+							pixel_sum += powf(weight,2);
+//						}
 					}
+					else real_values[pixel_counter] = (real_values[pixel_counter] - average) / weight_outside + average;
 
 					pixel_counter++;
 				}
 				pixel_counter += padding_jump_value;
 			}
 		}
-		if (pixel_sum == 0.0) return 0.0;
-		if (wanted_mask_radius <= 0.0) return pixel_sum / logical_x_dimension / logical_y_dimension / logical_z_dimension;
-		return pixel_sum / (4.0 / 3.0 * PI * powf(mask_radius,3));
+//		if (pixel_sum == 0.0) return 0.0;
+		return pixel_sum / logical_x_dimension / logical_y_dimension / logical_z_dimension;
+//		if (wanted_mask_radius <= 0.0) return pixel_sum / logical_x_dimension / logical_y_dimension / logical_z_dimension;
+//		return pixel_sum / (4.0 / 3.0 * PI * powf(mask_radius,3));
 	}
 	else
 	{

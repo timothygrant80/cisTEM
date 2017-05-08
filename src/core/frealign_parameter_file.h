@@ -25,8 +25,8 @@ public:
 	void WriteLine(float *parameters, bool comment = false);
 	int ReadFile(bool exclude_negative_film_numbers = false, int particles_in_stack = -1);
 	void ReadLine(float *parameters);
-	float ReadParameter(int wanted_line_number, int wanted_parameter);
-	void UpdateParameter(int wanted_line_number, int wanted_parameter, float wanted_value);
+	float ReadParameter(int wanted_line_number, int wanted_index);
+	void UpdateParameter(int wanted_line_number, int wanted_index, float wanted_value);
 	void Rewind();
 	float ReturnMin(int wanted_index, bool exclude_negative_film_numbers = false);
 	float ReturnMax(int wanted_index, bool exclude_negative_film_numbers = false);
@@ -36,4 +36,8 @@ public:
 	void CalculateDefocusDependence(bool exclude_negative_film_numbers = false);
 	void AdjustScores(bool exclude_negative_film_numbers = false);
 	float ReturnScoreAdjustment(float defocus);
+	void ReduceAngles();
+	float ReturnDistributionMax(int wanted_index, int selector = 0, bool exclude_negative_film_numbers = false);
+	float ReturnDistributionSigma(int wanted_index, float distribution_max, int selector = 0, bool exclude_negative_film_numbers = false);
+	void SetParameters(int wanted_index, float wanted_value, float wanted_sigma = 0.0, int selector = 0, bool exclude_negative_film_numbers = false);
 };

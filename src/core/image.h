@@ -121,7 +121,7 @@ public:
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
 	//float Correct3D(float wanted_mask_radius = 0.0);
-	float CorrectSinc(float wanted_mask_radius = 0.0, float padding_factor = 1.0);
+	float CorrectSinc(float wanted_mask_radius = 0.0, float padding_factor = 1.0, bool force_background_value = false, float wanted_mask_value = 0.0);
 	void MirrorXFourier2D(Image &mirrored_image);
 	void MirrorYFourier2D(Image &mirrored_image);
 	void RotateQuadrants(Image &rotated_image, int quad_i);

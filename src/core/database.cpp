@@ -1280,7 +1280,7 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 
 	// particles
 
-	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", temp_package->asset_id);
+	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li ORDER BY POSITION_IN_STACK", temp_package->asset_id);
 
 	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );

@@ -133,7 +133,7 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 
 //	density_map.CorrectSinc();
 	// Correct3D amplifies noise at the edges. Maybe it is better not to do this...
-	Correct3D();
+	Correct3D(mask_radius / pixel_size);
 //	if (mask_radius > 0.0) density_map.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
 //	else density_map.CosineMask(0.45 * density_map.logical_x_dimension, 10.0 / pixel_size, false, true, 0.0);
 //	density_map.CorrectSinc();
@@ -435,7 +435,8 @@ void ReconstructedVolume::CosineMask(float wanted_mask_radius, float wanted_mask
 float ReconstructedVolume::Correct3D(float mask_radius)
 {
 	was_corrected = true;
-	return density_map.CorrectSinc(mask_radius);
+//	return density_map.CorrectSinc(mask_radius);
+	return density_map.CorrectSinc(mask_radius, 1.0, true, 0.0);
 }
 
 void ReconstructedVolume::OptimalFilter(ResolutionStatistics &statistics)
@@ -563,7 +564,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	{
 		density_map.BackwardFFT();
 		// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
-//		Correct3D();
+		Correct3D(outer_mask_radius / pixel_size);
 		// Scaling factor needed to compensate for FFT normalization for different box sizes
 		density_map.MultiplyByConstant(float(intermediate_box_size) / float(box_size));
 		density_map.Resize(intermediate_box_size, intermediate_box_size,
@@ -573,16 +574,17 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	// Check if binning was used and resize reconstruction accordingly
 	if (pixel_size != original_pixel_size)
 	{
-		density_map.CosineMask(0.5 - pixel_size / 10.0, pixel_size / 5.0);
+		density_map.CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
 		density_map.Resize(original_box_size, original_box_size, original_box_size);
 	}
-	else density_map.CosineMask(0.5 - original_pixel_size / 10.0, original_pixel_size / 5.0);
+	else density_map.CosineMask(0.5 - original_pixel_size / 20.0, original_pixel_size / 10.0);
 	density_map.BackwardFFT();
-	// Need to run Correct3D is cropping was not used
+	// Need to run Correct3D if cropping was not used
 	// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
-//	if (intermediate_box_size == box_size) Correct3D();
+	if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
 	// Now we have a full-size map with the final pixel size. Applying mask and center map in box...
 //	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	CosineMask(density_map.physical_address_of_box_center_x - 3.0 * mask_falloff / original_pixel_size, 3.0 * mask_falloff / original_pixel_size);
 	if (center_mass)
 	{
 //		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();
@@ -664,7 +666,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &densi
 	if (intermediate_box_size != box_size)
 	{
 		density_map.BackwardFFT();
-		Correct3D();
+		Correct3D(outer_mask_radius / pixel_size);
 		density_map.Resize(intermediate_box_size, intermediate_box_size,
 				intermediate_box_size, density_map.ReturnAverageOfRealValuesOnEdges());
 		density_map.ForwardFFT();
@@ -672,7 +674,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &densi
 	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
 	density_map.CosineMask(0.5, 1.0 / 20.0);
 	density_map.BackwardFFT();
-	if (intermediate_box_size == box_size) Correct3D();
+	if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
 	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
 	output_file.OpenFile(output_volume.ToStdString(), true);
 	density_map.WriteSlices(&output_file,1,density_map.logical_z_dimension);

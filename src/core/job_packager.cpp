@@ -312,42 +312,31 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 socket->SetNotify(wxSOCKET_LOST_FLAG);
 	 // inform what we want to do..
 	 WriteToSocket(socket, socket_ready_to_send_job_package, SOCKET_CODE_SIZE);
-	 socket->WaitForRead(5);
 
-     if (socket->IsData() == true)
+	 // we should get a message saying the socket is ready to receive the data..
+
+     ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
+
+     // check it is ok..
+
+     if (memcmp(socket_input_buffer, socket_send_job_package, SOCKET_CODE_SIZE) == 0) // send it..
      {
+    	 // first - send how many bytes it is..
 
-    	 // we should get a message saying the socket is ready to receive the data..
+    	 char_pointer = (unsigned char*)&transfer_size;
+    	 WriteToSocket(socket, char_pointer, 8);
 
-    	 ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
+    	 // now send the whole buffer..
 
-    	 // check it is ok..
-
-    	 if (memcmp(socket_input_buffer, socket_send_job_package, SOCKET_CODE_SIZE) == 0) // send it..
-    	 {
-    		 // first - send how many bytes it is..
-
-    		 char_pointer = (unsigned char*)&transfer_size;
-    		 WriteToSocket(socket, char_pointer, 8);
-
-    		 // now send the whole buffer..
-
-    		 MyDebugPrint("doing socket write");
-    		 WriteToSocket(socket, transfer_buffer, transfer_size);
-    	 }
-    	 else
-    	 {
-    		MyPrintWithDetails("Oops, didn't understand the reply!");
-    		abort();
-    	 }
+    	 MyDebugPrint("doing socket write");
+    	 WriteToSocket(socket, transfer_buffer, transfer_size);
      }
      else
      {
-    		MyPrintWithDetails("Oops, unexpected timeout!");
-         		abort();
+    	MyPrintWithDetails("Oops, didn't understand the reply!");
+    	abort();
      }
-
-     // restore socket events..
+         // restore socket events..
 
      socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 	 delete [] transfer_buffer;
@@ -993,19 +982,13 @@ void RunJob::SendJob(wxSocketBase *socket)
 
 	 // inform what we want to do..
 	 WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE);
+	 // we should get a message saying the socket is ready to receive the data..
+	 ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
 
-	 socket->WaitForRead(5);
+	 // check it is ok..
 
-    if (socket->IsData() == true)
-    {
-
-    	// we should get a message saying the socket is ready to receive the data..
-    	ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-    	// check it is ok..
-
-    	if (memcmp(socket_input_buffer, socket_send_single_job, SOCKET_CODE_SIZE) == 0) // send it..
-    	{
+	 if (memcmp(socket_input_buffer, socket_send_single_job, SOCKET_CODE_SIZE) == 0) // send it..
+	 {
     		// first - send how many bytes it is..
 
     		char_pointer = (unsigned char*)&transfer_size;
@@ -1015,20 +998,14 @@ void RunJob::SendJob(wxSocketBase *socket)
 
     		WriteToSocket(socket, transfer_buffer, transfer_size);
 
-    	}
-    	else
-    	{
-    		MyPrintWithDetails("Oops, didn't understand the reply!");
-    		abort();
-    	}
-    }
-    else
-    {
-    		MyPrintWithDetails("Oops, unexpected timeout!");
-        	abort();
-    }
+	 }
+	 else
+	 {
+		 MyPrintWithDetails("Oops, didn't understand the reply!");
+		 abort();
+	 }
 
-    // restore socket events..
+	// restore socket events..
 
     socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 	delete [] transfer_buffer;

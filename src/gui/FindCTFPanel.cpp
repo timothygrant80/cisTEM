@@ -596,27 +596,29 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		//known_astigmatism_angle = 35.0;
 		resample_if_pixel_too_small = true;
 
-		if (input_is_a_movie)
-		{
-			current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-			movie_is_gain_corrected = current_gain_filename.IsEmpty();
+        if (input_is_a_movie)
+        {
+                parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
+                MovieAsset *current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
+                current_gain_filename = current_movie->gain_filename;
+                movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
-			correct_movie_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+                correct_movie_mag_distortion = current_movie->correct_mag_distortion;
 
-			if (correct_movie_mag_distortion == true)
-			{
-				movie_mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-				movie_mag_distortion_major_scale = movie_asset_panel->ReturnMagDistortionMajorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-				movie_mag_distortion_minor_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-			}
-			else
-			{
-				movie_mag_distortion_angle = 0.0;
-				movie_mag_distortion_major_scale = 1.0;
-				movie_mag_distortion_minor_scale = 1.0;
+                if (correct_movie_mag_distortion == true)
+                {
+                        movie_mag_distortion_angle = current_movie->mag_distortion_angle;
+                        movie_mag_distortion_major_scale = current_movie->mag_distortion_major_scale;
+                        movie_mag_distortion_minor_scale = current_movie->mag_distortion_minor_scale;
+                }
+                else
+                {
+                        movie_mag_distortion_angle = 0.0;
+                        movie_mag_distortion_major_scale = 1.0;
+                        movie_mag_distortion_minor_scale = 1.0;
 
-			}
-		}
+                }
+        }
 		else
 		{
 			current_gain_filename = "";

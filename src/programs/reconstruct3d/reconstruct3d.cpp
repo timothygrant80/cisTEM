@@ -189,6 +189,8 @@ bool Reconstruct3DApp::DoCalculation()
 	int padding_2d = 2;
 	int padded_box_size;
 	int number_of_rotations;
+	int min_class;
+	int max_class;
 	float temp_float;
 	float mask_volume_fraction;
 	float mask_falloff = 10.0;
@@ -196,6 +198,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float binning_factor = 1.0;
 	float variance;
 	float average;
+	float sigma;
 	float original_pixel_size = pixel_size;
 	float outer_mask_in_pixels = outer_mask_radius / pixel_size;
 	float average_density_max;
@@ -214,6 +217,20 @@ bool Reconstruct3DApp::DoCalculation()
 	if (use_input_reconstruction) input_3d_file = new MRCFile(input_reconstruction.ToStdString(), false);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	input_par_file.ReadFile(true, input_file.ReturnZSize());
+/*	input_par_file.ReduceAngles();
+	min_class = myroundint(input_par_file.ReturnMin(7));
+	max_class = myroundint(input_par_file.ReturnMax(7));
+	for (i = min_class; i <= max_class; i++)
+	{
+		temp_float = input_par_file.ReturnDistributionMax(2, i);
+		sigma = input_par_file.ReturnDistributionSigma(2, temp_float, i);
+		if (temp_float != 0.0) wxPrintf("theta max, sigma, phi max, sigma = %i %g %g", i, temp_float, sigma);
+		input_par_file.SetParameters(2, temp_float, sigma / 2.0, i);
+		temp_float = input_par_file.ReturnDistributionMax(3, i);
+		sigma = input_par_file.ReturnDistributionSigma(3, temp_float, i);
+		if (temp_float != 0.0) wxPrintf(" %g %g\n", temp_float, sigma);
+		input_par_file.SetParameters(3, temp_float, sigma / 2.0, i);
+	} */
 	// sigma values
 	input_par_file.RemoveOutliers(14, 2.0);
 	// score values
@@ -447,7 +464,9 @@ bool Reconstruct3DApp::DoCalculation()
 		// Check that the input 3D map has reasonable density values
 //		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
 //		input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
-		input_3d.density_map.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, false, true, 0.0);
+		// Remove masking here to avoid edge artifacts later
+		input_3d.density_map.CosineMask(outer_mask_in_pixels, 3.0 * mask_falloff / pixel_size, false, true, 0.0);
+		if (inner_mask_radius > 0.0) input_3d.density_map.CosineMask(inner_mask_radius / pixel_size, mask_falloff / pixel_size, true);
 //		for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
 //		average_density_max = input_3d.density_map.ReturnAverageOfMaxN(100, outer_mask_in_pixels);
 /*		if (average_density_max < 0.1 || average_density_max > 25)

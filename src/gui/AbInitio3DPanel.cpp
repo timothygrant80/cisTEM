@@ -1785,7 +1785,8 @@ wxThread::ExitCode MaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-		input_image.CosineMask(mask_radius / pixel_size, 5 / pixel_size);
+//		input_image.CosineMask(mask_radius / pixel_size, 5 / pixel_size);
+		input_image.CosineMask(mask_radius / pixel_size, 40 / pixel_size);
 		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
 		input_image.AddConstant(-edge_value);
 		input_image.SetMinimumValue(0);

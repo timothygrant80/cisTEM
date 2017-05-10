@@ -339,6 +339,7 @@ public:
 	void TaperEdges();
 	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0, bool invert_mask = false);
 	float ReturnAverageOfRealValuesOnEdges();
+	float ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius);
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
 	float ReturnMaximumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);

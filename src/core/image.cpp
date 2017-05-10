@@ -4490,6 +4490,59 @@ float Image::ReturnAverageOfRealValuesOnEdges()
 	return sum/float(number_of_pixels);
 }
 
+float Image::ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	double sum = 0.0;
+	long address = 0;
+	long number_of_pixels = 0;
+	int		i;
+	int		j;
+	int 	k;
+	float	x;
+	float	y;
+	float	z;
+	float   mask_radius_squared;
+	float	distance_from_center_squared;
+
+	mask_radius_squared = powf(wanted_mask_radius, 2);
+	number_of_pixels = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = powf(k - physical_address_of_box_center_z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = powf(j - physical_address_of_box_center_y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = powf(i - physical_address_of_box_center_x, 2);
+
+				distance_from_center_squared = x + y + z;
+
+				if (fabsf(distance_from_center_squared -mask_radius_squared) <= 1.0)
+				{
+					sum += real_values[address];
+					number_of_pixels++;
+				}
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+	if (number_of_pixels > 0)
+	{
+		return float(sum / number_of_pixels);
+	}
+	else
+	{
+		return 0.0;
+	}
+}
+
 // Find the largest voxel value, only considering voxels which are at least a certain distance from the center and from the edge in each dimension
 float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimum_distance_from_edge)
 {

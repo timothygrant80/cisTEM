@@ -474,8 +474,7 @@ void MyRefine3DPanel::SetDefaults()
 		DefocusSearchRangeTextCtrl->SetValue("500.00");
 		DefocusSearchStepTextCtrl->SetValue("50.00");
 
-		ReconstructionInnerRadiusTextCtrl->SetValue("0.00");
-		ReconstructionOuterRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
+		InnerMaskRadiusTextCtrl->SetValue("0.00");
 		ScoreToWeightConstantTextCtrl->SetValue("2.00");
 
 		AdjustScoreForDefocusYesRadio->SetValue(true);
@@ -894,10 +893,13 @@ void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
 	FSCResultsPanel->Show(false);
+	FSCResultsPanel->Clear();
 	AngularPlotPanel->Show(false);
 	//CTFResultsPanel->Show(false);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
+
+	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
 
 	if (ExpertToggleButton->GetValue() == true) ExpertPanel->Show(true);
 	else ExpertPanel->Show(false);
@@ -1302,8 +1304,8 @@ void RefinementManager::SetupMerge3dJob()
 
 		wxString output_resolution_statistics		= "/dev/null";
 		float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-		float    inner_mask_radius					= my_parent->ReconstructionInnerRadiusTextCtrl->ReturnValue();
-		float    outer_mask_radius					= my_parent->ReconstructionOuterRadiusTextCtrl->ReturnValue();
+		float    inner_mask_radius					= my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
+		float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
 		wxString dump_file_seed_1 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Refine3D/dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
 		wxString dump_file_seed_2 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Refine3D/dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
@@ -1444,8 +1446,8 @@ void RefinementManager::SetupReconstructionJob()
 			float 	 spherical_aberration_mm			= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
 			float    amplitude_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-			float    inner_mask_radius					= my_parent->ReconstructionInnerRadiusTextCtrl->ReturnValue();
-			float    outer_mask_radius					= my_parent->ReconstructionOuterRadiusTextCtrl->ReturnValue();
+			float    inner_mask_radius					= my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
+			float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    resolution_limit_rec				= my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
 			float    score_weight_conversion			= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
 			float    score_threshold					= my_parent->ReconstructioScoreThreshold->ReturnValue();
@@ -1698,6 +1700,7 @@ void RefinementManager::SetupRefinementJob()
 			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    inner_mask_radius                      = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
 			float    low_resolution_limit					= my_parent->LowResolutionLimitTextCtrl->ReturnValue();
 			float    high_resolution_limit					= my_parent->HighResolutionLimitTextCtrl->ReturnValue();
 			float	 signed_CC_limit						= my_parent->SignedCCResolutionTextCtrl->ReturnValue();
@@ -1719,6 +1722,7 @@ void RefinementManager::SetupRefinementJob()
 
 			bool global_search;
 			bool local_refinement;
+			bool global_local_refinemnent = false;
 
 			if (my_parent->GlobalRefinementRadio->GetValue() == true)
 			{
@@ -1750,7 +1754,7 @@ void RefinementManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
-			my_parent->my_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbbi",
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1768,6 +1772,7 @@ void RefinementManager::SetupRefinementJob()
 																											spherical_aberration_mm,
 																											amplitude_contrast,
 																											molecular_mass_kDa,
+																											inner_mask_radius,
 																											mask_radius,
 																											low_resolution_limit,
 																											high_resolution_limit,
@@ -1801,6 +1806,7 @@ void RefinementManager::SetupRefinementJob()
 																											exclude_blank_edges,
 																											normalize_input_3d,
 																											threshold_input_3d,
+																											global_local_refinemnent,
 																											class_counter);
 
 
@@ -1991,7 +1997,8 @@ void RefinementManager::ProcessAllJobsFinished()
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
 
 		// calculate occupancies..
-		UpdateOccupancies(output_refinement);
+		if (output_refinement->percent_used < 99.99) output_refinement->UpdateOccupancies(false);
+		else output_refinement->UpdateOccupancies(true);
 
 		SetupReconstructionJob();
 		RunReconstructionJob();
@@ -2031,7 +2038,6 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 		{
-			my_parent->WriteInfoText(wxString::Format(wxT("    Estimated 0.143 resolution for Class %2i = %2.2f Å"), class_counter + 1, output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution()));
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
 
 			if (start_with_reconstruction == true)
@@ -2061,11 +2067,27 @@ void RefinementManager::ProcessAllJobsFinished()
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
 		}
 
-		my_parent->WriteInfoText("");
-
 		main_frame->current_project.database.EndVolumeAssetInsert();
 
-		UpdatePSSNR(output_refinement);
+		wxArrayDouble average_occupancies = output_refinement->UpdatePSSNR();
+
+		my_parent->WriteInfoText("");
+
+		if (output_refinement->number_of_classes > 1)
+		{
+			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+			{
+				my_parent->WriteInfoText(wxString::Format(wxT("    Estimated 0.143 resolution for Class %2i = %2.2f Å (%2.2f %%)"), class_counter + 1, output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution(), average_occupancies[class_counter]));
+			}
+		}
+		else
+		{
+			my_parent->WriteInfoText(wxString::Format(wxT("    Estimated 0.143 resolution = %2.2f Å"), output_refinement->class_refinement_results[0].class_resolution_statistics.ReturnEstimatedResolution()));
+		}
+
+		my_parent->WriteInfoText("");
+
+
 
 		//wxPrintf("Writing to databse\n");
 		// write the refinement to the database
@@ -2145,127 +2167,6 @@ void RefinementManager::ProcessAllJobsFinished()
 		CycleRefinement();
 	}
 
-}
-
-void RefinementManager::UpdatePSSNR(Refinement *refinement_to_update)
-{
-	if (refinement_to_update->number_of_classes > 1)
-	{
-		float average_occupancies[refinement_to_update->number_of_classes];
-		float sum_ave_occ = 0.0f;
-		int class_counter;
-		long particle_counter;
-		int point_counter;
-		float sum_part_ssnr;
-		float current_part_ssnr;
-
-
-		for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-		{
-			average_occupancies[class_counter] = 0.0f;
-
-			for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
-			{
-				average_occupancies[class_counter] += refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-			}
-
-			average_occupancies[class_counter] /= float(refinement_to_update->number_of_particles);
-			sum_ave_occ += average_occupancies[class_counter];
-		}
-
-		for (point_counter = 0; point_counter < refinement_to_update->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
-		{
-			sum_part_ssnr = 0;
-			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-			{
-				sum_part_ssnr += refinement_to_update->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
-			}
-
-			current_part_ssnr = sum_part_ssnr / sum_ave_occ;
-
-			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-			{
-				refinement_to_update->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
-			}
-
-		}
-	}
-}
-
-void RefinementManager::UpdateOccupancies(Refinement *refinement_to_update)
-{
-	if (refinement_to_update->number_of_classes > 1)
-	{
-		int class_counter;
-		int particle_counter;
-		int point_counter;
-
-		float sum_probabilities;
-		float occupancy;
-		float max_logp;
-		float average_occupancies[refinement_to_update->number_of_classes];
-
-		// calculate average occupancies
-		for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-		{
-			average_occupancies[class_counter] = 0.0;
-
-			for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
-			{
-				average_occupancies[class_counter] += refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-			}
-
-			average_occupancies[class_counter] /= float(refinement_to_update->number_of_particles);
-		}
-
-		for (particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
-		{
-			max_logp = -FLT_MAX;
-
-			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-			{
-				if (refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-			}
-
-			sum_probabilities = 0.0;
-
-			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-			{
-				if (max_logp - refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-				{
-					sum_probabilities += exp(refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
-				}
-			}
-
-			refinement_to_update->average_sigma = 0.0;
-
-			for (class_counter = 0; class_counter < refinement_to_update->number_of_classes; class_counter++)
-			{
-				if (max_logp -  refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-				{
-					occupancy = exp(refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
-				}
-				else
-				{
-					occupancy = 0.0;
-				}
-
-				//occupancy = 1. * (occupancy - refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-				refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
-				refinement_to_update->average_sigma +=  refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * refinement_to_update->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
-			}
-		}
-	}
-	else
-	{
-		refinement_to_update->average_sigma = 0.0;
-		for (long particle_counter = 0; particle_counter < refinement_to_update->number_of_particles; particle_counter++)
-		{
-			refinement_to_update->average_sigma += refinement_to_update->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
-		}
-
-		refinement_to_update->average_sigma /= float (output_refinement->number_of_particles);
-	}
 }
 
 void RefinementManager::DoMasking()
@@ -2358,7 +2259,7 @@ void RefinementManager::CycleRefinement()
 		else
 		{
 			delete input_refinement;
-			delete output_refinement;
+//			delete output_refinement;
 			my_parent->WriteBlueText("All refinement cycles are finished!");
 			my_parent->CancelAlignmentButton->Show(false);
 			my_parent->FinishButton->Show(true);

@@ -234,7 +234,11 @@ bool UnBlurApp::DoCalculation()
 	//MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
 	ImageFile gain_file;
 
-	if (! movie_is_gain_corrected) gain_file.OpenFile(gain_filename.ToStdString(), false);
+	if (! movie_is_gain_corrected)
+	{
+		gain_file.OpenFile(gain_filename.ToStdString(), false);
+	}
+
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
 
 	long slice_byte_size;
@@ -325,6 +329,7 @@ bool UnBlurApp::DoCalculation()
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter].MultiplyPixelWise(gain_image);
+			image_stack[image_counter].ReplaceOutliersWithMean(6);
 		}
 
 		if (correct_mag_distortion == true)

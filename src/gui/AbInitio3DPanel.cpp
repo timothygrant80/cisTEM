@@ -2,8 +2,11 @@
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+extern MyVolumeAssetPanel *volume_asset_panel;
 
-wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(MY_ORTH_DRAW_EVENT, MyOrthDrawEvent);
+
 
 AbInitio3DPanel::AbInitio3DPanel( wxWindow* parent )
 :
@@ -14,6 +17,8 @@ AbInitio3DPanelParent( parent )
 	running_job = false;
 
 	SetInfo();
+
+	ShowOrthDisplayPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
 
 	wxSize input_size = InputSizer->GetMinSize();
 	input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
@@ -26,9 +31,18 @@ AbInitio3DPanelParent( parent )
 	selected_refinement_package = -1;
 
 	my_abinitio_manager.SetParent(this);
-	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
+	Bind(MY_ORTH_DRAW_EVENT, &AbInitio3DPanel::OnOrthThreadComplete, this);
 	FillRefinementPackagesComboBox();
 
+	// limits
+
+	InitialResolutionLimitTextCtrl->SetMinMaxValue(0, 300);
+	FinalResolutionLimitTextCtrl->SetMinMaxValue(0, 300);
+	StartPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
+	EndPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
+	MaskRadiusTextCtrl->SetMinMaxValue(0, FLT_MAX);
+	SmoothingFactorTextCtrl->SetMinMaxValue(0, 1);
 }
 
 void AbInitio3DPanel::SetInfo()
@@ -147,8 +161,12 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		InitialResolutionLimitTextCtrl->ChangeValueFloat(40);
 		FinalResolutionLimitTextCtrl->ChangeValueFloat(9);
 		AutoMaskYesRadio->SetValue(true);
+		AutoPercentUsedYesRadio->SetValue(true);
+
+		StartPercentUsedTextCtrl->ChangeValueFloat(10);
+		EndPercentUsedTextCtrl->ChangeValueFloat(10);
+
 		MaskRadiusTextCtrl->ChangeValueFloat(mask_radius);
-		ApplyBlurringYesRadioButton->SetValue(false);
 		ApplyBlurringNoRadioButton->SetValue(true);
 		SmoothingFactorTextCtrl->ChangeValueFloat(1.00);
 
@@ -165,6 +183,7 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		ReconstructionRunProfileComboBox->Enable(false);
 		ExpertToggleButton->Enable(false);
 		StartRefinementButton->Enable(false);
+		NumberStartsSpinCtrl->Enable(false);
 		NumberRoundsSpinCtrl->Enable(false);
 
 		if (ExpertPanel->IsShown() == true)
@@ -233,9 +252,25 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			}
 
 			NumberRoundsSpinCtrl->Enable(true);
+			NumberStartsSpinCtrl->Enable(true);
 
 			if (ExpertToggleButton->GetValue() == true)
 			{
+				if (AutoPercentUsedYesRadio->GetValue() == true)
+				{
+					InitialPercentUsedStaticText->Enable(false);
+					StartPercentUsedTextCtrl->Enable(false);
+					FinalPercentUsedStaticText->Enable(false);
+					EndPercentUsedTextCtrl->Enable(false);
+				}
+				else
+				{
+					InitialPercentUsedStaticText->Enable(true);
+					StartPercentUsedTextCtrl->Enable(true);
+					FinalPercentUsedStaticText->Enable(true);
+					EndPercentUsedTextCtrl->Enable(true);
+				}
+
 				if (ApplyBlurringYesRadioButton->GetValue() == true)
 				{
 					SmoothingFactorTextCtrl->Enable(true);
@@ -269,7 +304,25 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		}
 		else
 		{
-			//	ExpertToggleButton->Enable(false);
+			RefinementPackageComboBox->Enable(false);
+			NumberStartsSpinCtrl->Enable(false);
+			NumberRoundsSpinCtrl->Enable(false);
+			ExpertToggleButton->Enable(false);
+
+			if (ExpertToggleButton->GetValue() == true) ExpertToggleButton->SetValue(false);
+
+			if (my_abinitio_manager.number_of_rounds_run > 0 || my_abinitio_manager.number_of_starts_run > 0)
+			{
+				TakeCurrentResultButton->Enable(true);
+			}
+			else TakeCurrentResultButton->Enable(false);
+
+			if (my_abinitio_manager.number_of_starts_run > 0)
+			{
+				TakeLastStartResultButton->Enable(true);
+			}
+			else TakeLastStartResultButton->Enable(false);
+
 			//	GroupComboBox->Enable(false);
 			//	RunProfileComboBox->Enable(false);
 			//  StartAlignmentButton->SetLabel("Stop Job");
@@ -310,13 +363,17 @@ void AbInitio3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 void AbInitio3DPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
-
+	Freeze();
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
+	CurrentLineOne->Show(false);
+	CurrentLineTwo->Show(false);
+	TakeCurrentResultButton->Show(false);
+	TakeLastStartResultButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
-
+	Thaw();
 }
 
 void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
@@ -324,12 +381,20 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 	ProgressBar->SetValue(0);
 	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
     CancelAlignmentButton->Show(true);
+	CurrentLineOne->Show(true);
+	CurrentLineTwo->Show(true);
+	TakeCurrentResultButton->Show(true);
+	TakeLastStartResultButton->Show(true);
 	FinishButton->Show(false);
 
 	ProgressPanel->Show(false);
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
+	PlotPanel->Show(false);
+	PlotPanel->Clear();
+	OrthResultsPanel->Show(false);
+	ShowOrthDisplayPanel->Clear();
 	//FSCResultsPanel->Show(false);
 	//AngularPlotPanel->Show(false);
 	//CTFResultsPanel->Show(false);
@@ -340,6 +405,11 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 	else ExpertPanel->Show(false);
 	running_job = false;
 	Layout();
+
+
+	RunSimpleFunctionInAnotherThread(main_frame, global_delete_startup_scratch);
+
+
 }
 
 void AbInitio3DPanel::StartRefinementClick( wxCommandEvent& event )
@@ -514,6 +584,186 @@ void AbInitio3DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
 	NewRefinementPackageSelected();
 }
 
+
+void AbInitio3DPanel::TakeLastStartClicked( wxCommandEvent& event )
+{
+	main_frame->job_controller.KillJob(my_job_id);
+	Freeze();
+	WriteBlueText("Terminating job, and importing the result at the end of the previous start.");
+	TimeRemainingText->SetLabel("Time Remaining : Stopped");
+	CancelAlignmentButton->Show(false);
+	CurrentLineOne->Show(false);
+	CurrentLineTwo->Show(false);
+	TakeCurrentResultButton->Show(false);
+	TakeLastStartResultButton->Show(false);
+	FinishButton->Show(true);
+	ProgressPanel->Layout();
+	Thaw();
+
+	TakeLastStart();
+
+}
+
+void AbInitio3DPanel::TakeCurrentClicked( wxCommandEvent& event )
+{
+	main_frame->job_controller.KillJob(my_job_id);
+	Freeze();
+	WriteBlueText("Terminating job, and importing the current result.");
+	TimeRemainingText->SetLabel("Time Remaining : Stopped");
+	CancelAlignmentButton->Show(false);
+	CurrentLineOne->Show(false);
+	CurrentLineTwo->Show(false);
+	TakeCurrentResultButton->Show(false);
+	TakeLastStartResultButton->Show(false);
+	FinishButton->Show(true);
+	ProgressPanel->Layout();
+	Thaw();
+
+	TakeCurrent();
+}
+
+
+void AbInitio3DPanel::TakeCurrent()
+{
+	// import the current 3ds into the database.
+
+	wxString current_output_filename;
+	wxString input_file;
+	wxArrayString all_output_filenames;
+
+	bool have_error = false;
+	long current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
+
+	// copy the files..
+
+	for (int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
+	{
+
+		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
+		all_output_filenames.Add(current_output_filename);
+
+		// what is the current round number
+
+		int current_round_number = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) + my_abinitio_manager.number_of_rounds_run - 1;
+		input_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_%i_%i.mrc", current_round_number, class_counter);
+
+		if (wxCopyFile(input_file, current_output_filename) == false)
+		{
+			have_error = true;
+			WriteErrorText(wxString::Format("Cannot Copy File (%s to %s) - Startup volumes were not imported", input_file, current_output_filename));
+		}
+	}
+
+	if (have_error == false) // now add to database
+	{
+		VolumeAsset temp_asset;
+		wxArrayLong volume_asset_ids;
+
+		main_frame->current_project.database.Begin();
+		main_frame->current_project.database.BeginVolumeAssetInsert();
+
+		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
+		{
+
+			temp_asset.reconstruction_job_id = current_startup_id;
+			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
+			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+			temp_asset.z_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+
+			temp_asset.asset_id = volume_asset_panel->current_asset_number;
+			volume_asset_ids.Add(temp_asset.asset_id);
+			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, class_counter + 1);
+			temp_asset.filename = all_output_filenames[class_counter];
+
+			volume_asset_panel->AddAsset(&temp_asset);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+		}
+
+		main_frame->current_project.database.EndVolumeAssetInsert();
+
+		// now add the details of the startup job..
+
+		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, MaskRadiusTextCtrl->ReturnValue(),  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
+		main_frame->current_project.database.Commit();
+	}
+
+	main_frame->DirtyVolumes();
+
+
+
+}
+
+void AbInitio3DPanel::TakeLastStart()
+{
+	// import the current 3ds into the database.
+
+	wxString current_output_filename;
+	wxString input_file;
+	wxArrayString all_output_filenames;
+
+	bool have_error = false;
+	long current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
+
+	// copy the files..
+
+	for (int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
+	{
+
+		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
+		all_output_filenames.Add(current_output_filename);
+
+		// what is the round number of the end of the last start..
+
+		int last_start_round_number = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) - 1;
+		input_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_%i_%i.mrc", last_start_round_number, class_counter);
+
+		if (wxCopyFile(input_file, current_output_filename) == false)
+		{
+			have_error = true;
+			WriteErrorText(wxString::Format("Cannot Copy File (%s to %s) - Startup volumes were not imported", input_file, current_output_filename));
+		}
+	}
+
+	if (have_error == false) // now add to database
+	{
+		VolumeAsset temp_asset;
+		wxArrayLong volume_asset_ids;
+
+		main_frame->current_project.database.Begin();
+		main_frame->current_project.database.BeginVolumeAssetInsert();
+
+		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
+		{
+
+			temp_asset.reconstruction_job_id = current_startup_id;
+			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
+			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+			temp_asset.z_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
+
+			temp_asset.asset_id = volume_asset_panel->current_asset_number;
+			volume_asset_ids.Add(temp_asset.asset_id);
+			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, class_counter + 1);
+			temp_asset.filename = all_output_filenames[class_counter];
+
+			volume_asset_panel->AddAsset(&temp_asset);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+		}
+
+		main_frame->current_project.database.EndVolumeAssetInsert();
+
+		// now add the details of the startup job..
+
+		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, MaskRadiusTextCtrl->ReturnValue(),  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
+		main_frame->current_project.database.Commit();
+	}
+
+	main_frame->DirtyVolumes();
+
+
+}
+
 AbInitioManager::AbInitioManager()
 {
 
@@ -541,6 +791,10 @@ void AbInitioManager::BeginRefinementCycle()
 	number_of_starts_to_run = my_parent->NumberStartsSpinCtrl->GetValue();
 	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
 
+	my_parent->PlotPanel->Clear();
+	my_parent->PlotPanel->my_notebook->SetSelection(0);
+
+
 	current_refinement_package_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).asset_id;
 
 	// this should be the random start..
@@ -564,11 +818,13 @@ void AbInitioManager::BeginRefinementCycle()
 		for ( counter = 0; counter < number_of_particles; counter++)
 		{
 			if (number_of_classes == 1) input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-			else input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * 100.0);
+			else input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.00 / input_refinement->number_of_classes;
 
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
@@ -602,49 +858,31 @@ void AbInitioManager::BeginRefinementCycle()
 		}
 	}
 
-	long number_of_asym_units;
-
-	if (symmetry_type == 'C')
+	if (my_parent->AutoPercentUsedYesRadio->GetValue() == true)
 	{
-		 number_of_asym_units = number_of_particles * symmetry_number;
+		int symmetry_number = ReturnNumberofAsymmetricUnits(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry);
+		long number_of_asym_units = number_of_particles * symmetry_number;
+
+		// we want 10k asymmetric units per class
+
+		long wanted_start_number_of_asym_units = 1000 * number_of_classes;
+		long wanted_end_number_of_asym_units = 10000 * number_of_classes;
+
+		// what percentage is this.
+
+		start_percent_used = (float(wanted_start_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
+		end_percent_used = (float(wanted_end_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
+
+		if (start_percent_used > 100.0) start_percent_used = 100.0;
+		if (end_percent_used > 100.0) end_percent_used = 100.0;
+
+		if (end_percent_used > 25) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
 	}
 	else
-	if (symmetry_type == 'D')
 	{
-		number_of_asym_units = number_of_particles * symmetry_number * 2;
+		start_percent_used = my_parent->StartPercentUsedTextCtrl->ReturnValue();
+		end_percent_used = my_parent->EndPercentUsedTextCtrl->ReturnValue();
 	}
-	else
-	if (symmetry_type == 'T')
-	{
-		number_of_asym_units = number_of_particles * 12;
-	}
-	else
-	if (symmetry_type == 'O')
-	{
-		number_of_asym_units = number_of_particles * 24;
-	}
-	else
-	if (symmetry_type == 'I')
-	{
-		number_of_asym_units = number_of_particles * 60;
-	}
-
-	// we want 10k asymmetric units per class
-
-	long wanted_start_number_of_asym_units = 1000 * number_of_classes;
-	long wanted_end_number_of_asym_units = 10000 * number_of_classes;
-
-
-
-	// what percentage is this.
-
-	start_percent_used = (float(wanted_start_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
-	end_percent_used = (float(wanted_end_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
-
-	if (start_percent_used > 100.0) start_percent_used = 100.0;
-	if (end_percent_used > 100.0) end_percent_used = 100.0;
-
-	if (end_percent_used > 25) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
 
 	current_percent_used = start_percent_used;
 
@@ -675,6 +913,43 @@ void AbInitioManager::BeginRefinementCycle()
 	RunReconstructionJob();
 }
 
+void AbInitioManager::UpdatePlotPanel()
+{
+	long particle_counter;
+	int class_counter;
+	double number_active = 0;
+	double average_likelihood = 0;
+	double average_sigma = 0;
+
+	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+	{
+		for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
+		{
+			if (output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
+			{
+				number_active += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy * 0.01;
+				average_likelihood += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp * output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy * 0.01;
+				average_sigma += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy * 0.01;
+			}
+		}
+	}
+
+
+	average_likelihood /= number_active;
+	average_sigma /= number_active;
+	//wxPrintf("\nLogp = %f, sigma = %f, number_active = %li\n\n", average_likelihood, average_sigma, number_active);
+
+	my_parent->PlotPanel->AddPoints((number_of_rounds_to_run * number_of_starts_run) + number_of_rounds_run, average_sigma);
+	my_parent->PlotPanel->Draw();
+
+	if (number_of_rounds_run == 1)
+	{
+		my_parent->PlotPanel->Show(true);
+		my_parent->Layout();
+	}
+}
+
+
 void AbInitioManager::CycleRefinement()
 {
 	if (start_with_reconstruction == true)
@@ -700,6 +975,8 @@ void AbInitioManager::CycleRefinement()
 
 		if (number_of_rounds_run < number_of_rounds_to_run)
 		{
+			UpdatePlotPanel();
+
 			delete input_refinement;
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
@@ -711,11 +988,17 @@ void AbInitioManager::CycleRefinement()
 			float start_res = my_parent->InitialResolutionLimitTextCtrl->ReturnValue();
 			float end_res = my_parent->FinalResolutionLimitTextCtrl->ReturnValue();
 
-			current_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-			next_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+			//current_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			//next_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+
+			current_high_res_limit = start_res + (end_res - start_res) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			next_high_res_limit = start_res + (end_res - start_res) * (float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+
+
 			if (next_high_res_limit < 0.0) next_high_res_limit = 0.0;
 
-			current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			//current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
 
 			if (my_parent->AutoMaskYesRadio->GetValue() == true)
@@ -735,6 +1018,7 @@ void AbInitioManager::CycleRefinement()
 			if (number_of_starts_run < number_of_starts_to_run)
 			{
 				number_of_rounds_run = 0;
+				UpdatePlotPanel();
 
 				delete input_refinement;
 				input_refinement = output_refinement;
@@ -745,12 +1029,16 @@ void AbInitioManager::CycleRefinement()
 				float start_res = my_parent->InitialResolutionLimitTextCtrl->ReturnValue();
 				float end_res = my_parent->FinalResolutionLimitTextCtrl->ReturnValue();
 
-				current_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-				next_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+				//current_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				//next_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+
+				current_high_res_limit = start_res + (end_res - start_res) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				next_high_res_limit = start_res + (end_res - start_res) * (float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
+
 				if (next_high_res_limit < 0.0) next_high_res_limit = 0.0;
 
-				current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-
+				//current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
 				if (my_parent->AutoMaskYesRadio->GetValue() == true)
 				{
@@ -766,10 +1054,22 @@ void AbInitioManager::CycleRefinement()
 			}
 			else
 			{
+				UpdatePlotPanel();
+				number_of_starts_run--;
+				my_parent->TakeCurrent();
+
 				delete input_refinement;
 				delete output_refinement;
+
+				// write to the database..
+
+
 				my_parent->WriteBlueText("All refinement cycles are finished!");
 				my_parent->CancelAlignmentButton->Show(false);
+				my_parent->CurrentLineOne->Show(false);
+				my_parent->CurrentLineTwo->Show(false);
+				my_parent->TakeCurrentResultButton->Show(false);
+				my_parent->TakeLastStartResultButton->Show(false);
 				my_parent->FinishButton->Show(true);
 				my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
 				my_parent->ProgressBar->SetValue(100);
@@ -998,9 +1298,6 @@ void AbInitioManager::RunReconstructionJob()
 		else
 		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
 
-		//my_parent->AngularPlotPanel->Show(false);
-		//my_parent->AngularPlotPanel->Clear();
-
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
 		my_parent->StartPanel->Show(false);
@@ -1009,7 +1306,6 @@ void AbInitioManager::RunReconstructionJob()
 		my_parent->ExpertPanel->Show(false);
 		my_parent->InfoPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);
@@ -1036,8 +1332,9 @@ void AbInitioManager::SetupMerge3dJob()
 
 		wxString output_reconstruction_filtered;
 		int output_number = (number_of_rounds_to_run * number_of_starts_run) + number_of_rounds_run;
-		if (start_with_reconstruction == true) output_reconstruction_filtered = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_initial_%i.mrc", output_number, class_counter);
+		if (start_with_reconstruction == true) output_reconstruction_filtered = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_initial_%i_%i.mrc", output_number, class_counter);
 		else output_reconstruction_filtered		= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_%i_%i.mrc", output_number, class_counter);
+
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
 
 		wxString output_resolution_statistics		= "/dev/null";
@@ -1110,7 +1407,6 @@ void AbInitioManager::RunMerge3dJob()
 		my_parent->ExpertPanel->Show(false);
 		my_parent->InfoPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);
@@ -1149,14 +1445,16 @@ void AbInitioManager::SetupRefinementJob()
 		for ( counter = 0; counter < number_of_particles; counter++)
 		{
 			if (input_refinement->number_of_classes == 1) input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-			else input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * 100.0);
+			else input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.00 / input_refinement->number_of_classes;
 
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0.0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0.0;
+
+			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
+			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
 		}
 
 		input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda);
@@ -1196,7 +1494,6 @@ void AbInitioManager::SetupRefinementJob()
 			wxString ouput_matching_projections		 		= "";
 			//wxString output_parameter_file					= "/tmp/output_par.par";
 			//wxString ouput_shift_file						= "/tmp/output_shift.shft";
-			wxString output_parameter_file					= "/dev/null";
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
@@ -1210,6 +1507,11 @@ void AbInitioManager::SetupRefinementJob()
 
 			float	 percent_used							= current_percent_used / 100.0;
 
+#ifdef DEBUG
+			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li.par", first_particle, last_particle);
+#else
+			wxString output_parameter_file = "/dev/null";
+#endif
 
 			// for now we take the paramters of the first image!!!!
 
@@ -1218,7 +1520,9 @@ void AbInitioManager::SetupRefinementJob()
 			float 	 spherical_aberration_mm				= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
 			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
+
 			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    inner_mask_radius						= 0;
 
 			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
 			if (low_resolution_limit > 300.00) low_resolution_limit = 300.00;
@@ -1246,6 +1550,7 @@ void AbInitioManager::SetupRefinementJob()
 
 			bool global_search = true;
 			bool local_refinement = false;
+			bool local_global_refine = false;
 
 			bool refine_psi 								= true;
 			bool refine_theta								= true;
@@ -1265,7 +1570,7 @@ void AbInitioManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = false;
-			my_parent->my_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbbi",
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1283,6 +1588,7 @@ void AbInitioManager::SetupRefinementJob()
 																											spherical_aberration_mm,
 																											amplitude_contrast,
 																											molecular_mass_kDa,
+																											inner_mask_radius,
 																											mask_radius,
 																											low_resolution_limit,
 																											high_resolution_limit,
@@ -1316,6 +1622,7 @@ void AbInitioManager::SetupRefinementJob()
 																											exclude_blank_edges,
 																											normalize_input_3d,
 																											threshold_input_3d,
+																											local_global_refine,
 																											class_counter);
 		}
 
@@ -1404,7 +1711,6 @@ void AbInitioManager::RunRefinementJob()
 		my_parent->ExpertPanel->Show(false);
 		my_parent->InfoPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
- 		//my_parent->AngularPlotPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);
@@ -1589,11 +1895,13 @@ void AbInitioManager::ProcessAllJobsFinished()
 {
 	if (running_job_type == REFINEMENT)
 	{
-		//wxPrintf("Refinement has finished\n");
+
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
-		//wxPrintf("Setting up reconstruction\n");
+
+		// calculate occupancies..
+		output_refinement->UpdateOccupancies();
+
 		SetupReconstructionJob();
-		//wxPrintf("Running reconstruction\n");
 		RunReconstructionJob();
 
 	}
@@ -1610,135 +1918,56 @@ void AbInitioManager::ProcessAllJobsFinished()
 		int class_counter;
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
 
-		for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+		// prepare the orth projections..
+
+		OrthDrawerThread *result_thread;
+
+		if (start_with_reconstruction == true)	result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, "Random Angles");
+		else
+		result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i,%i", number_of_starts_run, number_of_rounds_run));
+
+		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
-			//my_parent->WriteInfoText(wxString::Format(wxT("    Estimated 0.143 resolution for Class %2i = %2.2f Å"), class_counter + 1, output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution()));
-			//my_parent->WriteInfoText("");
-
-			if (output_refinement->number_of_classes > 1)
-			{
-				int class_counter;
-				int particle_counter;
-				int point_counter;
-
-				float sum_probabilities;
-				float occupancy;
-				float max_logp;
-				float average_occupancies[output_refinement->number_of_classes];
-				float sum_part_ssnr;
-				float sum_ave_occ;
-				float current_part_ssnr;
-
-
-				// calculate average occupancies
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					average_occupancies[class_counter] = 0.0;
-
-					for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-					{
-						average_occupancies[class_counter] += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-					}
-
-					average_occupancies[class_counter] /= float(output_refinement->number_of_particles);
-				}
-
-
-				for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-				{
-					max_logp = -FLT_MAX;
-
-					for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-					{
-						if (output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-					}
-
-
-					sum_probabilities = 0.0;
-
-					for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-					{
-						if (max_logp - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-						{
-							sum_probabilities += exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
-						}
-					}
-
-					output_refinement->average_sigma = 0.0;
-
-					for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-					{
-						if (max_logp -  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-						{
-							occupancy = exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
-						}
-						else
-						{
-							occupancy = 0.0;
-						}
-
-						occupancy = 1. * (occupancy - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-						output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
-						output_refinement->average_sigma +=  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
-					}
-				}
-
-				// Now work out the proper part_ssnr
-
-				sum_ave_occ = 0.0;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					sum_ave_occ += average_occupancies[class_counter];
-
-				}
-
-				//wxPrintf("For class %i there are %i points", class_counter, output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points);
-
-				for (point_counter = 0; point_counter < output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
-				{
-					sum_part_ssnr = 0;
-					for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-					{
-						sum_part_ssnr += output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
-					}
-
-					current_part_ssnr = sum_part_ssnr / sum_ave_occ;
-
-					for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-					{
-						output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
-					}
-
-				}
-			}
-			else
-			{
-				output_refinement->average_sigma = 0.0;
-				for (long particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-				{
-					output_refinement->average_sigma += output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
-				}
-
-				output_refinement->average_sigma /= float (output_refinement->number_of_particles);
-			}
-
-			my_parent->FSCResultsPanel->AddRefinement(output_refinement);
-
-			//if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath(), wxPATH_RMDIR_RECURSIVE);
-			//if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath());
-
-			//my_parent->FSCResultsPanel->Show(true);
-			//my_parent->AngularPlotPanel->Show(false);
-			//my_parent->Layout();
-
-
-			//wxPrintf("Calling cycle refinement\n");
-			CycleRefinement();
+			my_parent->WriteErrorText("Error: Cannot start result creation thread, results not displayed");
+			delete result_thread;
 		}
+
+		wxArrayDouble average_occupancies = output_refinement->UpdatePSSNR();
+
+		if (output_refinement->number_of_classes > 1)
+		{
+			my_parent->WriteInfoText("");
+
+			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+			{
+				my_parent->WriteInfoText(wxString::Format(wxT("   Occupancy for Class %2i = %2.2f %%"), class_counter + 1, average_occupancies[class_counter]));
+			}
+
+			my_parent->WriteInfoText("");
+
+		}
+
+		CycleRefinement();
 	}
 }
 
+void AbInitio3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
+{
+	// in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..
+
+	Image *new_image = my_event.GetImage();
+
+	if (new_image != NULL)
+	{
+		ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
+
+		if (OrthResultsPanel->IsShown() == false)
+		{
+			OrthResultsPanel->Show(true);
+			Layout();
+		}
+	}
+}
 
 
 void AbInitio3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
@@ -1752,6 +1981,66 @@ void AbInitioManager::OnMaskerThreadComplete()
 	//my_parent->WriteInfoText("Masking Finished");
 	SetupRefinementJob();
 	RunRefinementJob();
+}
+
+wxThread::ExitCode OrthDrawerThread::Entry()
+{
+	// we are going to make a bitmap panel, calculate the orth image, add it to the bitmap panel, then return that for the gui to draw, this is a bit crazy maybe
+
+	MyOrthDrawEvent *finished_event = new MyOrthDrawEvent(MY_ORTH_DRAW_EVENT); // for sending back the panel
+
+	if (DoesFileExist(filenames_of_volumes.Item(0)) == true)
+	{
+		Image input_image;
+		ImageFile input_file;
+
+		input_file.OpenFile(filenames_of_volumes.Item(0).ToStdString(), false);
+		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+
+		Image *new_image = new Image;
+		new_image->Allocate(input_file.ReturnXSize() * 3, input_file.ReturnYSize() * 2, filenames_of_volumes.GetCount(), true);
+		input_file.CloseFile();
+
+		Image current_output;
+		current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
+		//current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
+		input_image.CreateOrthogonalProjectionsImage(&current_output);
+		current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
+
+
+		// if there are multiple classes, take care of it.
+
+		for (int class_counter = 2; class_counter <= filenames_of_volumes.GetCount(); class_counter++)
+		{
+			if (DoesFileExist(filenames_of_volumes.Item(class_counter -1 )) == false)
+			{
+				delete new_image;
+				finished_event->SetImage(NULL);
+				wxQueueEvent(main_thread_pointer, finished_event);
+			}
+
+			input_file.OpenFile(filenames_of_volumes.Item(class_counter - 1).ToStdString(), false);
+			input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+			input_file.CloseFile();
+
+			current_output.AllocateAsPointingToSliceIn3D(new_image, class_counter);
+			input_image.CreateOrthogonalProjectionsImage(&current_output);
+		}
+
+
+		finished_event->SetImage(new_image);
+		finished_event->SetString(tab_name);
+
+	}
+	else
+	{
+		finished_event->SetImage(NULL);
+	}
+
+
+	wxQueueEvent(main_thread_pointer, finished_event);
+
+
 }
 
 wxThread::ExitCode MaskerThread::Entry()
@@ -1785,8 +2074,8 @@ wxThread::ExitCode MaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-//		input_image.CosineMask(mask_radius / pixel_size, 5 / pixel_size);
-		input_image.CosineMask(mask_radius / pixel_size, 40 / pixel_size);
+		input_image.CosineMask(mask_radius / pixel_size, 1);
+//		input_image.CosineMask(mask_radius / pixel_size, 40 / pixel_size);
 		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
 		input_image.AddConstant(-edge_value);
 		input_image.SetMinimumValue(0);
@@ -1863,7 +2152,7 @@ wxThread::ExitCode MaskerThread::Entry()
 
 	// send finished event..
 
-	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MASKERTHREAD_COMPLETED);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
 

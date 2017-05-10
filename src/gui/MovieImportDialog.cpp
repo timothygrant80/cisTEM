@@ -41,7 +41,7 @@ MovieImportDialog( parent )
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
-		PixelSizeText->ChangeValue(wxString::Format("%.2f", default_pixel_size));
+		PixelSizeText->ChangeValue(wxString::Format("%.3f", default_pixel_size));
 		DoseText->ChangeValue(wxString::Format("%.2f", default_exposure_per_frame));
 
 		if (default_movies_are_gain_corrected == true) MoviesAreGainCorrectedCheckBox->SetValue(true);
@@ -359,6 +359,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		// loop through all the files and add them as assets..
 
+		main_frame->current_project.database.Begin();
 		// for adding to the database..
 		main_frame->current_project.database.BeginMovieAssetInsert();
 
@@ -426,8 +427,8 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		main_frame->current_project.database.DeleteTable("MOVIE_IMPORT_DEFAULTS");
 		main_frame->current_project.database.CreateMovieImportDefaultsTable();
-		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritififff", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, DesiredPixelSizeTextCtrl->ReturnValue(), correct_mag_distortion, DistortionAngleTextCtrl->ReturnValue(), MajorScaleTextCtrl->ReturnValue(), MinorScaleTextCtrl->ReturnValue());
-
+		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritirirrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()));
+		main_frame->current_project.database.Commit();
 
 		main_frame->DirtyMovieGroups();
 //		movie_asset_panel->SetSelectedGroup(0);

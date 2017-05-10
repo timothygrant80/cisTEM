@@ -596,28 +596,27 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		//known_astigmatism_angle = 35.0;
 		resample_if_pixel_too_small = true;
 
-        if (input_is_a_movie)
-        {
-                parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
-                MovieAsset *current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
-                current_gain_filename = current_movie->gain_filename;
-                movie_is_gain_corrected = current_gain_filename.IsEmpty();
+		if (input_is_a_movie)
+		{
+			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
+			MovieAsset *current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
+			current_gain_filename = current_movie->gain_filename;
+			movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
-                correct_movie_mag_distortion = current_movie->correct_mag_distortion;
+			correct_movie_mag_distortion = current_movie->correct_mag_distortion;
 
-                if (correct_movie_mag_distortion == true)
-                {
-                        movie_mag_distortion_angle = current_movie->mag_distortion_angle;
-                        movie_mag_distortion_major_scale = current_movie->mag_distortion_major_scale;
-                        movie_mag_distortion_minor_scale = current_movie->mag_distortion_minor_scale;
-                }
-                else
-                {
-                        movie_mag_distortion_angle = 0.0;
-                        movie_mag_distortion_major_scale = 1.0;
-                        movie_mag_distortion_minor_scale = 1.0;
-
-                }
+			if (correct_movie_mag_distortion == true)
+			{
+				movie_mag_distortion_angle = current_movie->mag_distortion_angle;
+				movie_mag_distortion_major_scale = current_movie->mag_distortion_major_scale;
+				movie_mag_distortion_minor_scale = current_movie->mag_distortion_minor_scale;
+			}
+			else
+			{
+				movie_mag_distortion_angle = 0.0;
+				movie_mag_distortion_major_scale = 1.0;
+				movie_mag_distortion_minor_scale = 1.0;
+            }
         }
 		else
 		{
@@ -1045,6 +1044,10 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 2, this, wxPD_APP_MODAL);
 
+	// global begin
+
+	main_frame->current_project.database.Begin();
+
 	// loop over all the jobs, and add them..
 	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 31,
 			                                                                              "CTF_ESTIMATION_ID",
@@ -1185,6 +1188,10 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	}
 
 	main_frame->current_project.database.EndImageAssetInsert();
+
+	// Global Commit
+
+	main_frame->current_project.database.Commit();
 	my_progress_dialog->Destroy();
 	ctf_results_panel->is_dirty = true;
 

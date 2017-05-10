@@ -16,6 +16,7 @@ extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
 extern MyRefine2DPanel *classification_panel;
 extern MyRefine3DPanel *refine_3d_panel;
+extern AutoRefine3DPanel *auto_refine_3d_panel;
 extern AbInitio3DPanel *ab_initio_3d_panel;
 
 extern MyRunProfilesPanel *run_profiles_panel;
@@ -73,6 +74,8 @@ MyMainFrame::~MyMainFrame()
 	{
 		socket_server->Destroy();
 	}
+
+	ClearScratchDirectory();
 }
 
 
@@ -236,7 +239,9 @@ void MyMainFrame::DirtyEverything()
 }
 void MyMainFrame::DirtyVolumes()
 {
+	volume_asset_panel->is_dirty = true;
 	refine_3d_panel->volumes_are_dirty = true;
+	auto_refine_3d_panel->volumes_are_dirty = true;
 
 }
 
@@ -267,6 +272,7 @@ void MyMainFrame::DirtyRefinementPackages()
 	refinement_package_asset_panel->is_dirty = true;
 	classification_panel->refinement_package_combo_is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
+	auto_refine_3d_panel->refinement_package_combo_is_dirty = true;
 	refinement_results_panel->is_dirty=true;
 	refine2d_results_panel->refinement_package_combo_is_dirty = true;
 	ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
@@ -296,6 +302,7 @@ void MyMainFrame::DirtyRunProfiles()
 	findparticles_panel->run_profiles_are_dirty = true;
 	classification_panel->run_profiles_are_dirty = true;
 	refine_3d_panel->run_profiles_are_dirty = true;
+	auto_refine_3d_panel->run_profiles_are_dirty = true;
 	ab_initio_3d_panel->run_profiles_are_dirty = true;
 }
 
@@ -435,7 +442,6 @@ void MyMainFrame::OpenProject(wxString project_filename)
 	{
 		int counter;
 		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
-		SetTitle("cisTEM - [" + current_project.project_name + "]");
 
 		movie_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(1, "Opening project (loading image assets...)");
@@ -457,6 +463,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		picking_results_panel->OnProjectOpen();
 		my_dialog->Update(9, "Opening project (all done)");
 
+		SetTitle("cisTEM - [" + current_project.project_name + "]");
 		DirtyEverything();
 		my_dialog->Destroy();
 
@@ -519,6 +526,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	MenuBook->SetSelection(0);
 	overview_panel->SetWelcomeInfo();
 	overview_panel->InfoText->Show(true);
+	ClearScratchDirectory();
 
 }
 void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )
@@ -555,4 +563,61 @@ void MyMainFrame::OnExportToRelion ( wxCommandEvent & event )
 {
 	MyRelionExportDialog *export_dialog = new MyRelionExportDialog(this);
 	export_dialog->ShowModal();
+}
+
+void MyMainFrame::ClearScratchDirectory()
+{
+	ClearStartupScratch();
+	ClearRefine2DScratch();
+	ClearRefine3DScratch();
+	ClearAutoRefine3DScratch();
+}
+
+void MyMainFrame::ClearStartupScratch()
+{
+	if (wxDir::Exists(ReturnStartupScratchDirectory()) == true) wxFileName::Rmdir(ReturnStartupScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnStartupScratchDirectory()) == false) wxFileName::Mkdir(ReturnStartupScratchDirectory());
+}
+
+void MyMainFrame::ClearRefine2DScratch()
+{
+	if (wxDir::Exists(ReturnRefine2DScratchDirectory()) == true) wxFileName::Rmdir(ReturnRefine2DScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnRefine2DScratchDirectory()) == false) wxFileName::Mkdir(ReturnRefine2DScratchDirectory());
+}
+
+void MyMainFrame::ClearRefine3DScratch()
+{
+	if (wxDir::Exists(ReturnRefine3DScratchDirectory()) == true) wxFileName::Rmdir(ReturnRefine3DScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnRefine3DScratchDirectory()) == false) wxFileName::Mkdir(ReturnRefine3DScratchDirectory());
+}
+
+void MyMainFrame::ClearAutoRefine3DScratch()
+{
+	if (wxDir::Exists(ReturnAutoRefine3DScratchDirectory()) == true) wxFileName::Rmdir(ReturnAutoRefine3DScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnAutoRefine3DScratchDirectory()) == false) wxFileName::Mkdir(ReturnAutoRefine3DScratchDirectory());
+}
+
+wxString MyMainFrame::ReturnScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath();
+}
+
+wxString MyMainFrame::ReturnStartupScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/Startup/";
+}
+
+wxString MyMainFrame::ReturnRefine2DScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/Refine2D/";
+}
+
+wxString MyMainFrame::ReturnRefine3DScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/ManualRefine3D/";
+}
+
+wxString MyMainFrame::ReturnAutoRefine3DScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/AutoRefine3D/";
 }

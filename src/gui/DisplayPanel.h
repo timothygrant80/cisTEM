@@ -3,9 +3,9 @@
 
 #include <wx/popupwin.h>
 
-#define CAN_CHANGE_FILE              1  // 2^0, bit 0
-#define CAN_CLOSE_TABS               2  // 2^1, bit 1
-#define CAN_FFT                      4  // 2^2, bit 2
+#define CAN_CHANGE_FILE              1  	// 2^0, bit 0
+#define CAN_CLOSE_TABS               2  	// 2^1, bit 1
+#define CAN_FFT                      4  	// 2^2, bit 2
 #define START_WITH_INVERTED_CONTRAST 8
 #define START_WITH_AUTO_CONTRAST     16
 #define NO_NOTEBOOK                  32
@@ -53,8 +53,13 @@ public:
 	DisplayPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 
 	void Initialise(int style_flags = 0);
+
 	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
 	void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
+
+	void OpenImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong *wanted_included_image_numbers = NULL);
+	void ChangeImage(Image *image_to_View, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong *wanted_included_image_numbers = NULL);
+
 	void UpdateToolbar();
 	void ChangeFocusToPanel(void);
 
@@ -147,6 +152,10 @@ DisplayNotebookPanel : public wxPanel
 
 	ImageFile my_file;
 	wxString filename;
+	bool input_is_a_file;
+
+	Image *image_to_display;
+	bool do_i_have_image_ownership;
 
 	wxImage *panel_image;
 
@@ -179,6 +188,44 @@ DisplayNotebookPanel : public wxPanel
 	void OnKeyUp( wxKeyEvent& event);
 
 	void UpdateImageStatusInfo(int x_pos, int y_pos);
+
+
+	inline int ReturnNumberofImages()
+	{
+		if (input_is_a_file == true) return my_file.ReturnNumberOfSlices();
+		else return image_to_display->logical_z_dimension;
+	};
+
+	inline int ReturnImageXSize()
+	{
+		if (input_is_a_file == true) return my_file.ReturnXSize();
+		else return image_to_display->logical_x_dimension;
+	};
+
+	inline int ReturnImageYSize()
+	{
+		if (input_is_a_file == true) return my_file.ReturnYSize();
+		else return image_to_display->logical_y_dimension;
+	};
+
+	inline void LoadIntoImage(Image *image_to_fill, long input_position)
+	{
+		if (input_is_a_file == true) image_to_fill->ReadSlice(&my_file, included_image_numbers.Item(input_position));
+		else
+		{
+			Image buffer_image;
+			buffer_image.AllocateAsPointingToSliceIn3D(image_to_display, included_image_numbers.Item(input_position));
+			image_to_fill->CopyFrom(&buffer_image);
+		}
+
+	};
+
+	inline void SetImageInMemoryBuffer(long buffer_position, long input_position)
+	{
+		if (input_is_a_file == true) image_memory_buffer[buffer_position].ReadSlice(&my_file, included_image_numbers.Item(input_position));
+	    else image_memory_buffer[buffer_position].AllocateAsPointingToSliceIn3D(image_to_display, included_image_numbers.Item(input_position));
+	};
+
 
 	bool CheckFileStillValid();
 	bool SetGlobalGreys();
@@ -257,6 +304,8 @@ DisplayNotebookPanel : public wxPanel
 
 	bool plt_is_saved;
 	bool have_plt_filename;
+
+
 
 	bool waypoints_is_saved;
 	bool have_waypoints_filename;

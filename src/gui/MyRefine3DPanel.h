@@ -58,9 +58,6 @@ public:
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();
 
-	void UpdateOccupancies(Refinement *refinement_to_update);
-	void UpdatePSSNR(Refinement *refinement_to_update);
-
 	void OnMaskerThreadComplete();
 
 	void DoMasking();

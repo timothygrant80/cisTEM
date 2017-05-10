@@ -163,35 +163,91 @@ void ResolutionStatistics::ResampleParticleSSNR(ResolutionStatistics &other_stat
 	}
 }
 
-float ResolutionStatistics::ReturnEstimatedResolution()
+float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc)
 {
-	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	if (use_part_fsc == true)
 	{
-		if (part_FSC.data_y[counter] < 0.143) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
-	}
+		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+		{
+			if (part_FSC.data_y[counter] < 0.143) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+		}
 
-	return pixel_size * 2.0;
+		return pixel_size * 2.0;
+	}
+	else
+	{
+		for (int counter = 1; counter < FSC.number_of_points; counter++)
+		{
+			if (FSC.data_y[counter] < 0.143) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+		}
+
+		return pixel_size * 2.0;
+	}
 }
 
-float ResolutionStatistics::Return0p8Resolution()
+float ResolutionStatistics::Return0p8Resolution(bool use_part_fsc)
 {
-	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	if (use_part_fsc == true)
 	{
-		if (part_FSC.data_y[counter] <= 0.8) return part_FSC.data_x[counter];
-	}
+		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+		{
+			if (part_FSC.data_y[counter] < 0.8) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+		}
 
-	return pixel_size * 2.0;
+		return pixel_size * 2.0;
+	}
+	else
+	{
+		for (int counter = 1; counter < FSC.number_of_points; counter++)
+		{
+			if (FSC.data_y[counter] < 0.8) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+		}
+
+		return pixel_size * 2.0;
+	}
 }
 
 
-float ResolutionStatistics::Return0p5Resolution()
+float ResolutionStatistics::Return0p5Resolution(bool use_part_fsc)
 {
-	for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+	if (use_part_fsc == true)
 	{
-		if (part_FSC.data_y[counter] <= 0.5) return part_FSC.data_x[counter];
+		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
+		{
+			if (part_FSC.data_y[counter] < 0.5) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+		}
+
+		return pixel_size * 2.0;
+	}
+	else
+	{
+		for (int counter = 1; counter < FSC.number_of_points; counter++)
+		{
+			if (FSC.data_y[counter] < 0.5) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+		}
+
+		return pixel_size * 2.0;
+	}
+}
+
+float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells)
+{
+	int resolution_shell = -1;
+
+	for (int counter = 1; counter < FSC.number_of_points; counter++)
+	{
+		if (FSC.data_x[counter] < wanted_resolution) resolution_shell = counter;
 	}
 
-	return pixel_size * 2.0;
+	if (resolution_shell == -1) return 0;
+	else
+	{
+		resolution_shell += number_of_shells;
+		if (resolution_shell >= FSC.number_of_points) return 0;
+		else return FSC.data_x[resolution_shell];
+	}
+
+	return 0.0;
 }
 
 
@@ -200,6 +256,10 @@ void ResolutionStatistics::Init(float wanted_pixel_size, int box_size)
 	pixel_size = wanted_pixel_size;
 	number_of_bins = box_size / 2 + 1;
 	number_of_bins_extended = int(number_of_bins * sqrtf(3.0)) + 1;
+	FSC.ClearData();
+	part_FSC.ClearData();
+	part_SSNR.ClearData();
+	rec_SSNR.ClearData();
 }
 
 void ResolutionStatistics::NormalizeVolumeWithParticleSSNR(Image &reconstructed_volume)
@@ -409,6 +469,9 @@ void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxe
 
 	int i;
 
+	part_FSC.ClearData();
+	rec_SSNR.ClearData();
+
 	float volume_fraction = kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3) / mask_volume_in_voxels;
 
 	for (i = 0; i < number_of_bins_extended; i++)
@@ -432,6 +495,8 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 {
 	MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve must be calculated first");
 	MyDebugAssertTrue(mask_volume_fraction > 0.0, "mask_volume_fraction invalid");
+
+	part_SSNR.ClearData();
 
 	int i, j, k;
 	int yi, zi;
@@ -616,6 +681,11 @@ void ResolutionStatistics::ReadStatisticsFromFile(wxString input_file)
 		abort();
 	}
 	NumericTextFile my_statistics(input_file, OPEN_TO_READ);
+
+	FSC.ClearData();
+	part_FSC.ClearData();
+	part_SSNR.ClearData();
+	rec_SSNR.ClearData();
 
 	FSC.AddPoint(0.0, 1.0);
 	part_FSC.AddPoint(0.0, 1.0);

@@ -961,6 +961,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 	int alignment_id = starting_alignment_id + 1;
 	int alignment_job_id =  main_frame->current_project.database.ReturnHighestAlignmentJobID() + 1;
 
+	// global begin
+
+	main_frame->current_project.database.Begin();
+
 	// loop over all the jobs, and add them..
 
 	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 19, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
@@ -1116,6 +1120,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 	my_progress_dialog->Destroy();
 
 	main_frame->current_project.database.EndImageAssetInsert();
+
+	// global commit..
+
+	main_frame->current_project.database.Commit();
 
 	image_asset_panel->is_dirty = true;
 	movie_results_panel->is_dirty = true;

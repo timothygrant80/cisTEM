@@ -275,7 +275,7 @@ public:
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void InvertRealValues();
-	void TakeReciprocalRealValues();
+	void TakeReciprocalRealValues(float zeros_become = 0.0);
 	void AddConstant(float constant_to_add);
 	void MultiplyAddConstant(float constant_to_multiply_by, float constant_to_add);
 	void AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by);
@@ -366,6 +366,9 @@ public:
 	void SubSampleMask(Image *first_sampled_image, Image *second_sampled_image);
 	// Test patterns
 	void Sine1D(int number_of_periods);
+
+	// for displaying
+	void CreateOrthogonalProjectionsImage(Image *image_to_create);
 };
 
 

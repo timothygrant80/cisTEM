@@ -3536,8 +3536,6 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
 	is_in_memory = true; // kind of a lie
 	real_memory_allocated = bytes_in_slice; // kind of a lie
 
-
-
 	real_values = wanted3d->real_values + (bytes_in_slice * (wanted_slice - 1)); // point to the 3d..
 	complex_values = (std::complex<float>*) real_values;  // Set the complex_values to point at the newly allocated real values;
 
@@ -3564,7 +3562,7 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
     	planned = true;
     }
 
-    // set the loop junmp value..
+    // set the loop jump value..
 
 	if (IsEven(logical_x_dimension) == true) padding_jump_value = 2;
 	else padding_jump_value = 1;
@@ -3819,15 +3817,15 @@ void Image::MultiplyByConstant(float constant_to_multiply_by)
 	}
 }
 
-void Image::TakeReciprocalRealValues()
+void Image::TakeReciprocalRealValues(float zeros_become)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{
-			if (real_values[pixel_counter] != 0.0) real_values[pixel_counter] = 1.0 / real_values[pixel_counter];
+		if (real_values[pixel_counter] != 0.0) real_values[pixel_counter] = 1.0 / real_values[pixel_counter];
+		else real_values[pixel_counter] = zeros_become;
 	}
-
 
 }
 
@@ -8079,6 +8077,174 @@ float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_m
 
 	return average_density_max;
 }
+
+
+void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
+{
+	image_to_create->QuickAndDirtyWriteSlice("/tmp/0.mrc", 1);
+	MyDebugAssertTrue(this->IsCubic() == true, "Only Cubic Volumes Supported");
+	// don't allocate so i can use Allocateaspointing to slice in 3d.
+	MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+
+	int i,j, k;
+
+	image_to_create->QuickAndDirtyWriteSlice("/tmp/1.mrc", 1);
+	Image slice_one;
+	Image slice_two;
+	Image slice_three;
+
+	Image proj_one;
+	Image proj_two;
+	Image proj_three;
+
+	slice_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	slice_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	slice_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+
+	proj_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	proj_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	proj_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+
+	proj_one.SetToConstant(0.0);
+	proj_two.SetToConstant(0.0);
+	proj_three.SetToConstant(0.0);
+
+	proj_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	proj_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	proj_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+
+	long input_counter = 0;
+	long output_counter;
+
+	for (k = 0; k < this->logical_z_dimension; k++)
+	{
+		for (j = 0; j < this->logical_y_dimension; j++)
+		{
+			for (i = 0; i < this->logical_x_dimension; i++)
+			{
+				proj_one.real_values[proj_one.ReturnReal1DAddressFromPhysicalCoord(i, j, 0)] += this->real_values[input_counter];
+				proj_two.real_values[proj_two.ReturnReal1DAddressFromPhysicalCoord(k, j, 0)] += this->real_values[input_counter];
+				proj_three.real_values[proj_three.ReturnReal1DAddressFromPhysicalCoord(i, k, 0)] += this->real_values[input_counter];
+
+				input_counter++;
+			}
+
+			input_counter += this->padding_jump_value;
+		}
+	}
+
+	output_counter = 0;
+
+	for (j = 0; j < slice_one.logical_y_dimension; j++)
+	{
+		for (i = 0; i < slice_one.logical_x_dimension; i++)
+		{
+
+			slice_one.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(i, j, this->physical_address_of_box_center_z);
+			slice_two.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(this->physical_address_of_box_center_x, j, i);
+			slice_three.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(i, this->physical_address_of_box_center_x, j);
+
+			output_counter++;
+		}
+
+
+		output_counter += slice_one.padding_jump_value;
+	}
+
+	float min_value = FLT_MAX;
+	float max_value = -FLT_MAX;
+
+	float current_min_value;
+	float current_max_value;
+
+	slice_one.GetMinMax(min_value, max_value);
+
+	slice_two.GetMinMax(current_min_value, current_max_value);
+	min_value = std::min(min_value, current_min_value);
+	max_value = std::max(max_value, current_max_value);
+
+	slice_three.GetMinMax(current_min_value, current_max_value);
+	min_value = std::min(min_value, current_min_value);
+	max_value = std::max(max_value, current_max_value);
+
+	slice_one.AddConstant(-min_value);
+	slice_one.DivideByConstant(max_value - min_value);
+
+	slice_two.AddConstant(-min_value);
+	slice_two.DivideByConstant(max_value - min_value);
+
+	slice_three.AddConstant(-min_value);
+	slice_three.DivideByConstant(max_value - min_value);
+
+	proj_one.GetMinMax(min_value, max_value);
+
+	proj_two.GetMinMax(current_min_value, current_max_value);
+	min_value = std::min(min_value, current_min_value);
+	max_value = std::max(max_value, current_max_value);
+
+	proj_three.GetMinMax(current_min_value, current_max_value);
+	min_value = std::min(min_value, current_min_value);
+	max_value = std::max(max_value, current_max_value);
+
+	proj_one.AddConstant(-min_value);
+	proj_one.DivideByConstant(max_value - min_value);
+
+	proj_two.AddConstant(-min_value);
+	proj_two.DivideByConstant(max_value - min_value);
+
+	proj_three.AddConstant(-min_value);
+	proj_three.DivideByConstant(max_value - min_value);
+
+	output_counter = 0;
+
+	image_to_create->QuickAndDirtyWriteSlice("/tmp/2.mrc", 1);
+
+	for (j = 0; j < image_to_create->logical_y_dimension; j++)
+	{
+		for (i = 0; i < image_to_create->logical_x_dimension; i++)
+		{
+			if (j < this->logical_y_dimension)
+			{
+				if (i < this->logical_x_dimension)
+				{
+					image_to_create->real_values[output_counter] = proj_one.ReturnRealPixelFromPhysicalCoord(i, j, 0);
+				}
+				else
+				if (i < this->logical_x_dimension * 2)
+				{
+					image_to_create->real_values[output_counter] = proj_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j, 0);
+				}
+				else
+				{
+					image_to_create->real_values[output_counter] = proj_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
+				}
+
+			}
+			else
+			{
+				if (i < this->logical_x_dimension)
+				{
+					image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j  - this->logical_y_dimension, 0);
+				}
+				else
+				if (i < this->logical_x_dimension * 2)
+				{
+					image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j  - this->logical_y_dimension, 0);
+				}
+				else
+				{
+					image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j  - this->logical_y_dimension, 0);
+				}
+			}
+			output_counter++;
+		}
+
+		output_counter += image_to_create->padding_jump_value;
+	}
+
+	image_to_create->QuickAndDirtyWriteSlice("/tmp/3.mrc", 1);
+}
+
 
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

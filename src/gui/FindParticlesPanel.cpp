@@ -1497,6 +1497,10 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 3, this, wxPD_APP_MODAL);
 
+	// global begin..
+
+	main_frame->current_project.database.Begin();
+
 	// Record the parameters we used to pick
 	main_frame->current_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
 																						"PICKING_ID",
@@ -1579,6 +1583,10 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 	// At this point, the database should be up-to-date
 	particle_position_asset_panel->ImportAllFromDatabase();
+
+	// global commit..
+
+	main_frame->current_project.database.Commit();
 
 	my_progress_dialog->Destroy();
 

@@ -77,49 +77,60 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
 
 
 
-
-	CTF2DResultsPanel->PanelImage.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString(), 1);
-	CTF2DResultsPanel->should_show = true;
-	CTF2DResultsPanel->Refresh();
+	if (DoesFileExist(diagnostic_filename) == true)
+	{
+		CTF2DResultsPanel->PanelImage.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString(), 1);
+		CTF2DResultsPanel->should_show = true;
+		CTF2DResultsPanel->Refresh();
+	}
 
 	avrot_filename = wxFileName::StripExtension(diagnostic_filename);
 	avrot_filename += "_avrot.txt";
 
-	NumericTextFile ctf_plot_file(avrot_filename, OPEN_TO_READ);
-
-	int number_of_points = ctf_plot_file.records_per_line;
-
-	float *spatial_frequency = new float[number_of_points];
-	float *ctf_fit = new float[number_of_points];
-	float *quality_of_fit = new float[number_of_points];
-	float *amplitude_spectrum = new float[number_of_points];
-
-	ctf_plot_file.ReadLine(spatial_frequency);
-	ctf_plot_file.ReadLine(amplitude_spectrum);
-	ctf_plot_file.ReadLine(amplitude_spectrum);
-	ctf_plot_file.ReadLine(ctf_fit);
-	ctf_plot_file.ReadLine(quality_of_fit);
-
-	// smooth the amplitude spectra
-
-	Curve amplitude_plot;
-
-	for (int counter = 0; counter < number_of_points; counter++)
+	if (DoesFileExist(avrot_filename) == true)
 	{
-		amplitude_plot.AddPoint(spatial_frequency[counter], amplitude_spectrum[counter]);
-	}
+		NumericTextFile ctf_plot_file(avrot_filename, OPEN_TO_READ);
 
-	amplitude_plot.FitSavitzkyGolayToData(7, 3);
+		int number_of_points = ctf_plot_file.records_per_line;
+
+		float *spatial_frequency = new float[number_of_points];
+		float *ctf_fit = new float[number_of_points];
+		float *quality_of_fit = new float[number_of_points];
+		float *amplitude_spectrum = new float[number_of_points];
+
+
+		ctf_plot_file.ReadLine(spatial_frequency);
+		ctf_plot_file.ReadLine(amplitude_spectrum);
+		ctf_plot_file.ReadLine(amplitude_spectrum);
+		ctf_plot_file.ReadLine(ctf_fit);
+		ctf_plot_file.ReadLine(quality_of_fit);
+
+		// smooth the amplitude spectra
+
+		Curve amplitude_plot;
+
+		for (int counter = 0; counter < number_of_points; counter++)
+		{
+			amplitude_plot.AddPoint(spatial_frequency[counter], amplitude_spectrum[counter]);
+		}
+
+		amplitude_plot.FitSavitzkyGolayToData(7, 3);
 
 
 
-	for (int counter = 0; counter < number_of_points; counter++)
-	{
+		for (int counter = 0; counter < number_of_points; counter++)
+		{
 		//CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_spectrum[counter]);
-		CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_plot.savitzky_golay_fit[counter]);
-	}
+			CTFPlotPanel->AddPoint(spatial_frequency[counter], ctf_fit[counter], quality_of_fit[counter], amplitude_plot.savitzky_golay_fit[counter]);
+		}
 
-	CTFPlotPanel->Draw();
+		CTFPlotPanel->Draw();
+
+		delete [] spatial_frequency;
+		delete [] ctf_fit;
+		delete [] quality_of_fit;
+		delete [] amplitude_spectrum;
+	}
 
 	ImageFileText->SetLabel(wxString::Format("(%s)", wxFileName(ImageFile).GetFullName()));
 
@@ -136,10 +147,7 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
 		ImageDisplayPanel->ChangeFile(ImageFile, "");
 	}
 
-	delete [] spatial_frequency;
-	delete [] ctf_fit;
-	delete [] quality_of_fit;
-	delete [] amplitude_spectrum;
+
 
 	Thaw();
 

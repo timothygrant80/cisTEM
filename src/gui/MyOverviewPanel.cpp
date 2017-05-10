@@ -165,6 +165,6 @@ void MyOverviewPanel::OnInfoURL(wxTextUrlEvent& event)
 		 main_frame->GetFileAndOpenProject();
 	 }
 	 else
-	 if (my_style.GetURL() == "www.cistem.org") wxLaunchDefaultBrowser(my_style.GetURL());
+	 if (my_style.GetURL() == "http://www.cistem.org") wxLaunchDefaultBrowser(my_style.GetURL());
 	 else main_frame->OpenProject(my_style.GetURL());
 }

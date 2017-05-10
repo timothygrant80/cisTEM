@@ -61,6 +61,20 @@ class MyMainFrame : public MainFrame
 		void DirtyClassificationSelections();
 		void DirtyClassifications();
 
+		void ClearScratchDirectory();
+		void ClearStartupScratch();
+		void ClearRefine2DScratch();
+		void ClearRefine3DScratch();
+		void ClearAutoRefine3DScratch();
+
+		wxString ReturnScratchDirectory();
+		wxString ReturnStartupScratchDirectory();
+		wxString ReturnRefine2DScratchDirectory();
+		wxString ReturnRefine3DScratchDirectory();
+		wxString ReturnAutoRefine3DScratchDirectory();
+
+
+
 		//LaunchJob(JobPanel *parent_panel, )
 
 };

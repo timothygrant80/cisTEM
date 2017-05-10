@@ -41,9 +41,10 @@ public:
 	void ReadStatisticsFromFile(wxString input_file);
 	void GenerateDefaultStatistics(float molecular_mass_in_kDa);
 
-	float ReturnEstimatedResolution();
-	float Return0p8Resolution();
-	float Return0p5Resolution();
+	float ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells);
+	float ReturnEstimatedResolution(bool use_part_fsc = true);
+	float Return0p8Resolution(bool use_part_fsc = true);
+	float Return0p5Resolution(bool use_part_fsc = true);
 
 	inline float kDa_to_area_in_pixel(float molecular_mass_in_kDa)
 	{

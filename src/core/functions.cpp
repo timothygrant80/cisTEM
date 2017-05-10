@@ -514,3 +514,61 @@ void SplitFileIntoDirectoryAndFile(wxString &input_file, wxString &output_direct
 
 	output_file = current_filename.GetFullName();
 }
+
+int ReturnNumberofAsymmetricUnits(wxString symmetry)
+{
+	wxString current_symmetry_string = symmetry;
+	wxChar   symmetry_type;
+	long     symmetry_number;
+
+	current_symmetry_string = current_symmetry_string.Trim();
+	current_symmetry_string = current_symmetry_string.Trim(false);
+
+	MyDebugAssertTrue(current_symmetry_string.Length() > 0, "symmetry string is blank");
+	symmetry_type = current_symmetry_string.Capitalize()[0];
+
+	if (current_symmetry_string.Length() == 1)
+	{
+		symmetry_number = 0;
+	}
+	else
+	{
+		if (! current_symmetry_string.Mid(1).ToLong(&symmetry_number))
+		{
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", current_symmetry_string.Mid(1));
+			abort();
+		}
+	}
+
+	if (symmetry_type == 'C')
+	{
+		return int(symmetry_number);
+	}
+	else
+	if (symmetry_type == 'D')
+	{
+		return int(symmetry_number * 2);
+	}
+	else
+	if (symmetry_type == 'T')
+	{
+		return 12;
+	}
+	else
+	if (symmetry_type == 'O')
+	{
+		return 24;
+	}
+	else
+	if (symmetry_type == 'I')
+	{
+		return 60;
+	}
+
+	// shouldn't get here
+
+	return 1;
+
+}
+
+

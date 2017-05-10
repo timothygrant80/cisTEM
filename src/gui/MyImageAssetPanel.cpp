@@ -129,6 +129,7 @@ void MyImageAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, w
 
 void  MyImageAssetPanel::RemoveAllFromDatabase()
 {
+	main_frame->current_project.database.Begin();
 	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
 	{
 		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE IMAGE_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
@@ -136,32 +137,38 @@ void  MyImageAssetPanel::RemoveAllFromDatabase()
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE IMAGE_GROUP_LIST");
 	main_frame->current_project.database.CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
+	main_frame->current_project.database.Commit();
 
 }
 
 void MyImageAssetPanel::RemoveAllGroupMembersFromDatabase(int wanted_group_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE IMAGE_GROUP_%i", wanted_group_id).ToUTF8().data());
 	main_frame->current_project.database.CreateTable(wxString::Format("IMAGE_GROUP_%i", wanted_group_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "IMAGE_ASSET_ID");
+	main_frame->current_project.database.Commit();
 }
 
 void MyImageAssetPanel::AddGroupToDatabase(int wanted_group_id, const char * wanted_group_name, int wanted_list_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.InsertOrReplace("IMAGE_GROUP_LIST", "iti", "GROUP_ID", "GROUP_NAME", "LIST_ID", wanted_group_id, wanted_group_name, wanted_list_id);
 	main_frame->current_project.database.CreateTable(wxString::Format("IMAGE_GROUP_%i", wanted_list_id).ToUTF8().data(), "pi", "MEMBER_NUMBER", "IMAGE_ASSET_ID");
+	main_frame->current_project.database.Commit();
 }
 
 void MyImageAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE IMAGE_GROUP_%i", wanted_group_id).ToUTF8().data());
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM IMAGE_GROUP_LIST WHERE GROUP_ID=%i", wanted_group_id));
+	main_frame->current_project.database.Commit();
 }
 
 void MyImageAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
 	wxString sql_command = wxString::Format("UPDATE IMAGE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
-
 }
 
 void MyImageAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
@@ -182,6 +189,8 @@ void MyImageAssetPanel::ImportAllFromDatabase()
 	all_groups_list->RemoveAll();
 
 	// First all assets..
+
+
 
 	main_frame->current_project.database.BeginAllImageAssetsSelect();
 

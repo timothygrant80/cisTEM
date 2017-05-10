@@ -998,7 +998,7 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 
 wxString ContainedParticleListControl::OnGetItemText(long item, long column) const
 {
-	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyRefinementPackageAssetPanel *parent_panel =  refinement_package_asset_panel;////refinereinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
 
 	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
 	{

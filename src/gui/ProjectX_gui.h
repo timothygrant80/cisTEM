@@ -10,6 +10,7 @@
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
+class AbInitioPlotPanel;
 class AngularDistributionPlotPanel;
 class AutoWrapStaticText;
 class BitmapPanel;
@@ -159,6 +160,13 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticText* m_staticText324;
 		wxRadioButton* AutoMaskYesRadio;
 		wxRadioButton* AutoMaskNoRadio;
+		wxStaticText* m_staticText4151;
+		wxRadioButton* AutoPercentUsedYesRadio;
+		wxRadioButton* AutoPercentUsedNoRadio;
+		wxStaticText* InitialPercentUsedStaticText;
+		NumericTextCtrl* StartPercentUsedTextCtrl;
+		wxStaticText* FinalPercentUsedStaticText;
+		NumericTextCtrl* EndPercentUsedTextCtrl;
 		wxStaticText* m_staticText532;
 		wxStaticText* m_staticText533;
 		NumericTextCtrl* MaskRadiusTextCtrl;
@@ -169,9 +177,11 @@ class AbInitio3DPanelParent : public JobPanel
 		NumericTextCtrl* SmoothingFactorTextCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
+		AbInitioPlotPanel* PlotPanel;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
-		AngularDistributionPlotPanel* AngularPlotPanel;
+		wxStaticText* m_staticText377;
+		wxStaticLine* m_staticline91;
 		wxStaticLine* m_staticline11;
 		wxPanel* ProgressPanel;
 		wxStaticText* NumberConnectedText;
@@ -180,6 +190,10 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticLine* m_staticline60;
 		wxButton* FinishButton;
 		wxButton* CancelAlignmentButton;
+		wxStaticLine* CurrentLineOne;
+		wxButton* TakeCurrentResultButton;
+		wxStaticLine* CurrentLineTwo;
+		wxButton* TakeLastStartResultButton;
 		wxPanel* StartPanel;
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RefinementRunProfileComboBox;
@@ -195,11 +209,14 @@ class AbInitio3DPanelParent : public JobPanel
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TakeCurrentClicked( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TakeLastStartClicked( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
-		MyFSCPanel* FSCResultsPanel;
+		wxPanel* OrthResultsPanel;
+		DisplayPanel* ShowOrthDisplayPanel;
 		
 		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,686 ), long style = wxTAB_TRAVERSAL ); 
 		~AbInitio3DPanelParent();
@@ -1417,6 +1434,8 @@ class Refine3DPanel : public JobPanel
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;
 		NumericTextCtrl* MaskRadiusTextCtrl;
+		wxStaticText* m_staticText331;
+		NumericTextCtrl* InnerMaskRadiusTextCtrl;
 		wxStaticText* m_staticText317;
 		NumericTextCtrl* SignedCCResolutionTextCtrl;
 		wxStaticText* m_staticText362;
@@ -1455,10 +1474,6 @@ class Refine3DPanel : public JobPanel
 		wxStaticText* DefocusSearchStepStaticText;
 		NumericTextCtrl* DefocusSearchStepTextCtrl;
 		wxStaticText* m_staticText329;
-		wxStaticText* m_staticText330;
-		NumericTextCtrl* ReconstructionInnerRadiusTextCtrl;
-		wxStaticText* m_staticText331;
-		NumericTextCtrl* ReconstructionOuterRadiusTextCtrl;
 		wxStaticText* m_staticText332;
 		NumericTextCtrl* ScoreToWeightConstantTextCtrl;
 		wxStaticText* m_staticText335;
@@ -1527,6 +1542,99 @@ class Refine3DPanel : public JobPanel
 		
 		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1216,660 ), long style = wxTAB_TRAVERSAL ); 
 		~Refine3DPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class AutoRefine3DPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class AutoRefine3DPanelParent : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText262;
+		MemoryComboBox* RefinementPackageComboBox;
+		wxStaticLine* m_staticline54;
+		wxStaticText* m_staticText188;
+		NumericTextCtrl* HighResolutionLimitTextCtrl;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticText* PleaseCreateRefinementPackageText;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxButton* ResetAllDefaultsButton;
+		wxStaticText* m_staticText202;
+		wxStaticText* NoMovieFramesStaticText;
+		NumericTextCtrl* LowResolutionLimitTextCtrl;
+		wxStaticText* m_staticText196;
+		NumericTextCtrl* MaskRadiusTextCtrl;
+		wxStaticText* m_staticText330;
+		NumericTextCtrl* InnerMaskRadiusTextCtrl;
+		wxStaticText* m_staticText201;
+		wxStaticText* GlobalMaskRadiusStaticText;
+		NumericTextCtrl* GlobalMaskRadiusTextCtrl;
+		wxStaticText* NumberToRefineStaticText;
+		wxSpinCtrl* NumberToRefineSpinCtrl;
+		wxStaticText* SearchRangeXStaticText;
+		NumericTextCtrl* SearchRangeXTextCtrl;
+		wxStaticText* SearchRangeYStaticText;
+		NumericTextCtrl* SearchRangeYTextCtrl;
+		wxStaticText* m_staticText329;
+		wxStaticText* m_staticText332;
+		NumericTextCtrl* ScoreToWeightConstantTextCtrl;
+		wxStaticText* m_staticText335;
+		wxRadioButton* AdjustScoreForDefocusYesRadio;
+		wxRadioButton* AdjustScoreForDefocusNoRadio;
+		wxStaticText* m_staticText336;
+		wxRadioButton* AutoCropYesRadioButton;
+		wxRadioButton* AutoCropNoRadioButton;
+		wxStaticText* m_staticText363;
+		wxRadioButton* ApplyBlurringYesRadioButton;
+		wxRadioButton* ApplyBlurringNoRadioButton;
+		wxStaticText* SmoothingFactorStaticText;
+		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* m_staticText405;
+		wxStaticText* m_staticText3241;
+		wxRadioButton* AutoMaskYesRadio;
+		wxRadioButton* AutoMaskNoRadio;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		AngularDistributionPlotPanel* AngularPlotPanel;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RefinementRunProfileComboBox;
+		wxStaticText* RunProfileText1;
+		MemoryComboBox* ReconstructionRunProfileComboBox;
+		wxButton* StartRefinementButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnRefinementPackageComboBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		MyFSCPanel* FSCResultsPanel;
+		
+		AutoRefine3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1216,660 ), long style = wxTAB_TRAVERSAL ); 
+		~AutoRefine3DPanelParent();
 	
 };
 
@@ -2281,6 +2389,24 @@ class ClassificationPlotPanelParent : public wxPanel
 		
 		ClassificationPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
 		~ClassificationPlotPanelParent();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class AbInitioPlotPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class AbInitioPlotPanelParent : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxPanel* SigmaPanel;
+	
+	public:
+		wxAuiNotebook* my_notebook;
+		
+		AbInitioPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~AbInitioPlotPanelParent();
 	
 };
 

@@ -10,6 +10,9 @@ Database::Database()
 	in_batch_select = false;
 	batch_statement = NULL;
 
+	is_in_begin_commit = false;
+	should_do_local_commit = false;
+
 	sqlite3_config(SQLITE_CONFIG_SINGLETHREAD); // we only need access from a single thread right now, and this should be a little faster as it avoids mutex checks;
 
 }
@@ -27,10 +30,63 @@ int Database::ExecuteSQL(const char *command)
 	if( return_code != SQLITE_OK )
 	{
 	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", error_message, command);
-	    sqlite3_free(error_message);
+	   	sqlite3_free(error_message);
+
+	   	if (return_code != SQLITE_LOCKED) abort();
 	}
 
 	return return_code;
+}
+
+int Database::Prepare(wxString sql_command, sqlite3_stmt **current_statement)
+{
+	int return_code;
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, current_statement, NULL);
+
+	if( return_code != SQLITE_OK )
+	{
+	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", sqlite3_errmsg(sqlite_database), sql_command);
+	   	if (return_code != SQLITE_LOCKED) abort();
+	}
+
+	return return_code;
+}
+
+int Database::Step(sqlite3_stmt *current_statement)
+{
+	int return_code;
+	return_code = sqlite3_step(current_statement);
+
+	if( return_code != SQLITE_DONE && return_code != SQLITE_ROW )
+	{
+	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errstr(return_code));
+	   	if (return_code != SQLITE_LOCKED) abort();
+	}
+
+	return return_code;
+}
+
+int Database::Finalize(sqlite3_stmt *current_statement)
+{
+	int return_code;
+	return_code = sqlite3_finalize(current_statement);
+
+	if( return_code != SQLITE_OK )
+	{
+	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errmsg(sqlite_database));
+	   	if (return_code != SQLITE_LOCKED) abort();
+	}
+
+	return return_code;
+}
+
+void Database::CheckBindCode(int return_code)
+{
+	if( return_code != SQLITE_OK )
+	{
+	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errmsg(sqlite_database));
+	   	if (return_code != SQLITE_LOCKED) abort();
+	}
 }
 
 int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
@@ -41,19 +97,11 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	sqlite3_stmt *current_statement;
 	int value;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n(Select command = %s\n", return_code , select_command);
-
-	return_code = sqlite3_step(current_statement);
-
-	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
-
+	Prepare(select_command, &current_statement);
+	return_code = Step(current_statement);
 	value = sqlite3_column_int(current_statement, 0);
 
-	sqlite3_finalize(current_statement);
+	Finalize(current_statement);
 
 	return value;
 }
@@ -66,19 +114,12 @@ long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 	sqlite3_stmt *current_statement;
 	long value;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(current_statement);
-
-	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
+	Prepare(select_command, &current_statement);
+	Step(current_statement);
 
 	value = sqlite3_column_int64(current_statement, 0);
 
-	sqlite3_finalize(current_statement);
+	Finalize(current_statement);
 
 	return value;
 }
@@ -92,15 +133,8 @@ void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defo
 	int value;
 	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, AMPLITUDE_CONTRAST FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(current_statement);
-
-	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
+	Prepare(select_command, &current_statement);
+	Step(current_statement);
 
 	defocus_1 = float(sqlite3_column_double(current_statement, 0));
 	defocus_2 = float(sqlite3_column_double(current_statement, 1));
@@ -108,7 +142,7 @@ void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defo
 	phase_shift = float(sqlite3_column_double(current_statement, 3));
 	amplitude_contrast = float(sqlite3_column_double(current_statement,4));
 
-	sqlite3_finalize(current_statement);
+	Finalize(current_statement);
 }
 
 double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
@@ -119,19 +153,12 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
 	sqlite3_stmt *current_statement;
 	double value;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, select_command, select_command.Length() + 1, &current_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(current_statement);
-
-	if (return_code != SQLITE_DONE && return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
+	Prepare(select_command, &current_statement);
+	Step(current_statement);
 
 	value = sqlite3_column_double(current_statement, 0);
 
-	sqlite3_finalize(current_statement);
+	Finalize(current_statement);
 
 	return value;
 }
@@ -139,6 +166,11 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command)
 long Database::ReturnHighestRefinementID()
 {
 	return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
+}
+
+long Database::ReturnHighestStartupID()
+{
+	return ReturnSingleLongFromSelectCommand("SELECT MAX(STARTUP_ID) FROM STARTUP_LIST");
 }
 
 long Database::ReturnHighestClassificationID()
@@ -402,11 +434,11 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
     }
 
 	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
-	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
-	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
-	ExecuteSQL("PRAGMA main.page_size=4096;");
-	ExecuteSQL("PRAGMA main.cache_size=10000;");
-	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
+	//ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
+	//ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
+	//ExecuteSQL("PRAGMA main.page_size=4096;");
+	//ExecuteSQL("PRAGMA main.cache_size=10000;");
+	//ExecuteSQL("PRAGMA main.journal_mode=WAL;");
 
 	// I want to lock the databse, and so i'm going to write to it.
 
@@ -462,11 +494,11 @@ bool Database::Open(wxFileName file_to_open)
 	}
 
 	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
-	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
-	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
-	ExecuteSQL("PRAGMA main.page_size=4096;");
-	ExecuteSQL("PRAGMA main.cache_size=10000;");
-	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
+//	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
+//	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
+//	ExecuteSQL("PRAGMA main.page_size=4096;");
+//	ExecuteSQL("PRAGMA main.cache_size=10000;");
+//	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
 
 	// I want to lock the databse, and so i'm going to write to it.
 
@@ -488,6 +520,10 @@ bool Database::Open(wxFileName file_to_open)
 
 	database_file = file_to_open;
 	is_open = true;
+
+	// check all the tables exist?
+
+	CreateAllTables();
 
 	return true;
 
@@ -566,12 +602,10 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 
 	va_end(args);
 
-	return_code = sqlite3_exec(sqlite_database, sql_command.ToUTF8().data(), NULL, 0, &error_message);
+	return_code = ExecuteSQL(sql_command.ToUTF8().data());
 
     if( return_code != SQLITE_OK )
     {
-    	MyPrintWithDetails("SQL Error: %s\n%s", error_message, sql_command);
-        sqlite3_free(error_message);
         abort();
     }
 
@@ -620,6 +654,8 @@ bool Database::CreateAllTables()
 	success = CreateClassificationListTable();
 	CheckSuccess(success);
 	success = CreateClassificationSelectionListTable();
+	CheckSuccess(success);
+	success = CreateStartupListTable();
 	CheckSuccess(success);
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
@@ -681,11 +717,6 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 			sql_command += wxString::Format("%li",  va_arg(args, long));
 		}
 		else
-		if (*column_format == 'f') // float
-		{
-			sql_command += wxString::Format("%f",  va_arg(args, float));
-		}
-		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
 			abort();
@@ -699,14 +730,12 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 
 	va_end(args);
 
-	return_code = sqlite3_exec(sqlite_database, sql_command.ToUTF8().data(), NULL, 0, &error_message);
+	return_code = ExecuteSQL(sql_command.ToUTF8().data());
 
     if( return_code != SQLITE_OK )
     {
-    	MyPrintWithDetails("SQL Error: %s\n\nFor :-\n%s", error_message, sql_command);
     	abort();
-        sqlite3_free(error_message);
-        return false;
+
     }
 
     return true;
@@ -719,19 +748,10 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	sqlite3_stmt *sqlite_statement;
-	int return_code;
 	wxString sql_command = "select * from MASTER_SETTINGS;";
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(sqlite_statement);
-
-	if (return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-		return false;
-	}
+	Prepare(sql_command, &sqlite_statement);
+	Step(sqlite_statement);
 
 	project_directory = sqlite3_column_text(sqlite_statement, 1);
 	project_name = sqlite3_column_text(sqlite_statement, 2);
@@ -739,7 +759,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	total_cpu_hours = sqlite3_column_double(sqlite_statement, 4);
 	total_jobs_run = sqlite3_column_int(sqlite_statement, 5);
 
-	sqlite3_finalize(sqlite_statement);
+	Finalize(sqlite_statement);
 	return true;
 }
 
@@ -757,15 +777,8 @@ void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberratio
 	int return_code;
 	wxString sql_command = "select * FROM MOVIE_IMPORT_DEFAULTS;";
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(sqlite_statement);
-
-	if (return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
+	Prepare(sql_command, &sqlite_statement);
+	Step(sqlite_statement);
 
 	voltage = sqlite3_column_double(sqlite_statement, 1);
 	spherical_aberration = sqlite3_column_double(sqlite_statement, 2);
@@ -780,7 +793,7 @@ void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberratio
 	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 11);
 	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 12);
 
-	sqlite3_finalize(sqlite_statement);
+	Finalize(sqlite_statement);
 }
 
 
@@ -792,20 +805,14 @@ void Database::GetImageImportDefaults(float &voltage, float &spherical_aberratio
 	int return_code;
 	wxString sql_command = "select * FROM IMAGE_IMPORT_DEFAULTS;";
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &sqlite_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(sqlite_statement);
-
-	if (return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", return_code);
-	}
+	Prepare(sql_command, &sqlite_statement);
+	Step(sqlite_statement);
 
 	voltage = sqlite3_column_double(sqlite_statement, 1);
 	spherical_aberration = sqlite3_column_double(sqlite_statement, 2);
 	pixel_size = sqlite3_column_double(sqlite_statement, 3);
-	sqlite3_finalize(sqlite_statement);
+
+	Finalize(sqlite_statement);
 }
 
 
@@ -839,15 +846,18 @@ void Database::BeginBatchInsert(const char *table_name, int number_of_columns, .
 	va_list args;
 	va_start(args, number_of_columns);
 
-	sql_command = "BEGIN IMMEDIATE;";
-	last_return_code = sqlite3_exec(sqlite_database, sql_command.ToUTF8().data(), NULL, 0, &error_message);
+	// check to see if we are part of a larger transaction.
 
-
-	if (last_return_code != SQLITE_OK)
+	if (is_in_begin_commit == false)
 	{
-		MyPrintWithDetails("SQL Error : %s\n", error_message);
-		sqlite3_free(error_message);
+		Begin();
+		should_do_local_commit = true;
 	}
+	else
+	{
+		should_do_local_commit = false;
+	}
+
 
 	sql_command = "INSERT OR REPLACE INTO ";
 	sql_command += table_name;
@@ -871,8 +881,7 @@ void Database::BeginBatchInsert(const char *table_name, int number_of_columns, .
 		else sql_command += "?); ";
 	}
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length(), &batch_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL command : %s", return_code, sql_command.ToUTF8().data() );
+	Prepare(sql_command, &batch_statement);
 }
 
 void Database::AddToBatchInsert(const char *column_format, ...)
@@ -891,25 +900,25 @@ void Database::AddToBatchInsert(const char *column_format, ...)
 		{
 			text_pointer = va_arg(args,const char *);
 			return_code = sqlite3_bind_text(batch_statement, argument_counter, text_pointer, strlen(text_pointer), SQLITE_STATIC);
-			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+			CheckBindCode(return_code);
 		}
 		else
 		if (*column_format == 'r') // real
 		{
 			return_code = sqlite3_bind_double(batch_statement, argument_counter, va_arg(args, double));
-			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+			CheckBindCode(return_code);
 		}
 		else
 		if (*column_format == 'i') // integer
 		{
 			return_code = sqlite3_bind_int(batch_statement, argument_counter, va_arg(args, int));
-			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+			CheckBindCode(return_code);
 		}
 		else
 		if (*column_format == 'l') // long
 		{
 			return_code = sqlite3_bind_int64(batch_statement, argument_counter, va_arg(args, long));
-			MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+			CheckBindCode(return_code);
 
 		}
 		else
@@ -922,7 +931,7 @@ void Database::AddToBatchInsert(const char *column_format, ...)
 
 	va_end(args);
 
-	return_code = sqlite3_step(batch_statement);
+	return_code = Step(batch_statement);
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
     return_code = sqlite3_clear_bindings(batch_statement);
@@ -937,19 +946,10 @@ void Database::EndBatchInsert()
 {
 	int return_code;
 	char *error_message = NULL;
-	wxString sql_command;
 
-	sql_command += "COMMIT;";
+	if (should_do_local_commit == true) Commit();
 
-	return_code = sqlite3_exec(sqlite_database, sql_command.ToUTF8().data(), NULL, 0, &error_message);
-
-    if( return_code != SQLITE_OK )
-    {
-    	MyPrintWithDetails("SQL Error: %s\n", error_message);
-        sqlite3_free(error_message);
-    }
-
-    sqlite3_finalize(batch_statement);
+	Finalize(batch_statement);
     in_batch_insert = false;
 }
 
@@ -1026,23 +1026,14 @@ bool Database::BeginBatchSelect(const char *select_command)
 	MyDebugAssertTrue(in_batch_insert == false, "Starting batch select but already in batch insert mode");
 	MyDebugAssertTrue(in_batch_select == false, "Starting batch select but already in batch select mode");
 
-
 	in_batch_select = true;
 	int return_code;
 
-	return_code = sqlite3_prepare_v2(sqlite_database, select_command, strlen(select_command) + 1, &batch_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i, Command = %s\n", return_code, select_command );
-
-	last_return_code = sqlite3_step(batch_statement);
-
-	if (last_return_code != SQLITE_DONE && last_return_code != SQLITE_ROW)
-	{
-		MyPrintWithDetails("SQL Return Code: %i\n", last_return_code);
-	}
+	Prepare(select_command, &batch_statement);
+	last_return_code = Step(batch_statement);
 
 	if (last_return_code != SQLITE_DONE) return true;
 	else return false;
-	//return true;
 }
 
 bool Database::GetFromBatchSelect(const char *column_format, ...)
@@ -1102,8 +1093,7 @@ bool Database::GetFromBatchSelect(const char *column_format, ...)
 
 	va_end(args);
 
-	last_return_code = sqlite3_step(batch_statement);
-	MyDebugAssertTrue(last_return_code == SQLITE_OK || last_return_code == SQLITE_ROW || last_return_code == SQLITE_DONE, "SQL error, return code : %i\n", last_return_code );
+	last_return_code = Step(batch_statement);
 
 	if (last_return_code == SQLITE_DONE) return false;
 	else return true;
@@ -1112,7 +1102,7 @@ bool Database::GetFromBatchSelect(const char *column_format, ...)
 
 void Database::EndBatchSelect()
 {
-	sqlite3_finalize(batch_statement);
+	Finalize(batch_statement);
 	in_batch_select = false;
 }
 
@@ -1182,20 +1172,18 @@ RunProfile Database::GetNextRunProfile()
 
 	profile_sql_select_command = wxString::Format("SELECT * FROM RUN_PROFILE_COMMANDS_%i", profile_table_number);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, profile_sql_select_command.ToUTF8().data(), profile_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(profile_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2), sqlite3_column_int(list_statement, 3));
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 	return temp_profile;
 }
 
@@ -1213,20 +1201,19 @@ AssetGroup Database::GetNextMovieGroup()
 
 	group_sql_select_command = wxString::Format("SELECT * FROM MOVIE_GROUP_%i", group_table_number);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
+	Prepare(group_sql_select_command, &list_statement);
 
-	return_code = sqlite3_step(list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
-			return_code = sqlite3_step(list_statement);
+			return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 	return temp_group;
 }
 
@@ -1244,20 +1231,18 @@ AssetGroup Database::GetNextImageGroup()
 
 	group_sql_select_command = wxString::Format("SELECT * FROM IMAGE_GROUP_%i", group_table_number);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
-			return_code = sqlite3_step(list_statement);
+			return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 	return temp_group;
 }
 
@@ -1282,10 +1267,8 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 
 	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li ORDER BY POSITION_IN_STACK", temp_package->asset_id);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
@@ -1305,73 +1288,64 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 
 		temp_package->contained_particles.Add(temp_info);
 
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 
 	// 3d references
 
 	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", temp_package->asset_id);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 		temp_package->references_for_next_refinement.Add(sqlite3_column_int64(list_statement, 1));
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
-
+	Finalize(list_statement);
 
 	// refinement list
 
 	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", temp_package->asset_id);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 		temp_package->refinement_ids.Add(sqlite3_column_int64(list_statement, 1));
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 
 
 	// classification list
 
 	group_sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", temp_package->asset_id);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 		temp_package->classification_ids.Add(sqlite3_column_int64(list_statement, 1));
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
-
-
+	Finalize(list_statement);
 
 	return temp_package;
 
@@ -1392,20 +1366,18 @@ AssetGroup Database::GetNextParticlePositionGroup()
 
 	group_sql_select_command = wxString::Format("SELECT * FROM PARTICLE_POSITION_GROUP_%i", group_table_number);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
-			return_code = sqlite3_step(list_statement);
+			return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 	return temp_group;
 }
 
@@ -1423,20 +1395,18 @@ AssetGroup Database::GetNextVolumeGroup()
 
 	group_sql_select_command = wxString::Format("SELECT * FROM VOLUME_GROUP_%i", group_table_number);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, group_sql_select_command.ToUTF8().data(), group_sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(group_sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 			temp_group.AddMember(sqlite3_column_int(list_statement, 1));
-			return_code = sqlite3_step(list_statement);
+			return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 	return temp_group;
 }
 
@@ -1666,6 +1636,18 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 
 }
 
+void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used,  float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids)
+{
+	InsertOrReplace("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR", startup_job_id, refinement_package_asset_id, name.ToUTF8().data(), number_of_starts, number_of_cycles, initial_res_limit, final_res_limit, int(auto_mask), int(auto_percent_used), initial_percent_used, final_percent_used, mask_radius, int(apply_blurring), smoothing_factor);
+	CreateStartupResultTable(startup_job_id);
+
+	for (int class_counter = 0; class_counter < result_volume_ids.GetCount(); class_counter++)
+	{
+		InsertOrReplace(wxString::Format("STARTUP_RESULT_%li", startup_job_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID", class_counter + 1, result_volume_ids[class_counter]);
+	}
+
+}
+
 void Database::AddRefinement(Refinement *refinement_to_add)
 {
 	int class_counter;
@@ -1723,14 +1705,20 @@ void Database::UpdateRefinementResolutionStatistics(Refinement *refinement_to_ad
 	int class_counter;
 	long counter;
 
-	ExecuteSQL("BEGIN");
+	if (is_in_begin_commit == false)
+	{
+		Begin();
+		should_do_local_commit = true;
+	}
+	else
+	{
+		should_do_local_commit = false;
+	}
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
 		ExecuteSQL(wxString::Format("DROP TABLE REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter));
 	}
-
-	ExecuteSQL("COMMIT");
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
@@ -1745,6 +1733,8 @@ void Database::UpdateRefinementResolutionStatistics(Refinement *refinement_to_ad
 
 		EndBatchInsert();
 	}
+
+	if (should_do_local_commit == true) Commit();
 
 }
 
@@ -1771,11 +1761,9 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	// general data
 
 	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_LIST WHERE REFINEMENT_ID=%li", wanted_refinement_id);
+	Prepare(sql_select_command, &list_statement);
 
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code , sql_select_command);
-
-	return_code = sqlite3_step(list_statement);
+	return_code = Step(list_statement);
 
 
 	temp_refinement->refinement_id = sqlite3_column_int64(list_statement, 0);
@@ -1808,26 +1796,24 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	temp_refinement->resolution_statistics_box_size = sqlite3_column_int(list_statement, 27);
 	temp_refinement->resolution_statistics_pixel_size = sqlite3_column_double(list_statement, 28);
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 
 	// volume_ids..
 
 
 	// 3d references
 	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_REFERENCE_VOLUME_IDS_%li", temp_refinement->refinement_id);
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
-
-	return_code = sqlite3_step(list_statement);
+	Prepare(sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	while (  return_code == SQLITE_ROW)
 	{
 		temp_refinement->reference_volume_ids.Add(sqlite3_column_int64(list_statement, 1));
-		return_code = sqlite3_step(list_statement);
+		return_code = Step(list_statement);
 	}
 
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 
 	// now get all the parameters..
 
@@ -1928,9 +1914,8 @@ Classification *Database::GetClassificationByID(long wanted_classification_id)
 	// general data
 
 	sql_select_command = wxString::Format("SELECT * FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=%li", wanted_classification_id);
-	return_code = sqlite3_prepare_v2(sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code , sql_select_command);
-	return_code = sqlite3_step(list_statement);
+	Prepare(sql_select_command, &list_statement);
+	return_code = Step(list_statement);
 
 	temp_classification->classification_id = sqlite3_column_int64(list_statement, 0);
 	temp_classification->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
@@ -1952,14 +1937,14 @@ Classification *Database::GetClassificationByID(long wanted_classification_id)
 	temp_classification->auto_percent_used = sqlite3_column_int(list_statement, 17);
 	temp_classification->percent_used = sqlite3_column_double(list_statement, 18);
 
-	sqlite3_finalize(list_statement);
+	Finalize(list_statement);
 
 	// now get all the parameters..
 
 	temp_classification->classification_results.Alloc(temp_classification->number_of_particles);
 
 	sql_select_command = wxString::Format("SELECT * FROM CLASSIFICATION_RESULT_%li", temp_classification->classification_id);
-	wxPrintf("Select command = %s\n", sql_select_command.ToUTF8().data());
+	//wxPrintf("Select command = %s\n", sql_select_command.ToUTF8().data());
 	more_data = BeginBatchSelect(sql_select_command);
 
 	while (more_data == true)

@@ -68,11 +68,12 @@ public :
 	float defocus_search_step;
 	int resolution_statistics_box_size;
 	float resolution_statistics_pixel_size;
-	float average_sigma;
 	float percent_used;
 	//wxArrayDouble average_occupancy;
 
 	void SizeAndFillWithEmpty(long number_of_particles, int number_of_classes);
+	void UpdateOccupancies(bool use_old_occupancies = true);
+	wxArrayDouble UpdatePSSNR();
 
 	wxArrayLong reference_volume_ids;
 	ArrayofClassRefinementResults class_refinement_results;

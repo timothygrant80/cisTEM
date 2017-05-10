@@ -513,7 +513,7 @@ bool Refine3DApp::DoCalculation()
 //	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size);
 //	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	// Remove masking here to avoid edge artifacts later
-	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, 3.0 * mask_falloff / pixel_size, false, true, 0.0);
+//	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, 3.0 * mask_falloff / pixel_size, false, true, 0.0);
 	if (inner_mask_radius > 0.0) input_3d.density_map.CosineMask(inner_mask_radius / pixel_size, mask_falloff / pixel_size, true);
 //	for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
 	if (threshold_input_3d)
@@ -715,6 +715,7 @@ bool Refine3DApp::DoCalculation()
 
 			for (i = 1; i < refine_particle.number_of_parameters; i++) output_parameters[i] = 0.0;
 			output_parameters[0] = input_parameters[0];
+
 			my_output_par_shifts_file.WriteLine(output_parameters);
 
 			my_progress->Update(image_counter);

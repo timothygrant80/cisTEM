@@ -208,9 +208,8 @@ void Refine2DResultsPanel::WriteJobInfo(long wanted_classification_id)
 	// general data
 
 	sql_select_command = wxString::Format("SELECT * FROM CLASSIFICATION_LIST WHERE CLASSIFICATION_ID=%li", wanted_classification_id);
-	return_code = sqlite3_prepare_v2(main_frame->current_project.database.sqlite_database, sql_select_command.ToUTF8().data(), sql_select_command.Length() + 1, &list_statement, NULL);
-	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\nSQL Command : %s\n", return_code , sql_select_command);
-	return_code = sqlite3_step(list_statement);
+	main_frame->current_project.database.Prepare(sql_select_command, &list_statement);
+	return_code = main_frame->current_project.database.Step(list_statement);
 
 	temp_classification->classification_id = sqlite3_column_int64(list_statement, 0);
 	temp_classification->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
@@ -232,7 +231,7 @@ void Refine2DResultsPanel::WriteJobInfo(long wanted_classification_id)
 	temp_classification->auto_percent_used = sqlite3_column_int(list_statement, 17);
 	temp_classification->percent_used = sqlite3_column_double(list_statement, 18);
 
-	sqlite3_finalize(list_statement);
+	main_frame->current_project.database.Finalize(list_statement);
 
 
 	ClassificationIDStaticText->SetLabel(wxString::Format("%li", temp_classification->classification_id));

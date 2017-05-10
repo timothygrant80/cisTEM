@@ -3,11 +3,12 @@ class Database {
 	bool is_open;
 	bool in_batch_insert;
 	bool in_batch_select;
-
+	bool is_in_begin_commit;
 
 	wxFileName database_file;
 
 	sqlite3_stmt *batch_statement;
+	bool should_do_local_commit; // used for functions to decide whether to do a commit themselves, or to leave it for someone else to commit. if already in a begin, it won't do begin commit.
 
 public :
 
@@ -23,6 +24,26 @@ public :
 
 	bool CreateNewDatabase(wxFileName database_file);
 	bool Open(wxFileName file_to_open);
+
+
+	void Begin()
+	{
+		if (is_in_begin_commit == false)
+		{
+			is_in_begin_commit = true;
+			ExecuteSQL("BEGIN IMMEDIATE;");// we can start, otherwise, we are already in begin commit
+		}
+
+	};
+
+	void Commit()
+	{
+		if (is_in_begin_commit == true)
+		{
+			is_in_begin_commit = false;
+			ExecuteSQL("COMMIT;"); // only do this if we are actually in a section
+		}
+	}
 
 	bool CreateTable(const char *table_name, const char *column_format, ...);
 	bool DeleteTable(const char *table_name);
@@ -40,6 +61,11 @@ public :
 	void EndBatchSelect();
 
 	int ExecuteSQL(const char *command);
+	int Prepare(wxString select_command, sqlite3_stmt **current_statement);
+	int Step(sqlite3_stmt *current_statement);
+	int Finalize(sqlite3_stmt *current_statement);
+	void CheckBindCode(int return_code);
+
 	int ReturnSingleIntFromSelectCommand(wxString select_command);
 	long ReturnSingleLongFromSelectCommand(wxString select_command);
 	double ReturnSingleDoubleFromSelectCommand(wxString select_command);
@@ -49,6 +75,7 @@ public :
 	// Get various id numbers and counts
 
 	long ReturnHighestRefinementID();
+	long ReturnHighestStartupID();
 	long ReturnHighestClassificationID();
 	int ReturnHighestAlignmentID();
 	int ReturnHighestAlignmentJobID();
@@ -67,6 +94,8 @@ public :
 	int ReturnNumberOfCTFEstimationJobs();
 	int ReturnNumberOfPickingJobs();
 	int ReturnNumberOfImageAssetsWithCTFEstimates();
+
+
 
 	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
 	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
@@ -147,6 +176,9 @@ public :
 	bool CreateMovieImportDefaultsTable() {return CreateTable("MOVIE_IMPORT_DEFAULTS", "prrrritirirrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE" );};
 	bool CreateImageImportDefaultsTable() {return CreateTable("IMAGE_IMPORT_DEFAULTS", "prrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE");};
 
+	bool CreateStartupListTable() { return CreateTable("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR");};
+	bool CreateStartupResultTable(const long startup_id) {return CreateTable(wxString::Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
+
 	void DoVacuum() {ExecuteSQL("VACUUM");}
 
 	// Convenience select functions...
@@ -191,6 +223,7 @@ public :
 	RefinementPackage* GetNextRefinementPackage();
 	void EndAllRefinementPackagesSelect() {EndBatchSelect();};
 
+	void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used,  float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
 
 	// Convenience CTF parameter function
 	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );

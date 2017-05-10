@@ -57,6 +57,7 @@ class RefinementPackage {
 
 	long ReturnLastRefinementID();
 
+
 };
 
 WX_DECLARE_OBJARRAY(RefinementPackage, ArrayOfRefinementPackages);

@@ -118,10 +118,10 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
 		output_parameters[5] = classification_results[particle_counter].yshift;
 		output_parameters[6] = 0.0;
 		output_parameters[7] = classification_results[particle_counter].best_class;
-		output_parameters[8] = parent_refinement_package->contained_particles[particle_counter].defocus_1;
-		output_parameters[9] = parent_refinement_package->contained_particles[particle_counter].defocus_2;
-		output_parameters[10] = parent_refinement_package->contained_particles[particle_counter].defocus_angle;
-		output_parameters[11] = parent_refinement_package->contained_particles[particle_counter].phase_shift;
+		output_parameters[8] = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_1;
+		output_parameters[9] = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_2;
+		output_parameters[10] = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_angle;
+		output_parameters[11] = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).phase_shift;
 		output_parameters[12] = 100.0;
 		output_parameters[13] = classification_results[particle_counter].logp;
 		output_parameters[14] = classification_results[particle_counter].sigma;

@@ -92,11 +92,13 @@
 #include "../gui/AngularDistributionPlotPanel.h"
 #include "../gui/DisplayPanel.h"
 #include "../gui/ClassificationPlotPanel.h"
+#include "../gui/AbInitioPlotPanel.h"
 #include "../gui/Refine2DResultsPanel.h"
 #include "../gui/ClassumSelectionCopyFromDialog.h"
 #include "../gui/MyOverviewPanel.h"
 #include "../gui/AbInitio3DPanel.h"
 #include "../gui/AssetPickerComboPanel.h"
+#include "../gui/AutoRefine3dPanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

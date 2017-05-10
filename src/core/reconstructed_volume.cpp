@@ -564,7 +564,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	{
 		density_map.BackwardFFT();
 		// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
-		Correct3D(outer_mask_radius / pixel_size);
+		//Correct3D(outer_mask_radius / pixel_size);
 		// Scaling factor needed to compensate for FFT normalization for different box sizes
 		density_map.MultiplyByConstant(float(intermediate_box_size) / float(box_size));
 		density_map.Resize(intermediate_box_size, intermediate_box_size,
@@ -581,10 +581,10 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	density_map.BackwardFFT();
 	// Need to run Correct3D if cropping was not used
 	// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
-	if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
+	//if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
 	// Now we have a full-size map with the final pixel size. Applying mask and center map in box...
 //	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
-	CosineMask(density_map.physical_address_of_box_center_x - 3.0 * mask_falloff / original_pixel_size, 3.0 * mask_falloff / original_pixel_size);
+	//CosineMask(density_map.physical_address_of_box_center_x - 3.0 * mask_falloff / original_pixel_size, 3.0 * mask_falloff / original_pixel_size);
 	if (center_mass)
 	{
 //		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();

@@ -87,6 +87,8 @@ Refinement::Refinement()
 	defocus_search_range = 0;
 	defocus_search_step = 0;
 	percent_used = 0.0;
+	resolution_statistics_pixel_size = 0;
+	resolution_statistics_box_size = 0;
 
 
 }
@@ -166,12 +168,6 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 
 		}
 
-		// NEED TO WRITE OUT AVERAGE SIGMA WEIGHTED BY OCC.
-
-
-		if (number_of_classes > 1) output_parameters[14] = average_sigma;
-
-
 		for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
 		{
 			parameter_average[parameter_counter] /= float (number_of_particles);
@@ -225,6 +221,151 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
 		class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
 		class_refinement_results[class_counter].particle_refinement_results.Add(junk_result, number_of_particles);
 	}
+}
+
+wxArrayDouble Refinement::UpdatePSSNR()
+{
+	wxArrayDouble average_occupancies;
 
 
+	if (this->number_of_classes > 1)
+	{
+		average_occupancies.Add(0.0, this->number_of_classes);
+
+		long number_of_active_images = 0;
+		float sum_ave_occ = 0.0f;
+		int class_counter;
+		long particle_counter;
+		int point_counter;
+		float sum_part_ssnr;
+		float current_part_ssnr;
+
+
+		for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+		{
+			number_of_active_images = 0;
+			average_occupancies[class_counter] = 0.0;
+
+			for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+			{
+				if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
+				{
+					average_occupancies[class_counter] += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+					number_of_active_images++;
+				}
+			}
+
+			average_occupancies[class_counter] /= double(number_of_active_images);
+			sum_ave_occ += average_occupancies[class_counter];
+		}
+
+		for (point_counter = 0; point_counter < this->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
+		{
+			sum_part_ssnr = 0;
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				sum_part_ssnr += this->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
+			}
+
+			current_part_ssnr = sum_part_ssnr / sum_ave_occ;
+
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				this->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
+			}
+
+		}
+	}
+	else average_occupancies.Add(100.00);
+
+	return average_occupancies;
+}
+
+void Refinement::UpdateOccupancies(bool use_old_occupancies)
+{
+	if (this->number_of_classes > 1)
+	{
+		int class_counter;
+		int particle_counter;
+		int point_counter;
+
+		float sum_probabilities;
+		float occupancy;
+		float max_logp;
+		float average_occupancies[this->number_of_classes];
+		long number_of_active_images = 0;
+		float current_average_sigma;
+
+		// calculate old average occupancies
+
+		if (use_old_occupancies == true)
+		{
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				average_occupancies[class_counter] = 0.0;
+				number_of_active_images = 0;
+
+				for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+				{
+					if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
+					{
+						average_occupancies[class_counter] += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+						number_of_active_images++;
+					}
+				}
+
+				average_occupancies[class_counter] /= float(number_of_active_images);
+			}
+		}
+		else
+		{
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				average_occupancies[class_counter] = 100.0 / float(this->number_of_classes);
+			}
+		}
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			max_logp = -FLT_MAX;
+
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
+			}
+
+			sum_probabilities = 0.0;
+
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				if (max_logp - this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
+				{
+					sum_probabilities += exp(this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
+				}
+			}
+
+			current_average_sigma = 0.0;
+
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				if (max_logp -  this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
+				{
+					occupancy = exp(this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
+				}
+				else
+				{
+					occupancy = 0.0;
+				}
+
+				//occupancy = 1. * (occupancy - this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+				this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
+				current_average_sigma +=  this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
+			}
+
+			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+			{
+				this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = current_average_sigma;
+			}
+		}
+	}
 }

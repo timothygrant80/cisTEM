@@ -275,4 +275,4 @@ inline bool IsAValidSymmetry(wxString *string_to_check)
 
 float ReturnSumOfLogP(float logp1, float logp2, float log_range);
 
-
+int ReturnNumberofAsymmetricUnits(wxString symmetry);

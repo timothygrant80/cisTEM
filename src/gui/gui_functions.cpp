@@ -1,6 +1,8 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyMainFrame *main_frame;
+
 
 void ConvertImageToBitmap(Image *input_image, wxBitmap *output_bitmap, bool auto_contrast)
 {
@@ -84,6 +86,7 @@ void ConvertImageToBitmap(Image *input_image, wxBitmap *output_bitmap, bool auto
 
 
 }
+
 
 void GetMultilineTextExtent	(wxDC *wanted_dc, const wxString & string, int &width, int &height)
 {
@@ -216,3 +219,48 @@ void AppendRefinementPackagesToComboBox(wxComboBox *ComboBox)
 
 		ComboBox->Thaw();
 }
+
+void RunSimpleFunctionInAnotherThread(wxWindow *parent_window, void (*function_to_run)(void))
+{
+	RunSimpleFunctionThread *function_thread = new RunSimpleFunctionThread(parent_window, function_to_run);
+
+	if ( function_thread->Run() != wxTHREAD_NO_ERROR )
+	{
+		MyPrintWithDetails("Error Running Thread!");
+	}
+
+}
+
+wxThread::ExitCode RunSimpleFunctionThread::Entry()
+{
+	function_to_run();
+	return (wxThread::ExitCode)0;
+}
+
+void global_delete_scratch()
+{
+	main_frame->ClearScratchDirectory();
+}
+
+void global_delete_refine2d_scratch()
+{
+	main_frame->ClearRefine2DScratch();
+}
+
+void global_delete_refine3d_scratch()
+{
+	main_frame->ClearRefine3DScratch();
+}
+
+void global_delete_startup_scratch()
+{
+	main_frame->ClearStartupScratch();
+}
+
+void global_delete_autorefine3d_scratch()
+{
+	main_frame->ClearAutoRefine3DScratch();
+
+}
+
+

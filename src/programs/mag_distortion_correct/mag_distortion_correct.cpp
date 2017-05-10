@@ -60,8 +60,8 @@ void MagDistortionCorrectApp::DoInteractiveUserInput()
 	}
 	else
 	{
-		new_x_size = 1;
-		new_y_size = 1;
+		new_x_size = -1;
+		new_y_size = -1;
 	}
 
 	delete my_input;
@@ -115,7 +115,7 @@ bool MagDistortionCorrectApp::DoCalculation()
 	Image input_image;
 
 	// Read in gain reference
-	if (!movie_is_gain_corrected) { gain_image.ReadSlice(&gain_file,1);	}
+	if (movie_is_gain_corrected == false) { gain_image.ReadSlice(&gain_file,1);	}
 
 	// Read in, gain-correct, correct-distortion and resample all the images..
 
@@ -125,7 +125,7 @@ bool MagDistortionCorrectApp::DoCalculation()
 		input_image.ReadSlice(&input_file,image_counter+1);
 
 		// Gain correction
-		if (! movie_is_gain_corrected)
+		if (movie_is_gain_corrected == false)
 		{
 			if (! input_image.HasSameDimensionsAs(&gain_image))
 			{

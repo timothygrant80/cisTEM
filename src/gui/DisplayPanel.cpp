@@ -739,6 +739,20 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 		return;
 	}
 
+	if (popup_exists == true)
+	{
+		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+		if (current_panel != NULL)
+		{
+			current_panel->ReleaseMouse();
+			current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+			popup->Destroy();
+			popup_exists = false;
+		}
+
+	}
+
 	DisplayNotebookPanel *my_panel;
 
 	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
@@ -785,6 +799,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 	// setup the panel attributes...
 
 	my_panel->filename = wanted_filename;
+	my_panel->input_is_a_file = true;
 
 	/*my_panel->image_is_selected = new bool[my_panel->first_header.number_following + 2];
 
@@ -803,6 +818,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 
 	// add the panel
 
+	if (my_panel->panel_image != NULL) delete my_panel->panel_image;
 	my_panel->panel_image = new wxImage(int(my_panel->my_file.ReturnXSize()), int(my_panel->my_file.ReturnYSize()));
 	my_panel->tab_title = wanted_tab_title;
 
@@ -845,6 +861,21 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 
 void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
 {
+
+	if (popup_exists == true)
+	{
+		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+		if (current_panel != NULL)
+		{
+			current_panel->ReleaseMouse();
+			current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+			popup->Destroy();
+			popup_exists = false;
+		}
+
+	}
+
 	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
 	{
 		if (no_notebook_panel == NULL)
@@ -863,11 +894,7 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	}
 
 	DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
-
-	if (current_panel == NULL)
-	{
-
-	}
+	if (current_panel == NULL) return;
 
 	if (DoesFileExist(wanted_filename) == false)
 	{
@@ -877,7 +904,17 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 
 	if (current_panel == NULL) return;
 
-	if (current_panel->my_file.IsOpen() == true) current_panel->my_file.CloseFile();
+	if (current_panel->input_is_a_file == true)
+	{
+		if (current_panel->my_file.IsOpen() == true) current_panel->my_file.CloseFile();
+	}
+	else
+	{
+		if (current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership == true)
+		{
+				delete current_panel->image_to_display;
+		}
+	}
 
 	current_panel->my_file.OpenFile(wanted_filename.ToStdString(), false);
 
@@ -910,6 +947,7 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	// setup the panel attributes...
 
 	current_panel->filename = wanted_filename;
+	current_panel->input_is_a_file = true;
 
 
 	if (current_panel->image_is_selected != NULL)
@@ -938,6 +976,8 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	current_panel->should_refresh = true;
 	current_panel->panel_image_has_correct_greys = false;
 	current_panel->panel_image_has_correct_scale = false;
+
+	if (current_panel->panel_image != NULL) delete current_panel->panel_image;
 	current_panel->panel_image = new wxImage(int(current_panel->my_file.ReturnXSize()), int(current_panel->my_file.ReturnYSize()));
 	current_panel->tab_title = wanted_tab_title;
 
@@ -962,6 +1002,267 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	current_panel->ReDrawPanel();
 	//notebook->SetFocus();
 	ChangeFocusToPanel();
+}
+
+void DisplayPanel::OpenImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership, wxArrayLong *wanted_included_image_numbers)
+{
+	if (image_to_view == NULL)
+	{
+		wxMessageBox(wxString::Format("Error, image is null"), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
+		return;
+	}
+
+	if (popup_exists == true)
+	{
+		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+		if (current_panel != NULL)
+		{
+			current_panel->ReleaseMouse();
+			current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+			popup->Destroy();
+			popup_exists = false;
+		}
+
+	}
+
+	DisplayNotebookPanel *my_panel;
+
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+	{
+		if (no_notebook_panel != NULL) no_notebook_panel->Destroy();
+		no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
+		my_panel = no_notebook_panel;
+		MainSizer->Insert( 1, no_notebook_panel, 1, wxEXPAND | wxALL, 5 );
+	}
+	else
+	{
+		panel_counter++;
+		my_panel = new DisplayNotebookPanel(my_notebook, panel_counter);
+	}
+
+
+	// which images are we including..
+
+	if (wanted_included_image_numbers == NULL)
+	{
+		for (long counter = 1; counter <= image_to_view->logical_z_dimension; counter++)
+		{
+			my_panel->included_image_numbers.Add(counter);
+		}
+	}
+	else
+	{
+		for (long counter = 0; counter < wanted_included_image_numbers->GetCount(); counter++)
+		{
+			MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= image_to_view->logical_z_dimension, "trying to add image numbers that don't exist")
+			my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
+		}
+	}
+
+
+	// setup the panel attributes...
+
+	my_panel->image_to_display = image_to_view;
+	my_panel->filename = "";
+	my_panel->input_is_a_file = false;
+	my_panel->do_i_have_image_ownership = take_ownership;
+
+
+	if ((style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES)
+	{
+		my_panel->image_is_selected = new bool[image_to_view->logical_z_dimension + 1];
+		ClearSelection(false);
+	}
+
+
+
+	// add the panel
+
+	if (my_panel->panel_image != NULL) delete my_panel->panel_image;
+	my_panel->panel_image = new wxImage(image_to_view->logical_x_dimension, image_to_view->logical_y_dimension);
+	my_panel->tab_title = wanted_tab_title;
+
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+	{
+
+	}
+	else
+	{
+		my_notebook->Freeze();
+		my_notebook->AddPage(my_panel, wanted_tab_title, false);
+		my_notebook->Thaw();
+		my_notebook->SetSelection(my_notebook->GetPageCount() - 1);
+	}
+
+	// we have switched focus so update toolbar..
+
+	UpdateToolbar();
+
+	// we can directly call the drawing now..
+
+	Refresh();
+	Update();
+
+
+	// if there is only one image, then set single image mode to true by default
+
+
+	if (my_panel->included_image_numbers.GetCount() == 1)
+	{
+		//my_panel->single_image = true;
+		//my_panel->picking_mode = COORDS_PICK;
+	}
+
+	my_panel->ReDrawPanel();
+	//notebook->SetFocus();
+	ChangeFocusToPanel();
+
+}
+void DisplayPanel::ChangeImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership, wxArrayLong *wanted_included_image_numbers)
+{
+	if (popup_exists == true)
+	{
+		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+		if (current_panel != NULL)
+		{
+			current_panel->ReleaseMouse();
+			current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+			popup->Destroy();
+			popup_exists = false;
+		}
+
+	}
+
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+	{
+		if (no_notebook_panel == NULL)
+		{
+			OpenImage(image_to_view, wanted_tab_title, take_ownership, wanted_included_image_numbers);
+			return;
+		}
+	}
+	else
+	{
+		if (my_notebook->GetPageCount() == 0)
+		{
+			OpenImage(image_to_view, wanted_tab_title, take_ownership, wanted_included_image_numbers);
+			return;
+		}
+	}
+
+	DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+	if (current_panel == NULL) return;
+
+	if (image_to_view == NULL)
+	{
+		wxMessageBox(wxString::Format("Error, image is null"), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
+		return;
+	}
+
+	current_panel->included_image_numbers.Clear();
+	if (wanted_included_image_numbers == NULL)
+	{
+		for (long counter = 1; counter <= image_to_view->logical_z_dimension; counter++)
+		{
+			current_panel->included_image_numbers.Add(counter);
+		}
+	}
+	else
+	{
+		for (long counter = 0; counter < wanted_included_image_numbers->GetCount(); counter++)
+		{
+			MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= image_to_view->logical_z_dimension, "trying to add image numbers that don't exist")
+			current_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
+		}
+	}
+
+	if (current_panel->input_is_a_file == true)
+	{
+		current_panel->input_is_a_file = false;
+		current_panel->do_i_have_image_ownership = take_ownership;
+		current_panel->image_to_display = image_to_view;
+
+		if (current_panel->my_file.IsOpen() == true) current_panel->my_file.CloseFile();
+	}
+	else
+	{
+		bool delete_old_image = false;
+		Image *old_image;
+
+		if (current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership == true)
+		{
+			delete_old_image = true;
+			old_image = current_panel->image_to_display;
+		}
+
+		current_panel->input_is_a_file = false;
+		current_panel->do_i_have_image_ownership = take_ownership;
+		current_panel->image_to_display = image_to_view;
+
+		if (delete_old_image == true)
+		{
+			delete old_image;
+		}
+
+	}
+
+	// setup the panel attributes...
+
+	current_panel->filename = "";
+
+	if (current_panel->image_is_selected != NULL)
+	{
+		delete[] current_panel->image_is_selected;
+		current_panel->image_is_selected = NULL;
+	}
+
+	if ((style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES)
+	{
+		current_panel->image_is_selected = new bool[image_to_view->logical_z_dimension + 1];
+		for (int mycounter = 0; mycounter < image_to_view->logical_z_dimension + 1; mycounter++)
+		{
+			current_panel->image_is_selected[mycounter] = false;
+		}
+
+		current_panel->number_of_selections = 0;
+	}
+
+
+	// add the panel
+
+	current_panel->current_location = 1;
+	current_panel->should_refresh = true;
+	current_panel->panel_image_has_correct_greys = false;
+	current_panel->panel_image_has_correct_scale = false;
+
+	if (current_panel->panel_image != NULL) delete current_panel->panel_image;
+	current_panel->panel_image = new wxImage(image_to_view->logical_x_dimension, image_to_view->logical_y_dimension);
+	current_panel->tab_title = wanted_tab_title;
+
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+	{
+
+	}
+	else
+	{
+		my_notebook->SetPageText(my_notebook->GetSelection(), wanted_tab_title);
+	}
+
+	// we have switched focus so update toolbar..
+
+	UpdateToolbar();
+
+	// we can directly call the drawing now..
+
+	Refresh();
+	Update();
+
+	current_panel->ReDrawPanel();
+	//notebook->SetFocus();
+	ChangeFocusToPanel();
+
 }
 
 
@@ -1016,7 +1317,12 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
 	image_memory_buffer = NULL;
 	scaled_image_memory_buffer = NULL;
 	image_is_selected = NULL;
+	image_to_display = NULL;
+
+	input_is_a_file = true;
+
 	number_allocated_for_buffer = 0;
+	panel_image = NULL;
 
 	if (parent->IsKindOf(wxCLASSINFO(DisplayNotebook))) parent_display_panel = reinterpret_cast < DisplayNotebook *> (parent)->parent_display_panel;
 	else parent_display_panel = reinterpret_cast < DisplayPanel *> (parent);
@@ -1147,16 +1453,16 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos)
 		int current_x_pos = single_image_x + (x_pos / actual_scale_factor);// - 1;
 		int current_y_pos = single_image_y + (y_pos / actual_scale_factor);// - 1;
 
-		current_y_pos = my_file.ReturnYSize() - 1 - current_y_pos;
+		current_y_pos = ReturnImageYSize() - 1 - current_y_pos;
 
 		int current_image = current_location;
 
-		int current_radius = sqrtf(pow(current_x_pos - (my_file.ReturnXSize() / 2), 2) + pow(current_y_pos - (my_file.ReturnYSize() / 2), 2));
+		int current_radius = sqrtf(pow(current_x_pos - (ReturnImageXSize() / 2), 2) + pow(current_y_pos - (ReturnImageYSize() / 2), 2));
 
-		if (my_file.ReturnXSize() > my_file.ReturnYSize()) current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
-		else current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
+		if (ReturnImageXSize() > ReturnImageYSize()) current_resolution = (pixel_size * ReturnImageXSize()) / current_radius;
+		else current_resolution = (pixel_size * ReturnImageXSize()) / current_radius;
 
-	 	if (current_x_pos >= 0 && current_x_pos < my_file.ReturnXSize() - 1 && current_y_pos >= 0 && current_y_pos < my_file.ReturnYSize() - 1)
+	 	if (current_x_pos >= 0 && current_x_pos < ReturnImageXSize() - 1 && current_y_pos >= 0 && current_y_pos < ReturnImageYSize() - 1)
 	 	{
 	 		float raw_pixel_value = image_memory_buffer[0].ReturnRealPixelFromPhysicalCoord(current_x_pos, current_y_pos, 0);
 
@@ -1195,13 +1501,13 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos)
 		 	int current_x_pos = (x_pos - (current_x_size * image_x_coord)) / actual_scale_factor;
 		 	int current_y_pos = (y_pos - (current_y_size * image_y_coord)) / actual_scale_factor;
 
-			current_y_pos = my_file.ReturnYSize() - 1 - current_y_pos;
+			current_y_pos = ReturnImageYSize() - 1 - current_y_pos;
 
 
-		 	int current_radius = sqrt(pow(current_x_pos - (my_file.ReturnXSize() / 2), 2) + pow(current_y_pos - (my_file.ReturnYSize() / 2), 2));
+		 	int current_radius = sqrt(pow(current_x_pos - (ReturnImageXSize() / 2), 2) + pow(current_y_pos - (ReturnImageYSize() / 2), 2));
 
-			if (my_file.ReturnXSize() > my_file.ReturnYSize()) current_resolution = (pixel_size * my_file.ReturnXSize()) / current_radius;
-			else current_resolution = (pixel_size * my_file.ReturnYSize()) / current_radius;
+			if (ReturnImageXSize() > ReturnImageYSize()) current_resolution = (pixel_size * ReturnImageYSize()) / current_radius;
+			else current_resolution = (pixel_size * ReturnImageYSize()) / current_radius;
 
 		 	if (current_image > 0 && current_image <= images_in_current_view + current_image && current_image <= included_image_numbers.GetCount())
 		 	{
@@ -1346,7 +1652,7 @@ bool DisplayNotebookPanel::SetGlobalGreys(void)
 		float current_min;
 		float current_max;
 
-		buffer_image.ReadSlice(&my_file, included_image_numbers.Item(0));
+		LoadIntoImage(&buffer_image, 0);
 		buffer_image.GetMinMax(global_min, global_max);
 
 		bool should_continue = true;
@@ -1355,7 +1661,7 @@ bool DisplayNotebookPanel::SetGlobalGreys(void)
 
 		for (long counter = 0; counter < included_image_numbers.GetCount(); counter++)
 		{
-			buffer_image.ReadSlice(&my_file, included_image_numbers.Item(counter));
+			LoadIntoImage(&buffer_image, counter);
 			buffer_image.GetMinMax(current_min, current_max);
 
 			if (current_max > global_max) global_max = current_max;
@@ -1390,6 +1696,7 @@ DisplayNotebookPanel::~DisplayNotebookPanel()
 {
 	if (image_memory_buffer != NULL) delete [] image_memory_buffer;
 	if (scaled_image_memory_buffer != NULL) delete [] scaled_image_memory_buffer;
+	if (input_is_a_file == false && do_i_have_image_ownership == true && image_to_display != NULL) delete image_to_display;
 }
 
 void DisplayNotebookPanel::OnSize(wxSizeEvent& event)
@@ -1492,7 +1799,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event)
 void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh)
 {
 	MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES, "Trying to select images, but selection style flag not set");
-	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= my_file.ReturnNumberOfSlices(), "Trying to select an image that doesn't exit (%li)", wanted_image);
+	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages(), "Trying to select an image that doesn't exit (%li)", wanted_image);
 
 	if (image_is_selected[wanted_image] == false) number_of_selections++;
 	image_is_selected[wanted_image] = true;
@@ -1507,7 +1814,7 @@ void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh)
 void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh)
 {
 	MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES, "Trying to select images, but selection style flag not set");
-	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= my_file.ReturnNumberOfSlices(), "Trying to select an image that doesn't exit (%li)", wanted_image);
+	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages(), "Trying to select an image that doesn't exit (%li)", wanted_image);
 
 	if (image_is_selected[wanted_image] == true) number_of_selections--;
 	image_is_selected[wanted_image] = false;
@@ -1522,7 +1829,7 @@ void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh)
 void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh)
 {
 	MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES, "Trying to select images, but selection style flag not set");
-	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= my_file.ReturnNumberOfSlices(), "Trying to select an image that doesn't exit (%li)", wanted_image);
+	MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages(), "Trying to select an image that doesn't exit (%li)", wanted_image);
 
 	if (image_is_selected[wanted_image] == true)
 	{
@@ -1546,7 +1853,7 @@ void DisplayNotebookPanel::ClearSelection(bool refresh)
 {
 	MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES, "Trying to clear selection, but selection style flag not set");
 
-	for (long mycounter = 0; mycounter < my_file.ReturnNumberOfSlices() + 1; mycounter++)
+	for (long mycounter = 0; mycounter < ReturnNumberofImages() + 1; mycounter++)
 	{
 		image_is_selected[mycounter] = false;
 	}
@@ -1982,29 +2289,35 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event)
 bool DisplayNotebookPanel::CheckFileStillValid()
 {
 
-	ImageFile buffer_file;
-	buffer_file.OpenFile(filename.ToStdString(), false);
+	if (input_is_a_file == true)
+	{
+		ImageFile buffer_file;
+		buffer_file.OpenFile(filename.ToStdString(), false);
 
-    if (buffer_file.ReturnNumberOfSlices() == my_file.ReturnNumberOfSlices() && buffer_file.ReturnXSize() == my_file.ReturnXSize() && buffer_file.ReturnYSize() == my_file.ReturnYSize())
-    {
-    	return true;
-    }
-    else
-    {
-    	wxMessageBox( wxT( "The current file is no longer accessible, or has changed number/size/type!!" ), wxT( "Error!!" ), wxOK | wxICON_INFORMATION, this);
+		if (buffer_file.ReturnNumberOfSlices() == my_file.ReturnNumberOfSlices() && buffer_file.ReturnXSize() == my_file.ReturnXSize() && buffer_file.ReturnYSize() == my_file.ReturnYSize())
+		{
+			return true;
+		}
+		else
+		{
+			wxMessageBox( wxT( "The current file is no longer accessible, or has changed number/size/type!!" ), wxT( "Error!!" ), wxOK | wxICON_INFORMATION, this);
 
-    	if ((parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
-    	{
-    		// delete panel?
-    	}
-    	else
-    	{
-    		parent_display_panel->my_notebook->DeletePage(parent_display_panel->my_notebook->GetSelection());
-    		parent_display_panel->UpdateToolbar();
-    	}
+		    if ((parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+		    {
+		    	// delete panel?
+		    }
+		    else
+		    {
+		    	parent_display_panel->my_notebook->DeletePage(parent_display_panel->my_notebook->GetSelection());
+		    	parent_display_panel->UpdateToolbar();
+		    }
 
-    	return false;
-    }
+		    return false;
+		}
+
+	}
+	else return true;
+
 }
 
 void DisplayNotebookPanel::ReDrawPanel(void)
@@ -2087,8 +2400,8 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 
 	// how big are the images going to be, and how many will fit..
 
-	scaled_x_size = long(myround(my_file.ReturnXSize() * desired_scale_factor));
-	scaled_y_size = long(myround(my_file.ReturnYSize() * desired_scale_factor));
+	scaled_x_size = long(myround(ReturnImageXSize() * desired_scale_factor));
+	scaled_y_size = long(myround(ReturnImageYSize() * desired_scale_factor));
 
 	if (single_image == true)
 	{
@@ -2107,13 +2420,13 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 			if (double(window_x_size) / double(scaled_x_size) >= double(window_y_size) / double(scaled_y_size))
 			{
 				// this means that the limiting dimension is the y.. so scale appropriately..
-				actual_scale_factor = double(window_y_size) / double(my_file.ReturnYSize());
+				actual_scale_factor = double(window_y_size) / double(ReturnImageYSize());
 
 			}
-			else actual_scale_factor = double(window_x_size) / double(my_file.ReturnXSize());
+			else actual_scale_factor = double(window_x_size) / double(ReturnImageXSize());
 
-			scaled_x_size = long(myround(my_file.ReturnXSize() * actual_scale_factor));
-			scaled_y_size = long(myround(my_file.ReturnYSize() * actual_scale_factor));
+			scaled_x_size = long(myround(ReturnImageXSize() * actual_scale_factor));
+			scaled_y_size = long(myround(ReturnImageYSize() * actual_scale_factor));
 
 			images_in_x = 1;
 			images_in_y = 1;
@@ -2153,8 +2466,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
     		{
     			if (current_location + image_counter <= included_image_numbers.GetCount())
     			{
-
-    				image_memory_buffer[image_counter].ReadSlice(&my_file, included_image_numbers.Item(current_location + image_counter - 1));
+    				SetImageInMemoryBuffer(image_counter, current_location + image_counter - 1);
 
     				if (use_fft == true)
     				{
@@ -2200,7 +2512,8 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 	    	{
 	  			if (this->current_location + image_counter <= included_image_numbers.GetCount())
 	  			{
-	  				image_memory_buffer[image_counter].ReadSlice(&my_file, included_image_numbers.Item(current_location + image_counter - 1));
+
+	  				SetImageInMemoryBuffer(image_counter, current_location + image_counter - 1);
 
 	  				if (use_fft == true)
 	  				{
@@ -2245,7 +2558,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 					// drawing speed is critical so we'll do it by directly writing the data,
 					// this gives us a pointer to the image data..
 
-					if (use_fourier_scaling == true && (scaled_x_size != my_file.ReturnXSize() || scaled_y_size != my_file.ReturnYSize()))
+					if (use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize() || scaled_y_size != ReturnImageYSize()))
 					{
 		   				scaled_image_memory_buffer[image_counter].CopyFrom(&image_memory_buffer[image_counter]);
 		    			scaled_image_memory_buffer[image_counter].ForwardFFT();
@@ -2253,14 +2566,14 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 		    			scaled_image_memory_buffer[image_counter].BackwardFFT();
 					}
 
-					if (use_fourier_scaling == true && (scaled_x_size != my_file.ReturnXSize() || scaled_y_size != my_file.ReturnYSize()))
+					if (use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize() || scaled_y_size != ReturnImageYSize()))
 					{
 						panel_image->Resize(wxSize(scaled_x_size, scaled_y_size), wxPoint(0,0));
 
 					}
 					else
 					{
-						panel_image->Resize(wxSize(my_file.ReturnXSize(), my_file.ReturnYSize()), wxPoint(0,0));
+						panel_image->Resize(wxSize(ReturnImageXSize(), ReturnImageYSize()), wxPoint(0,0));
 					}
 
 					unsigned char *image_data = panel_image->GetData();
@@ -2269,7 +2582,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 
 					if (this->grey_values_decided_by == LOCAL_GREYS)
 					{
-						if (use_fourier_scaling == true && (scaled_x_size != my_file.ReturnXSize() || scaled_y_size != my_file.ReturnYSize()))
+						if (use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize() || scaled_y_size != ReturnImageYSize()))
 						{
 							scaled_image_memory_buffer[image_counter].GetMinMax(current_low_grey_value, current_high_grey_value);
 						}
@@ -2286,7 +2599,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 
 						address = 0;
 
-						if (use_fourier_scaling == true && (scaled_x_size != my_file.ReturnXSize() || scaled_y_size != my_file.ReturnYSize()))
+						if (use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize() || scaled_y_size != ReturnImageYSize()))
 						{
 							for (j = 0; j < scaled_image_memory_buffer[image_counter].logical_y_dimension; j++)
 							{
@@ -2390,7 +2703,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 					blue_counter = 2;
 
 
-					if (use_fourier_scaling == true && (scaled_x_size != my_file.ReturnXSize() || scaled_y_size != my_file.ReturnYSize()))
+					if (use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize() || scaled_y_size != ReturnImageYSize()))
 					{
 						for (j = 0; j < scaled_image_memory_buffer[image_counter].logical_y_dimension; j++)
 						{
@@ -2450,7 +2763,7 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 						}
 
 
-						if (scaled_x_size > my_file.ReturnXSize()) panel_image->Rescale(scaled_x_size, scaled_y_size, wxIMAGE_QUALITY_NORMAL);
+						if (scaled_x_size > ReturnImageXSize()) panel_image->Rescale(scaled_x_size, scaled_y_size, wxIMAGE_QUALITY_NORMAL);
 						else panel_image->Rescale(scaled_x_size, scaled_y_size, wxIMAGE_QUALITY_HIGH);
 					}
 
@@ -2668,7 +2981,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 				{
 					for (int x = 0; x < images_in_x; x++)
 					{
-						if (my_file.ReturnNumberOfSlices() >= counter)
+						if (ReturnNumberofImages() >= counter)
 						{
 
 							if (image_is_selected[counter] == true )
@@ -2698,7 +3011,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 				{
 					for (int x = 0; x < images_in_x; x++)
 					{
-						if (my_file.ReturnNumberOfSlices() >= counter)
+						if (ReturnNumberofImages() >= counter)
 						{
 							if (counter == blue_selection_square_location)
 							{
@@ -2828,7 +3141,7 @@ DisplayManualDialogParent(parent, id, title, pos, size, wxDEFAULT_DIALOG_STYLE)
 	Bind(wxEVT_MENU, &DisplayManualDialog::OnPrevious, this, Toolbar_Previous);
 	Bind(wxEVT_MENU, &DisplayManualDialog::OnNext, this, Toolbar_Next);
 
-    InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(current_panel->current_location - 1));
+	current_panel->LoadIntoImage(&InputImage, current_panel->current_location - 1);
 
     // if we have no manual values set, then min/max the input image - otherwise load them..
 
@@ -3023,7 +3336,7 @@ bool DisplayManualDialog::GetGlobalHistogram(void)
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
-			InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(image_counter));
+			current_panel->LoadIntoImage(&InputImage, image_counter);
 
 			address = 0;
 
@@ -3517,7 +3830,7 @@ void DisplayManualDialog::OnImageChange(wxCommandEvent& WXUNUSED(event))
     		if (current_location == current_panel->included_image_numbers.GetCount()) Toolbar->EnableTool(Toolbar_Next, false);
     	    else Toolbar->EnableTool(Toolbar_Next, true);
 
-    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+    		current_panel->LoadIntoImage(&InputImage, set_location - 1);
 
     		 GetLocalHistogram();
     		 PaintHistogram();
@@ -3558,7 +3871,7 @@ void DisplayManualDialog::OnNext( wxCommandEvent& event )
     	{
     		toolbar_location_text->ChangeValue(wxString::Format(wxT("%li"), set_location));
     		current_location = set_location;
-    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+    		current_panel->LoadIntoImage(&InputImage, set_location - 1);
 
     		if (current_location == 1) Toolbar->EnableTool(Toolbar_Previous, false);
     		else Toolbar->EnableTool(Toolbar_Previous, true);
@@ -3604,7 +3917,7 @@ void DisplayManualDialog::OnPrevious( wxCommandEvent& event )
     	{
     		toolbar_location_text->ChangeValue(wxString::Format(wxT("%li"), set_location));
     		current_location = set_location;
-    		InputImage.ReadSlice(&current_panel->my_file, current_panel->included_image_numbers.Item(set_location-1));
+    		current_panel->LoadIntoImage(&InputImage, set_location - 1);
 
     		if (current_location == 1) Toolbar->EnableTool(Toolbar_Previous, false);
     		else Toolbar->EnableTool(Toolbar_Previous, true);

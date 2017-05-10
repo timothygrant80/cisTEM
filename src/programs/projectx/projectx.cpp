@@ -20,6 +20,7 @@ MyFindCTFPanel *findctf_panel;
 MyFindParticlesPanel *findparticles_panel;
 MyRefine2DPanel *classification_panel;
 AbInitio3DPanel *ab_initio_3d_panel;
+AutoRefine3DPanel *auto_refine_3d_panel;
 MyRefine3DPanel *refine_3d_panel;
 
 MyOverviewPanel *overview_panel;
@@ -115,6 +116,7 @@ bool MyGuiApp::OnInit()
 	findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
 	classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
 	ab_initio_3d_panel = new AbInitio3DPanel(actions_panel->ActionsBook);
+	auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
 	refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
@@ -211,7 +213,8 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(findparticles_panel,"Find Particles",false,2);
 	actions_panel->ActionsBook->AddPage(classification_panel,"2D Classify",false,3);
 	actions_panel->ActionsBook->AddPage(ab_initio_3d_panel,"Ab-Initio 3D",false, 4);
-	actions_panel->ActionsBook->AddPage(refine_3d_panel,"3D Refinement",false, 5);
+	actions_panel->ActionsBook->AddPage(auto_refine_3d_panel,"Auto Refine",false, 5);
+	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Manual Refine",false, 5);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

@@ -238,9 +238,9 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 	int ibin;
 	int window = myroundint(20.0 / pixel_size);
 
-	float difference;
-	float current_sum1;
-	float current_sum2;
+	double difference;
+	double current_sum1;
+	double current_sum2;
 
 	float x, y, z;
 	float frequency;
@@ -363,6 +363,7 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 		{
 //			if (i < 8 || non_zero_count[i] > 440)
 //			{
+			wxPrintf("res, cross, prod, fsc = %g %g %g %g\n", temp_float, cross_terms[i], temp_double, float(cross_terms[i] / sqrtf(temp_double)));
 				FSC.AddPoint(temp_float, float(cross_terms[i] / sqrtf(temp_double)));
 //			}
 //			else

@@ -1063,6 +1063,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 //				correlation_map->SetToConstant(0.0);
 //				correlation_map->real_values[0] = 1.0;
 //				sump_psi = 1.0;
+//				if (! uncrop) correlation_map->real_values[0] += 0.01;
 				correlation_map->ForwardFFT();
 
 				if (use_best_psi) i = number_of_rotations;
@@ -1195,6 +1196,9 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		else
 		{
 			blurred_image.CopyFrom(sum_image);
+			temp_image->CopyFrom(image_to_blur);
+			temp_image->MultiplyByConstant(sump_class / temp_image->number_of_real_space_pixels / temp_image->number_of_real_space_pixels);
+			blurred_image.AddImage(temp_image);
 		}
 
 //		wxPrintf("log sump_class = %g old_max_logp = %g number_of_independent_pixels = %g ssq_X = %g\n", logf(sump_class), old_max_logp, number_of_independent_pixels, ssq_X);

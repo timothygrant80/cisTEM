@@ -890,6 +890,11 @@ bool Reconstruct3DApp::DoCalculation()
 			input_particle.insert_even = false;
 		}
 
+//		input_particle.particle_image->BackwardFFT();
+//		input_particle.particle_image->AddGaussianNoise(input_particle.particle_image->ReturnSumOfSquares());
+//		input_particle.particle_image->AddGaussianNoise(100.0 * FLT_MIN);
+//		input_particle.particle_image->ForwardFFT();
+//		input_particle.particle_image->QuickAndDirtyWriteSlice("blurred.mrc", image_counter);
 		if (input_particle.insert_even)
 		{
 			my_reconstruction_2.InsertSliceWithCTF(input_particle, symmetry_weight);

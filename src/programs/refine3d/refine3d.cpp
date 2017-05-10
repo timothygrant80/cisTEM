@@ -713,7 +713,8 @@ bool Refine3DApp::DoCalculation()
 				AddJobToResultQueue(intermediate_result);
 			}
 
-			for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = 0.0; output_parameters[0] = input_parameters[0];}
+			for (i = 1; i < refine_particle.number_of_parameters; i++) output_parameters[i] = 0.0;
+			output_parameters[0] = input_parameters[0];
 			my_output_par_shifts_file.WriteLine(output_parameters);
 
 			my_progress->Update(image_counter);

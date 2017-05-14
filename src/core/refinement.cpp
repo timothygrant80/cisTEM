@@ -98,7 +98,7 @@ Refinement::~Refinement()
 
 }
 
-wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide)
+wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide, float sigma_override)
 {
 	wxArrayString output_filenames;
 	wxString current_filename;
@@ -154,7 +154,8 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 			output_parameters[11] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift;
 			output_parameters[12] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
 			output_parameters[13] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-			output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
+			if (sigma_override > 0.0) output_parameters[14] = sigma_override;
+			else output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
 			output_parameters[15] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score;
 			output_parameters[16] = 0.0;
 

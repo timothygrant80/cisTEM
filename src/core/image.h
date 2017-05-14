@@ -118,6 +118,7 @@ public:
 	void Whiten(float resolution_limit = 1.0);
 	void OptimalFilterBySNRImage(Image &SNR_image, int include_reference_weighting = 1);
 	void MultiplyByWeightsCurve(Curve &weights, float scale_factor = 1.0);
+	void WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel_size, Curve &SSNR, Image &projection_image, bool weight_particle_image, bool weight_projection_image);
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
 	//float Correct3D(float wanted_mask_radius = 0.0);
@@ -153,6 +154,7 @@ public:
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
 	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);
 	Peak CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
+	Peak StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false);
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 
 	inline long ReturnVolumeInRealSpace()

@@ -298,7 +298,7 @@ bool Refine3DApp::DoCalculation()
 	Image sum_power;
 	Image *projection_cache = NULL;
 //	CTF   my_ctf;
-//	CTF   input_ctf;
+	CTF   input_ctf;
 	Image snr_image;
 	ReconstructedVolume			input_3d;
 	ReconstructedVolume			search_reference_3d;
@@ -499,6 +499,7 @@ bool Refine3DApp::DoCalculation()
 	input_3d.molecular_mass_in_kDa = molecular_mass_kDa;
 	ResolutionStatistics input_statistics(pixel_size, input_3d.density_map.logical_y_dimension);
 	ResolutionStatistics search_statistics;
+	ResolutionStatistics refine_statistics;
 	if (use_statistics)
 	{
 		input_statistics.ReadStatisticsFromFile(input_reconstruction_statistics);
@@ -508,12 +509,13 @@ bool Refine3DApp::DoCalculation()
 		wxPrintf("\nUsing default statistics\n");
 		input_statistics.GenerateDefaultStatistics(molecular_mass_kDa);
 	}
+	refine_statistics = input_statistics;
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
 //!!! This line is incompatible with ML !!!
 //	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size);
 //	input_3d.density_map.AddConstant(- input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	// Remove masking here to avoid edge artifacts later
-//	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, 3.0 * mask_falloff / pixel_size, false, true, 0.0);
+	input_3d.density_map.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
 	if (inner_mask_radius > 0.0) input_3d.density_map.CosineMask(inner_mask_radius / pixel_size, mask_falloff / pixel_size, true);
 //	for (i = 0; i < input_3d.density_map.real_memory_allocated; i++) if (input_3d.density_map.real_values[i] < 0.0) input_3d.density_map.real_values[i] = -log(-input_3d.density_map.real_values[i] + 1.0);
 	if (threshold_input_3d)
@@ -559,7 +561,7 @@ bool Refine3DApp::DoCalculation()
 	if (padding != 1.0)
 	{
 		input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
-		input_statistics.part_SSNR.ResampleCurve(&input_statistics.part_SSNR, input_statistics.part_SSNR.number_of_points * padding);
+		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
 	}
 
 //	input_3d.PrepareForProjections(high_resolution_limit);
@@ -752,7 +754,7 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle.SetIndexForWeightedCorrelation();
 		refine_particle.SetParameterConstraints(powf(parameter_average[14],2));
 
-//		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
+		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
 //		ctf_input_image.CalculateCTFImage(input_ctf);
 //		refine_particle.is_phase_flipped = true;
 
@@ -794,9 +796,9 @@ bool Refine3DApp::DoCalculation()
 			{
 				refine_particle.SetDefocus(input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
 				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
-				if (normalize_input_3d) refine_particle.WeightBySSNR(input_statistics.part_SSNR, 1);
+				if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
 //				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
-				else refine_particle.WeightBySSNR(input_statistics.part_SSNR, 0);
+				else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
 				refine_particle.PhaseFlipImage();
 //				refine_particle.CosineMask(false, true, 0.0);
 				refine_particle.CosineMask();
@@ -828,9 +830,9 @@ bool Refine3DApp::DoCalculation()
 		}
 		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.SetIndexForWeightedCorrelation();
-		if (normalize_input_3d) refine_particle.WeightBySSNR(input_statistics.part_SSNR, 1);
+		if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
 		// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
-		else refine_particle.WeightBySSNR(input_statistics.part_SSNR, 0);
+		else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
 		refine_particle.PhaseFlipImage();
 //		refine_particle.CosineMask(false, true, 0.0);
 		refine_particle.CosineMask();
@@ -1011,8 +1013,8 @@ bool Refine3DApp::DoCalculation()
 		refine_particle.SetParameters(output_parameters);
 
 		refine_particle.SetAlignmentParameters(output_parameters[1], output_parameters[2], output_parameters[3], 0.0, 0.0);
-		unbinned_image.ClipInto(refine_particle.particle_image);
-		refine_particle.particle_image->MultiplyByConstant(binning_factor_refine);
+//		unbinned_image.ClipInto(refine_particle.particle_image);
+//		refine_particle.particle_image->MultiplyByConstant(binning_factor_refine);
 //		refine_particle.particle_image->QuickAndDirtyWriteSlice("part3.mrc", 1);
 //		refine_particle.PhaseFlipImage();
 //		refine_particle.CalculateProjection(projection_image, input_3d);
@@ -1021,13 +1023,13 @@ bool Refine3DApp::DoCalculation()
 //		unbinned_image.ClipInto(&final_image);
 //		logp = refine_particle.ReturnLogLikelihood(input_image, final_image, pixel_size, classification_resolution_limit, alpha, sigma);
 
-//		logp = refine_particle.ReturnLogLikelihood(input_3d, input_statistics, classification_resolution_limit);
-		output_parameters[13] = refine_particle.ReturnLogLikelihood(input_3d, input_statistics, classification_resolution_limit);
+//		logp = refine_particle.ReturnLogLikelihood(input_3d, refine_statistics, classification_resolution_limit);
+		output_parameters[13] = refine_particle.ReturnLogLikelihood(input_image, unbinned_image, input_ctf, input_3d, input_statistics, classification_resolution_limit);
 //		output_parameters[14] = sigma * binning_factor_refine;
 
 //		refine_particle.CalculateMaskedLogLikelihood(projection_image, input_3d, classification_resolution_limit);
 //		output_parameters[13] = refine_particle.logp;
-		if (refine_particle.snr > 0.0) output_parameters[14] = sqrtf(1.0 / refine_particle.snr) * binning_factor_refine;
+		if (refine_particle.snr > 0.0) output_parameters[14] = sqrtf(1.0 / refine_particle.snr);
 
 //		output_parameters[14] = refine_particle.sigma_noise * binning_factor_refine;
 //		wxPrintf("logp, sigma, score = %g %g %g\n", output_parameters[13], output_parameters[14], output_parameters[15]);

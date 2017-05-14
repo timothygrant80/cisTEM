@@ -160,7 +160,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 		float average_score_1 = std::max(1.0f, average_score);
 		float score_weights_conversion4 = score_weights_conversion / powf(pixel_size,2) * 0.25;
 //		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4;
-		float weight_conversion = particle_to_insert.particle_score * score_weights_conversion4;
+		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4 / average_score_1;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
 //		if (weight_conversion > 60.0) {weight_conversion = 60.0;};
@@ -182,7 +182,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 			{
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+				weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //				weight = particle_weight * expf(weight_conversion * frequency_squared);
 				if (weight > 0.0)
 				{
@@ -198,7 +198,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-			weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+			weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //			weight = particle_weight * expf(weight_conversion * frequency_squared);
 			if (weight > 0.0)
 			{
@@ -221,7 +221,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+						weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //						weight = particle_weight * expf(weight_conversion * frequency_squared);
 						if (weight > 0.0)
 						{
@@ -238,7 +238,7 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-					weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+					weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //					weight = particle_weight * expf(weight_conversion * frequency_squared);
 					if (weight > 0.0)
 					{
@@ -299,7 +299,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 		float average_score_1 = std::max(1.0f, average_score);
 		float score_weights_conversion4 = score_weights_conversion / powf(pixel_size,2) * 0.25;
 //		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4;
-		float weight_conversion = particle_to_insert.particle_score * score_weights_conversion4;
+		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4 / average_score_1;
 
 		// Make sure that the exponentiated conversion factor will not lead to an overflow
 //		if (weight_conversion > 60.0) {weight_conversion = 60.0;};
@@ -315,7 +315,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 			{
 				x_coordinate_2d = i;
 				frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-				weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+				weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //				weight = particle_weight * expf(weight_conversion * frequency_squared);
 				if (weight > 0.0)
 				{
@@ -331,7 +331,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-			weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+			weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //			weight = particle_weight * expf(weight_conversion * frequency_squared);
 			if (weight > 0.0)
 			{
@@ -354,7 +354,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 					{
 						x_coordinate_2d = i;
 						frequency_squared = powf(x_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_x, 2) + y_coord_sq;
-						weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+						weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //						weight = particle_weight * expf(weight_conversion * frequency_squared);
 						if (weight > 0.0)
 						{
@@ -371,7 +371,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 					y_coordinate_2d = j;
 					x_coordinate_2d = 0;
 					frequency_squared = powf(y_coordinate_2d * particle_to_insert.ctf_image->fourier_voxel_size_y, 2);
-					weight = particle_weight * (average_score_1 + weight_conversion * frequency_squared);
+					weight = particle_weight * (1.0 + weight_conversion * frequency_squared);
 //					weight = particle_weight * expf(weight_conversion * frequency_squared);
 					if (weight < 0.0)
 					{

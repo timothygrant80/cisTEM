@@ -1165,6 +1165,34 @@ void Image::OptimalFilterBySNRImage(Image &SNR_image, int include_reference_weig
 	}
 }
 
+void Image::WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel_size, Curve &SSNR, Image &projection_image, bool weight_particle_image, bool weight_projection_image)
+{
+	MyDebugAssertTrue(is_in_memory, "image memory not allocated");
+	MyDebugAssertTrue(projection_image.is_in_memory, "projection_image memory not allocated");
+	MyDebugAssertTrue(ctf_image.is_in_memory, "CTF image memory not allocated");
+
+	int i;
+	float particle_area_in_pixels = PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);
+	float ssnr_scale_factor = particle_area_in_pixels / logical_x_dimension / logical_y_dimension;
+
+	if (is_in_real_space) ForwardFFT();
+
+	Image *snr_image = new Image;
+	snr_image->Allocate(ctf_image.logical_x_dimension, ctf_image.logical_y_dimension, false);
+
+	for (i = 0; i < ctf_image.real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image.complex_values[i] * conj(ctf_image.complex_values[i]);}
+	if (! weight_projection_image) projection_image.MultiplyPixelWiseReal(*snr_image, true);
+	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
+	if (weight_particle_image)
+	{
+		Whiten();
+		OptimalFilterBySNRImage(*snr_image, 0);
+	}
+	if (weight_projection_image) projection_image.OptimalFilterBySNRImage(*snr_image, -1);
+
+	delete snr_image;
+}
+
 void Image::OptimalFilterSSNR(Curve &SSNR)
 {
 	MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
@@ -4521,7 +4549,7 @@ float Image::ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius)
 
 				distance_from_center_squared = x + y + z;
 
-				if (fabsf(distance_from_center_squared -mask_radius_squared) <= 1.0)
+				if (fabsf(distance_from_center_squared -mask_radius_squared) < 2.0)
 				{
 					sum += real_values[address];
 					number_of_pixels++;
@@ -8030,6 +8058,59 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 	}
 
 	return center_of_mass;
+}
+
+Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+
+	int i, j, k;
+	long pixel_counter = 0;
+	float temp_float;
+	double sum_xd = 0.0;
+	double sum_yd = 0.0;
+	double sum_zd = 0.0;
+	double sum_d = 0.0;
+	Peak standard_deviations;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				temp_float = real_values[pixel_counter];
+				if (apply_threshold)
+				{
+					temp_float = std::max(real_values[pixel_counter] - threshold, 0.0f);
+				}
+				sum_xd += powf(i - physical_address_of_box_center_x, 2) * temp_float;
+				sum_yd += powf(j - physical_address_of_box_center_y, 2) * temp_float;
+				sum_zd += powf(k - physical_address_of_box_center_z, 2) * temp_float;
+				sum_d += temp_float;
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	if (sum_d != 0.0)
+	{
+		standard_deviations.x = sqrtf(sum_xd / sum_d);
+		standard_deviations.y = sqrtf(sum_yd / sum_d);
+		standard_deviations.z = sqrtf(sum_zd / sum_d);
+		standard_deviations.value = 1.0;
+	}
+	else
+	{
+		standard_deviations.x = 0.0;
+		standard_deviations.y = 0.0;
+		standard_deviations.z = 0.0;
+		standard_deviations.value = 0.0;
+	}
+
+	return standard_deviations;
 }
 
 float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_mask_radius)

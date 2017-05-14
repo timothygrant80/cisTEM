@@ -376,42 +376,13 @@ void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting, bool n
 
 void Particle::WeightBySSNR(Curve &SSNR, Image &projection_image, bool weight_particle_image, bool weight_projection_image)
 {
-	MyDebugAssertTrue(particle_image->is_in_memory, "particle_image memory not allocated");
-	MyDebugAssertTrue(projection_image.is_in_memory, "projection_image memory not allocated");
-	MyDebugAssertTrue(ctf_image->is_in_memory, "CTF image memory not allocated");
 	MyDebugAssertTrue(ctf_image_calculated, "CTF image not initialized");
 	MyDebugAssertTrue(! is_ssnr_filtered, "Already SSNR filtered");
 
-	int i;
-	float particle_area_in_pixels = PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);
-//	float ssnr_scale_factor = particle_area_in_pixels / mask_volume;
-	float ssnr_scale_factor = particle_area_in_pixels / particle_image->logical_x_dimension / particle_image->logical_y_dimension;
-//	wxPrintf("particle_area_in_pixels = %g, mask_volume = %g\n", particle_area_in_pixels, mask_volume);
-//	float ssnr_scale_factor_old = kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3) / (4.0 * PI / 3.0 * powf(mask_volume / PI, 1.5));
-//	wxPrintf("old = %g, new = %g\n", ssnr_scale_factor_old, ssnr_scale_factor);
-//	float ssnr_scale_factor = PI * powf((3.0 * kDa_to_Angstrom3(molecular_mass_kDa) / 4.0 / PI / powf(pixel_size,3),1.0 / 3.0) ,2) / mask_volume;
-//	float ssnr_scale_factor = particle_image->logical_x_dimension * particle_image->logical_y_dimension / mask_volume;
-
-	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
-
-	Image *snr_image = new Image;
-	snr_image->Allocate(ctf_image->logical_x_dimension, ctf_image->logical_y_dimension, false);
-
-//	snr_image->CopyFrom(ctf_image);
-	for (i = 0; i < ctf_image->real_memory_allocated / 2; i++) {snr_image->complex_values[i] = ctf_image->complex_values[i] * conj(ctf_image->complex_values[i]);}
-	if (! weight_projection_image) projection_image.MultiplyPixelWiseReal(*snr_image, true);
-	snr_image->MultiplyByWeightsCurve(SSNR, ssnr_scale_factor);
-	if (weight_particle_image)
-	{
-		particle_image->Whiten();
-		particle_image->OptimalFilterBySNRImage(*snr_image, 0);
-		is_ssnr_filtered = true;
-	}
+	particle_image->WeightBySSNR(*ctf_image, molecular_mass_kDa, pixel_size, SSNR, projection_image, weight_particle_image, weight_projection_image);
+	if (weight_particle_image) is_ssnr_filtered = true;
 	else is_ssnr_filtered = false;
-	if (weight_projection_image) projection_image.OptimalFilterBySNRImage(*snr_image, -1);
 	includes_reference_ssnr_weighting = false;
-
-	delete snr_image;
 }
 
 void Particle::CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d)
@@ -582,7 +553,7 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit)
+float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 
@@ -594,24 +565,31 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 	float rotated_center_z;
 	float alpha;
 	float sigma;
+	float original_pixel_size = pixel_size * float(input_3d.density_map.logical_x_dimension) / float(padded_unbinned_image.logical_x_dimension);
 //	float effective_bfactor;
 
-	float pixel_center_2d_x = mask_center_2d_x / pixel_size - particle_image->physical_address_of_box_center_x;
-	float pixel_center_2d_y = mask_center_2d_y / pixel_size - particle_image->physical_address_of_box_center_y;
+	float pixel_center_2d_x = mask_center_2d_x / original_pixel_size - particle_image->physical_address_of_box_center_x;
+	float pixel_center_2d_y = mask_center_2d_y / original_pixel_size - particle_image->physical_address_of_box_center_y;
 	// Assumes cubic reference volume
-	float pixel_center_2d_z = mask_center_2d_z / pixel_size - particle_image->physical_address_of_box_center_x;
-	float pixel_radius_2d = mask_radius_2d / pixel_size;
+	float pixel_center_2d_z = mask_center_2d_z / original_pixel_size - particle_image->physical_address_of_box_center_x;
+	float pixel_radius_2d = mask_radius_2d / original_pixel_size;
 
+	Image *temp_image1 = new Image;
+	temp_image1->Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	Image *temp_image2 = new Image;
+	temp_image2->Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	Image *projection_image = new Image;
-	projection_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
-	Image *temp_particle = new Image;
-	temp_particle->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+	projection_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 	Image *temp_projection = new Image;
-	temp_projection->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
+	temp_projection->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+	Image *temp_particle = new Image;
+	temp_particle->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+	Image *ctf_input_image = new Image;
+	ctf_input_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 
 //	if (filter_radius_high != 0.0)
 //	{
-//		effective_bfactor = 2.0 * powf(pixel_size / filter_radius_high, 2);
+//		effective_bfactor = 2.0 * powf(original_pixel_size / filter_radius_high, 2);
 //	}
 //	else
 //	{
@@ -619,33 +597,54 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 //	}
 
 //	ResetImageFlags();
-//	mask_volume = PI * powf(mask_radius / pixel_size,2);
-	is_ssnr_filtered = false;
-	is_centered_in_box = true;
+//	mask_volume = PI * powf(mask_radius / original_pixel_size, 2);
+//	is_ssnr_filtered = false;
+//	is_centered_in_box = true;
 //	CenterInCorner();
-//	input_3d.CalculateProjection(*projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, pixel_size / filter_radius_high, false, true);
-	input_3d.density_map.ExtractSlice(*projection_image, alignment_parameters, pixel_size / filter_radius_high);
-	projection_image->SwapRealSpaceQuadrants();
-	projection_image->BackwardFFT();
-	projection_image->AddConstant(- projection_image->ReturnAverageOfRealValues(mask_radius / pixel_size, true));
-	projection_image->CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+//	input_3d.CalculateProjection(*projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, original_pixel_size / filter_radius_high, false, true);
+	input_3d.density_map.ExtractSlice(*temp_image1, alignment_parameters, pixel_size / filter_radius_high);
+	temp_image1->SwapRealSpaceQuadrants();
+	temp_image1->BackwardFFT();
+	temp_image1->AddConstant(- temp_image1->ReturnAverageOfRealValues(mask_radius / pixel_size, true));
+	temp_image1->CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+	temp_image1->ForwardFFT();
+	temp_image2->CopyFrom(temp_image1);
+
+	ctf_input_image->CalculateCTFImage(input_ctf);
+	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
+//	temp_image1->PhaseFlipPixelWise(*ctf_image);
+	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	temp_image1->ClipInto(&padded_unbinned_image);
+	padded_unbinned_image.BackwardFFT();
+	padded_unbinned_image.ClipInto(projection_image);
 	projection_image->ForwardFFT();
-	temp_projection->CopyFrom(projection_image);
-	projection_image->PhaseFlipPixelWise(*ctf_image);
-	temp_projection->MultiplyPixelWiseReal(*ctf_image);
+	projection_image->PhaseFlipPixelWise(*ctf_input_image);
+
+//	temp_image2->MultiplyPixelWiseReal(*ctf_image);
+	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	temp_image2->ClipInto(&padded_unbinned_image);
+	padded_unbinned_image.BackwardFFT();
+	padded_unbinned_image.ClipInto(temp_projection);
+	temp_projection->ForwardFFT();
+	temp_projection->MultiplyPixelWiseReal(*ctf_input_image);
 //	temp_projection->CopyFrom(projection_image);
-	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
-	temp_particle->CopyFrom(particle_image);
+//	projection_image->PhaseFlipPixelWise(*ctf_image);
+//	temp_projection->MultiplyPixelWiseReal(*ctf_image);
+//	temp_projection->CopyFrom(projection_image);
+	if (input_image.is_in_real_space) input_image.ForwardFFT();
+	input_image.PhaseShift(- current_parameters[4] / original_pixel_size, - current_parameters[5] / original_pixel_size);
+	temp_particle->CopyFrom(&input_image);
 
 //	if (includes_reference_ssnr_weighting) temp_projection->Whiten(pixel_size / filter_radius_high);
 //	WeightBySSNR(statistics.part_SSNR, *temp_projection, false, includes_reference_ssnr_weighting);
+	input_image.WeightBySSNR(*ctf_input_image, molecular_mass_kDa, original_pixel_size, statistics.part_SSNR, *projection_image, true, includes_reference_ssnr_weighting);
 
-	if (includes_reference_ssnr_weighting) projection_image->Whiten(pixel_size / filter_radius_high);
-	WeightBySSNR(statistics.part_SSNR, *projection_image, true, includes_reference_ssnr_weighting);
+//	if (includes_reference_ssnr_weighting) projection_image->Whiten(original_pixel_size / filter_radius_high);
+//	WeightBySSNR(statistics.part_SSNR, *projection_image, true, includes_reference_ssnr_weighting);
 
 //	particle_image->SwapRealSpaceQuadrants();
 //	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
-	particle_image->BackwardFFT();
+	input_image.BackwardFFT();
 	temp_particle->BackwardFFT();
 
 //	projection_image->SwapRealSpaceQuadrants();
@@ -653,7 +652,7 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 	// Apply some low-pass filtering to improve classification
 //	temp_projection->ApplyBFactor(effective_bfactor);
 	temp_projection->BackwardFFT();
-//	particle_image->QuickAndDirtyWriteSlice("part.mrc", 1);
+//	input_image.QuickAndDirtyWriteSlice("part.mrc", 1);
 //	projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
 //	temp_particle->QuickAndDirtyWriteSlice("part2.mrc", 1);
 //	temp_projection->QuickAndDirtyWriteSlice("proj2.mrc", 1);
@@ -685,10 +684,12 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 
 	temp_particle->SubtractImage(temp_projection);
 //	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
+	// This low-pass filter reduces the number of independent pixels. It should therefore be applied only to
+	// the reference (temp_projection), and not to the difference (temp_particle - temp_projection), as is done here...
 	if (classification_resolution_limit > 0.0)
 	{
 		temp_particle->ForwardFFT();
-		temp_particle->CosineMask(pixel_size / classification_resolution_limit, pixel_size / mask_falloff);
+		temp_particle->CosineMask(original_pixel_size / classification_resolution_limit, original_pixel_size / mask_falloff);
 		temp_particle->BackwardFFT();
 	}
 	if (apply_2D_masking)
@@ -697,13 +698,13 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 				rotated_center_y + temp_particle->physical_address_of_box_center_y, 0.0);
 //		sigma = sqrtf(variance_difference / temp_projection->ReturnVarianceOfRealValues(pixel_radius_2d, rotated_center_x + temp_particle->physical_address_of_box_center_x,
 //				rotated_center_y + temp_particle->physical_address_of_box_center_y, 0.0));
-		number_of_independent_pixels = PI * powf(pixel_radius_2d,2);
+		number_of_independent_pixels = PI * powf(pixel_radius_2d, 2);
 	}
 	else
 	{
-		variance_difference = temp_particle->ReturnSumOfSquares(mask_radius / pixel_size);
+		variance_difference = temp_particle->ReturnSumOfSquares(mask_radius / original_pixel_size);
 //		sigma = sqrtf(variance_difference / temp_projection->ReturnVarianceOfRealValues(mask_radius / pixel_size));
-		number_of_independent_pixels = PI * powf(mask_radius / pixel_size,2);
+		number_of_independent_pixels = PI * powf(mask_radius / original_pixel_size, 2);
 //		number_of_independent_pixels = mask_volume;
 	}
 
@@ -712,17 +713,21 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 //			+ ReturnParameterLogP(current_parameters);
 
 	// Calculate SNR used for particle weighting during reconstruction
-	alpha = particle_image->ReturnImageScale(*projection_image, mask_radius / pixel_size);
+//	input_image.CosineMask(mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+//	alpha = input_image.ReturnImageScale(*projection_image);
+	alpha = input_image.ReturnImageScale(*projection_image, mask_radius / original_pixel_size);
 	projection_image->MultiplyByConstant(alpha);
 
 //	particle_image->QuickAndDirtyWriteSlice("part.mrc", 1);
 //	projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
 
-	particle_image->SubtractImage(projection_image);
+	input_image.SubtractImage(projection_image);
 //	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
 //	exit(0);
-	variance_difference = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
-	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues(mask_radius / pixel_size));
+//	variance_difference = input_image.ReturnVarianceOfRealValues();
+//	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues());
+	variance_difference = input_image.ReturnVarianceOfRealValues(mask_radius / original_pixel_size);
+	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues(mask_radius / original_pixel_size));
 //	wxPrintf("variance_difference, alpha for sigma, sigma = %g %g %g\n", variance_difference, alpha, sigma);
 	// Prevent rare occurrences of unrealistically high sigmas
 	if (sigma > 100.0) sigma = 100.0;
@@ -735,9 +740,12 @@ float Particle::ReturnLogLikelihood(ReconstructedVolume &input_3d, ResolutionSta
 //	return 	- number_of_independent_pixels * variance_difference / variance_masked / 2.0
 //			+ ReturnParameterLogP(current_parameters);
 
+	delete temp_image1;
+	delete temp_image2;
 	delete projection_image;
 	delete temp_particle;
 	delete temp_projection;
+	delete ctf_input_image;
 
 	return 	logp;
 }

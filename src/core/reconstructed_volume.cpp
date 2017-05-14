@@ -480,13 +480,11 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	int original_box_size = density_map_1.logical_x_dimension;
 	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
 	int box_size = reconstruction.logical_x_dimension;
-	long pixel_counter;
 	float binning_factor = pixel_size / original_box_size;
 	float particle_area_in_pixels;
 	float mask_volume_fraction;
 	float resolution_limit = 0.0;
 	float temp_float;
-	float volume_fraction = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3) / mask_volume_in_voxels;
 	MRCFile output_file;
 	ResolutionStatistics statistics(original_pixel_size, original_box_size);
 	ResolutionStatistics cropped_statistics(pixel_size, box_size);
@@ -497,30 +495,6 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
-/*	if (inner_mask_radius == 0.0 && volume_fraction < 0.5)
-	{
-		Image *temp_image = new Image;
-		temp_image->Allocate(density_map_1.logical_x_dimension, density_map_1.logical_y_dimension, density_map_1.logical_z_dimension, false);
-		for (pixel_counter = 0; pixel_counter < temp_image->real_memory_allocated; pixel_counter++) temp_image->real_values[pixel_counter] += density_map_1.real_values[pixel_counter] + density_map_2.real_values[pixel_counter];
-		temp_image->CosineMask(pixel_size / 40.0, pixel_size / 10.0);
-		temp_image->BackwardFFT();
-		temp_image->CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
-		temp_image->SetMinimumValue(0.0);
-		temp_image->SetMaximumValue(1.0);
-		temp_float = 1.2 * temp_image->ReturnAverageOfRealValues() * temp_image->number_of_real_space_pixels;
-		if (temp_float > kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3))
-		{
-			density_map_1.BackwardFFT();
-			density_map_2.BackwardFFT();
-			mask_volume_in_voxels = density_map_1.ApplyMask(*temp_image, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
-			mask_volume_in_voxels = density_map_2.ApplyMask(*temp_image, mask_falloff / pixel_size, 0.0, 0.0, 0.0);
-			density_map_1.ForwardFFT();
-			density_map_2.ForwardFFT();
-//			wxPrintf("Tight mask applied %g %g %g %g", temp_float, kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3), molecular_mass_in_kDa, pixel_size);
-		}
-//		else wxPrintf("Tight mask not applied %g %g", temp_float, kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3));
-		delete temp_image;
-	} */
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	density_map_1.Deallocate();
 	density_map_2.Deallocate();
@@ -577,14 +551,14 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 		density_map.CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
 		density_map.Resize(original_box_size, original_box_size, original_box_size);
 	}
-	else density_map.CosineMask(0.5 - original_pixel_size / 20.0, original_pixel_size / 10.0);
+	else density_map.CosineMask(0.5, original_pixel_size / 10.0);
 	density_map.BackwardFFT();
 	// Need to run Correct3D if cropping was not used
 	// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
 	//if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
 	// Now we have a full-size map with the final pixel size. Applying mask and center map in box...
 //	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
-	//CosineMask(density_map.physical_address_of_box_center_x - 3.0 * mask_falloff / original_pixel_size, 3.0 * mask_falloff / original_pixel_size);
+//	CosineMask(density_map.physical_address_of_box_center_x - 3.0 * mask_falloff / original_pixel_size, 3.0 * mask_falloff / original_pixel_size);
 	if (center_mass)
 	{
 //		temp_float = density_map.ReturnAverageOfRealValuesOnEdges();

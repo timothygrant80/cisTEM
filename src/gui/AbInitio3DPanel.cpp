@@ -1092,7 +1092,8 @@ void AbInitioManager::SetupReconstructionJob()
 
 	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", current_percent_used / 100.0, 10.0);
 	else
-	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0);
+//	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
 
 	int class_counter;
 	long counter;
@@ -2082,6 +2083,11 @@ wxThread::ExitCode MaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
+/*		input_image.CosineMask(mask_radius / pixel_size, 1);
+		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
+		input_image.AddConstant(-edge_value);
+		input_image.SetMinimumValue(0);
+*/
 //		for (i = myroundint(0.5 * mask_radius / pixel_size); i < myroundint(1.5 * mask_radius / pixel_size); i++)
 //		{
 //			edge_value = input_image.ReturnAverageOfRealValuesAtRadius(mask_radius / pixel_size);
@@ -2089,20 +2095,21 @@ wxThread::ExitCode MaskerThread::Entry()
 //		}
 //		edge_value = min_value;
 //		edge_value = input_image.ReturnAverageOfRealValuesAtRadius(mask_radius / pixel_size);
-		input_image.CosineMask(mask_radius / pixel_size, 1);
+//		input_image.CosineMask(mask_radius / pixel_size, 1);
 //		input_image.CosineMask(mask_radius / pixel_size, 40 / pixel_size, false, true, edge_value);
 //		input_image.CosineMask(0.5 * mask_radius / pixel_size, mask_radius / pixel_size, false, true, edge_value);
 //		edge_value = std::max(input_image.ReturnAverageOfRealValuesOnEdges(), 0.0f);
-		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
-		input_image.AddConstant(-edge_value);
-/*		standard_deviations = input_image.StandardDeviationOfMass(0.0, true);
-		wxPrintf("\nstd x y z = %g %g %g\n", standard_deviations.x, standard_deviations.y, standard_deviations.z);
+		edge_value = std::max(input_image.ReturnAverageOfRealValues(std::max(mask_radius / pixel_size, 0.9f * float(input_image.physical_address_of_box_center_x)), true), 0.0f);
+//		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
+//		input_image.AddConstant(-edge_value);
+		standard_deviations = input_image.StandardDeviationOfMass(0.0, true, true);
+//		wxPrintf("\nstd x y z = %g %g %g\n", standard_deviations.x, standard_deviations.y, standard_deviations.z);
 //		var_x = fabsf(4.0 * standard_deviations.x);
 //		var_y = fabsf(4.0 * standard_deviations.y);
 //		var_z = fabsf(4.0 * standard_deviations.z);
-		var_x = powf(2.0 * standard_deviations.x, 2);
-		var_y = powf(2.0 * standard_deviations.y, 2);
-		var_z = powf(2.0 * standard_deviations.z, 2);
+		var_x = powf(standard_deviations.x, 2);
+		var_y = powf(standard_deviations.y, 2);
+		var_z = powf(standard_deviations.z, 2);
 
 		max_value = input_image.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
 		for (k = 0; k < input_image.logical_z_dimension; k++)
@@ -2135,7 +2142,7 @@ wxThread::ExitCode MaskerThread::Entry()
 				}
 				pixel_counter += input_image.padding_jump_value;
 			}
-		} */
+		}
 
 		input_image.SetMinimumValue(0);
 //		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);

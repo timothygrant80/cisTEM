@@ -713,21 +713,30 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //			+ ReturnParameterLogP(current_parameters);
 
 	// Calculate SNR used for particle weighting during reconstruction
-//	input_image.CosineMask(mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
+	input_image.CosineMask(mask_radius / original_pixel_size, mask_falloff / original_pixel_size);
 //	alpha = input_image.ReturnImageScale(*projection_image);
-	alpha = input_image.ReturnImageScale(*projection_image, mask_radius / original_pixel_size);
+//	variance_masked = projection_image->ReturnVarianceOfRealValues(mask_radius / original_pixel_size);
+//	projection_image->MultiplyByConstant(1.0 / sqrtf(variance_masked));
+//	wxPrintf("var = %g\n", variance_masked);
+//	alpha = input_image.ReturnImageScale(*projection_image, mask_radius / original_pixel_size);
+	alpha = input_image.ReturnImageScale(*projection_image);
 	projection_image->MultiplyByConstant(alpha);
 
-//	particle_image->QuickAndDirtyWriteSlice("part.mrc", 1);
-//	projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
+//	if (origin_micrograph < 0) origin_micrograph = 0;
+//	origin_micrograph++;
+//	input_image.QuickAndDirtyWriteSlice("part.mrc", origin_micrograph);
+//	projection_image->QuickAndDirtyWriteSlice("proj.mrc", origin_micrograph);
 
 	input_image.SubtractImage(projection_image);
-//	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
+//	input_image.QuickAndDirtyWriteSlice("diff.mrc", origin_micrograph);
 //	exit(0);
 //	variance_difference = input_image.ReturnVarianceOfRealValues();
 //	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues());
-	variance_difference = input_image.ReturnVarianceOfRealValues(mask_radius / original_pixel_size);
-	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues(mask_radius / original_pixel_size));
+//	variance_difference = input_image.ReturnVarianceOfRealValues(mask_radius / original_pixel_size);
+//	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues(mask_radius / original_pixel_size));
+	variance_difference = input_image.ReturnVarianceOfRealValues();
+	sigma = sqrtf(variance_difference / projection_image->ReturnVarianceOfRealValues());
+//	sigma = sqrtf(variance_difference / powf(alpha, 2));
 //	wxPrintf("variance_difference, alpha for sigma, sigma = %g %g %g\n", variance_difference, alpha, sigma);
 	// Prevent rare occurrences of unrealistically high sigmas
 	if (sigma > 100.0) sigma = 100.0;

@@ -337,6 +337,7 @@ float Image::ReturnImageScale(Image &matching_projection, float mask_radius)
 	correlation_coefficient = ReturnCorrelationCoefficientUnnormalized(matching_projection, mask_radius);
 //	pixel_variance_image = ReturnVarianceOfRealValues(mask_radius);
 	pixel_variance_projection = matching_projection.ReturnVarianceOfRealValues(mask_radius);
+//	pixel_variance_projection = matching_projection.ReturnSumOfSquares(mask_radius);
 
 	return fabsf(correlation_coefficient / pixel_variance_projection);
 }
@@ -8060,7 +8061,7 @@ Peak Image::CenterOfMass(float threshold, bool apply_threshold)
 	return center_of_mass;
 }
 
-Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold)
+Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold, bool invert_densities)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
@@ -8080,11 +8081,23 @@ Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold)
 		{
 			for (i = 0; i < logical_x_dimension; i++)
 			{
-				temp_float = real_values[pixel_counter];
-				if (apply_threshold)
+				if (invert_densities)
 				{
-					temp_float = std::max(real_values[pixel_counter] - threshold, 0.0f);
+					if (apply_threshold)
+					{
+						temp_float = std::max(threshold - real_values[pixel_counter], 0.0f);
+					}
+					else temp_float = - real_values[pixel_counter];
 				}
+				else
+				{
+					if (apply_threshold)
+					{
+						temp_float = std::max(real_values[pixel_counter] - threshold, 0.0f);
+					}
+					else temp_float = real_values[pixel_counter];
+				}
+
 				sum_xd += powf(i - physical_address_of_box_center_x, 2) * temp_float;
 				sum_yd += powf(j - physical_address_of_box_center_y, 2) * temp_float;
 				sum_zd += powf(k - physical_address_of_box_center_z, 2) * temp_float;

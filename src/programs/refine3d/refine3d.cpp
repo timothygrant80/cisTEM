@@ -353,6 +353,7 @@ bool Refine3DApp::DoCalculation()
 	float variance;
 	float average;
 	float average_density_max;
+	bool skip_local_refinement = false;
 	wxDateTime my_time_in;
 //	wxDateTime my_time_out;
 
@@ -532,7 +533,7 @@ bool Refine3DApp::DoCalculation()
 
 	if (global_search)
 	{
-		if (best_parameters_to_keep == 0) best_parameters_to_keep = 1;
+		if (best_parameters_to_keep == 0) {best_parameters_to_keep = 1; skip_local_refinement = true;}
 		// Assume square particles
 		search_reference_3d = input_3d;
 		search_statistics = input_statistics;
@@ -943,13 +944,14 @@ bool Refine3DApp::DoCalculation()
 					search_particle.SetParameters(search_parameters);
 					search_particle.MapParameters(cg_starting_point);
 					search_parameters[15] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, search_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
-					// Replace the following line with temp_float = search_parameters[15] to skip local refinement.
 					if (i == 0)
 					{
 						output_parameters[15] = search_parameters[15];
 						if (! local_refinement) input_parameters[15] = output_parameters[15];
 					}
-					temp_float = - 100.0 * conjugate_gradient_minimizer.Run();
+					if (skip_local_refinement) temp_float = search_parameters[15];
+					else temp_float = - 100.0 * conjugate_gradient_minimizer.Run();
+					// Uncomment the following line to skip local refinement.
 //					temp_float = search_parameters[15];
 //					wxPrintf("best, refine in, out, diff = %i %g %g %g %g\n", i, output_parameters[15], search_parameters[15], temp_float, temp_float - output_parameters[15]);
 //					log_diff = output_parameters[15] - temp_float;

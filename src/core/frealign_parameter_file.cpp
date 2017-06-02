@@ -94,14 +94,14 @@ void FrealignParameterFile::WriteLine(float *parameters, bool comment)
 			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %7.2f %9i %10.4f %7.2f %7.2f\n",
 					float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), float(parameters[12]), int(parameters[13]), float(parameters[14]), float(parameters[15]), float(parameters[16]));
+					float(parameters[11]), float(parameters[12]), myroundint(parameters[13]), float(parameters[14]), float(parameters[15]), float(parameters[16]));
 		}
 		else
 		{
 			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %7.2f %9i %10.4f %7.2f %7.2f\n",
 					int(parameters[0]), float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), float(parameters[12]), int(parameters[13]), float(parameters[14]), float(parameters[15]), float(parameters[16]));
+					float(parameters[11]), float(parameters[12]), myroundint(parameters[13]), float(parameters[14]), float(parameters[15]), float(parameters[16]));
 		}
 	}
 	else
@@ -111,14 +111,14 @@ void FrealignParameterFile::WriteLine(float *parameters, bool comment)
 			fprintf(parameter_file, "C       %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %7.2f %9i %10.4f %7.2f\n",
 					float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), float(parameters[12]), int(parameters[13]), float(parameters[14]), float(parameters[15]));
+					float(parameters[11]), float(parameters[12]), myroundint(parameters[13]), float(parameters[14]), float(parameters[15]));
 		}
 		else
 		{
 			fprintf(parameter_file, "%7i %7.2f %7.2f %7.2f %9.2f %9.2f %7.0f %5i %8.1f %8.1f %7.2f %7.2f %7.2f %9i %10.4f %7.2f\n",
 					int(parameters[0]), float(parameters[1]), float(parameters[2]), float(parameters[3]), float(parameters[4]), float(parameters[5]),
 					float(parameters[6]), int(parameters[7]), float(parameters[8]), float(parameters[9]), float(parameters[10]),
-					float(parameters[11]), float(parameters[12]), int(parameters[13]), float(parameters[14]), float(parameters[15]));
+					float(parameters[11]), float(parameters[12]), myroundint(parameters[13]), float(parameters[14]), float(parameters[15]));
 		}
 	}
 	number_of_lines++;

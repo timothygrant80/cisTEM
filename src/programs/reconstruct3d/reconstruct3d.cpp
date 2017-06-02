@@ -380,8 +380,8 @@ bool Reconstruct3DApp::DoCalculation()
 	input_particle.mask_falloff = mask_falloff;
 	input_par_file.Rewind();
 
-	Reconstruct3D my_reconstruction_1(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[14], score_weight_conversion, my_symmetry);
-	Reconstruct3D my_reconstruction_2(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[14], score_weight_conversion, my_symmetry);
+	Reconstruct3D my_reconstruction_1(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry);
+	Reconstruct3D my_reconstruction_2(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry);
 	my_reconstruction_1.original_x_dimension = original_box_size;
 	my_reconstruction_1.original_y_dimension = original_box_size;
 	my_reconstruction_1.original_z_dimension = original_box_size;
@@ -393,7 +393,7 @@ bool Reconstruct3DApp::DoCalculation()
 	my_reconstruction_2.original_pixel_size = original_pixel_size;
 	my_reconstruction_2.center_mass = center_mass;
 
-	wxPrintf("\nNumber of particles to reconstruct = %i, average sigma noise = %f, average LogP = %f\n", images_to_process, parameter_average[14], parameter_average[15]);
+	wxPrintf("\nNumber of particles to reconstruct = %i, average sigma noise = %f, average score = %f\n", images_to_process, parameter_average[14], parameter_average[15]);
 	wxPrintf("Box size for reconstruction = %i, binning factor = %f\n", box_size, binning_factor);
 
 	if (images_to_process == 0)

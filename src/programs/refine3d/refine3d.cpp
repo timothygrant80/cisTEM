@@ -569,7 +569,7 @@ bool Refine3DApp::DoCalculation()
 	input_3d.PrepareForProjections(low_resolution_limit, high_resolution_limit);
 	binning_factor_refine = input_3d.pixel_size / pixel_size;
 	//Scale to make projections compatible with images for ML calculation
-	input_3d.density_map.MultiplyByConstant(binning_factor_refine);
+//	input_3d.density_map.MultiplyByConstant(binning_factor_refine);
 //	input_3d.density_map.MultiplyByConstant(powf(powf(binning_factor_refine, 1.0 / 3.0), 2));
 	wxPrintf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
 

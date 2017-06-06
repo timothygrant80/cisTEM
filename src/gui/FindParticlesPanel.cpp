@@ -307,6 +307,9 @@ void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 // When the user selects a new picking algorithm
 void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 {
+	wxSize ExpertMinSize;
+	int splitter_panel_size;
+
 	switch(PickingAlgorithmComboBox->GetCurrentSelection())
 	{
 	case(-1) :
@@ -318,8 +321,8 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 			// Ab initio
 			PickingParametersPanel->Show(true);
 
-			wxSize ExpertMinSize = ExpertOptionsPanel->GetMinSize();
-			int splitter_panel_size = 400;
+			ExpertMinSize = ExpertOptionsPanel->GetMinSize();
+			splitter_panel_size = 400;
 			if (ExpertMinSize.x > 400) splitter_panel_size = ExpertMinSize.x;
 			FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, splitter_panel_size);
 			ExpertToggleButton->Enable(true);

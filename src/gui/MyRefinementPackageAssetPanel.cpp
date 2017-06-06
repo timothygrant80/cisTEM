@@ -57,6 +57,8 @@ void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 			long counter;
 			int class_counter;
 
+			main_frame->current_project.database.Begin();
+
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
 			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
 			main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", all_refinement_packages.Item(selected_refinement_package).asset_id));
@@ -105,6 +107,11 @@ void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 			}
 
 			all_refinement_packages.RemoveAt(selected_refinement_package);
+
+			main_frame->current_project.database.Commit();
+
+			if (all_refinement_packages.GetCount() > 0) selected_refinement_package = 0;
+			else selected_refinement_package = -1;
 			main_frame->DirtyRefinementPackages();
 		}
 	}
@@ -372,6 +379,7 @@ void MyRefinementPackageAssetPanel::OnPackageActivated( wxListEvent& event )
 void MyRefinementPackageAssetPanel::OnVolumeListItemActivated( wxListEvent& event )
 {
 	MyVolumeChooserDialog *dialog = new MyVolumeChooserDialog(this);
+
 	dialog->ComboBox->SetSelection(volume_asset_panel->ReturnArrayPositionFromAssetID(all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex())) + 1);
 	dialog->Fit();
 	if (dialog->ShowModal() == wxID_OK)
@@ -379,17 +387,13 @@ void MyRefinementPackageAssetPanel::OnVolumeListItemActivated( wxListEvent& even
 		if (dialog->selected_volume_id != all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex()))
 		{
 			all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex()) = dialog->selected_volume_id;
-			dialog->Destroy();
-			// Change in database..
+					// Change in database..
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%li WHERE CLASS_NUMBER=%li;", all_refinement_packages.Item(selected_refinement_package).asset_id, dialog->selected_volume_id, event.GetIndex() + 1));
 
 			ReDrawActiveReferences();
-
-
-
 		}
 	}
-
+	dialog->Destroy();
 }
 
 void MyRefinementPackageAssetPanel::OnBeginEdit( wxListEvent& event )
@@ -535,7 +539,7 @@ ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefineme
 	}
 
 	//wxPrintf("returning NULL\n");
-	MyDebugAssertFalse(1==1, "Returning NULL here..");
+	MyDebugAssertFalse(1==1, "Returning NULL here, wanted_id is %li", wanted_id);
 	return NULL;
 }
 
@@ -554,7 +558,7 @@ ShortClassificationInfo*  MyRefinementPackageAssetPanel::ReturnPointerToShortCla
 	}
 
 	//wxPrintf("returning NULL\n");
-	MyDebugAssertFalse(1==1, "Returning NULL here..");
+	MyDebugAssertFalse(1==1, "Returning NULL here, wanted_id is %li", wanted_id);
 	return NULL;
 
 }

@@ -168,6 +168,7 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 		{
 			long item = -1;
 
+			main_frame->current_project.database.Begin();
 			for ( ;; )
 			{
 					item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
@@ -195,6 +196,8 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 					already_removed[number_removed] = item;
 					number_removed++;
 			}
+
+			main_frame->current_project.database.Commit();
 
 		}
 
@@ -1035,7 +1038,7 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 	dropped_group = my_owner->HitTest(drop_position, flags);
 
 	//  Add the specified image to the specified group..
-	wxPrintf("dropped_group = %li\n", dropped_group);
+//	wxPrintf("dropped_group = %li\n", dropped_group);
 	if (dropped_group > 0)
 	{
 		if (my_panel->ContentsListBox->GetSelectedItemCount() == 1)
@@ -1057,6 +1060,8 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 
 			long item = -1;
 
+			main_frame->current_project.database.Begin();
+
 			for ( ;; )
 			{
 				item = my_panel->ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
@@ -1071,6 +1076,8 @@ wxDragResult GroupDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult defResul
 					my_panel->InsertGroupMemberToDatabase(dropped_group, my_panel->all_groups_list->groups[dropped_group].number_of_members - 1);
 				}
 			}
+
+			main_frame->current_project.database.Commit();
 
 		}
 

@@ -1144,7 +1144,7 @@ void ParticleFinder::ReadAndResampleMicrograph()
 	micrograph.ApplyCTFPhaseFlip(micrograph_ctf);
 
 	// High pass filter to remove density ramps (due to variations in ice thickness)
-	micrograph.CosineMask(2.0/float(micrograph.logical_x_dimension),4.0/float(micrograph.logical_x_dimension),true);
+	micrograph.CosineMask(10.0/float(micrograph.logical_x_dimension),20.0/float(micrograph.logical_x_dimension),true);
 
 	// Back to real space
 	micrograph.BackwardFFT();

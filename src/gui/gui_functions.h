@@ -29,6 +29,8 @@ class RunSimpleFunctionThread : public wxThread
 	 virtual ExitCode Entry();
 };
 
+void SetupDefaultColorMap();
+
 void global_delete_scratch();
 void global_delete_refine2d_scratch();
 void global_delete_refine3d_scratch();

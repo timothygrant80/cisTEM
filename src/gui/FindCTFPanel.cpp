@@ -58,9 +58,9 @@ void MyFindCTFPanel::EnableMovieProcessingIfAppropriate()
 	MovieRadioButton->Enable(true);
 	NoMovieFramesStaticText->Enable(true);
 	NoFramesToAverageSpinCtrl->Enable(true);
-	for (int counter = 0; counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); counter ++ )
+	for (int counter = 0; counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); counter ++ )
 	{
-		if (image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(),counter))->parent_id < 0)
+		if (image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(),counter))->parent_id < 0)
 		{
 			MovieRadioButton->SetValue(false);
 			MovieRadioButton->Enable(false);
@@ -282,7 +282,7 @@ void MyFindCTFPanel::SetInfo()
 
 void MyFindCTFPanel::FillGroupComboBox()
 {
-	GroupComboBox->FillWithImageGroups();
+	GroupComboBox->FillComboBox(true);
 }
 
 void MyFindCTFPanel::FillRunProfileComboBox()
@@ -312,7 +312,7 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
 				{
 					StartEstimationButton->Enable(true);
 				}
@@ -443,7 +443,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	// Package the job details..
 
 	long counter;
-	long number_of_jobs = image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many images / movies in the selected group..
+	long number_of_jobs = image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many images / movies in the selected group..
 
 	bool ok_number_conversion;
 
@@ -561,29 +561,29 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		if (input_is_a_movie == true)
 		{
-			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
+			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->parent_id;
 			input_filename = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id))->filename.GetFullPath().ToStdString();
 			pixel_size = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id))->pixel_size;
 		}
 		else
 		{
-			input_filename = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->filename.GetFullPath().ToStdString();
-			pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->pixel_size;
+			input_filename = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->filename.GetFullPath().ToStdString();
+			pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->pixel_size;
 		}
 
-		acceleration_voltage = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->microscope_voltage;
-		spherical_aberration = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->spherical_aberration;
+		acceleration_voltage = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->microscope_voltage;
+		spherical_aberration = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->spherical_aberration;
 
 
-		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		//output_filename.Replace(".mrc", "_ali.mrc", false);
 
-		current_asset_id = image_asset_panel->ReturnAssetID(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		buffer_filename = image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_asset_id = image_asset_panel->ReturnAssetID(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		buffer_filename = image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		number_of_previous_estimations =  main_frame->current_project.database.ReturnNumberOfPreviousCTFEstimationsByAssetID(current_asset_id);
 
 		buffer_filename = main_frame->current_project.ctf_asset_directory.GetFullPath();
-		buffer_filename += wxString::Format("/%s_CTF_%i.mrc", wxFileName::StripExtension(image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))), number_of_previous_estimations);
+		buffer_filename += wxString::Format("/%s_CTF_%i.mrc", wxFileName::StripExtension(image_asset_panel->ReturnAssetShortFilename(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))), number_of_previous_estimations);
 
 		output_diagnostic_filename = buffer_filename.ToStdString();
 
@@ -598,7 +598,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		if (input_is_a_movie)
 		{
-			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->parent_id;
+			parent_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->parent_id;
 			MovieAsset *current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
 			current_gain_filename = current_movie->gain_filename;
 			movie_is_gain_corrected = current_gain_filename.IsEmpty();
@@ -976,7 +976,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	{
 		// we need the filename of the image..
 
-		wxString image_filename = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), result_to_process->job_number))->filename.GetFullPath();
+		wxString image_filename = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), result_to_process->job_number))->filename.GetFullPath();
 
 		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], image_filename);
 		time_of_last_result_update = time(NULL);
@@ -1088,7 +1088,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		image_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->asset_id;
+		image_asset_id = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->asset_id;
 
 
 		if (my_job_package.jobs[counter].arguments[15].ReturnFloatArgument() < 0)
@@ -1163,7 +1163,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		current_asset = image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter);
+		current_asset = image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter);
 
 		main_frame->current_project.database.AddNextImageAsset(image_asset_panel->ReturnAssetPointer(current_asset)->asset_id,
 															image_asset_panel->ReturnAssetPointer(current_asset)->asset_name,

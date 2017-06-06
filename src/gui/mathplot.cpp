@@ -2000,7 +2000,7 @@ bool mpWindow::DelLayer(
     for (layIt = m_layers.begin(); layIt != m_layers.end(); layIt++) 
     {
     	if (*layIt == layer)
-	{
+    	{
 	        // Also delete the object?
         	if (alsoDeleteObject) 
 			delete *layIt;
@@ -2008,7 +2008,7 @@ bool mpWindow::DelLayer(
 	    	if (refreshDisplay) 
 			UpdateAll();
 	    	return true;
-	}
+    	}
     }
     return false;
 }

@@ -1,7 +1,6 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
@@ -135,6 +134,43 @@ bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group)
 	else return false;
 }
 
+bool MemoryComboBox::FillWithImages(long wanted_image_group)
+{
+	extern MyImageAssetPanel *image_asset_panel;
+
+	Freeze();
+	Clear();
+	ChangeValue("");
+
+	long new_selection = 0;
+	long new_id = -1;
+	long start_position;
+	int number_of_images = image_asset_panel->ReturnGroupSize(wanted_image_group);
+
+	for (long counter = 0; counter < number_of_images; counter++)
+	{
+		AddMemoryItem(image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(wanted_image_group, counter))->ReturnShortNameString(), image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(wanted_image_group, counter))->asset_id);
+
+		if (image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(wanted_image_group, counter))->asset_id == selected_id_on_last_clear)
+		{
+			new_selection = counter;
+			new_id = selected_id_on_last_clear;
+		}
+	}
+
+	if (GetCount() > 0)
+	{
+		SetSelection(new_selection);
+	}
+
+	currently_selected_id = new_id;
+	Thaw();
+
+	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
+	else return false;
+
+}
+
 bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
 {
 	extern MyImageAssetPanel *image_asset_panel;
@@ -155,7 +191,7 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
 		AddMemoryItem(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")", image_asset_panel->ReturnGroupID(counter));
 		if (image_asset_panel->ReturnGroupID(counter) == selected_id_on_last_clear)
 		{
-			if (include_all_images_group == true) new_selection == counter;
+			if (include_all_images_group == true) new_selection = counter;
 			else new_selection = counter - 1;
 
 			new_id = selected_id_on_last_clear;
@@ -208,7 +244,7 @@ bool MemoryComboBox::FillWithRefinementPackages()
 	else return false;
 }
 
-bool MemoryComboBox::FillWithVolumeAssets()
+bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
 {
 	extern MyVolumeAssetPanel *volume_asset_panel;
 
@@ -218,6 +254,11 @@ bool MemoryComboBox::FillWithVolumeAssets()
 
 	long new_selection = -1;
 	long new_id = -1;
+
+	if (include_generate_from_params == true)
+	{
+		AddMemoryItem("Generate from params.", -100);
+	}
 
 	for (long counter = 0; counter < volume_asset_panel->all_assets_list->number_of_assets; counter++)
 	{
@@ -1115,7 +1156,7 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) const
 {
 	extern MyVolumeAssetPanel *volume_asset_panel;
-	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyRefinementPackageAssetPanel *parent_panel =  refinement_package_asset_panel;
 
 	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
 	{
@@ -1139,6 +1180,8 @@ wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) cons
 		return "";
 	}
 }
+
+
 
 int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 {
@@ -1173,6 +1216,44 @@ int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 	}
 
 	return max_width;
+}
+
+
+ReferenceVolumesListControlRefinement::ReferenceVolumesListControlRefinement(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+ReferenceVolumesListControl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString ReferenceVolumesListControlRefinement::OnGetItemText(long item, long column) const
+{
+	extern MyVolumeAssetPanel *volume_asset_panel;
+	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+	extern MyRefine3DPanel *refine_3d_panel;
+	int selected_refinement_package = refine_3d_panel->RefinementPackageComboBox->GetSelection();
+
+	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && selected_refinement_package >= 0)
+	{
+		switch(column)
+		{
+		    case 0  :
+		    	return wxString::Format(wxT("%li"), item + 1);
+		       break;
+		    case 1  :
+		    	if (refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item) == -1) return wxT("Generate from params.");
+		    	else
+		    	return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item)));
+		       break;
+		    default :
+		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+		       return "";
+		}
+	}
+	else
+	{
+		return "";
+	}
 }
 
 // Refinements..
@@ -1470,4 +1551,74 @@ ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id,
 ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
 {
 }
+
+wxThread::ExitCode OrthDrawerThread::Entry()
+{
+	// we are going to make a bitmap panel, calculate the orth image, add it to the bitmap panel, then return that for the gui to draw, this is a bit crazy maybe
+
+	MyOrthDrawEvent *finished_event = new MyOrthDrawEvent(MY_ORTH_DRAW_EVENT); // for sending back the panel
+
+	if (DoesFileExist(filenames_of_volumes.Item(0)) == true)
+	{
+		Image input_image;
+		ImageFile input_file;
+
+		input_file.OpenFile(filenames_of_volumes.Item(0).ToStdString(), false);
+		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+
+		Image *new_image = new Image;
+		new_image->Allocate(input_file.ReturnXSize() * 3, input_file.ReturnYSize() * 2, filenames_of_volumes.GetCount(), true);
+		input_file.CloseFile();
+
+		Image current_output;
+		current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
+		//current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
+		input_image.CreateOrthogonalProjectionsImage(&current_output);
+		current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
+
+
+		// if there are multiple classes, take care of it.
+
+		for (int class_counter = 2; class_counter <= filenames_of_volumes.GetCount(); class_counter++)
+		{
+			if (DoesFileExist(filenames_of_volumes.Item(class_counter -1 )) == false)
+			{
+				delete new_image;
+				finished_event->SetImage(NULL);
+				wxQueueEvent(main_thread_pointer, finished_event);
+			}
+
+			input_file.OpenFile(filenames_of_volumes.Item(class_counter - 1).ToStdString(), false);
+			input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+			input_file.CloseFile();
+
+			current_output.AllocateAsPointingToSliceIn3D(new_image, class_counter);
+			input_image.CreateOrthogonalProjectionsImage(&current_output);
+		}
+
+
+		if (new_image->logical_x_dimension > 1500)
+		{
+			float scale_factor = new_image->logical_x_dimension / 1500;
+			new_image->ForwardFFT();
+			new_image->Resize(myroundint(new_image->logical_x_dimension * scale_factor), myroundint(new_image->logical_y_dimension * scale_factor), 1);
+			new_image->BackwardFFT();
+		}
+
+
+		finished_event->SetImage(new_image);
+		finished_event->SetString(tab_name);
+
+	}
+	else
+	{
+		finished_event->SetImage(NULL);
+	}
+
+
+	wxQueueEvent(main_thread_pointer, finished_event);
+
+
+}
+
 

@@ -236,19 +236,61 @@ float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution
 
 	for (int counter = 1; counter < FSC.number_of_points; counter++)
 	{
-		if (FSC.data_x[counter] < wanted_resolution) resolution_shell = counter;
+		if (FSC.data_x[counter] < wanted_resolution)
+		{
+			resolution_shell = counter;
+			break;
+		}
 	}
 
 	if (resolution_shell == -1) return 0;
 	else
 	{
 		resolution_shell += number_of_shells;
-		if (resolution_shell >= FSC.number_of_points) return 0;
+		if (resolution_shell >= FSC.number_of_points) return pixel_size * 2.0;
 		else return FSC.data_x[resolution_shell];
 	}
-
-	return 0.0;
 }
+
+int ResolutionStatistics::ReturnResolutionShellNumber(float wanted_resolution)
+{
+	int resolution_shell = -1;
+
+	for (int counter = 1; counter < FSC.number_of_points; counter++)
+	{
+		if (FSC.data_x[counter] < wanted_resolution)
+		{
+			resolution_shell = counter;
+			break;
+		}
+	}
+
+	return resolution_shell;
+}
+
+float ResolutionStatistics::ReturnResolutionNShellsBefore(float wanted_resolution, int number_of_shells)
+{
+	int resolution_shell = -1;
+
+	for (int counter = FSC.number_of_points - 1; counter >= 1; counter--)
+	{
+		if (FSC.data_x[counter] > wanted_resolution)
+		{
+			resolution_shell = counter;
+			break;
+		}
+	}
+
+	if (resolution_shell == -1) return 0;
+	else
+	{
+		resolution_shell -= number_of_shells;
+		if (resolution_shell < 1) return 0;
+		else return FSC.data_x[resolution_shell];
+	}
+}
+
+
 
 
 void ResolutionStatistics::Init(float wanted_pixel_size, int box_size)
@@ -645,7 +687,7 @@ void ResolutionStatistics::WriteStatisticsToFloatArray(float *float_array, int w
 	}
 }
 
-void ResolutionStatistics::WriteStatisticsToFile(NumericTextFile &output_statistics_file)
+void ResolutionStatistics::WriteStatisticsToFile(NumericTextFile &output_statistics_file, float pssnr_division_factor)
 {
 	MyDebugAssertTrue(FSC.number_of_points > 0, "Resolution statistics have not been fully calculated");
 
@@ -660,7 +702,7 @@ void ResolutionStatistics::WriteStatisticsToFile(NumericTextFile &output_statist
 		temp_float[2] = pixel_size / FSC.data_x[i];
 		temp_float[3] = FSC.data_y[i];
 		temp_float[4] = part_FSC.data_y[i];
-		temp_float[5] = sqrtf(part_SSNR.data_y[i]);
+		temp_float[5] = sqrtf(part_SSNR.data_y[i] / pssnr_division_factor);
 		temp_float[6] = sqrtf(rec_SSNR.data_y[i]);
 
 		output_statistics_file.WriteLine(temp_float);

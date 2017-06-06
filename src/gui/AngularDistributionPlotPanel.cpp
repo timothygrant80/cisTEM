@@ -43,6 +43,13 @@ void AngularDistributionPlotPanel::Clear()
     dc.Clear();
     Thaw();
     refinement_results_to_plot.Clear();
+
+	int client_x;
+	int client_y;
+
+	GetClientSize(&client_x, &client_y);
+	buffer_bitmap.Create(wxSize(client_x, client_y));
+	UpdateScalingAndDimensions();
 	SetupBitmap();
 	Refresh();
 
@@ -57,6 +64,8 @@ void AngularDistributionPlotPanel::OnSize(wxSizeEvent & event)
 
 void AngularDistributionPlotPanel::SetupBitmap()
 {
+	if (buffer_bitmap.GetHeight() > 5 && buffer_bitmap.GetWidth() > 5)
+	{
 	wxMemoryDC memDC;
 	memDC.SelectObject(buffer_bitmap);
 	int window_x_size;
@@ -141,7 +150,7 @@ void AngularDistributionPlotPanel::SetupBitmap()
 
 	current_label = greek_phi+" = 90 "+degree_symbol;
 	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-	gc->DrawText(current_label, circle_center_x - label_height * 0.5, circle_center_y - circle_radius - major_tick_length - margin_between_major_ticks_and_labels, PI * 0.5);
+	gc->DrawText(current_label, circle_center_x - label_width * 0.5, circle_center_y - circle_radius - major_tick_length - margin_between_major_ticks_and_labels - label_height, 0.0);
 
 	current_label = greek_phi+" = 180 "+degree_symbol;
 	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
@@ -149,7 +158,7 @@ void AngularDistributionPlotPanel::SetupBitmap()
 
 	current_label = greek_phi+" = 270 "+degree_symbol;
 	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
-	gc->DrawText(current_label, circle_center_x + label_height * 0.5, circle_center_y + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, PI * 1.5);
+	gc->DrawText(current_label, circle_center_x - label_width * 0.5, circle_center_y + circle_radius + major_tick_length + margin_between_major_ticks_and_labels, 0.0);
 
 	current_label = greek_theta+" = 90 "+degree_symbol;
 	gc->GetTextExtent(current_label,&label_width,&label_height,&label_descent,&label_externalLeading);
@@ -270,6 +279,7 @@ void AngularDistributionPlotPanel::SetupBitmap()
 			//wxPrintf("plot!\n");
 		}
 	}
+	}
 
 }
 
@@ -334,6 +344,9 @@ void AngularDistributionPlotPanel::XYFromPhiTheta(const float phi, const float t
 void AngularDistributionPlotPanel::AddRefinementResult(RefinementResult * refinement_result_to_add)
 {
 	//wxPrintf("Adding refinement result to the panel: theta = %f phi = %f\n",refinement_result_to_add->theta, refinement_result_to_add->phi);
+
+	if (refinement_result_to_add->image_is_active >= 0)
+	{
 	refinement_results_to_plot.Add(*refinement_result_to_add);
 
 //	wxMemoryDC memDC;
@@ -452,6 +465,7 @@ void AngularDistributionPlotPanel::AddRefinementResult(RefinementResult * refine
 	}
 
 //	memDC.SelectObject(wxNullBitmap);
+	}
 
 
 }

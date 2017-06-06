@@ -206,9 +206,9 @@ bool Project::ReadMasterSettings()
 	return success;
 }
 
-void Project::Close()
+void Project::Close(bool remove_lock)
 {
-	database.Close();
+	database.Close(remove_lock);
 
 	is_open = false;
 	total_cpu_hours = 0;

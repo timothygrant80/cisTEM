@@ -28,7 +28,7 @@ public :
 	Project();
 	~Project();
 
-	void Close();
+	void Close(bool remove_lock = true);
 	bool CreateNewProject(wxFileName database_file, wxString project_directory, wxString project_name);
 	bool OpenProjectFromFile(wxFileName file_to_open);
 	bool ReadMasterSettings();

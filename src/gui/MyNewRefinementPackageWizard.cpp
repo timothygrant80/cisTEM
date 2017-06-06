@@ -440,16 +440,16 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 		temp_refinement.refinement_id = refinement_id;
 		temp_refinement.refinement_was_imported_or_generated = true;
+		temp_refinement.SizeAndFillWithEmpty(number_of_particles, temp_refinement_package->number_of_classes);
+		//temp_refinement.class_refinement_results.Alloc(temp_refinement_package->number_of_classes);
 
-		temp_refinement.class_refinement_results.Alloc(temp_refinement_package->number_of_classes);
+		//temp_refinement.class_refinement_results.Add(junk_class_results, temp_refinement_package->number_of_classes);
 
-		temp_refinement.class_refinement_results.Add(junk_class_results, temp_refinement_package->number_of_classes);
-
-		for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
-		{
-			temp_refinement.class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
-			temp_refinement.class_refinement_results[class_counter].particle_refinement_results.Add(junk_result, number_of_particles);
-		}
+		//for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+		//{
+			//temp_refinement.class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
+		//	temp_refinement.class_refinement_results[class_counter].particle_refinement_results.Add(junk_result, number_of_particles);
+		//}
 
 		for (counter = 0; counter < number_of_particles; counter++)
 		{
@@ -538,7 +538,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
 
 				if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * 100.0);
+				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
 
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
@@ -593,7 +593,6 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
 
 		temp_refinement.SizeAndFillWithEmpty(number_of_particles, temp_refinement.number_of_classes);
-
 		wxWindowList all_children = initial_reference_page->my_panel->ScrollWindow->GetChildren();
 
 		// fill the references box
@@ -649,7 +648,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].logp;
 
 				if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * 100.0);
+				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
 
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].phi;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = refinement_to_copy->class_refinement_results[0].particle_refinement_results[counter].theta;
@@ -672,6 +671,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	// now we have to add the refinment_package to the panel..
 
+	main_frame->current_project.database.Begin();
 	refinement_package_asset_panel->AddAsset(temp_refinement_package);
 	temp_refinement.resolution_statistics_pixel_size = temp_particle_info.pixel_size;
 
@@ -682,6 +682,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	}
 
+	wxPrintf("Ref ID = %li\n", temp_refinement.reference_volume_ids.Item(0));
 	main_frame->current_project.database.AddRefinement(&temp_refinement);
 
 	ShortRefinementInfo temp_info;
@@ -692,6 +693,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	temp_info.refinement_package_asset_id = temp_refinement.refinement_package_asset_id;
 
 	refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
+	main_frame->current_project.database.Commit();
 	//delete temp_refinement_package;
 
 

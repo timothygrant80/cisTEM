@@ -440,6 +440,41 @@ void MyMainFrame::OpenProject(wxString project_filename)
 {
 	if (current_project.OpenProjectFromFile(project_filename) == true)
 	{
+		// check this project is not "locked"
+
+		long my_process_id = wxGetProcessId();
+		wxString my_hostname = wxGetFullHostName();
+
+		long database_process_id;
+		wxString database_hostname;
+
+		if (current_project.database.DoesTableExist("PROCESS_LOCK") == true)
+		{
+			current_project.database.ReturnProcessLockInfo(database_process_id, database_hostname);
+
+			if (my_process_id != 0 && database_process_id != -1 && my_process_id != database_process_id)
+			{
+				// if we got here then the database is marked as owned..
+
+				wxMessageDialog *my_dialog = new wxMessageDialog(this, wxString::Format("Database is marked as owned by :- \n\nPID : %li\nHost : %s\n\nEach database should only be opened by one instance of cisTEM at a time, otherwise corruption is possible. If it exists, you should close the other instance before continuing, if this message is the result of a crash etc. then you can overide and continue.\n\nDo you want to overide?", database_process_id, database_hostname), "Database already owned", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+				my_dialog->SetYesNoLabels("Override", "No");
+
+				if (my_dialog->ShowModal() != wxID_YES)
+				{
+					my_dialog->Destroy();
+					current_project.Close(false);
+					return;
+				}
+
+				my_dialog->Destroy();
+
+			}
+		}
+
+		// if we got here, we can take ownership and carry on..
+
+		current_project.database.SetProcessLockInfo(my_process_id, my_hostname);
+
 		int counter;
 		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
 

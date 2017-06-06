@@ -15,14 +15,15 @@ class MyFSCPanel : public FSCPanel
 {
 	protected:
 		// Handlers for FSCPanel events.
-		void OnClassComboBoxChange( wxCommandEvent& event );
+		//void OnClassComboBoxChange( wxCommandEvent& event );
 		Refinement *my_refinement;
 	public:
 		/** Constructor */
 		MyFSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL );
 		void AddRefinement(Refinement *refinement_to_plot);
-		void PlotCurrentClass();
 		void Clear();
+
+		void PopupTextClick( wxCommandEvent& event );
 
 	//// end generated class members
 	

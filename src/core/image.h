@@ -340,6 +340,7 @@ public:
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);
 	void TaperEdges();
 	float ReturnAverageOfRealValues(float wanted_mask_radius = 0.0, bool invert_mask = false);
+	float ReturnMedianOfRealValues();
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius);
 	float ReturnSigmaOfFourierValuesOnEdges();
@@ -348,6 +349,8 @@ public:
 	void SetMaximumValue(float new_maximum_value);
 	void SetMinimumValue(float new_minimum_value);
 	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);
+	void Binarise(float threshold_value);
+
 	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();

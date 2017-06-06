@@ -28,6 +28,7 @@ void ClassumSelectionCopyFromDialog::FillWithSelections(int number_of_classes)
 	int counter;
 	int old_width;
 	int current_width;
+	int list_position = 0;
 
 
 	original_array_positions.Clear();
@@ -44,12 +45,17 @@ void ClassumSelectionCopyFromDialog::FillWithSelections(int number_of_classes)
 		if (refinement_package_asset_panel->all_classification_selections.Item(counter).number_of_classes == number_of_classes)
 		{
 			original_array_positions.Add(counter);
-			SelectionListCtrl->InsertItem(counter, refinement_package_asset_panel->all_classification_selections.Item(counter).name);
-			SelectionListCtrl->SetItem (counter, 1, refinement_package_asset_panel->all_classification_selections.Item(counter).creation_date.FormatISOCombined(' '));
-			SelectionListCtrl->SetItem (counter, 2, wxString::Format("%i", refinement_package_asset_panel->all_classification_selections.Item(counter).number_of_selections));
+			SelectionListCtrl->InsertItem(list_position, refinement_package_asset_panel->all_classification_selections.Item(counter).name);
+			SelectionListCtrl->SetItem (list_position, 1, refinement_package_asset_panel->all_classification_selections.Item(counter).creation_date.FormatISOCombined(' '));
+			SelectionListCtrl->SetItem (list_position, 2, wxString::Format("%i", refinement_package_asset_panel->all_classification_selections.Item(counter).number_of_selections));
+			list_position++;
 		}
 
-		if (original_array_positions.GetCount() > 0) SelectionListCtrl->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+		if (original_array_positions.GetCount() > 0)
+		{
+			SelectionListCtrl->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+			OkButton->Enable(true);
+		}
 		else OkButton->Enable(false);
 	}
 

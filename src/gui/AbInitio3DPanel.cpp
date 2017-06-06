@@ -5,8 +5,6 @@ extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, wxThreadEvent);
-wxDEFINE_EVENT(MY_ORTH_DRAW_EVENT, MyOrthDrawEvent);
-
 
 AbInitio3DPanel::AbInitio3DPanel( wxWindow* parent )
 :
@@ -31,6 +29,7 @@ AbInitio3DPanelParent( parent )
 	selected_refinement_package = -1;
 
 	my_abinitio_manager.SetParent(this);
+	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AbInitio3DPanel::OnRefinementPackageComboBox, this);
 	Bind(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
 	Bind(MY_ORTH_DRAW_EVENT, &AbInitio3DPanel::OnOrthThreadComplete, this);
 	FillRefinementPackagesComboBox();
@@ -126,7 +125,7 @@ void AbInitio3DPanel::WriteErrorText(wxString text_to_write)
 
 void AbInitio3DPanel::FillRefinementPackagesComboBox()
 {
-	if (RefinementPackageComboBox->FillWithRefinementPackages() == false) NewRefinementPackageSelected();
+	if (RefinementPackageComboBox->FillComboBox() == false) NewRefinementPackageSelected();
 }
 
 void AbInitio3DPanel::FillRunProfileComboBoxes()
@@ -387,6 +386,8 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 	TakeLastStartResultButton->Show(true);
 	FinishButton->Show(false);
 
+	InputParamsPanel->Show(true);
+
 	ProgressPanel->Show(false);
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
@@ -407,7 +408,7 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 	Layout();
 
 
-	RunSimpleFunctionInAnotherThread(main_frame, global_delete_startup_scratch);
+	global_delete_startup_scratch();
 
 
 }
@@ -861,11 +862,10 @@ void AbInitioManager::BeginRefinementCycle()
 	if (my_parent->AutoPercentUsedYesRadio->GetValue() == true)
 	{
 		int symmetry_number = ReturnNumberofAsymmetricUnits(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry);
+
 		long number_of_asym_units = number_of_particles * symmetry_number;
 
-		// we want 10k asymmetric units per class
-
-		long wanted_start_number_of_asym_units = 1000 * number_of_classes;
+		long wanted_start_number_of_asym_units = 2500 * number_of_classes;
 		long wanted_end_number_of_asym_units = 10000 * number_of_classes;
 
 		// what percentage is this.
@@ -907,6 +907,16 @@ void AbInitioManager::BeginRefinementCycle()
 	// empty scratch
 	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Startup/") == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Startup", wxPATH_RMDIR_RECURSIVE);
 	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Startup/") == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Startup");
+
+	my_parent->InputParamsPanel->Show(false);
+	my_parent->StartPanel->Show(false);
+	my_parent->ProgressPanel->Show(true);
+
+	my_parent->ExpertPanel->Show(false);
+	my_parent->InfoPanel->Show(false);
+	my_parent->OutputTextPanel->Show(true);
+
+	my_parent->ExpertToggleButton->Enable(false);
 
 
 	SetupReconstructionJob();
@@ -1015,6 +1025,12 @@ void AbInitioManager::CycleRefinement()
 		{
 			number_of_starts_run++;
 
+			if (my_parent->AutoPercentUsedYesRadio->GetValue() == true && number_of_starts_run == 1)
+			{
+				start_percent_used *=10;
+				if (start_percent_used > end_percent_used) start_percent_used = end_percent_used;
+			}
+
 			if (number_of_starts_run < number_of_starts_to_run)
 			{
 				number_of_rounds_run = 0;
@@ -1092,8 +1108,7 @@ void AbInitioManager::SetupReconstructionJob()
 
 	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", current_percent_used / 100.0, 10.0);
 	else
-	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0);
-//	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
 
 	int class_counter;
 	long counter;
@@ -1149,8 +1164,10 @@ void AbInitioManager::SetupReconstructionJob()
 
 			float    resolution_limit_rec;
 
-			if (number_of_rounds_run == number_of_rounds_to_run - 1) resolution_limit_rec = 0.0;
-			else resolution_limit_rec					= next_high_res_limit;//current_high_res_limit;//current_my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
+			resolution_limit_rec					= next_high_res_limit;//current_high_res_limit;//current_my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
+			//if (number_of_rounds_run == number_of_rounds_to_run - 1) resolution_limit_rec = 0.0;
+			//else resolution_limit_rec					= next_high_res_limit;//current_high_res_limit;//current_my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
+
 			float    score_weight_conversion			= 0;//my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
 			float    score_threshold					= 0;//my_parent->ReconstructioScoreThreshold->ReturnValue();
 			bool	 adjust_scores						= true;//my_parent->AdjustScoreForDefocusYesRadio->GetValue();
@@ -1301,16 +1318,6 @@ void AbInitioManager::RunReconstructionJob()
 
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageComboBox->Enable(false);
-
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
@@ -1401,16 +1408,6 @@ void AbInitioManager::RunMerge3dJob()
 		else
 
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageComboBox->Enable(false);
 
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
@@ -1522,14 +1519,14 @@ void AbInitioManager::SetupRefinementJob()
 			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 
-			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    mask_radius							= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    inner_mask_radius						= 0;
 
-			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
-			if (low_resolution_limit > 300.00) low_resolution_limit = 300.00;
+			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms;
+			//if (low_resolution_limit > 100.00) low_resolution_limit = 100.00;
 
 			float    high_resolution_limit					= current_high_res_limit;
-			float	 signed_CC_limit						= 0.0;
+			float	 signed_CC_limit						= 50.0;
 			float	 classification_resolution_limit		= current_high_res_limit;
 			float    mask_radius_search						= my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float	 high_resolution_limit_search			= current_high_res_limit;
@@ -1705,17 +1702,6 @@ void AbInitioManager::RunRefinementJob()
 		else
 
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageComboBox->Enable(false);
-
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
@@ -1933,7 +1919,7 @@ void AbInitioManager::ProcessAllJobsFinished()
 			delete result_thread;
 		}
 
-		wxArrayDouble average_occupancies = output_refinement->UpdatePSSNR();
+		wxArrayFloat average_occupancies = output_refinement->UpdatePSSNR();
 
 		if (output_refinement->number_of_classes > 1)
 		{
@@ -1984,195 +1970,72 @@ void AbInitioManager::OnMaskerThreadComplete()
 	RunRefinementJob();
 }
 
-wxThread::ExitCode OrthDrawerThread::Entry()
-{
-	// we are going to make a bitmap panel, calculate the orth image, add it to the bitmap panel, then return that for the gui to draw, this is a bit crazy maybe
-
-	MyOrthDrawEvent *finished_event = new MyOrthDrawEvent(MY_ORTH_DRAW_EVENT); // for sending back the panel
-
-	if (DoesFileExist(filenames_of_volumes.Item(0)) == true)
-	{
-		Image input_image;
-		ImageFile input_file;
-
-		input_file.OpenFile(filenames_of_volumes.Item(0).ToStdString(), false);
-		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-
-		Image *new_image = new Image;
-		new_image->Allocate(input_file.ReturnXSize() * 3, input_file.ReturnYSize() * 2, filenames_of_volumes.GetCount(), true);
-		input_file.CloseFile();
-
-		Image current_output;
-		current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
-		//current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
-		input_image.CreateOrthogonalProjectionsImage(&current_output);
-		current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
-
-
-		// if there are multiple classes, take care of it.
-
-		for (int class_counter = 2; class_counter <= filenames_of_volumes.GetCount(); class_counter++)
-		{
-			if (DoesFileExist(filenames_of_volumes.Item(class_counter -1 )) == false)
-			{
-				delete new_image;
-				finished_event->SetImage(NULL);
-				wxQueueEvent(main_thread_pointer, finished_event);
-			}
-
-			input_file.OpenFile(filenames_of_volumes.Item(class_counter - 1).ToStdString(), false);
-			input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-			input_file.CloseFile();
-
-			current_output.AllocateAsPointingToSliceIn3D(new_image, class_counter);
-			input_image.CreateOrthogonalProjectionsImage(&current_output);
-		}
-
-
-		finished_event->SetImage(new_image);
-		finished_event->SetString(tab_name);
-
-	}
-	else
-	{
-		finished_event->SetImage(NULL);
-	}
-
-
-	wxQueueEvent(main_thread_pointer, finished_event);
-
-
-}
-
 wxThread::ExitCode MaskerThread::Entry()
 {
 	//  Read in the files, threshold them write them out again...
 
 	Image input_image;
-	//Image mask_volume;
+	Image mask_image;
 	ImageFile input_file;
 	MRCFile output_file;
 
-	long pixel_counter = 0;
-	float edge_value;
-	float min_value;
-	float max_value;
-	float distance_from_center_squared;
-	float mask_radius_squared = powf(mask_radius / pixel_size , 2);
-	float x, y, z;
-	float var_x, var_y, var_z;
-	float temp_float;
-	float offset = mask_radius / pixel_size;
-
-	const int histogram_width = 256;
-	float *histogram = new float[histogram_width];
-	float histogram_bin_width;
-
-	int bin_counter;
+	float average_value;
+	float average_of_other_values;
+	float average_value_on_edge;
 	int i,j,k;
 	long address;
-	float grey_level;
-	int grey_level_index;
-	int highest_bin;
-	float highest_value;
-	Peak standard_deviations;
+	long number_of_pixels;
 
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
 	{
 		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
+/*
+		average_value = input_image.ReturnAverageOfRealValues();
+		average_value_on_edge = input_image.ReturnAverageOfRealValuesOnEdges();
+		address = 0;
+		number_of_pixels = 0;
+		average_of_other_values = 0.0f;
 
-/*		input_image.CosineMask(mask_radius / pixel_size, 1);
-		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
-		input_image.AddConstant(-edge_value);
-		input_image.SetMinimumValue(0);
-*/
-//		for (i = myroundint(0.5 * mask_radius / pixel_size); i < myroundint(1.5 * mask_radius / pixel_size); i++)
-//		{
-//			edge_value = input_image.ReturnAverageOfRealValuesAtRadius(mask_radius / pixel_size);
-//			if (edge_value < min_value) min_value = edge_value;
-//		}
-//		edge_value = min_value;
-//		edge_value = input_image.ReturnAverageOfRealValuesAtRadius(mask_radius / pixel_size);
-//		input_image.CosineMask(mask_radius / pixel_size, 1);
-//		input_image.CosineMask(mask_radius / pixel_size, 40 / pixel_size, false, true, edge_value);
-//		input_image.CosineMask(0.5 * mask_radius / pixel_size, mask_radius / pixel_size, false, true, edge_value);
-//		edge_value = std::max(input_image.ReturnAverageOfRealValuesOnEdges(), 0.0f);
-		edge_value = std::max(input_image.ReturnAverageOfRealValues(std::max(mask_radius / pixel_size, 0.9f * float(input_image.physical_address_of_box_center_x)), true), 0.0f);
-//		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
-//		input_image.AddConstant(-edge_value);
-		standard_deviations = input_image.StandardDeviationOfMass(0.0, true, true);
-//		wxPrintf("\nstd x y z = %g %g %g\n", standard_deviations.x, standard_deviations.y, standard_deviations.z);
-//		var_x = fabsf(4.0 * standard_deviations.x);
-//		var_y = fabsf(4.0 * standard_deviations.y);
-//		var_z = fabsf(4.0 * standard_deviations.z);
-		var_x = powf(standard_deviations.x, 2);
-		var_y = powf(standard_deviations.y, 2);
-		var_z = powf(standard_deviations.z, 2);
-
-		max_value = input_image.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
 		for (k = 0; k < input_image.logical_z_dimension; k++)
 		{
-			z = fabsf(k - input_image.physical_address_of_box_center_z);
-			z -= standard_deviations.z; if (z < 0.0) z = 0.0;
-			z = powf(z, 2);
-//			z = powf(k - input_image.physical_address_of_box_center_z, 2);
-
 			for (j = 0; j < input_image.logical_y_dimension; j++)
 			{
-				y = fabsf(j - input_image.physical_address_of_box_center_y);
-				y -= standard_deviations.y; if (y < 0.0) y = 0.0;
-				y = powf(y, 2);
-//				y = powf(j - input_image.physical_address_of_box_center_y, 2);
-
 				for (i = 0; i < input_image.logical_x_dimension; i++)
 				{
-					x = fabsf(i - input_image.physical_address_of_box_center_x);
-					x -= standard_deviations.x; if (x < 0.0) x = 0.0;
-					x = powf(x, 2);
-//					x = powf(i - input_image.physical_address_of_box_center_x, 2);
+					if (input_image.real_values[address] < average_value)
+					{
+						average_of_other_values += input_image.real_values[address];
+						number_of_pixels++;
+					}
 
-//					distance_from_center_squared = x + y + z;
-
-//					temp_float = input_image.real_values[pixel_counter] - 0.5 * max_value * (expf(0.25 * distance_from_center_squared / mask_radius_squared) - 1.0);
-					temp_float = input_image.real_values[pixel_counter] - edge_value * (expf(x / var_x) * expf(y / var_y) * expf(z / var_z)- 1.0);
-					if (temp_float < 0.0) input_image.real_values[pixel_counter] = 0.0;
-					pixel_counter++;
+					address++;
 				}
-				pixel_counter += input_image.padding_jump_value;
+
+				address += input_image.padding_jump_value;
+
 			}
 		}
 
-		input_image.SetMinimumValue(0);
-//		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-
-
-
-		// get a histogram of the values..
-/*
-		input_image.GetMinMax(min_value, max_value);
-		ZeroFloatArray(histogram, histogram_width);
-
-		// Set-up grey level increment between bins
-		histogram_bin_width = (max_value - min_value) / float(histogram_width);
+		if (number_of_pixels > 0)
+		{
+			average_of_other_values /= float(number_of_pixels);
+		}
 
 		address = 0;
+
 		for (k = 0; k < input_image.logical_z_dimension; k++)
 		{
 			for (j = 0; j < input_image.logical_y_dimension; j++)
 			{
 				for (i = 0; i < input_image.logical_x_dimension; i++)
 				{
-					grey_level = input_image.real_values[address];
-					grey_level_index = (int) floor(0.5 + ((grey_level - min_value) / histogram_bin_width));
+					if (input_image.real_values[address] < average_value)
+					{
+						input_image.real_values[address] = average_of_other_values;
+					}
 
-					// Check for bounds
-					if(grey_level_index < 0 ) grey_level_index = 0;
-					if(grey_level_index >= histogram_width) grey_level_index = histogram_width - 1;
-
-					// Increment count
-					histogram[grey_level_index] += 1.0;
 					address++;
 				}
 
@@ -2180,36 +2043,28 @@ wxThread::ExitCode MaskerThread::Entry()
 			}
 		}
 
-		// so what is the value of the bin that has the most values..
+		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, average_value_on_edge);
 
-		highest_value = -FLT_MAX;
-		highest_bin = 0;
+*/
 
-		for (bin_counter = 0; bin_counter < histogram_width; bin_counter++)
-		{
-			if (histogram[bin_counter] > highest_value)
-			{
-				highest_value = histogram[bin_counter];
-				highest_bin = bin_counter;
-			}
-		}
-
-		// threshold the map
-
-		input_image.AddConstant(-(min_value + (histogram_bin_width * float(highest_bin))));
-		input_image.SetMinimumValue(0);
-		input_image.CosineMask(mask_radius / pixel_size, 10 / pixel_size, false, true, 0.0);
+		input_image.SetMinimumValue(input_image.ReturnAverageOfRealValues());
+		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
 
 
-		/*
+		//input_image.CosineMask(mask_radius / pixel_size, 1.0);
+		//input_image.AddConstant(-input_image.ReturnAverageOfRealValuesOnEdges());
+		//input_image.SetMinimumValue(0);
 
-		mask_volume.CopyFrom(&input_image);
-		mask_volume.ForwardFFT();
-		mask_volume.GaussianLowPassFilter(pixel_size / mask_resolution);
-		mask_volume.BackwardFFT();
-		mask_volume.AddConstant(-0.1);
-		input_image.ApplyMask(mask_volume, 10 / pixel_size, 0.0, 0.0, 0.0);
-		*/
+
+
+
+/*
+		mask_image.CopyFrom(&input_image);
+		mask_image.Binarise(input_image.ReturnAverageOfRealValues());
+		mask_image.CosineMask(mask_radius / pixel_size, 1.0f, false, true, 0.0f);
+
+		input_image.ApplyMask(mask_image, 5.0f  / pixel_size, 1.0f, pixel_size / 50.0f, pixel_size / 5.0f);
+*/
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
@@ -2222,8 +2077,6 @@ wxThread::ExitCode MaskerThread::Entry()
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MASKERTHREAD_COMPLETED);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-
-	delete [] histogram;
 	return (wxThread::ExitCode)0;     // success
 }
 
@@ -2249,7 +2102,7 @@ void AbInitioManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	MaskerThread *mask_thread = new MaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, 35.0f, my_parent->MaskRadiusTextCtrl->ReturnValue());
+	MaskerThread *mask_thread = new MaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, 35.0f, input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size);
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{

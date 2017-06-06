@@ -60,6 +60,8 @@ bool CalcOccApp::DoCalculation()
 	wxString	extension = wxFileName(input_file_seed).GetExt();
 	wxString	parameter_file;
 
+	Refinement input_refinement;
+
 	// count parameter files
 	number_of_files = 0;
 	parameter_file = wxFileName::StripExtension(input_file_seed) + wxString::Format("%i", number_of_files + 1) + "." + extension;
@@ -88,6 +90,40 @@ bool CalcOccApp::DoCalculation()
 		input_parameter_files[i].ReadFile();
 	}
 	wxPrintf("\nFinished reading files\n\n");
+
+	input_refinement.SizeAndFillWithEmpty(input_parameter_files[0].number_of_lines, number_of_files);
+
+	for (int class_counter = 0; class_counter < input_refinement.number_of_classes; class_counter++)
+	{
+		for (long particle_counter = 0; particle_counter < input_refinement.number_of_particles; particle_counter++)
+		{
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = input_parameter_files[class_counter].ReadParameter(particle_counter, 0);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].psi = input_parameter_files[class_counter].ReadParameter(particle_counter, 1);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].theta = input_parameter_files[class_counter].ReadParameter(particle_counter, 2);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi = input_parameter_files[class_counter].ReadParameter(particle_counter, 3);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift = input_parameter_files[class_counter].ReadParameter(particle_counter, 4);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift = input_parameter_files[class_counter].ReadParameter(particle_counter, 5);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = input_parameter_files[class_counter].ReadParameter(particle_counter, 7);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1 = input_parameter_files[class_counter].ReadParameter(particle_counter, 8);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2 = input_parameter_files[class_counter].ReadParameter(particle_counter, 9);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle = input_parameter_files[class_counter].ReadParameter(particle_counter, 10);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = input_parameter_files[class_counter].ReadParameter(particle_counter, 11);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = input_parameter_files[class_counter].ReadParameter(particle_counter, 13);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = input_parameter_files[class_counter].ReadParameter(particle_counter, 12);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = input_parameter_files[class_counter].ReadParameter(particle_counter, 14);
+			input_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = input_parameter_files[class_counter].ReadParameter(particle_counter, 15);
+		}
+	}
+
+	input_refinement.UpdateOccupancies();
+
+	for (long particle_counter = 0; particle_counter < 10; particle_counter++)
+	{
+		wxPrintf("%li, occ = %f, logp = %f, sigma = %f\n", input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].occupancy, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].logp, input_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma );
+	}
+
+
+	/*
 
 	// calculate average occupancies
 	wxPrintf("Average occupancies:\n");
@@ -168,6 +204,8 @@ bool CalcOccApp::DoCalculation()
 	wxPrintf("\n\nFinished writing files\n");
 
 	wxPrintf("\nCalcOcc: Normal termination\n\n");
+
+	*/
 
 	return true;
 }

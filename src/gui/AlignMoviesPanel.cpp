@@ -303,7 +303,7 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
 				{
 					StartAlignmentButton->Enable(true);
 				}
@@ -346,7 +346,7 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 void MyAlignMoviesPanel::FillGroupComboBox()
 {
 
-	GroupComboBox->FillWithMovieGroups();
+	GroupComboBox->FillComboBox(true);
 }
 
 void MyAlignMoviesPanel::Refresh()
@@ -368,7 +368,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	// Package the job details..
 
 	long counter;
-	long number_of_jobs = movie_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many movies in the selected group..
+	long number_of_jobs = movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many movies in the selected group..
 
 	bool ok_number_conversion;
 
@@ -486,11 +486,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 		// OUTPUT FILENAME, MUST BE SET PROPERLY
 
-		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		//output_filename.Replace(".mrc", "_ali.mrc", false);
 
-		current_asset_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_asset_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		number_of_previous_alignments =  main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
 
 		output_filename = main_frame->current_project.image_asset_directory.GetFullPath();
@@ -509,21 +509,21 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 			small_sum_image_filename = "/dev/null";
 		}
 
-		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)).ToStdString();
-		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		current_acceleration_voltage = movie_asset_panel->ReturnAssetAccelerationVoltage(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter)).ToStdString();
+		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		current_acceleration_voltage = movie_asset_panel->ReturnAssetAccelerationVoltage(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 
-		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
-		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 
-		correct_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		mag_distortion_major_axis_scale = movie_asset_panel->ReturnMagDistortionMajorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		correct_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		mag_distortion_major_axis_scale = movie_asset_panel->ReturnMagDistortionMajorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 
 
 		my_job_package.AddJob("ssfffbbfifbiifffbsfbfffbtbt",current_filename.c_str(), //0
@@ -979,7 +979,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiii", alignment_id,
 				                                                                    (long int) now.GetAsDOS(),
 																					alignment_job_id,
-																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)),
+																					movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter)),
 																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument().c_str(), // output_filename
 																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
 																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
@@ -1041,13 +1041,13 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 			if (temp_asset.is_valid == true)
 			{
-				parent_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+				parent_id = movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 
 				// work out the corrected pixel size
 				// so the bin amount, might not be exactly the specified amount, as it is fixed by integer resizing of the image.
 
-				x_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->x_size) / float(temp_asset.x_size);
-				y_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter))->y_size) / float(temp_asset.y_size);
+				x_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->x_size) / float(temp_asset.x_size);
+				y_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter))->y_size) / float(temp_asset.y_size);
 				average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
 
 				corrected_pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * average_bin_factor;
@@ -1066,7 +1066,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				if (array_location == -1) // we don't already have an asset from this movie..
 				{
 					temp_asset.asset_id = image_asset_panel->current_asset_number;
-					temp_asset.asset_name = movie_asset_panel->ReturnAssetName(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter)) + "_aligned";
+					temp_asset.asset_name = movie_asset_panel->ReturnAssetName(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter)) + "_aligned";
 					temp_asset.parent_id = parent_id;
 					temp_asset.alignment_id = alignment_id;
 					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();

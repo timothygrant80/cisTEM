@@ -18,7 +18,7 @@ public :
 	Database();
 	~Database();
 
-	void Close();
+	void Close(bool remove_lock = true);
 
 	wxString ReturnFilename() {return database_file.GetFullPath();};
 
@@ -71,6 +71,9 @@ public :
 	double ReturnSingleDoubleFromSelectCommand(wxString select_command);
 
 	bool DoesTableExist(wxString table_name);
+
+	void ReturnProcessLockInfo(long &active_process_id, wxString &active_hostname);
+	void SetProcessLockInfo(long &active_process_id, wxString &active_hostname);
 
 	// Get various id numbers and counts
 
@@ -144,6 +147,8 @@ public :
 
 	// Table creation wrappers..
 
+	bool CreateProcessLockTable() {return CreateTable("PROCESS_LOCK", "plt", "NUMBER", "ACTIVE_PROCESS", "ACTIVE_HOST");};
+
 	bool CreateParticlePickingListTable() {return CreateTable("PARTICLE_PICKING_LIST", "piiiirrrriiiii", "PICKING_ID", "DATETIME_OF_RUN", "PICKING_JOB_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ALGORITHM","CHARACTERISTIC_RADIUS", "MAXIMUM_RADIUS","THRESHOLD_PEAK_HEIGHT","HIGHEST_RESOLUTION_USED_IN_PICKING","MIN_DIST_FROM_EDGES","AVOID_HIGH_VARIANCE","AVOID_HIGH_LOW_MEAN","NUM_BACKGROUND_BOXES","MANUAL_EDIT");};
 	bool CreateParticlePositionAssetTable() {return CreateTable("PARTICLE_POSITION_ASSETS", "piiirrrirrr", "PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "PICKING_ID", "PICK_JOB_ID", "X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");};
 	bool CreateParticlePositionGroupListTable() {return  CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
@@ -162,9 +167,9 @@ public :
 	bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID");};
 	bool CreateRefinementPackageClassificationsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", refinement_package_asset_id), "pl", "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID");};
 
-	bool CreateRefinementListTable() {return CreateTable("REFINEMENT_LIST", "Pltillllrrrrrrirrrrirrrrirrir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE");};
+	bool CreateRefinementListTable() {return CreateTable("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE");};
+	bool CreateRefinementDetailsTable(const long refinement_id) {return CreateTable(wxString::Format("REFINEMENT_DETAILS_%li", refinement_id), "plrrrrrrirrrrirrrrirrir", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE");};
 	bool CreateRefinementResultTable(const long refinement_id, const int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrri", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE");};
-	bool CreateRefinementReferenceVolumeIDsTable(const long refinement_id) {return CreateTable(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", refinement_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
 	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_counter) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_counter), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
 
 	bool CreateClassificationListTable() {return CreateTable("CLASSIFICATION_LIST", "Plttilllirrrrrrriir", "CLASSIFICATION_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "CLASS_AVERAGE_FILE", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_CLASSIFICATION_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "SMOOTHING_FACTOR", "EXCLUDE_BLANK_EDGES", "AUTO_PERCENT_USED", "PERCENT_USED" );	};

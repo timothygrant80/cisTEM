@@ -4227,6 +4227,19 @@ void Image::SetMinimumValue(float new_minimum_value)
 	}
 }
 
+void Image::Binarise(float threshold_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	for (long address = 0; address < real_memory_allocated; address++)
+	{
+		if (real_values[address] >= threshold_value) real_values[address] = 1.0f;
+		else real_values[address] = 0.0f;
+	}
+}
+
+
 void Image::SetMinimumAndMaximumValues(float new_minimum_value, float new_maximum_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4621,6 +4634,44 @@ float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimu
 	}
 
 	return maximum_value;
+}
+
+
+float Image::ReturnMedianOfRealValues()
+{
+	long number_of_voxels = logical_x_dimension * logical_y_dimension * logical_z_dimension;
+	float *buffer_array = new float[number_of_voxels];
+
+	float median_value;
+
+	long address = 0;
+	long buffer_counter = 0;
+
+	int		i;
+	int		j;
+	int 	k;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				buffer_array[buffer_counter] = real_values[address];
+
+				buffer_counter++;
+				address++;
+			}
+
+			address += padding_jump_value;
+		}
+	}
+
+	std::sort(buffer_array, buffer_array + number_of_voxels -1);
+	median_value = buffer_array[number_of_voxels / 2];
+	delete [] buffer_array;
+
+	return median_value;
 }
 
 //TODO: consolidate (reduce code duplication) by using an Empirical distribution object

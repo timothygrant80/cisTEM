@@ -25,6 +25,8 @@ Refine2DPanel( parent )
 
 	ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING);
 
+	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
+
 	/*
 	buffered_results = NULL;
 
@@ -116,14 +118,14 @@ void MyRefine2DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 
 void MyRefine2DPanel::FillRefinementPackagesComboBox()
 {
-	if (RefinementPackageComboBox->FillWithRefinementPackages() == false) NewRefinementPackageSelected();
+	if (RefinementPackageComboBox->FillComboBox() == false) NewRefinementPackageSelected();
 }
 
 void MyRefine2DPanel::FillInputParamsComboBox()
 {
 	if (RefinementPackageComboBox->GetSelection() >= 0 && refinement_package_asset_panel->all_refinement_packages.GetCount() > 0)
 	{
-		InputParametersComboBox->FillWithClassifications(RefinementPackageComboBox->GetSelection(), true);
+		InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true);
 	}
 }
 
@@ -515,7 +517,7 @@ void MyRefine2DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Scheres, S. H. W., Valle, M., Nuñez, R., Sorzano, C. O. S., Marabini, R., Herman, G. T., and Jose-Maria Carazo, J.-M.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Maximum-likelihood multi-reference refinement for electron microscopy images. J. Mol. Biol. 348, 139–149."));
+	InfoText->WriteText(wxT(" 2005. Maximum-likelihood multi-reference refinement for electron microscopy images. J. Mol. Biol. 348, 139–149."));
 	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jmb.2005.02.031");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
@@ -678,7 +680,7 @@ void MyRefine2DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
 
 void MyRefine2DPanel::OnInputParametersComboBox( wxCommandEvent& event )
 {
-	SetDefaults();
+
 }
 
 
@@ -890,7 +892,7 @@ void ClassificationManager::BeginRefinementCycle()
 	my_parent->PlotPanel->Clear();
 	my_parent->PlotPanel->my_notebook->SetSelection(0);
 
-	if (my_parent->InputParametersComboBox->GetCurrentSelection() == 0)
+	if (my_parent->InputParametersComboBox->GetSelection() == 0)
 	{
 		start_with_random = true;
 		current_input_classification_id = -1;

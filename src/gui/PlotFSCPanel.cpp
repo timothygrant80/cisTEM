@@ -10,56 +10,45 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	Layout();
 	GraphSizer->Fit( this );
 
-	// Create a mpFXYVector layer for the plot
-
-	FSC_vector_layer = new mpFXYVector(("X-Shift"));
-		//average_shift_vector_layer = new mpFXYVector((""));
-
-	FSC_vector_layer->ShowName(false);
-
-	wxPen vectorpen(*wxBLUE, 2, wxSOLID);
-
-	//current_x_shift_vector_layer->SetData(current_accumulated_dose_data, current_movement_data);
-	FSC_vector_layer->SetContinuity(true);
-	FSC_vector_layer->SetPen(vectorpen);
-	FSC_vector_layer->SetDrawOutsideMargins(false);
-
-	wxFont graphFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-
 	current_plot_window = new mpWindow( this, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
+    current_plot_window->SetMargins(20, 20, 60, 60);
+
+    GraphSizer->Add(current_plot_window, 1, wxEXPAND );
+    current_plot_window->EnableDoubleBuffer(true);
+    current_plot_window->EnableMousePanZoom(false);
+
+	number_of_added_fscs = 0;
+
+}
+
+void PlotFSCPanel::SetupBaseLayers()
+{
+
+	wxFont graphFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
 	current_xaxis = new mpScaleX(wxT("Spatial Frequency  (1 / Å)"), mpALIGN_BOTTOM, true, mpX_NORMAL);
 	current_yaxis = new mpScaleY(wxT("FSC"), mpALIGN_LEFT, true);
 
-	refinement_limit = new RefinementLimit(-0.1);
+	refinement_limit = new RefinementLimit(-100);
 	refinement_limit->SetDrawOutsideMargins(false);
 	refinement_limit->SetPen(*wxGREY_PEN);
 
 	title = new mpTitle("");
 
-    current_xaxis->SetFont(graphFont);
-    current_yaxis->SetFont(graphFont);
-    current_xaxis->SetDrawOutsideMargins(false);
-    current_yaxis->SetDrawOutsideMargins(false);
-
-    current_plot_window->SetMargins(20, 20, 60, 60);
+	current_xaxis->SetFont(graphFont);
+	current_yaxis->SetFont(graphFont);
+	current_xaxis->SetDrawOutsideMargins(false);
+	current_yaxis->SetDrawOutsideMargins(false);
 
     current_plot_window->AddLayer(current_xaxis);
     current_plot_window->AddLayer(current_yaxis);
-	current_plot_window->AddLayer(FSC_vector_layer);
 	current_plot_window->AddLayer(refinement_limit);
 	current_plot_window->AddLayer(title);
-
-	GraphSizer->Add(current_plot_window, 1, wxEXPAND );
-    current_plot_window->EnableDoubleBuffer(true);
-    current_plot_window->EnableMousePanZoom(false);
-  //  current_plot_window->Fit();
 
 	current_plot_window->SetLayerVisible(0, false);
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, false);
-	current_plot_window->SetLayerVisible(4, false);
 
 
 }
@@ -67,55 +56,75 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 PlotFSCPanel::~PlotFSCPanel()
 {
 	delete current_plot_window;
-	//delete legend;
-	//delete title;
-	//delete current_x_shift_vector_layer;
-	//delete current_y_shift_vector_layer;
-	//delete current_xaxis;
-	//delete current_yaxis;
 }
 
-void PlotFSCPanel::Clear()
+void PlotFSCPanel::Clear(bool update_display)
 {
 	current_plot_window->Freeze();
+	current_plot_window->DelAllLayers( true, false );
+	SetupBaseLayers();
 
-	FSC_vector_layer->Clear();
+	number_of_added_fscs = 0;
 
-	current_spatial_frequency_data.clear();
-	current_FSC_data.clear();
-
-
-	current_plot_window->SetLayerVisible(0, false);
-	current_plot_window->SetLayerVisible(1, false);
-	current_plot_window->SetLayerVisible(2, false);
-	current_plot_window->SetLayerVisible(3, false);
-	current_plot_window->SetLayerVisible(4, false);
+	current_plot_window->UpdateAll();
 	current_plot_window->Thaw();
 
 }
+
+void PlotFSCPanel::AddPartFSC(ResolutionStatistics *statistics_to_add, float wanted_nyquist)
+{
+	if (number_of_added_fscs < default_colormap.GetCount())
+	{
+		std::vector<double> current_spatial_frequency_data;
+		std::vector<double> current_FSC_data;
+		mpFXYVector* current_FSC_vector_layer;
+
+		// Create a mpFXYVector layer for the plot
+
+		current_FSC_vector_layer = new mpFXYVector(("FSC"));
+		current_FSC_vector_layer->ShowName(false);
+
+		wxPen vectorpen(default_colormap[number_of_added_fscs], 2, wxSOLID);
+
+		current_FSC_vector_layer->SetContinuity(true);
+		current_FSC_vector_layer->SetPen(vectorpen);
+		current_FSC_vector_layer->SetDrawOutsideMargins(false);
+
+		for (int point_counter = 1; point_counter < statistics_to_add->part_FSC.number_of_points; point_counter++)
+		{
+			if (statistics_to_add->part_FSC.data_x[point_counter] >= wanted_nyquist && statistics_to_add->part_FSC.data_x[point_counter] < 1000)
+			{
+				current_spatial_frequency_data.push_back(1.0 / statistics_to_add->part_FSC.data_x[point_counter]);
+				current_FSC_data.push_back(statistics_to_add->part_FSC.data_y[point_counter]);
+			}
+		}
+
+		current_FSC_vector_layer->SetData(current_spatial_frequency_data, current_FSC_data);
+		current_plot_window->AddLayer(current_FSC_vector_layer);
+		number_of_added_fscs++;
+	}
+}
+
+
 
 void PlotFSCPanel::Draw(float nyquist)
 {
 	current_plot_window->Freeze();
-	FSC_vector_layer->SetData(current_spatial_frequency_data, current_FSC_data);
-	current_plot_window->Fit(0, 1./ nyquist, -0.05, 1.05);
+	current_plot_window->Fit(0, 1./ nyquist, 0, 1.05);
 
 	refinement_limit->SetSpatialFrequency(current_refinement_resolution_limit);
 
-
-	current_plot_window->UpdateAll();
-
 	current_plot_window->SetLayerVisible(0, true);
 	current_plot_window->SetLayerVisible(1, true);
-	current_plot_window->SetLayerVisible(2, true);
-	current_plot_window->SetLayerVisible(3, current_refinement_resolution_limit > 0.0  && current_refinement_resolution_limit < 1000.0);
-	current_plot_window->SetLayerVisible(4, true);
+	current_plot_window->SetLayerVisible(2, current_refinement_resolution_limit > 0.0  && current_refinement_resolution_limit < 100.0);
+	current_plot_window->SetLayerVisible(3, true);
+
+	for (int layer_counter = 4; layer_counter < 4 + number_of_added_fscs; layer_counter++)
+	{
+		current_plot_window->SetLayerVisible(layer_counter, true);
+	}
+	current_plot_window->UpdateAll();
 
 	current_plot_window->Thaw();
 }
 
-void PlotFSCPanel::AddPoint(double spatial_frequency, double FSC)
-{
-	current_spatial_frequency_data.push_back(spatial_frequency);
-	current_FSC_data.push_back(FSC);
-}

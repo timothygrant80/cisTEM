@@ -43,6 +43,8 @@
 
 #include "../core/core_headers.h"
 
+#include "../gui/gui_globals.h"
+
 #include "../gui/job_panel.h"
 #include "../gui/ProjectX_gui.h"
 #include "../gui/gui_functions.h"
@@ -99,6 +101,7 @@
 #include "../gui/AbInitio3DPanel.h"
 #include "../gui/AssetPickerComboPanel.h"
 #include "../gui/AutoRefine3dPanel.h"
+#include "../gui/DisplayRefinementResultsPanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

@@ -94,6 +94,8 @@ bool MyGuiApp::OnInit()
 	cistem_config = new wxConfig("cisTEM", "TG");
 	wxConfig::Set(cistem_config);
 
+	SetupDefaultColorMap();
+
 	// Left hand Panels
 
 	overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);

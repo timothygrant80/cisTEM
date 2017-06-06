@@ -84,7 +84,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void ResetAllDefaultsClick( wxCommandEvent& event );
 		void OnHighResLimitChange( wxCommandEvent& event );
 		void OnUseMaskCheckBox( wxCommandEvent& event );
-
+		void OnVolumeListItemActivated( wxListEvent& event );
 		void OnJobSocketEvent(wxSocketEvent& event);
 
 		int length_of_process_number;
@@ -127,12 +127,14 @@ class MyRefine3DPanel : public Refine3DPanel
 		void FillRefinementPackagesComboBox();
 		void FillRunProfileComboBoxes();
 		void FillInputParamsComboBox();
+		void ReDrawActiveReferences();
 
 		void NewRefinementPackageSelected();
 
 		void OnRefinementPackageComboBox( wxCommandEvent& event );
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
+		void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 };
 

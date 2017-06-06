@@ -13,6 +13,7 @@
 #include "CTF1DPanel.h"
 #include "ClassificationPlotPanel.h"
 #include "DisplayPanel.h"
+#include "DisplayRefinementResultsPanel.h"
 #include "MyFSCPanel.h"
 #include "PickingResultsDisplayPanel.h"
 #include "PlotFSCPanel.h"
@@ -134,11 +135,11 @@ AssetPickerComboPanelParent::AssetPickerComboPanelParent( wxWindow* parent, wxWi
 	bSizer436 = new wxBoxSizer( wxHORIZONTAL );
 	
 	AssetComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 0 );
+	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL, 0 );
 	
 	WindowSelectButton = new wxBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
 	WindowSelectButton->SetDefault(); 
-	bSizer436->Add( WindowSelectButton, 0, wxALIGN_CENTER_VERTICAL|wxEXPAND|wxLEFT, 5 );
+	bSizer436->Add( WindowSelectButton, 0, wxALIGN_CENTER_VERTICAL|wxLEFT, 5 );
 	
 	
 	this->SetSizer( bSizer436 );
@@ -161,8 +162,9 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	wxBoxSizer* bSizer451;
 	bSizer451 = new wxBoxSizer( wxHORIZONTAL );
 	
+	InputParamsPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer441;
-	bSizer441 = new wxBoxSizer( wxHORIZONTAL );
+	bSizer441 = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer200;
 	bSizer200 = new wxBoxSizer( wxHORIZONTAL );
@@ -172,19 +174,20 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	fgSizer15->SetFlexibleDirection( wxBOTH );
 	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText262 = new wxStaticText( this, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
 	m_staticText262->Wrap( -1 );
 	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	RefinementPackageComboBox = new MemoryComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	RefinementPackageComboBox->SetMinSize( wxSize( 250,-1 ) );
+	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer15->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
+	fgSizer15->Add( RefinementPackageComboBox, 1, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer200->Add( fgSizer15, 0, wxALIGN_CENTER_VERTICAL, 5 );
 	
-	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	m_staticline52 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer200->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
 	
 	wxGridSizer* gSizer10;
@@ -193,23 +196,23 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	wxBoxSizer* bSizer216;
 	bSizer216 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText415 = new wxStaticText( this, wxID_ANY, wxT("Number of Starts :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText415 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Number of Starts :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText415->Wrap( -1 );
 	bSizer216->Add( m_staticText415, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberStartsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 1000, 0 );
+	NumberStartsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 1000, 0 );
 	NumberStartsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
 	bSizer216->Add( NumberStartsSpinCtrl, 0, wxALL, 5 );
 	
-	m_staticline90 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	m_staticline90 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer216->Add( m_staticline90, 0, wxEXPAND | wxALL, 5 );
 	
-	m_staticText264 = new wxStaticText( this, wxID_ANY, wxT("No. of Cycles per Start:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText264 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Cycles per Start:"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText264->Wrap( -1 );
 	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	NumberRoundsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 1000, 40 );
+	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 1000, 40 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
 	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
@@ -223,34 +226,39 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	bSizer200->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer200->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
 	
 	bSizer441->Add( bSizer200, 1, wxEXPAND, 5 );
 	
-	
-	bSizer451->Add( bSizer441, 1, wxEXPAND, 5 );
-	
-	
-	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
-	
-	PleaseCreateRefinementPackageText = new wxStaticText( this, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
+	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
 	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
-	bSizer43->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
+	bSizer441->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
 	
-	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	m_staticline10 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer441->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	InputParamsPanel->SetSizer( bSizer441 );
+	InputParamsPanel->Layout();
+	bSizer441->Fit( InputParamsPanel );
+	bSizer451->Add( InputParamsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer46;
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -582,7 +590,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AbInitio3DPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnRefinementPackageComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AbInitio3DPanelParent::OnInfoURL ), NULL, this );
@@ -597,7 +604,6 @@ AbInitio3DPanelParent::~AbInitio3DPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AbInitio3DPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnRefinementPackageComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AbInitio3DPanelParent::OnInfoURL ), NULL, this );
@@ -636,20 +642,24 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText262->Wrap( -1 );
 	fgSizer14->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	RefinementPackageComboBox = new MemoryComboBox( InputParamsPanel, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	RefinementPackageComboBox->SetMinSize( wxSize( 300,-1 ) );
+	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer14->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
+	fgSizer14->Add( RefinementPackageComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	m_staticText263 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Starting References :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText263->Wrap( -1 );
 	fgSizer14->Add( m_staticText263, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	InputParametersComboBox = new MemoryComboBox( InputParamsPanel, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	fgSizer14->Add( InputParametersComboBox, 0, wxALL|wxEXPAND, 5 );
+	InputParametersComboBox = new ClassificationPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	InputParametersComboBox->SetMinSize( wxSize( 350,-1 ) );
+	InputParametersComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer14->Add( InputParametersComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	bSizer200->Add( fgSizer14, 1, wxEXPAND, 5 );
+	bSizer200->Add( fgSizer14, 0, wxEXPAND, 5 );
 	
 	m_staticline57 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer200->Add( m_staticline57, 0, wxEXPAND | wxALL, 5 );
@@ -685,7 +695,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 20 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
-	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
+	bSizer216->Add( NumberRoundsSpinCtrl, 0, wxALL, 5 );
 	
 	
 	gSizer10->Add( bSizer216, 1, wxEXPAND, 5 );
@@ -1047,8 +1057,6 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DPanel::OnUpdateUI ) );
-	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DPanel::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DPanel::OnInputParametersComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::ResetAllDefaultsClick ), NULL, this );
 	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
@@ -1062,8 +1070,6 @@ Refine2DPanel::~Refine2DPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DPanel::OnUpdateUI ) );
-	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DPanel::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DPanel::OnInputParametersComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::ResetAllDefaultsClick ), NULL, this );
 	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
@@ -1197,19 +1203,21 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	m_staticText284->Wrap( -1 );
 	fgSizer16->Add( m_staticText284, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	RefinementPackageComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer16->Add( RefinementPackageComboBox, 0, wxALL, 5 );
+	fgSizer16->Add( RefinementPackageComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	m_staticText285 = new wxStaticText( LeftPanel, wxID_ANY, wxT("Select Classification :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText285->Wrap( -1 );
 	fgSizer16->Add( m_staticText285, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	InputParametersComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	InputParametersComboBox = new ClassificationPickerComboPanel( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	InputParametersComboBox->SetMinSize( wxSize( 350,-1 ) );
+	InputParametersComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer16->Add( InputParametersComboBox, 1, wxALL, 5 );
+	fgSizer16->Add( InputParametersComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	fgSizer11->Add( fgSizer16, 0, wxEXPAND, 5 );
@@ -1521,8 +1529,6 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DResultsPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DResultsPanelParent::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DResultsPanelParent::OnInputParametersComboBox ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DResultsPanelParent::OnJobDetailsToggle ), NULL, this );
 	SelectionManagerListCtrl->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( Refine2DResultsPanelParent::OnEndLabelEdit ), NULL, this );
 	SelectionManagerListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine2DResultsPanelParent::OnActivated ), NULL, this );
@@ -1540,8 +1546,6 @@ Refine2DResultsPanelParent::~Refine2DResultsPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DResultsPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DResultsPanelParent::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine2DResultsPanelParent::OnInputParametersComboBox ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DResultsPanelParent::OnJobDetailsToggle ), NULL, this );
 	SelectionManagerListCtrl->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( Refine2DResultsPanelParent::OnEndLabelEdit ), NULL, this );
 	SelectionManagerListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine2DResultsPanelParent::OnActivated ), NULL, this );
@@ -3128,8 +3132,11 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticText21->Wrap( -1 );
 	bSizer44->Add( m_staticText21, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	GroupComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	bSizer44->Add( GroupComboBox, 40, wxALL, 5 );
+	GroupComboBox = new ImageGroupPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	bSizer44->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
 	
 	m_staticText211 = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText211->Wrap( -1 );
@@ -3138,7 +3145,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
 	PickingAlgorithmComboBox->SetMinSize( wxSize( 150,-1 ) );
 	
-	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALL, 5 );
+	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	bSizer44->Add( 0, 0, 60, wxEXPAND, 5 );
@@ -3172,15 +3179,11 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	FindParticlesSplitterWindow->SetMinimumPaneSize( 10 );
 	
 	LeftPanel = new wxPanel( FindParticlesSplitterWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	LeftPanel->Hide();
-	
 	wxBoxSizer* bSizer214;
 	bSizer214 = new wxBoxSizer( wxVERTICAL );
 	
 	PickingParametersPanel = new wxScrolledWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxHSCROLL|wxVSCROLL );
 	PickingParametersPanel->SetScrollRate( 5, 5 );
-	PickingParametersPanel->Hide();
-	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxFlexGridSizer* fgSizer1;
@@ -3210,6 +3213,22 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ThresholdPeakHeightNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("6.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ThresholdPeakHeightNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	
+	InputSizer->Add( fgSizer1, 0, wxEXPAND, 5 );
+	
+	m_staticline106 = new wxStaticLine( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	InputSizer->Add( m_staticline106, 0, wxEXPAND | wxALL, 5 );
+	
+	m_staticText440 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Select Preview Image :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText440->Wrap( -1 );
+	InputSizer->Add( m_staticText440, 0, wxALL, 5 );
+	
+	ImageComboBox = new ImagesPickerComboPanel( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ImageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	ImageComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	InputSizer->Add( ImageComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
 	wxBoxSizer* bSizer212;
 	bSizer212 = new wxBoxSizer( wxHORIZONTAL );
 	
@@ -3220,13 +3239,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer212->Add( AutoPickRefreshCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	fgSizer1->Add( bSizer212, 1, wxEXPAND, 5 );
-	
-	ImageComboBox = new wxComboBox( PickingParametersPanel, wxID_ANY, wxT("List of images in current group"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	fgSizer1->Add( ImageComboBox, 0, wxALL|wxEXPAND, 5 );
-	
-	
-	InputSizer->Add( fgSizer1, 0, wxEXPAND, 5 );
+	InputSizer->Add( bSizer212, 0, 0, 5 );
 	
 	ExpertOptionsPanel = new wxPanel( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	ExpertOptionsPanel->Hide();
@@ -3391,7 +3404,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	RightPanel->SetSizer( bSizer215 );
 	RightPanel->Layout();
 	bSizer215->Fit( RightPanel );
-	FindParticlesSplitterWindow->SplitVertically( LeftPanel, RightPanel, 528 );
+	FindParticlesSplitterWindow->SplitVertically( LeftPanel, RightPanel, 350 );
 	bSizer43->Add( FindParticlesSplitterWindow, 1, wxEXPAND, 5 );
 	
 	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
@@ -3500,7 +3513,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
-	GroupComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnGroupComboBox ), NULL, this );
 	PickingAlgorithmComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
 	MaximumParticleRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus ), NULL, this );
@@ -3514,7 +3526,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
-	ImageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnImageComboBox ), NULL, this );
 	HighestResolutionNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
 	HighestResolutionNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
 	HighestResolutionNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
@@ -3534,7 +3545,6 @@ FindParticlesPanel::~FindParticlesPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
-	GroupComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnGroupComboBox ), NULL, this );
 	PickingAlgorithmComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
 	MaximumParticleRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus ), NULL, this );
@@ -3548,7 +3558,6 @@ FindParticlesPanel::~FindParticlesPanel()
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
-	ImageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnImageComboBox ), NULL, this );
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
@@ -4622,8 +4631,11 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText21->Wrap( -1 );
 	bSizer44->Add( m_staticText21, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	GroupComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	bSizer44->Add( GroupComboBox, 40, wxALL, 5 );
+	GroupComboBox = new MovieGroupPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	bSizer44->Add( GroupComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	bSizer44->Add( 0, 0, 60, wxEXPAND, 5 );
@@ -4676,7 +4688,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText40->Wrap( -1 );
 	fgSizer1->Add( m_staticText40, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	maximum_shift_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("80"), wxDefaultPosition, wxDefaultSize, 0 );
+	maximum_shift_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("40"), wxDefaultPosition, wxDefaultSize, 0 );
 	maximum_shift_text->SetToolTip( wxT("Maximum shift for each alignment round") );
 	
 	fgSizer1->Add( maximum_shift_text, 0, wxALL|wxEXPAND, 5 );
@@ -4948,148 +4960,154 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	wxBoxSizer* bSizer451;
 	bSizer451 = new wxBoxSizer( wxHORIZONTAL );
 	
+	InputParamsPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer361;
+	bSizer361 = new wxBoxSizer( wxVERTICAL );
+	
 	wxBoxSizer* bSizer441;
 	bSizer441 = new wxBoxSizer( wxHORIZONTAL );
 	
 	wxBoxSizer* bSizer200;
 	bSizer200 = new wxBoxSizer( wxHORIZONTAL );
 	
+	wxBoxSizer* bSizer359;
+	bSizer359 = new wxBoxSizer( wxVERTICAL );
+	
+	
+	bSizer200->Add( bSizer359, 1, wxEXPAND, 5 );
+	
 	wxFlexGridSizer* fgSizer15;
 	fgSizer15 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer15->SetFlexibleDirection( wxBOTH );
 	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText262 = new wxStaticText( this, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
 	m_staticText262->Wrap( -1 );
 	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	RefinementPackageComboBox = new MemoryComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	RefinementPackageComboBox->SetMinSize( wxSize( 250,-1 ) );
+	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer15->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
+	fgSizer15->Add( RefinementPackageComboBox, 1, wxEXPAND | wxALL, 5 );
 	
-	m_staticText263 = new wxStaticText( this, wxID_ANY, wxT("Input Parameters :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText263 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Parameters :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText263->Wrap( -1 );
 	fgSizer15->Add( m_staticText263, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	InputParametersComboBox = new MemoryComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	fgSizer15->Add( InputParametersComboBox, 0, wxALL|wxEXPAND, 5 );
+	InputParametersComboBox = new RefinementPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	InputParametersComboBox->SetMinSize( wxSize( 350,-1 ) );
+	InputParametersComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( InputParametersComboBox, 1, wxEXPAND | wxALL, 5 );
+	
+	UseMaskCheckBox = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Use a Mask? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer15->Add( UseMaskCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	MaskSelectPanel = new VolumeAssetPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	MaskSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( MaskSelectPanel, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	bSizer200->Add( fgSizer15, 0, wxEXPAND, 5 );
+	bSizer200->Add( fgSizer15, 0, wxALIGN_CENTER, 5 );
 	
-	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	m_staticline52 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer200->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
 	
-	wxGridSizer* gSizer10;
-	gSizer10 = new wxGridSizer( 0, 1, 0, 0 );
+	wxBoxSizer* bSizer357;
+	bSizer357 = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer215;
 	bSizer215 = new wxBoxSizer( wxHORIZONTAL );
 	
-	LocalRefinementRadio = new wxRadioButton( this, wxID_ANY, wxT("Local Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
+	LocalRefinementRadio = new wxRadioButton( InputParamsPanel, wxID_ANY, wxT("Local Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer215->Add( LocalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	GlobalRefinementRadio = new wxRadioButton( InputParamsPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer215->Add( GlobalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	
 	bSizer215->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	GlobalRefinementRadio = new wxRadioButton( this, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer215->Add( GlobalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
+	bSizer357->Add( bSizer215, 0, wxEXPAND, 5 );
 	
-	gSizer10->Add( bSizer215, 1, wxEXPAND, 5 );
+	wxFlexGridSizer* fgSizer22;
+	fgSizer22 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer22->SetFlexibleDirection( wxBOTH );
+	fgSizer22->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	wxBoxSizer* bSizer216;
-	bSizer216 = new wxBoxSizer( wxHORIZONTAL );
+	NoCycleStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Cycles to Run :"), wxDefaultPosition, wxDefaultSize, 0 );
+	NoCycleStaticText->Wrap( -1 );
+	fgSizer22->Add( NoCycleStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	m_staticText264 = new wxStaticText( this, wxID_ANY, wxT("No. of Cycles to Run :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText264->Wrap( -1 );
-	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
-	
-	NumberRoundsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 1 );
+	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 1 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
-	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	fgSizer22->Add( NumberRoundsSpinCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	HiResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Hi-Res Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	HiResLimitStaticText->Wrap( -1 );
+	fgSizer22->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer22->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	
-	gSizer10->Add( bSizer216, 1, wxEXPAND, 5 );
+	bSizer357->Add( fgSizer22, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer358;
+	bSizer358 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_CENTER|wxALL, 5 );
 	
 	
-	bSizer200->Add( gSizer10, 0, wxEXPAND, 5 );
-	
-	m_staticline54 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer200->Add( m_staticline54, 0, wxEXPAND | wxALL, 5 );
-	
-	wxGridSizer* gSizer11;
-	gSizer11 = new wxGridSizer( 2, 1, 0, 0 );
-	
-	wxBoxSizer* bSizer214;
-	bSizer214 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticText188 = new wxStaticText( this, wxID_ANY, wxT("High-Res. Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText188->Wrap( -1 );
-	bSizer214->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer357->Add( bSizer358, 0, wxALIGN_CENTER, 5 );
 	
 	
-	gSizer11->Add( bSizer214, 0, wxEXPAND, 5 );
+	bSizer200->Add( bSizer357, 1, wxEXPAND, 5 );
 	
-	wxBoxSizer* bSizer435;
-	bSizer435 = new wxBoxSizer( wxHORIZONTAL );
+	m_staticline101 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer200->Add( m_staticline101, 0, wxEXPAND | wxALL, 5 );
 	
-	UseMaskCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Use a Mask? : "), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer435->Add( UseMaskCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	wxBoxSizer* bSizer364;
+	bSizer364 = new wxBoxSizer( wxVERTICAL );
 	
+	Active3DReferencesListCtrl = new ReferenceVolumesListControlRefinement( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
+	Active3DReferencesListCtrl->SetMinSize( wxSize( -1,50 ) );
 	
-	gSizer11->Add( bSizer435, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT, 5 );
-	
-	
-	bSizer200->Add( gSizer11, 0, wxEXPAND, 5 );
-	
-	wxGridSizer* gSizer25;
-	gSizer25 = new wxGridSizer( 0, 1, 0, 0 );
-	
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	gSizer25->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	wxBoxSizer* bSizer437;
-	bSizer437 = new wxBoxSizer( wxHORIZONTAL );
-	
-	MaskSelectPanel = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	MaskSelectPanel->SetMinSize( wxSize( 350,-1 ) );
-	
-	bSizer437->Add( MaskSelectPanel, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer364->Add( Active3DReferencesListCtrl, 30, wxALL|wxEXPAND, 5 );
 	
 	
-	gSizer25->Add( bSizer437, 0, wxALIGN_CENTER_VERTICAL, 5 );
-	
-	
-	bSizer200->Add( gSizer25, 0, wxEXPAND, 5 );
-	
-	
-	bSizer200->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer200->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	bSizer200->Add( bSizer364, 30, wxEXPAND, 5 );
 	
 	
 	bSizer441->Add( bSizer200, 1, wxEXPAND, 5 );
 	
 	
-	bSizer451->Add( bSizer441, 1, wxEXPAND, 5 );
+	bSizer361->Add( bSizer441, 1, wxEXPAND, 5 );
 	
-	
-	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
-	
-	PleaseCreateRefinementPackageText = new wxStaticText( this, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
+	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
 	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
-	bSizer43->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
+	bSizer361->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
 	
-	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	m_staticline10 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer361->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	InputParamsPanel->SetSizer( bSizer361 );
+	InputParamsPanel->Layout();
+	bSizer361->Fit( InputParamsPanel );
+	bSizer451->Add( InputParamsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer46;
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
@@ -5526,30 +5544,25 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	OutputTextPanel->SetSizer( bSizer56 );
 	OutputTextPanel->Layout();
 	bSizer56->Fit( OutputTextPanel );
-	bSizer46->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( OutputTextPanel, 20, wxEXPAND | wxALL, 5 );
 	
 	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer61;
-	bSizer61 = new wxBoxSizer( wxVERTICAL );
+	bSizer61 = new wxBoxSizer( wxHORIZONTAL );
 	
 	InfoText = new wxRichTextCtrl( InfoPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY|wxHSCROLL|wxVSCROLL );
-	bSizer61->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
+	bSizer61->Add( InfoText, 70, wxEXPAND | wxALL, 5 );
 	
 	
 	InfoPanel->SetSizer( bSizer61 );
 	InfoPanel->Layout();
 	bSizer61->Fit( InfoPanel );
-	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( InfoPanel, 70, wxEXPAND | wxALL, 5 );
 	
-	FSCResultsPanel = new MyFSCPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	FSCResultsPanel->Hide();
+	ShowRefinementResultsPanel = new DisplayRefinementResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ShowRefinementResultsPanel->Hide();
 	
-	bSizer46->Add( FSCResultsPanel, 50, wxEXPAND | wxALL, 5 );
-	
-	AngularPlotPanel = new AngularDistributionPlotPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	AngularPlotPanel->Hide();
-	
-	bSizer46->Add( AngularPlotPanel, 50, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( ShowRefinementResultsPanel, 80, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
@@ -5688,11 +5701,10 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
-	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
 	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Refine3DPanel::OnUseMaskCheckBox ), NULL, this );
 	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine3DPanel::OnVolumeListItemActivated ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
@@ -5704,11 +5716,10 @@ Refine3DPanel::~Refine3DPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine3DPanel::OnUpdateUI ) );
-	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnRefinementPackageComboBox ), NULL, this );
-	InputParametersComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( Refine3DPanel::OnInputParametersComboBox ), NULL, this );
 	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Refine3DPanel::OnUseMaskCheckBox ), NULL, this );
 	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnHighResLimitChange ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine3DPanel::OnVolumeListItemActivated ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
@@ -5728,30 +5739,45 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	wxBoxSizer* bSizer451;
 	bSizer451 = new wxBoxSizer( wxHORIZONTAL );
 	
+	wxBoxSizer* bSizer364;
+	bSizer364 = new wxBoxSizer( wxVERTICAL );
+	
+	InputParamsPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer441;
-	bSizer441 = new wxBoxSizer( wxHORIZONTAL );
+	bSizer441 = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer200;
 	bSizer200 = new wxBoxSizer( wxHORIZONTAL );
 	
 	wxFlexGridSizer* fgSizer15;
 	fgSizer15 = new wxFlexGridSizer( 0, 2, 0, 0 );
-	fgSizer15->SetFlexibleDirection( wxBOTH );
+	fgSizer15->SetFlexibleDirection( wxHORIZONTAL );
 	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText262 = new wxStaticText( this, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
 	m_staticText262->Wrap( -1 );
 	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	RefinementPackageComboBox = new MemoryComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	RefinementPackageComboBox->SetMinSize( wxSize( 250,-1 ) );
+	RefinementPackageSelectPanel = new RefinementPackagePickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	RefinementPackageSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
 	
-	fgSizer15->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
+	fgSizer15->Add( RefinementPackageSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticText478 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Starting Reference :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText478->Wrap( -1 );
+	fgSizer15->Add( m_staticText478, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ReferenceSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	ReferenceSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( ReferenceSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	bSizer200->Add( fgSizer15, 0, wxEXPAND, 5 );
 	
-	m_staticline54 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	m_staticline54 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer200->Add( m_staticline54, 0, wxEXPAND | wxALL, 5 );
 	
 	wxGridSizer* gSizer11;
@@ -5760,56 +5786,58 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	wxBoxSizer* bSizer214;
 	bSizer214 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText188 = new wxStaticText( this, wxID_ANY, wxT("Initial Res. Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText188->Wrap( -1 );
-	bSizer214->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	InitialResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Initial Res. Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	InitialResLimitStaticText->Wrap( -1 );
+	bSizer214->Add( InitialResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer214->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	gSizer11->Add( bSizer214, 0, wxEXPAND, 5 );
+	gSizer11->Add( bSizer214, 0, 0, 5 );
 	
 	
 	bSizer200->Add( gSizer11, 0, wxEXPAND, 5 );
 	
-	wxGridSizer* gSizer25;
-	gSizer25 = new wxGridSizer( 0, 1, 0, 0 );
-	
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	gSizer25->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	
-	bSizer200->Add( gSizer25, 0, wxEXPAND, 5 );
-	
 	
 	bSizer200->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer200->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
 	
 	bSizer441->Add( bSizer200, 1, wxEXPAND, 5 );
 	
-	
-	bSizer451->Add( bSizer441, 1, wxEXPAND, 5 );
-	
-	
-	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
-	
-	PleaseCreateRefinementPackageText = new wxStaticText( this, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
+	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
 	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
-	bSizer43->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
+	bSizer441->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
 	
-	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	m_staticline105 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer441->Add( m_staticline105, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	InputParamsPanel->SetSizer( bSizer441 );
+	InputParamsPanel->Layout();
+	bSizer441->Fit( InputParamsPanel );
+	bSizer364->Add( InputParamsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer451->Add( bSizer364, 1, wxEXPAND, 5 );
+	
+	
+	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer46;
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -5911,29 +5939,6 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_staticText332 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Score to Weight Constant (Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText332->Wrap( -1 );
-	fgSizer1->Add( m_staticText332, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
-	
-	m_staticText335 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Adjust Score for Defocus?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText335->Wrap( -1 );
-	fgSizer1->Add( m_staticText335, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	wxBoxSizer* bSizer265;
-	bSizer265 = new wxBoxSizer( wxHORIZONTAL );
-	
-	AdjustScoreForDefocusYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
-	bSizer265->Add( AdjustScoreForDefocusYesRadio, 0, wxALL, 5 );
-	
-	AdjustScoreForDefocusNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer265->Add( AdjustScoreForDefocusNoRadio, 0, wxALL, 5 );
-	
-	
-	fgSizer1->Add( bSizer265, 1, wxEXPAND, 5 );
-	
 	m_staticText336 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocrop Images?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText336->Wrap( -1 );
 	fgSizer1->Add( m_staticText336, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -6020,7 +6025,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	OutputTextPanel->SetSizer( bSizer56 );
 	OutputTextPanel->Layout();
 	bSizer56->Fit( OutputTextPanel );
-	bSizer46->Add( OutputTextPanel, 30, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( OutputTextPanel, 20, wxEXPAND | wxALL, 5 );
 	
 	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer61;
@@ -6035,15 +6040,10 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	bSizer61->Fit( InfoPanel );
 	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
 	
-	FSCResultsPanel = new MyFSCPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	FSCResultsPanel->Hide();
+	ShowRefinementResultsPanel = new DisplayRefinementResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ShowRefinementResultsPanel->Hide();
 	
-	bSizer46->Add( FSCResultsPanel, 50, wxEXPAND | wxALL, 5 );
-	
-	AngularPlotPanel = new AngularDistributionPlotPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	AngularPlotPanel->Hide();
-	
-	bSizer46->Add( AngularPlotPanel, 50, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( ShowRefinementResultsPanel, 80, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
@@ -6182,7 +6182,6 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AutoRefine3DPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnRefinementPackageComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
@@ -6195,7 +6194,6 @@ AutoRefine3DPanelParent::~AutoRefine3DPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AutoRefine3DPanelParent::OnUpdateUI ) );
-	RefinementPackageComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnRefinementPackageComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
@@ -6223,8 +6221,11 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	m_staticText21->Wrap( -1 );
 	bSizer44->Add( m_staticText21, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	GroupComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	bSizer44->Add( GroupComboBox, 40, wxALL, 5 );
+	GroupComboBox = new ImageGroupPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	bSizer44->Add( GroupComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	bSizer44->Add( 0, 0, 60, wxEXPAND, 5 );
@@ -6860,9 +6861,10 @@ VolumeChooserDialog::VolumeChooserDialog( wxWindow* parent, wxWindowID id, const
 	m_staticline18 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	MainBoxSizer->Add( m_staticline18, 0, wxEXPAND | wxALL, 5 );
 	
-	ComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	ComboBox->SetSelection( 0 );
-	MainBoxSizer->Add( ComboBox, 0, wxALL|wxEXPAND, 5 );
+	ComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ComboBox->SetMinSize( wxSize( 350,-1 ) );
+	
+	MainBoxSizer->Add( ComboBox, 1, wxEXPAND | wxALL, 5 );
 	
 	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	MainBoxSizer->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
@@ -8003,23 +8005,29 @@ FSCPanel::FSCPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const w
 	
 	TitleSizer = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText280 = new wxStaticText( this, wxID_ANY, wxT("Select Class :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText280->Wrap( -1 );
-	TitleSizer->Add( m_staticText280, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleStaticText = new wxStaticText( this, wxID_ANY, wxT("Current FSC"), wxDefaultPosition, wxDefaultSize, 0 );
+	TitleStaticText->Wrap( -1 );
+	TitleStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
-	ClassComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	TitleSizer->Add( ClassComboBox, 0, wxALL, 5 );
+	TitleSizer->Add( TitleStaticText, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	TitleSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	EstimatedResolutionLabel = new wxStaticText( this, wxID_ANY, wxT("Estimated Resolution : "), wxDefaultPosition, wxDefaultSize, 0 );
+	EstimatedResolutionLabel = new wxStaticText( this, wxID_ANY, wxT("Best Est. Resolution : "), wxDefaultPosition, wxDefaultSize, 0 );
 	EstimatedResolutionLabel->Wrap( -1 );
-	TitleSizer->Add( EstimatedResolutionLabel, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleSizer->Add( EstimatedResolutionLabel, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	EstimatedResolutionText = new wxStaticText( this, wxID_ANY, wxT("00.00  ‎Å"), wxDefaultPosition, wxDefaultSize, 0 );
 	EstimatedResolutionText->Wrap( -1 );
-	TitleSizer->Add( EstimatedResolutionText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleSizer->Add( EstimatedResolutionText, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticline104 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	TitleSizer->Add( m_staticline104, 0, wxEXPAND | wxALL, 5 );
+	
+	FSCDetailsButton = new wxBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
+	FSCDetailsButton->SetDefault(); 
+	TitleSizer->Add( FSCDetailsButton, 0, wxLEFT|wxRIGHT, 5 );
 	
 	
 	bSizer200->Add( TitleSizer, 0, wxEXPAND, 5 );
@@ -8035,13 +8043,13 @@ FSCPanel::FSCPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const w
 	this->Layout();
 	
 	// Connect Events
-	ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FSCPanel::OnClassComboBoxChange ), NULL, this );
+	FSCDetailsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FSCPanel::PopupTextClick ), NULL, this );
 }
 
 FSCPanel::~FSCPanel()
 {
 	// Disconnect Events
-	ClassComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FSCPanel::OnClassComboBoxChange ), NULL, this );
+	FSCDetailsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FSCPanel::PopupTextClick ), NULL, this );
 	
 }
 
@@ -8503,5 +8511,127 @@ ListCtrlDialog::ListCtrlDialog( wxWindow* parent, wxWindowID id, const wxString&
 }
 
 ListCtrlDialog::~ListCtrlDialog()
+{
+}
+
+DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer92;
+	bSizer92 = new wxBoxSizer( wxVERTICAL );
+	
+	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	LeftRightSplitter->SetSashGravity( 0.5 );
+	LeftRightSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
+	
+	LeftPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer301;
+	bSizer301 = new wxBoxSizer( wxVERTICAL );
+	
+	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	TopBottomSplitter->SetSashGravity( 0.5 );
+	TopBottomSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
+	
+	TopPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer302;
+	bSizer302 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText377 = new wxStaticText( TopPanel, wxID_ANY, wxT("Angular Plot"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText377->Wrap( -1 );
+	m_staticText377->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer302->Add( m_staticText377, 0, wxALL, 5 );
+	
+	m_staticline81 = new wxStaticLine( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer302->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
+	
+	AngularPlotPanel = new AngularDistributionPlotPanel( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer302->Add( AngularPlotPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	TopPanel->SetSizer( bSizer302 );
+	TopPanel->Layout();
+	bSizer302->Fit( TopPanel );
+	BottomPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer303;
+	bSizer303 = new wxBoxSizer( wxVERTICAL );
+	
+	FSCResultsPanel = new MyFSCPanel( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer303->Add( FSCResultsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	BottomPanel->SetSizer( bSizer303 );
+	BottomPanel->Layout();
+	bSizer303->Fit( BottomPanel );
+	TopBottomSplitter->SplitHorizontally( TopPanel, BottomPanel, 0 );
+	bSizer301->Add( TopBottomSplitter, 1, wxEXPAND, 5 );
+	
+	
+	LeftPanel->SetSizer( bSizer301 );
+	LeftPanel->Layout();
+	bSizer301->Fit( LeftPanel );
+	RightPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer304;
+	bSizer304 = new wxBoxSizer( wxVERTICAL );
+	
+	OrthText = new wxStaticText( RightPanel, wxID_ANY, wxT("Orthogonal Slices / Projections"), wxDefaultPosition, wxDefaultSize, 0 );
+	OrthText->Wrap( -1 );
+	OrthText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer304->Add( OrthText, 0, wxALL, 5 );
+	
+	m_staticline109 = new wxStaticLine( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline109, 0, wxEXPAND | wxALL, 5 );
+	
+	ShowOrthDisplayPanel = new DisplayPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer304->Add( ShowOrthDisplayPanel, 66, wxEXPAND | wxALL, 5 );
+	
+	RoundPlotPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RoundPlotPanel->Hide();
+	
+	bSizer304->Add( RoundPlotPanel, 33, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer306;
+	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
+	
+	
+	RightPanel->SetSizer( bSizer304 );
+	RightPanel->Layout();
+	bSizer304->Fit( RightPanel );
+	LeftRightSplitter->SplitVertically( LeftPanel, RightPanel, 600 );
+	bSizer92->Add( LeftRightSplitter, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer92 );
+	this->Layout();
+}
+
+DisplayRefinementResultsPanelParent::~DisplayRefinementResultsPanelParent()
+{
+}
+
+PopupTextDialog::PopupTextDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxSize( 600,600 ), wxDefaultSize );
+	
+	wxBoxSizer* bSizer363;
+	bSizer363 = new wxBoxSizer( wxVERTICAL );
+	
+	OutputTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_MULTILINE|wxTE_READONLY );
+	OutputTextCtrl->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 90, false, wxT("Fixed") ) );
+	
+	bSizer363->Add( OutputTextCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer363 );
+	this->Layout();
+	bSizer363->Fit( this );
+	
+	this->Centre( wxBOTH );
+}
+
+PopupTextDialog::~PopupTextDialog()
 {
 }

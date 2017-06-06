@@ -237,6 +237,53 @@ wxThread::ExitCode RunSimpleFunctionThread::Entry()
 	return (wxThread::ExitCode)0;
 }
 
+void SetupDefaultColorMap()
+{
+	wxColor color1(0, 0, 255);
+	default_colormap.Add(color1);
+	wxColor color2(128, 0, 0);
+	default_colormap.Add(color2);
+	wxColor color3(255, 206, 0);
+	default_colormap.Add(color3);
+	wxColor color4(139, 182, 182);
+	default_colormap.Add(color4);
+	wxColor color5(0, 0, 128);
+	default_colormap.Add(color5);
+	wxColor color6(255, 0, 255);
+	default_colormap.Add(color6);
+	wxColor color7(255,255, 0);
+	default_colormap.Add(color7);
+	wxColor color8(115, 229, 229);
+	default_colormap.Add(color8);
+	wxColor color9(128, 0, 128);
+	default_colormap.Add(color9);
+	wxColor color10(156, 206, 0);
+	default_colormap.Add(color10);
+	wxColor color11(206, 156, 255);
+	default_colormap.Add(color11);
+	wxColor color12(0, 206, 255);
+	default_colormap.Add(color12);
+	wxColor color13(255, 156, 206);
+	default_colormap.Add(color13);
+	wxColor color14(206, 255, 255);
+	default_colormap.Add(color14);
+	wxColor color15(206, 255, 206);
+	default_colormap.Add(color15);
+	wxColor color16(255, 255, 156);
+	default_colormap.Add(color16);
+	wxColor color17(224, 208, 191);
+	default_colormap.Add(color17);
+	wxColor color18(49, 99, 255);
+	default_colormap.Add(color18);
+	wxColor color19(52, 207, 207);
+	default_colormap.Add(color19);
+	wxColor color20(0, 0, 0);
+	default_colormap.Add(color20);
+
+
+
+}
+
 void global_delete_scratch()
 {
 	main_frame->ClearScratchDirectory();

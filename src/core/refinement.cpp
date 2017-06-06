@@ -30,6 +30,35 @@ RefinementResult::~RefinementResult()
 
 }
 
+ClassRefinementResults::ClassRefinementResults()
+{
+	low_resolution_limit = 0;
+	high_resolution_limit = 0;
+	mask_radius = 0;
+	signed_cc_resolution_limit = 0;
+	global_resolution_limit = 0;
+	global_mask_radius = 0;
+	number_results_to_refine = 0;
+	angular_search_step = 0;
+	search_range_x = 0;
+	search_range_y = 0;
+	classification_resolution_limit = 0;
+	should_focus_classify = 0;
+	sphere_x_coord = 0;
+	sphere_y_coord = 0;
+	sphere_z_coord = 0;
+	sphere_radius = 0;
+	should_refine_ctf = false;
+	defocus_search_range = 0;
+	defocus_search_step = 0;
+}
+
+ClassRefinementResults::~ClassRefinementResults()
+{
+
+}
+
+
 ShortRefinementInfo::ShortRefinementInfo()
 {
 
@@ -67,30 +96,9 @@ Refinement::Refinement()
 	starting_refinement_id = -1;
 	number_of_particles = 0;
 	number_of_classes = 0;
-	low_resolution_limit = 0;
-	high_resolution_limit = 0;
-	mask_radius = 0;
-	signed_cc_resolution_limit = 0;
-	global_resolution_limit = 0;
-	global_mask_radius = 0;
-	number_results_to_refine = 0;
-	angular_search_step = 0;
-	search_range_x = 0;
-	search_range_y = 0;
-	classification_resolution_limit = 0;
-	should_focus_classify = 0;
-	sphere_x_coord = 0;
-	sphere_y_coord = 0;
-	sphere_z_coord = 0;
-	sphere_radius = 0;
-	should_refine_ctf = false;
-	defocus_search_range = 0;
-	defocus_search_step = 0;
 	percent_used = 0.0;
 	resolution_statistics_pixel_size = 0;
 	resolution_statistics_box_size = 0;
-
-
 }
 
 Refinement::~Refinement()
@@ -183,7 +191,7 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 	return output_filenames;
 }
 
-wxArrayString Refinement::WriteResolutionStatistics(wxString base_filename)
+wxArrayString Refinement::WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor)
 {
 	NumericTextFile *current_plot;
 	int class_counter;
@@ -198,7 +206,7 @@ wxArrayString Refinement::WriteResolutionStatistics(wxString base_filename)
 		output_filenames.Add(current_filename);
 
 		current_plot = new NumericTextFile(current_filename, OPEN_TO_WRITE, 7);
-		class_refinement_results[class_counter].class_resolution_statistics.WriteStatisticsToFile(*current_plot);
+		class_refinement_results[class_counter].class_resolution_statistics.WriteStatisticsToFile(*current_plot, pssnr_division_factor);
 		delete current_plot;
 	}
 
@@ -214,6 +222,9 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
 	number_of_classes = wanted_number_of_classes;
 	number_of_particles = wanted_number_of_particles;
 
+	reference_volume_ids.Clear();
+	reference_volume_ids.Add(-1, number_of_classes);
+
 	class_refinement_results.Alloc(number_of_classes);
 	class_refinement_results.Add(junk_class_results, number_of_classes);
 
@@ -224,9 +235,9 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
 	}
 }
 
-wxArrayDouble Refinement::UpdatePSSNR()
+wxArrayFloat Refinement::UpdatePSSNR()
 {
-	wxArrayDouble average_occupancies;
+	wxArrayFloat average_occupancies;
 
 
 	if (this->number_of_classes > 1)
@@ -256,7 +267,7 @@ wxArrayDouble Refinement::UpdatePSSNR()
 				}
 			}
 
-			average_occupancies[class_counter] /= double(number_of_active_images);
+			average_occupancies[class_counter] /= float(number_of_active_images);
 			sum_ave_occ += average_occupancies[class_counter];
 		}
 
@@ -308,11 +319,9 @@ void Refinement::UpdateOccupancies(bool use_old_occupancies)
 
 				for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
 				{
-					if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
-					{
-						average_occupancies[class_counter] += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-						number_of_active_images++;
-					}
+					average_occupancies[class_counter] += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+					number_of_active_images++;
+
 				}
 
 				average_occupancies[class_counter] /= float(number_of_active_images);
@@ -360,7 +369,7 @@ void Refinement::UpdateOccupancies(bool use_old_occupancies)
 
 				//occupancy = 1. * (occupancy - this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
 				this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
-				current_average_sigma +=  this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
+				current_average_sigma +=  this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0);
 			}
 
 			for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)

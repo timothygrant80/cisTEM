@@ -7,9 +7,10 @@
 
 class RefinementLimit : public mpFY
 {
-	double spatial_frequency;
+
 public:
-	RefinementLimit(float wanted_spatial_frequency) : mpFY(wxT(" Refinement limit"),mpALIGN_TOP) { spatial_frequency = wanted_spatial_frequency; }
+	double spatial_frequency;
+	RefinementLimit(float wanted_spatial_frequency) : mpFY(wxT(" Min. refinement limit"),mpALIGN_TOP) { spatial_frequency = wanted_spatial_frequency; }
 	void SetSpatialFrequency(float wanted_spatial_frequency) { spatial_frequency = wanted_spatial_frequency; }
 	virtual double GetX( double y ) { return spatial_frequency; }
 	virtual double GetMinX() { return -0.05; }
@@ -21,19 +22,20 @@ PlotFSCPanel : public wxPanel
 {
 
 	wxBoxSizer* GraphSizer;
+	int number_of_added_fscs;
 
 	public:
 
 	PlotFSCPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
 	~PlotFSCPanel();
 
-	void Clear();
-	void AddPoint(double spatial_frequency, double FSC);
+	void Clear(bool update_display = true);
+	void AddPartFSC(ResolutionStatistics *statistics_to_add, float wanted_nyquist);
 	void Draw(float nyquist);
+	void SetupBaseLayers();
 
 
-	std::vector<double> current_spatial_frequency_data;
-	std::vector<double> current_FSC_data;
+
 	float current_refinement_resolution_limit;
 
 
@@ -41,9 +43,6 @@ PlotFSCPanel : public wxPanel
 	mpTitle         *title;
 	mpScaleX * current_xaxis;
 	mpScaleY * current_yaxis;
-
-	mpFXYVector* FSC_vector_layer;
-
 	RefinementLimit * refinement_limit;
 
 

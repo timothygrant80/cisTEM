@@ -15,16 +15,16 @@ RefinementResultsPanel( parent )
 	FSCPlotPanel->Clear();
 	currently_displayed_refinement = NULL;
 
-	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
+//	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }
 
 void MyRefinementResultsPanel::OnClassComboBoxChange( wxCommandEvent& event )
 {
 	//wxPrintf("Changed\n");
-	current_class = FSCPlotPanel->ClassComboBox->GetSelection();
+//	current_class = FSCPlotPanel->ClassComboBox->GetSelection();
 	FillAngles();
 	ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
-	FSCPlotPanel->PlotCurrentClass();
+//	FSCPlotPanel->PlotCurrentClass();
 	event.Skip();
 }
 

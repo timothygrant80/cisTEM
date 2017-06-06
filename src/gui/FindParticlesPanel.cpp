@@ -33,10 +33,18 @@ FindParticlesPanel( parent )
 	FillRunProfileComboBox();
 	FillPickingAlgorithmComboBox();
 
+	wxSize input_size = ExpertInputSizer->GetMinSize();
+	input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
+	input_size.y = -1;
+	ExpertOptionsPanel->SetMinSize(input_size);
+	ExpertOptionsPanel->SetSize(input_size);
 
 	//result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
 	FindParticlesSplitterWindow->Unsplit(LeftPanel);
+
+	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnGroupComboBox, this);
+	ImageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnImageComboBox, this);
 
 }
 
@@ -233,27 +241,13 @@ void MyFindParticlesPanel::SetInfo()
 
 void MyFindParticlesPanel::FillGroupComboBox()
 {
-	GroupComboBox->FillWithImageGroups(true);
+	GroupComboBox->FillComboBox(true);
 }
 
 void MyFindParticlesPanel::FillImageComboBox()
 {
 	ImageAsset *current_image_asset;
-
-	ImageComboBox->Freeze();
-	ImageComboBox->Clear();
-
-	int number_of_images = image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection());
-
-	for (long counter = 0; counter < number_of_images; counter ++ )
-	{
-		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
-		ImageComboBox->Append(current_image_asset->ReturnShortNameString());
-	}
-
-	ImageComboBox->SetSelection(0);
-
-	ImageComboBox->Thaw();
+	ImageComboBox->FillComboBox(GroupComboBox->GetSelection());
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
@@ -323,7 +317,11 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 	case(0):
 			// Ab initio
 			PickingParametersPanel->Show(true);
-			FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, 528);
+
+			wxSize ExpertMinSize = ExpertOptionsPanel->GetMinSize();
+			int splitter_panel_size = 400;
+			if (ExpertMinSize.x > 400) splitter_panel_size = ExpertMinSize.x;
+			FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, splitter_panel_size);
 			ExpertToggleButton->Enable(true);
 			break;
 	default:
@@ -375,7 +373,7 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 
 int MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()
 {
-	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), 0))->pixel_size;
+	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), 0))->pixel_size;
 	return int(MaximumParticleRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
 }
 
@@ -747,7 +745,7 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RunProfileComboBox->Enable(true);
 			GroupComboBox->Enable(true);
 			PickingAlgorithmComboBox->Enable(true);
-			if (image_asset_panel->all_groups_list->groups[GroupComboBox->GetCurrentSelection()].can_be_picked)
+			if (image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
 			{
 				if (PleaseEstimateCTFStaticText->IsShown())
 				{
@@ -773,7 +771,7 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			}
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1 && PickingAlgorithmComboBox->GetCurrentSelection() >= 0 && image_asset_panel->all_groups_list->groups[GroupComboBox->GetCurrentSelection()].can_be_picked)
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1 && PickingAlgorithmComboBox->GetCurrentSelection() >= 0 && image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
 				{
 					StartPickingButton->Enable(true);
 				}
@@ -827,7 +825,7 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 	float pixel_size = 10;
 	float minimum_distance_from_edge;
 
-	current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), ImageComboBox->GetCurrentSelection()));
+	current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), ImageComboBox->GetSelection()));
 
 	main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
 
@@ -925,7 +923,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	// Package the job details..
 
 	long counter;
-	long number_of_jobs = image_asset_panel->ReturnGroupSize(GroupComboBox->GetCurrentSelection()); // how many images / movies in the selected group..
+	long number_of_jobs = image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many images / movies in the selected group..
 
 	bool ok_number_conversion;
 
@@ -1003,7 +1001,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
 
-		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetCurrentSelection(), counter));
+		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 
 		input_filename 			=	current_image_asset->filename.GetFullPath().ToStdString();
 		pixel_size				=	current_image_asset->pixel_size;
@@ -1523,7 +1521,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiiii", 		picking_id,
 																						picking_job_id,
 																						(long int) now.GetAsDOS(),
-																						image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetCurrentSelection(),counter),
+																						image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter),
 																						PickingAlgorithmComboBox->GetSelection(),
 																						CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
 																						MaximumParticleRadiusNumericCtrl->ReturnValue(),
@@ -1580,13 +1578,13 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 	my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 2);
 
+	main_frame->current_project.database.Commit();
+
 
 	// At this point, the database should be up-to-date
 	particle_position_asset_panel->ImportAllFromDatabase();
 
 	// global commit..
-
-	main_frame->current_project.database.Commit();
 
 	my_progress_dialog->Destroy();
 

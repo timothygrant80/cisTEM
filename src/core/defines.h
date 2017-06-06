@@ -35,3 +35,5 @@
 #define MyDebugAssertTrue(cond, msg, ...)
 #define MyDebugAssertFalse(cond, msg, ...)
 #endif
+
+WX_DECLARE_OBJARRAY(float, wxArrayFloat);

@@ -85,3 +85,4 @@ const std::complex<float> I(0.0,1.0);
 #endif
 
 extern RandomNumberGenerator global_random_number_generator;
+

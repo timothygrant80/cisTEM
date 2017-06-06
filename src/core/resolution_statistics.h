@@ -33,14 +33,16 @@ public:
 	void NormalizeVolumeWithParticleSSNR(Image &reconstructed_volume);
 	void CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2, bool smooth_curve = false);
 	void CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_in_kDa);
-	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction, float wanted_mask_volume_fraction = 1.0);
+	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction, float wanted_mask_volume_fraction = 1.0f);
 	void ZeroToResolution(float resolution_limit);
 	void PrintStatistics();
-	void WriteStatisticsToFile(NumericTextFile &output_statistics_file);
+	void WriteStatisticsToFile(NumericTextFile &output_statistics_file, float pssnr_division_factor = 1.0f);
 	void WriteStatisticsToFloatArray(float *float_array, int wanted_class);
 	void ReadStatisticsFromFile(wxString input_file);
 	void GenerateDefaultStatistics(float molecular_mass_in_kDa);
 
+	int ReturnResolutionShellNumber(float wanted_resolution);
+	float ReturnResolutionNShellsBefore(float wanted_resolution, int number_of_shells);
 	float ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells);
 	float ReturnEstimatedResolution(bool use_part_fsc = true);
 	float Return0p8Resolution(bool use_part_fsc = true);
@@ -48,6 +50,6 @@ public:
 
 	inline float kDa_to_area_in_pixel(float molecular_mass_in_kDa)
 	{
-		return PI * powf(3.0 * (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3)) / 4.0 / PI, 2.0 / 3.0);
+		return PI * powf(3.0f * (kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3)) / 4.0f / PI, 2.0f / 3.0f);
 	};
 };

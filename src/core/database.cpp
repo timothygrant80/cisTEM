@@ -433,28 +433,12 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
         return false;
     }
 
-	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
+	//ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
 	//ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
 	//ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
 	//ExecuteSQL("PRAGMA main.page_size=4096;");
 	//ExecuteSQL("PRAGMA main.cache_size=10000;");
 	//ExecuteSQL("PRAGMA main.journal_mode=WAL;");
-
-	// I want to lock the databse, and so i'm going to write to it.
-
-	return_code = ExecuteSQL("CREATE TABLE JUNK_TABLE(JUNK INTEGER PRIMARY KEY);");
-
-	if (return_code != SQLITE_OK)
-	{
-		return false;
-	}
-
-	return_code = ExecuteSQL("DROP TABLE JUNK_TABLE;");
-
-	if (return_code != SQLITE_OK)
-	{
-		return false;
-	}
 
 	// if we get here, we should have the database open, with an exclusive lock
 
@@ -493,28 +477,12 @@ bool Database::Open(wxFileName file_to_open)
 	    return false;
 	}
 
-	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
+//	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
 //	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
 //	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
 //	ExecuteSQL("PRAGMA main.page_size=4096;");
 //	ExecuteSQL("PRAGMA main.cache_size=10000;");
 //	ExecuteSQL("PRAGMA main.journal_mode=WAL;");
-
-	// I want to lock the databse, and so i'm going to write to it.
-
-	return_code = ExecuteSQL("CREATE TABLE JUNK_TABLE(JUNK INTEGER PRIMARY KEY);");
-
-	if (return_code != SQLITE_OK)
-	{
-		return false;
-	}
-
-	return_code = ExecuteSQL("DROP TABLE JUNK_TABLE;");
-
-	if (return_code != SQLITE_OK)
-	{
-		return false;
-	}
 
 	// if we get here, we should have the database open, with an exclusive lock
 
@@ -613,6 +581,7 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 
 }
 
+
 bool Database::CreateAllTables()
 {
 	bool success;
@@ -620,6 +589,8 @@ bool Database::CreateAllTables()
 	// this succes thing won't work, as it needs to be checked each time - oh well!
 
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
+	CheckSuccess(success);
+	success = CreateProcessLockTable();
 	CheckSuccess(success);
 	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
 	CheckSuccess(success);
@@ -671,6 +642,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 	char *error_message = NULL;
 
 	wxString sql_command;
+	wxString temp_string;
 
 	sql_command = "INSERT OR REPLACE INTO  ";
 	sql_command += table_name;
@@ -698,7 +670,10 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 		if (*column_format == 't') // text
 		{
 			sql_command += "'";
-			sql_command += va_arg(args, const char *);
+			temp_string =  va_arg(args, const char *);
+			//escape apostrophes
+			temp_string.Replace("'", "''");
+			sql_command += temp_string;
 			sql_command += "'";
 		}
 		else
@@ -730,6 +705,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 
 	va_end(args);
 
+	// escape apostrophes;
 	return_code = ExecuteSQL(sql_command.ToUTF8().data());
 
     if( return_code != SQLITE_OK )
@@ -816,11 +792,32 @@ void Database::GetImageImportDefaults(float &voltage, float &spherical_aberratio
 }
 
 
-void Database::Close()
+void Database::Close(bool remove_lock)
 {
 	if (is_open == true)
 	{
+		Begin();
+		// drop any ownership..
+		if (remove_lock == true)
+		{
+			long my_process_id = wxGetProcessId();
+			long database_process_id = ReturnSingleLongFromSelectCommand("SELECT ACTIVE_PROCESS FROM PROCESS_LOCK");
+
+			if (my_process_id != database_process_id && my_process_id != 0 && database_process_id > 0)
+			{
+				wxPrintf("\n\nError: Active process ID != my process ID, leaving the process lock in place.\n\n");
+
+			}
+			else
+			{
+				DeleteTable("PROCESS_LOCK");
+				CreateProcessLockTable();
+			}
+		}
+
 		ExecuteSQL("PRAGMA optimize");
+		Commit();
+
 		int return_code = sqlite3_close(sqlite_database);
 		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL close error, return code : %i\n", return_code );
 	}
@@ -1652,25 +1649,23 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 {
 	int class_counter;
 	long counter;
+	bool should_commit = false;
 
-	InsertOrReplace("REFINEMENT_LIST", "Pltillllrrrrrrirrrrirrrrirrir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->refinement_was_imported_or_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->low_resolution_limit, refinement_to_add->high_resolution_limit, refinement_to_add->mask_radius, refinement_to_add->signed_cc_resolution_limit, refinement_to_add->global_resolution_limit, refinement_to_add->global_mask_radius, refinement_to_add->number_results_to_refine, refinement_to_add->angular_search_step, refinement_to_add->search_range_x, refinement_to_add->search_range_y, refinement_to_add->classification_resolution_limit, refinement_to_add->should_focus_classify, refinement_to_add->sphere_x_coord, refinement_to_add->sphere_y_coord, refinement_to_add->sphere_z_coord, refinement_to_add->sphere_radius, refinement_to_add->should_refine_ctf, refinement_to_add->defocus_search_range, refinement_to_add->defocus_search_step, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
-
-	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
+	if (is_in_begin_commit == false)
 	{
-		CreateRefinementResultTable(refinement_to_add->refinement_id, class_counter);
-		CreateRefinementResolutionStatisticsTable(refinement_to_add->refinement_id, class_counter);
+		Begin();
+		should_commit = true;
 	}
+	InsertOrReplace("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->refinement_was_imported_or_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
 
-	CreateRefinementReferenceVolumeIDsTable(refinement_to_add->refinement_id);
-
-	BeginBatchInsert(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", refinement_to_add->refinement_id), 2 , "CLASS_NUMBER", "VOLUME_ASSET_ID");
-
-	for ( counter = 0; counter < refinement_to_add->reference_volume_ids.GetCount(); counter++)
+	for (class_counter = 0; class_counter < refinement_to_add->number_of_classes; class_counter++)
 	{
-		AddToBatchInsert("ll", counter, refinement_to_add->reference_volume_ids[counter]);
-	}
+		CreateRefinementResultTable(refinement_to_add->refinement_id, class_counter + 1);
+		CreateRefinementResolutionStatisticsTable(refinement_to_add->refinement_id, class_counter + 1);
+		CreateRefinementDetailsTable(refinement_to_add->refinement_id);
 
-	EndBatchInsert();
+		InsertOrReplace(wxString::Format("REFINEMENT_DETAILS_%li", refinement_to_add->refinement_id), "ilrrrrrrirrrrirrrrirr", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", class_counter + 1, refinement_to_add->reference_volume_ids[class_counter], refinement_to_add->class_refinement_results[class_counter].low_resolution_limit, refinement_to_add->class_refinement_results[class_counter].high_resolution_limit, refinement_to_add->class_refinement_results[class_counter].mask_radius, refinement_to_add->class_refinement_results[class_counter].signed_cc_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_mask_radius, refinement_to_add->class_refinement_results[class_counter].number_results_to_refine, refinement_to_add->class_refinement_results[class_counter].angular_search_step, refinement_to_add->class_refinement_results[class_counter].search_range_x, refinement_to_add->class_refinement_results[class_counter].search_range_y, refinement_to_add->class_refinement_results[class_counter].classification_resolution_limit, refinement_to_add->class_refinement_results[class_counter].should_focus_classify, refinement_to_add->class_refinement_results[class_counter].sphere_x_coord, refinement_to_add->class_refinement_results[class_counter].sphere_y_coord, refinement_to_add->class_refinement_results[class_counter].sphere_z_coord, refinement_to_add->class_refinement_results[class_counter].sphere_radius, refinement_to_add->class_refinement_results[class_counter].should_refine_ctf, refinement_to_add->class_refinement_results[class_counter].defocus_search_range, refinement_to_add->class_refinement_results[class_counter].defocus_search_step);
+	}
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
@@ -1696,6 +1691,8 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 
 		EndBatchInsert();
 	}
+
+	if (should_commit == true) Commit();
 
 }
 
@@ -1746,6 +1743,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	Refinement *temp_refinement = new Refinement;
 	RefinementResult temp_result;
 	int class_counter;
+	long current_reference_volume;
 
 	float temp_resolution;
 	float temp_fsc;
@@ -1765,7 +1763,6 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 
 	return_code = Step(list_statement);
 
-
 	temp_refinement->refinement_id = sqlite3_column_int64(list_statement, 0);
 	temp_refinement->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
 	temp_refinement->name = sqlite3_column_text(list_statement, 2);
@@ -1774,51 +1771,47 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	temp_refinement->starting_refinement_id = sqlite3_column_int64(list_statement, 5);
 	temp_refinement->number_of_particles = sqlite3_column_int64(list_statement, 6);
 	temp_refinement->number_of_classes = sqlite3_column_int(list_statement, 7);
-	temp_refinement->low_resolution_limit = sqlite3_column_double(list_statement, 8);
-	temp_refinement->high_resolution_limit = sqlite3_column_double(list_statement, 9);
-	temp_refinement->mask_radius = sqlite3_column_double(list_statement, 10);
-	temp_refinement->signed_cc_resolution_limit = sqlite3_column_double(list_statement, 11);
-	temp_refinement->global_resolution_limit = sqlite3_column_double(list_statement, 12);
-	temp_refinement->global_mask_radius = sqlite3_column_double(list_statement, 13);
-	temp_refinement->number_results_to_refine = sqlite3_column_int(list_statement, 14);
-	temp_refinement->angular_search_step = sqlite3_column_double(list_statement, 15);
-	temp_refinement->search_range_x = sqlite3_column_double(list_statement, 16);
-	temp_refinement->search_range_y = sqlite3_column_double(list_statement, 17);
-	temp_refinement->classification_resolution_limit = sqlite3_column_double(list_statement, 18);
-	temp_refinement->should_focus_classify = sqlite3_column_int(list_statement, 19);
-	temp_refinement->sphere_x_coord = sqlite3_column_double(list_statement, 20);
-	temp_refinement->sphere_y_coord = sqlite3_column_double(list_statement, 21);
-	temp_refinement->sphere_z_coord = sqlite3_column_double(list_statement, 22);
-	temp_refinement->sphere_radius = sqlite3_column_double(list_statement, 23);
-	temp_refinement->should_refine_ctf = sqlite3_column_int(list_statement, 24);
-	temp_refinement->defocus_search_range = sqlite3_column_double(list_statement, 25);
-	temp_refinement->defocus_search_step = sqlite3_column_double(list_statement, 26);
-	temp_refinement->resolution_statistics_box_size = sqlite3_column_int(list_statement, 27);
-	temp_refinement->resolution_statistics_pixel_size = sqlite3_column_double(list_statement, 28);
+	temp_refinement->resolution_statistics_box_size = sqlite3_column_int(list_statement, 8);
+	temp_refinement->resolution_statistics_pixel_size = sqlite3_column_double(list_statement, 9);
 
-	Finalize(list_statement);
-
-	// volume_ids..
-
-
-	// 3d references
-	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_REFERENCE_VOLUME_IDS_%li", temp_refinement->refinement_id);
-	Prepare(sql_select_command, &list_statement);
-	return_code = Step(list_statement);
-
-	while (  return_code == SQLITE_ROW)
-	{
-		temp_refinement->reference_volume_ids.Add(sqlite3_column_int64(list_statement, 1));
-		return_code = Step(list_statement);
-	}
-
-	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 	Finalize(list_statement);
 
 	// now get all the parameters..
 
 	temp_refinement->class_refinement_results.Alloc(temp_refinement->number_of_classes);
 	temp_refinement->class_refinement_results.Add(junk_class_results, temp_refinement->number_of_classes);
+
+	// now the details..
+
+	sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_DETAILS_%li", wanted_refinement_id);
+	Prepare(sql_select_command, &list_statement);
+
+	for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
+	{
+		return_code = Step(list_statement);
+		temp_refinement->reference_volume_ids.Add(sqlite3_column_int64(list_statement, 1));
+		temp_refinement->class_refinement_results[class_counter].low_resolution_limit = sqlite3_column_double(list_statement, 2);
+		temp_refinement->class_refinement_results[class_counter].high_resolution_limit = sqlite3_column_double(list_statement, 3);
+		temp_refinement->class_refinement_results[class_counter].mask_radius = sqlite3_column_double(list_statement, 4);
+		temp_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = sqlite3_column_double(list_statement, 5);
+		temp_refinement->class_refinement_results[class_counter].global_resolution_limit = sqlite3_column_double(list_statement, 6);
+		temp_refinement->class_refinement_results[class_counter].global_mask_radius = sqlite3_column_double(list_statement, 7);
+		temp_refinement->class_refinement_results[class_counter].number_results_to_refine = sqlite3_column_int(list_statement, 8);
+		temp_refinement->class_refinement_results[class_counter].angular_search_step = sqlite3_column_double(list_statement, 9);
+		temp_refinement->class_refinement_results[class_counter].search_range_x = sqlite3_column_double(list_statement, 10);
+		temp_refinement->class_refinement_results[class_counter].search_range_y = sqlite3_column_double(list_statement, 11);
+		temp_refinement->class_refinement_results[class_counter].classification_resolution_limit = sqlite3_column_double(list_statement, 12);
+		temp_refinement->class_refinement_results[class_counter].should_focus_classify = sqlite3_column_int(list_statement, 13);
+		temp_refinement->class_refinement_results[class_counter].sphere_x_coord = sqlite3_column_double(list_statement, 14);
+		temp_refinement->class_refinement_results[class_counter].sphere_y_coord = sqlite3_column_double(list_statement, 15);
+		temp_refinement->class_refinement_results[class_counter].sphere_z_coord = sqlite3_column_double(list_statement, 16);
+		temp_refinement->class_refinement_results[class_counter].sphere_radius = sqlite3_column_double(list_statement, 17);
+		temp_refinement->class_refinement_results[class_counter].should_refine_ctf = sqlite3_column_int(list_statement, 18);
+		temp_refinement->class_refinement_results[class_counter].defocus_search_range = sqlite3_column_double(list_statement, 19);
+		temp_refinement->class_refinement_results[class_counter].defocus_search_step = sqlite3_column_double(list_statement, 20);
+	}
+
+	Finalize(list_statement);
 
 	for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
 	{
@@ -1983,5 +1976,37 @@ void Database::AddClassificationSelection(ClassificationSelection *classificatio
 	}
 
 	EndBatchInsert();
+}
+
+
+void Database::ReturnProcessLockInfo(long &active_process_id, wxString &active_hostname)
+{
+	if (ReturnSingleIntFromSelectCommand(wxString::Format("select count(*) from PROCESS_LOCK")) != 1)
+	{
+		active_process_id = -1;
+		active_hostname = "";
+	}
+	else
+	{
+		sqlite3_stmt *list_statement = NULL;
+		wxString sql_select_command = "SELECT * FROM PROCESS_LOCK";
+		Prepare(sql_select_command, &list_statement);
+		Step(list_statement);
+
+		active_process_id = sqlite3_column_int64(list_statement, 1);
+		active_hostname = sqlite3_column_text(list_statement, 2);
+
+		Finalize(list_statement);
+	}
+
+}
+
+void Database::SetProcessLockInfo(long &active_process_id, wxString &active_hostname)
+{
+	Begin();
+	DeleteTable("PROCESS_LOCK");
+	CreateProcessLockTable();
+	InsertOrReplace("PROCESS_LOCK", "plt", "NUMBER", "ACTIVE_PROCESS", "ACTIVE_HOST", 1, active_process_id, active_hostname.ToUTF8().data());
+	Commit();
 }
 

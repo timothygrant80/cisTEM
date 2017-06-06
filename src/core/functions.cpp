@@ -61,6 +61,8 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 		else
 		if (mode == 4) bytes_per_pixel = 8;
 		else
+		if (mode == 6) bytes_per_pixel = 2;
+		else
 		{
 			fclose(input);
 			return false;

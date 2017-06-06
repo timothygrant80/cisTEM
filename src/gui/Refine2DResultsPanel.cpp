@@ -15,6 +15,8 @@ Refine2DResultsPanel::Refine2DResultsPanel(wxWindow* parent, wxWindowID id, cons
 	input_params_combo_is_dirty = false;
 	classification_selections_are_dirty = false;
 
+	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &Refine2DResultsPanel::OnRefinementPackageComboBox, this);
+	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &Refine2DResultsPanel::OnInputParametersComboBox, this);
 	ClassumDisplayPanel->Bind(wxEVT_RIGHT_DOWN, &Refine2DResultsPanel::OnClassumRightClick, this);
 	ClassumDisplayPanel->Bind(wxEVT_LEFT_DOWN, &Refine2DResultsPanel::OnClassumLeftClick, this);
 	Layout();
@@ -29,7 +31,7 @@ Refine2DResultsPanel::~Refine2DResultsPanel()
 
 void Refine2DResultsPanel::FillRefinementPackageComboBox(void)
 {
-	RefinementPackageComboBox->FillWithRefinementPackages();
+	RefinementPackageComboBox->FillComboBox();
 	FillInputParametersComboBox();
 }
 
@@ -117,7 +119,7 @@ void Refine2DResultsPanel::FillInputParametersComboBox(void)
 	if (RefinementPackageComboBox->GetSelection() >= 0)
 	{
 
-		if (InputParametersComboBox->FillWithClassifications(RefinementPackageComboBox->GetSelection(), false) == false && InputParametersComboBox->GetSelection() >= 0)
+		if (InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), false) == false && InputParametersComboBox->GetSelection() >= 0)
 		{
 			long current_class = refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].classification_ids[InputParametersComboBox->GetSelection()];
 			ShortClassificationInfo *current_classification = refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].classification_ids[InputParametersComboBox->GetSelection()]);

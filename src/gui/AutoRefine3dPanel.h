@@ -34,14 +34,16 @@ public:
 
 	long number_of_received_particle_results;
 
-	wxArrayDouble percent_used_per_round;
-	wxArrayDouble resolution_per_round;
-	wxArrayDouble high_res_limit_per_round;
+	wxArrayFloat percent_used_per_round;
+	wxArrayFloat resolution_per_round;
+	wxArrayFloat high_res_limit_per_round;
 
-	wxArrayDouble class_high_res_limits;
-	wxArrayDouble class_next_high_res_limits;
+	wxArrayFloat class_high_res_limits;
+	wxArrayFloat class_next_high_res_limits;
 
 	float classification_resolution;
+
+	bool this_is_the_final_round;
 
 	Refinement *input_refinement;
 	Refinement *output_refinement;
@@ -139,6 +141,7 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
+		void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
 };
 
 class AutoRefine3DMaskerThread : public wxThread
@@ -165,6 +168,5 @@ class AutoRefine3DMaskerThread : public wxThread
 
     virtual ExitCode Entry();
 };
-
 
 #endif

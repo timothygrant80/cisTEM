@@ -8,8 +8,7 @@ VolumeChooserDialog( parent )
 {
 	selected_volume_id = -1;
 	selected_volume_name = "Generate from params.";
-	ComboBox->Append("Generate from params.");
-	AppendVolumeAssetsToComboBox(ComboBox);
+	ComboBox->FillComboBox(true);
 }
 
 void MyVolumeChooserDialog::OnCancelClick( wxCommandEvent& event )

@@ -26,9 +26,10 @@ public :
 
 	bool FillWithRunProfiles();
 	bool FillWithRefinementPackages();
-	bool FillWithVolumeAssets();
+	bool FillWithVolumeAssets(bool include_generate_from_params = false);
 	bool FillWithMovieGroups(bool include_all_movies_group = true);
 	bool FillWithImageGroups(bool include_all_images_group = true);
+	bool FillWithImages(long wanted_image_group);
 	bool FillWithClassifications(long wanted_refinement_package, bool include_new_classification);
 	bool FillWithRefinements(long wanted_refinement_package);
 
@@ -225,16 +226,24 @@ class ContainedParticleListControl: public wxListCtrl{
 class ReferenceVolumesListControl: public wxListCtrl{
 	public:
 	ReferenceVolumesListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
-	wxString OnGetItemText(long item, long column) const;
+	virtual wxString OnGetItemText(long item, long column) const;
 
 	int ReturnGuessAtColumnTextWidth(int wanted_column);
 
 };
 
+class ReferenceVolumesListControlRefinement: public ReferenceVolumesListControl{
+	public:
+	ReferenceVolumesListControlRefinement(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	 wxString OnGetItemText(long item, long column) const;
+
+};
+
+
 class RefinementParametersListCtrl: public wxListCtrl{
 	public:
 	RefinementParametersListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
-	wxString OnGetItemText(long item, long column) const;
+	virtual wxString OnGetItemText(long item, long column) const;
 
 	int ReturnGuessAtColumnTextWidth(int wanted_column);
 

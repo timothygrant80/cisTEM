@@ -44,18 +44,49 @@ MovieImportDialog( parent )
 		PixelSizeText->ChangeValue(wxString::Format("%.3f", default_pixel_size));
 		DoseText->ChangeValue(wxString::Format("%.2f", default_exposure_per_frame));
 
-		if (default_movies_are_gain_corrected == true) MoviesAreGainCorrectedCheckBox->SetValue(true);
-		else MoviesAreGainCorrectedCheckBox->SetValue(false);
+		if (default_movies_are_gain_corrected == true)
+		{
+			MoviesAreGainCorrectedCheckBox->SetValue(true);
+		}
+		else
+		{
+			MoviesAreGainCorrectedCheckBox->SetValue(false);
+		}
 
 		// don't set the gain reference as this is likely to be different, and i want to force users to have to pick the correct one.
 
-		if (default_resample_movies == true) ResampleMoviesCheckBox->SetValue(true);
-		else ResampleMoviesCheckBox->SetValue(false);
+		if (default_resample_movies == true)
+		{
+			ResampleMoviesCheckBox->SetValue(true);
+		}
+		else
+		{
+			ResampleMoviesCheckBox->SetValue(false);
+
+		}
 
 		DesiredPixelSizeTextCtrl->ChangeValueFloat(default_desired_pixel_size);
 
-		if (default_correct_mag_distortion == true)	CorrectMagDistortionCheckBox->SetValue(true);
-		else CorrectMagDistortionCheckBox->SetValue(false);
+		if (default_correct_mag_distortion == true)
+		{
+			CorrectMagDistortionCheckBox->SetValue(true);
+		}
+		else
+		{
+			CorrectMagDistortionCheckBox->SetValue(false);
+		}
+
+		GainFilePicker->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+		GainFileStaticText->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+		DesiredPixelSizeStaticText->Enable(ResampleMoviesCheckBox->IsChecked());
+		DesiredPixelSizeTextCtrl->Enable(ResampleMoviesCheckBox->IsChecked());
+		DistortionAngleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+		MajorScaleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+		MinorScaleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
+		DistortionAngleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+		MajorScaleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+		MinorScaleStaticText->Enable(CorrectMagDistortionCheckBox->IsChecked());
+
 
 		DistortionAngleTextCtrl->ChangeValueFloat(default_mag_distortion_angle);
 		MajorScaleTextCtrl->ChangeValueFloat(default_mag_distortion_major_scale);
@@ -368,7 +399,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			wxDateTime start = wxDateTime::UNow();
 			temp_asset.Update(PathListCtrl->GetItemText(counter));
 			wxDateTime end = wxDateTime::UNow();
-			wxPrintf("File parsing (disk access) took %li milliseconds\n", (end-start).GetMilliseconds());
+			//wxPrintf("File parsing (disk access) took %li milliseconds\n", (end-start).GetMilliseconds());
 			start = wxDateTime::UNow();
 
 			// check everything ok with gain_ref
@@ -383,7 +414,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			{
 				end = wxDateTime::UNow();
 
-				wxPrintf("File searching took %li milliseconds\n", (end-start).GetMilliseconds());
+				//wxPrintf("File searching took %li milliseconds\n", (end-start).GetMilliseconds());
 
 				if (temp_asset.is_valid == true)
 				{

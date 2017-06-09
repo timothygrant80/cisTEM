@@ -232,7 +232,7 @@ bool Reconstruct3DApp::DoCalculation()
 		input_par_file.SetParameters(3, temp_float, sigma / 2.0, i);
 	} */
 	// sigma values
-	input_par_file.RemoveOutliers(14, 2.0);
+	input_par_file.RemoveOutliers(14, 2.0, false, true);
 	// score values
 	input_par_file.RemoveOutliers(15, 1.0);
 	NumericTextFile output_statistics_file(output_resolution_statistics, OPEN_TO_WRITE, 7);

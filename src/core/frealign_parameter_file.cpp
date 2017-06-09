@@ -298,7 +298,7 @@ double FrealignParameterFile::ReturnAverage(int wanted_index, bool exclude_negat
 	else return 0.0;
 }
 
-void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standard_deviation, bool exclude_negative_film_numbers)
+void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standard_deviation, bool exclude_negative_film_numbers, bool reciprocal_square)
 {
 	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
 	MyDebugAssertTrue(wanted_index >= 0 && wanted_index < records_per_line, "Index out of range");
@@ -312,14 +312,17 @@ void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standa
 	float std;
 	float upper_threshold;
 	float lower_threshold;
+	float temp_float;
 
 	for (line = 0; line < number_of_lines; line++)
 	{
 		index = records_per_line * line;
 		if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
 		{
-			average += parameter_cache[wanted_index + index];
-			sum2 += powf(parameter_cache[wanted_index + index], 2);
+			temp_float = parameter_cache[wanted_index + index];
+			if (reciprocal_square && temp_float > 0.0) temp_float = 1.0 / powf(temp_float, 2);
+			average += temp_float;
+			sum2 += powf(temp_float, 2);
 			sum_i++;
 		}
 	}
@@ -345,10 +348,12 @@ void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standa
 			index = records_per_line * line;
 			if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
 			{
-				if (parameter_cache[wanted_index + index] <= upper_threshold && parameter_cache[wanted_index + index] >= lower_threshold)
+				temp_float = parameter_cache[wanted_index + index];
+				if (reciprocal_square && temp_float > 0.0) temp_float = 1.0 / powf(temp_float, 2);
+				if (temp_float <= upper_threshold && temp_float >= lower_threshold)
 				{
-					average += parameter_cache[wanted_index + index];
-					sum2 += powf(parameter_cache[wanted_index + index], 2);
+					average += temp_float;
+					sum2 += powf(temp_float, 2);
 					sum_i++;
 				}
 			}
@@ -371,8 +376,21 @@ void FrealignParameterFile::RemoveOutliers(int wanted_index, float wanted_standa
 			index = records_per_line * line;
 			if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
 			{
-				if (parameter_cache[wanted_index + index] > upper_threshold) parameter_cache[wanted_index + index] = upper_threshold;
-				if (parameter_cache[wanted_index + index] < lower_threshold) parameter_cache[wanted_index + index] = lower_threshold;
+				temp_float = parameter_cache[wanted_index + index];
+				if (reciprocal_square)
+				{
+					if (temp_float > 0.0) temp_float = 1.0 / powf(temp_float, 2);
+					else temp_float = average;
+					if (temp_float > upper_threshold) temp_float = upper_threshold;
+					if (temp_float < lower_threshold) temp_float = lower_threshold;
+					temp_float = sqrtf(1.0 / temp_float);
+				}
+				else
+				{
+					if (temp_float > upper_threshold) temp_float = upper_threshold;
+					if (temp_float < lower_threshold) temp_float = lower_threshold;
+				}
+				parameter_cache[wanted_index + index] = temp_float;
 			}
 		}
 	}

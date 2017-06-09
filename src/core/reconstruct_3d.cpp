@@ -269,8 +269,8 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 	}
 
 	particle_to_insert.particle_image->PhaseShift(-particle_to_insert.alignment_parameters.ReturnShiftX() / particle_to_insert.pixel_size, -particle_to_insert.alignment_parameters.ReturnShiftY() / particle_to_insert.pixel_size);
-//	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[12] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[14],2);
-	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
+	particle_weight = particle_to_insert.particle_occupancy / particle_to_insert.parameter_average[12] / powf(particle_to_insert.sigma_noise / particle_to_insert.parameter_average[14],2);
+//	particle_weight = particle_to_insert.particle_occupancy / 100.0 / powf(particle_to_insert.sigma_noise,2);
 
 	images_processed++;
 

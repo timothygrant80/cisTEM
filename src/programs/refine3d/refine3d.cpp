@@ -496,6 +496,9 @@ bool Refine3DApp::DoCalculation()
 	if (high_resolution_limit_search < 2.0 * pixel_size) high_resolution_limit_search = 2.0 * pixel_size;
 	if (signed_CC_limit == 0.0) signed_CC_limit = pixel_size;
 
+	if (outer_mask_radius > float(input_stack.ReturnXSize()) / 2.0 * pixel_size- mask_falloff) outer_mask_radius = float(input_stack.ReturnXSize()) / 2.0 * pixel_size - mask_falloff;
+	if (mask_radius_search > float(input_stack.ReturnXSize()) / 2.0 * pixel_size- mask_falloff) mask_radius_search = float(input_stack.ReturnXSize()) / 2.0 * pixel_size - mask_falloff;
+
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, my_symmetry);
 	input_3d.molecular_mass_in_kDa = molecular_mass_kDa;
 	ResolutionStatistics input_statistics(pixel_size, input_3d.density_map.logical_y_dimension);
@@ -527,8 +530,8 @@ bool Refine3DApp::DoCalculation()
 	}
 
 	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
-	if (outer_mask_radius > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) outer_mask_radius = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
-	if (mask_radius_search > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) mask_radius_search = input_image.physical_address_of_box_center_x * pixel_size- mask_falloff;
+//	if (outer_mask_radius > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) outer_mask_radius = input_image.physical_address_of_box_center_x * pixel_size - mask_falloff;
+//	if (mask_radius_search > input_image.physical_address_of_box_center_x * pixel_size- mask_falloff) mask_radius_search = input_image.physical_address_of_box_center_x * pixel_size - mask_falloff;
 	input_3d.mask_radius = outer_mask_radius;
 
 	if (global_search)

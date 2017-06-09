@@ -31,7 +31,7 @@ public:
 	float ReturnMin(int wanted_index, bool exclude_negative_film_numbers = false);
 	float ReturnMax(int wanted_index, bool exclude_negative_film_numbers = false);
 	double ReturnAverage(int wanted_index, bool exclude_negative_film_numbers = false);
-	void RemoveOutliers(int wanted_index, float wanted_standard_deviation, bool exclude_negative_film_numbers = false);
+	void RemoveOutliers(int wanted_index, float wanted_standard_deviation, bool exclude_negative_film_numbers = false, bool reciprocal_square = false);
 	float ReturnThreshold(float wanted_percentage, bool exclude_negative_film_numbers = false);
 	void CalculateDefocusDependence(bool exclude_negative_film_numbers = false);
 	void AdjustScores(bool exclude_negative_film_numbers = false);

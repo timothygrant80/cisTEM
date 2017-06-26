@@ -43,6 +43,8 @@ class RefinementPackage {
 	double estimated_particle_weight_in_kda;
 	double lowest_resolution_of_intial_parameter_generated_3ds;
 
+	bool stack_has_white_protein;
+
 
 	int number_of_run_refinments;
 	long last_refinment_id;

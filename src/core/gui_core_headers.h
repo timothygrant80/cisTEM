@@ -77,6 +77,7 @@
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
 #include "../gui/MyNewProjectWizard.h"
+#include "../gui/ImportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/PickingResultsPanel.h"

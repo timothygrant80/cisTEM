@@ -973,7 +973,7 @@ void ClassificationManager::RunInitialStartJob()
 	float smoothing_factor = output_classification->smoothing_factor;
 	int padding_factor = 2;
 	bool normalize_particles = true;
-	bool invert_contrast = false;
+	bool invert_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 	bool exclude_blank_edges = output_classification->exclude_blank_edges;
 	bool dump_arrays = false;
 	wxString dump_file = "/dev/null";
@@ -1217,7 +1217,7 @@ void ClassificationManager::RunRefinementJob()
 		float smoothing_factor = output_classification->smoothing_factor;
 		int padding_factor = 2;
 		bool normalize_particles = true;
-		bool invert_contrast = false;
+		bool invert_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 		bool exclude_blank_edges = output_classification->exclude_blank_edges;
 		bool dump_arrays = true;
 		wxString dump_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);

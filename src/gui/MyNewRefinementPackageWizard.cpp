@@ -31,14 +31,18 @@ NewRefinementPackageWizard( parent )
 	particle_group_page = new ParticleGroupWizardPage(this);
 	number_of_classes_page = new NumberofClassesWizardPage(this);
 	box_size_page = new BoxSizeWizardPage(this);
-	class_setup_page = new ClassesSetupWizardPage(this);
+
 	initial_reference_page = new InitialReferencesWizardPage(this);
 	symmetry_page = new SymmetryWizardPage(this);
 	molecular_weight_page = new MolecularWeightWizardPage(this);
 	largest_dimension_page = new LargestDimensionWizardPage(this);
 	class_selection_page = new ClassSelectionWizardPage(this);
 
-
+	class_setup_pageA = new ClassesSetupWizardPageA(this);
+	class_setup_pageB = new ClassesSetupWizardPageB(this);
+	class_setup_pageC = new ClassesSetupWizardPageC(this);
+	class_setup_pageD = new ClassesSetupWizardPageD(this);
+	class_setup_pageE = new ClassesSetupWizardPageE(this);
 
 	GetPageAreaSizer()->Add(template_page);
 	//GetPageAreaSizer()->Add(particle_group_page);
@@ -87,7 +91,7 @@ void MyNewRefinementPackageWizard::OnUpdateUI(wxUpdateUIEvent& event)
 	else
 	if (GetCurrentPage() == number_of_classes_page) EnableNextButton();
 	else
-	if (GetCurrentPage() == class_setup_page) EnableNextButton();
+	if (GetCurrentPage() == class_setup_pageA) EnableNextButton();
 	else
 	if (GetCurrentPage() == symmetry_page)
 	{
@@ -124,8 +128,6 @@ void MyNewRefinementPackageWizard::OnUpdateUI(wxUpdateUIEvent& event)
 			else DisableNextButton();
 		}
 		else DisableNextButton();
-
-
 	}
 }
 
@@ -215,11 +217,6 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		}
 	}
 	else
-	if (event.GetPage() == class_setup_page)
-	{
-		//if (box_size_page->my_panel->InfoText->has_autowrapped == false) class_setup_page->my_panel->InfoText->AutoWrap();
-	}
-	else
 	if (event.GetPage() == initial_reference_page)
 	{
 
@@ -283,6 +280,91 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		}
 
 	}
+	else
+	if (event.GetPage() == class_setup_pageA)
+	{
+		if (class_setup_pageA->my_panel->InfoText->has_autowrapped == false)
+		{
+			class_setup_pageA->Freeze();
+			class_setup_pageA->my_panel->InfoText->AutoWrap();
+			class_setup_pageA->Layout();
+			class_setup_pageA->Thaw();
+		}
+	}
+	else
+	if (event.GetPage() == class_setup_pageB)
+	{
+		if (class_setup_pageB->my_panel->InfoText->has_autowrapped == false)
+		{
+			class_setup_pageB->Freeze();
+			class_setup_pageB->my_panel->InfoText->AutoWrap();
+			class_setup_pageB->Layout();
+			class_setup_pageB->Thaw();
+		}
+
+		// we need to fill with the appopriate classess.
+
+		class_setup_pageB->my_panel->Freeze();
+		class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(0, wxT("Class No."), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(1, wxT("Class Name"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(2, wxT("Average Occupancy"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(3, wxT("Est. Resolution"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+
+		/*
+		for (counter = 0; counter < refinement_package_asset_panel->all_classification_selections.GetCount(); counter++)
+		{
+			RefinementPackage *parent_package = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_classification_selections.Item(counter).refinement_package_asset_id));
+
+			my_panel->SelectionListCtrl->InsertItem(counter, refinement_package_asset_panel->all_classification_selections.Item(counter).name);
+			my_panel->SelectionListCtrl->SetItem (counter, 1, refinement_package_asset_panel->all_classification_selections.Item(counter).creation_date.FormatISOCombined(' '));
+			my_panel->SelectionListCtrl->SetItem (counter, 2, parent_package->name);
+			my_panel->SelectionListCtrl->SetItem (counter, 3, wxString::Format("%i/%i", refinement_package_asset_panel->all_classification_selections.Item(counter).number_of_selections, refinement_package_asset_panel->all_classification_selections.Item(counter).number_of_classes));
+		}
+
+		for (counter = 0; counter < my_panel->SelectionListCtrl->GetColumnCount(); counter++)
+		{
+			old_width = my_panel->SelectionListCtrl->GetColumnWidth(counter);
+			my_panel->SelectionListCtrl->SetColumnWidth(counter, wxLIST_AUTOSIZE);
+			current_width = my_panel->SelectionListCtrl->GetColumnWidth(counter);
+
+			if (old_width > current_width) my_panel->SelectionListCtrl->SetColumnWidth(counter, wxLIST_AUTOSIZE_USEHEADER);
+		}*/
+
+		class_setup_pageB->my_panel->Thaw();
+	}
+	else
+	if (event.GetPage() == class_setup_pageC)
+	{
+		if (class_setup_pageC->my_panel->InfoText->has_autowrapped == false)
+		{
+			class_setup_pageC->Freeze();
+			class_setup_pageC->my_panel->InfoText->AutoWrap();
+			class_setup_pageC->Layout();
+			class_setup_pageC->Thaw();
+		}
+	}
+	else
+	if (event.GetPage() == class_setup_pageD)
+	{
+		if (class_setup_pageD->my_panel->InfoText->has_autowrapped == false)
+		{
+			class_setup_pageD->Freeze();
+			class_setup_pageD->my_panel->InfoText->AutoWrap();
+			class_setup_pageD->Layout();
+			class_setup_pageD->Thaw();
+		}
+	}
+	else
+	if (event.GetPage() == class_setup_pageE)
+	{
+		if (class_setup_pageE->my_panel->InfoText->has_autowrapped == false)
+		{
+			class_setup_pageE->Freeze();
+			class_setup_pageE->my_panel->InfoText->AutoWrap();
+			class_setup_pageE->Layout();
+			class_setup_pageE->Thaw();
+		}
+	}
 
 
 
@@ -311,58 +393,17 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	RefinementPackage *parent_refinement_package_link;
 
 	wxArrayLong current_images;
-	ArrayOfRefinmentPackageParticleInfos class_average_particle_infos;
 
-
-
-	if (template_page->my_panel->GroupComboBox->GetSelection() < 2) // This is a new package or from classums
+	if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // This is a new package
 	{
 		long number_of_particles;
-		if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // completely new..
-		{
-			number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
-		}
-		else // from classums..
-		{
-			OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Sorting out which contained particles to copy over", "Reading particles from database...", 100, this, wxPD_APP_MODAL);
-
-			item = -1;
-			for ( ;; )
-			{
-				item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-				if ( item == -1 )
-				break;
-
-				current_images.Clear();
-
-				// for each selection we need to extract out the relevant particle position assets..
-
-				parent_refinement_package_link = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id));
-				parent_classification_id = refinement_package_asset_panel->all_classification_selections.Item(item).classification_id;
-
-				for (counter = 0; counter < refinement_package_asset_panel->all_classification_selections.Item(item).selections.GetCount(); counter++)
-				{
-					current_images = main_frame->current_project.database.Return2DClassMembers(parent_classification_id, refinement_package_asset_panel->all_classification_selections.Item(item).selections.Item(counter));
-					my_progress_dialog->Pulse();
-
-					// copy out all the relevant particle positions
-
-					for (particle_counter = 0; particle_counter < current_images.GetCount(); particle_counter++)
-					{
-						class_average_particle_infos.Add(parent_refinement_package_link->ReturnParticleInfoByPositionInStack(current_images.Item(particle_counter)));
-					}
-				}
-			}
-
-			number_of_particles = class_average_particle_infos.GetCount();
-			class_average_particle_infos.Sort(SortByParentImageID);
-			my_progress_dialog->Destroy();
-		}
+		number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
 
 		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 
 		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
+		temp_refinement_package->stack_has_white_protein = false;
 		temp_refinement_package->number_of_run_refinments = 0;
 
 		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
@@ -370,6 +411,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		temp_refinement.name = "Random Parameters";
 		temp_refinement.resolution_statistics_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
 		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
+
 
 		long current_particle_parent_image_id = 0;
 		long current_loaded_image_id = -1;
@@ -455,16 +497,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		{
 			// current particle, what image is it from?
 
-			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // completely new..
-			{
-				current_particle_position_asset = particle_position_asset_panel->ReturnAssetPointer(particle_position_asset_panel->ReturnGroupMember(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection(), counter));
-				current_particle_parent_image_id = current_particle_position_asset->parent_id;
-			}
-			else
-			{
-				current_particle_parent_image_id = class_average_particle_infos.Item(counter).parent_image_id;
-			}
-
+			current_particle_position_asset = particle_position_asset_panel->ReturnAssetPointer(particle_position_asset_panel->ReturnGroupMember(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection(), counter));
+			current_particle_parent_image_id = current_particle_position_asset->parent_id;
 
 			if (current_loaded_image_id != current_particle_parent_image_id)
 			{
@@ -485,16 +519,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			position_in_stack++;
 
-			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // completely new..
-			{
-				current_x_pos = myround(current_particle_position_asset->x_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
-				current_y_pos = myround(current_particle_position_asset->y_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
-			}
-			else
-			{
-				current_x_pos = myround(class_average_particle_infos.Item(counter).x_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
-				current_y_pos = myround(class_average_particle_infos.Item(counter).y_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
-			}
+			current_x_pos = myround(current_particle_position_asset->x_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
+			current_y_pos = myround(current_particle_position_asset->y_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
 
 			current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
 			cut_particle.ZeroFloatAndNormalize();
@@ -513,18 +539,9 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			temp_particle_info.phase_shift = image_phase_shift;
 			temp_particle_info.amplitude_contrast = image_amplitude_contrast;
 
-			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // completely new..
-			{
-				temp_particle_info.x_pos = current_particle_position_asset->x_position;
-				temp_particle_info.y_pos = current_particle_position_asset->y_position;
-				temp_particle_info.original_particle_position_asset_id = current_particle_position_asset->asset_id;
-			}
-			else
-			{
-				temp_particle_info.x_pos = class_average_particle_infos.Item(counter).x_pos;
-				temp_particle_info.y_pos = class_average_particle_infos.Item(counter).y_pos;
-				temp_particle_info.original_particle_position_asset_id =  class_average_particle_infos.Item(counter).original_particle_position_asset_id;
-			}
+			temp_particle_info.x_pos = current_particle_position_asset->x_position;
+			temp_particle_info.y_pos = current_particle_position_asset->y_position;
+			temp_particle_info.original_particle_position_asset_id = current_particle_position_asset->asset_id;
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
@@ -556,6 +573,275 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	}
 	else
+	if (template_page->my_panel->GroupComboBox->GetSelection() == 1) // 2D Classums
+	{
+		long number_of_particles;
+		long parent_refinement_package_id;
+		long parent_refinement_array_position;
+
+		ArrayOfRefinmentPackageParticleInfos class_average_particle_infos;
+		wxArrayLong class_average_particle_parent_refinement_packages_array_position;
+
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Sorting out which contained particles to copy over", "Reading particles from database...", 100, this, wxPD_APP_MODAL);
+
+		item = -1;
+		for ( ;; )
+		{
+			item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+			if ( item == -1 )
+			break;
+
+			current_images.Clear();
+
+			// for each selection we need to extract out the relevant particle position assets..
+			parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+			parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+			parent_refinement_package_link = &refinement_package_asset_panel->all_refinement_packages.Item(parent_refinement_array_position);
+			parent_classification_id = refinement_package_asset_panel->all_classification_selections.Item(item).classification_id;
+
+			for (counter = 0; counter < refinement_package_asset_panel->all_classification_selections.Item(item).selections.GetCount(); counter++)
+			{
+				current_images = main_frame->current_project.database.Return2DClassMembers(parent_classification_id, refinement_package_asset_panel->all_classification_selections.Item(item).selections.Item(counter));
+				my_progress_dialog->Pulse();
+
+				// copy out all the relevant particle positions
+
+				for (particle_counter = 0; particle_counter < current_images.GetCount(); particle_counter++)
+				{
+					class_average_particle_infos.Add(parent_refinement_package_link->ReturnParticleInfoByPositionInStack(current_images.Item(particle_counter)));
+					class_average_particle_parent_refinement_packages_array_position.Add(parent_refinement_array_position);
+				}
+			}
+		}
+
+		number_of_particles = class_average_particle_infos.GetCount();
+		class_average_particle_infos.Sort(SortByParentImageID);
+		my_progress_dialog->Destroy();
+
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
+		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
+		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
+		temp_refinement_package->stack_has_white_protein = false;
+		temp_refinement_package->number_of_run_refinments = 0;
+
+		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
+		temp_refinement.number_of_particles = number_of_particles;
+		temp_refinement.name = "Random Parameters";
+		temp_refinement.resolution_statistics_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
+
+		long current_particle_parent_image_id = 0;
+		long current_loaded_image_id = -1;
+		long position_in_stack = 0;
+
+		int current_x_pos;
+		int current_y_pos;
+
+		float average_value_at_edges;
+		float image_defocus_1;
+		float image_defocus_2;
+		float image_defocus_angle;
+		float image_phase_shift;
+		float image_amplitude_contrast;
+
+		long currently_opened_refinement_package_particle_stack = -1;
+		MRCFile input_stack_file;
+
+		ImageAsset *current_image_asset = NULL;
+		ParticlePositionAsset *current_particle_position_asset = NULL;
+
+		Image stack_image; // in case we are reading from a stack
+		Image current_image; // for reading images to cut from
+		Image cut_particle; // the cut particle
+
+		wxFileName output_stack_filename = main_frame->current_project.particle_stack_directory.GetFullPath() + wxString::Format("/particle_stack_%li.mrc", refinement_package_asset_panel->current_asset_number);
+
+		// specific package setup..
+
+		temp_refinement_package->stack_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement_package->stack_filename = output_stack_filename.GetFullPath();
+		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
+		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
+		temp_refinement_package->estimated_particle_size_in_angstroms = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
+
+		// setup the 3ds
+
+		wxWindowList all_children = initial_reference_page->my_panel->ScrollWindow->GetChildren();
+		ClassVolumeSelectPanel *panel_pointer;
+
+		for (counter = 0; counter <  all_children.GetCount(); counter++)
+		{
+			if (all_children.Item(counter)->GetData()->GetClassInfo()->GetClassName() == wxString("wxPanel"))
+			{
+				panel_pointer = reinterpret_cast <ClassVolumeSelectPanel *> (all_children.Item(counter)->GetData());
+
+				if (panel_pointer->VolumeComboBox->GetCurrentSelection() == 0)
+				{
+					temp_refinement_package->references_for_next_refinement.Add(-1);
+				}
+				else
+				{
+					temp_refinement_package->references_for_next_refinement.Add(volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(panel_pointer->VolumeComboBox->GetCurrentSelection() - 1)->asset_id);
+				}
+			}
+		}
+
+		// size the box..
+
+		cut_particle.Allocate(box_size_page->my_panel->BoxSizeSpinCtrl->GetValue(),box_size_page->my_panel->BoxSizeSpinCtrl->GetValue(),1);
+
+		// open the output stack
+
+		MRCFile output_stack(output_stack_filename.GetFullPath().ToStdString(), true);
+
+		// setup the refinement..
+
+		long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
+		temp_refinement_package->refinement_ids.Add(refinement_id);
+
+		temp_refinement.refinement_id = refinement_id;
+		temp_refinement.refinement_was_imported_or_generated = true;
+		temp_refinement.SizeAndFillWithEmpty(number_of_particles, temp_refinement_package->number_of_classes);
+
+
+		for (counter = 0; counter < number_of_particles; counter++)
+		{
+			// current particle, what image is it from?
+
+			current_particle_parent_image_id = class_average_particle_infos.Item(counter).parent_image_id;
+
+			if (current_particle_parent_image_id == -1) // we don't have a parent image, we will have to use the stack image..
+			{
+				if (currently_opened_refinement_package_particle_stack != class_average_particle_parent_refinement_packages_array_position[counter])
+				{
+					input_stack_file.OpenFile(refinement_package_asset_panel->all_refinement_packages[class_average_particle_parent_refinement_packages_array_position[counter]].stack_filename.ToStdString(), false);
+					currently_opened_refinement_package_particle_stack = class_average_particle_parent_refinement_packages_array_position[counter];
+				}
+
+				stack_image.ReadSlice(&input_stack_file, class_average_particle_infos[counter].position_in_stack);
+
+				if (refinement_package_asset_panel->all_refinement_packages[class_average_particle_parent_refinement_packages_array_position[counter]].stack_has_white_protein == true)
+				{
+					// invert..
+
+					stack_image.InvertRealValues();
+					stack_image.ZeroFloatAndNormalize();
+				}
+
+
+				// pad into the new box..
+
+				stack_image.ClipInto(&cut_particle, stack_image.ReturnAverageOfRealValuesOnEdges());
+
+				temp_particle_info.spherical_aberration = class_average_particle_infos[counter].spherical_aberration;
+				temp_particle_info.microscope_voltage = class_average_particle_infos[counter].microscope_voltage;
+				temp_particle_info.parent_image_id = -1;
+				temp_particle_info.pixel_size = class_average_particle_infos[counter].pixel_size;
+				temp_particle_info.position_in_stack = position_in_stack;
+				temp_particle_info.defocus_1 = class_average_particle_infos[counter].defocus_1;
+				temp_particle_info.defocus_2 = class_average_particle_infos[counter].defocus_2;
+				temp_particle_info.defocus_angle = class_average_particle_infos[counter].defocus_angle;
+				temp_particle_info.phase_shift = class_average_particle_infos[counter].phase_shift;
+				temp_particle_info.amplitude_contrast = class_average_particle_infos[counter].amplitude_contrast;
+
+				// fill in the refinement data..
+
+				for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+				{
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].position_in_stack = counter + 1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = class_average_particle_infos[counter].defocus_1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = class_average_particle_infos[counter].defocus_2;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = class_average_particle_infos[counter].defocus_angle;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = class_average_particle_infos[counter].phase_shift;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
+
+					if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
+					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+				}
+
+			}
+			else // we can cut it out the image..
+			{
+				if (current_loaded_image_id != current_particle_parent_image_id)
+				{
+					// load it..
+
+					current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle_parent_image_id));
+					current_image.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(), 1);
+					current_loaded_image_id = current_particle_parent_image_id;
+					average_value_at_edges = current_image.ReturnAverageOfRealValuesOnEdges();
+
+					// we have to get the defocus stuff from the database..
+
+					main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast);
+				}
+
+				// do the cutting..
+
+				current_x_pos = myround(class_average_particle_infos.Item(counter).x_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
+				current_y_pos = myround(class_average_particle_infos.Item(counter).y_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
+				current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
+
+				temp_particle_info.spherical_aberration = current_image_asset->spherical_aberration;
+				temp_particle_info.microscope_voltage = current_image_asset->microscope_voltage;
+				temp_particle_info.parent_image_id = current_particle_parent_image_id;
+				temp_particle_info.pixel_size = current_image_asset->pixel_size;
+				temp_particle_info.position_in_stack = position_in_stack;
+				temp_particle_info.defocus_1 = image_defocus_1;
+				temp_particle_info.defocus_2 = image_defocus_2;
+				temp_particle_info.defocus_angle = image_defocus_angle;
+				temp_particle_info.phase_shift = image_phase_shift;
+				temp_particle_info.amplitude_contrast = image_amplitude_contrast;
+
+				// fill in the refinement data..
+
+				for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+				{
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].position_in_stack = counter + 1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = image_defocus_1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = image_defocus_2;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = image_defocus_angle;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = image_phase_shift;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
+
+					if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
+					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+
+				}
+			}
+
+			position_in_stack++;
+			cut_particle.ZeroFloatAndNormalize();
+			cut_particle.WriteSlice(&output_stack, position_in_stack);
+
+			// set the contained particles..
+
+			temp_particle_info.x_pos = class_average_particle_infos.Item(counter).x_pos;
+			temp_particle_info.y_pos = class_average_particle_infos.Item(counter).y_pos;
+			temp_particle_info.original_particle_position_asset_id =  class_average_particle_infos.Item(counter).original_particle_position_asset_id;
+
+			temp_refinement_package->contained_particles.Add(temp_particle_info);
+			my_dialog->Update(counter + 1);
+		}
+
+		my_dialog->Destroy();
+	}
+	else
 	{
 
 		long number_of_particles = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].contained_particles.GetCount();
@@ -574,6 +860,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 		temp_refinement_package->stack_box_size = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].stack_box_size;
 		temp_refinement_package->stack_filename = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].stack_filename;
+		temp_refinement_package->stack_has_white_protein = refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection() - 3].stack_has_white_protein;
 		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
 		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
 		temp_refinement_package->estimated_particle_size_in_angstroms = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
@@ -1023,7 +1310,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	 //else return wizard_pointer->class_setup_page;
 
 	// wxPrintf("Number classes Next\n");
-	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->class_setup_page;
+	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->class_setup_pageA;
 	else return wizard_pointer->initial_reference_page;
  }
 
@@ -1071,7 +1358,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  wxWizardPage *  InitialReferencesWizardPage::GetPrev () const
  {
 	// wxPrintf("Initial Prev\n");
-	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->class_setup_page;
+	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->class_setup_pageE;
 	else return wizard_pointer->number_of_classes_page;
  }
 
@@ -1146,16 +1433,16 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
  ////////////////////////////
 
- //  Classes Setup Page
+ //  Classes Setup Page A
 
  /////////////////////////////
 
- ClassesSetupWizardPage::ClassesSetupWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+ ClassesSetupWizardPageA::ClassesSetupWizardPageA (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
  : wxWizardPage(parent, bitmap)
  {
 	wizard_pointer = parent;
 	wxBoxSizer* main_sizer;
-	my_panel = new ClassesSetupWizardPanel(this);
+	my_panel = new ClassesSetupWizardPanelA(this);
 
 	main_sizer = new wxBoxSizer( wxVERTICAL );
 	this->SetSizer(main_sizer);
@@ -1164,14 +1451,144 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  }
 
 
- wxWizardPage *  ClassesSetupWizardPage::GetNext () const
+ wxWizardPage *  ClassesSetupWizardPageA::GetNext () const
+ {
+	 if (my_panel->CarryOverYesButton->GetValue() == false) return wizard_pointer->class_setup_pageB;
+	 else return wizard_pointer->class_setup_pageC;
+ }
+
+
+
+ wxWizardPage *  ClassesSetupWizardPageA::GetPrev () const
+ {
+	 return wizard_pointer->number_of_classes_page;
+ }
+
+ ////////////////////////////
+
+ //  Classes Setup Page B
+
+ /////////////////////////////
+
+ ClassesSetupWizardPageB::ClassesSetupWizardPageB (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+ : wxWizardPage(parent, bitmap)
+ {
+	wizard_pointer = parent;
+	wxBoxSizer* main_sizer;
+	my_panel = new ClassesSetupWizardPanelB(this);
+
+	main_sizer = new wxBoxSizer( wxVERTICAL );
+	this->SetSizer(main_sizer);
+	main_sizer->Fit(this);
+	main_sizer->Add(my_panel);
+ }
+
+
+ wxWizardPage *  ClassesSetupWizardPageB::GetNext () const
+ {
+	return wizard_pointer->class_setup_pageC;
+ }
+
+
+
+ wxWizardPage *  ClassesSetupWizardPageB::GetPrev () const
+ {
+	 return wizard_pointer->class_setup_pageA;
+ }
+
+ ////////////////////////////
+
+ //  Classes Setup Page C
+
+ /////////////////////////////
+
+ ClassesSetupWizardPageC::ClassesSetupWizardPageC (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+ : wxWizardPage(parent, bitmap)
+ {
+	wizard_pointer = parent;
+	wxBoxSizer* main_sizer;
+	my_panel = new ClassesSetupWizardPanelC(this);
+
+	main_sizer = new wxBoxSizer( wxVERTICAL );
+	this->SetSizer(main_sizer);
+	main_sizer->Fit(this);
+	main_sizer->Add(my_panel);
+ }
+
+
+ wxWizardPage *  ClassesSetupWizardPageC::GetNext () const
+ {
+	return wizard_pointer->class_setup_pageD;
+ }
+
+
+
+ wxWizardPage *  ClassesSetupWizardPageC::GetPrev () const
+ {
+	 if (wizard_pointer->class_setup_pageA->my_panel->CarryOverYesButton->GetValue() == false) return wizard_pointer->class_setup_pageB;
+	 else return wizard_pointer->class_setup_pageA;
+ }
+
+ ////////////////////////////
+
+ //  Classes Setup Page D
+
+ /////////////////////////////
+
+ ClassesSetupWizardPageD::ClassesSetupWizardPageD (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+ : wxWizardPage(parent, bitmap)
+ {
+	wizard_pointer = parent;
+	wxBoxSizer* main_sizer;
+	my_panel = new ClassesSetupWizardPanelD(this);
+
+	main_sizer = new wxBoxSizer( wxVERTICAL );
+	this->SetSizer(main_sizer);
+	main_sizer->Fit(this);
+	main_sizer->Add(my_panel);
+ }
+
+
+ wxWizardPage *  ClassesSetupWizardPageD::GetNext () const
+ {
+	return wizard_pointer->class_setup_pageE;
+ }
+
+
+
+ wxWizardPage *  ClassesSetupWizardPageD::GetPrev () const
+ {
+	 return wizard_pointer->class_setup_pageC;
+ }
+
+ ////////////////////////////
+
+ //  Classes Setup Page E
+
+ /////////////////////////////
+
+ ClassesSetupWizardPageE::ClassesSetupWizardPageE (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+ : wxWizardPage(parent, bitmap)
+ {
+	wizard_pointer = parent;
+	wxBoxSizer* main_sizer;
+	my_panel = new ClassesSetupWizardPanelE(this);
+
+	main_sizer = new wxBoxSizer( wxVERTICAL );
+	this->SetSizer(main_sizer);
+	main_sizer->Fit(this);
+	main_sizer->Add(my_panel);
+ }
+
+
+ wxWizardPage *  ClassesSetupWizardPageE::GetNext () const
  {
 	return wizard_pointer->initial_reference_page;
  }
 
 
 
- wxWizardPage *  ClassesSetupWizardPage::GetPrev () const
+ wxWizardPage *  ClassesSetupWizardPageE::GetPrev () const
  {
-	 return wizard_pointer->number_of_classes_page;
+	 return wizard_pointer->class_setup_pageD;
  }

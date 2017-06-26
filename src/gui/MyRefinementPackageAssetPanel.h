@@ -18,6 +18,8 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void OnCreateClick( wxCommandEvent& event );
 		void OnRenameClick( wxCommandEvent& event );
 		void OnDeleteClick( wxCommandEvent& event );
+		void OnImportClick( wxCommandEvent& event );
+		void OnExportClick( wxCommandEvent& event );
 		void OnUpdateUI(wxUpdateUIEvent& event);
 		void OnDisplayStackButton( wxCommandEvent& event );
 

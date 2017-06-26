@@ -406,6 +406,7 @@ void MyMainFrame::StartNewProject()
 	MyNewProjectWizard *my_wizard = new MyNewProjectWizard(this);
 	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
 	my_wizard->RunWizard(my_wizard->m_pages.Item(0));
+	my_wizard->Destroy();
 
 	if (current_project.is_open == true)
 	{

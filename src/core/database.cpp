@@ -1253,12 +1253,14 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 	temp_package = new RefinementPackage;
 
 	int return_code;
+	int temp_int;
 
 
 	wxString group_sql_select_command;
 	sqlite3_stmt *list_statement = NULL;
 
-	GetFromBatchSelect("lttitrriii", &temp_package->asset_id, &temp_package->name, &temp_package->stack_filename, &temp_package->stack_box_size, &temp_package->symmetry, &temp_package->estimated_particle_weight_in_kda, &temp_package->estimated_particle_size_in_angstroms, &temp_package->number_of_classes, &temp_package->number_of_run_refinments, &temp_package->last_refinment_id);
+	GetFromBatchSelect("lttitrriiii", &temp_package->asset_id, &temp_package->name, &temp_package->stack_filename, &temp_package->stack_box_size, &temp_package->symmetry, &temp_package->estimated_particle_weight_in_kda, &temp_package->estimated_particle_size_in_angstroms, &temp_package->number_of_classes, &temp_package->number_of_run_refinments, &temp_package->last_refinment_id, &temp_int);
+	temp_package->stack_has_white_protein = temp_int;
 
 	// particles
 
@@ -1583,7 +1585,8 @@ bool Database::DeleteRunProfile(int wanted_id)
 
 void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 {
-	InsertOrReplace("REFINEMENT_PACKAGE_ASSETS", "Pttitrriii", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STACK_FILENAME", "STACK_BOX_SIZE", "SYMMETRY", "MOLECULAR_WEIGHT", "PARTICLE_SIZE", "NUMBER_OF_CLASSES", "NUMBER_OF_REFINEMENTS", "LAST_REFINEMENT_ID", asset_to_add->asset_id, asset_to_add->name.ToUTF8().data(), asset_to_add->stack_filename.ToUTF8().data(), asset_to_add->stack_box_size, asset_to_add->symmetry.ToUTF8().data(), asset_to_add->estimated_particle_weight_in_kda, asset_to_add->estimated_particle_size_in_angstroms, asset_to_add->number_of_classes, asset_to_add->number_of_run_refinments, asset_to_add->last_refinment_id);
+	int temp_int = asset_to_add->stack_has_white_protein;
+	InsertOrReplace("REFINEMENT_PACKAGE_ASSETS", "Pttitrriiii", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STACK_FILENAME", "STACK_BOX_SIZE", "SYMMETRY", "MOLECULAR_WEIGHT", "PARTICLE_SIZE", "NUMBER_OF_CLASSES", "NUMBER_OF_REFINEMENTS", "LAST_REFINEMENT_ID", "STACK_HAS_WHITE_PROTEIN", asset_to_add->asset_id, asset_to_add->name.ToUTF8().data(), asset_to_add->stack_filename.ToUTF8().data(), asset_to_add->stack_box_size, asset_to_add->symmetry.ToUTF8().data(), asset_to_add->estimated_particle_weight_in_kda, asset_to_add->estimated_particle_size_in_angstroms, asset_to_add->number_of_classes, asset_to_add->number_of_run_refinments, asset_to_add->last_refinment_id, temp_int);
 	CreateRefinementPackageContainedParticlesTable(asset_to_add->asset_id);
 	CreateRefinementPackageCurrent3DReferencesTable(asset_to_add->asset_id);
 	CreateRefinementPackageRefinementsList(asset_to_add->asset_id);

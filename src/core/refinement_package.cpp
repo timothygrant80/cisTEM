@@ -44,6 +44,8 @@ RefinementPackage::RefinementPackage()
 	estimated_particle_size_in_angstroms = 0.0;
 	estimated_particle_weight_in_kda = 0.0;
 	lowest_resolution_of_intial_parameter_generated_3ds = -1;
+
+	stack_has_white_protein = false;
 }
 
 RefinementPackage::~RefinementPackage()

@@ -571,6 +571,8 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 	}
 	else
 	{
+		RefinementRunProfileComboBox->Enable(true);
+		ReconstructionRunProfileComboBox->Enable(true);
 
 		if (running_job == false)
 		{
@@ -1506,7 +1508,7 @@ void RefinementManager::SetupReconstructionJob()
 			float    score_weight_conversion			= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
 			float    score_threshold					= my_parent->ReconstructioScoreThreshold->ReturnValue();
 			bool	 adjust_scores						= my_parent->AdjustScoreForDefocusYesRadio->GetValue();
-			bool	 invert_contrast					= false;
+			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 			bool	 crop_images						= my_parent->AutoCropYesRadioButton->GetValue();
 			bool	 dump_arrays						= true;
 			wxString dump_file_1 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
@@ -1783,7 +1785,7 @@ void RefinementManager::SetupRefinementJob()
 			bool calculate_matching_projections				= false;
 			bool apply_2d_masking							= my_parent->SphereClassificatonYesRadio->GetValue();
 			bool ctf_refinement								= my_parent->RefineCTFYesRadio->GetValue();
-			bool invert_contrast							= false;
+			bool invert_contrast							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 
 			bool normalize_particles = true;
 			bool exclude_blank_edges = false;

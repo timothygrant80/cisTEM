@@ -139,15 +139,74 @@ class LargestDimensionWizardPage : public wxWizardPage
 
 
 
-class ClassesSetupWizardPage : public wxWizardPage
+class ClassesSetupWizardPageA : public wxWizardPage
 {
 	MyNewRefinementPackageWizard *wizard_pointer;
 
 	public:
 
-	ClassesSetupWizardPanel *my_panel;
+	ClassesSetupWizardPanelA *my_panel;
 
-	ClassesSetupWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	ClassesSetupWizardPageA (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
+class ClassesSetupWizardPageB : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	ClassesSetupWizardPanelB *my_panel;
+
+	ClassesSetupWizardPageB (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
+class ClassesSetupWizardPageC : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	ClassesSetupWizardPanelC *my_panel;
+
+	ClassesSetupWizardPageC (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
+class ClassesSetupWizardPageD : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	ClassesSetupWizardPanelD *my_panel;
+
+	ClassesSetupWizardPageD (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+};
+
+class ClassesSetupWizardPageE : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	ClassesSetupWizardPanelE *my_panel;
+
+	ClassesSetupWizardPageE (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
 
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const;
@@ -182,12 +241,17 @@ public:
 		ParticleGroupWizardPage *particle_group_page;
 		NumberofClassesWizardPage *number_of_classes_page;
 		BoxSizeWizardPage *box_size_page;
-		ClassesSetupWizardPage *class_setup_page;
 		InitialReferencesWizardPage *initial_reference_page;
 		SymmetryWizardPage *symmetry_page;
 		MolecularWeightWizardPage *molecular_weight_page;
 		LargestDimensionWizardPage *largest_dimension_page;
 		ClassSelectionWizardPage *class_selection_page;
+
+		ClassesSetupWizardPageA *class_setup_pageA;
+		ClassesSetupWizardPageB *class_setup_pageB;
+		ClassesSetupWizardPageC *class_setup_pageC;
+		ClassesSetupWizardPageD *class_setup_pageD;
+		ClassesSetupWizardPageE *class_setup_pageE;
 
 		void DisableNextButton();
 		void EnableNextButton();

@@ -1108,7 +1108,12 @@ void AbInitioManager::SetupReconstructionJob()
 
 	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", current_percent_used / 100.0, 10.0);
 	else
-	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+	{
+		//if (current_high_res_limit > 20) 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+		//else 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0);
+		if (current_high_res_limit > 20) 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+	}
+
 
 	int class_counter;
 	long counter;
@@ -1171,7 +1176,7 @@ void AbInitioManager::SetupReconstructionJob()
 			float    score_weight_conversion			= 0;//my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
 			float    score_threshold					= 0;//my_parent->ReconstructioScoreThreshold->ReturnValue();
 			bool	 adjust_scores						= true;//my_parent->AdjustScoreForDefocusYesRadio->GetValue();
-			bool	 invert_contrast					= false;
+			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 			bool	 crop_images						= false;//my_parent->AutoCropYesRadioButton->GetValue();
 			bool	 dump_arrays						= true;
 			wxString dump_file_1 						= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup_dump_file_%i_odd_%i.dump", class_counter, job_counter +1);
@@ -1519,14 +1524,14 @@ void AbInitioManager::SetupRefinementJob()
 			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 
-			float    mask_radius							= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    mask_radius							= 180;//input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    inner_mask_radius						= 0;
 
 			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms;
 			//if (low_resolution_limit > 100.00) low_resolution_limit = 100.00;
 
 			float    high_resolution_limit					= current_high_res_limit;
-			float	 signed_CC_limit						= 50.0;
+			float	 signed_CC_limit						= 0.0;
 			float	 classification_resolution_limit		= current_high_res_limit;
 			float    mask_radius_search						= my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float	 high_resolution_limit_search			= current_high_res_limit;
@@ -1558,7 +1563,7 @@ void AbInitioManager::SetupRefinementJob()
 			bool calculate_matching_projections				= false;
 			bool apply_2d_masking							= false;
 			bool ctf_refinement								= false;
-			bool invert_contrast							= false;
+			bool invert_contrast							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 
 			bool normalize_particles = true;
 			bool exclude_blank_edges = false;

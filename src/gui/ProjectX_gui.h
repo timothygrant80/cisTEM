@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jan 30 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -43,6 +43,7 @@ class ShowCTFResultsPanel;
 class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
 
+#include "job_panel.h"
 #include <wx/gdicmn.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -1759,6 +1760,64 @@ class NewProjectWizard : public wxWizard
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ImportRefinementPackageWizardParent
+///////////////////////////////////////////////////////////////////////////////
+class ImportRefinementPackageWizardParent : public wxWizard 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText465;
+		wxStaticLine* m_staticline105;
+		wxRadioButton* FrealignRadioButton;
+		wxRadioButton* RelionRadioButton;
+		wxStaticText* m_staticText474;
+		wxStaticLine* m_staticline106;
+		wxStaticText* m_staticText41;
+		wxTextCtrl* ParticleStackFileTextCtrl;
+		wxButton* m_button241;
+		wxStaticText* MetaFilenameStaticText;
+		wxTextCtrl* MetaDataFileTextCtrl;
+		wxButton* m_button24;
+		wxStaticText* m_staticText476;
+		wxStaticLine* m_staticline107;
+		wxStaticText* m_staticText477;
+		NumericTextCtrl* PixelSizeTextCtrl;
+		wxStaticText* m_staticText478;
+		NumericTextCtrl* MicroscopeVoltageTextCtrl;
+		wxStaticText* m_staticText479;
+		NumericTextCtrl* SphericalAberrationTextCtrl;
+		wxStaticText* m_staticText480;
+		NumericTextCtrl* AmplitudeContrastTextCtrl;
+		wxStaticText* m_staticText459;
+		wxStaticText* m_staticText460;
+		wxStaticText* m_staticText214;
+		wxStaticText* m_staticText462;
+		wxRadioButton* BlackProteinRadioButton;
+		wxRadioButton* WhiteProteinRadioButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
+		virtual void OnPageChanged( wxWizardEvent& event ) { event.Skip(); }
+		virtual void OnPageChanging( wxWizardEvent& event ) { event.Skip(); }
+		virtual void OnPathChange( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnStackBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMetaBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		wxComboBox* SymmetryComboBox;
+		NumericTextCtrl* MolecularWeightTextCtrl;
+		NumericTextCtrl* LargestDimensionTextCtrl;
+		
+		ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
+		WizardPages m_pages;
+		~ImportRefinementPackageWizardParent();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class AddRunCommandDialog
 ///////////////////////////////////////////////////////////////////////////////
 class AddRunCommandDialog : public wxDialog 
@@ -2020,6 +2079,8 @@ class RefinementPackageAssetPanel : public wxPanel
 		wxButton* CreateButton;
 		wxButton* RenameButton;
 		wxButton* DeleteButton;
+		wxButton* ImportButton;
+		wxButton* ExportButton;
 		RefinementPackageListControl* RefinementPackageListCtrl;
 		wxPanel* m_panel51;
 		wxStaticText* ContainedParticlesStaticText;
@@ -2050,6 +2111,8 @@ class RefinementPackageAssetPanel : public wxPanel
 		virtual void OnCreateClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRenameClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDeleteClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImportClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void MouseCheckPackagesVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }
@@ -2267,19 +2330,103 @@ class InitialReferenceSelectWizardPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ClassesSetupWizardPanel 
+/// Class ClassesSetupWizardPanelA
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanel  : public wxPanel 
+class ClassesSetupWizardPanelA : public wxPanel 
 {
 	private:
 	
 	protected:
-		wxStaticText* m_staticText232;
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn40;
 	
 	public:
+		wxRadioButton* CarryOverYesButton;
+		AutoWrapStaticText* InfoText;
 		
-		ClassesSetupWizardPanel ( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
-		~ClassesSetupWizardPanel ();
+		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~ClassesSetupWizardPanelA();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassesSetupWizardPanelB
+///////////////////////////////////////////////////////////////////////////////
+class ClassesSetupWizardPanelB : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxStaticLine* m_staticline103;
+	
+	public:
+		wxListCtrl* ClassListCtrl;
+		AutoWrapStaticText* InfoText;
+		
+		ClassesSetupWizardPanelB( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~ClassesSetupWizardPanelB();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassesSetupWizardPanelC
+///////////////////////////////////////////////////////////////////////////////
+class ClassesSetupWizardPanelC : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxStaticLine* m_staticline104;
+		wxListCtrl* m_listCtrl17;
+		wxListCtrl* m_listCtrl20;
+	
+	public:
+		AutoWrapStaticText* InfoText;
+		
+		ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~ClassesSetupWizardPanelC();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassesSetupWizardPanelD
+///////////////////////////////////////////////////////////////////////////////
+class ClassesSetupWizardPanelD : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn39;
+		wxRadioButton* m_radioBtn40;
+	
+	public:
+		AutoWrapStaticText* InfoText;
+		
+		ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~ClassesSetupWizardPanelD();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassesSetupWizardPanelE
+///////////////////////////////////////////////////////////////////////////////
+class ClassesSetupWizardPanelE : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn39;
+		wxRadioButton* m_radioBtn40;
+	
+	public:
+		AutoWrapStaticText* InfoText;
+		
+		ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~ClassesSetupWizardPanelE();
 	
 };
 

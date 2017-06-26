@@ -1018,7 +1018,7 @@ wxString VolumeAssetList::ReturnAssetFullFilename(long wanted_asset)
 
 int VolumeAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
 {
-	MyDebugAssertTrue(last_found_position < number_of_assets,"Bad last found position: %i >= %i\n",last_found_position,number_of_assets);
+	MyDebugAssertTrue(last_found_position < number_of_assets || number_of_assets == 0,"Bad last found position: %i >= %li\n",last_found_position,number_of_assets);
 
 	for (int counter = last_found_position; counter < number_of_assets; counter++)
 	{

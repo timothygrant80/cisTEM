@@ -604,7 +604,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
 				{
-					if (RefinementPackageSelectPanel->GetSelection() != wxNOT_FOUND )
+					if (RefinementPackageSelectPanel->GetSelection() != wxNOT_FOUND && ReferenceSelectPanel->GetSelection() != wxNOT_FOUND)
 					{
 						//if (UseMaskCheckBox->GetValue() == false || MaskSelectPanel->AssetComboBox->GetSelection() != wxNOT_FOUND)
 						estimation_button_status = true;
@@ -965,7 +965,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 
 	// make sure we have references..
-
+/*
 	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).number_of_classes; class_counter++)
 	{
 		if (refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).references_for_next_refinement[class_counter] == -1)
@@ -975,14 +975,12 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 		}
 	}
-
+*/
 	// setup input/output refinements
 
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).refinement_ids[0];
 	input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
 	output_refinement = new Refinement;
-
-
 
 	// create a refinement with random angles etc..
 
@@ -1381,7 +1379,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 
 			float    score_threshold					= 0;//my_parent->ReconstructioScoreThreshold->ReturnValue();
 			bool	 adjust_scores						= true;//my_parent->AdjustScoreForDefocusYesRadio->GetValue();
-			bool	 invert_contrast					= false;
+			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).stack_has_white_protein;
 			bool	 crop_images						= my_parent->AutoCropYesRadioButton->GetValue();
 			bool	 dump_arrays						= true;
 			wxString dump_file_1 						= main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
@@ -1706,7 +1704,7 @@ void AutoRefinementManager::SetupRefinementJob()
 			bool calculate_matching_projections				= false;
 			bool apply_2d_masking							= false; //my_parent->SphereClassificatonYesRadio->GetValue();
 			bool ctf_refinement								= false;
-			bool invert_contrast							= false;
+			bool invert_contrast							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).stack_has_white_protein;
 
 			bool normalize_particles = true;
 			bool exclude_blank_edges = false;

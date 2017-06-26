@@ -46,6 +46,20 @@ void MyRefinementPackageAssetPanel::OnRenameClick( wxCommandEvent& event )
 
 }
 
+void MyRefinementPackageAssetPanel::OnImportClick( wxCommandEvent& event )
+{
+	ImportRefinementPackageWizard *my_wizard = new ImportRefinementPackageWizard(this);
+	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
+	my_wizard->RunWizard(my_wizard->m_pages.Item(0));
+	my_wizard->Destroy();
+}
+
+void MyRefinementPackageAssetPanel::OnExportClick( wxCommandEvent& event )
+{
+	wxPrintf("Export\n");
+
+}
+
 void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 {
 	if (selected_refinement_package >= 0)
@@ -270,12 +284,14 @@ void MyRefinementPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event)
 		{
 			RenameButton->Enable(true);
 			DeleteButton->Enable(true);
+			ExportButton->Enable(true);
 			DisplayStackButton->Enable(true);
 		}
 		else
 		{
 			RenameButton->Enable(false);
 			DeleteButton->Enable(false);
+			ExportButton->Enable(false);
 			DisplayStackButton->Enable(false);
 		}
 

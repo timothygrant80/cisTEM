@@ -105,11 +105,6 @@ void MyNewProjectWizard::CheckProjectPath()
 		if(win) win->Enable(true);
 
 	}
-
-
-
-
-
 }
 
 void MyNewProjectWizard::OnFinished(  wxWizardEvent& event  )

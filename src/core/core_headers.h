@@ -77,6 +77,7 @@ const std::complex<float> I(0.0,1.0);
 #include "conjugate_gradient.h"
 #include "euler_search.h"
 #include "frealign_parameter_file.h"
+#include "basic_star_file_reader.h"
 #include "particle_finder.h"
 #include "myapp.h"
 

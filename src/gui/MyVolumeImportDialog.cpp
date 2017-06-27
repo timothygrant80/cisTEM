@@ -222,6 +222,7 @@ void MyVolumeImportDialog::ImportClick( wxCommandEvent& event )
 		volume_asset_panel->FillContentsList();
 		//main_frame->RecalculateAssetBrowser();
 		//main_frame->DirtyVolumeGroups();
+		main_frame->DirtyVolumes();
 	}
 
 

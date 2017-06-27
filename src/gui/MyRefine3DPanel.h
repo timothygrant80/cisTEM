@@ -141,7 +141,7 @@ class MyRefine3DPanel : public Refine3DPanel
 class Refine3DMaskerThread : public wxThread
 {
 	public:
-	Refine3DMaskerThread(Refine3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_filter_cosine_edge_width) : wxThread(wxTHREAD_DETACHED)
+	Refine3DMaskerThread(Refine3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		input_files = wanted_input_files;
@@ -150,7 +150,7 @@ class Refine3DMaskerThread : public wxThread
 		cosine_edge_width = wanted_cosine_edge_width;
 		weight_outside_mask = wanted_weight_outside_mask;
 		low_pass_filter_radius = wanted_low_pass_filter_radius;
-		filter_cosine_edge_width = wanted_filter_cosine_edge_width;
+		pixel_size = wanted_pixel_size;
 	}
 
 	protected:
@@ -163,7 +163,7 @@ class Refine3DMaskerThread : public wxThread
 	float cosine_edge_width;
 	float weight_outside_mask;
 	float low_pass_filter_radius;
-	float filter_cosine_edge_width;
+	float pixel_size;
 
     virtual ExitCode Entry();
 };

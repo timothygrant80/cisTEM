@@ -2072,6 +2072,8 @@ void AutoRefinementManager::ProcessAllJobsFinished()
         main_frame->ClearAutoRefine3DScratch();
 
 		//wxPrintf("Calling cycle refinement\n");
+        main_frame->DirtyVolumes();
+        main_frame->DirtyRefinements();
 		CycleRefinement();
 	}
 

@@ -2394,6 +2394,8 @@ void RefinementManager::ProcessAllJobsFinished()
 
 
 		//wxPrintf("Calling cycle refinement\n");
+		main_frame->DirtyVolumes();
+		main_frame->DirtyRefinements();
 		CycleRefinement();
 	}
 
@@ -2432,7 +2434,7 @@ void RefinementManager::DoMasking()
 
 	float wanted_filter_cosine_edge_width = my_parent->MaskFilterEdgeWidthTextCtrl->ReturnValue();
 
-	Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, wanted_filter_cosine_edge_width);
+	Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size);
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -2499,6 +2501,7 @@ void RefinementManager::CycleRefinement()
 		}
 	}
 
+	main_frame->DirtyVolumes();
 	main_frame->DirtyRefinements();
 }
 
@@ -2559,7 +2562,7 @@ wxThread::ExitCode Refine3DMaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-		input_image.ApplyMask(mask_image, cosine_edge_width, weight_outside_mask, low_pass_filter_radius, filter_cosine_edge_width);
+		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 10.0);
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);

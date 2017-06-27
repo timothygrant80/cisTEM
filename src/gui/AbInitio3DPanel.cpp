@@ -1214,7 +1214,7 @@ void AbInitioManager::SetupReconstructionJob()
 			float    padding							= 1.0f;
 			bool	 normalize_particles				= true;
 			bool	 exclude_blank_edges				= false;
-			bool	 split_even_odd						= true;
+			bool	 split_even_odd						= false;
 			bool     centre_mass                        = true;
 
 			bool threshold_input_3d = false;

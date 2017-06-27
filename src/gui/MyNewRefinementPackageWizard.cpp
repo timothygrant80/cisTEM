@@ -732,6 +732,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				// pad into the new box..
 
+				position_in_stack++;
+
 				stack_image.ClipInto(&cut_particle, stack_image.ReturnAverageOfRealValuesOnEdges());
 
 				temp_particle_info.spherical_aberration = class_average_particle_infos[counter].spherical_aberration;
@@ -786,6 +788,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				// do the cutting..
 
+				position_in_stack++;
+
 				current_x_pos = myround(class_average_particle_infos.Item(counter).x_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
 				current_y_pos = myround(class_average_particle_infos.Item(counter).y_pos / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
 				current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
@@ -825,7 +829,6 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				}
 			}
 
-			position_in_stack++;
 			cut_particle.ZeroFloatAndNormalize();
 			cut_particle.WriteSlice(&output_stack, position_in_stack);
 

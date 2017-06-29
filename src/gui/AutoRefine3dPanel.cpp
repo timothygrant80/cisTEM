@@ -87,7 +87,7 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
 	InfoText->BeginFontSize(14);
-	InfoText->WriteText(wxT("3D Refinement & Reconstruction (FrealignX)"));
+	InfoText->WriteText(wxT("3D Auto Refinement"));
 	InfoText->EndFontSize();
 	InfoText->EndBold();
 	InfoText->EndUnderline();
@@ -95,27 +95,14 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("The goal of refinement and reconstruction is to obtain 3D maps of the imaged particle at the highest possible resolution. Refinement typically starts with a preexisting structure that serves as a reference to determine initial particle alignment parameters using a global parameter search. In subsequent iterations, these parameters are refined and (optionally) the dataset can be classified into several classes with distinct structural features.\nThis panel allows the user to define a refinement job that includes a set number of iterations (refinement cycles) and number of desired classes to be generated (Lyumkis et al. 2013). The general refinement strategies and options are similar to those available with Frealign and are described in Grigorieff, 2016:"));
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->WriteImage(niko_picture1_bmp);
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+
+
+
 
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("In each refinement cycle, the particle parameters are aligned in a local search (searching only parameters close to those found in the previous cycle) against the reconstruction (or reconstructions if more than one class is refined) obtained in the previous cycle. The final result includes refined alignment parameters, class memberships (occupancies) and filtered 3D reconstructions (Sindelar and Grigorieff, 2012) for all classes. Further refinement can be performed with different numbers of classes by setting up a new refinement package and selecting reconstructions and particles of classes from a previous package as input for the new package. To bring out high-resolution features in the maps, the user should sharpen the reconstructions by applying a negative B-factor, for example using the external program bfactor. The following shows a typical workflow :"));
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
-
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->WriteImage(niko_picture2_bmp);
+	InfoText->WriteText(wxT("This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Manual Refine panel). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options)."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -132,24 +119,14 @@ void AutoRefine3DPanel::SetInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Input Refinement Package : "));
+	InfoText->WriteText(wxT("Starting Reference : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."));
+	InfoText->WriteText(wxT("The initial 3D reconstruction used to align particles against. This should be of reasonable quality to ensure successful refinement."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Input Parameters : "));
+	InfoText->WriteText(wxT("Initial Res. Limit (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The source of the starting parameters for this refinement run. These can be either set to be random Euler angles and zero X,Y shifts, or they can be the output of a previous refinement (if available)."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Local Refinement/Global Search : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If no starting parameters from a previous refinement are available, they have to be determined in a global search (slow); otherwise it is usually sufficient to perform local refinement (fast)."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("No. of Cycles to Run : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The number of refinement cycles to run. For a global search, one is usually sufficient, possibly followed by another one at a later stage in the refinement if the user suspects that the initial reference was limited in quality such that a significant number of particles were misaligned. For local refinement of a single class, typically 3 to 5 cycles are sufficient, possibly followed by another local refinement at increased resolution (see below). If multiple classes are refined, between 30 and 50 cycles should be run to ensure convergence of the classes."));
+	InfoText->WriteText(wxT("The starting resolution limit used to align particles against the starting reference. In most cases, this should specify a relatively low resolution to remove potential bias in the starting reference."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -164,6 +141,7 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
+
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginUnderline();
 	InfoText->WriteText(wxT("General Refinement"));
@@ -172,6 +150,14 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
+
+
+
+
+
+
+
+
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Low/High-Resolution Limit (Å) : "));
 	InfoText->EndBold();
@@ -179,15 +165,9 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->Newline();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Mask Radius (Å) : "));
+	InfoText->WriteText(wxT("Inner/Outer Mask Radius (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The radius of the circular mask applied to the input images before refinement starts. This mask should be sufficiently large to include the largest dimension of the particle. When a global search is performed, the radius should be set to include the expected area containing the particle. This area is usually larger than the area defined by the largest dimension of the particle because particles may not be precisely centered."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Signed CC Resolution Limit (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Particle alignment is done by maximizing a correlation coefficient with the reference. The user has the option to maximize the unsigned correlation coefficient instead (starting at the limit set here) to reduce overfitting (Stewart and Grigorieff, 2004). Overfitting is also reduced by appropriate weighting of the data and this is usually sufficient to achieve good refinement results. The limit set here should therefore be set to 0.0 to maximize the signed correlation at all resolutions, unless there is evidence that there is overfitting. (This feature was formerly known as “FBOOST”.)"));
+	InfoText->WriteText(wxT("Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."));
 	InfoText->Newline();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -199,15 +179,15 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Number of Results to Refine : "));
+	InfoText->WriteText(wxT("Global Mask Radius (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. Only the set of parameters yielding the best score (correlation coefficient) is kept. Increasing N will increase the chances of finding the correct particle orientations but will slow down the search. A value of 20 is recommended."));
+	InfoText->WriteText(wxT("The radius describing the area within the boxed-out particles that contains the particles. This radius us usually larger than the particle radius to account for particles that are not perfectly centered. The best value will depend on the way the particles were picked."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Angular Search Step (°) : "));
+	InfoText->WriteText(wxT("Number of Results to Refine : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The angular step used to generate the search grid for the global search. An appropriate value is suggested by default (depending on particle size and high-resolution limit) but smaller values can be tried if the user suspects that the search misses orientations found in the particle dataset. The smaller the value, the finer the search grid and the slower the search."));
+	InfoText->WriteText(wxT("For a global search, an angular grid search is performed and the alignment parameters for the N best matching projections are then refined further in a local refinement. Only the set of parameters yielding the best score (correlation coefficient) is kept. Increasing N will increase the chances of finding the correct particle orientations but will slow down the search. A value of 20 is recommended."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
@@ -216,57 +196,6 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->WriteText(wxT("The global search can be limited in the X and Y directions (measured from the box center) to ensure that only particles close to the box center are found. This is useful when the particle density is high and particles end up close to each other. In this case, it is usually still possible to align all particles in a cluster of particles (assuming they do not significantly overlap). The values provided here for the search range should be set to exclude the possibility that the same particle is selected twice and counted as two different particles."));
 	InfoText->Newline();
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("Classification"));
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("High-Resolution Limit (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The limit set here is analogous to the high-resolution limit set for refinement. It cannot exceed the refinement limit. Setting it to a lower resolution may increase the useful SNR for classification and lead to better separation of particles with different structural features. However, at lower resolution the classification may also become less sensitive to heterogeneity represented by smaller structural features."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Focused Classification? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Classification can be performed based on structural variability in a defined region of the particle. This is useful when there are multiple regions that have uncorrelated structural variability. Using focused classification, each of these regions can be classified in turn. The focus feature can also be used to reduce noise from other parts of the images and increase the useful SNR for classification. The focus region is defined by a sphere with coordinates and radius in the following four inputs. (This feature was formerly known as “focus_mask”.)"));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Sphere X/Y/Z Co-ordinate and Radius (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("These values describe a spherical region inside the particle that contains the structural variability to focus on."));
-	InfoText->Newline();
-
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("CTF"));
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Refine CTF? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Should the CTF be refined as well? This is only recommended for high-resolution data that yield reconstructions of better than 4 Å resolution, and for particles of sufficient molecular mass (500 kDa and higher)."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Defocus Search Range (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The range of defocus values to search over for each particle. A search with the step size given in the next input will be performed starting at the defocus values determined in the previous refinement cycle minus the search range, up to values plus the search range. The search steps will be applied to both defocus values, keeping the estimated astigmatism constant."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Defocus Search Step (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The search step for the defocus search."));
-	InfoText->Newline();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginUnderline();
@@ -277,42 +206,38 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Inner/Outer Mask Radius (Å) : "));
+	InfoText->WriteText(wxT("Autocrop Images? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."));
+	InfoText->WriteText(wxT("Should the particle images be cropped to a minimum size determined by the mask radius to accelerate 3D reconstruction? This is usually not recommended as it increases interpolation artifacts."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Score to B-factor Constant (Å2) : "));
+	InfoText->WriteText(wxT("Apply Likelihood Blurring? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The particles inserted into a reconstruction will be weighted according to their scores. The weighting function is akin to a B-factor, attenuating high-resolution signal of particles with lower scores more strongly than of particles with higher scores. The B-factor applied to each particle prior to insertion into the reconstruction is calculated as B = (score – average score) * constant * 0.25. Users are encouraged to calculate reconstructions with different values to find a value that produces the highest resolution. Values between 0 and 10 are reasonable (0 will disable weighting)."));
+	InfoText->WriteText(wxT("Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Adjust Score for Defocus? : "));
+	InfoText->WriteText(wxT("Smoothing Factor : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Scores sometimes depend on the amount of image defocus. A larger defocus amplifies low-resolution features in the image and this may lead to higher particle scores compared to particles from an image with a small defocus. Adjusting the scores for this difference makes sure that particles with smaller defocus are not systematically downweighted by the above B-factor weighting."));
+	InfoText->WriteText(wxT("A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."));
 	InfoText->Newline();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Masking"));
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Score Threshold : "));
+	InfoText->WriteText(wxT("Use Auto-Masking? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage."));
+	InfoText->WriteText(wxT("Should the 3D reconstructions be masked? Masking can suppress spurious density features that could be amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."));
+	InfoText->Newline();
 	InfoText->Newline();
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Resolution Limit (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Autocrop Images? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."));
-	InfoText->Newline();
-
-//	InfoText->EndAlignment();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
@@ -325,57 +250,9 @@ void AutoRefine3DPanel::SetInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Stewart, A., Grigorieff, N.,"));
+	InfoText->WriteText(wxT("Grigorieff, N.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2004. Noise bias in the refinement of structures derived from single particles. Ultramicroscopy 102, 67-84. "));
-	InfoText->BeginURL("http://dx.doi.org/10.1016/j.ultramic.2004.08.008");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("dio:10.1016/j.ultramic.2004.08.008"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->EndAlignment();
-	InfoText->Newline();
-	InfoText->Newline();
-
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Sindelar, C. V., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Optimal noise reduction in 3D reconstructions of single particles using a volume-normalized filter. J. Struct. Biol. 180, 26-38."));
-	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2012.05.005");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("dio:10.1016/j.jsb.2012.05.005"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->EndAlignment();
-	InfoText->Newline();
-	InfoText->Newline();
-
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Lyumkis, D., Brilot, A. F., Theobald, D. L., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2013. Likelihood-based classification of cryo-EM images using FREALIGN. J. Struct. Biol. 183, 377-388."));
-	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2013.07.005");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("dio:10.1016/j.jsb.2013.07.005"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->EndAlignment();
-	InfoText->Newline();
-	InfoText->Newline();
-
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Grigorieff, N., "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol., in press."));
+	InfoText->WriteText(wxT(" 2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191-226. "));
 	InfoText->BeginURL("http://dx.doi.org/10.1016/bs.mie.2016.04.013");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
@@ -1006,7 +883,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift = 0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift = 0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = 0.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = 1.0;
 		}
 
@@ -1020,7 +897,8 @@ void AutoRefinementManager::BeginRefinementCycle()
 	// how many particles to use..
 
 	long number_of_asym_units = number_of_particles * ReturnNumberofAsymmetricUnits(current_refinement_package->symmetry);
-	long wanted_start_number_of_asym_units = 10000 * number_of_classes;
+	float estimated_required_asym_units = 8000.0f * expf(75.0f / powf(my_parent->HighResolutionLimitTextCtrl->ReturnValue(),2));
+	long wanted_start_number_of_asym_units = myroundint(estimated_required_asym_units) * number_of_classes;
 
 	// what percentage is this.
 
@@ -1028,13 +906,19 @@ void AutoRefinementManager::BeginRefinementCycle()
 	if (start_percent_used > 100.0) start_percent_used = 100.0;
 
 	current_percent_used = start_percent_used;
-	current_percent_used = 100.0;
+	max_percent_used = current_percent_used;
 
 	this_is_the_final_round = false;
 	number_of_rounds_run = 0;
 	percent_used_per_round.Clear();
 	resolution_per_round.Clear();
 	high_res_limit_per_round.Clear();
+
+	number_of_global_alignments.Clear();
+	number_of_global_alignments.Add(0, number_of_particles);
+
+	rounds_since_global_alignment.Clear();
+	rounds_since_global_alignment.Add(0, number_of_particles);
 
 	// we need to set the currently selected reference filenames..
 
@@ -1128,12 +1012,10 @@ void AutoRefinementManager::RunRefinementJob()
 
 	my_parent->WriteBlueText(wxString::Format(wxT("Running refinement round %2i (%.2f %%)\n"), number_of_rounds_run + 1, current_percent_used));
 
-#ifdef DEBUG
 	for (int class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
-		my_parent->WriteBlueText(wxString::Format(wxT("Res. for class #%i = %.2f"), class_counter, class_high_res_limits[class_counter]));
+		my_parent->WriteBlueText(wxString::Format(wxT("Res. limit for class #%i = %.2f"), class_counter, class_high_res_limits[class_counter]));
 	}
-#endif
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].gui_address);
 	my_parent->my_job_id = current_job_id;
@@ -1166,8 +1048,8 @@ void AutoRefinementManager::RunRefinementJob()
 		else
 		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
 		else
-
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
+
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 
@@ -1271,7 +1153,7 @@ void AutoRefinementManager::RunMerge3dJob()
 		else
 		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
 		else
-
+		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
 
 	/*
@@ -1287,7 +1169,7 @@ void AutoRefinementManager::RunMerge3dJob()
 		my_parent->RefinementPackageSelectPanel->Enable(false);
 		*/
 
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
+
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
@@ -1370,14 +1252,18 @@ void AutoRefinementManager::SetupReconstructionJob()
 
 			if (this_is_the_final_round == true) resolution_limit_rec = 0;
 			else
-			resolution_limit_rec = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 12.5 );
+			resolution_limit_rec = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 10 );
 			//wxPrintf("\n\n\n\nres limit = %.2f\n\n\n\n", resolution_limit_rec);
 
 			float    score_weight_conversion;
 			if (class_high_res_limits[class_counter] < 8) score_weight_conversion = 2;
 			else score_weight_conversion = 0.0;
 
-			float    score_threshold					= 0;//my_parent->ReconstructioScoreThreshold->ReturnValue();
+
+			float    score_threshold;
+			if (current_percent_used * 3.0f < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
+			else score_threshold = current_percent_used / 100.0; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
+
 			bool	 adjust_scores						= true;//my_parent->AdjustScoreForDefocusYesRadio->GetValue();
 			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).stack_has_white_protein;
 			bool	 crop_images						= my_parent->AutoCropYesRadioButton->GetValue();
@@ -1554,40 +1440,52 @@ void AutoRefinementManager::SetupRefinementJob()
 	long number_of_particles;
 	float particles_per_job;
 	float likelihood_to_global;
+	bool do_global_for_this_particle;
 
 	// get the last refinement for the currently selected refinement package..
 
 	wxArrayString written_parameter_files;
 	wxArrayString written_res_files;
 
+	float lowest_res = FLT_MAX;
+
+	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
+	{
+		lowest_res = std::min(class_high_res_limits[class_counter], lowest_res);
+	}
+
 	// setup whether to do global or local refinement..
 
-	for (int class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
-	{
-		float likelihood_to_global = powf(class_high_res_limits[class_counter], 2) / 1000;
+	for ( long particle_counter = 0; particle_counter < input_refinement->number_of_particles; particle_counter++)
+    {
+		// should we do local or global?
 
+		float round_adjust = powf(number_of_global_alignments[particle_counter] - floor(rounds_since_global_alignment[particle_counter] / 3), 2);
+		if (round_adjust < 1) round_adjust = 1;
 
-		for ( long particle_counter = 0; particle_counter < input_refinement->number_of_particles; particle_counter++)
-        {
-			if (number_of_rounds_run == 0) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 0.0;
+		float likelihood_to_global;
+		if (lowest_res < 4) likelihood_to_global = -5; // they will all be local at such high res.
+		else likelihood_to_global = powf(lowest_res, 2) / (250.0f * round_adjust); // very arbritrary
+
+		if (fabsf(global_random_number_generator.GetUniformRandom()) < likelihood_to_global) do_global_for_this_particle = true;
+		else do_global_for_this_particle = false;
+
+		for (int class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
+		{
+			if (number_of_global_alignments[particle_counter] == 0) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 0.0;
 			else
 			{
-				// should we do local or global?
 
 				if (this_is_the_final_round == true) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
 				else
-				if (input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active == 0.0)
-				{
-					input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
-				}
+				if (rounds_since_global_alignment[particle_counter] == 0) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
 				else
-				if (fabsf(global_random_number_generator.GetUniformRandom()) < likelihood_to_global)
+				if (do_global_for_this_particle == true)
 				{
 					input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 0.0;
 				}
 				else
 				input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
-
 			}
         }
 	}
@@ -1631,7 +1529,10 @@ void AutoRefinementManager::SetupRefinementJob()
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
 
-			float	 percent_used							= current_percent_used / 100.0;
+			float	 percent_used;
+			if (number_of_rounds_run == 0) percent_used = 1.0f;
+			else percent_used = (current_percent_used * 3.0) / 100.0;
+			if (percent_used > 1) percent_used = 1;
 
 #ifdef DEBUG
 			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li.par", first_particle, last_particle);
@@ -2113,12 +2014,18 @@ void AutoRefinementManager::DoMasking()
 void AutoRefinementManager::CycleRefinement()
 {
 	percent_used_per_round.Add(current_percent_used);
+	RefinementPackage *current_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection());
 
+	int class_counter;
+	long particle_counter;
 
 		// use highest resoluton..
 	float best_res = FLT_MAX;
+	float best_p143_res = FLT_MAX;
 	float worse_res = -FLT_MAX;
+
 	bool should_stop = false;
+	bool did_resolution_improve;
 
 	float current_0p5_resolution;
 	float bleed_resolution;
@@ -2129,7 +2036,22 @@ void AutoRefinementManager::CycleRefinement()
 
 	int number_of_bleed_shells = ceil(output_refinement->resolution_statistics_box_size / (my_parent->MaskRadiusTextCtrl->ReturnValue() / output_refinement->resolution_statistics_pixel_size));
 
-	for (int class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+	// loop over all particles, to see if they were actually active, and if so whether they were global or not this number should be consistent for all classes, so only check class 1
+
+	for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
+	{
+		if (input_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active == 0 && output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active == 1)
+		{
+			number_of_global_alignments[particle_counter]++;
+			rounds_since_global_alignment[particle_counter] = 0;
+		}
+		else
+		{
+			rounds_since_global_alignment[particle_counter]++;
+		}
+	}
+
+	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 	{
 		high_res_limit_per_round.Add(class_high_res_limits.Item(class_counter));
 
@@ -2139,37 +2061,68 @@ void AutoRefinementManager::CycleRefinement()
 		if (current_0p5_res_minus_bleed == 0) current_0p5_res_minus_bleed = class_high_res_limits[class_counter];
 
 		bleed_resolution = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], number_of_bleed_shells);
-		resolution_min_shells_after = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 25 );
+		resolution_min_shells_after = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 15 );
 
 		if (bleed_resolution == 0) bleed_resolution = class_high_res_limits[class_counter];
 		safe_resolution = bleed_resolution;
 
 		res_for_next_round = std::max(resolution_min_shells_after, current_0p5_res_minus_bleed);
+		if (res_for_next_round > class_high_res_limits.Item(class_counter)) res_for_next_round = class_high_res_limits.Item(class_counter);
 
 		//if (res_for_next_round < 4.0) res_for_next_round = 4.0;
 
 		class_high_res_limits[class_counter] = res_for_next_round;
 
-		wxPrintf("\n\n\ncurrent_0p5_resolution = %.2f\n", current_0p5_resolution);
-		wxPrintf("current_0p5_resolution_minus_bleed = %.2f\n", current_0p5_res_minus_bleed);
-		wxPrintf("bleed_resolution = %.2f\n", bleed_resolution);
-		wxPrintf("resolution_min_shells_after = %.2f\n", resolution_min_shells_after);
-		wxPrintf("safe_resolution = %.2f\n", safe_resolution);
-		wxPrintf("res_for_next_round = %.2f\n", res_for_next_round);
-		wxPrintf("number_bleed_shells = %i\n\n\n\n", number_of_bleed_shells);
+	//	wxPrintf("\n\n\ncurrent_0p5_resolution = %.2f\n", current_0p5_resolution);
+	//	wxPrintf("current_0p5_resolution_minus_bleed = %.2f\n", current_0p5_res_minus_bleed);
+	//	wxPrintf("bleed_resolution = %.2f\n", bleed_resolution);
+	//	wxPrintf("resolution_min_shells_after = %.2f\n", resolution_min_shells_after);
+	//	wxPrintf("safe_resolution = %.2f\n", safe_resolution);
+	//	wxPrintf("res_for_next_round = %.2f\n", res_for_next_round);
+	//	wxPrintf("number_bleed_shells = %i\n\n\n\n", number_of_bleed_shells);
 
 		if (output_refinement->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() < best_res)
 		{
 			best_res = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution();
 		}
+
+		if (output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution() < best_p143_res)
+		{
+			best_p143_res = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution();
+		}
+
 	}
 
-	resolution_per_round.Add(best_res);
-	current_percent_used *= 2;
-	if (current_percent_used > 100) current_percent_used = 100;
+	if (resolution_per_round.GetCount() > 0)
+	{
+		if (best_p143_res > resolution_per_round[resolution_per_round.GetCount() - 1] - 0.1) // the resolution did not improve, lets add more particles to the max
+		{
+			max_percent_used += max_percent_used * 0.5;
+			if (max_percent_used > 100) max_percent_used = 100.0;
+		}
+	}
+
+	resolution_per_round.Add(best_p143_res);
+	//current_percent_used *= 2;
+
+	float estimated_required_asym_units = 8000.0f * expf(75.0f / powf(best_p143_res,2));
+	long wanted_number_of_asym_units = myroundint(estimated_required_asym_units) * output_refinement->number_of_classes;
+	long number_of_asym_units = output_refinement->number_of_particles * ReturnNumberofAsymmetricUnits(current_refinement_package->symmetry);
+
+	// what percentage is this.
+
+
+	current_percent_used = (float(wanted_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
+	if (current_percent_used < start_percent_used) current_percent_used = start_percent_used;
+	if (current_percent_used > 100.0) current_percent_used = 100.0;
+
+	if (current_percent_used < max_percent_used) current_percent_used = max_percent_used;
+	else (max_percent_used = current_percent_used);
+
+
 	number_of_rounds_run++;
 
-	main_frame->DirtyRefinements();
+	//main_frame->DirtyRefinements();
 
 	if (resolution_per_round.GetCount() >= 5)
 	{
@@ -2198,6 +2151,7 @@ void AutoRefinementManager::CycleRefinement()
 		if (should_stop == true)
 		{
 			this_is_the_final_round = true;
+			current_percent_used = 100.0;
 		}
 
 

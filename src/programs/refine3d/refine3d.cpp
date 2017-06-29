@@ -700,7 +700,7 @@ bool Refine3DApp::DoCalculation()
 		image_counter++;
 		if (temp_float < 1.0 - 2.0 * percent_used)
 		{
-			input_parameters[7] = - fabsf(input_parameters[7]);
+			input_parameters[7] = -1;//- fabsf(input_parameters[7]);
 			input_parameters[16] = 0.0;
 			my_output_par_file.WriteLine(input_parameters);
 
@@ -1066,7 +1066,7 @@ bool Refine3DApp::DoCalculation()
 				output_parameters[i] = input_parameters[i];
 			}
 		}
-		input_parameters[7] = fabsf(input_parameters[7]);
+		input_parameters[7] = 1;//fabsf(input_parameters[7]);
 		output_parameters[7] = input_parameters[7];
 		if (output_parameters[15] < 0.0) output_parameters[15] = 0.0;
 		my_output_par_file.WriteLine(output_parameters);

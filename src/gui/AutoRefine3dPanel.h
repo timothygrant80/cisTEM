@@ -41,7 +41,12 @@ public:
 	wxArrayFloat class_high_res_limits;
 	wxArrayFloat class_next_high_res_limits;
 
+	wxArrayInt number_of_global_alignments;
+	wxArrayInt rounds_since_global_alignment;
+
 	float classification_resolution;
+
+	float max_percent_used;
 
 	bool this_is_the_final_round;
 

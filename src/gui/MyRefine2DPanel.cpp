@@ -1290,7 +1290,6 @@ void ClassificationManager::RunRefinementJob()
 		else
 		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
 		else
-
 		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
 		my_parent->StartPanel->Show(false);

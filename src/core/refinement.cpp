@@ -108,6 +108,7 @@ Refinement::~Refinement()
 
 wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide, float sigma_override)
 {
+	MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
 	wxArrayString output_filenames;
 	wxString current_filename;
 	float output_parameters[17];

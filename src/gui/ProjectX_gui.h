@@ -177,8 +177,6 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticText* FinalPercentUsedStaticText;
 		NumericTextCtrl* EndPercentUsedTextCtrl;
 		wxStaticText* m_staticText532;
-		wxStaticText* m_staticText533;
-		NumericTextCtrl* MaskRadiusTextCtrl;
 		wxStaticText* m_staticText363;
 		wxRadioButton* ApplyBlurringYesRadioButton;
 		wxRadioButton* ApplyBlurringNoRadioButton;
@@ -1506,8 +1504,6 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* LowPassMaskNoRadio;
 		wxStaticText* FilterResolutionStaticText;
 		NumericTextCtrl* MaskFilterResolutionText;
-		wxStaticText* FilterWidthStaticText;
-		NumericTextCtrl* MaskFilterEdgeWidthTextCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

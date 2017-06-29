@@ -40,7 +40,6 @@ AbInitio3DPanelParent( parent )
 	FinalResolutionLimitTextCtrl->SetMinMaxValue(0, 300);
 	StartPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
 	EndPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
-	MaskRadiusTextCtrl->SetMinMaxValue(0, FLT_MAX);
 	SmoothingFactorTextCtrl->SetMinMaxValue(0, 1);
 }
 
@@ -62,12 +61,128 @@ void AbInitio3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("It's a great thing etc..."));
+	InfoText->WriteText(wxT("When a prior 3D reconstruction of a molecule or complex is available that has a closely related structure, it is usually fastest and safest to use it to initialize 3D refinement and reconstruction of a new dataset. However, in many cases such a structure is not available, or an independently determined structure is desired. Ab-initio 3D reconstruction offers a way to start refinement and reconstruction without any prior structural information."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->WriteText(wxT("It is advisable to precede the ab-initio step with a 2D classification step to remove junk particles and select a high-quality subset of the data. A refinement package has to be created (in Assets) that will be used with the ab-initio procedure, either from selected 2D classes or using picked particle position. The idea of the ab-initio algorithm is to iteratively improve a 3D reconstruction, starting with a reconstruction calculated from random Euler angles, by aligning a small percentage of the data against the current reconstruction and increasing the refinement resolution and percentage at each iteration (Grigorieff, 2016). This procedure can also be carried out using multiple references that must be specified when creating the refinement package. The procedure stops after a user-specified number of refinement cycles and restarts if more than one starts are specified."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->WriteText(wxT("The progress of the ab-initio reconstruction is displayed as a plot of the average sigma value that measures the average apparent noise-to-signal ratio in the data. The sigma value should decrease as the reconstruction gets closer to the true structure. The current reconstruction is also displayed as three orthogonal central slices and three orthogonal projections."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->WriteText(wxT("If the ab-initio procedure fails on a symmetrical particle, users should repeat it using C1 (no symmetry). This can be specified by creating a new refinement package that is based on the previous refinement package, and changing the symmetry to C1. If a particle is close to spherical, such as apoferritin, it may be necessary to change the initial and final resolution limits from 40 Å and 9 Å (default) to higher resolution, e.g. 15 Å and 6 Å (see Expert Options). Finally, it is worth repeating the procedure a few times if a good reconstruction is not obtained in the first trial."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Program Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
 
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Input Refinement Package : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Number of Starts : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The number of times the ab-initio reconstruction is restarted, using the result from the previous run in each restart."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("No. of Cycles per Start : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The number of refinement cycles to run for each start. The percentage of particles and the refinement resolution limit will be adjusted automatically from cycle to cycle using initial and final values specified under Expert Options."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("Expert Options"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Initial Resolution Limit (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The starting resolution limit used to align particles against the current 3D reconstruction. In most cases, this should specify a relatively low resolution to make sure the reconstructions generated in the initial refinement cycles do not develop spurious high-resolution features."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Final Resolution Limit (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The resolution limit used in the final refinement cycle. In most cases, this should specify a resolution at which expected secondary structure becomes apparent, i.e. around 9 Å."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Use Auto-Masking? "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the 3D reconstructions be masked? Masking is important to suppress weak density features that usually appear in the early stages of ab-initio reconstruction, thus preventing them to get amplified during the iterative refinement. Masking should only be disabled if it appears to interfere with the reconstruction process."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Auto Percent used? "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the percentage of particles used in each refinement cycle be set automatically? If reconstructions appear very noisy or reconstructions settle into a wrong structure that does not change anymore during iterations, disable this option and specify initial and final percentages manually. To reduce noise, increase the percentage; to make reconstructions more variable, decrease the percentage. By default, the initial percentage is set to include an equivalent of 2500 asymmetric units and the final percentage corresponds to 10,000 asymmetric units used."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Initial % Used / Final % Used : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("User-specified percentages of particles used when Auto Percent Used is disabled."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Apply Likelihood Blurring? "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the reconstructions be blurred by inserting each particle image at multiple orientations, weighted by a likelihood function? Enable this option if the ab-initio procedure appears to suffer from over-fitting and the appearance of spurious high-resolution features."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Smoothing Factor : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("A factor that reduces the range of likelihoods used for blurring. A smaller number leads to more blurring. The user should try values between 0.1 and 1."));
+	InfoText->Newline();
+	InfoText->Newline();
+
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxT("References"));
+	InfoText->EndBold();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191-226. "));
+	InfoText->BeginURL("http://dx.doi.org/10.1016/bs.mie.2016.04.013");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/bs.mie.2016.04.013"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->EndAlignment();
+	InfoText->Newline();
+	InfoText->Newline();
 }
 
 void AbInitio3DPanel::OnInfoURL( wxTextUrlEvent& event )
@@ -149,8 +264,6 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 
 		ExpertPanel->Freeze();
 
-		float mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
-
 		//if (symmetry_type == 'O' || symmetry_type == 'I') NumberStartsSpinCtrl->ChangeValue(1);
 		//else NumberStartsSpinCtrl->ChangeValue(2);
 
@@ -165,7 +278,6 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		StartPercentUsedTextCtrl->ChangeValueFloat(10);
 		EndPercentUsedTextCtrl->ChangeValueFloat(10);
 
-		MaskRadiusTextCtrl->ChangeValueFloat(mask_radius);
 		ApplyBlurringNoRadioButton->SetValue(true);
 		SmoothingFactorTextCtrl->ChangeValueFloat(1.00);
 
@@ -685,7 +797,7 @@ void AbInitio3DPanel::TakeCurrent()
 
 		// now add the details of the startup job..
 
-		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, MaskRadiusTextCtrl->ReturnValue(),  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
+		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.input_refinement->resolution_statistics_box_size * 0.45 * my_abinitio_manager.input_refinement->resolution_statistics_pixel_size,  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
 		main_frame->current_project.database.Commit();
 	}
 
@@ -756,7 +868,7 @@ void AbInitio3DPanel::TakeLastStart()
 
 		// now add the details of the startup job..
 
-		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, MaskRadiusTextCtrl->ReturnValue(),  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
+		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.input_refinement->resolution_statistics_box_size * 0.45 * my_abinitio_manager.input_refinement->resolution_statistics_pixel_size,  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
 		main_frame->current_project.database.Commit();
 	}
 
@@ -1111,7 +1223,7 @@ void AbInitioManager::SetupReconstructionJob()
 	{
 		//if (current_high_res_limit > 20) 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
 		//else 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0);
-		if (current_high_res_limit > 20) 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
+		written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0, 1.0);
 	}
 
 
@@ -1165,7 +1277,7 @@ void AbInitioManager::SetupReconstructionJob()
 			float    amplitude_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= 0;//my_parent->ReconstructionInnerRadiusTextCtrl->ReturnValue();
-			float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    outer_mask_radius					= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
 
 			float    resolution_limit_rec;
 
@@ -1353,7 +1465,7 @@ void AbInitioManager::SetupMerge3dJob()
 		wxString output_resolution_statistics		= "/dev/null";
 		float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 		float    inner_mask_radius					= 0;
-		float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
+		float    outer_mask_radius					= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
 		wxString dump_file_seed_1 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup_dump_file_%i_odd_.dump",  class_counter);
 		wxString dump_file_seed_2 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup_dump_file_%i_even_.dump", class_counter);
 
@@ -1524,7 +1636,7 @@ void AbInitioManager::SetupRefinementJob()
 			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 
-			float    mask_radius							= 180;//input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    mask_radius							= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
 			float    inner_mask_radius						= 0;
 
 			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms;
@@ -1533,9 +1645,9 @@ void AbInitioManager::SetupRefinementJob()
 			float    high_resolution_limit					= current_high_res_limit;
 			float	 signed_CC_limit						= 0.0;
 			float	 classification_resolution_limit		= current_high_res_limit;
-			float    mask_radius_search						= my_parent->MaskRadiusTextCtrl->ReturnValue();
+			float    mask_radius_search						= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
 			float	 high_resolution_limit_search			= current_high_res_limit;
-			float	 angular_step							= CalculateAngularStep(current_high_res_limit, my_parent->MaskRadiusTextCtrl->ReturnValue());
+			float	 angular_step							= CalculateAngularStep(current_high_res_limit, refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5);
 
 		//	if (angular_step < 30.0) angular_step = 30.0;
 

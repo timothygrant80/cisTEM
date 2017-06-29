@@ -371,9 +371,9 @@ void MyRefine3DPanel::SetInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Grigorieff, N., "));
+	InfoText->WriteText(wxT("Grigorieff, N.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol., in press."));
+	InfoText->WriteText(wxT(" 2016. Frealign: An exploratory tool for single-particle cryo-EM. Methods Enzymol. 579, 191-226. "));
 	InfoText->BeginURL("http://dx.doi.org/10.1016/bs.mie.2016.04.013");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
@@ -384,6 +384,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
+
 
 }
 
@@ -496,8 +497,6 @@ void MyRefine3DPanel::SetDefaults()
 		LowPassMaskYesRadio->SetValue(false);
 		LowPassMaskNoRadio->SetValue(true);
 		MaskFilterResolutionText->ChangeValueFloat(20.00);
-		MaskFilterEdgeWidthTextCtrl->ChangeValueFloat(5.00);
-
 
 		ExpertPanel->Thaw();
 	}
@@ -721,10 +720,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					LowPassMaskNoRadio->Enable(false);
 					FilterResolutionStaticText->Enable(false);
 					MaskFilterResolutionText->Enable(false);
-					FilterWidthStaticText->Enable(false);
-					MaskFilterEdgeWidthTextCtrl->Enable(false);
-
-
 				}
 				else
 				{
@@ -740,15 +735,11 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					{
 						FilterResolutionStaticText->Enable(true);
 						MaskFilterResolutionText->Enable(true);
-						FilterWidthStaticText->Enable(true);
-						MaskFilterEdgeWidthTextCtrl->Enable(true);
 					}
 					else
 					{
 						FilterResolutionStaticText->Enable(false);
 						MaskFilterResolutionText->Enable(false);
-						FilterWidthStaticText->Enable(false);
-						MaskFilterEdgeWidthTextCtrl->Enable(false);
 					}
 
 
@@ -2431,8 +2422,6 @@ void RefinementManager::DoMasking()
 	{
 		wanted_low_pass_filter_radius = 0.0;
 	}
-
-	float wanted_filter_cosine_edge_width = my_parent->MaskFilterEdgeWidthTextCtrl->ReturnValue();
 
 	Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size);
 

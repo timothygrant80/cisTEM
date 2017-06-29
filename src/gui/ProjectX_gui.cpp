@@ -358,13 +358,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_staticText533 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Circular Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText533->Wrap( -1 );
-	fgSizer1->Add( m_staticText533, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	MaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("9.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( MaskRadiusTextCtrl, 0, wxALL, 5 );
-	
 	m_staticText363 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Apply Likelihood Blurring?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText363->Wrap( -1 );
 	fgSizer1->Add( m_staticText363, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -5513,13 +5506,6 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
-	
-	FilterWidthStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tFilter Edge Width (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	FilterWidthStaticText->Wrap( -1 );
-	fgSizer1->Add( FilterWidthStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	MaskFilterEdgeWidthTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( MaskFilterEdgeWidthTextCtrl, 0, wxALL, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );

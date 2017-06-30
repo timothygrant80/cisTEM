@@ -29,6 +29,7 @@ class MyFindCTFResultsPanel : public FindCTFResultsPanel
 		void FillGroupComboBox();
 		void FillBasedOnSelectCommand(wxString wanted_command);
 		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
+		void OnAddAllToGroupClick( wxCommandEvent& event );
 		void FillResultsPanelAndDetails(int row, int column);
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );

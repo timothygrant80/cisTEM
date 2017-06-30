@@ -573,6 +573,7 @@ class FindCTFResultsPanel : public wxPanel
 		wxToggleButton* JobDetailsToggleButton;
 		ResultsDataViewListCtrl* ResultDataView;
 		wxButton* PreviousButton;
+		wxButton* AddAllToGroupButton;
 		wxButton* NextButton;
 		wxPanel* RightPanel;
 		wxPanel* JobDetailsPanel;
@@ -631,6 +632,7 @@ class FindCTFResultsPanel : public wxPanel
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		
@@ -743,7 +745,7 @@ class MovieAlignResultsPanel : public wxPanel
 		wxToggleButton* JobDetailsToggleButton;
 		ResultsDataViewListCtrl* ResultDataView;
 		wxButton* PreviousButton;
-		wxButton* AddAllToGroup;
+		wxButton* AddAllToGroupButton;
 		wxButton* NextButton;
 		wxPanel* RightPanel;
 		wxPanel* JobDetailsPanel;
@@ -793,6 +795,7 @@ class MovieAlignResultsPanel : public wxPanel
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		
@@ -2524,9 +2527,9 @@ class ClassificationPlotPanelParent : public wxPanel
 	private:
 	
 	protected:
-		wxPanel* MobilityPanel;
-		wxPanel* LikelihoodPanel;
 		wxPanel* SigmaPanel;
+		wxPanel* LikelihoodPanel;
+		wxPanel* MobilityPanel;
 	
 	public:
 		wxAuiNotebook* my_notebook;

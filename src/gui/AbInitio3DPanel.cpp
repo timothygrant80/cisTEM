@@ -176,6 +176,7 @@ void AbInitio3DPanel::SetInfo()
 	InfoText->BeginURL("http://dx.doi.org/10.1016/bs.mie.2016.04.013");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
+
 	InfoText->WriteText(wxT("doi:10.1016/bs.mie.2016.04.013"));
 	InfoText->EndURL();
 	InfoText->EndTextColour();

@@ -71,11 +71,16 @@ void MyFindCTFResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			FilterButton->Enable(false);
 		}
 
-		if (GroupComboBox->GetCount() > 0)
+		if (GroupComboBox->GetCount() > 0 && ResultDataView->GetItemCount() > 0)
 		{
 			AddToGroupButton->Enable(true);
+			AddAllToGroupButton->Enable(true);
 		}
-		else AddToGroupButton->Enable(false);
+		else
+		{
+			AddToGroupButton->Enable(false);
+			AddAllToGroupButton->Enable(false);
+		}
 
 		if (is_dirty == true)
 		{
@@ -594,6 +599,21 @@ void MyFindCTFResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetCurrentSelection() + 1, per_row_array_position[selected_row]);
 
 }
+
+void MyFindCTFResultsPanel::OnAddAllToGroupClick( wxCommandEvent& event )
+{
+	wxArrayLong items_to_add;
+
+	for (long counter = 0; counter < ResultDataView->GetItemCount(); counter++)
+	{
+		items_to_add.Add(per_row_array_position[counter]);
+
+	}
+	OneSecondProgressDialog *progress_bar = new OneSecondProgressDialog("Add all to group", "Adding all to group", ResultDataView->GetItemCount(), this, wxPD_APP_MODAL);
+	image_asset_panel->AddArrayofArrayItemsToGroup(GroupComboBox->GetSelection() + 1, &items_to_add, progress_bar);
+	progress_bar->Destroy();
+}
+
 
 void MyFindCTFResultsPanel::OnDefineFilterClick( wxCommandEvent& event )
 {

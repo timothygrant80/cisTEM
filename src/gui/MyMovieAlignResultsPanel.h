@@ -9,6 +9,7 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
 		void OnAddToGroupClick( wxCommandEvent& event );
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );
+		void OnAddAllToGroupClick( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void OnShowTypeRadioBoxChange(wxCommandEvent& event);
 		void OnJobDetailsToggle( wxCommandEvent& event );

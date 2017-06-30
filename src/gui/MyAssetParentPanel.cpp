@@ -266,42 +266,44 @@ void MyAssetParentPanel::AddSelectedAssetClick( wxCommandEvent& event )
 	long number_selected = ContentsListBox->GetSelectedItemCount();
 
 		if (number_selected > 0)
-	{
-		if (all_groups_list->number_of_groups > 1)
 		{
-			// selected group..
-
-			wxArrayString my_choices;
-
-			for (long counter = 1; counter < ReturnNumberOfGroups(); counter++)
+			if (all_groups_list->number_of_groups > 1)
 			{
-				my_choices.Add(all_groups_list->groups[counter].name);
-			}
+				// selected group..
 
-			wxSingleChoiceDialog	*group_choice = new wxSingleChoiceDialog(this, "Add Selected Assets to which group(s)?", "Select Groups", my_choices);
+				wxArrayString my_choices;
 
-			if (group_choice->ShowModal() ==  wxID_OK)
-			{
-				long item = -1;
-
-				for ( ;; )
+				for (long counter = 1; counter < ReturnNumberOfGroups(); counter++)
 				{
-					item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-					if ( item == -1 )
+					my_choices.Add(all_groups_list->groups[counter].name);
+				}
+
+				wxSingleChoiceDialog	*group_choice = new wxSingleChoiceDialog(this, "Add Selected Assets to which group(s)?", "Select Groups", my_choices);
+
+				if (group_choice->ShowModal() ==  wxID_OK)
+				{
+					main_frame->current_project.database.Begin();
+					long item = -1;
+
+					for ( ;; )
+					{
+						item = ContentsListBox->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+						if ( item == -1 )
 						break;
 
-					AddContentItemToGroup(group_choice->GetSelection() + 1, item);
+						AddContentItemToGroup(group_choice->GetSelection() + 1, item);
+					}
+					main_frame->current_project.database.Commit();
 				}
+
+				group_choice->Destroy();
 			}
 
-			group_choice->Destroy();
+			FillGroupList();
+			FillContentsList();
+			main_frame->RecalculateAssetBrowser();
+			//UpdateInfo();
 		}
-
-		FillGroupList();
-		FillContentsList();
-		main_frame->RecalculateAssetBrowser();
-		//UpdateInfo();
-	}
 
 }
 

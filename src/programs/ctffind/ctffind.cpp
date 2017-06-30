@@ -859,8 +859,46 @@ bool CtffindApp::DoCalculation()
 					current_input_image->ReadSlice(&input_file,current_input_location);
 					if (current_input_image->IsConstant())
 					{
-						SendError(wxString::Format("Error: location %i of input file %s is blank",current_input_location, input_filename));
-						ExitMainLoop();
+
+
+						if (is_running_locally == false)
+						{
+							// don't crash, as this will lead to the gui job never finishing, instead send a blank result..
+							SendError(wxString::Format("Error: location %i of input file %s is blank, defocus parameters will be set to 0",current_input_location, input_filename));
+
+							float results_array[7];
+							results_array[0] = 0.0;				// Defocus 1 (Angstroms)
+							results_array[1] = 0.0;				// Defocus 2 (Angstroms)
+							results_array[2] = 0.0;				// Astigmatism angle (degrees)
+							results_array[3] = 0.0;				// Additional phase shift (e.g. from phase plate) (radians)
+							results_array[4] = 0.0;				// CTFFIND score
+							results_array[5] = 0.0;
+							results_array[6] = 0.0;
+
+							my_result.SetResult(7,results_array);
+
+							delete average_spectrum;
+							delete current_power_spectrum;
+							delete current_input_image;
+							delete current_input_image_square;
+							delete temp_image;
+							delete sum_image;
+							delete resampled_power_spectrum;
+							delete number_of_extrema_image;
+							delete ctf_values_image;
+							delete gain;
+							delete [] values_to_write_out;
+
+							return true;
+
+
+						}
+						else
+						{
+							SendError(wxString::Format("Error: location %i of input file %s is blank",current_input_location, input_filename));
+							ExitMainLoop();
+						}
+
 					}
 
 					// Apply gain reference

@@ -90,7 +90,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->WriteText(wxT("Individual particles need to be located in each micrograph so that they may be used to compute a 3D reconstruction later. Ideally one would find all the particles and not make any erroneous selections."));
 	InfoText->Newline();
 	InfoText->Newline();
-	InfoText->WriteText(wxT("In the absence of a pre-existing 3D model, one can either select (click on) each particle manually, or use the 'ab initio' mode. In this mode, a template is genated internally, which consists of a cosine-shaped blob and then matched against each micrographs. This works reasonably well to find globular protein complexes, even though it is less accurate and more error-prone than template-based search strategy."));
+	InfoText->WriteText(wxT("In the absence of a pre-existing 3D model, one can either select (click on) each particle manually, or use the 'ab-initio' mode. In this mode, a template is genated internally, which consists of a cosine-shaped blob and then matched against each micrographs. This works reasonably well to find globular protein complexes, even though it is less accurate and more error-prone than template-based search strategy."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->WriteText(wxT(""));
@@ -136,7 +136,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("Program Options: ab initio mode"));
+	InfoText->WriteText(wxT("Program Options: ab-initio mode"));
 	InfoText->EndBold();
 	InfoText->EndUnderline();
 	InfoText->Newline();
@@ -273,7 +273,7 @@ wxString MyFindParticlesPanel::ReturnNameOfPickingAlgorithm( const int wanted_al
 	switch(wanted_algorithm)
 	{
 	case(ab_initio):
-			string_to_return = "ab initio";
+			string_to_return = "ab-initio";
 			break;
 	default:
 			string_to_return = "unknown";

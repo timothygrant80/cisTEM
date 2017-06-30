@@ -1529,10 +1529,10 @@ bool CtffindApp::DoCalculation()
 			{
 				MyPrintfRed("Warning: CTF aliasing occurred within your CTF fitting range. Consider computing a larger spectrum (current size = %i).\n",box_size);
 			}
-			else
-			{
-				SendInfo(wxString::Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,current_micrograph_number, number_of_micrographs,box_size));
-			}
+//			else
+//			{
+//				SendInfo(wxString::Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,current_micrograph_number, number_of_micrographs,box_size));
+//			}
 		}
 
 

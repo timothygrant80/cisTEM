@@ -169,6 +169,7 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->EndBold();
 	InfoText->WriteText(wxT("Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."));
 	InfoText->Newline();
+	InfoText->Newline();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginUnderline();

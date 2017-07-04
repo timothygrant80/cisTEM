@@ -1466,6 +1466,31 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			ProgressPanel->Layout();
 		}
 	}
+	else
+	{
+		my_job_tracker.MarkJobFinished();
+		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+
+		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
+		{
+			// job has really finished, so we can write to the database...
+
+			WriteResultToDataBase();
+
+			if (buffered_results != NULL)
+			{
+				delete [] buffered_results;
+				buffered_results = NULL;
+			}
+
+			WriteInfoText(wxString::Format("All Jobs have finished. %i particles were picked.", number_of_particles_picked));
+			ProgressBar->SetValue(100);
+			TimeRemainingText->SetLabel("Time Remaining : All Done!");
+			CancelAlignmentButton->Show(false);
+			FinishButton->Show(true);
+			ProgressPanel->Layout();
+		}
+	}
 
 }
 
@@ -1603,27 +1628,32 @@ ArrayOfParticlePositionAssets MyFindParticlesPanel::ParticlePositionsFromJobResu
 	ArrayOfParticlePositionAssets array_of_assets;
 	int address_within_results = 0;
 
-
-	temp_asset.pick_job_id = picking_job_id;
-	temp_asset.asset_id = starting_asset_id;
-
-	temp_asset.parent_id = parent_image_id;
-	temp_asset.picking_id = picking_id;
-	// Loop over picked coordinates
-	for (int particle_counter = 0; particle_counter < job_result->result_size / 5; particle_counter ++ )
+	if (job_result->result_size > 0)
 	{
-		address_within_results = particle_counter * 5;
-		// Finish setting up the asset. We use an ID that hasn't been used for any other position asset previously.
-		temp_asset.asset_id ++;
-		temp_asset.x_position = job_result->result_data[address_within_results + 0];
-		temp_asset.y_position = job_result->result_data[address_within_results + 1];
-		temp_asset.peak_height = job_result->result_data[address_within_results + 2];
 
-		//
-		array_of_assets.Add(temp_asset);
+		temp_asset.pick_job_id = picking_job_id;
+		temp_asset.asset_id = starting_asset_id;
+
+		temp_asset.parent_id = parent_image_id;
+		temp_asset.picking_id = picking_id;
+		// Loop over picked coordinates
+
+		for (int particle_counter = 0; particle_counter < job_result->result_size / 5; particle_counter ++ )
+		{
+			address_within_results = particle_counter * 5;
+			// Finish setting up the asset. We use an ID that hasn't been used for any other position asset previously.
+			temp_asset.asset_id ++;
+			temp_asset.x_position = job_result->result_data[address_within_results + 0];
+			temp_asset.y_position = job_result->result_data[address_within_results + 1];
+			temp_asset.peak_height = job_result->result_data[address_within_results + 2];
+
+			//
+			array_of_assets.Add(temp_asset);
+		}
 	}
 
 	return array_of_assets;
+
 }
 
 void MyFindParticlesPanel::UpdateProgressBar()

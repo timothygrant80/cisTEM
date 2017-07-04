@@ -168,7 +168,9 @@ bool FindParticlesApp::DoCalculation()
 
 	// Put together results
 
-	float *result_array = new float[ 5 * particle_finder.results_x_y.number_of_points ];
+	float *result_array;
+
+	if (particle_finder.results_x_y.number_of_points > 0) result_array = new float[ 5 * particle_finder.results_x_y.number_of_points ];
 
 	long address = 0;
 	for ( long counter = 0; counter < particle_finder.results_x_y.number_of_points; counter ++ )
@@ -189,7 +191,7 @@ bool FindParticlesApp::DoCalculation()
 
 
 	// Cleanup
-	delete [] result_array;
+	if (particle_finder.results_x_y.number_of_points > 0) delete [] result_array;
 
 	return true;
 }

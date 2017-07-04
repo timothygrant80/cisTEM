@@ -425,7 +425,7 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 
 	wanted_database_file.MakeAbsolute();
 
-	return_code = sqlite3_open_v2(wanted_database_file.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, "unix-excl");
+	return_code = sqlite3_open_v2(wanted_database_file.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, "unix-dotfile");
 
     if( return_code )
     {
@@ -469,7 +469,7 @@ bool Database::Open(wxFileName file_to_open)
 	}
 
 
-	return_code = sqlite3_open_v2(file_to_open.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-excl");
+	return_code = sqlite3_open_v2(file_to_open.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-dotfile");
 
 	if( return_code )
 	{

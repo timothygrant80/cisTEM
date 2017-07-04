@@ -197,7 +197,7 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 			return false;
 		}
 
-		temp_parameters.phase_shift = float(temp_double);
+		temp_parameters.phase_shift = deg_2_rad(float(temp_double));
 	}
 
 	cached_parameters.Add(temp_parameters);

@@ -40,9 +40,9 @@ FindCTFPanel( parent )
 	MaxResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
 	DefocusStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
 	ToleratedAstigmatismNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
-	MinPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 3.15);
+	MinPhaseShiftNumericCtrl->SetMinMaxValue(-190, 190);
+	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-190, 190);
+	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 190);
 
 	EnableMovieProcessingIfAppropriate();
 

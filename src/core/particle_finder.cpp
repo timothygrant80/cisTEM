@@ -724,12 +724,31 @@ void ParticleFinder::RemoveHighVarianceAreasFromTargetFunction()
 {
 	if (avoid_high_variance_areas)
 	{
+		// Decide what we call a "high-variance area"
+		// Normally, 2 sigmas over the mode is OK, but when the micrograph
+		// is from a phase plate, the particles are super high-contrast, so we need a larger value
+		// The following may be tweaked heuristically:
+		// - the phase shift range over which high contrast is assumed
+		// - the number of sigmas above the mode for the threshold when in high-contrast mode
+		float threshold;
+		float abs_p_shift = fabs(fmod(micrograph_ctf.GetAdditionalPhaseShift(),PI));
+		if ( (abs_p_shift > PI * 0.1) && (abs_p_shift < PI * 0.9 ))
+		{
+			// phase shift means very high contrast particles
+			threshold = local_sigma_mode + 8.0 * local_sigma_fwhm;
+		}
+		else
+		{
+			threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
+		}
+		//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
+		//wxPrintf("Threshold on sigma = %f\n",threshold);
+
 		long address;
 		long address_in_score;
 		// this is slightly complicated because the correlation map and the variance map are in reverse order
-		float threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
-		//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
-		//wxPrintf("Threshold on sigma = %f\n",threshold);
+
+
 		address = 0;
 		address_in_score = maximum_score_modified.real_memory_allocated;
 		for ( int j = 0; j < maximum_score_modified.logical_y_dimension; j ++ )

@@ -30,6 +30,7 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
+#include <wx/dir.h>
 #include <wx/wfstream.h>
 #include <wx/tokenzr.h>
 #include <wx/txtstrm.h>

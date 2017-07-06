@@ -2718,19 +2718,25 @@ class DisplayRefinementResultsPanelParent : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class PopupTextDialog
+/// Class PopupTextDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class PopupTextDialog : public wxDialog 
+class PopupTextDialogParent : public wxDialog 
 {
 	private:
 	
 	protected:
+		wxButton* CloseButton;
+		wxButton* ClipBoardButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCopyToClipboardClick( wxCommandEvent& event ) { event.Skip(); }
+		
 	
 	public:
 		wxTextCtrl* OutputTextCtrl;
 		
-		PopupTextDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER ); 
-		~PopupTextDialog();
+		PopupTextDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxCAPTION|wxRESIZE_BORDER ); 
+		~PopupTextDialogParent();
 	
 };
 

@@ -1220,7 +1220,7 @@ void ClassificationManager::RunRefinementJob()
 		bool invert_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 		bool exclude_blank_edges = output_classification->exclude_blank_edges;
 		bool dump_arrays = true;
-		wxString dump_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
+		wxString dump_file = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
 
 
 		my_parent->my_job_package.AddJob("tttttiiiffffffffffffibbbbt",	input_particle_images.ToUTF8().data(),
@@ -1482,7 +1482,7 @@ void ClassificationManager::RunMerge2dJob()
 	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "merge2d", 1);
 
 	wxString output_class_averages = output_classification->class_average_file;
-	wxString dump_file_seed = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/class_dump_file_%li_.dump", output_classification->classification_id);
+	wxString dump_file_seed = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_.dump", output_classification->classification_id);
 
 	my_parent->my_job_package.AddJob("tt",	output_class_averages.ToUTF8().data(),
 											dump_file_seed.ToUTF8().data());
@@ -1827,6 +1827,7 @@ void ClassificationManager::ProcessAllJobsFinished()
 	else
 	if (running_job_type == MERGE)
 	{
+		global_delete_refine2d_scratch();
 		CycleRefinement();
 	}
 

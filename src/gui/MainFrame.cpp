@@ -431,6 +431,7 @@ void MyMainFrame::StartNewProject()
 		}
 
 		AddProjectToRecentProjects(current_project.database.ReturnFilename());
+		ClearScratchDirectory();
 	}
 	else
 	{
@@ -504,6 +505,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		my_dialog->Destroy();
 
 		AddProjectToRecentProjects(project_filename);
+		ClearScratchDirectory();
 		overview_panel->InfoText->Show(false);
 	}
 	else

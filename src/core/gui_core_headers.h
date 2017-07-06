@@ -30,7 +30,6 @@
 #include <wx/gauge.h>
 #include <wx/string.h>
 #include <wx/dnd.h>
-#include <wx/dir.h>
 #include <wx/progdlg.h>
 #include <wx/choicdlg.h>
 #include <wx/richtext/richtextctrl.h>
@@ -40,6 +39,7 @@
 #include <wx/dataview.h>
 #include <wx/graphics.h>
 #include <wx/aui/auibook.h>
+#include <wx/clipbrd.h>
 
 #include "../core/core_headers.h"
 
@@ -103,6 +103,7 @@
 #include "../gui/AssetPickerComboPanel.h"
 #include "../gui/AutoRefine3dPanel.h"
 #include "../gui/DisplayRefinementResultsPanel.h"
+#include "../gui/PopupTextDialog.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

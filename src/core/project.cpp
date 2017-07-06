@@ -70,15 +70,6 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	image_asset_directory = directory_string;
 	wxFileName::Mkdir(image_asset_directory.GetFullPath());
 
-	// sub directories
-
-	directory_string = image_asset_directory.GetFullPath();
-	directory_string += "/Spectra";
-	wxFileName::Mkdir(directory_string);
-
-	directory_string = image_asset_directory.GetFullPath();
-	directory_string += "/Scaled";
-	wxFileName::Mkdir(directory_string);
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Volumes";
@@ -105,16 +96,25 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	class_average_directory = directory_string;
 	wxFileName::Mkdir(class_average_directory.GetFullPath());
 
-
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Parameters";
 	parameter_file_directory = directory_string;
 	wxFileName::Mkdir(parameter_file_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
-	directory_string += "/Assets/Scratch";
+	directory_string += "/Scratch";
 	scratch_directory = directory_string;
 	wxFileName::Mkdir(scratch_directory.GetFullPath());
+
+	// sub directories
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Spectra";
+	wxFileName::Mkdir(directory_string);
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Scaled";
+	wxFileName::Mkdir(directory_string);
 
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
@@ -149,38 +149,47 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Movies";
 	movie_asset_directory = directory_string;
+	if (wxDir::Exists(movie_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(movie_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Images";
 	image_asset_directory = directory_string;
+	if (wxDir::Exists(image_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(image_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Volumes";
 	volume_asset_directory = directory_string;
+	if (wxDir::Exists(volume_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(volume_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
 	ctf_asset_directory = directory_string;
+	if (wxDir::Exists(ctf_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(ctf_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/ParticlePosition";
 	particle_position_asset_directory = directory_string;
+	if (wxDir::Exists(particle_position_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(particle_position_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/ParticleStacks";
 	particle_stack_directory = directory_string;
+	if (wxDir::Exists(particle_stack_directory.GetFullPath()) == false) wxFileName::Mkdir(particle_stack_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/ClassAverages";
 	class_average_directory = directory_string;
+	if (wxDir::Exists(class_average_directory.GetFullPath()) == false) wxFileName::Mkdir(class_average_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Parameters";
 	parameter_file_directory = directory_string;
+	if (wxDir::Exists(parameter_file_directory.GetFullPath()) == false) wxFileName::Mkdir(parameter_file_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
-	directory_string += "/Assets/Scratch";
+	directory_string += "/Scratch";
 	scratch_directory = directory_string;
+	if (wxDir::Exists(scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(scratch_directory.GetFullPath());
 
 	is_open = true;
 

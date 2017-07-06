@@ -9037,7 +9037,7 @@ DisplayRefinementResultsPanelParent::~DisplayRefinementResultsPanelParent()
 {
 }
 
-PopupTextDialog::PopupTextDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+PopupTextDialogParent::PopupTextDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxSize( 600,600 ), wxDefaultSize );
 	
@@ -9049,14 +9049,35 @@ PopupTextDialog::PopupTextDialog( wxWindow* parent, wxWindowID id, const wxStrin
 	
 	bSizer363->Add( OutputTextCtrl, 1, wxALL|wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer380;
+	bSizer380 = new wxBoxSizer( wxHORIZONTAL );
+	
+	CloseButton = new wxButton( this, wxID_CANCEL, wxT("Close"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer380->Add( CloseButton, 0, wxALL, 5 );
+	
+	
+	bSizer380->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	ClipBoardButton = new wxButton( this, wxID_ANY, wxT("Copy to Clipboard"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer380->Add( ClipBoardButton, 0, wxALL, 5 );
+	
+	
+	bSizer363->Add( bSizer380, 0, wxEXPAND, 5 );
+	
 	
 	this->SetSizer( bSizer363 );
 	this->Layout();
 	bSizer363->Fit( this );
 	
 	this->Centre( wxBOTH );
+	
+	// Connect Events
+	ClipBoardButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PopupTextDialogParent::OnCopyToClipboardClick ), NULL, this );
 }
 
-PopupTextDialog::~PopupTextDialog()
+PopupTextDialogParent::~PopupTextDialogParent()
 {
+	// Disconnect Events
+	ClipBoardButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PopupTextDialogParent::OnCopyToClipboardClick ), NULL, this );
+	
 }

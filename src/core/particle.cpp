@@ -568,10 +568,10 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float original_pixel_size = pixel_size * float(input_3d.density_map.logical_x_dimension) / float(padded_unbinned_image.logical_x_dimension);
 //	float effective_bfactor;
 
-	float pixel_center_2d_x = mask_center_2d_x / original_pixel_size - particle_image->physical_address_of_box_center_x;
-	float pixel_center_2d_y = mask_center_2d_y / original_pixel_size - particle_image->physical_address_of_box_center_y;
+	float pixel_center_2d_x = mask_center_2d_x / original_pixel_size - input_image.physical_address_of_box_center_x;
+	float pixel_center_2d_y = mask_center_2d_y / original_pixel_size - input_image.physical_address_of_box_center_y;
 	// Assumes cubic reference volume
-	float pixel_center_2d_z = mask_center_2d_z / original_pixel_size - particle_image->physical_address_of_box_center_x;
+	float pixel_center_2d_z = mask_center_2d_z / original_pixel_size - input_image.physical_address_of_box_center_x;
 	float pixel_radius_2d = mask_radius_2d / original_pixel_size;
 
 	Image *temp_image1 = new Image;

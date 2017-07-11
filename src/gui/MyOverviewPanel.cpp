@@ -33,7 +33,11 @@ void MyOverviewPanel::SetWelcomeInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
-	InfoText->WriteText(wxT("Welcome to cisTEM (Computational Imaging System for Transmission Electron Microscopy)"));
+	InfoText->WriteText(wxT("Welcome to "));
+	InfoText->BeginItalic();
+	InfoText->WriteText(wxT("cis"));
+	InfoText->EndItalic();
+	InfoText->WriteText(wxT("TEM (Computational Imaging System for Transmission Electron Microscopy)"));
 	InfoText->Newline();
 	InfoText->EndFontSize();
 	InfoText->EndAlignment();

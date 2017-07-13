@@ -1755,7 +1755,7 @@ void AbInitioManager::RunRefinementJob()
 	output_refinement->SizeAndFillWithEmpty(input_refinement->number_of_particles, input_refinement->number_of_classes);
 	output_refinement->refinement_package_asset_id = current_refinement_package_asset_id;
 
-	output_refinement->refinement_was_imported_or_generated = true;
+	output_refinement->resolution_statistics_are_generated = true;
 	output_refinement->datetime_of_run = wxDateTime::Now();
 
 /*	output_refinement->low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();

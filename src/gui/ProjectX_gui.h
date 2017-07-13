@@ -2232,6 +2232,28 @@ class MolecularWeightWizardPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class InitialReferenceSelectWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class InitialReferenceSelectWizardPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline108;
+	
+	public:
+		wxBoxSizer* MainSizer;
+		wxStaticText* TitleText;
+		wxScrolledWindow* ScrollWindow;
+		wxBoxSizer* ScrollSizer;
+		AutoWrapStaticText* InfoText;
+		
+		InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~InitialReferenceSelectWizardPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class LargestDimensionWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
 class LargestDimensionWizardPanel : public wxPanel 
@@ -2308,27 +2330,6 @@ class NumberofClassesWizardPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class InitialReferenceSelectWizardPanel
-///////////////////////////////////////////////////////////////////////////////
-class InitialReferenceSelectWizardPanel : public wxPanel 
-{
-	private:
-	
-	protected:
-	
-	public:
-		wxBoxSizer* MainSizer;
-		wxStaticText* TitleText;
-		wxScrolledWindow* ScrollWindow;
-		wxGridSizer* GridSizer;
-		AutoWrapStaticText* InfoText;
-		
-		InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
-		~InitialReferenceSelectWizardPanel();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelA
 ///////////////////////////////////////////////////////////////////////////////
 class ClassesSetupWizardPanelA : public wxPanel 
@@ -2378,10 +2379,10 @@ class ClassesSetupWizardPanelC : public wxPanel
 	protected:
 		wxStaticText* m_staticText21411;
 		wxStaticLine* m_staticline104;
-		wxListCtrl* m_listCtrl17;
-		wxListCtrl* m_listCtrl20;
 	
 	public:
+		wxListCtrl* NewClassListCtrl;
+		wxListCtrl* OldClassListCtrl;
 		AutoWrapStaticText* InfoText;
 		
 		ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
@@ -2398,10 +2399,10 @@ class ClassesSetupWizardPanelD : public wxPanel
 	
 	protected:
 		wxStaticText* m_staticText21411;
-		wxRadioButton* m_radioBtn39;
 		wxRadioButton* m_radioBtn40;
 	
 	public:
+		wxRadioButton* BestOccupancyRadioButton;
 		AutoWrapStaticText* InfoText;
 		
 		ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
@@ -2418,10 +2419,10 @@ class ClassesSetupWizardPanelE : public wxPanel
 	
 	protected:
 		wxStaticText* m_staticText21411;
-		wxRadioButton* m_radioBtn39;
 		wxRadioButton* m_radioBtn40;
 	
 	public:
+		wxRadioButton* RandomiseOccupanciesRadioButton;
 		AutoWrapStaticText* InfoText;
 		
 		ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 

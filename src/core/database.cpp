@@ -1653,13 +1653,14 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 	int class_counter;
 	long counter;
 	bool should_commit = false;
+	float estimated_resolution;
 
 	if (is_in_begin_commit == false)
 	{
 		Begin();
 		should_commit = true;
 	}
-	InsertOrReplace("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->refinement_was_imported_or_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
+	InsertOrReplace("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "RESOLUTION_STATISTICS_ARE_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->resolution_statistics_are_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
 
 	for (class_counter = 0; class_counter < refinement_to_add->number_of_classes; class_counter++)
 	{
@@ -1667,7 +1668,10 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 		CreateRefinementResolutionStatisticsTable(refinement_to_add->refinement_id, class_counter + 1);
 		CreateRefinementDetailsTable(refinement_to_add->refinement_id);
 
-		InsertOrReplace(wxString::Format("REFINEMENT_DETAILS_%li", refinement_to_add->refinement_id), "ilrrrrrrirrrrirrrrirr", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", class_counter + 1, refinement_to_add->reference_volume_ids[class_counter], refinement_to_add->class_refinement_results[class_counter].low_resolution_limit, refinement_to_add->class_refinement_results[class_counter].high_resolution_limit, refinement_to_add->class_refinement_results[class_counter].mask_radius, refinement_to_add->class_refinement_results[class_counter].signed_cc_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_mask_radius, refinement_to_add->class_refinement_results[class_counter].number_results_to_refine, refinement_to_add->class_refinement_results[class_counter].angular_search_step, refinement_to_add->class_refinement_results[class_counter].search_range_x, refinement_to_add->class_refinement_results[class_counter].search_range_y, refinement_to_add->class_refinement_results[class_counter].classification_resolution_limit, refinement_to_add->class_refinement_results[class_counter].should_focus_classify, refinement_to_add->class_refinement_results[class_counter].sphere_x_coord, refinement_to_add->class_refinement_results[class_counter].sphere_y_coord, refinement_to_add->class_refinement_results[class_counter].sphere_z_coord, refinement_to_add->class_refinement_results[class_counter].sphere_radius, refinement_to_add->class_refinement_results[class_counter].should_refine_ctf, refinement_to_add->class_refinement_results[class_counter].defocus_search_range, refinement_to_add->class_refinement_results[class_counter].defocus_search_step);
+		if (refinement_to_add->resolution_statistics_are_generated == true) estimated_resolution = 0.0;
+		else estimated_resolution = refinement_to_add->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution();
+
+		InsertOrReplace(wxString::Format("REFINEMENT_DETAILS_%li", refinement_to_add->refinement_id), "ilrrrrrrirrrrirrrrirrrr", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "AVERAGE_OCCUPANCY", "ESTIMATED_RESOLUTION", class_counter + 1, refinement_to_add->reference_volume_ids[class_counter], refinement_to_add->class_refinement_results[class_counter].low_resolution_limit, refinement_to_add->class_refinement_results[class_counter].high_resolution_limit, refinement_to_add->class_refinement_results[class_counter].mask_radius, refinement_to_add->class_refinement_results[class_counter].signed_cc_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_mask_radius, refinement_to_add->class_refinement_results[class_counter].number_results_to_refine, refinement_to_add->class_refinement_results[class_counter].angular_search_step, refinement_to_add->class_refinement_results[class_counter].search_range_x, refinement_to_add->class_refinement_results[class_counter].search_range_y, refinement_to_add->class_refinement_results[class_counter].classification_resolution_limit, refinement_to_add->class_refinement_results[class_counter].should_focus_classify, refinement_to_add->class_refinement_results[class_counter].sphere_x_coord, refinement_to_add->class_refinement_results[class_counter].sphere_y_coord, refinement_to_add->class_refinement_results[class_counter].sphere_z_coord, refinement_to_add->class_refinement_results[class_counter].sphere_radius, refinement_to_add->class_refinement_results[class_counter].should_refine_ctf, refinement_to_add->class_refinement_results[class_counter].defocus_search_range, refinement_to_add->class_refinement_results[class_counter].defocus_search_step, refinement_to_add->class_refinement_results[class_counter].average_occupancy, estimated_resolution);
 	}
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
@@ -1747,6 +1751,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	RefinementResult temp_result;
 	int class_counter;
 	long current_reference_volume;
+	long number_of_active_images;
 
 	float temp_resolution;
 	float temp_fsc;
@@ -1769,7 +1774,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	temp_refinement->refinement_id = sqlite3_column_int64(list_statement, 0);
 	temp_refinement->refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
 	temp_refinement->name = sqlite3_column_text(list_statement, 2);
-	temp_refinement->refinement_was_imported_or_generated = sqlite3_column_int(list_statement, 3);
+	temp_refinement->resolution_statistics_are_generated = sqlite3_column_int(list_statement, 3);
 	temp_refinement->datetime_of_run.SetFromDOS((unsigned long) sqlite3_column_int64(list_statement, 4));
 	temp_refinement->starting_refinement_id = sqlite3_column_int64(list_statement, 5);
 	temp_refinement->number_of_particles = sqlite3_column_int64(list_statement, 6);
@@ -1812,6 +1817,9 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 		temp_refinement->class_refinement_results[class_counter].should_refine_ctf = sqlite3_column_int(list_statement, 18);
 		temp_refinement->class_refinement_results[class_counter].defocus_search_range = sqlite3_column_double(list_statement, 19);
 		temp_refinement->class_refinement_results[class_counter].defocus_search_step = sqlite3_column_double(list_statement, 20);
+		temp_refinement->class_refinement_results[class_counter].average_occupancy = sqlite3_column_double(list_statement, 21);
+		temp_refinement->class_refinement_results[class_counter].estimated_resolution = sqlite3_column_double(list_statement, 22);
+
 	}
 
 	Finalize(list_statement);
@@ -1822,6 +1830,9 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESULT_%li_%i", temp_refinement->refinement_id, class_counter + 1);
 
 		more_data = BeginBatchSelect(sql_select_command);
+
+		temp_refinement->class_refinement_results[class_counter].average_occupancy = 0.0f;
+		number_of_active_images = 0;
 
 		while (more_data == true)
 		{
@@ -1842,8 +1853,14 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 																								  &temp_result.image_is_active);
 
 			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
-		}
 
+			if (temp_result.image_is_active >= 0.0)
+			{
+				temp_refinement->class_refinement_results[class_counter].average_occupancy += temp_result.occupancy;
+				number_of_active_images++;
+			}
+		}
+		if (number_of_active_images > 0) temp_refinement->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
 		EndBatchSelect();
 
 	}

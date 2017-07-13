@@ -84,11 +84,11 @@ class ClassVolumeSelectPanel : public wxPanel
 
 		wxBoxSizer* MainSizer;
 		wxStaticText* ClassText;
-		wxComboBox* VolumeComboBox;
+		VolumeAssetPickerComboPanel* VolumeComboBox;
 
 		int class_number;
 
-		ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL );
+		ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL );
 		~ClassVolumeSelectPanel();
 };
 

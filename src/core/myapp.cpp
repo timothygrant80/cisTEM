@@ -157,7 +157,7 @@ bool MyApp::OnInit()
 	{
 		active_controller_address.Hostname(possible_controller_addresses.Item(counter));
 		controller_socket->Connect(active_controller_address, false);
-		controller_socket->WaitOnConnect(120);
+		controller_socket->WaitOnConnect(4);
 
 		if (controller_socket->IsConnected() == false)
 		{
@@ -361,7 +361,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				   controller_socket->Notify(true);
 
 				  controller_socket->Connect(active_controller_address, false);
-				  controller_socket->WaitOnConnect(120);
+				  controller_socket->WaitOnConnect(10);
 
 				  controller_socket->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
 

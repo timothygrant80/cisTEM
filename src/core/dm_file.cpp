@@ -16,6 +16,7 @@ DMFile::DMFile()
 	level = 0;
 	sb = 0;
 	endianness = 1;
+	ss = 1;
 	keep = 0;
 }
 

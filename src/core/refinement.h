@@ -53,6 +53,8 @@ public :
 	float defocus_search_range;
 	float defocus_search_step;
 
+	float average_occupancy;
+	float estimated_resolution;
 
 	ArrayofRefinementResults particle_refinement_results;
 };
@@ -68,7 +70,7 @@ public :
 	long refinement_id;
 	long refinement_package_asset_id;
 	wxString name;
-	bool refinement_was_imported_or_generated;
+	bool resolution_statistics_are_generated;
 	wxDateTime datetime_of_run;
 	long starting_refinement_id;
 	long number_of_particles;
@@ -103,6 +105,9 @@ public :
 	wxString name;
 	long number_of_particles;
 	int number_of_classes;
+
+	wxArrayFloat average_occupancy;
+	wxArrayFloat estimated_resolution;
 
 	ShortRefinementInfo & operator = (const Refinement &other_refinement);
 	ShortRefinementInfo & operator = (const Refinement *other_other_refinement);

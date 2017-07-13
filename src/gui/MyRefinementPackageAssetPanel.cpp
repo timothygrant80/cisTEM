@@ -90,6 +90,7 @@ void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 
 					for (class_counter = 1; class_counter <= all_refinement_short_infos.Item(counter).number_of_classes; class_counter++)
 					{
+						main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_DETAILS_%li", all_refinement_short_infos.Item(counter).refinement_id));
 						main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_RESULT_%li_%i", all_refinement_short_infos.Item(counter).refinement_id, class_counter));
 						main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", all_refinement_short_infos.Item(counter).refinement_id, class_counter));
 					}
@@ -471,12 +472,34 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 	int counter = 0;
 	ShortRefinementInfo temp_info;
 	all_refinement_short_infos.Clear();
+	double average_occupancy;
+	double estimated_resolution;
+	int class_counter;
+	sqlite3_stmt *list_statement = NULL;
 
 	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT REFINEMENT_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM REFINEMENT_LIST");
 
 	while (more_data == true)
 	{
 		more_data = main_frame->current_project.database.GetFromBatchSelect("lltli", &temp_info.refinement_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.number_of_particles, &temp_info.number_of_classes);
+		main_frame->current_project.database.Prepare(wxString::Format("SELECT AVERAGE_OCCUPANCY, ESTIMATED_RESOLUTION FROM REFINEMENT_DETAILS_%li", temp_info.refinement_id), &list_statement);
+
+		temp_info.average_occupancy.Clear();
+		temp_info.estimated_resolution.Clear();
+
+		for (class_counter = 0; class_counter < temp_info.number_of_classes; class_counter++)
+		{
+			main_frame->current_project.database.Step(list_statement);
+			average_occupancy = sqlite3_column_double(list_statement, 0);
+			estimated_resolution = sqlite3_column_double(list_statement, 1);
+
+			//wxPrintf("Average Occ. = %f, Res. = %f\n", average_occupancy, estimated_resolution);
+
+			temp_info.average_occupancy.Add(average_occupancy);
+			temp_info.estimated_resolution.Add(estimated_resolution);
+		}
+
+		main_frame->current_project.database.Finalize(list_statement);
 		all_refinement_short_infos.Add(temp_info);
 	}
 

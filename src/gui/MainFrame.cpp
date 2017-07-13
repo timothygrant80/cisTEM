@@ -440,6 +440,23 @@ void MyMainFrame::StartNewProject()
 }
 void MyMainFrame::OpenProject(wxString project_filename)
 {
+	// check for the lock file..
+
+	if (wxDirExists(project_filename + ".lock"))
+	{
+		wxMessageDialog *my_dialog = new wxMessageDialog(this, "There is a lock file for this database, implying another process is writing to it. If multiple processes access the database, it may lead to corruption! A stale lock file can be leftover due to a crashed process, if you are sure that this lock file is stale then select override to delete it and continue.  If not, then select No until you are sure no other process is connected to the database.\n\nBacking up your database regularly doesn't hurt!\n\nDo you want to override?", "Database locked", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+		my_dialog->SetYesNoLabels("Override", "No");
+
+		if (my_dialog->ShowModal() != wxID_YES)
+		{
+			my_dialog->Destroy();
+			return;
+		}
+
+		wxFileName::Rmdir(project_filename + ".lock", wxPATH_RMDIR_RECURSIVE);
+
+	}
+
 	if (current_project.OpenProjectFromFile(project_filename) == true)
 	{
 		// check this project is not "locked"

@@ -37,3 +37,5 @@
 #endif
 
 WX_DECLARE_OBJARRAY(float, wxArrayFloat);
+WX_DECLARE_OBJARRAY(bool, wxArrayBool);
+

@@ -51,6 +51,8 @@ ClassRefinementResults::ClassRefinementResults()
 	should_refine_ctf = false;
 	defocus_search_range = 0;
 	defocus_search_step = 0;
+	average_occupancy = 0.0f;
+	estimated_resolution = 0.0f;
 }
 
 ClassRefinementResults::~ClassRefinementResults()
@@ -81,7 +83,14 @@ ShortRefinementInfo & ShortRefinementInfo::operator = (const Refinement *other_r
 	refinement_package_asset_id = other_refinement->refinement_package_asset_id;
 	name = other_refinement->name;
 	number_of_particles = other_refinement->number_of_particles;
-	number_of_classes = other_refinement->number_of_particles;
+	number_of_classes = other_refinement->number_of_classes;
+
+	for (int counter = 0; counter < number_of_classes; counter++)
+	{
+		average_occupancy.Add(other_refinement->class_refinement_results[counter].average_occupancy);
+		if (other_refinement->resolution_statistics_are_generated == true) estimated_resolution.Add(0.0f);
+		else estimated_resolution.Add(other_refinement->class_refinement_results[counter].class_resolution_statistics.ReturnEstimatedResolution());
+	}
 
 	return *this;
 }
@@ -91,7 +100,7 @@ Refinement::Refinement()
 	refinement_id = -1;
 	refinement_package_asset_id = -1;
 	name = "";
-	refinement_was_imported_or_generated = true;
+	resolution_statistics_are_generated = true;
 	datetime_of_run = wxDateTime::Now();
 	starting_refinement_id = -1;
 	number_of_particles = 0;
@@ -378,5 +387,25 @@ void Refinement::UpdateOccupancies(bool use_old_occupancies)
 				this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = current_average_sigma;
 			}
 		}
+
+		// calculate the new average occupancies..
+
+		for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+		{
+			number_of_active_images = 0;
+			this->class_refinement_results[class_counter].average_occupancy = 0.0f;
+
+			for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+			{
+				if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
+				{
+					this->class_refinement_results[class_counter].average_occupancy += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+					number_of_active_images++;
+				}
+			}
+
+			if (number_of_active_images > 0) this->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
+		}
+
 	}
 }

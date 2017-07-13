@@ -859,6 +859,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).refinement_ids[0];
 	input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
 	output_refinement = new Refinement;
+	output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
 
 	// create a refinement with random angles etc..
 
@@ -973,7 +974,7 @@ void AutoRefinementManager::RunRefinementJob()
 
 	output_refinement->name = wxString::Format("Auto #%li - Round %i", current_output_refinement_id, number_of_rounds_run + 1);
 
-	output_refinement->refinement_was_imported_or_generated = false;
+	output_refinement->resolution_statistics_are_generated = false;
 	output_refinement->datetime_of_run = wxDateTime::Now();
 	output_refinement->starting_refinement_id = input_refinement->refinement_id;
 
@@ -2159,6 +2160,7 @@ void AutoRefinementManager::CycleRefinement()
 		delete input_refinement;
 		input_refinement = output_refinement;
 		output_refinement = new Refinement;
+		output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
 
 		if (my_parent->AutoMaskYesRadio->GetValue() == true)
 		{

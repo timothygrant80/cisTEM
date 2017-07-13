@@ -216,10 +216,10 @@ bool JobControlApp::OnInit()
 	for (counter = 0; counter < possible_gui_addresses.GetCount(); counter++)
 	{
 		active_gui_address.Hostname(possible_gui_addresses.Item(counter));
-		wxPrintf("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 30 sec) ...\n", active_gui_address.IPAddress(), active_gui_address.Service());
+		wxPrintf("\n JOB CONTROL: Trying to connect to %s:%i (timeout = 4 sec) ...\n", active_gui_address.IPAddress(), active_gui_address.Service());
 
 		gui_socket->Connect(active_gui_address, false);
-		gui_socket->WaitOnConnect(30);
+		gui_socket->WaitOnConnect(4);
 
 		if (gui_socket->IsConnected() == false)
 		{

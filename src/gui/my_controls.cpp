@@ -1532,17 +1532,12 @@ ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id,
 	ClassText->Wrap( -1 );
 	bSizer201->Add( ClassText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	VolumeComboBox = new wxComboBox( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	VolumeComboBox->Append("Generate From Params.");
-	AppendVolumeAssetsToComboBox(VolumeComboBox);
+	VolumeComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	VolumeComboBox->FillComboBox(true);
 	VolumeComboBox->SetSelection(0);
 	bSizer201->Add( VolumeComboBox, 1, wxALL, 5 );
-
-
 	MainSizer->Add( bSizer201, 1, 0, 5 );
-
 	class_number = -1;
-
 
 	this->SetSizer( MainSizer );
 	this->Layout();

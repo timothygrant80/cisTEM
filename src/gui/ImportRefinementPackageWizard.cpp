@@ -201,7 +201,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		temp_refinement_package->references_for_next_refinement.Add(-1);
 
 		temp_refinement.refinement_id = refinement_id;
-		temp_refinement.refinement_was_imported_or_generated = true;
+		temp_refinement.resolution_statistics_are_generated = true;
 
 		temp_particle_info.spherical_aberration = SphericalAberrationTextCtrl->ReturnValue();
 		temp_particle_info.microscope_voltage = MicroscopeVoltageTextCtrl->ReturnValue();
@@ -318,7 +318,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		temp_refinement_package->references_for_next_refinement.Add(-1);
 
 		temp_refinement.refinement_id = refinement_id;
-		temp_refinement.refinement_was_imported_or_generated = true;
+		temp_refinement.resolution_statistics_are_generated = true;
 
 		temp_particle_info.spherical_aberration = SphericalAberrationTextCtrl->ReturnValue();
 		temp_particle_info.microscope_voltage = MicroscopeVoltageTextCtrl->ReturnValue();

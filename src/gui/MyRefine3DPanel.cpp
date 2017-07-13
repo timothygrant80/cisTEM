@@ -1205,6 +1205,10 @@ void RefinementManager::BeginRefinementCycle()
 		output_refinement = input_refinement;
 		current_output_refinement_id = input_refinement->refinement_id;
 
+		// after this job, the resolution statistics will be real, so update..
+
+		output_refinement->resolution_statistics_are_generated = false;
+
 		SetupReconstructionJob();
 		RunReconstructionJob();
 	}
@@ -1251,7 +1255,7 @@ void RefinementManager::RunRefinementJob()
 	}
 	else output_refinement->name = wxString::Format("Local Refinement #%li", current_output_refinement_id);
 
-	output_refinement->refinement_was_imported_or_generated = false;
+	output_refinement->resolution_statistics_are_generated = false;
 	output_refinement->datetime_of_run = wxDateTime::Now();
 	output_refinement->starting_refinement_id = current_input_refinement_id;
 

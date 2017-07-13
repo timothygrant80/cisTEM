@@ -8006,7 +8006,7 @@ MolecularWeightWizardPanel::MolecularWeightWizardPanel( wxWindow* parent, wxWind
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer147->Add( MolecularWeightTextCtrl, 1, wxALL, 5 );
 	
 	
@@ -8028,6 +8028,39 @@ MolecularWeightWizardPanel::~MolecularWeightWizardPanel()
 {
 }
 
+InitialReferenceSelectWizardPanel::InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	MainSizer = new wxBoxSizer( wxVERTICAL );
+	
+	TitleText = new wxStaticText( this, wxID_ANY, wxT("Initial class references :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	TitleText->Wrap( -1 );
+	MainSizer->Add( TitleText, 0, wxALL, 5 );
+	
+	m_staticline108 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainSizer->Add( m_staticline108, 0, wxEXPAND | wxALL, 5 );
+	
+	ScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( 100,-1 ), wxHSCROLL|wxVSCROLL );
+	ScrollWindow->SetScrollRate( 5, 5 );
+	ScrollSizer = new wxBoxSizer( wxVERTICAL );
+	
+	
+	ScrollWindow->SetSizer( ScrollSizer );
+	ScrollWindow->Layout();
+	MainSizer->Add( ScrollWindow, 1, wxALL|wxEXPAND, 5 );
+	
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Select the volume asset to use for the initial reference for each of the classes.  If \"Generate from params.\" is selected, a new volume asset will be calculated from the starting parameters at the start of the next refinement. In general, you will provide a reference for a new refinement package, and generate one when using a template."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	MainSizer->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+InitialReferenceSelectWizardPanel::~InitialReferenceSelectWizardPanel()
+{
+}
+
 LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer153;
@@ -8040,7 +8073,7 @@ LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWi
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("150.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer147->Add( LargestDimensionTextCtrl, 1, wxALL, 5 );
 	
 	
@@ -8108,7 +8141,7 @@ BoxSizeWizardPanel::BoxSizeWizardPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticText21411->Wrap( -1 );
 	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	BoxSizeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("512"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 2048, 0 );
+	BoxSizeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("512"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 2048, 1 );
 	bSizer14711->Add( BoxSizeSpinCtrl, 1, wxALL, 5 );
 	
 	
@@ -8164,37 +8197,6 @@ NumberofClassesWizardPanel::~NumberofClassesWizardPanel()
 {
 }
 
-InitialReferenceSelectWizardPanel::InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
-{
-	MainSizer = new wxBoxSizer( wxVERTICAL );
-	
-	TitleText = new wxStaticText( this, wxID_ANY, wxT("Initial class references :-"), wxDefaultPosition, wxDefaultSize, 0 );
-	TitleText->Wrap( -1 );
-	MainSizer->Add( TitleText, 0, wxALL, 5 );
-	
-	ScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
-	ScrollWindow->SetScrollRate( 5, 5 );
-	GridSizer = new wxGridSizer( 0, 2, 0, 0 );
-	
-	
-	ScrollWindow->SetSizer( GridSizer );
-	ScrollWindow->Layout();
-	GridSizer->Fit( ScrollWindow );
-	MainSizer->Add( ScrollWindow, 1, wxALL|wxEXPAND, 5 );
-	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Select the volume asset to use for the initial reference for each of the classes.  If \"Generate from params.\" is selected, a new volume asset will be calculated from the starting parameters at the start of the next refinement. In general, you will provide a reference for a new refinement package, and generate one when using a template."), wxDefaultPosition, wxDefaultSize, 0 );
-	InfoText->Wrap( -1 );
-	MainSizer->Add( InfoText, 0, wxALL|wxEXPAND, 10 );
-	
-	
-	this->SetSizer( MainSizer );
-	this->Layout();
-}
-
-InitialReferenceSelectWizardPanel::~InitialReferenceSelectWizardPanel()
-{
-}
-
 ClassesSetupWizardPanelA::ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer15311;
@@ -8225,7 +8227,7 @@ ClassesSetupWizardPanelA::ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID
 	
 	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to carry over all particles from the template refinement package to the new refinement package?  If No, you will be able to select the classes from which particles should be carried over."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to carry over all particles from the template refinement package to the new refinement package?  If No, you will be able to select the classes from which particles should be carried over (based on which class has the highest occupancy for that particle), and a new particle stack will be created. If yes all the particles will be included in the new refinement package."), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	
@@ -8296,10 +8298,10 @@ ClassesSetupWizardPanelC::ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer391;
 	bSizer391 = new wxBoxSizer( wxVERTICAL );
 	
-	m_listCtrl17 = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT );
-	m_listCtrl17->SetMinSize( wxSize( 10,-1 ) );
+	NewClassListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL );
+	NewClassListCtrl->SetMinSize( wxSize( 10,-1 ) );
 	
-	bSizer391->Add( m_listCtrl17, 100, wxALL|wxEXPAND, 5 );
+	bSizer391->Add( NewClassListCtrl, 100, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer378->Add( bSizer391, 1, wxEXPAND, 5 );
@@ -8307,10 +8309,10 @@ ClassesSetupWizardPanelC::ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer392;
 	bSizer392 = new wxBoxSizer( wxVERTICAL );
 	
-	m_listCtrl20 = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT );
-	m_listCtrl20->SetMinSize( wxSize( 10,-1 ) );
+	OldClassListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT );
+	OldClassListCtrl->SetMinSize( wxSize( 10,-1 ) );
 	
-	bSizer392->Add( m_listCtrl20, 1, wxALL|wxEXPAND, 5 );
+	bSizer392->Add( OldClassListCtrl, 1, wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer378->Add( bSizer392, 1, wxEXPAND, 5 );
@@ -8324,7 +8326,7 @@ ClassesSetupWizardPanelC::ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID
 	
 	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("For each new class (Left) select input class(es) parameters.  If two or more classes are selected (e.g. to merge similar classes), parameters can be taken either from the class with the highest occupancy, or from a random class. At least one class must be selected, multiple selections are allowed (with CTRL/SHIFT)."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("For each new class (Left) select class(es) to copy parameters from.  If two or more classes are selected (e.g. to merge similar classes), parameters can be taken either from the class with the highest occupancy, or from a random class. At least one class must be selected, multiple selections are allowed (with CTRL/SHIFT).  Note : You are selecting which parameters to copy over, all particles are represented in each class. "), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	
@@ -8352,8 +8354,8 @@ ClassesSetupWizardPanelD::ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer367;
 	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_radioBtn39 = new wxRadioButton( this, wxID_ANY, wxT("Best Occupancy"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer367->Add( m_radioBtn39, 0, wxALL, 5 );
+	BestOccupancyRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Best Occupancy"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( BestOccupancyRadioButton, 0, wxALL, 5 );
 	
 	m_radioBtn40 = new wxRadioButton( this, wxID_ANY, wxT("Random"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer367->Add( m_radioBtn40, 0, wxALL, 5 );
@@ -8395,8 +8397,8 @@ ClassesSetupWizardPanelE::ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer367;
 	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_radioBtn39 = new wxRadioButton( this, wxID_ANY, wxT("Random occupancies"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer367->Add( m_radioBtn39, 0, wxALL, 5 );
+	RandomiseOccupanciesRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Random occupancies"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( RandomiseOccupanciesRadioButton, 0, wxALL, 5 );
 	
 	m_radioBtn40 = new wxRadioButton( this, wxID_ANY, wxT("Keep input occupancies"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer367->Add( m_radioBtn40, 0, wxALL, 5 );
@@ -8410,7 +8412,7 @@ ClassesSetupWizardPanelE::ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID
 	
 	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Should the new occupancies be randomised, or should the input occupancies be kept."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Should the new occupancies be randomised, or should the input occupancies be kept. Randomising the occupanices is a way of creating new \"seed\" references. For example, a refinement done with 1 class, could be classified into multiple classes by creating the new classes with parameters from the single class and randomising the occupancies.  This will lead to small differences which will hopefully converge to an accurate 3D classification after a number of rounds of additional refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	

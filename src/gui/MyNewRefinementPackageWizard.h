@@ -5,6 +5,16 @@
 
 class MyNewRefinementPackageWizard;
 
+// this is a shitty little class for holding class selections
+
+class NewRefinementPackageWizardClassSelection
+{
+public:
+	wxArrayBool class_selection;
+};
+
+WX_DECLARE_OBJARRAY(NewRefinementPackageWizardClassSelection, ArrayofNewRefinementPackageWizardClassSelection);
+
 class TemplateWizardPage : public wxWizardPage
 {
 	MyNewRefinementPackageWizard *wizard_pointer;
@@ -14,6 +24,10 @@ class TemplateWizardPage : public wxWizardPage
 	TemplateWizardPanel *my_panel;
 
  	 TemplateWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+ 	 ~TemplateWizardPage ();
+
+ 	 void RefinementPackageChanged( wxCommandEvent& event );
+
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const {return NULL;};
 
@@ -71,7 +85,10 @@ class NumberofClassesWizardPage : public wxWizardPage
 
 	NumberofClassesWizardPanel *my_panel;
 
-	NumberofClassesWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	NumberofClassesWizardPage(MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	~NumberofClassesWizardPage();
+
+	void NumberClassesChanged(wxSpinEvent& event);
 
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const;
@@ -85,6 +102,7 @@ class InitialReferencesWizardPage : public wxWizardPage
 	public:
 
 	InitialReferenceSelectWizardPanel *my_panel;
+	wxBoxSizer* main_sizer;
 
 	InitialReferencesWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
 
@@ -148,6 +166,9 @@ class ClassesSetupWizardPageA : public wxWizardPage
 	ClassesSetupWizardPanelA *my_panel;
 
 	ClassesSetupWizardPageA (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	~ClassesSetupWizardPageA();
+
+	void CarryOverYesButtonChanged(wxCommandEvent& event);
 
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const;
@@ -163,6 +184,10 @@ class ClassesSetupWizardPageB : public wxWizardPage
 	ClassesSetupWizardPanelB *my_panel;
 
 	ClassesSetupWizardPageB (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	~ClassesSetupWizardPageB ();
+
+	void ClassSelectionChanged( wxListEvent& event );
+	wxArrayBool ReturnSelectedClasses();
 
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const;
@@ -177,7 +202,21 @@ class ClassesSetupWizardPageC : public wxWizardPage
 
 	ClassesSetupWizardPanelC *my_panel;
 
+	void OldClassListCtrlDeSelected( wxListEvent& event );
+	void OldClassListCtrlSelected( wxListEvent& event );
+	void NewClassSelectionChanged( wxListEvent& event );
+
+	int ReturnSelectedNewClass();
+	void DrawClassSelections();
+	void UpdateCurrentClassSelectionsText();
+
+	bool IsAtLeastOneOldClassSelectedForEachNewClass();
+	wxArrayInt ReturnReferencesForClass(int wanted_class);
+
+	ArrayofNewRefinementPackageWizardClassSelection current_class_selections;
+
 	ClassesSetupWizardPageC (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	~ClassesSetupWizardPageC ();
 
  	 wxWizardPage * GetNext () const;
 	 wxWizardPage * GetPrev () const;
@@ -229,6 +268,7 @@ class ClassSelectionWizardPage : public wxWizardPage
 
 };
 
+
 class MyNewRefinementPackageWizard : public NewRefinementPackageWizard
 {
 public:
@@ -260,8 +300,7 @@ public:
 		void OnUpdateUI(wxUpdateUIEvent& event);
 		void PageChanging(wxWizardEvent& event);
 		void PageChanged(wxWizardEvent& event);
-	
-};
 
+};
 
 #endif

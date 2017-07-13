@@ -856,10 +856,14 @@ void AutoRefinementManager::BeginRefinementCycle()
 */
 	// setup input/output refinements
 
+
+
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).refinement_ids[0];
 	input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
 	output_refinement = new Refinement;
 	output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
+
+	wxPrintf("RP has %li particles, refinement has %li particles\n", number_of_particles, input_refinement->number_of_particles);
 
 	// create a refinement with random angles etc..
 
@@ -1101,14 +1105,19 @@ void AutoRefinementManager::SetupMerge3dJob()
 		wxString dump_file_seed_1 					= main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump",  current_output_refinement_id, class_counter);
 		wxString dump_file_seed_2 					= main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
-		my_parent->my_job_package.AddJob("ttttffftti",	output_reconstruction_1.ToUTF8().data(),
+		bool save_orthogonal_views_image = true;
+		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+
+		my_parent->my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
 														molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 														dump_file_seed_1.ToUTF8().data(),
 														dump_file_seed_2.ToUTF8().data(),
-														class_counter + 1);
+														class_counter + 1,
+														save_orthogonal_views_image,
+														orthogonal_views_filename.ToUTF8().data());
 	}
 }
 

@@ -116,6 +116,13 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	directory_string += "/Scaled";
 	wxFileName::Mkdir(directory_string);
 
+	directory_string = volume_asset_directory.GetFullPath();
+	directory_string += "/OrthViews";
+	wxFileName::Mkdir(directory_string);
+
+
+
+
 	total_cpu_hours = 0;
 	total_jobs_run = 0;
 
@@ -190,6 +197,20 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	directory_string += "/Scratch";
 	scratch_directory = directory_string;
 	if (wxDir::Exists(scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(scratch_directory.GetFullPath());
+
+	// sub directories
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Spectra";
+	if (wxDir::Exists(directory_string) == false) wxFileName::Mkdir(directory_string);
+
+	directory_string = image_asset_directory.GetFullPath();
+	directory_string += "/Scaled";
+	if (wxDir::Exists(directory_string) == false) wxFileName::Mkdir(directory_string);
+
+	directory_string = volume_asset_directory.GetFullPath();
+	directory_string += "/OrthViews";
+	if (wxDir::Exists(directory_string) == false) wxFileName::Mkdir(directory_string);
 
 	is_open = true;
 

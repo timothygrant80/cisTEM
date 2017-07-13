@@ -1470,14 +1470,19 @@ void AbInitioManager::SetupMerge3dJob()
 		wxString dump_file_seed_1 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup_dump_file_%i_odd_.dump",  class_counter);
 		wxString dump_file_seed_2 					= main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup_dump_file_%i_even_.dump", class_counter);
 
-		my_parent->my_job_package.AddJob("ttttffftti",	output_reconstruction_1.ToUTF8().data(),
+		bool save_orthogonal_views_image = false;
+		wxString orthogonal_views_filename = "";
+
+		my_parent->my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
 														molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 														dump_file_seed_1.ToUTF8().data(),
 														dump_file_seed_2.ToUTF8().data(),
-														class_counter + 1);
+														class_counter + 1,
+														save_orthogonal_views_image,
+														orthogonal_views_filename.ToUTF8().data());
 	}
 }
 

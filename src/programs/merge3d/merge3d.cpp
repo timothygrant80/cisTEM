@@ -42,15 +42,19 @@ void Merge3DApp::DoInteractiveUserInput()
 	delete my_input;
 
 	int class_number_for_gui = 1;
-	my_current_job.Reset(10);
-	my_current_job.ManualSetArguments("ttttffftti",	output_reconstruction_1.ToUTF8().data(),
+	bool save_orthogonal_views_image = false;
+	wxString orthogonal_views_filename = "";
+	my_current_job.Reset(12);
+	my_current_job.ManualSetArguments("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
 													molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 													dump_file_seed_1.ToUTF8().data(),
 													dump_file_seed_2.ToUTF8().data(),
-													class_number_for_gui);
+													class_number_for_gui,
+													save_orthogonal_views_image,
+													orthogonal_views_filename.ToUTF8().data());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -67,6 +71,8 @@ bool Merge3DApp::DoCalculation()
 	wxString dump_file_seed_1 					= my_current_job.arguments[7].ReturnStringArgument();
 	wxString dump_file_seed_2 					= my_current_job.arguments[8].ReturnStringArgument();
 	int class_number_for_gui					= my_current_job.arguments[9].ReturnIntegerArgument();
+	bool save_orthogonal_views_image			= my_current_job.arguments[10].ReturnBoolArgument();
+	wxString orthogonal_views_filename			= my_current_job.arguments[11].ReturnStringArgument();
 
 	ResolutionStatistics *gui_statistics = NULL;
 
@@ -172,6 +178,15 @@ bool Merge3DApp::DoCalculation()
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
 			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics);
+
+	if (save_orthogonal_views_image == true)
+	{
+		Image orth_image;
+		orth_image.Allocate(output_3d.density_map.logical_x_dimension * 3, output_3d.density_map.logical_y_dimension * 2, 1, true);
+		output_3d.density_map.CreateOrthogonalProjectionsImage(&orth_image);
+		orth_image.QuickAndDirtyWriteSlice(orthogonal_views_filename.ToStdString(), 1);
+	}
+
 
 	if (is_running_locally == false)
 	{

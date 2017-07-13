@@ -8226,14 +8226,12 @@ float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_m
 
 void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 {
-	image_to_create->QuickAndDirtyWriteSlice("/tmp/0.mrc", 1);
 	MyDebugAssertTrue(this->IsCubic() == true, "Only Cubic Volumes Supported");
 	// don't allocate so i can use Allocateaspointing to slice in 3d.
 	MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
 
 	int i,j, k;
 
-	image_to_create->QuickAndDirtyWriteSlice("/tmp/1.mrc", 1);
 	Image slice_one;
 	Image slice_two;
 	Image slice_three;
@@ -8342,8 +8340,6 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 
 	output_counter = 0;
 
-	image_to_create->QuickAndDirtyWriteSlice("/tmp/2.mrc", 1);
-
 	for (j = 0; j < image_to_create->logical_y_dimension; j++)
 	{
 		for (i = 0; i < image_to_create->logical_x_dimension; i++)
@@ -8386,8 +8382,6 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 
 		output_counter += image_to_create->padding_jump_value;
 	}
-
-	image_to_create->QuickAndDirtyWriteSlice("/tmp/3.mrc", 1);
 }
 
 

@@ -1069,7 +1069,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 		for (particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 		{
-			temp_particle_info = template_refinement_package->contained_particles[particle_counter];
+			temp_particle_info = template_refinement_package->contained_particles[particles_to_take[particle_counter]];
+
+			if (class_setup_pageA->my_panel->CarryOverYesButton->GetValue() == false) temp_particle_info.position_in_stack = particle_counter + 1;
+
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
 			// do we have to write to a new stack?
@@ -1157,7 +1160,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = active_result->sigma;
 			}
 
-			my_dialog->Update(counter + 1);
+			my_dialog->Update(particle_counter + 1);
 		}
 
 		my_dialog->Destroy();

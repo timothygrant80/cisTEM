@@ -1360,14 +1360,19 @@ void RefinementManager::SetupMerge3dJob()
 		wxString dump_file_seed_1 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
 		wxString dump_file_seed_2 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
-		my_parent->my_job_package.AddJob("ttttffftti",	output_reconstruction_1.ToUTF8().data(),
-														output_reconstruction_2.ToUTF8().data(),
-														output_reconstruction_filtered.ToUTF8().data(),
-														output_resolution_statistics.ToUTF8().data(),
-														molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
-														dump_file_seed_1.ToUTF8().data(),
-														dump_file_seed_2.ToUTF8().data(),
-														class_counter + 1);
+		bool save_orthogonal_views_image = true;
+		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+
+		my_parent->my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
+															output_reconstruction_2.ToUTF8().data(),
+															output_reconstruction_filtered.ToUTF8().data(),
+															output_resolution_statistics.ToUTF8().data(),
+															molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
+															dump_file_seed_1.ToUTF8().data(),
+															dump_file_seed_2.ToUTF8().data(),
+															class_counter + 1,
+															save_orthogonal_views_image,
+															orthogonal_views_filename.ToUTF8().data());
 	}
 }
 

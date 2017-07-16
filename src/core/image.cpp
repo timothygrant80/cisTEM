@@ -6863,10 +6863,65 @@ void Image::ApplyBFactor(float bfactor) // add real space and windows later, pro
 				pixel_counter++;
 			}
 		}
-
 	}
 }
 
+void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit, float res_limit)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
+
+	int i, j, k;
+	int bin;
+	int number_of_bins2 = ReturnLargestLogicalDimension();
+
+	long pixel_counter = 0;
+
+	float z_coord;
+	float y_coord;
+	float x_coord;
+
+	float frequency_squared;
+	float filter_value;
+	float bfactor_res_limit2 = powf(bfactor_res_limit, 2);
+	float res_limit2 = powf(res_limit, 2);
+	float filter_value_blimit;
+
+	bin = int(sqrtf(bfactor_res_limit2) * number_of_bins2);
+	filter_value_blimit = power_spectrum.data_y[bin];
+//	filter_value_blimit = exp(-bfactor * bfactor_res_limit2 * 0.25) * power_spectrum.data_y[bin];
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x_coord = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x_coord + y_coord + z_coord;
+				//frequency = sqrt(frequency_squared);
+
+				// compute radius, in units of physical Fourier pixels
+				bin = int(sqrtf(frequency_squared) * number_of_bins2);
+
+				if (frequency_squared <= bfactor_res_limit2) filter_value = exp(-bfactor * frequency_squared * 0.25);
+				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit * exp(-bfactor * frequency_squared * 0.25) / power_spectrum.data_y[bin];
+//				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
+				else filter_value = 0.0;
+
+				complex_values[pixel_counter] *= filter_value;
+				pixel_counter++;
+			}
+		}
+	}
+}
 
 // If you set half_width to 1, only the central row or column of pixels will be masked. Half_width of 2 means 3 pixels will be masked.
 void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)

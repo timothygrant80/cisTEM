@@ -269,9 +269,9 @@ void ParticleFinder::RedoWithNewNumberOfBackgroundBoxes()
 	OpenMicrographAndUpdateDimensions();
 
 	UpdatePixelSizeFromMicrographDimensions();
-
+*/
 	OpenTemplatesAndUpdateDimensions();
-
+/*
 	UpdateCTF();
 
 	UpdateMinimumBoxSize();
@@ -1304,6 +1304,7 @@ void ParticleFinder::UpdateMinimumBoxSize()
 {
 	// Let's decide on a box size for picking (on the resampled micrograph)
 	minimum_box_size_for_object_with_psf = 2 * (maximum_radius_in_pixels + int(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size));
+	minimum_box_size_for_object_with_psf = std::max(4,minimum_box_size_for_object_with_psf);
 	minimum_box_size_for_picking = minimum_box_size_for_object_with_psf;
 
 	const int minimum_box_size_for_picking_unbinned = int(float(minimum_box_size_for_picking)*pixel_size/original_micrograph_pixel_size)+1;

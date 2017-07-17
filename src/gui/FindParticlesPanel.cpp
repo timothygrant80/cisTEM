@@ -380,8 +380,56 @@ int MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()
 	return int(MaximumParticleRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
 }
 
-void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event )
+
+void MyFindParticlesPanel::OnNewCharacteristicParticleRadius()
 {
+	// Enforce min
+	if (CharacteristicParticleRadiusNumericCtrl->ReturnValue() < 1.0) CharacteristicParticleRadiusNumericCtrl->ChangeValueFloat(1.0);
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewTypicalRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+
+void MyFindParticlesPanel::OnNewThresholdPeakHeight()
+{
+	// Enforce min
+	if (ThresholdPeakHeightNumericCtrl->ReturnValue() < 0.1) ThresholdPeakHeightNumericCtrl->ChangeValueFloat(0.1);
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewMinimumPeakHeight();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+
+void MyFindParticlesPanel::OnNewMaximumParticleRadius()
+{
+	// Enforce min
+	if (MaximumParticleRadiusNumericCtrl->ReturnValue() < 1.0) MaximumParticleRadiusNumericCtrl->ChangeValueFloat(1.0);
+
 	if (!SetMinimumDistanceFromEdgesCheckBox->IsChecked())
 	{
 		MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
@@ -401,66 +449,50 @@ void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter( wxCommandEve
 		PickingParametersPanel->Thaw();
 		ExpertOptionsPanel->Thaw();
 	}
+}
 
+
+void MyFindParticlesPanel::OnNewHighestResolution()
+{
+	// Enforce min
+	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), ImageComboBox->GetSelection()))->pixel_size;
+	if (HighestResolutionNumericCtrl->ReturnValue() <  pixel_size * 2.0 ) HighestResolutionNumericCtrl->ChangeValueFloat( pixel_size * 2.0 );
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewHighestResolution();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+
+void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event )
+{
+	OnNewMaximumParticleRadius();
 }
 
 void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
 {
-	if (fabs(MaximumParticleRadiusNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
-	{
-		if (!SetMinimumDistanceFromEdgesCheckBox->IsChecked())
-		{
-			MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
-		}
-
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewMaximumRadius();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
+	OnNewMaximumParticleRadius();
 }
 
 void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
 {
-	if (fabs(CharacteristicParticleRadiusNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewTypicalRadius();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
+	OnNewCharacteristicParticleRadius();
 }
 
 void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event )
 {
-	if (fabs(ThresholdPeakHeightNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewMinimumPeakHeight();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
+	OnNewThresholdPeakHeight();
 }
 
 
@@ -481,76 +513,22 @@ void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus( wxFocusEven
 
 void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event )
 {
-	if (AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewTypicalRadius();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
-
+	OnNewCharacteristicParticleRadius();
 }
 
 void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event )
 {
-	if (AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewMinimumPeakHeight();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
-
+	OnNewThresholdPeakHeight();
 }
 
 void MyFindParticlesPanel::OnHighestResolutionNumericTextEnter( wxCommandEvent & event )
 {
-	if (AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewHighestResolution();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
+	OnNewHighestResolution();
 }
 
 void MyFindParticlesPanel::OnHighestResolutionNumericKillFocus( wxFocusEvent & event )
 {
-	if (fabs(HighestResolutionNumericCtrl->ReturnValue() - value_on_focus_float) > 0.001 && AutoPickRefreshCheckBox->GetValue())
-	{
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
-
-		SetAllUserParametersForParticleFinder();
-
-		particle_finder.RedoWithNewHighestResolution();
-
-		DrawResultsFromParticleFinder();
-
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
-	}
+	OnNewHighestResolution();
 }
 
 void MyFindParticlesPanel::OnHighestResolutionNumericSetFocus( wxFocusEvent & event )

@@ -51,6 +51,11 @@ public:
 		void DrawResultsFromParticleFinder();
 		int ReturnDefaultMinimumDistanceFromEdges();
 
+		void OnNewCharacteristicParticleRadius();
+		void OnNewThresholdPeakHeight();
+		void OnNewMaximumParticleRadius();
+		void OnNewHighestResolution();
+
 		void OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event );
 		void OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent & event );
 		void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event );

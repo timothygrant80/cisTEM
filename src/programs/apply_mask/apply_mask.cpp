@@ -67,8 +67,9 @@ bool ApplyMask::DoCalculation()
 	{
 		if (input3d_file.ReturnZSize() > 1) wxPrintf("\nVolume and mask file have different dimensions\n");
 		else wxPrintf("\nImage and mask file have different dimensions\n");
-		exit(0);
+		abort();
 	}
+	if (filter_radius == 0.0) filter_radius = pixel_size;
 	mask_volume = my_image.ApplyMask(my_mask, cosine_edge / pixel_size, outside_weight, pixel_size / filter_radius, pixel_size / filter_edge);
 	my_image.WriteSlices(&output_file,1, input3d_file.ReturnNumberOfSlices());
 

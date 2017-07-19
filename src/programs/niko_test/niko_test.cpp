@@ -87,7 +87,7 @@ bool NikoTestApp::DoCalculation()
 //	input_image.ReadSlices(&input_file, first_slice, last_slice);
 	bfactor_pixels = bfactor / pixel_size / pixel_size;
 	input_image.ForwardFFT();
-	input_image.ApplyBFactorAndWhiten(power_spectrum, bfactor_pixels, pixel_size / bfactor_res_limit, pixel_size / resolution_limit);
+	input_image.ApplyBFactorAndWhiten(power_spectrum, bfactor_pixels, pixel_size / bfactor_res_limit);
 //	input_image.ApplyBFactor(bfactor_pixels);
 //	input_image.CosineMask(pixel_size / resolution_limit, cosine_edge / input_file.ReturnXSize());
 	input_image.CosineMask(pixel_size / resolution_limit - pixel_size / 40.0, pixel_size / 20.0);
@@ -103,7 +103,7 @@ bool NikoTestApp::DoCalculation()
 	output_image.WriteSlice(&output_file_2D, 1);
 	wxPrintf("Done with slices. Starting 3D B-factor application...\n");
 
-	output_image_3D.ApplyBFactorAndWhiten(power_spectrum, bfactor_pixels, pixel_size / bfactor_res_limit, pixel_size / resolution_limit);
+	output_image_3D.ApplyBFactorAndWhiten(power_spectrum, bfactor_pixels, pixel_size / bfactor_res_limit);
 	output_image_3D.CosineMask(pixel_size / resolution_limit - pixel_size / 40.0, pixel_size / 20.0);
 	output_image_3D.BackwardFFT();
 	output_image_3D.WriteSlices(&output_file_3D, 1, input_file.ReturnZSize());

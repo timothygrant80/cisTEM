@@ -323,7 +323,7 @@ public:
 	void SubtractImage(Image *other_image);
 	void SubtractSquaredImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
-	void ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit, float res_limit);
+	void ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit);
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
 	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);

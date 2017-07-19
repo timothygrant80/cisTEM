@@ -73,7 +73,7 @@ bool ApplyMask::DoCalculation()
 	mask_volume = my_image.ApplyMask(my_mask, cosine_edge / pixel_size, outside_weight, pixel_size / filter_radius, pixel_size / filter_edge);
 	my_image.WriteSlices(&output_file,1, input3d_file.ReturnNumberOfSlices());
 
-	wxPrintf("\nMask volume = %g\n\n", mask_volume);
+	wxPrintf("\nMask volume = %g\n\n voxels", mask_volume);
 
 	return true;
 }

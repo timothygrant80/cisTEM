@@ -6866,7 +6866,7 @@ void Image::ApplyBFactor(float bfactor) // add real space and windows later, pro
 	}
 }
 
-void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit, float res_limit)
+void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -6884,7 +6884,6 @@ void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bf
 	float frequency_squared;
 	float filter_value;
 	float bfactor_res_limit2 = powf(bfactor_res_limit, 2);
-	float res_limit2 = powf(res_limit, 2);
 	float filter_value_blimit;
 
 	bin = int(sqrtf(bfactor_res_limit2) * number_of_bins2);

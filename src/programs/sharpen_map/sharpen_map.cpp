@@ -24,19 +24,20 @@ void SharpenMap::DoInteractiveUserInput()
 
 	wxString input_volume	= my_input->GetFilenameFromUser("Input volume file name", "Name of input image file", "input.mrc", true );
 	wxString output_volume	= my_input->GetFilenameFromUser("Output sharpened volume file name", "Name of sharpened output volume", "output.mrc", false );
-	wxString input_mask		= my_input->GetFilenameFromUser("Input mask file name", "Name of input image file", "mask.mrc", true );
+	wxString input_mask		= my_input->GetFilenameFromUser("Input mask file name", "Name of input image file", "mask.mrc", false );
 	float pixel_size		= my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
 	float mask_radius		= my_input->GetFloatFromUser("Mask radius (A)", "Radius of mask to be applied to input map, in Angstroms", "100.0", 0.0);
-	float bfactor			= my_input->GetFloatFromUser("B-Factor (A^2)", "B-factor to be applied to dampen the map after spectral flattening, in Angstroms squared", "20.0");
+	float bfactor			= my_input->GetFloatFromUser("B-Factor (A^2)", "B-factor to be applied to dampen the map after spectral flattening, in Angstroms squared", "0.0");
 	float bfactor_res_limit	= my_input->GetFloatFromUser("Low resolution limit for spectral flattening (A)", "The resolution at which spectral flattening starts being applied, in Angstroms", "8.0", 0.0);
 	float resolution_limit	= my_input->GetFloatFromUser("High resolution limit (A)", "Resolution of low-pass filter applied to final output maps, in Angstroms", "3.0", 0.0);
+	float filter_edge		= my_input->GetFloatFromUser("Filter edge width (A)", "Cosine edge used with the low-pass filter, in Angstroms", "20.0", 0.0);
 	bool use_mask			= my_input->GetYesNoFromUser("Use 3D mask", "Should the 3D mask be used to mask the input map before sharpening?", "No");
 	bool invert_hand		= my_input->GetYesNoFromUser("Invert handedness", "Should the map handedness be inverted?", "No");
 
 	delete my_input;
 
-	my_current_job.Reset(10);
-	my_current_job.ManualSetArguments("tttfffffbb", input_volume.ToUTF8().data(), output_volume.ToUTF8().data(), input_mask.ToUTF8().data(), pixel_size, mask_radius, bfactor, bfactor_res_limit, resolution_limit, use_mask, invert_hand);
+	my_current_job.Reset(11);
+	my_current_job.ManualSetArguments("tttffffffbb", input_volume.ToUTF8().data(), output_volume.ToUTF8().data(), input_mask.ToUTF8().data(), pixel_size, mask_radius, bfactor, bfactor_res_limit, resolution_limit, filter_edge, use_mask, invert_hand);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -52,8 +53,9 @@ bool SharpenMap::DoCalculation()
 	float bfactor			= my_current_job.arguments[5].ReturnFloatArgument();
 	float bfactor_res_limit	= my_current_job.arguments[6].ReturnFloatArgument();
 	float resolution_limit	= my_current_job.arguments[7].ReturnFloatArgument();
-	bool use_mask			= my_current_job.arguments[8].ReturnBoolArgument();
-	bool invert_hand		= my_current_job.arguments[9].ReturnBoolArgument();
+	float filter_edge		= my_current_job.arguments[8].ReturnFloatArgument();
+	bool use_mask			= my_current_job.arguments[9].ReturnBoolArgument();
+	bool invert_hand		= my_current_job.arguments[10].ReturnBoolArgument();
 
 	MRCFile input_file(input_volume.ToStdString(), false);
 	MRCFile output_file(output_volume.ToStdString(), true);
@@ -101,7 +103,7 @@ bool SharpenMap::DoCalculation()
 	if (use_mask)
 	{
 		mask_volume.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
-		wxPrintf("\nMask volume = %g\n\n", input_map.ApplyMask(mask_volume, cosine_edge / pixel_size, 0.0, 0.0, 0.0));
+		wxPrintf("\nMask volume = %g voxels\n\n", input_map.ApplyMask(mask_volume, cosine_edge / pixel_size, 0.0, 0.0, 0.0));
 	}
 	else input_map.CosineMask(mask_radius / pixel_size, cosine_edge / pixel_size);
 
@@ -110,8 +112,8 @@ bool SharpenMap::DoCalculation()
 	power_spectrum.SquareRoot();
 //	wxPrintf("Done with 3D spectrum. Starting slice estimation...\n");
 
-	output_map.ApplyBFactorAndWhiten(power_spectrum, bfactor / pixel_size / pixel_size, pixel_size / bfactor_res_limit, pixel_size / resolution_limit);
-	output_map.CosineMask(pixel_size / resolution_limit - pixel_size / 40.0, pixel_size / 20.0);
+	output_map.ApplyBFactorAndWhiten(power_spectrum, bfactor / pixel_size / pixel_size, pixel_size / bfactor_res_limit);
+	output_map.CosineMask(pixel_size / resolution_limit - pixel_size / 2.0 / filter_edge, pixel_size / filter_edge);
 	output_map.BackwardFFT();
 
 	if (invert_hand)
@@ -134,6 +136,9 @@ bool SharpenMap::DoCalculation()
 	if (use_mask) delete input_mask_file;
 
 //	wxPrintf("Done with 3D B-factor application.\n");
+
+	output_file.SetPixelSize(pixel_size);
+	output_file.WriteHeader();
 
 	return true;
 }

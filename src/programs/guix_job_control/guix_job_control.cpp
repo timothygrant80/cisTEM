@@ -198,10 +198,6 @@ bool JobControlApp::OnInit()
 
 	wxSocketBase::Initialize();
 
-	// start the server..
-
-	SetupServer();
-
 	// Attempt to connect to the gui..
 
 	active_gui_address.Service(gui_port);
@@ -481,7 +477,7 @@ void JobControlApp::CheckForConnections()
 		  if ((memcmp(socket_input_buffer, job_code, SOCKET_CODE_SIZE) != 0) )
 		  {
 
-			  SendError("JOB CONTROL : Unknown JOB ID - Closing Connection");
+			  SendError("Unknown Job ID (Job Control), leftover from a previous job? - Closing Connection");
 
 				  // incorrect identification - close the connection..
 				  sock->Destroy();
@@ -824,6 +820,9 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 			  		if (counter != 0) ip_address_string += ",";
 			  		ip_address_string += my_possible_ip_addresses.Item(counter);
 			  }
+
+			  // start the server..
+			  SetupServer();
 
 			  LaunchJobThread *launch_thread = new LaunchJobThread(this, my_job_package.my_profile, ip_address_string, my_port_string, job_code, my_job_package.number_of_jobs);
 

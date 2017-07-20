@@ -49,9 +49,10 @@ DMFile::~DMFile()
 	true;
 }
 
-bool DMFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
 {
 	MyDebugAssertFalse(overwrite,"Overwriting is not supported for DM files");
+	MyDebugAssertFalse(wait_for_file_to_exist,"Waiting for file to exist not supported for DM files");
 	unsigned char *fake_pointer;
 	readDM(wxString(wanted_filename), fake_pointer, false);
 	filename = wxString(wanted_filename);
@@ -808,45 +809,5 @@ size_t	DMFile::data_type_size()
 	}
 
 	return typesize;
-}
-
-/**
-@brief 	Swaps bytes.
-@param	*v 			a pointer to the bytes.
-@param 	n			number of bytes to swap.
-
-	Byte swapping is done in place.
-
-**/
-void		swapbytes(unsigned char* v, size_t n)
-{
-	unsigned char	t;
-	size_t	i;
-
-	for ( i=0, n--; i<n; i++, n-- ) {
-		t = v[i];
-		v[i] = v[n];
-		v[n] = t;
-	}
-}
-
-/**
-@brief 	Swaps bytes.
-@param 	size		size of the block to be swapped.
-@param 	*v 			a pointer to the bytes.
-@param 	n			number of bytes to swap.
-
-	Byte swapping is done in place.
-
-**/
-void		swapbytes(size_t size, unsigned char* v, size_t n)
-{
-	if ( n < 2 ) return;
-
-	MyDebugPrintWithDetails("DEBUG swapbytes: size = %i n= %i\n",size,n);
-
-	size_t	i;
-
-	for ( i=0; i<size; i+=n, v+=n ) swapbytes(v, n);
 }
 

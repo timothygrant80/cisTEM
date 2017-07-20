@@ -15,7 +15,7 @@ public:
 
 	virtual bool IsOpen() = 0;
 
-	virtual bool OpenFile(std::string filename, bool overwrite = false) = 0; // Return true if everything about the file looks OK
+	virtual bool OpenFile(std::string filename, bool overwrite = false, bool wait_for_file_to_exist = false) = 0; // Return true if everything about the file looks OK
 	virtual void CloseFile() = 0;
 
 	virtual void ReadSliceFromDisk(int slice_number, float *output_array) = 0;

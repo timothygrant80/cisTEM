@@ -127,10 +127,21 @@ bool Merge3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C");
 
 	dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", 1) + "." + extension;
-	if (! DoesFileExist(dump_file))
+	if (is_running_locally)
 	{
-		MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-		abort();
+		if (! DoesFileExist(dump_file))
+		{
+			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
+			abort();
+		}
+	}
+	else
+	{
+		if (! DoesFileExistWithWait(dump_file, 10))
+		{
+			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
+			abort();
+		}
 	}
 
 	Reconstruct3D temp_reconstruction;

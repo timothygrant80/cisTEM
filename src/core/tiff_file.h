@@ -19,7 +19,7 @@ public:
 
 	inline bool IsOpen() {if (tif) {return true;} else { return false;}};
 
-	bool OpenFile(std::string filename, bool overwrite = false);
+	bool OpenFile(std::string filename, bool overwrite = false, bool wait_for_file_to_exist = false);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int slice_number, float *output_array);

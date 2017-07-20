@@ -374,7 +374,7 @@ bool Refine3DApp::DoCalculation()
 	input_par_file.ReadFile(false, input_stack.ReturnZSize());
 	random_particle.SetSeed(int(10000.0 * fabsf(input_par_file.ReturnAverage(14, true)))%10000);
 
-	MRCFile input_file(input_reconstruction.ToStdString(), false);
+	MRCFile input_file(input_reconstruction.ToStdString(), false, true);
 	MRCFile *output_file;
 	if (percent_used < 1.0 && calculate_matching_projections)
 	{
@@ -388,16 +388,20 @@ bool Refine3DApp::DoCalculation()
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
 		MyPrintWithDetails("Error: Particles are not square\n");
+		input_stack.PrintInfo();
 		abort();
 	}
 	if ((input_file.ReturnXSize() != input_file.ReturnYSize()) || (input_file.ReturnXSize() != input_file.ReturnZSize()))
 	{
 		MyPrintWithDetails("Error: Input reconstruction is not cubic\n");
+		input_file.PrintInfo();
 		abort();
 	}
 	if (input_file.ReturnXSize() != input_stack.ReturnXSize())
 	{
 		MyPrintWithDetails("Error: Dimension of particles and input reconstruction differ\n");
+		input_file.PrintInfo();
+		input_stack.PrintInfo();
 		abort();
 	}
 	if (last_particle < first_particle && last_particle != 0)

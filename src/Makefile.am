@@ -51,6 +51,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/gui_job_controller.h \
                  core/classification.h \
                  core/classification_selection.h \
+                 core/basic_star_file_reader.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -85,6 +86,9 @@ noinst_HEADERS = core/asset_group.h \
                  gui/MyRenameDialog.h \
                  gui/MyVolumeChooserDialog.h \
                  gui/MyRefine3DPanel.h \
+                 gui/AutoRefine3dPanel.h \
+                 gui/DisplayRefinementResultsPanel.h \
+                 gui/PopupTextDialog.h \
                  gui/PlotFSCPanel.h \
                  gui/MyFSCPanel.h \
                  gui/MyRefinementResultsPanel.h \
@@ -102,6 +106,11 @@ noinst_HEADERS = core/asset_group.h \
                  gui/MyOverviewPanel.h \
                  gui/DisplayPanel.h \
                  gui/ProjectX_gui.h \
+                 gui/gui_globals.h \
+                 gui/ImportRefinementPackageWizard.h \
+                 gui/AbInitioPlotPanel.h \
+                 gui/AbInitio3DPanel.h \
+                 gui/AssetPickerComboPanel.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
                  gui/icons/ctf_icon.cpp \
@@ -150,6 +159,9 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/delete_file_icon.cpp \
                  gui/icons/cistem_logo_600.cpp \
                  gui/icons/cistem_logo_800.cpp \
+                 gui/icons/show_text.cpp \
+                 gui/icons/tool_icon.cpp \
+                 gui/icons/window_plus_icon_16.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp

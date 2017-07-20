@@ -3,11 +3,18 @@
 MRCFile::MRCFile()
 {
 	rewrite_header_on_close = false;
+
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite)
 {
 	OpenFile(filename, overwrite);
+
+}
+
+MRCFile::MRCFile(std::string filename, bool overwrite,bool wait_for_file_to_exist)
+{
+	OpenFile(filename, overwrite,wait_for_file_to_exist);
 
 }
 
@@ -25,18 +32,26 @@ void MRCFile::CloseFile()
 	}
 }
 
-bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
 {
 //	MyDebugAssertFalse(my_file.is_open(), "File Already Open: %s",wanted_filename);
 	CloseFile();
 
 	bool file_already_exists;
 
+	if (wait_for_file_to_exist)
+	{
+		file_already_exists = DoesFileExistWithWait(wanted_filename, max_number_of_seconds_to_wait_for_file_to_exist);
+	}
+	else
+	{
+		file_already_exists = DoesFileExist(wanted_filename);
+	}
+
 	// if overwrite is specified, then we delete the file nomatter what..
 	// if it isn't, then we need to know if the file already exists..
 
 	if (overwrite == true) file_already_exists = false;
-	else file_already_exists = DoesFileExist(wanted_filename);
 
 
 	// Now open it, truncating to 0 if it doesn't already exist, or we specified overwrite
@@ -104,6 +119,8 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 	MyDebugAssertTrue(start_slice <= ReturnNumberOfSlices(), "Start slice number larger than total slices!");
 	MyDebugAssertTrue(end_slice <= ReturnNumberOfSlices(), "end slice number larger than total slices!");
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
+	//MyDebugAssertTrue(my_header.ReturnMachineStamp() == my_header.ReturnLocalMachineStamp(), "Byteswapping not yet supported");
+        //wxPrintf("mchst from headers: %i, local mchst: %i\n",my_header.ReturnMachineStamp(), my_header.ReturnLocalMachineStamp());
 
 	// calculate and seek to the start byte..
 

@@ -10,10 +10,12 @@ class MRCFile : public AbstractImageFile {
 	wxString filename;
 
 	bool rewrite_header_on_close;
+	int max_number_of_seconds_to_wait_for_file_to_exist;
 
 
 	MRCFile();
 	MRCFile(std::string filename, bool overwrite = false);
+	MRCFile(std::string filename, bool overwrite, bool wait_for_file_to_exist);
 	~MRCFile();
 
 	inline int ReturnXSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionX();};
@@ -23,7 +25,7 @@ class MRCFile : public AbstractImageFile {
 
 	inline bool IsOpen() {return my_file.is_open();}
 
-	bool OpenFile(std::string filename, bool overwrite = false);
+	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false);
 	void CloseFile();
 
 	inline void ReadSliceFromDisk(int slice_number, float *output_array) {ReadSlicesFromDisk(slice_number, slice_number, output_array);}

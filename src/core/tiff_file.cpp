@@ -17,10 +17,11 @@ TiffFile::~TiffFile()
 	CloseFile();
 }
 
-bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite)
+bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
 {
 
-	MyDebugAssertFalse(tif != NULL,"File already open: %s",wanted_filename)
+	MyDebugAssertFalse(tif != NULL,"File already open: %s",wanted_filename);
+	MyDebugAssertFalse(wait_for_file_to_exist,"Waiting for file to exist not implemented for tif files");
 
 	bool file_already_exists = DoesFileExist(wanted_filename);
 

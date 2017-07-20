@@ -1,3 +1,7 @@
+
+void		swapbytes(unsigned char* v, size_t n);
+void		swapbytes(size_t size, unsigned char* v, size_t n);
+
 bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_of_images);
 
 inline void ZeroBoolArray(bool *array_to_zero, int size_of_array)
@@ -141,6 +145,22 @@ inline bool DoesFileExist(wxString filename)
 
     if(file_to_check.is_open()) return true;
     return false;
+}
+
+inline bool DoesFileExistWithWait(wxString filename, int max_wait_time_in_seconds)
+{
+
+    if ( ! DoesFileExist(filename) )
+	{
+		for (int wait_counter = 0; wait_counter < max_wait_time_in_seconds; wait_counter ++)
+		{
+			wxSleep(1);
+			if (DoesFileExist(filename)) break;
+		}
+	}
+
+    return DoesFileExist(filename);
+
 }
 
 inline float rad_2_deg(float radians)

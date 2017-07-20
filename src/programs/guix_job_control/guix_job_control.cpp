@@ -336,12 +336,12 @@ void LaunchJobThread::LaunchRemoteJob()
 
 		execution_command += "&";
 
-		QueueInfo(wxString::Format("Job Control : Executing '%s' %li times.", execution_command, number_to_run_for_this_command));
-
 		for (process_counter = 0; process_counter < number_to_run_for_this_command; process_counter++)
 		{
 
 			wxMilliSleep( current_run_profile.run_commands[command_counter].delay_time_in_ms);
+
+			if (process_counter == 0) QueueInfo(wxString::Format("Job Control : Executing '%s' %li times.", execution_command, number_to_run_for_this_command));
 
 			//wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_LAUNCHJOB);
 			//test_event->SetString(execution_command);

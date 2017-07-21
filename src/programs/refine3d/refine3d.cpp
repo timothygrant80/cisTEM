@@ -196,8 +196,9 @@ void Refine3DApp::DoInteractiveUserInput()
 
 	bool local_global_refine = false;
 	int current_class = 0;
-	my_current_job.Reset(53);
-	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",	input_particle_images.ToUTF8().data(),
+	bool ignore_input_angles = false;
+	my_current_job.Reset(54);
+	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",	input_particle_images.ToUTF8().data(),
 																								input_parameter_file.ToUTF8().data(),
 																								input_reconstruction.ToUTF8().data(),
 																								input_reconstruction_statistics.ToUTF8().data(), use_statistics,
@@ -217,7 +218,7 @@ void Refine3DApp::DoInteractiveUserInput()
 																								refine_psi, refine_theta, refine_phi, refine_x, refine_y,
 																								calculate_matching_projections, apply_2D_masking, ctf_refinement, normalize_particles,
 																								invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d,
-																								local_global_refine, current_class);
+																								local_global_refine, current_class, ignore_input_angles);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -282,6 +283,7 @@ bool Refine3DApp::DoCalculation()
 	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
 	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
 	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
+	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument();
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts
@@ -325,6 +327,7 @@ bool Refine3DApp::DoCalculation()
 	int result_parameter_counter;
 	int number_of_blank_edges;
 	int max_samples = 2000;
+	int istart;
 	float input_parameters[refine_particle.number_of_parameters];
 	float output_parameters[refine_particle.number_of_parameters];
 	float gui_result_parameters[refine_particle.number_of_parameters];
@@ -941,7 +944,9 @@ bool Refine3DApp::DoCalculation()
 //				output_parameters[15] = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 //				if (! local_refinement) input_parameters[15] = output_parameters[15];
 				search_particle.UnmapParametersToExternal(output_parameters, cg_starting_point);
-				for (i = 0; i <= best_parameters_to_keep; i++)
+				if (ignore_input_angles && best_parameters_to_keep >= 1) istart = 1;
+				else istart = 0;
+				for (i = istart; i <= best_parameters_to_keep; i++)
 				{
 					for (j = 1; j < 6; j++) {search_parameters[j] = global_euler_search.list_of_best_parameters[i][j - 1];}
 //					wxPrintf("parameters in  = %i %g, %g, %g, %g, %g %g\n", i, search_parameters[3], search_parameters[2],
@@ -951,7 +956,7 @@ bool Refine3DApp::DoCalculation()
 					search_particle.SetParameters(search_parameters);
 					search_particle.MapParameters(cg_starting_point);
 					search_parameters[15] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, search_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
-					if (i == 0)
+					if (i == istart)
 					{
 						output_parameters[15] = search_parameters[15];
 						if (! local_refinement) input_parameters[15] = output_parameters[15];

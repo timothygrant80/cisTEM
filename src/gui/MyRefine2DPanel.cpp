@@ -235,7 +235,7 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			bool estimation_button_status = false;
 
-			if (RefinementPackageComboBox->GetCount() > 0 )
+			if (RefinementPackageComboBox->GetCount() > 0 && RefinementRunProfileComboBox->GetSelection() >= 0)
 			{
 				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 )
 				{

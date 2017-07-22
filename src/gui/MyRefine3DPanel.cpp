@@ -203,6 +203,12 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->Newline();
 
 	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Also Refine Input Parameters "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("In addition to the N best sets of parameter values found during the grid search, the input set of parameters is also locally refined. Switching this off can help reduce over-fitting that may have biased the input parameters."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Angular Search Step (°) : "));
 	InfoText->EndBold();
 	InfoText->WriteText(wxT("The angular step used to generate the search grid for the global search. An appropriate value is suggested by default (depending on particle size and high-resolution limit) but smaller values can be tried if the user suspects that the search misses orientations found in the particle dataset. The smaller the value, the finer the search grid and the slower the search."));
@@ -641,6 +647,9 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					SearchRangeXStaticText->Enable(false);
 					SearchRangeYTextCtrl->Enable(false);
 					SearchRangeYStaticText->Enable(false);
+					AlsoRefineInputStaticText1->Enable(false);
+					AlsoRefineInputYesRadio->Enable(false);
+					AlsoRefineInputNoRadio->Enable(false);
 				}
 				else
 				{
@@ -656,6 +665,9 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					SearchRangeXStaticText->Enable(true);
 					SearchRangeYTextCtrl->Enable(true);
 					SearchRangeYStaticText->Enable(true);
+					AlsoRefineInputStaticText1->Enable(true);
+					AlsoRefineInputYesRadio->Enable(true);
+					AlsoRefineInputNoRadio->Enable(true);
 
 				}
 
@@ -1776,6 +1788,8 @@ void RefinementManager::SetupRefinementJob()
 				local_refinement = true;
 			}
 
+			bool ignore_input_parameters = my_parent->AlsoRefineInputNoRadio->GetValue();
+
 
 			bool refine_psi 								= my_parent->RefinePsiCheckBox->GetValue();
 			bool refine_theta								= my_parent->RefineThetaCheckBox->GetValue();
@@ -1795,7 +1809,7 @@ void RefinementManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1848,7 +1862,8 @@ void RefinementManager::SetupRefinementJob()
 																											normalize_input_3d,
 																											threshold_input_3d,
 																											global_local_refinemnent,
-																											class_counter);
+																											class_counter,
+																											ignore_input_parameters);
 
 
 		}

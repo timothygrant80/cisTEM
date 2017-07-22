@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -958,7 +958,7 @@ class FindParticlesPanel : public JobPanel
 	protected:
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
-		wxStaticText* m_staticText211;
+		wxStaticText* PickingAlgorithStaticText;
 		wxComboBox* PickingAlgorithmComboBox;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticText* PleaseEstimateCTFStaticText;
@@ -973,6 +973,7 @@ class FindParticlesPanel : public JobPanel
 		NumericTextCtrl* CharacteristicParticleRadiusNumericCtrl;
 		wxStaticText* ThresholdPeakHeightStaticText1;
 		NumericTextCtrl* ThresholdPeakHeightNumericCtrl;
+		wxCheckBox* AvoidHighVarianceAreasCheckBox;
 		wxStaticLine* m_staticline106;
 		wxStaticText* m_staticText440;
 		wxButton* TestOnCurrentMicrographButton;
@@ -988,7 +989,6 @@ class FindParticlesPanel : public JobPanel
 		wxCheckBox* m_checkBox8;
 		wxCheckBox* m_checkBox9;
 		wxSpinCtrl* NumberOfTemplateRotationsSpinCtrl;
-		wxCheckBox* AvoidHighVarianceAreasCheckBox;
 		wxCheckBox* AvoidAbnormalLocalMeanAreasCheckBox;
 		wxCheckBox* ShowEstimatedBackgroundSpectrumCheckBox;
 		wxCheckBox* ShowPositionsOfBackgroundBoxesCheckBox;
@@ -1027,6 +1027,7 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnTestOnCurrentMicrographButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoPickRefreshCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHighestResolutionNumericKillFocus( wxFocusEvent& event ) { event.Skip(); }
@@ -1034,7 +1035,6 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnHighestResolutionNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& event ) { event.Skip(); }
-		virtual void OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNumberOfBackgroundBoxesSpinCtrl( wxSpinEvent& event ) { event.Skip(); }
 		virtual void OnAlgorithmToFindBackgroundChoice( wxCommandEvent& event ) { event.Skip(); }
@@ -1451,6 +1451,9 @@ class Refine3DPanel : public JobPanel
 		NumericTextCtrl* GlobalMaskRadiusTextCtrl;
 		wxStaticText* NumberToRefineStaticText;
 		wxSpinCtrl* NumberToRefineSpinCtrl;
+		wxStaticText* AlsoRefineInputStaticText1;
+		wxRadioButton* AlsoRefineInputYesRadio;
+		wxRadioButton* AlsoRefineInputNoRadio;
 		wxStaticText* AngularStepStaticText;
 		NumericTextCtrl* AngularStepTextCtrl;
 		wxStaticText* SearchRangeXStaticText;

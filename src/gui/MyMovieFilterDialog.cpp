@@ -463,7 +463,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (job_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" CTF_ESTIMATION_JOB_ID BETWEEN %li AND %li", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
+			search_command += wxString::Format(" CTF_ESTIMATION_JOB_ID BETWEEN %i AND %i", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";

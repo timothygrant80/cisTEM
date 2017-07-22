@@ -1693,7 +1693,8 @@ void AbInitioManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = false;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",
+			bool ignore_input_parameters = false;
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1746,7 +1747,8 @@ void AbInitioManager::SetupRefinementJob()
 																											normalize_input_3d,
 																											threshold_input_3d,
 																											local_global_refine,
-																											class_counter);
+																											class_counter,
+																											ignore_input_parameters);
 		}
 
 	}

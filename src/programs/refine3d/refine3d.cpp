@@ -283,7 +283,7 @@ bool Refine3DApp::DoCalculation()
 	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
 	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
 	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
-	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument();
+	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts

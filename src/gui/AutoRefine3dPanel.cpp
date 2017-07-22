@@ -1626,7 +1626,8 @@ void AutoRefinementManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbi",
+			bool ignore_input_parameters = false;
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1679,7 +1680,8 @@ void AutoRefinementManager::SetupRefinementJob()
 																											normalize_input_3d,
 																											threshold_input_3d,
 																											global_local_refinement,
-																											class_counter);
+																											class_counter,
+																											ignore_input_parameters);
 
 
 		}

@@ -39,6 +39,8 @@ FindParticlesPanel( parent )
 	ExpertOptionsPanel->SetMinSize(input_size);
 	ExpertOptionsPanel->SetSize(input_size);
 
+	ExpertToggleButton->Enable(true);
+
 	//result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
 	FindParticlesSplitterWindow->Unsplit(LeftPanel);
@@ -109,12 +111,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Input Group : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The group of image assets to estimate the CTF for."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Picking algorithm : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Choice of method for picking particles."));
+	InfoText->WriteText(wxT("The group of image assets in which to find particles."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Run Profile : "));
@@ -146,7 +143,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Characteristic particle radius : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("In Angstroms, the radius within which most of the density is enclosed. This defines the radius at which the cosine-edge template reaches 0.5 (it is 1.0 at the origin and 0.0 at 1.5 * characteristic radius). A good default value might be half of the maximum radius."));
+	InfoText->WriteText(wxT("In Angstroms, the radius within which most of the density is enclosed. The template for picking is a soft-edge disc, where the edge is 5 pixels wide and this parameter defines the radius at which the cosine-edge template reaches 0.5."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Run Profile : "));
@@ -298,8 +295,8 @@ void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 		PickingAlgorithmComboBox->Append(ReturnNameOfPickingAlgorithm(counter).Capitalize());
 	}
 
-	PickingAlgorithmComboBox->SetSelection(-1);
-	PickingAlgorithmComboBox->ChangeValue("Please Select...");
+	PickingAlgorithmComboBox->SetSelection(0);
+	//PickingAlgorithmComboBox->ChangeValue("Please Select...");
 
 	PickingAlgorithmComboBox->Thaw();
 }
@@ -307,9 +304,6 @@ void MyFindParticlesPanel::FillPickingAlgorithmComboBox()
 // When the user selects a new picking algorithm
 void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 {
-	wxSize ExpertMinSize;
-	int splitter_panel_size;
-
 	switch(PickingAlgorithmComboBox->GetCurrentSelection())
 	{
 	case(-1) :
@@ -319,12 +313,7 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 			break;
 	case(0):
 			// Ab initio
-			PickingParametersPanel->Show(true);
-
-			ExpertMinSize = ExpertOptionsPanel->GetMinSize();
-			splitter_panel_size = 400;
-			if (ExpertMinSize.x > 400) splitter_panel_size = ExpertMinSize.x;
-			FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, splitter_panel_size);
+			ShowPickingParametersPanel();
 			ExpertToggleButton->Enable(true);
 			break;
 	default:
@@ -333,9 +322,26 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 			ExpertToggleButton->Enable(false);
 	}
 
-	Layout();
-	LeftPanel->Layout();
-	RightPanel->Layout();
+}
+
+void MyFindParticlesPanel::ShowPickingParametersPanel()
+{
+	PickingParametersPanel->Show(true);
+
+	wxSize ExpertMinSize = ExpertOptionsPanel->GetMinSize();
+	int splitter_panel_size = std::max(400,ExpertMinSize.x);
+
+	if (FindParticlesSplitterWindow->GetSashPosition() != splitter_panel_size)
+	{
+		FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, splitter_panel_size);
+		FindParticlesSplitterWindow->SetSashPosition(splitter_panel_size);
+
+		Layout();
+		LeftPanel->Layout();
+		RightPanel->Layout();
+	}
+
+
 }
 
 void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
@@ -694,6 +700,40 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		PickingAlgorithmComboBox->Enable(false);
 		ExpertToggleButton->Enable(false);
 		StartPickingButton->Enable(false);
+		if (PickingParametersPanel->IsShown())
+		{
+			PickingParametersPanel->Show(false);
+			Layout();
+			LeftPanel->Layout();
+			RightPanel->Layout();
+		}
+		if (PickingResultsPanel->IsShown())
+		{
+			PickingResultsPanel->Show(false);
+			Layout();
+			LeftPanel->Layout();
+			RightPanel->Layout();
+		}
+		if (!InfoPanel->IsShown())
+		{
+			InfoPanel->Show(true);
+			Layout();
+			LeftPanel->Layout();
+			RightPanel->Layout();
+		}
+		if (FindParticlesSplitterWindow->IsSplit())
+		{
+			FindParticlesSplitterWindow->Unsplit(LeftPanel);
+			Layout();
+			LeftPanel->Layout();
+			RightPanel->Layout();
+		}
+
+		// Do I need to deal with these too?
+		//ExpertOptionsPanel->Show(false);
+		//OutputTextPanel->Show(true);
+
+
 
 		if (PleaseEstimateCTFStaticText->IsShown())
 		{
@@ -725,7 +765,9 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			RunProfileComboBox->Enable(true);
 			GroupComboBox->Enable(true);
-			PickingAlgorithmComboBox->Enable(true);
+			PickingAlgorithmComboBox->Enable(false);
+			ExpertToggleButton->Enable(true);
+			ShowPickingParametersPanel();
 			if (image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
 			{
 				if (PleaseEstimateCTFStaticText->IsShown())
@@ -962,7 +1004,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		maximum_radius = MaximumParticleRadiusNumericCtrl->ReturnValue();
 	break;
 	default :
-		MyDebugAssertTrue(false,"Oops, uknown picking algorithm: %i\n",PickingAlgorithmComboBox->GetSelection());
+		MyDebugAssertTrue(false,"Oops, unknown picking algorithm: %i\n",PickingAlgorithmComboBox->GetSelection());
 	}
 
 	highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();
@@ -1107,9 +1149,7 @@ void MyFindParticlesPanel::FinishButtonClick( wxCommandEvent& event )
 	if (PickingAlgorithmComboBox->GetCurrentSelection() >= 0)
 	{
 		PickingParametersPanel->Show(true);
-
-		if (ExpertToggleButton->GetValue() == true) ExpertOptionsPanel->Show(true);
-		else ExpertOptionsPanel->Show(false);
+		ExpertOptionsPanel->Show(ExpertToggleButton->GetValue());
 	}
 	else
 	{
@@ -1155,19 +1195,6 @@ void MyFindParticlesPanel::TerminateButtonClick( wxCommandEvent& event )
 }
 
 
-
-/*
-
-
-void MyAlignMoviesPanel::Refresh()
-{
-	FillGroupComboBox();
-	FillRunProfileComboBox();
-}
-
-
-
-*/
 void MyFindParticlesPanel::WriteInfoText(wxString text_to_write)
 {
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));

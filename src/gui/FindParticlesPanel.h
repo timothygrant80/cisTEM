@@ -50,6 +50,7 @@ public:
 		void SetAllUserParametersForParticleFinder();
 		void DrawResultsFromParticleFinder();
 		int ReturnDefaultMinimumDistanceFromEdges();
+		void ShowPickingParametersPanel();
 
 		void OnNewCharacteristicParticleRadius();
 		void OnNewThresholdPeakHeight();

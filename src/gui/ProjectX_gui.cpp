@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -2266,6 +2266,8 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer64->Add( AllImagesButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	ByFilterButton = new wxRadioButton( m_panel13, wxID_ANY, wxT("By Filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	ByFilterButton->Enable( false );
+	
 	bSizer64->Add( ByFilterButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	FilterButton = new wxButton( m_panel13, wxID_ANY, wxT("Define Filter"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -3140,11 +3142,15 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	bSizer44->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
 	
-	m_staticText211 = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText211->Wrap( -1 );
-	bSizer44->Add( m_staticText211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	PickingAlgorithStaticText = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PickingAlgorithStaticText->Wrap( -1 );
+	PickingAlgorithStaticText->Enable( false );
+	
+	bSizer44->Add( PickingAlgorithStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	PickingAlgorithmComboBox->SetSelection( 0 );
+	PickingAlgorithmComboBox->Enable( false );
 	PickingAlgorithmComboBox->SetMinSize( wxSize( 150,-1 ) );
 	
 	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -3214,6 +3220,9 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	ThresholdPeakHeightNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("6.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ThresholdPeakHeightNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	AvoidHighVarianceAreasCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Avoid high variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( AvoidHighVarianceAreasCheckBox, 0, wxALL, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 0, wxEXPAND, 5 );
@@ -3298,13 +3307,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	NumberOfTemplateRotationsSpinCtrl->Enable( false );
 	
 	ExpertOptionsSizer->Add( NumberOfTemplateRotationsSpinCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	AvoidHighVarianceAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid high variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
-	AvoidHighVarianceAreasCheckBox->SetValue(true); 
-	ExpertOptionsSizer->Add( AvoidHighVarianceAreasCheckBox, 0, wxALL, 5 );
-	
-	
-	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	AvoidAbnormalLocalMeanAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid areas with abnormal local mean"), wxDefaultPosition, wxDefaultSize, 0 );
 	AvoidAbnormalLocalMeanAreasCheckBox->SetValue(true); 
@@ -3526,6 +3528,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
+	AvoidHighVarianceAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
 	TestOnCurrentMicrographButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
 	HighestResolutionNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
@@ -3533,7 +3536,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	HighestResolutionNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	SetMinimumDistanceFromEdgesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox ), NULL, this );
 	MinimumDistanceFromEdgesSpinCtrl->Connect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl ), NULL, this );
-	AvoidHighVarianceAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
 	AvoidAbnormalLocalMeanAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox ), NULL, this );
 	NumberOfBackgroundBoxesSpinCtrl->Connect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl ), NULL, this );
 	AlgorithmToFindBackgroundChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnAlgorithmToFindBackgroundChoice ), NULL, this );
@@ -3558,6 +3560,7 @@ FindParticlesPanel::~FindParticlesPanel()
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
+	AvoidHighVarianceAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
 	TestOnCurrentMicrographButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
@@ -3565,7 +3568,6 @@ FindParticlesPanel::~FindParticlesPanel()
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	SetMinimumDistanceFromEdgesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox ), NULL, this );
 	MinimumDistanceFromEdgesSpinCtrl->Disconnect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl ), NULL, this );
-	AvoidHighVarianceAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
 	AvoidAbnormalLocalMeanAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox ), NULL, this );
 	NumberOfBackgroundBoxesSpinCtrl->Disconnect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl ), NULL, this );
 	AlgorithmToFindBackgroundChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnAlgorithmToFindBackgroundChoice ), NULL, this );
@@ -5241,6 +5243,29 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000, 20 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
+	
+	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AlsoRefineInputStaticText1->Wrap( -1 );
+	AlsoRefineInputStaticText1->Enable( false );
+	
+	fgSizer1->Add( AlsoRefineInputStaticText1, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer2631;
+	bSizer2631 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AlsoRefineInputYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	AlsoRefineInputYesRadio->SetValue( true ); 
+	AlsoRefineInputYesRadio->Enable( false );
+	
+	bSizer2631->Add( AlsoRefineInputYesRadio, 0, wxALL, 5 );
+	
+	AlsoRefineInputNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	AlsoRefineInputNoRadio->Enable( false );
+	
+	bSizer2631->Add( AlsoRefineInputNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2631, 1, wxEXPAND, 5 );
 	
 	AngularStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Angular Search Step (°) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	AngularStepStaticText->Wrap( -1 );

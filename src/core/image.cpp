@@ -1214,7 +1214,8 @@ void Image::OptimalFilterSSNR(Curve &SSNR)
 
 	long pixel_counter = 0;
 
-	number_of_bins2 = 2 * (SSNR.number_of_points - 1);
+//	number_of_bins2 = 2 * (SSNR.number_of_points - 1);
+	number_of_bins2 = ReturnLargestLogicalDimension();
 
 	for (k = 0; k <= physical_upper_bound_complex_z; k++)
 	{
@@ -1267,7 +1268,8 @@ void Image::OptimalFilterFSC(Curve &FSC)
 
 	long pixel_counter = 0;
 
-	number_of_bins2 = 2 * (FSC.number_of_points - 1);
+//	number_of_bins2 = 2 * (FSC.number_of_points - 1);
+	number_of_bins2 = ReturnLargestLogicalDimension();
 
 	for (k = 0; k <= physical_upper_bound_complex_z; k++)
 	{
@@ -1286,7 +1288,9 @@ void Image::OptimalFilterFSC(Curve &FSC)
 
 				if ((frequency_squared <= 0.25) && (bin < FSC.number_of_points))
 				{
-					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabsf(FSC.data_y[bin])) / fabsf(FSC.data_y[bin]));
+//					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabsf(FSC.data_y[bin])) / fabsf(FSC.data_y[bin]));
+					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] *= 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin]));
+//					if (j == 0 && k == 0) wxPrintf("FSC, filt = %i %g %g %g\n", bin, x, FSC.data_y[bin], 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin])));
 				}
 				else
 				{

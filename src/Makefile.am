@@ -173,7 +173,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan sharpen_map niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan sharpen_map calculate_fsc niko_test
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -382,6 +382,11 @@ sharpen_map_SOURCES = programs/sharpen_map/sharpen_map.cpp
 sharpen_map_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sharpen_map_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 sharpen_map_LDADD = libcore.a $(WX_LIBS_BASE)
+
+calculate_fsc_SOURCES = programs/calculate_fsc/calculate_fsc.cpp
+calculate_fsc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_fsc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_fsc_LDADD = libcore.a $(WX_LIBS_BASE)
 
 niko_test_SOURCES = programs/niko_test/niko_test.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)

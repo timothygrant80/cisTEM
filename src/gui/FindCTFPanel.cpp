@@ -527,7 +527,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	}
 
 
-	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Prepare Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "ctffind", number_of_jobs);
 
 	for (counter = 0; counter < number_of_jobs; counter++)

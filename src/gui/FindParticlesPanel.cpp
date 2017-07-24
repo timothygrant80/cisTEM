@@ -1019,7 +1019,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "find_particles", number_of_jobs);
 
 
-	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Prepare Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{

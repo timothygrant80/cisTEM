@@ -784,6 +784,10 @@ bool Refine3DApp::DoCalculation()
 			input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
+
+		// Option to add noise to images to get out of local optima
+//		input_image.AddGaussianNoise(sqrtf(2.0 * input_image.ReturnVarianceOfRealValues()));
+
 		input_image.ClipInto(&unbinned_image);
 		unbinned_image.ForwardFFT();
 		unbinned_image.ClipInto(refine_particle.particle_image);

@@ -989,7 +989,11 @@ void AbInitioManager::BeginRefinementCycle()
 		if (start_percent_used > 100.0) start_percent_used = 100.0;
 		if (end_percent_used > 100.0) end_percent_used = 100.0;
 
-		if (end_percent_used > 25) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
+		if (end_percent_used > 25)
+		{
+			if (number_of_classes > 1) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
+			else my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles", end_percent_used));
+		}
 	}
 	else
 	{

@@ -157,8 +157,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/display_fft_icon.cpp \
                  gui/icons/add_file_icon.cpp \
                  gui/icons/delete_file_icon.cpp \
-                 gui/icons/cistem_logo_600.cpp \
-                 gui/icons/cistem_logo_800.cpp \
+                 gui/icons/cisTEM_logo_800.cpp \
                  gui/icons/show_text.cpp \
                  gui/icons/tool_icon.cpp \
                  gui/icons/window_plus_icon_16.cpp \
@@ -173,7 +172,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan sharpen_map calculate_fsc niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc niko_test
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -377,6 +376,11 @@ remove_inf_and_nan_SOURCES = programs/remove_inf_and_nan/remove_inf_and_nan.cpp
 remove_inf_and_nan_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_inf_and_nan_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 remove_inf_and_nan_LDADD = libcore.a $(WX_LIBS_BASE)
+
+make_orth_views_SOURCES = programs/make_orth_views/make_orth_views.cpp
+make_orth_views_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+make_orth_views_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+make_orth_views_LDADD = libcore.a $(WX_LIBS_BASE)
 
 sharpen_map_SOURCES = programs/sharpen_map/sharpen_map.cpp
 sharpen_map_CXXFLAGS = $(WX_CPPFLAGS_BASE)

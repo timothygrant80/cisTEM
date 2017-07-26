@@ -10,13 +10,13 @@ OverviewPanel( parent, id, pos, size, style )
 
 void MyOverviewPanel::SetWelcomeInfo()
 {
-	#include "icons/cistem_logo_600.cpp"
+	#include "icons/cisTEM_logo_800.cpp"
 
 	InfoText->Clear();
 	InfoText->EndAllStyles();
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cistem_logo_600);
+	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_logo_800);
 	delete suppress_png_warnings;
 
 	InfoText->GetCaret()->Hide();

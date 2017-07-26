@@ -1428,7 +1428,7 @@ void Database::SetManualEditForPickingID(const int &picking_id, const bool wante
 
 void Database::RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id)
 {
-	ExecuteSQL(wxString::Format("delete from particle_position_group_%i where exists(select 1 from particle_position_assets where particle_position_assets.parent_image_asset_id = %i AND particle_position_group_%i.particle_position_asset_id = particle_position_assets.particle_position_asset_id)",group_number_following_gui_convention-1,parent_image_asset_id,group_number_following_gui_convention-1));
+	ExecuteSQL(wxString::Format("delete from particle_position_group_%i where exists(select 1 from particle_position_assets where particle_position_assets.parent_image_asset_id = %i AND particle_position_group_%i.particle_position_asset_id = particle_position_assets.particle_position_asset_id)",group_number_following_gui_convention,parent_image_asset_id,group_number_following_gui_convention));
 }
 
 void Database::RemoveParticlePositionAssetsPickedFromImagesAlsoPickedByGivenPickingJobID( const int &picking_job_id)

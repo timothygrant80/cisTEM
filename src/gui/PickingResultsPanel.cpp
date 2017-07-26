@@ -641,7 +641,7 @@ void MyPickingResultsPanel::OnValueChanged(wxDataViewEvent &event)
 				// First remove from particle_position assets any assets with parent_image_asset_id corresponding to the image of the current row
 				for (int group_counter = 1; group_counter < particle_position_asset_panel->all_groups_list->number_of_groups; group_counter++)
 				{
-					main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,per_row_asset_id[row]);
+					main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(particle_position_asset_panel->ReturnGroupID(group_counter),per_row_asset_id[row]);
 				}
 				main_frame->current_project.database.RemoveParticlePositionAssetsPickedFromImageWithGivenID(per_row_asset_id[row]);
 

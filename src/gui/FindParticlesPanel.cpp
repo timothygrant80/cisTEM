@@ -1578,7 +1578,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		for (int job_counter = 0; job_counter < my_job_tracker.total_number_of_jobs; job_counter ++ )
 		{
 			parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
-			main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(group_counter,parent_id);
+			main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(particle_position_asset_panel->ReturnGroupID(group_counter),parent_id);
 		}
 
 		my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + group_counter);

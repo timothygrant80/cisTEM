@@ -257,7 +257,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	DateOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISODate());
 	TimeOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISOTime());
 	VoltageStaticText->SetLabel(wxString::Format(wxT("%.2f kV"), voltage));
-	PixelSizeStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), pixel_size));
+	PixelSizeStaticText->SetLabel(wxString::Format(wxT("%.4f Å"), pixel_size));
 	BfactorStaticText->SetLabel(wxString::Format(wxT("%i Å²"), bfactor));
 	ExposureStaticText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), exposure_per_frame));
 	PreExposureStaticText->SetLabel(wxString::Format(wxT("%.2f e¯/Å²"), pre_exposure_amount));

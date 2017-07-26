@@ -43,7 +43,7 @@ void MyVolumeAssetPanel::UpdateInfo()
 		Label0Text->SetLabel(all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_name);
 		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
 		Label2Text->SetLabel(wxString::Format(wxT("%li"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->reconstruction_job_id));
-		Label3Text->SetLabel(wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
+		Label3Text->SetLabel(wxString::Format(wxT("%.4f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
 		Label4Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
 		Label5Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
 		Label6Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size));
@@ -211,7 +211,7 @@ void MyVolumeAssetPanel::FillAssetSpecificContentsList()
 			ContentsListBox->InsertItem(counter, wxString::Format(wxT("%s"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->filename.GetFullName(), counter));
 			ContentsListBox->SetItem(counter, 1, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->asset_id));
 			ContentsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->reconstruction_job_id));
-			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->pixel_size));
+			ContentsListBox->SetItem(counter, 3, wxString::Format(wxT("%.4f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->pixel_size));
 			ContentsListBox->SetItem(counter, 4, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->x_size));
 			ContentsListBox->SetItem(counter, 5, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->y_size));
 			ContentsListBox->SetItem(counter, 6, wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, counter))->z_size));
@@ -234,7 +234,7 @@ wxString MyVolumeAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%li"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->reconstruction_job_id);
 	       break;
 	    case 3  :
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
+	    	return wxString::Format(wxT("%.4f"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
 	       break;
 	    case 4  :
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnVolumeAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);

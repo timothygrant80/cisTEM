@@ -410,7 +410,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	TimeOfRunStaticText->SetLabel(wxdatetime_of_run.FormatISOTime());
 	VoltageStaticText->SetLabel(wxString::Format(wxT("%.2f kV"), voltage));
 	CsStaticText->SetLabel(wxString::Format(wxT("%.2f mm"), spherical_aberration));
-	PixelSizeStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), pixel_size));
+	PixelSizeStaticText->SetLabel(wxString::Format(wxT("%.4f Å"), pixel_size));
 	AmplitudeContrastStaticText->SetLabel(wxString::Format(wxT("%.2f"), amplitude_contrast));
 	BoxSizeStaticText->SetLabel(wxString::Format(wxT("%i"), box_size));
 	MinResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_resolution));

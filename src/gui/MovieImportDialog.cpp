@@ -41,7 +41,7 @@ MovieImportDialog( parent )
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
-		PixelSizeText->ChangeValue(wxString::Format("%.3f", default_pixel_size));
+		PixelSizeText->ChangeValue(wxString::Format("%.4f", default_pixel_size));
 		DoseText->ChangeValue(wxString::Format("%.2f", default_exposure_per_frame));
 
 		if (default_movies_are_gain_corrected == true)

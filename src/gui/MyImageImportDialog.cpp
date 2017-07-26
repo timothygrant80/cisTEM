@@ -26,7 +26,7 @@ ImageImportDialog( parent )
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
-		PixelSizeText->ChangeValue(wxString::Format("%.3f", default_pixel_size));
+		PixelSizeText->ChangeValue(wxString::Format("%.4f", default_pixel_size));
 	}
 }
 

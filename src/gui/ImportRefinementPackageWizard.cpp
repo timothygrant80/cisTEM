@@ -22,6 +22,7 @@ ImportRefinementPackageWizardParent( parent )
   	SymmetryComboBox->Append("T");
   	SymmetryComboBox->Append("T2");
   	SymmetryComboBox->SetSelection(0);
+  	PixelSizeTextCtrl->SetPrecision(4);
 }
 
 void ImportRefinementPackageWizard::CheckPaths()

@@ -15,6 +15,7 @@ MovieImportDialog( parent )
 	PathListCtrl->InsertColumn(0, "Files", wxLIST_FORMAT_LEFT, list_width);
 
 	DesiredPixelSizeTextCtrl->SetMinMaxValue(0, 100);
+	DesiredPixelSizeTextCtrl->SetPrecision(4);
 	MajorScaleTextCtrl->SetMinMaxValue(0, FLT_MAX);
 	MinorScaleTextCtrl->SetMinMaxValue(0, FLT_MAX);
 	MajorScaleTextCtrl->SetPrecision(3);

@@ -562,6 +562,8 @@ void MyMainFrame::OnFileExit( wxCommandEvent& event )
 
 void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 {
+	picking_results_panel->OnProjectClose();
+
 	current_project.Close();
 
 	movie_asset_panel->Reset();
@@ -574,7 +576,6 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	movie_results_panel->Clear();
 	ctf_results_panel->Clear();
 	refine2d_results_panel->Clear();
-	picking_results_panel->OnProjectClose();
 
 
 	SetTitle("cisTEM");

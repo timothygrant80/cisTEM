@@ -262,18 +262,33 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 {
 	if (RefinementPackageComboBox->GetCount() > 0)
 	{
+		wxString current_symmetry_string = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry;
+		wxChar   symmetry_type;
+
+		current_symmetry_string = current_symmetry_string.Trim();
+		current_symmetry_string = current_symmetry_string.Trim(false);
+
+		MyDebugAssertTrue(current_symmetry_string.Length() > 0, "symmetry string is blank");
+		symmetry_type = current_symmetry_string.Capitalize()[0];
 
 		ExpertPanel->Freeze();
 
-		//if (symmetry_type == 'O' || symmetry_type == 'I') NumberStartsSpinCtrl->ChangeValue(1);
-		//else NumberStartsSpinCtrl->ChangeValue(2);
+		if (symmetry_type == 'O' || symmetry_type == 'I')
+		{
+			NumberStartsSpinCtrl->SetValue(1);
+			AutoMaskNoRadio->SetValue(true);
+		}
+		else
+		{
+			NumberStartsSpinCtrl->SetValue(2);
+			AutoMaskYesRadio->SetValue(true);
+		}
 
-		NumberStartsSpinCtrl->SetValue(2);
+//		NumberStartsSpinCtrl->SetValue(2);
 		NumberRoundsSpinCtrl->SetValue(40);
 
 		InitialResolutionLimitTextCtrl->ChangeValueFloat(40);
 		FinalResolutionLimitTextCtrl->ChangeValueFloat(9);
-		AutoMaskYesRadio->SetValue(true);
 		AutoPercentUsedYesRadio->SetValue(true);
 
 		StartPercentUsedTextCtrl->ChangeValueFloat(10);

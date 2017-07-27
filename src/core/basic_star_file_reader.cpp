@@ -99,6 +99,8 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	// phi
 
+	if (phi_column == -1) temp_double = 0.0;
+	else
 	if (all_tokens[phi_column].ToDouble(&temp_double) == false)
 	{
 		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[phi_column]);
@@ -110,6 +112,8 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	// theta
 
+	if (theta_column == -1) temp_double = 0.0;
+	else
 	if (all_tokens[theta_column].ToDouble(&temp_double) == false)
 	{
 		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[theta_column]);
@@ -121,6 +125,8 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	// psi
 
+	if (psi_column == -1) temp_double = 0.0;
+	else
 	if (all_tokens[psi_column].ToDouble(&temp_double) == false)
 	{
 		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[psi_column]);
@@ -132,6 +138,8 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	// xshift
 
+	if (xshift_column == -1) temp_double = 0.0;
+	else
 	if (all_tokens[xshift_column].ToDouble(&temp_double) == false)
 	{
 		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[xshift_column]);
@@ -143,6 +151,8 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	// yshift
 
+	if (yshift_column == -1) temp_double = 0.0;
+	else
 	if (all_tokens[yshift_column].ToDouble(&temp_double) == false)
 	{
 		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[yshift_column]);
@@ -299,7 +309,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	}
 
 	// quick checks we have all the desired info.
-
+/*
 	if (phi_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnAngleRot in star file (%s)\n", wanted_filename);
@@ -334,7 +344,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		if (error_string != NULL) *error_string = wxString::Format("Error: Couldn't find _rlnOriginY in star file (%s)\n", wanted_filename);
 		return false;
 	}
-
+*/
 	if (defocus1_column == -1)
 	{
 		MyPrintWithDetails("Error: Couldn't find _rlnDefocusU in star file (%s)\n", wanted_filename);
@@ -358,7 +368,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 
 	if (phase_shift_column == -1)
 	{
-		MyPrintWithDetails("Warning: Couldn't find _rlnPhaseShift in star file (%s) - phase shift will be set to 0.0\n", wanted_filename);
+	//	MyPrintWithDetails("Warning: Couldn't find _rlnPhaseShift in star file (%s) - phase shift will be set to 0.0\n", wanted_filename);
 	}
 
 	// we have the headers, the current line should be the first parameter to extract the info

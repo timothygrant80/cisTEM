@@ -74,7 +74,8 @@ bool MyGuiApp::OnInit()
 	#include "../../gui/icons/movie_align_icon.cpp"
 	#include "../../gui/icons/ctf_icon.cpp"
 	#include "../../gui/icons/2d_classification_icon.cpp"
-	#include "../../gui/icons/tool_icon.cpp"
+//	#include "../../gui/icons/tool_icon.cpp"
+	#include "../../gui/icons/abinitio_icon.cpp"
 	#include "../../gui/icons/growth.cpp"
 
 	#include "../../gui/icons/run_profiles_icon.cpp"
@@ -154,7 +155,7 @@ bool MyGuiApp::OnInit()
 	wxBitmap ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(ctf_icon);
 	wxBitmap find_particles_icon_bmp = wxBITMAP_PNG_FROM_DATA(particle_position_icon);
 	wxBitmap classification_icon_bmp = wxBITMAP_PNG_FROM_DATA(classification_icon);
-	wxBitmap ab_initio_3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(tool_icon);
+	wxBitmap ab_initio_3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(abinitio_icon);
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);

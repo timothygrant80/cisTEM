@@ -77,6 +77,7 @@ bool MyGuiApp::OnInit()
 //	#include "../../gui/icons/tool_icon.cpp"
 	#include "../../gui/icons/abinitio_icon.cpp"
 	#include "../../gui/icons/growth.cpp"
+	#include "../../gui/icons/manual_refine_icon.cpp"
 
 	#include "../../gui/icons/run_profiles_icon.cpp"
 
@@ -157,6 +158,7 @@ bool MyGuiApp::OnInit()
 	wxBitmap classification_icon_bmp = wxBITMAP_PNG_FROM_DATA(classification_icon);
 	wxBitmap ab_initio_3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(abinitio_icon);
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
+	wxBitmap manual_refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(manual_refine_icon);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
@@ -177,6 +179,7 @@ bool MyGuiApp::OnInit()
 	ActionsBookIconImages->Add(classification_icon_bmp);
 	ActionsBookIconImages->Add(ab_initio_3d_icon_bmp);
 	ActionsBookIconImages->Add(refine3d_icon_bmp);
+	ActionsBookIconImages->Add(manual_refine3d_icon_bmp);
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
@@ -217,7 +220,7 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(classification_panel,"2D Classify",false,3);
 	actions_panel->ActionsBook->AddPage(ab_initio_3d_panel,"Ab-Initio 3D",false, 4);
 	actions_panel->ActionsBook->AddPage(auto_refine_3d_panel,"Auto Refine",false, 5);
-	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Manual Refine",false, 5);
+	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Manual Refine",false, 6);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

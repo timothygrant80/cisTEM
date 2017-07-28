@@ -117,7 +117,7 @@ void MovieAsset::Update(wxString wanted_filename)
 	
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{
-		if (filename.GetExt().IsSameAs("mrc",false))
+		if (filename.GetExt().IsSameAs("mrc",false) || filename.GetExt().IsSameAs("mrcs",false))
 		{
 			is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
 		}

@@ -115,87 +115,112 @@ Refinement::~Refinement()
 
 }
 
+RefinementResult Refinement::ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack)
+{
+	MyDebugAssertTrue(wanted_class >= 0 && wanted_class < number_of_classes, "wanted class (%i) out of range!", wanted_class);
+	MyDebugAssertTrue(wanted_position_in_stack > 0 && wanted_class <= number_of_particles, "wanted position in stack out of range!");
+
+	for (long counter = wanted_position_in_stack - 1; counter < number_of_particles; counter++)
+	{
+		if (class_refinement_results[wanted_class].particle_refinement_results[counter].position_in_stack == wanted_position_in_stack) return class_refinement_results[wanted_class].particle_refinement_results[counter];
+	}
+
+	for (long counter = 0; counter < wanted_position_in_stack; counter++)
+	{
+		if (class_refinement_results[wanted_class].particle_refinement_results[counter].position_in_stack == wanted_position_in_stack) return class_refinement_results[wanted_class].particle_refinement_results[counter];
+	}
+
+	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle");
+	abort();
+}
+
+void Refinement::WriteSingleClassFrealignParameterFile(wxString filename,int wanted_class, float percent_used_overide, float sigma_override)
+{
+	float output_parameters[17];
+	float parameter_average[17];
+	float temp_float;
+	long particle_counter;
+	int parameter_counter;
+
+	ZeroFloatArray(output_parameters, 17);
+	ZeroFloatArray(parameter_average, 17);
+
+	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(filename, OPEN_TO_WRITE);
+
+	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
+	{
+		output_parameters[0] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].position_in_stack;
+		output_parameters[1] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].psi;
+		output_parameters[2] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].theta;
+		output_parameters[3] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].phi;
+		output_parameters[4] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].xshift;
+		output_parameters[5] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].yshift;
+		output_parameters[6] = 0.0;
+
+		if (percent_used_overide < 1.0)
+		{
+			temp_float = global_random_number_generator.GetUniformRandom();
+			if (temp_float < 1.0 - 2.0 * percent_used_overide)
+			{
+				output_parameters[7] = -1;
+			}
+			else
+			{
+				output_parameters[7] = 1;
+			}
+		}
+		else
+		{
+			output_parameters[7] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_is_active;
+		}
+
+		output_parameters[8] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus1;
+		output_parameters[9] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus2;
+		output_parameters[10] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus_angle;
+		output_parameters[11] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].phase_shift;
+		output_parameters[12] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].occupancy;
+		output_parameters[13] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].logp;
+		if (sigma_override > 0.0) output_parameters[14] = sigma_override;
+		else output_parameters[14] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].sigma;
+		output_parameters[15] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].score;
+		output_parameters[16] = 0.0;
+
+		for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
+		{
+			parameter_average[parameter_counter] += output_parameters[parameter_counter];
+		}
+
+		my_output_par_file->WriteLine(output_parameters);
+
+	}
+
+	for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
+	{
+		parameter_average[parameter_counter] /= float (number_of_particles);
+	}
+
+	my_output_par_file->WriteLine(parameter_average, true);
+	my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + wxString::Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[15], parameter_average[12]));
+
+	delete my_output_par_file;
+}
+
 wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide, float sigma_override)
 {
 	MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
 	wxArrayString output_filenames;
 	wxString current_filename;
-	float output_parameters[17];
-	float parameter_average[17];
-	float temp_float;
+
 
 	int class_counter;
-	long particle_counter;
-	int parameter_counter;
+
 
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-		ZeroFloatArray(output_parameters, 17);
-		ZeroFloatArray(parameter_average, 17);
 
 		current_filename = base_filename + wxString::Format("_%li_%i.par", refinement_id, class_counter + 1);
 		output_filenames.Add(current_filename);
-
-		FrealignParameterFile *my_output_par_file = new FrealignParameterFile(current_filename, OPEN_TO_WRITE);
-
-		for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
-		{
-
-			output_parameters[0] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack;
-			output_parameters[1] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].psi;
-			output_parameters[2] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].theta;
-			output_parameters[3] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi;
-			output_parameters[4] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift;
-			output_parameters[5] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift;
-			output_parameters[6] = 0.0;
-
-			if (percent_used_overide < 1.0)
-			{
-				temp_float = global_random_number_generator.GetUniformRandom();
-				if (temp_float < 1.0 - 2.0 * percent_used_overide)
-				{
-					output_parameters[7] = -1;
-				}
-				else
-				{
-					output_parameters[7] = 1;
-				}
-			}
-			else
-			{
-				output_parameters[7] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active;
-			}
-
-			output_parameters[8] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1;
-			output_parameters[9] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2;
-			output_parameters[10] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle;
-			output_parameters[11] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift;
-			output_parameters[12] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-			output_parameters[13] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-			if (sigma_override > 0.0) output_parameters[14] = sigma_override;
-			else output_parameters[14] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma;
-			output_parameters[15] = class_refinement_results[class_counter].particle_refinement_results[particle_counter].score;
-			output_parameters[16] = 0.0;
-
-			for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
-			{
-				parameter_average[parameter_counter] += output_parameters[parameter_counter];
-			}
-
-
-			my_output_par_file->WriteLine(output_parameters);
-
-		}
-
-		for (parameter_counter = 0; parameter_counter < 17; parameter_counter++)
-		{
-			parameter_average[parameter_counter] /= float (number_of_particles);
-		}
-
-		my_output_par_file->WriteLine(parameter_average, true);
-		my_output_par_file->WriteCommentLine("C  Total particles included, overall score, average occupancy " + wxString::Format("%11li %10.6f %10.6f", number_of_particles, parameter_average[15], parameter_average[12]));
-
-		delete my_output_par_file;
+		WriteSingleClassFrealignParameterFile(current_filename, class_counter, percent_used_overide, sigma_override);
 	}
 
 	return output_filenames;

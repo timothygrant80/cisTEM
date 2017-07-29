@@ -236,6 +236,21 @@ void MyAssetParentPanel::AddArrayItemToGroup(long wanted_group, long wanted_arra
 	}
 }
 
+void MyAssetParentPanel::DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item)
+{
+	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
+	MyDebugAssertTrue(wanted_array_item >= 0 && wanted_array_item < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_array_item)
+
+	long array_location = all_groups_list->groups[wanted_group].FindMember(wanted_array_item);
+	if (array_location != -1)
+	{
+		RemoveFromGroupInDatabase(ReturnGroupID(wanted_group), ReturnGroupMemberID(wanted_group, array_location));
+		all_groups_list->groups[wanted_group].RemoveMember(array_location);
+		DirtyGroups();
+	}
+}
+
+
 void MyAssetParentPanel::AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog)
 {
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)

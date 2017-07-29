@@ -15,6 +15,8 @@ RefinementResultsPanel( parent )
 	FSCPlotPanel->Clear();
 	currently_displayed_refinement = NULL;
 
+	OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+
 //	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }
 
@@ -23,7 +25,7 @@ void MyRefinementResultsPanel::OnClassComboBoxChange( wxCommandEvent& event )
 	//wxPrintf("Changed\n");
 //	current_class = FSCPlotPanel->ClassComboBox->GetSelection();
 	FillAngles();
-	ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
+//	ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
 //	FSCPlotPanel->PlotCurrentClass();
 	event.Skip();
 }
@@ -70,8 +72,8 @@ void MyRefinementResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		RefinementPackageComboBox->ChangeValue("");
 		InputParametersComboBox->Clear();
 		InputParametersComboBox->ChangeValue("");
-		ParameterListCtrl->ClearAll();
-		ParameterListCtrl->SetItemCount(0);
+//		ParameterListCtrl->ClearAll();
+//		ParameterListCtrl->SetItemCount(0);
 		FSCPlotPanel->Clear();
 
 	}
@@ -147,7 +149,7 @@ void MyRefinementResultsPanel::FillParameterListCtrl()
 	if (RefinementPackageComboBox->GetSelection() >= 0)
 	{
 
-		ParameterListCtrl->Freeze();
+/*		ParameterListCtrl->Freeze();
 		ParameterListCtrl->ClearAll();
 		ParameterListCtrl->InsertColumn(0, wxT("Position In Stack."), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 		ParameterListCtrl->InsertColumn(1, wxT("Psi Angle (°)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
@@ -174,7 +176,7 @@ void MyRefinementResultsPanel::FillParameterListCtrl()
 		{
 			ParameterListCtrl->SetColumnWidth(counter, ParameterListCtrl->ReturnGuessAtColumnTextWidth(counter));
 		}
-		ParameterListCtrl->Thaw();
+		ParameterListCtrl->Thaw();*/
 	}
 
 }

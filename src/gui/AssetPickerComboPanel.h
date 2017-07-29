@@ -47,7 +47,7 @@ class RefinementPickerComboPanel : public AssetPickerComboPanel
 public:
 
 	RefinementPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	bool FillComboBox(long wanted_refinement_package) {AssetComboBox->FillWithRefinements(wanted_refinement_package);}
+	bool FillComboBox(long wanted_refinement_package, bool always_select_latest = false) {AssetComboBox->FillWithRefinements(wanted_refinement_package, always_select_latest);}
 };
 
 class ClassificationPickerComboPanel : public AssetPickerComboPanel
@@ -55,7 +55,7 @@ class ClassificationPickerComboPanel : public AssetPickerComboPanel
 public:
 
 	ClassificationPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	bool FillComboBox(long wanted_refinement_package, bool include_new_classification) {AssetComboBox->FillWithClassifications(wanted_refinement_package, include_new_classification);}
+	bool FillComboBox(long wanted_refinement_package, bool include_new_classification, bool always_select_latest = false) {AssetComboBox->FillWithClassifications(wanted_refinement_package, include_new_classification, always_select_latest);}
 };
 
 class ImageGroupPickerComboPanel : public AssetPickerComboPanel
@@ -80,6 +80,13 @@ public:
 
 	ImagesPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 	bool FillComboBox(long wanted_image_group) {AssetComboBox->FillWithImages(wanted_image_group);}
+};
+
+class AssetPickerListCtrl: public wxListCtrl{
+	public:
+	AssetPickerListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+	virtual wxString OnGetItemText(long item, long column) const;
+
 };
 
 

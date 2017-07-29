@@ -695,8 +695,13 @@ void MyPickingResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 
 void MyPickingResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 {
-	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetCurrentSelection() + 1, per_row_array_position[selected_row]);
+	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 
+}
+
+void MyPickingResultsPanel::OnRemoveFromGroupClick( wxCommandEvent& event )
+{
+	image_asset_panel->DeleteArrayItemFromGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 }
 
 void MyPickingResultsPanel::OnDefineFilterClick( wxCommandEvent& event )

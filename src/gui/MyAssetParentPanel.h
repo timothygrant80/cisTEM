@@ -84,6 +84,7 @@ private:
 		void AddAsset(Asset *asset_to_add);
 		void AddContentItemToGroup(long wanted_group, long wanted_content_item);
 		void AddArrayItemToGroup(long wanted_group, long wanted_array_item);
+		void DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item);
 		void AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog = NULL);
 
 		void OnGroupFocusChange( wxListEvent& event );

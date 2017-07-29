@@ -596,8 +596,13 @@ void MyFindCTFResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 
 void MyFindCTFResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 {
-	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetCurrentSelection() + 1, per_row_array_position[selected_row]);
+	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 
+}
+
+void MyFindCTFResultsPanel::OnRemoveFromGroupClick( wxCommandEvent& event )
+{
+	image_asset_panel->DeleteArrayItemFromGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 }
 
 void MyFindCTFResultsPanel::OnAddAllToGroupClick( wxCommandEvent& event )

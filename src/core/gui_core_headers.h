@@ -40,6 +40,7 @@
 #include <wx/graphics.h>
 #include <wx/aui/auibook.h>
 #include <wx/clipbrd.h>
+#include <wx/odcombo.h>
 
 #include "../core/core_headers.h"
 
@@ -78,6 +79,7 @@
 #include "../gui/MyAddRunCommandDialog.h"
 #include "../gui/MyNewProjectWizard.h"
 #include "../gui/ImportRefinementPackageWizard.h"
+#include "../gui/ExportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/PickingResultsPanel.h"

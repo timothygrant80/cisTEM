@@ -261,6 +261,8 @@ MyCTFFilterDialog::MyCTFFilterDialog( wxWindow* parent )
 :
 MyFilterDialog( parent )
 {
+	SetTitle("Filter / Sort Images");
+
 	// add the filter checkboxes..
 
 	asset_id_filter = new IntegerFilterItem("Asset ID", FilterScrollPanel);

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -1108,8 +1108,8 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	bSizer203->Add( fgSizer11, 0, wxEXPAND, 5 );
 	
-	ParameterListCtrl = new RefinementParametersListCtrl( m_panel48, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
-	bSizer203->Add( ParameterListCtrl, 1, wxALL|wxEXPAND, 5 );
+	FSCPlotPanel = new MyFSCPanel( m_panel48, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer203->Add( FSCPlotPanel, 60, wxEXPAND | wxALL, 5 );
 	
 	
 	m_panel48->SetSizer( bSizer203 );
@@ -1119,17 +1119,33 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	wxBoxSizer* bSizer206;
 	bSizer206 = new wxBoxSizer( wxVERTICAL );
 	
-	FSCPlotPanel = new MyFSCPanel( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer206->Add( FSCPlotPanel, 60, wxEXPAND | wxALL, 5 );
+	m_splitter16 = new wxSplitterWindow( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter16OnIdle ), NULL, this );
 	
-	wxBoxSizer* bSizer208;
-	bSizer208 = new wxBoxSizer( wxHORIZONTAL );
+	m_panel124 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer383;
+	bSizer383 = new wxBoxSizer( wxVERTICAL );
 	
-	AngularPlotPanel = new AngularDistributionPlotPanel( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer208->Add( AngularPlotPanel, 100, wxEXPAND | wxALL, 5 );
+	OrthPanel = new DisplayPanel( m_panel124, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer383->Add( OrthPanel, 1, wxEXPAND | wxALL, 5 );
 	
 	
-	bSizer206->Add( bSizer208, 40, wxEXPAND, 5 );
+	m_panel124->SetSizer( bSizer383 );
+	m_panel124->Layout();
+	bSizer383->Fit( m_panel124 );
+	m_panel125 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer384;
+	bSizer384 = new wxBoxSizer( wxVERTICAL );
+	
+	AngularPlotPanel = new AngularDistributionPlotPanel( m_panel125, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer384->Add( AngularPlotPanel, 100, wxEXPAND | wxALL, 5 );
+	
+	
+	m_panel125->SetSizer( bSizer384 );
+	m_panel125->Layout();
+	bSizer384->Fit( m_panel125 );
+	m_splitter16->SplitHorizontally( m_panel124, m_panel125, 0 );
+	bSizer206->Add( m_splitter16, 1, wxEXPAND, 5 );
 	
 	
 	m_panel49->SetSizer( bSizer206 );
@@ -2194,6 +2210,9 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 	
+	DeleteFromGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Delete Image From Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer69->Add( DeleteFromGroupButton, 0, wxALL, 5 );
+	
 	AddToGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Add Image To Group"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer69->Add( AddToGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -2225,6 +2244,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
 	NextButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddToGroupClick ), NULL, this );
 }
 
@@ -2239,6 +2259,7 @@ FindCTFResultsPanel::~FindCTFResultsPanel()
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
 	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddToGroupClick ), NULL, this );
 	
 }
@@ -2483,6 +2504,9 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 	
+	DeleteFromGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Delete Image From Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer69->Add( DeleteFromGroupButton, 0, wxALL, 5 );
+	
 	AddToGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Add Image To Group"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer69->Add( AddToGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -2513,6 +2537,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnPreviousButtonClick ), NULL, this );
 	NextButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnAddToGroupClick ), NULL, this );
 }
 
@@ -2526,6 +2551,7 @@ PickingResultsPanel::~PickingResultsPanel()
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnPreviousButtonClick ), NULL, this );
 	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsPanel::OnAddToGroupClick ), NULL, this );
 	
 }
@@ -2805,6 +2831,9 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 	
+	DeleteFromGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Delete Movie From Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer69->Add( DeleteFromGroupButton, 0, wxALL, 5 );
+	
 	AddToGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Add Movie To Group"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer69->Add( AddToGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -2836,6 +2865,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnAddAllToGroupClick ), NULL, this );
 	NextButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnAddToGroupClick ), NULL, this );
 }
 
@@ -2850,6 +2880,7 @@ MovieAlignResultsPanel::~MovieAlignResultsPanel()
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnAddAllToGroupClick ), NULL, this );
 	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieAlignResultsPanel::OnAddToGroupClick ), NULL, this );
 	
 }
@@ -6696,6 +6727,160 @@ NewProjectWizard::~NewProjectWizard()
 	m_pages.Clear();
 }
 
+ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
+{
+	this->Create( parent, id, title, bitmap, pos, style );
+	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
+	
+	wxWizardPageSimple* ChooseParamsPage = new wxWizardPageSimple( this );
+	m_pages.Add( ChooseParamsPage );
+	
+	wxBoxSizer* bSizer39311;
+	bSizer39311 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText46511 = new wxStaticText( ChooseParamsPage, wxID_ANY, wxT("Export which parameters? :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText46511->Wrap( -1 );
+	bSizer39311->Add( m_staticText46511, 0, wxALL, 5 );
+	
+	m_staticline10511 = new wxStaticLine( ChooseParamsPage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer39311->Add( m_staticline10511, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer419;
+	bSizer419 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ParameterSelectPanel = new RefinementPickerComboPanel( ChooseParamsPage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer419->Add( ParameterSelectPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	m_staticline123 = new wxStaticLine( ChooseParamsPage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
+	bSizer419->Add( m_staticline123, 0, wxEXPAND | wxALL, 5 );
+	
+	ClassComboBox = new wxComboBox( ChooseParamsPage, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	ClassComboBox->SetMinSize( wxSize( 150,-1 ) );
+	
+	bSizer419->Add( ClassComboBox, 0, wxALL, 5 );
+	
+	
+	bSizer39311->Add( bSizer419, 0, wxEXPAND, 5 );
+	
+	
+	ChooseParamsPage->SetSizer( bSizer39311 );
+	ChooseParamsPage->Layout();
+	bSizer39311->Fit( ChooseParamsPage );
+	wxWizardPageSimple* ExportTypePage = new wxWizardPageSimple( this );
+	m_pages.Add( ExportTypePage );
+	
+	wxBoxSizer* bSizer3931;
+	bSizer3931 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText4651 = new wxStaticText( ExportTypePage, wxID_ANY, wxT("Export to what format? :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText4651->Wrap( -1 );
+	bSizer3931->Add( m_staticText4651, 0, wxALL, 5 );
+	
+	m_staticline1051 = new wxStaticLine( ExportTypePage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer3931->Add( m_staticline1051, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer3941;
+	bSizer3941 = new wxBoxSizer( wxVERTICAL );
+	
+	FrealignRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Frealign"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3941->Add( FrealignRadioButton, 0, wxALL, 5 );
+	
+	RelionRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion "), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
+	
+	
+	bSizer3931->Add( bSizer3941, 1, wxEXPAND, 5 );
+	
+	
+	ExportTypePage->SetSizer( bSizer3931 );
+	ExportTypePage->Layout();
+	bSizer3931->Fit( ExportTypePage );
+	wxWizardPageSimple* GetPathPage = new wxWizardPageSimple( this );
+	m_pages.Add( GetPathPage );
+	
+	GetPathPage->SetMinSize( wxSize( 600,300 ) );
+	
+	wxBoxSizer* bSizer471;
+	bSizer471 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText4741 = new wxStaticText( GetPathPage, wxID_ANY, wxT("Please provide the stack and metadata files"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText4741->Wrap( -1 );
+	bSizer471->Add( m_staticText4741, 0, wxALL, 5 );
+	
+	m_staticline1061 = new wxStaticLine( GetPathPage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer471->Add( m_staticline1061, 0, wxEXPAND | wxALL, 5 );
+	
+	m_staticText411 = new wxStaticText( GetPathPage, wxID_ANY, wxT("Output Particle Stack Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText411->Wrap( -1 );
+	bSizer471->Add( m_staticText411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer5011;
+	bSizer5011 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ParticleStackFileTextCtrl = new wxTextCtrl( GetPathPage, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer5011->Add( ParticleStackFileTextCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_button2411 = new wxButton( GetPathPage, wxID_ANY, wxT("Browse..."), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer5011->Add( m_button2411, 0, wxALL, 5 );
+	
+	
+	bSizer471->Add( bSizer5011, 0, wxEXPAND, 5 );
+	
+	MetaFilenameStaticText = new wxStaticText( GetPathPage, wxID_ANY, wxT("Output PAR / STAR Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	MetaFilenameStaticText->Wrap( -1 );
+	bSizer471->Add( MetaFilenameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer502;
+	bSizer502 = new wxBoxSizer( wxHORIZONTAL );
+	
+	MetaDataFileTextCtrl = new wxTextCtrl( GetPathPage, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer502->Add( MetaDataFileTextCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_button242 = new wxButton( GetPathPage, wxID_ANY, wxT("Browse..."), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer502->Add( m_button242, 0, wxALL, 5 );
+	
+	
+	bSizer471->Add( bSizer502, 0, wxEXPAND, 5 );
+	
+	
+	GetPathPage->SetSizer( bSizer471 );
+	GetPathPage->Layout();
+	bSizer471->Fit( GetPathPage );
+	
+	this->Centre( wxBOTH );
+	
+	for ( unsigned int i = 1; i < m_pages.GetCount(); i++ )
+	{
+		m_pages.Item( i )->SetPrev( m_pages.Item( i - 1 ) );
+		m_pages.Item( i - 1 )->SetNext( m_pages.Item( i ) );
+	}
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( ExportRefinementPackageWizardParent::OnUpdateUI ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnFinished ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnPageChanged ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnPageChanging ) );
+	ParticleStackFileTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnPathChange ), NULL, this );
+	m_button2411->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnStackBrowseButtonClick ), NULL, this );
+	MetaDataFileTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnPathChange ), NULL, this );
+	m_button242->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnMetaBrowseButtonClick ), NULL, this );
+}
+
+ExportRefinementPackageWizardParent::~ExportRefinementPackageWizardParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( ExportRefinementPackageWizardParent::OnUpdateUI ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnFinished ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnPageChanged ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( ExportRefinementPackageWizardParent::OnPageChanging ) );
+	ParticleStackFileTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnPathChange ), NULL, this );
+	m_button2411->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnStackBrowseButtonClick ), NULL, this );
+	MetaDataFileTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnPathChange ), NULL, this );
+	m_button242->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExportRefinementPackageWizardParent::OnMetaBrowseButtonClick ), NULL, this );
+	
+	m_pages.Clear();
+}
+
 ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style ) 
 {
 	this->Create( parent, id, title, bitmap, pos, style );
@@ -6704,32 +6889,32 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	wxWizardPageSimple* ImportTypePage = new wxWizardPageSimple( this );
 	m_pages.Add( ImportTypePage );
 	
-	wxBoxSizer* bSizer393;
-	bSizer393 = new wxBoxSizer( wxVERTICAL );
+	wxBoxSizer* bSizer3931;
+	bSizer3931 = new wxBoxSizer( wxVERTICAL );
 	
-	m_staticText465 = new wxStaticText( ImportTypePage, wxID_ANY, wxT("Import from what source? :-"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText465->Wrap( -1 );
-	bSizer393->Add( m_staticText465, 0, wxALL, 5 );
+	m_staticText4651 = new wxStaticText( ImportTypePage, wxID_ANY, wxT("Import from what source? :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText4651->Wrap( -1 );
+	bSizer3931->Add( m_staticText4651, 0, wxALL, 5 );
 	
-	m_staticline105 = new wxStaticLine( ImportTypePage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer393->Add( m_staticline105, 0, wxEXPAND | wxALL, 5 );
+	m_staticline1051 = new wxStaticLine( ImportTypePage, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer3931->Add( m_staticline1051, 0, wxEXPAND | wxALL, 5 );
 	
-	wxBoxSizer* bSizer394;
-	bSizer394 = new wxBoxSizer( wxVERTICAL );
+	wxBoxSizer* bSizer3941;
+	bSizer3941 = new wxBoxSizer( wxVERTICAL );
 	
 	FrealignRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("Frealign (Requires particle stack and PAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer394->Add( FrealignRadioButton, 0, wxALL, 5 );
+	bSizer3941->Add( FrealignRadioButton, 0, wxALL, 5 );
 	
 	RelionRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("Relion (Requires particle stack and STAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer394->Add( RelionRadioButton, 0, wxALL, 5 );
+	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
 	
 	
-	bSizer393->Add( bSizer394, 1, wxEXPAND, 5 );
+	bSizer3931->Add( bSizer3941, 1, wxEXPAND, 5 );
 	
 	
-	ImportTypePage->SetSizer( bSizer393 );
+	ImportTypePage->SetSizer( bSizer3931 );
 	ImportTypePage->Layout();
-	bSizer393->Fit( ImportTypePage );
+	bSizer3931->Fit( ImportTypePage );
 	wxWizardPageSimple* GetPathPage = new wxWizardPageSimple( this );
 	m_pages.Add( GetPathPage );
 	
@@ -7662,6 +7847,9 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	DeleteButton = new wxButton( m_panel50, wxID_ANY, wxT("Delete"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer193->Add( DeleteButton, 0, wxALL, 5 );
 	
+	m_staticline122 = new wxStaticLine( m_panel50, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer193->Add( m_staticline122, 0, wxEXPAND | wxALL, 5 );
+	
 	ImportButton = new wxButton( m_panel50, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer193->Add( ImportButton, 0, wxALL, 5 );
 	
@@ -8094,7 +8282,7 @@ LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWi
 	wxBoxSizer* bSizer147;
 	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Estimated Largest Dimension (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Estimated Largest Dimension / Diameter (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -8107,7 +8295,7 @@ LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWi
 	
 	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please enter the estimated largest dimension of the particle. This will be used for autosizing masks and shift limits, it need not be exact, and it is better to err on the large size."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please enter the estimated largest dimension of the particle. This will be used for autosizing masks and shift limits, it need not be exact, and it is better to err on the large size. Please note, this is the largest dimension / diameter - NOT RADIUS."), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	
@@ -8196,7 +8384,7 @@ NumberofClassesWizardPanel::NumberofClassesWizardPanel( wxWindow* parent, wxWind
 	wxBoxSizer* bSizer147111;
 	bSizer147111 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText214111 = new wxStaticText( this, wxID_ANY, wxT("Number of 3D classes for refinement :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214111 = new wxStaticText( this, wxID_ANY, wxT("Number of classes for 3D refinement :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText214111->Wrap( -1 );
 	bSizer147111->Add( m_staticText214111, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -8209,7 +8397,7 @@ NumberofClassesWizardPanel::NumberofClassesWizardPanel( wxWindow* parent, wxWind
 	
 	bSizer153111->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Select the number 3D of classes to use during the refinement.  This number is fixed for a refinement package, but can be changed by creating a new refinement package and using an old refinement package as a template.  In general you will start with 1 class, and split into more classes later in the refinement.If this package is based on a previous package, you will be given options about how to split/merge classes in the following steps."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Select the number 3D of classes to use during 3D refinement.  This number only affects 3D refinements, and will have no effect during 2D classification.  This number is fixed for a refinement package, but can be changed by creating a new refinement package and using an old refinement package as a template.  In general you will start with 1 class, and split into more classes later in the refinement.If this package is based on a previous package, you will be given options about how to split/merge classes in the following steps.  "), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer153111->Add( InfoText, 0, wxALL|wxEXPAND, 10 );
 	
@@ -8933,7 +9121,7 @@ ListCtrlDialog::ListCtrlDialog( wxWindow* parent, wxWindowID id, const wxString&
 	wxBoxSizer* bSizer321;
 	bSizer321 = new wxBoxSizer( wxVERTICAL );
 	
-	MyListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxSize( 500,300 ), wxLC_NO_HEADER|wxLC_REPORT|wxLC_SINGLE_SEL );
+	MyListCtrl = new AssetPickerListCtrl( this, wxID_ANY, wxDefaultPosition, wxSize( 500,300 ), wxLC_NO_HEADER|wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
 	bSizer321->Add( MyListCtrl, 0, wxALL, 5 );
 	
 	wxBoxSizer* bSizer322;

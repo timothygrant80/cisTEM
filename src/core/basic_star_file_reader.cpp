@@ -83,6 +83,7 @@ void BasicStarFileReader::Close()
 bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxString *error_string)
 {
 	// extract info.
+
 	wxArrayString all_tokens;
 	wxStringTokenizer tokens(wanted_line);
 	StarFileParameters temp_parameters;
@@ -95,7 +96,6 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	current_position_in_stack++;
 	temp_parameters.position_in_stack = current_position_in_stack;
-
 
 	// phi
 
@@ -235,8 +235,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	while (input_file_stream->Eof() == false)
 	{
 		current_line = input_text_stream->ReadLine();
-		current_line.Trim(true);
-		current_line.Trim(false);
+		current_line = current_line.Trim(true);
+		current_line = current_line.Trim(false);
 		if (current_line.Find("data_") != wxNOT_FOUND)
 		{
 			found_valid_data_block = true;
@@ -257,8 +257,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	while (input_file_stream->Eof() == false)
 	{
 		current_line = input_text_stream->ReadLine();
-		current_line.Trim(true);
-		current_line.Trim(false);
+		current_line = current_line.Trim(true);
+		current_line = current_line.Trim(false);
 
 		if (current_line.Find("loop_") != wxNOT_FOUND)
 		{
@@ -279,8 +279,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	while (input_file_stream->Eof() == false)
 	{
 		current_line = input_text_stream->ReadLine();
-		current_line.Trim(true);
-		current_line.Trim(false);
+		current_line = current_line.Trim(true);
+		current_line = current_line.Trim(false);
 
 	    if (current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';') continue;
 	    if (current_line[0] != '_') break;
@@ -380,8 +380,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	while (input_file_stream->Eof() == false)
 	{
 		current_line = input_text_stream->ReadLine();
-		current_line.Trim(true);
-		current_line.Trim(false);
+		current_line = current_line.Trim(true);
+		current_line = current_line.Trim(false);
 
 		if (current_line.IsEmpty() == true) break;
 		if (current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';') continue;

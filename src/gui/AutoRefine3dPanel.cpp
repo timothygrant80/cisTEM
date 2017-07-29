@@ -841,7 +841,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	global_delete_autorefine3d_scratch();
 
-
 	// make sure we have references..
 /*
 	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).number_of_classes; class_counter++)
@@ -856,20 +855,18 @@ void AutoRefinementManager::BeginRefinementCycle()
 */
 	// setup input/output refinements
 
-
-
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).refinement_ids[0];
+
 	input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
 	output_refinement = new Refinement;
 	output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
 
-	wxPrintf("RP has %li particles, refinement has %li particles\n", number_of_particles, input_refinement->number_of_particles);
+	//wxPrintf("RP has %li particles, refinement has %li particles\n", number_of_particles, input_refinement->number_of_particles);
 
 	// create a refinement with random angles etc..
 
 	output_refinement->SizeAndFillWithEmpty(number_of_particles, number_of_classes);
 	output_refinement->refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
-
 
 	// Randomise the input parameters, and set the default resolution statistics..
 
@@ -1486,7 +1483,6 @@ void AutoRefinementManager::SetupRefinementJob()
 			if (number_of_global_alignments[particle_counter] == 0) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 0.0;
 			else
 			{
-
 				if (this_is_the_final_round == true) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
 				else
 				if (rounds_since_global_alignment[particle_counter] == 0) input_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = 1.0;
@@ -1889,6 +1885,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 	{
 		// launch drawer thread..
 
+		main_frame->ClearAutoRefine3DScratch();
 		OrthDrawerThread *result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1));
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
@@ -1983,7 +1980,6 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		}
 
 		my_parent->Layout();
-        main_frame->ClearAutoRefine3DScratch();
 
 		//wxPrintf("Calling cycle refinement\n");
         main_frame->DirtyVolumes();
@@ -2137,7 +2133,7 @@ void AutoRefinementManager::CycleRefinement()
 
 	//main_frame->DirtyRefinements();
 
-	if (resolution_per_round.GetCount() >= 5)
+	if (resolution_per_round.GetCount() >= 5 && max_percent_used > 99.0)
 	{
 		should_stop = true;
 		float round_resolution = resolution_per_round[resolution_per_round.GetCount() - 3];

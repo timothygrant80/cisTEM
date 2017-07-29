@@ -6,7 +6,7 @@ MyFilterDialog::MyFilterDialog( wxWindow* parent )
 :
 FilterDialog( parent )
 {
-
+	SetTitle("Filter / Sort Images");
 }
 
 

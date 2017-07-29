@@ -183,6 +183,11 @@ void MyMovieAlignResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 	movie_asset_panel->AddArrayItemToGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
 }
 
+void MyMovieAlignResultsPanel::OnRemoveFromGroupClick( wxCommandEvent& event )
+{
+	movie_asset_panel->DeleteArrayItemFromGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
+}
+
 void MyMovieAlignResultsPanel::OnAddAllToGroupClick( wxCommandEvent& event )
 {
 	wxArrayLong items_to_add;

@@ -7,6 +7,7 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
 		void JunkMe(wxCommandEvent & event);
 		void OnDefineFilterClick( wxCommandEvent& event );
 		void OnAddToGroupClick( wxCommandEvent& event );
+		void OnRemoveFromGroupClick( wxCommandEvent& event );
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );
 		void OnAddAllToGroupClick( wxCommandEvent& event );

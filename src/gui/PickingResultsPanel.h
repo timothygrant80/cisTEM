@@ -19,6 +19,7 @@ class MyPickingResultsPanel : public PickingResultsPanel
 		void OnNextButtonClick( wxCommandEvent& event );
 		void OnPreviousButtonClick( wxCommandEvent& event );
 		void OnAddToGroupClick( wxCommandEvent& event );
+		void OnRemoveFromGroupClick( wxCommandEvent& event );
 		void OnJobDetailsToggle( wxCommandEvent& event );
 		void Clear();
 		bool CheckBoxIsChecked(const int row, const int column);

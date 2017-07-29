@@ -917,6 +917,7 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 	{
 		// job has really finished, so we can write to the database...
 
+		main_frame->job_controller.KillJob(my_job_id);
 		WriteResultToDataBase();
 
 		if (buffered_results != NULL)
@@ -924,6 +925,8 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 			delete [] buffered_results;
 			buffered_results = NULL;
 		}
+
+
 
 		WriteInfoText("All Jobs have finished.");
 		ProgressBar->SetValue(100);

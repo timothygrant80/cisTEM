@@ -1479,7 +1479,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
 		{
 			// job has really finished, so we can write to the database...
-
+			main_frame->job_controller.KillJob(my_job_id);
 			WriteResultToDataBase();
 
 			if (buffered_results != NULL)

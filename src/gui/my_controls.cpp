@@ -7,7 +7,7 @@ extern Refine2DResultsPanel *refine2d_results_panel;
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
-wxComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
+		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
 {
 	associated_ids.clear();
 	selected_id_on_last_clear -10;
@@ -35,30 +35,46 @@ void MemoryComboBox::SetSelection(int n)
 		currently_selected_id = associated_ids.Item(n);
 	}
 
-	wxComboBox::SetSelection(n);
+	wxOwnerDrawnComboBox::SetSelection(n);
 }
 
 void MemoryComboBox::Clear()
 {
 	associated_ids.clear();
+	associated_text.clear();
 	selected_id_on_last_clear = currently_selected_id;
 	currently_selected_id = -10;
-	wxComboBox::Clear();
+	wxOwnerDrawnComboBox::Clear();
 }
 
 void MemoryComboBox::Reset()
 {
 	associated_ids.clear();
+	associated_text.clear();
 	selected_id_on_last_clear = -10;
 	currently_selected_id = -10;
-	wxComboBox::Clear();
+	wxOwnerDrawnComboBox::Clear();
 }
 
 void MemoryComboBox::AddMemoryItem(wxString wanted_text, long wanted_id)
 {
 	Append(wanted_text);
+	associated_text.Add(wanted_text);
 	associated_ids.Add(wanted_id);
 }
+
+void MemoryComboBox::AddMemoryItems(wxArrayString wanted_texts, wxArrayLong wanted_ids)
+{
+	MyDebugAssertTrue(wanted_texts.GetCount() == wanted_ids.GetCount(), "different number of texts and ids")
+	for (int counter = 0; counter < wanted_texts.GetCount(); counter++)
+	{
+		associated_text.Add(wanted_texts[counter]);
+		associated_ids.Add(wanted_ids[counter]);
+	}
+
+	Append(wanted_texts);
+}
+
 
 
 bool MemoryComboBox::FillWithRunProfiles()
@@ -255,14 +271,22 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
 	long new_selection = -1;
 	long new_id = -1;
 
+	wxArrayString items_to_add;
+	wxArrayLong ids_to_add;
+
+
 	if (include_generate_from_params == true)
 	{
-		AddMemoryItem("Generate from params.", -100);
+		items_to_add.Add("Generate from params.");
+		ids_to_add.Add(-100);
+		//AddMemoryItem("Generate from params.", -100);
 	}
 
 	for (long counter = 0; counter < volume_asset_panel->all_assets_list->number_of_assets; counter++)
 	{
-		AddMemoryItem(volume_asset_panel->ReturnAssetName(counter), volume_asset_panel->ReturnAssetID(counter));
+		//AddMemoryItem(volume_asset_panel->ReturnAssetName(counter), volume_asset_panel->ReturnAssetID(counter));
+		items_to_add.Add(volume_asset_panel->ReturnAssetName(counter));
+		ids_to_add.Add(volume_asset_panel->ReturnAssetID(counter));
 
 		if ( volume_asset_panel->ReturnAssetID(counter) == selected_id_on_last_clear)
 		{
@@ -270,6 +294,9 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
 			new_id = selected_id_on_last_clear;
 		}
 	}
+
+	AddMemoryItems(items_to_add, ids_to_add);
+
 
 	if (GetCount() > 0)
 	{
@@ -284,7 +311,7 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
 	else return false;
 }
 
-bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, bool include_new_classification)
+bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, bool include_new_classification, bool always_select_newest)
 {
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 	Freeze();
@@ -310,7 +337,7 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1) SetSelection(GetCount() - 1);
+		if (new_selection == -1 || always_select_newest == true) SetSelection(GetCount() - 1);
 		else SetSelection(new_selection);
 	}
 
@@ -321,7 +348,7 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
 	else return false;
 }
 
-bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package)
+bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool always_select_newest)
 {
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 	Freeze();
@@ -345,7 +372,7 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package)
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1) SetSelection(GetCount() - 1);
+		if (new_selection == -1 || always_select_newest == true) SetSelection(GetCount() - 1);
 		else SetSelection(new_selection);
 	}
 
@@ -886,12 +913,19 @@ wxFileDialog(parent, message, wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE,
 	extension_lowercase = wanted_extension.Lower();
 	extension_uppercase = wanted_extension.Upper();
 	Bind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+	overidden_path = "";
 
 };
 
 ProperOverwriteCheckSaveDialog::~ProperOverwriteCheckSaveDialog()
 {
 	Unbind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+}
+
+wxString ProperOverwriteCheckSaveDialog::ReturnProperPath()
+{
+	if (overidden_path == "") return GetPath();
+	else return overidden_path;
 }
 
 void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
@@ -901,8 +935,12 @@ void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
 	if (current_path.EndsWith(extension_lowercase) == false && current_path.EndsWith(extension_uppercase) == false)
 	{
 		current_path += extension_lowercase;
+		overidden_path = current_path;
 	}
-	SetPath(current_path);
+	else
+	{
+		overidden_path = "";
+	}
 
 	if (DoesFileExist(current_path) == true)
 	{

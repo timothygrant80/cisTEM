@@ -992,7 +992,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 	if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
 	{
 		// job has really finished, so we can write to the database...
-
+		main_frame->job_controller.KillJob(my_job_id);
 		WriteResultToDataBase();
 
 		// let the FindParticles panel check whether any of the groups are now ready to be picked
@@ -1003,6 +1003,8 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 			delete [] buffered_results;
 			buffered_results = NULL;
 		}
+
+
 
 		WriteInfoText("All Jobs have finished.");
 		ProgressBar->SetValue(100);

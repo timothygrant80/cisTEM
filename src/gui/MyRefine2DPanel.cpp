@@ -125,7 +125,7 @@ void MyRefine2DPanel::FillInputParamsComboBox()
 {
 	if (RefinementPackageComboBox->GetSelection() >= 0 && refinement_package_asset_panel->all_refinement_packages.GetCount() > 0)
 	{
-		InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true);
+		InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true, true);
 	}
 }
 
@@ -616,7 +616,7 @@ void MyRefine2DPanel::SetDefaults()
 		SearchRangeYTextCtrl->SetValue(wxString::Format("%.2f", search_range));
 
 		SmoothingFactorTextCtrl->SetValue("1.00");
-		ExcludeBlankEdgesYesRadio->SetValue(true);
+		ExcludeBlankEdgesNoRadio->SetValue(true);
 		AutoPercentUsedRadioYes->SetValue(true);
 		PercentUsedTextCtrl->SetValue("100.00");
 		ExpertPanel->Thaw();
@@ -1816,17 +1816,20 @@ void ClassificationManager::ProcessAllJobsFinished()
 
 	if (running_job_type == STARTUP)
 	{
+		main_frame->job_controller.KillJob(my_parent->my_job_id);
 		//my_parent->WriteBlueText("Done.");
 		CycleRefinement();
 	}
 	else
 	if (running_job_type == REFINEMENT)
 	{
+		main_frame->job_controller.KillJob(my_parent->my_job_id);
 		RunMerge2dJob();
 	}
 	else
 	if (running_job_type == MERGE)
 	{
+		main_frame->job_controller.KillJob(my_parent->my_job_id);
 		global_delete_refine2d_scratch();
 		CycleRefinement();
 	}

@@ -110,12 +110,13 @@ void MyRelionExportDialog::OnExportButtonClick( wxCommandEvent & event )
 	relion_star_file->AddLine(wxString("_rlnDefocusU #5"));
 	relion_star_file->AddLine(wxString("_rlnDefocusV #6"));
 	relion_star_file->AddLine(wxString("_rlnDefocusAngle #7"));
-	relion_star_file->AddLine(wxString("_rlnVoltage #8"));
-	relion_star_file->AddLine(wxString("_rlnSphericalAberration #9"));
-	relion_star_file->AddLine(wxString("_rlnAmplitudeContrast #10"));
-	relion_star_file->AddLine(wxString("_rlnMagnification #11"));
-	relion_star_file->AddLine(wxString("_rlnDetectorPixelSize #12"));
-	relion_star_file->AddLine(wxString("_rlnCtfFigureOfMerit #13"));
+	relion_star_file->AddLine(wxString("_rlnPhaseShift #8"));
+	relion_star_file->AddLine(wxString("_rlnVoltage #9"));
+	relion_star_file->AddLine(wxString("_rlnSphericalAberration #10"));
+	relion_star_file->AddLine(wxString("_rlnAmplitudeContrast #11"));
+	relion_star_file->AddLine(wxString("_rlnMagnification #12"));
+	relion_star_file->AddLine(wxString("_rlnDetectorPixelSize #13"));
+	relion_star_file->AddLine(wxString("_rlnCtfFigureOfMerit #14"));
 
 	OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Exporting stack and star file", "Exporting...", number_of_images_in_group, this);
 
@@ -188,7 +189,7 @@ void MyRelionExportDialog::OnExportButtonClick( wxCommandEvent & event )
 			box.WriteSlice(output_stack,number_of_boxes);
 			//frealign_txt_file->WriteLine(temp_float);
 			//movie_sums/r_001_aligned_sum.mrc   523.000000   558.000000 000001@Particles/movie_sums/r_001_aligned_sum_particles.mrcs 26792.400391 26373.519531   -27.580000   200.000000     2.000000     0.100000 47361.000000    14.000000     0.075220
-			relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f",	current_image_asset->filename.GetFullPath(),
+			relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f %f",	current_image_asset->filename.GetFullPath(),
 																										current_array_of_assets.Item(particle_counter).x_position / current_image_asset->pixel_size,
 																										current_array_of_assets.Item(particle_counter).y_position / current_image_asset->pixel_size,
 																										number_of_boxes,
@@ -196,6 +197,7 @@ void MyRelionExportDialog::OnExportButtonClick( wxCommandEvent & event )
 																										defocus_1,
 																										defocus_2,
 																										astigmatism_angle,
+																										additional_phase_shift,
 																										acceleration_voltage,
 																										spherical_aberration,
 																										amplitude_contrast,

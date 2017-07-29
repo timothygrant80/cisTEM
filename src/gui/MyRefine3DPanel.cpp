@@ -874,7 +874,7 @@ void MyRefine3DPanel::FillRefinementPackagesComboBox()
 
 void MyRefine3DPanel::FillInputParamsComboBox()
 {
-	if (RefinementPackageComboBox->GetCount() > 0 ) InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection());
+	if (RefinementPackageComboBox->GetCount() > 0 ) InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true);
 }
 
 void MyRefine3DPanel::NewRefinementPackageSelected()

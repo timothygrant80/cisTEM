@@ -154,11 +154,11 @@ void AssetGroup::CopyFrom(AssetGroup *other_group)
 }
 
 
-void AssetGroup::RemoveMember(long number_to_remove)
+void AssetGroup::RemoveMember(long number_to_remove) // number to remove is the array position IN THE GROUP - this is confusing, as in Add member, it is the array position from all assets
 {
 	if (number_to_remove < 0 || number_to_remove >= number_of_members)
 	{
-		wxPrintf("Error! Trying to add to a group that does not exist\n\n");
+		wxPrintf("Error! Trying to add to remove an image that doesn't exist\n\n");
 		exit(-1);
 	}
 

@@ -56,8 +56,10 @@ void MyRefinementPackageAssetPanel::OnImportClick( wxCommandEvent& event )
 
 void MyRefinementPackageAssetPanel::OnExportClick( wxCommandEvent& event )
 {
-	wxPrintf("Export\n");
-
+	ExportRefinementPackageWizard *my_wizard = new ExportRefinementPackageWizard(this);
+	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
+	my_wizard->RunWizard(my_wizard->m_pages.Item(0));
+	my_wizard->Destroy();
 }
 
 void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )

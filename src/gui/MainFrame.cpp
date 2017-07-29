@@ -366,8 +366,6 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	    	  MyDebugPrint("Connection from Job #%li", current_job);
 
 	    	  job_controller.job_list[current_job].socket = sock;
-	    	  job_controller.job_list[current_job].parent_panel->Bind(wxEVT_SOCKET, &JobPanel::OnJobSocketEvent, job_controller.job_list[current_job].parent_panel, SOCKET_ID);
-
 	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
 	    	  //sock->SetEventHandler(*this, SOCKET_ID);
 	    	  // Tell the socket it is connected
@@ -405,10 +403,10 @@ void MyMainFrame::StartNewProject()
 
 	MyNewProjectWizard *my_wizard = new MyNewProjectWizard(this);
 	my_wizard->GetPageAreaSizer()->Add(my_wizard->m_pages.Item(0));
-	my_wizard->RunWizard(my_wizard->m_pages.Item(0));
+	if (my_wizard->RunWizard(my_wizard->m_pages.Item(0)) == false) return;
 	my_wizard->Destroy();
 
-	if (current_project.is_open == true)
+	if (current_project.is_open == true )
 	{
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
 
@@ -437,6 +435,8 @@ void MyMainFrame::StartNewProject()
 	{
 		wxMessageBox( wxString::Format("Error Creating database - Does the file already exist?"), "Cannot create database!", wxICON_ERROR);
 	}
+
+
 }
 void MyMainFrame::OpenProject(wxString project_filename)
 {

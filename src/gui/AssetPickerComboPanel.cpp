@@ -3,6 +3,20 @@
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
+AssetPickerListCtrl::AssetPickerListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
+:
+wxListCtrl(parent, id, pos, size, style, validator, name)
+{
+
+}
+
+wxString AssetPickerListCtrl::OnGetItemText(long item, long column) const
+{
+	AssetPickerComboPanel *parent = reinterpret_cast < AssetPickerComboPanel *> (GetParent()->GetParent());
+	if (item >= 0 && item < parent->AssetComboBox->GetCount()) return parent->AssetComboBox->associated_text[item];
+	else return "";
+}
+
 AssetPickerComboPanel::AssetPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
 : AssetPickerComboPanelParent(parent, id, pos, size, style)
 {
@@ -27,14 +41,15 @@ void AssetPickerComboPanel::GetAssetFromPopup()
 	ListCtrlDialog *picker_dialog = new ListCtrlDialog(this, wxID_ANY, "Make a selection :-");
 
 	picker_dialog->MyListCtrl->InsertColumn(0, "Column1", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	picker_dialog->MyListCtrl->SetItemCount(AssetComboBox->GetCount());
 
 	if (AssetComboBox->GetCount() > 0 )
 	{
-
+/*
 		for (counter = 0; counter < AssetComboBox->GetCount(); counter++)
 		{
-			picker_dialog->MyListCtrl->InsertItem(counter, AssetComboBox->GetString(counter), counter);
-		}
+			picker_dialog->MyListCtrl->InsertItem(counter, AssetComboBox->associated_text[counter], counter);
+		}*/
 
 		if (AssetComboBox->GetSelection() == -1)
 		{

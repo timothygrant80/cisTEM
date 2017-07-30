@@ -628,6 +628,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
 			cut_particle.ZeroFloatAndNormalize();
+			if (current_image_asset->protein_is_white) cut_particle.InvertRealValues();
 			cut_particle.WriteSlice(&output_stack, position_in_stack);
 
 			// set the contained particles..

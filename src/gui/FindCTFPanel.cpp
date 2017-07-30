@@ -1168,7 +1168,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		current_asset = image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter);
 
 		main_frame->current_project.database.AddNextImageAsset(image_asset_panel->ReturnAssetPointer(current_asset)->asset_id,
-															image_asset_panel->ReturnAssetPointer(current_asset)->asset_name,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->asset_name,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->filename.GetFullPath(),
 															   image_asset_panel->ReturnAssetPointer(current_asset)->position_in_stack,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->parent_id,
@@ -1178,7 +1178,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 															   image_asset_panel->ReturnAssetPointer(current_asset)->y_size,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->microscope_voltage,
 															   image_asset_panel->ReturnAssetPointer(current_asset)->pixel_size,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->spherical_aberration);
+															   image_asset_panel->ReturnAssetPointer(current_asset)->spherical_aberration,
+															   image_asset_panel->ReturnAssetPointer(current_asset)->protein_is_white);
 
 
 		image_asset_panel->ReturnAssetPointer(current_asset)->ctf_estimation_id = ctf_estimation_id;

@@ -745,7 +745,7 @@ bool Database::DoesTableExist(wxString table_name)
 	return (bool) ReturnSingleIntFromSelectCommand(wxString::Format("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='%s';", table_name));
 }
 
-void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale)
+void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -768,12 +768,13 @@ void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberratio
 	mag_distortion_angle = sqlite3_column_double(sqlite_statement, 10);
 	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 11);
 	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 12);
+	protein_is_white = sqlite3_column_int(sqlite_statement,13);
 
 	Finalize(sqlite_statement);
 }
 
 
-void Database::GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size)
+void Database::GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, bool &protein_is_white)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -787,6 +788,7 @@ void Database::GetImageImportDefaults(float &voltage, float &spherical_aberratio
 	voltage = sqlite3_column_double(sqlite_statement, 1);
 	spherical_aberration = sqlite3_column_double(sqlite_statement, 2);
 	pixel_size = sqlite3_column_double(sqlite_statement, 3);
+	protein_is_white = sqlite3_column_int(sqlite_statement,4);
 
 	Finalize(sqlite_statement);
 }
@@ -952,12 +954,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 17, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE");
+	BeginBatchInsert("MOVIE_ASSETS", 18, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white)
 {
-	AddToBatchInsert("ittiiiirrrrtrirrr", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
+	AddToBatchInsert("ittiiiirrrrtrirrri", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale,protein_is_white);
 }
 
 /*
@@ -975,7 +977,7 @@ void Database::EndMovieAssetInsert()
 
 void Database::BeginImageAssetInsert()
 {
-	BeginBatchInsert("IMAGE_ASSETS", 12, "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");
+	BeginBatchInsert("IMAGE_ASSETS", 13, "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", "PROTEIN_IS_WHITE");
 }
 
 void Database::BeginVolumeAssetInsert()
@@ -988,9 +990,9 @@ void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString f
 	AddToBatchInsert("ittiriii", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size);
 }
 
-void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration)
+void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white)
 {
-	AddToBatchInsert("ittiiiiiirrr", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration);
+	AddToBatchInsert("ittiiiiiirrri", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white);
 }
 
 /*
@@ -1526,7 +1528,7 @@ MovieAsset Database::GetNextMovieAsset()
 	MovieAsset temp_asset;
 	int correct_mag_distortion;
 
-	GetFromBatchSelect("itfiiiirrrrtrirrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale);
+	GetFromBatchSelect("itfiiiirrrrtrirrri", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale, &temp_asset.protein_is_white);
 	temp_asset.correct_mag_distortion = correct_mag_distortion;
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;
@@ -1537,7 +1539,7 @@ ImageAsset Database::GetNextImageAsset()
 {
 	ImageAsset temp_asset;
 
-	GetFromBatchSelect("itfiiiiiirrr", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.ctf_estimation_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration);
+	GetFromBatchSelect("itfiiiiiirrri", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.parent_id, &temp_asset.alignment_id, &temp_asset.ctf_estimation_id, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.pixel_size, &temp_asset.microscope_voltage,  &temp_asset.spherical_aberration, &temp_asset.protein_is_white);
 	return temp_asset;
 }
 

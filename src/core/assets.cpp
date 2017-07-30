@@ -61,6 +61,8 @@ MovieAsset::MovieAsset()
 	mag_distortion_major_scale = 1.0;
 	mag_distortion_minor_scale = 1.0;
 
+	protein_is_white = false;
+
 }
 
 MovieAsset::~MovieAsset()
@@ -93,6 +95,8 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	mag_distortion_angle = 0.0;
 	mag_distortion_major_scale = 1.0;
 	mag_distortion_minor_scale = 1.0;
+
+	protein_is_white = false;
 
 	Update(wanted_filename); // this checks filename is OK, reads dimensions from headers
 	
@@ -160,7 +164,8 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	correct_mag_distortion = casted_asset->correct_mag_distortion;
 	mag_distortion_angle = casted_asset->mag_distortion_angle;
 	mag_distortion_major_scale = casted_asset->mag_distortion_major_scale;
-	mag_distortion_minor_scale = casted_asset->mag_distortion_minor_scale;;
+	mag_distortion_minor_scale = casted_asset->mag_distortion_minor_scale;
+	protein_is_white = casted_asset->protein_is_white;
 }
 
 // Image asset///
@@ -177,6 +182,7 @@ ImageAsset::ImageAsset()
 	microscope_voltage = 0;
 	spherical_aberration = 0;
 	is_valid = false;
+	protein_is_white = false;
 
 	filename = wxEmptyString;
 	asset_name = wxEmptyString;
@@ -204,6 +210,8 @@ ImageAsset::ImageAsset(wxString wanted_filename)
 	microscope_voltage = 0;
 	spherical_aberration = 0;
 	is_valid = false;
+
+	protein_is_white = false;
 
 	int number_in_stack;
 
@@ -247,6 +255,8 @@ void ImageAsset::CopyFrom(Asset *other_asset)
 	spherical_aberration = casted_asset->spherical_aberration;
 	is_valid = casted_asset->is_valid;
 	asset_name = casted_asset->asset_name;
+
+	protein_is_white = casted_asset->protein_is_white;
 }
 
 // Particle Position Asset

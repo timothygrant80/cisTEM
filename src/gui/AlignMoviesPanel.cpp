@@ -1078,8 +1078,9 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 					temp_asset.position_in_stack = 1;
 					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+					temp_asset.protein_is_white = movie_asset_panel->ReturnAssetProteinIsWhite(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 					image_asset_panel->AddAsset(&temp_asset);
-					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
 
 
 				}
@@ -1104,7 +1105,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration);
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration,
+																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].protein_is_white);
 
 					image_asset_panel->current_asset_number++;
 				}

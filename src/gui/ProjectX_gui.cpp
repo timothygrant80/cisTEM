@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -3811,6 +3811,18 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer282, 0, wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer3212;
+	bSizer3212 = new wxBoxSizer( wxHORIZONTAL );
+	
+	MoviesHaveInvertedContrast = new wxCheckBox( this, wxID_ANY, wxT("Particles are white"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3212->Add( MoviesHaveInvertedContrast, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer3212->Add( 0, 0, 50, wxEXPAND, 5 );
+	
+	
+	bSizer26->Add( bSizer3212, 1, wxEXPAND, 5 );
+	
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
 	
@@ -3861,6 +3873,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	DistortionAngleTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MajorScaleTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MinorScaleTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	MoviesHaveInvertedContrast->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesHaveInvertedContrastCheckBox ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 }
@@ -3887,6 +3900,7 @@ MovieImportDialog::~MovieImportDialog()
 	DistortionAngleTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MajorScaleTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MinorScaleTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
+	MoviesHaveInvertedContrast->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesHaveInvertedContrastCheckBox ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 	
@@ -3962,6 +3976,18 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer3212;
+	bSizer3212 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ImagesHaveInvertedContrast = new wxCheckBox( this, wxID_ANY, wxT("Particles are white"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3212->Add( ImagesHaveInvertedContrast, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer3212->Add( 0, 0, 50, wxEXPAND, 5 );
+	
+	
+	bSizer26->Add( bSizer3212, 1, wxEXPAND, 5 );
+	
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
 	
@@ -4001,6 +4027,7 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	CsText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
+	ImagesHaveInvertedContrast->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( ImageImportDialog::OnImagesHaveInvertedContrastCheckBox ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::CancelClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ImportClick ), NULL, this );
 }
@@ -4017,6 +4044,7 @@ ImageImportDialog::~ImageImportDialog()
 	CsText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
 	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( ImageImportDialog::OnTextKeyPress ), NULL, this );
 	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ImageImportDialog::TextChanged ), NULL, this );
+	ImagesHaveInvertedContrast->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( ImageImportDialog::OnImagesHaveInvertedContrastCheckBox ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ImageImportDialog::ImportClick ), NULL, this );
 	

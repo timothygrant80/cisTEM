@@ -67,13 +67,14 @@ void FindParticlesApp::DoInteractiveUserInput()
 	bool 		avoid_high_low_mean_areas			=	my_input->GetYesNoFromUser("Avoid areas with abnormal local mean?","Areas with abnormal local mean are can be avoided. This often works well to avoid ice crystals, for example.","yes");
 	int			algorithm_to_find_background		=	my_input->GetIntFromUser("Algorithm to find background areas (0 or 1)","0: lowest variance; 1: variance near mode","0",0,1);
 	int			number_of_background_boxes			=	my_input->GetIntFromUser("Number of background boxes","This number of boxes will be extracted from the micrographs in areas devoid of particles or other features, to compute the background amplitude spectrum","50",1);
+	bool		particles_are_white					=	my_input->GetYesNoFromUser("Particles are white on a dark background", "Answer yes here if contrast is inverted, i.e. particles have higher densities than the background","no");
 
 
 
 	delete my_input;
 
-	my_current_job.Reset(24);
-	my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbii",	micrograph_filename.ToStdString().c_str(),
+	my_current_job.Reset(25);
+	my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbiib",	micrograph_filename.ToStdString().c_str(),
 																	pixel_size,
 																	acceleration_voltage_in_keV,
 																	spherical_aberration_in_mm,
@@ -96,7 +97,8 @@ void FindParticlesApp::DoInteractiveUserInput()
 																	avoid_high_variance_areas,
 																	avoid_high_low_mean_areas,
 																	algorithm_to_find_background,
-																	number_of_background_boxes
+																	number_of_background_boxes,
+																	particles_are_white
 																	);
 
 
@@ -133,6 +135,7 @@ bool FindParticlesApp::DoCalculation()
 	bool		avoid_high_low_mean_areas					=	my_current_job.arguments[21].ReturnBoolArgument();
 	int			algorithm_to_find_background				=	my_current_job.arguments[22].ReturnIntegerArgument();
 	int			number_of_background_boxes					=	my_current_job.arguments[23].ReturnIntegerArgument();
+	bool		particles_are_white							=	my_current_job.arguments[24].ReturnBoolArgument();
 
 
 	particle_finder.SetAllUserParameters(   micrograph_filename,
@@ -158,7 +161,8 @@ bool FindParticlesApp::DoCalculation()
 			                                avoid_high_variance_areas,
 			                                avoid_high_low_mean_areas,
 			                                algorithm_to_find_background,
-			                                number_of_background_boxes);
+			                                number_of_background_boxes,
+											particles_are_white);
 
 	particle_finder.write_out_plt = is_running_locally;
 	if (is_running_locally) wxPrintf("Running locally. Should write PLT out.\n");

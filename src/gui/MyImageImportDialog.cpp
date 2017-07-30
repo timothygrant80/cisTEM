@@ -21,12 +21,14 @@ ImageImportDialog( parent )
 		float default_voltage;
 		float default_spherical_aberration;
 		float default_pixel_size;
+		bool default_protein_is_white;
 
-		main_frame->current_project.database.GetImageImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size);
+		main_frame->current_project.database.GetImageImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_protein_is_white);
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
 		PixelSizeText->ChangeValue(wxString::Format("%.4f", default_pixel_size));
+		ImagesHaveInvertedContrast->SetValue(default_protein_is_white);
 	}
 }
 
@@ -192,6 +194,7 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.microscope_voltage = microscope_voltage;
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.spherical_aberration = spherical_aberration;
+		temp_asset.protein_is_white = ImagesHaveInvertedContrast->IsChecked();
 
 		// ProgressBar..
 
@@ -216,7 +219,7 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.asset_name = temp_asset.filename.GetName();
 						image_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, -1, -1, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration);
+						main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, -1, -1, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
 
 					}
 					else
@@ -243,7 +246,7 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 
 		main_frame->current_project.database.DeleteTable("IMAGE_IMPORT_DEFAULTS");
 		main_frame->current_project.database.CreateImageImportDefaultsTable();
-		main_frame->current_project.database.InsertOrReplace("IMAGE_IMPORT_DEFAULTS", "prrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", 1,  microscope_voltage, spherical_aberration, pixel_size);
+		main_frame->current_project.database.InsertOrReplace("IMAGE_IMPORT_DEFAULTS", "prrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "PROTEIN_IS_WHITE", 1,  microscope_voltage, spherical_aberration, pixel_size, int(ImagesHaveInvertedContrast->IsChecked()));
 
 		image_asset_panel->SetSelectedGroup(0);
 		image_asset_panel->FillGroupList();

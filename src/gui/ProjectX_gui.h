@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -1109,6 +1109,7 @@ class MovieImportDialog : public wxDialog
 		NumericTextCtrl* MajorScaleTextCtrl;
 		wxStaticText* MinorScaleStaticText;
 		NumericTextCtrl* MinorScaleTextCtrl;
+		wxCheckBox* MoviesHaveInvertedContrast;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -1123,6 +1124,7 @@ class MovieImportDialog : public wxDialog
 		virtual void OnGainFilePickerChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void OnResampleMoviesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCorrectMagDistortionCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMoviesHaveInvertedContrastCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
 		
@@ -1153,6 +1155,7 @@ class ImageImportDialog : public wxDialog
 		wxTextCtrl* CsText;
 		wxStaticText* m_staticText20;
 		wxTextCtrl* PixelSizeText;
+		wxCheckBox* ImagesHaveInvertedContrast;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -1163,13 +1166,14 @@ class ImageImportDialog : public wxDialog
 		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
 		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImagesHaveInvertedContrastCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		
-		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,559 ), long style = wxCLOSE_BOX ); 
 		~ImageImportDialog();
 	
 };

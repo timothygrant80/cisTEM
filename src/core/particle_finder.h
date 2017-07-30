@@ -42,7 +42,8 @@ public:
 															bool				wanted_avoid_high_variance_areas,
 															bool				wanted_avoid_high_low_mean_areas,
 															int					wanted_algorithm_to_find_background,
-															int					wanted_number_of_background_boxes);
+															int					wanted_number_of_background_boxes,
+															bool				wanted_particles_are_white);
 
 
 
@@ -77,6 +78,7 @@ private:
 	bool		avoid_high_low_mean_areas;
 	int			minimum_distance_from_edges_in_pixels;
 	wxString	output_stack_filename;
+	bool		particles_are_white;
 
 	// CTF parameters from the user
 	float		acceleration_voltage_in_keV;

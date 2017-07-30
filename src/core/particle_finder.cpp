@@ -552,7 +552,8 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 											bool				wanted_avoid_high_variance_areas,
 											bool				wanted_avoid_high_low_mean_areas,
 											int					wanted_algorithm_to_find_background,
-											int					wanted_number_of_background_boxes)
+											int					wanted_number_of_background_boxes,
+											bool				wanted_particles_are_white)
 {
 	micrograph_filename 							=	 wanted_micrograph_filename;
 	original_micrograph_pixel_size				    =    wanted_original_micrograph_pixel_size;
@@ -578,6 +579,7 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 	avoid_high_low_mean_areas					    =    wanted_avoid_high_low_mean_areas;
 	algorithm_to_find_background				    =    wanted_algorithm_to_find_background;
 	number_of_background_boxes		                =    wanted_number_of_background_boxes;
+	particles_are_white								=	 wanted_particles_are_white;
 
 }
 
@@ -1167,7 +1169,14 @@ void ParticleFinder::ReadAndResampleMicrograph()
 
 	// Back to real space
 	micrograph.BackwardFFT();
-	micrograph.NormalizeFT();
+	if (particles_are_white)
+	{
+		micrograph.NormalizeFTAndInvertRealValues();
+	}
+	else
+	{
+		micrograph.NormalizeFT();
+	}
 
 	// Write the raw micrograph's spectrum to disk
 #ifdef dump_intermediate_files

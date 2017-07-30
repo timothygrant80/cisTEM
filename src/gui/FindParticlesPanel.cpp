@@ -900,7 +900,8 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 											AvoidHighVarianceAreasCheckBox->IsChecked(),
 											AvoidAbnormalLocalMeanAreasCheckBox->IsChecked(),
 											AlgorithmToFindBackgroundChoice->GetSelection(),
-											NumberOfBackgroundBoxesSpinCtrl->GetValue());
+											NumberOfBackgroundBoxesSpinCtrl->GetValue(),
+											current_image_asset->protein_is_white);
 }
 
 void MyFindParticlesPanel::DrawResultsFromParticleFinder()
@@ -986,6 +987,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	bool 		avoid_high_low_mean_areas;
 	int			algorithm_to_find_background;
 	int			number_of_background_boxes;
+	bool 		particles_are_white;
 
 	// allocate space for the buffered results..
 
@@ -1030,6 +1032,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		pixel_size				=	current_image_asset->pixel_size;
 		acceleration_voltage	=	current_image_asset->microscope_voltage;
 		spherical_aberration	=	current_image_asset->spherical_aberration;
+		particles_are_white     = 	current_image_asset->protein_is_white;
 
 		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
 
@@ -1040,7 +1043,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		output_stack_filename += wxString::Format("/%s_COOS_%i.mrc", wxFileName::StripExtension(current_image_asset->ReturnShortNameString()),number_of_previous_picks);
 
 
-		my_job_package.AddJob("sffffffffbsbifffsiifbbii",	input_filename.c_str(), // 0
+		my_job_package.AddJob("sffffffffbsbifffsiifbbiib",	input_filename.c_str(), // 0
 															pixel_size,
 															acceleration_voltage,
 															spherical_aberration,
@@ -1063,7 +1066,8 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 															avoid_high_variance_areas,
 															avoid_high_low_mean_areas,
 															algorithm_to_find_background,
-															number_of_background_boxes
+															number_of_background_boxes,
+															particles_are_white
 															);
 
 		my_progress_dialog->Update(counter + 1);

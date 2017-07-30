@@ -32,6 +32,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		double ReturnAssetDosePerFrame(long wanted_asset);
 		double ReturnAssetPreExposureAmount(long wanted_asset);
 		float ReturnAssetSphericalAbberation(long wanted_asset);
+		bool ReturnAssetProteinIsWhite(long wanted_asset);
 		int ReturnAssetID(long wanted_asset);
 		wxString ReturnAssetGainFilename(long wanted_asset);
 		float ReturnAssetBinningFactor(long wanted_asset);

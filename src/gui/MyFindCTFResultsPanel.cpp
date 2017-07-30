@@ -545,7 +545,7 @@ void MyFindCTFResultsPanel::OnValueChanged(wxDataViewEvent &event)
 				//main_frame->current_project.database.EndBatchSelect();
 
 				main_frame->current_project.database.BeginImageAssetInsert();
-				main_frame->current_project.database.AddNextImageAsset(image_asset,  image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, image_asset_panel->ReturnAssetPointer(image_asset)->filename.GetFullPath(),  image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  image_asset_panel->ReturnAssetPointer(image_asset)->alignment_id, estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
+				main_frame->current_project.database.AddNextImageAsset(image_asset,  image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, image_asset_panel->ReturnAssetPointer(image_asset)->filename.GetFullPath(),  image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  image_asset_panel->ReturnAssetPointer(image_asset)->alignment_id, estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration, image_asset_panel->ReturnAssetPointer(image_asset)->protein_is_white);
 				main_frame->current_project.database.EndImageAssetInsert();
 				image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id = estimation_id;
 				image_asset_panel->is_dirty = true;
@@ -597,7 +597,6 @@ void MyFindCTFResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 void MyFindCTFResultsPanel::OnAddToGroupClick( wxCommandEvent& event )
 {
 	image_asset_panel->AddArrayItemToGroup(GroupComboBox->GetSelection() + 1, per_row_array_position[selected_row]);
-
 }
 
 void MyFindCTFResultsPanel::OnRemoveFromGroupClick( wxCommandEvent& event )

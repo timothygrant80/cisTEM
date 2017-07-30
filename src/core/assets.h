@@ -52,6 +52,8 @@ class MovieAsset : public Asset {
 	double mag_distortion_major_scale;
 	double mag_distortion_minor_scale;
 
+	bool protein_is_white;
+
 	void Update(wxString wanted_filename);
 	//void Recheck_if_valid();
 	void CopyFrom(Asset *other_asset);
@@ -77,6 +79,8 @@ class ImageAsset : public Asset {
 	double pixel_size;
 	double microscope_voltage;
 	double spherical_aberration;
+
+	bool protein_is_white;
 
 	void Update(wxString wanted_filename);
 	void CopyFrom(Asset *other_asset);

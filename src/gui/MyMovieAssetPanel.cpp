@@ -224,6 +224,7 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(12,"Dist. angle", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(13,"Dist. major scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(14,"Dist. minor scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(15,"Particles are white?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -287,7 +288,9 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_major_scale);
 	    case 14:
 	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_minor_scale);
-	    default :
+	    case 15:
+			return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->protein_is_white);
+		default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
 	}
@@ -320,6 +323,12 @@ double MyMovieAssetPanel::ReturnAssetDosePerFrame(long wanted_asset)
 float MyMovieAssetPanel::ReturnAssetSphericalAbberation(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->spherical_aberration;
+
+}
+
+bool MyMovieAssetPanel::ReturnAssetProteinIsWhite(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->protein_is_white;
 
 }
 

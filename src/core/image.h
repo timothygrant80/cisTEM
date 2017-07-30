@@ -274,6 +274,7 @@ public:
 
 
 	inline void NormalizeFT() { MultiplyByConstant(ft_normalization_factor); }
+	inline void NormalizeFTAndInvertRealValues() { MultiplyByConstant(-ft_normalization_factor); }
 	void DivideByConstant(float constant_to_divide_by);
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void InvertRealValues();

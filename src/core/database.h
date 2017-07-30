@@ -105,8 +105,8 @@ public :
 	void GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs);
 	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
 
-	void GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale);
-	void GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size);
+	void GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white);
+	void GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, bool &protein_is_white);
 
 	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float&amplitude_contrast);
 
@@ -122,11 +122,11 @@ public :
 	bool DeleteRunProfile(int wanted_id);
 
 	void BeginMovieAssetInsert();
-	void AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale);
+	void AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white);
 	void EndMovieAssetInsert();
 
 	void BeginImageAssetInsert();
-	void AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration);
+	void AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white);
 	void EndImageAssetInsert() {EndBatchInsert();};
 
 	void BeginVolumeAssetInsert();
@@ -154,8 +154,8 @@ public :
 	bool CreateParticlePositionGroupListTable() {return  CreateTable("PARTICLE_POSITION_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
 	bool CreateParticlePickingResultsTable(const int &picking_job_id) {return CreateTable(wxString::Format("PARTICLE_PICKING_RESULTS_%i",picking_job_id),"piirrrirrr","POSITION_ID","PICKING_ID","PARENT_IMAGE_ASSET_ID","X_POSITION", "Y_POSITION","PEAK_HEIGHT","TEMPLATE_ASSET_ID","TEMPLATE_PSI","TEMPLATE_THETA","TEMPLATE_PHI");};
 
-	bool CreateImageAssetTable() {return CreateTable("IMAGE_ASSETS", "pttiiiiiirrr", "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION");};
-	bool CreateMovieAssetTable() {return CreateTable("MOVIE_ASSETS", "pttiiiirrrrtrirrr", "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION", "GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE");};
+	bool CreateImageAssetTable() {return CreateTable("IMAGE_ASSETS", "pttiiiiiirrri", "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION","PROTEIN_IS_WHITE");};
+	bool CreateMovieAssetTable() {return CreateTable("MOVIE_ASSETS", "pttiiiirrrrtrirrri", "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION", "GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE","PROTEIN_IS_WHITE");};
 
 	bool CreateVolumeAssetTable() {return CreateTable("VOLUME_ASSETS", "pttiriii", "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
 	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
@@ -184,8 +184,8 @@ public :
 	bool CreateClassificationSelectionListTable() {return CreateTable("CLASSIFICATION_SELECTION_LIST", "Ptlllii", "SELECTION_ID", "SELECTION_NAME", "CREATION_DATE", "REFINEMENT_PACKAGE_ID", "CLASSIFICATION_ID", "NUMBER_OF_CLASSES", "NUMBER_OF_SELECTIONS");};
 	bool CreateClassificationSelectionTable(const long selection_id) {return CreateTable(wxString::Format("CLASSIFICATION_SELECTION_%li", selection_id), "pl", "SELECTION_NUMBER", "CLASS_AVERAGE_NUMBER");};
 
-	bool CreateMovieImportDefaultsTable() {return CreateTable("MOVIE_IMPORT_DEFAULTS", "prrrritirirrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE" );};
-	bool CreateImageImportDefaultsTable() {return CreateTable("IMAGE_IMPORT_DEFAULTS", "prrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE");};
+	bool CreateMovieImportDefaultsTable() {return CreateTable("MOVIE_IMPORT_DEFAULTS", "prrrritirirrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE" );};
+	bool CreateImageImportDefaultsTable() {return CreateTable("IMAGE_IMPORT_DEFAULTS", "prrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "PROTEIN_IS_WHITE");};
 
 	bool CreateStartupListTable() { return CreateTable("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR");};
 	bool CreateStartupResultTable(const long startup_id) {return CreateTable(wxString::Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};

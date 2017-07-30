@@ -37,8 +37,9 @@ MovieImportDialog( parent )
 		float default_mag_distortion_angle;
 		float default_mag_distortion_major_scale;
 		float default_mag_distortion_minor_scale;
+		bool default_protein_is_white;
 
-		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale);
+		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale, default_protein_is_white);
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
@@ -76,6 +77,8 @@ MovieImportDialog( parent )
 		{
 			CorrectMagDistortionCheckBox->SetValue(false);
 		}
+
+		MoviesHaveInvertedContrast->SetValue(default_protein_is_white);
 
 		GainFilePicker->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
 		GainFileStaticText->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
@@ -316,6 +319,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
+		temp_asset.protein_is_white = MoviesHaveInvertedContrast->IsChecked();
 
 		movies_are_gain_corrected = MoviesAreGainCorrectedCheckBox->IsChecked();
 
@@ -383,7 +387,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			temp_asset.mag_distortion_major_scale = MajorScaleTextCtrl->ReturnValue();
 			temp_asset.mag_distortion_minor_scale = MinorScaleTextCtrl->ReturnValue();
 
-					}
+		}
 
 		// ProgressBar..
 
@@ -432,7 +436,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white);
 					}
 				}
 				else
@@ -459,7 +463,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		main_frame->current_project.database.DeleteTable("MOVIE_IMPORT_DEFAULTS");
 		main_frame->current_project.database.CreateMovieImportDefaultsTable();
-		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritirirrr", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()));
+		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritirirrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()), int(MoviesHaveInvertedContrast->IsChecked()));
 		main_frame->current_project.database.Commit();
 
 		main_frame->DirtyMovieGroups();

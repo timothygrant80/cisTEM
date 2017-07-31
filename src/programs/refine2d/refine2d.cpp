@@ -654,7 +654,8 @@ bool Refine2DApp::DoCalculation()
 		cropped_input_image.ClipInto(input_particle.particle_image);
 		input_particle.particle_image->ClipInto(&padded_image);
 		// Pre-correct for real-space interpolation errors
-		padded_image.CorrectSinc();
+		// Maybe this is not a good idea since this amplifies noise...
+//		padded_image.CorrectSinc();
 		padded_image.BackwardFFT();
 //???		input_particle.mask_volume = padded_image.CosineMask(padded_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
 

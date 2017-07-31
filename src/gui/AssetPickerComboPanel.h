@@ -11,7 +11,7 @@ public :
 	void SetSelection(int wanted_selection) {AssetComboBox->SetSelection(wanted_selection);}
 	void SetSelectionWithEvent(int wanted_selection)
 	{
-		if (wanted_selection > 0 && wanted_selection < AssetComboBox->GetCount())
+		if (wanted_selection >= 0 && wanted_selection < AssetComboBox->GetCount())
 		{
 			AssetComboBox->SetSelection(wanted_selection);
 		 	wxCommandEvent *change_event = new wxCommandEvent(wxEVT_COMBOBOX);

@@ -841,18 +841,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	global_delete_autorefine3d_scratch();
 
-	// make sure we have references..
-/*
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).number_of_classes; class_counter++)
-	{
-		if (refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).references_for_next_refinement[class_counter] == -1)
-		{
-			my_parent->WriteErrorText("Error: A reference must be provided for auto refinement.\nEither Import one, create one with the ab-inito panel, or use manual refinement");
-			return;
-
-		}
-	}
-*/
 	// setup input/output refinements
 
 	long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).refinement_ids[0];
@@ -932,7 +920,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	// Do we need to do masking them?
 
-	my_parent->Freeze();
+	//my_parent->Freeze();
 
 	my_parent->InputParamsPanel->Show(false);
 	my_parent->StartPanel->Show(false);
@@ -947,7 +935,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	my_parent->ShowRefinementResultsPanel->Show(true);
 	my_parent->Layout();
 
-	my_parent->Thaw();
+	//my_parent->Thaw();
 
 	if (my_parent->AutoMaskYesRadio->GetValue() == true)
 	{
@@ -1440,6 +1428,7 @@ void AutoRefinementManager::RunReconstructionJob()
 void AutoRefinementManager::SetupRefinementJob()
 {
 	int class_counter;
+	int number_of_classes;
 	long counter;
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
@@ -1473,7 +1462,7 @@ void AutoRefinementManager::SetupRefinementJob()
 
 		float likelihood_to_global;
 		if (lowest_res < 4) likelihood_to_global = -5; // they will all be local at such high res.
-		else likelihood_to_global = powf(lowest_res, 2) / (250.0f * round_adjust); // very arbritrary
+		else likelihood_to_global = powf(lowest_res, 2) / (1000.0f * round_adjust); // very arbritrary
 
 		if (fabsf(global_random_number_generator.GetUniformRandom()) < likelihood_to_global) do_global_for_this_particle = true;
 		else do_global_for_this_particle = false;
@@ -1497,6 +1486,16 @@ void AutoRefinementManager::SetupRefinementJob()
         }
 	}
 
+	// KIND OF A HACK FOR FIRST ROUND MULTIPLE CLASSES - PAY ATTENTION TO THIS!
+	// It is put back to the correct number after the job is setup.
+
+	if (number_of_rounds_run == 0)
+	{
+		number_of_classes = input_refinement->number_of_classes;
+		input_refinement->number_of_classes = 1;
+	}
+
+
 	written_parameter_files = input_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_par");
 	written_res_files = input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_stats");
 
@@ -1509,9 +1508,9 @@ void AutoRefinementManager::SetupRefinementJob()
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).number_of_classes);
+	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * input_refinement->number_of_classes);
 
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageSelectPanel->GetSelection()).number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
 		current_particle_counter = 1;
 
@@ -1683,6 +1682,11 @@ void AutoRefinementManager::SetupRefinementJob()
 		}
 
 	}
+
+	if (number_of_rounds_run == 0)
+	{
+		input_refinement->number_of_classes = number_of_classes;
+	}
 }
 
 void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
@@ -1729,13 +1733,20 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 		else
 		if (current_time != time_of_last_update)
 		{
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+			int current_percentage;
+			if (number_of_rounds_run == 0) current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles) * 100.0; // always 1 class for first round
+			else current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+
 			time_of_last_update = current_time;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
+
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * output_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+
+			long seconds_remaining;
+			if (number_of_rounds_run == 0) seconds_remaining = float((input_refinement->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
+			else seconds_remaining = float((input_refinement->number_of_particles * output_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 
@@ -1860,13 +1871,61 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 void AutoRefinementManager::ProcessAllJobsFinished()
 {
 
+	long position_in_stack;
+	float psi;
+	float theta;
+	float phi;
+	float xshift;
+	float yshift;
+	float defocus1;
+	float defocus2;
+	float defocus_angle;
+	float phase_shift;
+	float occupancy;
+	float logp;
+	float sigma;
+	float score;
+	int image_is_active;
 	if (running_job_type == REFINEMENT)
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
 
-		// calculate occupancies..
-		if (output_refinement->percent_used < 99.99) output_refinement->UpdateOccupancies(false);
-		else output_refinement->UpdateOccupancies(true);
+		// if this is the first round of a multiple class refinement then do random occupancies.
+		// This is based on just hacking input_refinement->number_of_classes = 1 in begin refinement cycle
+
+		if (number_of_rounds_run == 0 && output_refinement->number_of_classes > 1)
+		{
+			int class_counter;
+			long particle_counter;
+
+			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
+			{
+				for ( particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
+				{
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(output_refinement->number_of_classes)));
+
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].phi;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].theta = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].theta;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].psi = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].psi;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].xshift;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].yshift;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].score;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1 = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus1;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2 = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus2;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus_angle;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].phase_shift;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].logp;
+				}
+			}
+		}
+		else // calculate occupancies..
+		{
+			if (output_refinement->percent_used < 99.99) output_refinement->UpdateOccupancies(false);
+			else output_refinement->UpdateOccupancies(true);
+		}
 
 		SetupReconstructionJob();
 		RunReconstructionJob();
@@ -2043,6 +2102,8 @@ void AutoRefinementManager::CycleRefinement()
 	float safe_resolution;
 	float current_0p5_res_minus_bleed;
 
+	float change_in_occupancies;
+
 	int number_of_bleed_shells = ceil(output_refinement->resolution_statistics_box_size / (my_parent->MaskRadiusTextCtrl->ReturnValue() / output_refinement->resolution_statistics_pixel_size));
 
 	// loop over all particles, to see if they were actually active, and if so whether they were global or not this number should be consistent for all classes, so only check class 1
@@ -2133,7 +2194,20 @@ void AutoRefinementManager::CycleRefinement()
 
 	//main_frame->DirtyRefinements();
 
-	if (resolution_per_round.GetCount() >= 5 && max_percent_used > 99.0)
+	// what is the change in occupancies
+
+	if (output_refinement->number_of_classes == 1) change_in_occupancies = 0.0f;
+	else
+	{
+		change_in_occupancies = output_refinement->ReturnChangeInAverageOccupancy(*input_refinement);
+	}
+
+	int min_rounds_to_run;
+
+	if (output_refinement->number_of_classes == 1) min_rounds_to_run = 5;
+	else min_rounds_to_run = 10;
+
+	if (resolution_per_round.GetCount() >= min_rounds_to_run && max_percent_used > 99.0 && change_in_occupancies < 1.0)
 	{
 		should_stop = true;
 		float round_resolution = resolution_per_round[resolution_per_round.GetCount() - 3];

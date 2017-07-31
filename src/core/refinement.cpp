@@ -270,6 +270,21 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
 	}
 }
 
+float Refinement::ReturnChangeInAverageOccupancy(Refinement &other_refinement)
+{
+	MyDebugAssertTrue(number_of_classes == other_refinement.number_of_classes, "Number of classes is not the same")
+
+	float change_in_average_occupancy = 0.0f;
+
+	for (int class_counter = 0; class_counter < number_of_classes; class_counter++)
+	{
+		change_in_average_occupancy += fabsf(class_refinement_results[class_counter].average_occupancy - other_refinement.class_refinement_results[class_counter].average_occupancy);
+	}
+
+	return change_in_average_occupancy;
+
+}
+
 wxArrayFloat Refinement::UpdatePSSNR()
 {
 	wxArrayFloat average_occupancies;
@@ -434,3 +449,5 @@ void Refinement::UpdateOccupancies(bool use_old_occupancies)
 
 	}
 }
+
+

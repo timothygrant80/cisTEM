@@ -86,6 +86,9 @@ public :
 
 	wxArrayLong reference_volume_ids;
 	ArrayofClassRefinementResults class_refinement_results;
+
+	float ReturnChangeInAverageOccupancy(Refinement &other_refinement);
+
 	RefinementResult ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack);
 
 	void WriteSingleClassFrealignParameterFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);

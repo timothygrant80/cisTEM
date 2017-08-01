@@ -76,10 +76,21 @@ bool Merge2DApp::DoCalculation()
 	wxString	dump_file;
 
 	dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", 1) + "." + extension;
-	if (! DoesFileExist(dump_file))
+	if (is_running_locally)
 	{
-		MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-		abort();
+		if (! DoesFileExist(dump_file))
+		{
+			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
+			abort();
+		}
+	}
+	else
+	{
+		if (! DoesFileExistWithWait(dump_file, 30))
+		{
+			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
+			abort();
+		}
 	}
 
 	ReadArrayHeader(dump_file);

@@ -812,12 +812,19 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText188 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText188 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Res. Limit (start)  (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText188->Wrap( -1 );
 	fgSizer1->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( HighResolutionLimitTextCtrl, 1, wxALL|wxEXPAND, 5 );
+	HighResolutionLimitStartTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("40.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( HighResolutionLimitStartTextCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	m_staticText1881 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Res. Limit (finish) (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText1881->Wrap( -1 );
+	fgSizer1->Add( m_staticText1881, 0, wxALL, 5 );
+	
+	HighResolutionLimitFinishTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( HighResolutionLimitFinishTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText196->Wrap( -1 );
@@ -1051,7 +1058,8 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DPanel::OnUpdateUI ) );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::ResetAllDefaultsClick ), NULL, this );
-	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
+	HighResolutionLimitStartTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
+	HighResolutionLimitFinishTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine2DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::TerminateButtonClick ), NULL, this );
@@ -1064,7 +1072,8 @@ Refine2DPanel::~Refine2DPanel()
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( Refine2DPanel::OnUpdateUI ) );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::ResetAllDefaultsClick ), NULL, this );
-	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
+	HighResolutionLimitStartTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
+	HighResolutionLimitFinishTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine2DPanel::OnHighResLimitChange ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine2DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine2DPanel::TerminateButtonClick ), NULL, this );

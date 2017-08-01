@@ -61,6 +61,7 @@ public :
 	wxString class_average_file;
 	long number_of_particles;
 	int number_of_classes;
+	float high_resolution_limit;
 
 	ShortClassificationInfo & operator = (const Classification &other_classification);
 	ShortClassificationInfo & operator = (const Classification *other_classification);

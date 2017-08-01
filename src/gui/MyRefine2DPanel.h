@@ -88,6 +88,7 @@ public:
 	void FillRefinementPackagesComboBox();
 	void FillInputParamsComboBox();
 	void NewRefinementPackageSelected();
+	void NewInputParametersSelected();
 	void FillRunProfileComboBoxes();
 
 	void ResetAllDefaultsClick( wxCommandEvent& event );

@@ -137,7 +137,7 @@ bool Merge3DApp::DoCalculation()
 	}
 	else
 	{
-		if (! DoesFileExistWithWait(dump_file, 10))
+		if (! DoesFileExistWithWait(dump_file, 30))
 		{
 			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
 			abort();

@@ -28,6 +28,7 @@ ShortClassificationInfo::ShortClassificationInfo()
 	number_of_particles = 0;
 	number_of_classes = 0;
 	class_average_file = "";
+	high_resolution_limit = 0.0;
 }
 
 ShortClassificationInfo & ShortClassificationInfo::operator = (const Classification &other_classification)
@@ -44,6 +45,7 @@ ShortClassificationInfo & ShortClassificationInfo::operator = (const Classificat
 	number_of_particles = other_classification->number_of_particles;
 	number_of_classes = other_classification->number_of_classes;
 	class_average_file = other_classification->class_average_file;
+	high_resolution_limit = other_classification->high_resolution_limit;
 
 	return *this;
 }

@@ -162,6 +162,8 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/show_text.cpp \
                  gui/icons/tool_icon.cpp \
                  gui/icons/window_plus_icon_16.cpp \
+                 gui/icons/abinitio_icon.cpp \
+                 gui/icons/manual_refine_icon.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp

@@ -517,11 +517,11 @@ void MyRefinementPackageAssetPanel::ImportAllClassificationInfosFromDatabase()
 	ShortClassificationInfo temp_info;
 	all_classification_short_infos.Clear();
 
-	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT CLASSIFICATION_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, CLASS_AVERAGE_FILE, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES FROM CLASSIFICATION_LIST");
+	more_data = main_frame->current_project.database.BeginBatchSelect("SELECT CLASSIFICATION_ID, REFINEMENT_PACKAGE_ASSET_ID, NAME, CLASS_AVERAGE_FILE, NUMBER_OF_PARTICLES, NUMBER_OF_CLASSES, HIGH_RESOLUTION_LIMIT FROM CLASSIFICATION_LIST");
 
 	while (more_data == true)
 	{
-		more_data = main_frame->current_project.database.GetFromBatchSelect("llttli", &temp_info.classification_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.class_average_file, &temp_info.number_of_particles, &temp_info.number_of_classes);
+		more_data = main_frame->current_project.database.GetFromBatchSelect("llttlis", &temp_info.classification_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.class_average_file, &temp_info.number_of_particles, &temp_info.number_of_classes, &temp_info.high_resolution_limit);
 		all_classification_short_infos.Add(temp_info);
 	}
 

@@ -260,7 +260,9 @@ class Refine2DPanel : public JobPanel
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
 		wxStaticText* m_staticText188;
-		NumericTextCtrl* HighResolutionLimitTextCtrl;
+		NumericTextCtrl* HighResolutionLimitStartTextCtrl;
+		wxStaticText* m_staticText1881;
+		NumericTextCtrl* HighResolutionLimitFinishTextCtrl;
 		wxStaticText* m_staticText196;
 		NumericTextCtrl* MaskRadiusTextCtrl;
 		wxStaticText* AngularStepStaticText;

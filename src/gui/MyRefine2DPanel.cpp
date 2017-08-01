@@ -26,6 +26,7 @@ Refine2DPanel( parent )
 	ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING);
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
+	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);
 
 	/*
 	buffered_results = NULL;
@@ -297,6 +298,11 @@ void MyRefine2DPanel::NewRefinementPackageSelected()
 {
 	selected_refinement_package = RefinementPackageComboBox->GetSelection();
 	FillInputParamsComboBox();
+	SetDefaults();
+}
+
+void MyRefine2DPanel::NewInputParametersSelected()
+{
 	SetDefaults();
 }
 
@@ -575,9 +581,15 @@ void MyRefine2DPanel::SetDefaults()
 	if (RefinementPackageComboBox->GetCount() > 0)
 	{
 		ExpertPanel->Freeze();
+
+		LowResolutionLimitTextCtrl->SetValue("300.00");
+		HighResolutionLimitStartTextCtrl->SetValue("40.00");
+		HighResolutionLimitFinishTextCtrl->SetValue("8.00");
+
 		if (InputParametersComboBox->GetSelection() > 0)
 		{
 			NumberClassesSpinCtrl->SetValue(refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->number_of_classes);
+			HighResolutionLimitStartTextCtrl->SetValue(wxString::Format("%.2f",refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->high_resolution_limit));
 		}
 		else
 		{
@@ -602,9 +614,6 @@ void MyRefine2DPanel::SetDefaults()
 		}
 
 		NumberRoundsSpinCtrl->SetValue(20);
-
-		LowResolutionLimitTextCtrl->SetValue("300.00");
-		HighResolutionLimitTextCtrl->SetValue("8.00");
 
 		float local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
 		MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
@@ -678,9 +687,19 @@ void MyRefine2DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
 
 }
 
+
 void MyRefine2DPanel::OnInputParametersComboBox( wxCommandEvent& event )
 {
-
+	ExpertPanel->Freeze();
+	if (InputParametersComboBox->GetSelection() > 0)
+	{
+		HighResolutionLimitStartTextCtrl->SetValue(wxString::Format("%.2f",refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->high_resolution_limit));
+	}
+	else
+	{
+		HighResolutionLimitStartTextCtrl->SetValue("40.00");
+	}
+	ExpertPanel->Thaw();
 }
 
 
@@ -930,7 +949,7 @@ void ClassificationManager::RunInitialStartJob()
 	output_classification->number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
 	output_classification->number_of_classes = my_parent->NumberClassesSpinCtrl->GetValue();
 	output_classification->low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-	output_classification->high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
+	output_classification->high_resolution_limit = my_parent->HighResolutionLimitStartTextCtrl->ReturnValue();
 	output_classification->mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
 	output_classification->angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
 	output_classification->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
@@ -1077,6 +1096,7 @@ void ClassificationManager::RunRefinementJob()
 	long number_of_particles;
 	float particles_per_job;
 	int job_counter;
+	int reach_max_high_res_at_cycle;
 
 	running_job_type = REFINEMENT;
 	number_of_received_particle_results = 0;
@@ -1091,7 +1111,7 @@ void ClassificationManager::RunRefinementJob()
 	output_classification->number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
 	output_classification->number_of_classes = input_classification->number_of_classes;
 	output_classification->low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-	output_classification->high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
+	//output_classification->high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
 	output_classification->mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
 	output_classification->angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
 	output_classification->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
@@ -1099,6 +1119,31 @@ void ClassificationManager::RunRefinementJob()
 	output_classification->smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
 	output_classification->exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
 	output_classification->auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
+
+	// Ramp up the high resolution limit
+	if (number_of_rounds_to_run > 1)
+	{
+		if (number_of_rounds_to_run >= 4)
+		{
+			reach_max_high_res_at_cycle = number_of_rounds_to_run * 3 / 4;
+		}
+		else
+		{
+			reach_max_high_res_at_cycle = number_of_rounds_to_run;
+		}
+		if (number_of_rounds_run >= reach_max_high_res_at_cycle)
+		{
+			output_classification->high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
+		}
+		else
+		{
+			output_classification->high_resolution_limit = my_parent->HighResolutionLimitStartTextCtrl->ReturnValue() + float(number_of_rounds_run) / float(reach_max_high_res_at_cycle - 1) * (my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue() - my_parent->HighResolutionLimitStartTextCtrl->ReturnValue());
+		}
+	}
+	else
+	{
+		output_classification->high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
+	}
 
 	if (output_classification->auto_percent_used == true)
 	{
@@ -1251,7 +1296,8 @@ void ClassificationManager::RunRefinementJob()
 																		dump_file.ToUTF8().data());
 	}
 
-	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i\n", number_of_rounds_run + 1, number_of_rounds_to_run));
+	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));
+	my_parent->WriteInfoText(wxString::Format("Highest resolution: %.1f A",output_classification->high_resolution_limit));
 	if (my_parent->AutoPercentUsedRadioYes->GetValue() == true)
 	{
 		my_parent->WriteInfoText(wxString::Format("Using %.0f %% of the particles (%i per class)", output_classification->percent_used, myroundint((float(output_classification->number_of_particles) * output_classification->percent_used * 0.01) / float(output_classification->number_of_classes))));

@@ -2205,7 +2205,7 @@ void AutoRefinementManager::CycleRefinement()
 	int min_rounds_to_run;
 
 	if (output_refinement->number_of_classes == 1) min_rounds_to_run = 5;
-	else min_rounds_to_run = 10;
+	else min_rounds_to_run = 9;
 
 	if (resolution_per_round.GetCount() >= min_rounds_to_run && max_percent_used > 99.0 && change_in_occupancies < 1.0)
 	{

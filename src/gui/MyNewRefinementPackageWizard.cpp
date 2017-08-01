@@ -242,7 +242,34 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		else
 		if (box_size_page->my_panel->BoxSizeSpinCtrl->GetValue() == 1)
 		{
-			box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(512);
+			// do an intelligent default..
+
+			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // new, we should do largest_dimension * 2, scaled up to factorizable.
+			{
+				// i need to know the pixel size, which is not a simple thing really. For now, lets just make a guess.
+				// lets just take the pixel size of the first included particle..
+
+				float pixel_size_guess;
+				float current_largest_dimension = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
+
+				ParticlePositionAsset *first_particle = particle_position_asset_panel->ReturnAssetPointer(particle_position_asset_panel->ReturnGroupMember(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection(), 0));
+				ImageAsset *first_particle_image = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(first_particle->parent_id));
+
+				pixel_size_guess = first_particle_image->pixel_size;
+				current_largest_dimension /= pixel_size_guess;
+
+				box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(ReturnClosestFactorizedUpper(int(current_largest_dimension * 2), 3, true));
+			}
+			else // from class selection
+			{				// take the stack size of the refinement package of the first selected class selection
+
+				long item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+				MyDebugAssertTrue(item != -1, "Ooops, there is no selected classification selection - that shouldn't be possible?")
+				long parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+
+				box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].stack_box_size);
+			}
 		}
 	}
 	else
@@ -283,7 +310,6 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		}
 
 
-
 		if (template_page->my_panel->GroupComboBox->GetSelection() > 1 && symmetry_page->my_panel->SymmetryComboBox->GetValue() == "0")
 		{
 			RefinementPackage *template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection() - 3);
@@ -292,6 +318,17 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		else
 		if (symmetry_page->my_panel->SymmetryComboBox->GetValue() == "0")
 		{
+			if (template_page->my_panel->GroupComboBox->GetSelection() == 1) // take the value of the first selected classum selections refinement package
+			{
+				long item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+				MyDebugAssertTrue(item != -1, "Ooops, there is no selected classification selection - that shouldn't be possible?")
+				long parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+
+				symmetry_page->my_panel->SymmetryComboBox->SetValue(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].symmetry);
+
+			}
+			else
 			symmetry_page->my_panel->SymmetryComboBox->SetSelection(0);
 		}
 	}
@@ -314,6 +351,17 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		else
 		if (molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue() == 0.0)
 		{
+			if (template_page->my_panel->GroupComboBox->GetSelection() == 1) // take the value of the first selected classum selections refinement package
+			{
+				long item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+				MyDebugAssertTrue(item != -1, "Ooops, there is no selected classification selection - that shouldn't be possible?")
+				long parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+
+				molecular_weight_page->my_panel->MolecularWeightTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].estimated_particle_weight_in_kda);
+
+			}
+			else
 			molecular_weight_page->my_panel->MolecularWeightTextCtrl->ChangeValueFloat(300.0f);
 		}
 	}
@@ -336,6 +384,17 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 		else
 		if (largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue() == 0.0)
 		{
+			if (template_page->my_panel->GroupComboBox->GetSelection() == 1) // take the value of the first selected classum selections refinement package
+			{
+				long item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+				MyDebugAssertTrue(item != -1, "Ooops, there is no selected classification selection - that shouldn't be possible?")
+				long parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+
+				largest_dimension_page->my_panel->LargestDimensionTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].estimated_particle_size_in_angstroms);
+
+			}
+			else
 			largest_dimension_page->my_panel->LargestDimensionTextCtrl->ChangeValueFloat(150.0f);
 		}
 	}
@@ -610,6 +669,11 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle_parent_image_id));
 				current_image.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(), 1);
+
+				// take out weird values..
+
+				current_image.ReplaceOutliersWithMean(4.5);
+
 				current_loaded_image_id = current_particle_parent_image_id;
 				average_value_at_edges = current_image.ReturnAverageOfRealValuesOnEdges();
 
@@ -887,6 +951,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 					current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle_parent_image_id));
 					current_image.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(), 1);
+					current_image.ReplaceOutliersWithMean(4.5);
 					current_loaded_image_id = current_particle_parent_image_id;
 					average_value_at_edges = current_image.ReturnAverageOfRealValuesOnEdges();
 
@@ -1355,7 +1420,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  wxWizardPage *  ParticleGroupWizardPage::GetNext () const
   {
 	// wxPrintf("Particle Next\n");
-	 return wizard_pointer->box_size_page;
+	 //return wizard_pointer->box_size_page;
+	 return wizard_pointer->molecular_weight_page;
   }
 
  //////////////////////////
@@ -1380,9 +1446,12 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
   wxWizardPage *  BoxSizeWizardPage::GetPrev () const
   {
-	  if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 0) return wizard_pointer->particle_group_page;
-	  else
-	  return wizard_pointer->class_selection_page;
+	  //if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 0) return wizard_pointer->particle_group_page;
+	  //else
+	  //return wizard_pointer->class_selection_page;
+
+	  return wizard_pointer->largest_dimension_page;
+
 
 
   }
@@ -1390,7 +1459,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
   wxWizardPage *  BoxSizeWizardPage::GetNext () const
   {
 	//  wxPrintf("Box Next\n");
-  	 return wizard_pointer->molecular_weight_page;
+  	 return wizard_pointer->symmetry_page;
   }
 
   //////////////////////////
@@ -1416,8 +1485,11 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
    wxWizardPage *  MolecularWeightWizardPage::GetPrev () const
    {
  	//  wxPrintf("Box Prev\n");
+//	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->parameter_page;
+	//   else return wizard_pointer->box_size_page;
 	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->parameter_page;
-	   else return wizard_pointer->box_size_page;
+	   else return wizard_pointer->particle_group_page;
+
    }
 
    wxWizardPage *  MolecularWeightWizardPage::GetNext () const
@@ -1455,7 +1527,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
     wxWizardPage *  LargestDimensionWizardPage::GetNext () const
     {
   	//  wxPrintf("Box Next\n");
-    	 return wizard_pointer->symmetry_page;
+    	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
+    	else return wizard_pointer->box_size_page;
+    	 //return wizard_pointer->symmetry_page;
+
     }
 
 
@@ -1552,9 +1627,9 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	{
 		RefinementPackage *input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() - 3);
 
-		if (input_package->number_of_classes == 1) // if there is only 1 input class, there is no fancy class setup so we can just skip to whether to randomise occupancies
+		if (input_package->number_of_classes == 1) // if there is only 1 input class, there is no fancy class setup so we can just skip to initial references
 		{
-			return wizard_pointer->class_setup_pageE;
+			return wizard_pointer->initial_reference_page;
 		}
 		else // we need to know how to setup the classes
 		{
@@ -1608,7 +1683,12 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  wxWizardPage *  InitialReferencesWizardPage::GetPrev () const
  {
 	// wxPrintf("Initial Prev\n");
-	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->class_setup_pageE;
+	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1)
+	{
+		RefinementPackage *input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() - 3);
+		if (input_package->number_of_classes == 1) return wizard_pointer->number_of_classes_page;
+		else wizard_pointer->class_setup_pageE;
+	}
 	else return wizard_pointer->number_of_classes_page;
  }
 
@@ -1669,7 +1749,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  wxWizardPage *  ClassSelectionWizardPage::GetNext () const
  {
 	 //wxPrintf("Classes Next\n");
-	 return wizard_pointer->box_size_page;
+	 return wizard_pointer->molecular_weight_page;
 
  }
 
@@ -1716,7 +1796,13 @@ void ClassesSetupWizardPageA::CarryOverYesButtonChanged(wxCommandEvent& event)
 
  wxWizardPage *  ClassesSetupWizardPageA::GetNext () const
  {
-	 if (my_panel->CarryOverYesButton->GetValue() == false) return wizard_pointer->class_setup_pageB;
+	 if (my_panel->CarryOverYesButton->GetValue() == false)
+	 {
+		 // we are carrying over all particles.  Do we need to work out how the classes should be assigned?
+		 // e.g. if there is only one input class, there is no setup to do..
+		 return wizard_pointer->class_setup_pageB;
+		 RefinementPackage *input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() - 3);
+	 }
 	 else return wizard_pointer->class_setup_pageC;
  }
 

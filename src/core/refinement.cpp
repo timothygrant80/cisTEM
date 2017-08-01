@@ -281,7 +281,7 @@ float Refinement::ReturnChangeInAverageOccupancy(Refinement &other_refinement)
 		change_in_average_occupancy += fabsf(class_refinement_results[class_counter].average_occupancy - other_refinement.class_refinement_results[class_counter].average_occupancy);
 	}
 
-	return change_in_average_occupancy;
+	return change_in_average_occupancy / float(number_of_classes);
 
 }
 

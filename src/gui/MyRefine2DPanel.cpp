@@ -673,7 +673,11 @@ void MyRefine2DPanel::FinishButtonClick( wxCommandEvent& event )
 
 	ResultDisplayPanel->Clear();
 
-	if (my_classification_manager.number_of_rounds_run > 0) FillInputParamsComboBox();
+	if (my_classification_manager.number_of_rounds_run > 0)
+	{
+		FillInputParamsComboBox();
+		HighResolutionLimitStartTextCtrl->SetValue(wxString::Format("%.2f",refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).classification_ids.Item(InputParametersComboBox->GetSelection() - 1))->high_resolution_limit));
+	}
 
 	//CTFResultsPanel->CTF2DResultsPanel->should_show = false;
 	//CTFResultsPanel->CTF2DResultsPanel->Refresh();

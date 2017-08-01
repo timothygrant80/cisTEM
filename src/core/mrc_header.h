@@ -43,21 +43,14 @@
 	Symmetry records follow - if any - stored as text as in International Tables, operators separated by and grouped into 'lines' of 80 characters (ie. symmetry operators do not cross the ends of the 80-character 'lines' and the 'lines' do not terminate in a ).
 
 	Data records follow.
-
-
-*
-* Some of the code was adapted from Bernard Heymann's Bsoft program (public domain, not copyrighted)
-*
 */
 
 //
 enum MRCDataTypes { MRCByte, MRCInteger, MRCFloat };
-enum MRCEndianness { Unknown_endianness, BigIEEE, LittleIEEE, LittleVAX };
-#define SWAPTRIG 65535 // Threshold file z size above which bytes are swapped
 
 class MRCHeader {
 
-	unsigned char	*buffer; 				// !< The true byte data
+	char	*buffer; 	// !< The true byte data
 
 
 	//  The following are all pointers and just point to the relevant area of the buffer..
@@ -102,7 +95,6 @@ class MRCHeader {
 	bool pixel_data_are_signed;
 	int pixel_data_are_of_type;
 	bool pixel_data_are_complex;
-	bool bytes_are_swapped;
 
 	public:
 
@@ -119,10 +111,7 @@ class MRCHeader {
 	void ResetLabels();
 	void ResetOrigin();
 
-	void SetMachineStampToLocal();
-	int ReturnLocalMachineStamp();
-	int ReturnMachineStamp();
-	int ReturnLocalEndianness();
+	void SetLocalMachineStamp();
 
 	void PrintInfo();
 
@@ -143,5 +132,6 @@ class MRCHeader {
 	inline int BytesPerPixel() { return bytes_per_pixel; };
 	inline int Mode() { return mode[0];};
 	inline int SymmetryDataBytes() { return symmetry_data_bytes[0];};
+
 
 };

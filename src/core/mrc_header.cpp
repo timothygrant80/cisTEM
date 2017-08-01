@@ -5,9 +5,8 @@
 
 MRCHeader::MRCHeader()
 {
-	buffer = new unsigned char[1024];
+	buffer = new char[1024];
 	InitPointers();
-	bytes_are_swapped = false;
 
 }
 
@@ -59,15 +58,6 @@ void MRCHeader::PrintInfo()
 	wxPrintf("Bit depth: %i\n",bytes_per_pixel * 8);
 	wxPrintf("Pixel size: %0.3f %0.3f %0.3f\n",pixel_size[0],pixel_size[1],pixel_size[2]);
 	wxPrintf("Bytes in symmetry header: %i\n",symmetry_data_bytes[0]);
-	wxPrintf("Bytes are swapped: ");
-	if (bytes_are_swapped)
-	{
-		wxPrintf("yes\n");
-	}
-	else
-	{
-		wxPrintf("no\n");
-	}
 	for (int label_counter=0; label_counter < number_of_labels_used[0]; label_counter++)
 	{
 		for (char_counter=0;char_counter < 80; char_counter++)
@@ -235,28 +225,9 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 {
 	MyDebugAssertTrue(MRCFile->is_open(), "File not open!");
 
-	char	*temp_signed_buffer = (char *) buffer;
-
 	// Read the first 1024 bytes into buffer, the pointers should then all be set..
     MRCFile->seekg(0);
-    MRCFile->read (temp_signed_buffer, 1024);
-
-    // Is this a byte-swapped file?
-    bytes_are_swapped = abs(mode[0]) > SWAPTRIG || abs(nx[0]) > SWAPTRIG;
-
-    // We may need to byte-swap the header
-    if (bytes_are_swapped)
-    {
-    	wxPrintf("Swapping byte\n");
-    	for (int i = 0; i < 1024 - 800; i ++ )
-    	{
-    		swapbytes(buffer + i, 4);
-    	}
-    }
-
-	//MyDebugAssertTrue(ReturnMachineStamp() == ReturnLocalMachineStamp(), "Byteswapping not yet supported");
-	wxPrintf("       local mchst: %i\n", ReturnLocalMachineStamp());
-	wxPrintf("mchst from headers: %i\n",ReturnMachineStamp());
+    MRCFile->read (buffer, 1024);
 
     // work out some extra details..
 
@@ -325,12 +296,10 @@ void MRCHeader::WriteHeader(std::fstream *MRCFile)
 {
 	MyDebugAssertTrue(MRCFile->is_open(), "File not open!");
 
-	char	*temp_signed_buffer = (char *) buffer;
-
 	// Write the first 1024 bytes from buffer.
 
     MRCFile->seekg(0);
-    MRCFile->write (temp_signed_buffer, 1024);
+    MRCFile->write (buffer, 1024);
 
 }
 
@@ -376,7 +345,7 @@ void MRCHeader::BlankHeader()
 	map[2]                  = 'P';
 	map[3]                  = ' ';
 
-	SetMachineStampToLocal();
+	SetLocalMachineStamp();
 
 	rms[0]                 	= 0;
 	number_of_labels_used[0]= 1;
@@ -387,114 +356,31 @@ void MRCHeader::BlankHeader()
 
 }
 
-
-
-void MRCHeader::SetMachineStampToLocal()
+void MRCHeader::SetLocalMachineStamp()
 {
-	/*
 	int i = 858927408;
 	char *first_byte  = (char*)&i;
 
-	if (first_byte[0] == '0') // little-endian
+	if (first_byte[0] == '0')
 	{
-		// 0100 0100
 		buffer[212] = 68;
-		// 0100 0001
 		buffer[213] = 65;
 		buffer[214] = 0;
 		buffer[215] = 0;
 	}
 	else
-	if (first_byte[0] == '3') // big-endian
+	if (first_byte[0] == '3')
 	{
-		// 0001 0001
 		buffer[212] = 17;
-		// 0001 0001
 		buffer[213] = 17;
 		buffer[214] = 0;
 		buffer[215] = 0;
 	}
-	else // mixed endianity machine (vax)
+	else
 	{
-		// 0010 0010
 		buffer[212] = 34;
-		// 0010 0001
 		buffer[213] = 33;
 		buffer[214] = 0;
 		buffer[215] = 0;
 	}
-	*/
-	machine_stamp = (int*) ReturnLocalMachineStamp();
 }
-
-int MRCHeader::ReturnMachineStamp()
-{
-	return *machine_stamp;
-}
-
-
-/*
- * Compute the local machine's "machinestamp", which is endian-specific.
- *
- * Fortran code from jfem (unblur, ctffind4, etc.):
- *
- *          integer(kind=4),  parameter     ::  a0  =   48
-            integer(kind=4),  parameter     ::  a1  =   49
-            integer(kind=4),  parameter     ::  a2  =   50
-            integer(kind=4),  parameter     ::  a3  =   51
- *
- *          i=a0+a1*256+a2*(256**2)+a3*(256**3) !  = 858927408 (decimal)
-                                                !  = 0011 0011 0011 0010 0011 0001 0011 0000 (binary, little endian)
-                                                !  when this is converted to ASCII characters (1 byte per character, with the most significant bit always 0)
-                                                ! this will give different results on little- and big-endian machines
-                                                ! For example, '0' in ASCII has decimal value 48 and bit value 011 0000
-                                                ! '3' in ASCII has decimal value 51 and bit value 011 0011
-                                                ! Therefore the value computed above, when converted to bytes will have the first byte
-                                                ! read off as ASCII character '0' on little-endian and '3' on big-endian machines
- *
- *
- */
-int MRCHeader::ReturnLocalMachineStamp()
-{
-	int local_machine_stamp;
-	int *machine_stamp_ptr;
-	char local_buffer[4];
-	machine_stamp_ptr = (int*) local_buffer[0];
-
-	int i = 858927408;
-	char *first_byte  = (char*)&i;
-
-	if (first_byte[0] == '0') // little-endian
-	{
-		// 0100 0100
-		local_buffer[0] = 68;
-		// 0100 0001
-		local_buffer[1] = 65;
-		local_buffer[2] = 0;
-		local_buffer[3] = 0;
-	}
-	else
-	if (first_byte[0] == '3') // big-endian
-	{
-		// 0001 0001
-		local_buffer[0] = 17;
-		// 0001 0001
-		local_buffer[1] = 17;
-		local_buffer[2] = 0;
-		local_buffer[3] = 0;
-	}
-	else // mixed endianity machine (vax)
-	{
-		// 0010 0010
-		local_buffer[0] = 34;
-		// 0010 0001
-		local_buffer[1] = 33;
-		local_buffer[2] = 0;
-		local_buffer[3] = 0;
-	}
-
-	//local_machine_stamp = *machine_stamp_ptr;
-
-	return local_machine_stamp;
-}
-

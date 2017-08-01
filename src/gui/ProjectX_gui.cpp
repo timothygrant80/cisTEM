@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -8391,7 +8391,7 @@ BoxSizeWizardPanel::BoxSizeWizardPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticText21411->Wrap( -1 );
 	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	BoxSizeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("512"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 2048, 1 );
+	BoxSizeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 2048, 1 );
 	bSizer14711->Add( BoxSizeSpinCtrl, 1, wxALL, 5 );
 	
 	

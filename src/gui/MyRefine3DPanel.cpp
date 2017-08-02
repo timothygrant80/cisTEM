@@ -845,7 +845,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 }
 
-void MyRefine3DPanel::OnAutoMaskYesButton( wxCommandEvent& event )
+void MyRefine3DPanel::OnAutoMaskButton( wxCommandEvent& event )
 {
 	auto_mask_value = AutoMaskYesRadioButton->GetValue();
 }

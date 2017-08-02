@@ -85,7 +85,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void OnHighResLimitChange( wxCommandEvent& event );
 
 		void OnUseMaskCheckBox( wxCommandEvent& event );
-		void OnAutoMaskYesButton( wxCommandEvent& event );
+		void OnAutoMaskButton( wxCommandEvent& event );
 
 		void OnVolumeListItemActivated( wxListEvent& event );
 		void OnJobSocketEvent(wxSocketEvent& event);

@@ -2513,8 +2513,15 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 	
+	m_staticText469 = new wxStaticText( RightPanel, wxID_ANY, wxT("Left-Click on particles to select/deselect.\nCtrl-Left-Click to rubberband area and deselect.\nShift-Left-Click to paint area and deselect."), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText469->Wrap( -1 );
+	bSizer69->Add( m_staticText469, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer69->Add( 0, 0, 1, wxEXPAND, 5 );
+	
 	DeleteFromGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Delete Image From Group"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer69->Add( DeleteFromGroupButton, 0, wxALL, 5 );
+	bSizer69->Add( DeleteFromGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	AddToGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Add Image To Group"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer69->Add( AddToGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -2525,7 +2532,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer69->Add( GroupComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	bSizer681->Add( bSizer69, 0, wxALIGN_RIGHT, 5 );
+	bSizer681->Add( bSizer69, 0, wxALIGN_RIGHT|wxEXPAND, 5 );
 	
 	
 	RightPanel->SetSizer( bSizer681 );
@@ -5573,6 +5580,22 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
+	AutoMaskStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use AutoMasking?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoMaskStaticText->Wrap( -1 );
+	fgSizer1->Add( AutoMaskStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26612;
+	bSizer26612 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoMaskYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26612->Add( AutoMaskYesRadioButton, 0, wxALL, 5 );
+	
+	AutoMaskNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26612->Add( AutoMaskNoRadioButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26612, 1, wxEXPAND, 5 );
+	
 	MaskEdgeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Edge Width (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaskEdgeStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskEdgeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -5794,6 +5817,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine3DPanel::OnVolumeListItemActivated ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskYesButton ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
@@ -5809,6 +5833,7 @@ Refine3DPanel::~Refine3DPanel()
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnExpertOptionsToggle ), NULL, this );
 	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( Refine3DPanel::OnVolumeListItemActivated ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskYesButton ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );

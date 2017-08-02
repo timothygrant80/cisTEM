@@ -1,6 +1,7 @@
 
 class MyOrthDrawEvent;
 wxDECLARE_EVENT(MY_ORTH_DRAW_EVENT, MyOrthDrawEvent);
+wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 
 class MyOrthDrawEvent: public wxCommandEvent
 {
@@ -37,6 +38,29 @@ class OrthDrawerThread : public wxThread
 	wxWindow *main_thread_pointer;
 	wxArrayString filenames_of_volumes;
 	wxString tab_name;
+
+    virtual ExitCode Entry();
+};
+
+class AutoMaskerThread : public wxThread
+{
+	public:
+	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius) : wxThread(wxTHREAD_DETACHED)
+	{
+		main_thread_pointer = parent;
+		input_files = wanted_input_files;
+		output_files = wanted_output_files;
+		pixel_size = wanted_pixel_size;
+		mask_radius = wanted_mask_radius;
+	}
+
+	protected:
+
+	wxWindow *main_thread_pointer;
+	wxArrayString input_files;
+	wxArrayString output_files;
+	float pixel_size;
+	float mask_radius;
 
     virtual ExitCode Entry();
 };

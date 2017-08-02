@@ -83,15 +83,17 @@ class MyRefine3DPanel : public Refine3DPanel
 		void StartRefinementClick( wxCommandEvent& event );
 		void ResetAllDefaultsClick( wxCommandEvent& event );
 		void OnHighResLimitChange( wxCommandEvent& event );
+
 		void OnUseMaskCheckBox( wxCommandEvent& event );
+		void OnAutoMaskYesButton( wxCommandEvent& event );
+
 		void OnVolumeListItemActivated( wxListEvent& event );
 		void OnJobSocketEvent(wxSocketEvent& event);
 
 		int length_of_process_number;
 
-
-
 		RefinementManager my_refinement_manager;
+		RefinementPackage *input_package;
 
 	public:
 
@@ -111,6 +113,8 @@ class MyRefine3DPanel : public Refine3DPanel
 
 		JobPackage my_job_package;
 		JobTracker my_job_tracker;
+
+		bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
 
 		bool running_job;
 

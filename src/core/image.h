@@ -259,6 +259,8 @@ public:
 		return (logical_x_dimension == logical_y_dimension);
 	}
 
+	bool IsBinary();
+
 	void SetLogicalDimensions(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1);
 	void UpdateLoopingAndAddressing();
 	void UpdatePhysicalAddressOfBoxCenter();

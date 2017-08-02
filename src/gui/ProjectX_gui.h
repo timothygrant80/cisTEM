@@ -712,6 +712,7 @@ class PickingResultsPanel : public wxPanel
 		wxStaticText* m_staticText95;
 		wxStaticText* NumBackgroundBoxesStaticText;
 		wxStaticLine* m_staticline30;
+		wxStaticText* m_staticText469;
 		wxButton* DeleteFromGroupButton;
 		wxButton* AddToGroupButton;
 		MemoryComboBox* GroupComboBox;
@@ -731,7 +732,7 @@ class PickingResultsPanel : public wxPanel
 	public:
 		PickingResultsDisplayPanel* ResultDisplayPanel;
 		
-		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1309,557 ), long style = wxTAB_TRAVERSAL ); 
 		~PickingResultsPanel();
 		
 		void m_splitter4OnIdle( wxIdleEvent& )
@@ -1522,6 +1523,9 @@ class Refine3DPanel : public JobPanel
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
 		wxStaticText* m_staticText405;
+		wxStaticText* AutoMaskStaticText;
+		wxRadioButton* AutoMaskYesRadioButton;
+		wxRadioButton* AutoMaskNoRadioButton;
 		wxStaticText* MaskEdgeStaticText;
 		NumericTextCtrl* MaskEdgeTextCtrl;
 		wxStaticText* MaskWeightStaticText;
@@ -1557,6 +1561,7 @@ class Refine3DPanel : public JobPanel
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAutoMaskYesButton( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

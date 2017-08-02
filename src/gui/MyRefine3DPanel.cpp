@@ -57,6 +57,7 @@ Refine3DPanel( parent )
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine3DPanel::OnRefinementPackageComboBox, this);
 	Bind(MY_ORTH_DRAW_EVENT, &MyRefine3DPanel::OnOrthThreadComplete, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
 
@@ -458,6 +459,7 @@ void MyRefine3DPanel::SetDefaults()
 		float low_res_limit = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
 		if (low_res_limit > 300.00) low_res_limit = 300.00;
 
+		auto_mask_value = true;
 		LowResolutionLimitTextCtrl->SetValue(wxString::Format("%.2f", low_res_limit));
 		HighResolutionLimitTextCtrl->SetValue(wxString::Format("%.2f", calculated_high_resolution_cutoff));
 		MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
@@ -732,9 +734,29 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					LowPassMaskNoRadio->Enable(false);
 					FilterResolutionStaticText->Enable(false);
 					MaskFilterResolutionText->Enable(false);
+
+					AutoMaskStaticText->Enable(true);
+					AutoMaskYesRadioButton->Enable(true);
+					AutoMaskNoRadioButton->Enable(true);
+
+					if (AutoMaskYesRadioButton->GetValue() != auto_mask_value)
+					{
+						if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
+						else AutoMaskNoRadioButton->SetValue(true);
+					}
 				}
 				else
 				{
+
+					AutoMaskStaticText->Enable(false);
+					AutoMaskYesRadioButton->Enable(false);
+					AutoMaskNoRadioButton->Enable(false);
+
+					if (AutoMaskYesRadioButton->GetValue() != false)
+					{
+						AutoMaskNoRadioButton->SetValue(true);
+					}
+
 					MaskEdgeStaticText->Enable(true);
 					MaskEdgeTextCtrl->Enable(true);
 					MaskWeightStaticText->Enable(true);
@@ -823,11 +845,22 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 }
 
+void MyRefine3DPanel::OnAutoMaskYesButton( wxCommandEvent& event )
+{
+	auto_mask_value = AutoMaskYesRadioButton->GetValue();
+}
+
 void MyRefine3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
 {
 	if (UseMaskCheckBox->GetValue() == true)
 	{
+		auto_mask_value = AutoMaskYesRadioButton->GetValue();
 		MaskSelectPanel->FillComboBox();
+	}
+	else
+	{
+		if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
+		else AutoMaskNoRadioButton->SetValue(true);
 	}
 }
 
@@ -1174,6 +1207,7 @@ void RefinementManager::BeginRefinementCycle()
 	number_of_rounds_run = 0;
 	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
 
+	my_parent->input_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
 	current_refinement_package_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).asset_id;
 	current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).refinement_ids[my_parent->InputParametersComboBox->GetSelection()];
 
@@ -1236,7 +1270,7 @@ void RefinementManager::BeginRefinementCycle()
 			current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
 		}
 
-		if (my_parent->UseMaskCheckBox->GetValue() == true)
+		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
 		{
 			DoMasking();
 		}
@@ -2418,7 +2452,7 @@ void RefinementManager::ProcessAllJobsFinished()
 
 void RefinementManager::DoMasking()
 {
-	MyDebugAssertTrue(my_parent->UseMaskCheckBox->GetValue() == true, "DoMasking called, when masking not ticked!");
+	MyDebugAssertTrue(my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true, "DoMasking called, when masking not selected!");
 
 	wxArrayString masked_filenames;
 	wxString current_masked_filename;
@@ -2433,32 +2467,51 @@ void RefinementManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	float wanted_cosine_edge_width = my_parent->MaskEdgeTextCtrl->ReturnValue();
-	float wanted_weight_outside_mask = my_parent->MaskWeightTextCtrl->ReturnValue();
-
-	float wanted_low_pass_filter_radius;
-
-	if (my_parent->LowPassMaskYesRadio->GetValue() == true)
+	if (my_parent->UseMaskCheckBox->GetValue() == true) // user selected masking
 	{
-		wanted_low_pass_filter_radius = my_parent->MaskFilterResolutionText->ReturnValue();
+		float wanted_cosine_edge_width = my_parent->MaskEdgeTextCtrl->ReturnValue();
+		float wanted_weight_outside_mask = my_parent->MaskWeightTextCtrl->ReturnValue();
+
+		float wanted_low_pass_filter_radius;
+
+		if (my_parent->LowPassMaskYesRadio->GetValue() == true)
+		{
+			wanted_low_pass_filter_radius = my_parent->MaskFilterResolutionText->ReturnValue();
+		}
+		else
+		{
+			wanted_low_pass_filter_radius = 0.0;
+		}
+
+		Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size);
+
+		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+			delete mask_thread;
+		}
+		else
+		{
+			current_reference_filenames = masked_filenames;
+			return;
+		}
 	}
 	else
 	{
-		wanted_low_pass_filter_radius = 0.0;
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, my_parent->input_package->estimated_particle_size_in_angstroms * 0.75);
+
+		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+			delete mask_thread;
+		}
+		else
+		{
+			current_reference_filenames = masked_filenames;
+			return;
+		}
 	}
 
-	Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size);
-
-	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
-	{
-		my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-		delete mask_thread;
-	}
-	else
-	{
-		current_reference_filenames = masked_filenames;
-		return;
-	}
 
 
 }
@@ -2470,7 +2523,7 @@ void RefinementManager::CycleRefinement()
 		output_refinement = new Refinement;
 		start_with_reconstruction = false;
 
-		if (my_parent->UseMaskCheckBox->GetValue() == true)
+		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
 		{
 			DoMasking();
 		}
@@ -2491,7 +2544,7 @@ void RefinementManager::CycleRefinement()
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
 
-			if (my_parent->UseMaskCheckBox->GetValue() == true)
+			if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
 			{
 				DoMasking();
 			}
@@ -2528,7 +2581,6 @@ void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 void MyRefine3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
 {
 
-	wxPrintf("Orth Thread Finished!\n");
 	Image *new_image = my_event.GetImage();
 
 	if (new_image != NULL)

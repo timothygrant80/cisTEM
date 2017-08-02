@@ -4,7 +4,6 @@ extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 
-wxDEFINE_EVENT(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, wxThreadEvent);
 
 AbInitio3DPanel::AbInitio3DPanel( wxWindow* parent )
 :
@@ -30,7 +29,7 @@ AbInitio3DPanelParent( parent )
 
 	my_abinitio_manager.SetParent(this);
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AbInitio3DPanel::OnRefinementPackageComboBox, this);
-	Bind(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
 	Bind(MY_ORTH_DRAW_EVENT, &AbInitio3DPanel::OnOrthThreadComplete, this);
 	FillRefinementPackagesComboBox();
 
@@ -1306,7 +1305,11 @@ void AbInitioManager::SetupReconstructionJob()
 			//else resolution_limit_rec					= next_high_res_limit;//current_high_res_limit;//current_my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
 
 			float    score_weight_conversion			= 0;//my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
-			float    score_threshold					= 0;//my_parent->ReconstructioScoreThreshold->ReturnValue();
+
+			float    score_threshold;
+			if (current_percent_used * 3.0f < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
+			else score_threshold = current_percent_used / 100.0; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
+
 			bool	 adjust_scores						= true;//my_parent->AdjustScoreForDefocusYesRadio->GetValue();
 			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
 			bool	 crop_images						= false;//my_parent->AutoCropYesRadioButton->GetValue();
@@ -1645,7 +1648,13 @@ void AbInitioManager::SetupRefinementJob()
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
 
-			float	 percent_used							= current_percent_used / 100.0;
+			//float	 percent_used							= current_percent_used / 100.0;
+
+			float percent_used;
+			percent_used = current_percent_used * 3.0f;
+			if (percent_used > 100.0f) percent_used = 100.0f;
+
+			percent_used *= 0.01f;
 
 #ifdef DEBUG
 			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li.par", first_particle, last_particle);
@@ -1662,7 +1671,9 @@ void AbInitioManager::SetupRefinementJob()
 			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
 
 //			float    mask_radius							= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;//my_parent->MaskRadiusTextCtrl->ReturnValue();
-			float    mask_radius							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
+			float    mask_radius							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
+			mask_radius = std::min(mask_radius, input_refinement->resolution_statistics_box_size * 0.45f * input_refinement->resolution_statistics_pixel_size);
+
 			float    inner_mask_radius						= 0;
 
 			float low_resolution_limit = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms;
@@ -1672,7 +1683,7 @@ void AbInitioManager::SetupRefinementJob()
 			float	 signed_CC_limit						= 0.0;
 			float	 classification_resolution_limit		= current_high_res_limit;
 //			float    mask_radius_search						= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
-			float    mask_radius_search						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.6;
+			float    mask_radius_search						= mask_radius;
 			float	 high_resolution_limit_search			= current_high_res_limit;
 			float	 angular_step							= CalculateAngularStep(current_high_res_limit, refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5);
 
@@ -2116,123 +2127,14 @@ void AbInitioManager::OnMaskerThreadComplete()
 	RunRefinementJob();
 }
 
-wxThread::ExitCode MaskerThread::Entry()
-{
-	//  Read in the files, threshold them write them out again...
-
-	Image input_image;
-	Image mask_image;
-	ImageFile input_file;
-	MRCFile output_file;
-
-	float average_value;
-	float average_of_other_values;
-	float average_value_on_edge;
-	int i,j,k;
-	long address;
-	long number_of_pixels;
-
-	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
-	{
-		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
-		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-		input_file.CloseFile();
-/*
-		average_value = input_image.ReturnAverageOfRealValues();
-		average_value_on_edge = input_image.ReturnAverageOfRealValuesOnEdges();
-		address = 0;
-		number_of_pixels = 0;
-		average_of_other_values = 0.0f;
-
-		for (k = 0; k < input_image.logical_z_dimension; k++)
-		{
-			for (j = 0; j < input_image.logical_y_dimension; j++)
-			{
-				for (i = 0; i < input_image.logical_x_dimension; i++)
-				{
-					if (input_image.real_values[address] < average_value)
-					{
-						average_of_other_values += input_image.real_values[address];
-						number_of_pixels++;
-					}
-
-					address++;
-				}
-
-				address += input_image.padding_jump_value;
-
-			}
-		}
-
-		if (number_of_pixels > 0)
-		{
-			average_of_other_values /= float(number_of_pixels);
-		}
-
-		address = 0;
-
-		for (k = 0; k < input_image.logical_z_dimension; k++)
-		{
-			for (j = 0; j < input_image.logical_y_dimension; j++)
-			{
-				for (i = 0; i < input_image.logical_x_dimension; i++)
-				{
-					if (input_image.real_values[address] < average_value)
-					{
-						input_image.real_values[address] = average_of_other_values;
-					}
-
-					address++;
-				}
-
-				address += input_image.padding_jump_value;
-			}
-		}
-
-		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, average_value_on_edge);
-
-*/
-
-		input_image.SetMinimumValue(input_image.ReturnAverageOfRealValues());
-		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-
-
-		//input_image.CosineMask(mask_radius / pixel_size, 1.0);
-		//input_image.AddConstant(-input_image.ReturnAverageOfRealValuesOnEdges());
-		//input_image.SetMinimumValue(0);
-
-
-
-
-/*
-		mask_image.CopyFrom(&input_image);
-		mask_image.Binarise(input_image.ReturnAverageOfRealValues());
-		mask_image.CosineMask(mask_radius / pixel_size, 1.0f, false, true, 0.0f);
-
-		input_image.ApplyMask(mask_image, 5.0f  / pixel_size, 1.0f, pixel_size / 50.0f, pixel_size / 5.0f);
-*/
-
-		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
-		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
-		output_file.CloseFile();
-	}
-
-
-	// send finished event..
-
-	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MASKERTHREAD_COMPLETED);
-	wxQueueEvent(main_thread_pointer, my_thread_event);
-
-	return (wxThread::ExitCode)0;     // success
-}
-
-
 void AbInitioManager::DoMasking()
 {
 	// right now do nothing. Take out event if changing back to thread.
 //	MyDebugAssertTrue(my_parent->AutoMaskYesRadio->GetValue() == true, "DoMasking called, when masking not ticked!");
 //	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
 //	wxQueueEvent(my_parent, my_thread_event);
+
+	my_parent->WriteInfoText("Doing Masking...");
 
 	wxArrayString masked_filenames;
 	wxFileName current_ref_filename;
@@ -2248,7 +2150,8 @@ void AbInitioManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	MaskerThread *mask_thread = new MaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, 35.0f, input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size);
+	RefinementPackage *input_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
+	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, input_package->estimated_particle_size_in_angstroms * 0.75);
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{

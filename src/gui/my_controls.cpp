@@ -5,6 +5,8 @@ extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
+wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
+
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
 		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
@@ -1584,6 +1586,63 @@ ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id,
 ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
 {
 }
+
+
+wxThread::ExitCode AutoMaskerThread::Entry()
+{
+	//  Read in the files, threshold them write them out again...
+
+	Image input_image;
+	Image buffer_image;
+	Image size_image;
+	ImageFile input_file;
+	MRCFile output_file;
+
+	float average_value;
+//	long address;
+	//float minimum_size = pow(30.0 / pixel_size, 3); // 30A cubed
+
+	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
+	{
+		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
+		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+		input_file.CloseFile();
+
+		average_value = input_image.ReturnAverageOfRealValues();
+
+		// remove disconnected density
+
+		//buffer_image.CopyFrom(&input_image);
+		//buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+		//buffer_image.Binarise(average_value);
+
+		//rle3d my_rle3d(buffer_image);
+		//size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+		//my_rle3d.ConnectedSizeDecodeTo(size_image);
+
+		input_image.SetMinimumValue(average_value);
+
+		//for (address = 0; address < input_image.real_memory_allocated; address++)
+		//{
+		//	if (size_image.real_values[address] < minimum_size) input_image.real_values[address] = average_value;
+		//}
+
+		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+
+		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
+		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
+		output_file.CloseFile();
+	}
+
+
+	// send finished event..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_AUTOMASKERTHREAD_COMPLETED);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+	return (wxThread::ExitCode)0;     // success
+}
+
 
 wxThread::ExitCode OrthDrawerThread::Entry()
 {

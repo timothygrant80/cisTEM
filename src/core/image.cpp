@@ -3913,6 +3913,29 @@ bool Image::IsConstant()
 	return true;
 }
 
+bool Image::IsBinary()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Only makes sense for images in real space")
+
+	long pixel_counter = 0;
+
+	for ( int k = 0; k < logical_z_dimension; k ++ )
+	{
+		for ( int j = 0; j < logical_y_dimension; j ++ )
+		{
+			for ( int i = 0; i < logical_x_dimension; i ++ )
+			{
+				if (real_values[pixel_counter] != 0 && real_values[pixel_counter] != 1) return false;
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	return true;
+}
+
 bool Image::HasNan()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");

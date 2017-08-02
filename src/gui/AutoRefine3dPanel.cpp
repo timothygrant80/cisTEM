@@ -6,8 +6,6 @@ extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern MyMainFrame *main_frame;
 
-wxDEFINE_EVENT(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, wxThreadEvent);
-
 AutoRefine3DPanel::AutoRefine3DPanel( wxWindow* parent )
 :
 AutoRefine3DPanelParent( parent )
@@ -57,7 +55,7 @@ AutoRefine3DPanelParent( parent )
 	selected_refinement_package = -1;
 
 	RefinementPackageSelectPanel->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AutoRefine3DPanel::OnRefinementPackageComboBox, this);
-	Bind(wxEVT_COMMAND_MASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(MY_ORTH_DRAW_EVENT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
@@ -2065,7 +2063,7 @@ void AutoRefinementManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	AutoRefine3DMaskerThread *mask_thread = new AutoRefine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, my_parent->MaskRadiusTextCtrl->ReturnValue(), input_refinement->resolution_statistics_pixel_size);
+	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, my_parent->MaskRadiusTextCtrl->ReturnValue());
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -2284,51 +2282,6 @@ void AutoRefine3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
 			Layout();
 		}
 	}
-}
-
-
-wxThread::ExitCode AutoRefine3DMaskerThread::Entry()
-{
-	//  Read in the files, threshold them write them out again...
-
-	Image input_image;
-	ImageFile input_file;
-	MRCFile output_file;
-
-	float edge_value;
-
-	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
-	{
-		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
-		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-		input_file.CloseFile();
-
-		// OLD MASKING
-
-		/*
-		input_image.CosineMask(mask_radius / pixel_size, 5 / pixel_size);
-		edge_value = input_image.ReturnAverageOfRealValuesOnEdges();
-		input_image.AddConstant(-edge_value);
-		input_image.SetMinimumValue(0);
-		*/
-
-		input_image.SetMinimumValue(input_image.ReturnAverageOfRealValues());
-		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-
-
-		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
-		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
-		output_file.CloseFile();
-	}
-
-
-	// send finished event..
-
-	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MASKERTHREAD_COMPLETED);
-	wxQueueEvent(main_thread_pointer, my_thread_event);
-
-
-	return (wxThread::ExitCode)0;     // success
 }
 
 

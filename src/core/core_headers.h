@@ -81,6 +81,7 @@ const std::complex<float> I(0.0,1.0);
 #include "basic_star_file_reader.h"
 #include "particle_finder.h"
 #include "myapp.h"
+#include "rle3d.h"
 
 #ifdef MKL
 #include <mkl.h>

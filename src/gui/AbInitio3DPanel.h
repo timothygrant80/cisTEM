@@ -139,30 +139,5 @@ public:
 
 };
 
-class MaskerThread : public wxThread
-{
-	public:
-	MaskerThread(AbInitio3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_resolution, float wanted_mask_radius) : wxThread(wxTHREAD_DETACHED)
-	{
-		main_thread_pointer = parent;
-		input_files = wanted_input_files;
-		output_files = wanted_output_files;
-		pixel_size = wanted_pixel_size;
-		mask_resolution = wanted_mask_resolution;
-		mask_radius = wanted_mask_radius;
-	}
-
-	protected:
-
-	AbInitio3DPanel *main_thread_pointer;
-	wxArrayString input_files;
-	wxArrayString output_files;
-	float pixel_size;
-	float mask_resolution;
-	float mask_radius;
-
-    virtual ExitCode Entry();
-};
-
 
 #endif

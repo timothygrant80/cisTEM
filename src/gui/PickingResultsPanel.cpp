@@ -83,11 +83,16 @@ void MyPickingResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 		FilterButton->Enable(ByFilterButton->GetValue());
 
-		if (GroupComboBox->GetCount() > 0)
+		if (GroupComboBox->GetCount() > 0 && ResultDataView->GetItemCount() > 0)
 		{
 			AddToGroupButton->Enable(true);
+			DeleteFromGroupButton->Enable(true);
 		}
-		else AddToGroupButton->Enable(false);
+		else
+		{
+			DeleteFromGroupButton->Enable(false);
+			AddToGroupButton->Enable(false);
+		}
 
 		if (is_dirty)
 		{

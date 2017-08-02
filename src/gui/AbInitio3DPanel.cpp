@@ -2134,7 +2134,7 @@ void AbInitioManager::DoMasking()
 //	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
 //	wxQueueEvent(my_parent, my_thread_event);
 
-	my_parent->WriteInfoText("Doing Masking...");
+	//my_parent->WriteInfoText("Doing Masking...");
 
 	wxArrayString masked_filenames;
 	wxFileName current_ref_filename;

@@ -1561,7 +1561,7 @@ class Refine3DPanel : public JobPanel
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnAutoMaskYesButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

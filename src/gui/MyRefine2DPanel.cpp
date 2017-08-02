@@ -1301,7 +1301,7 @@ void ClassificationManager::RunRefinementJob()
 	}
 
 	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));
-	my_parent->WriteInfoText(wxString::Format("Highest resolution: %.1f A",output_classification->high_resolution_limit));
+	my_parent->WriteInfoText(wxString::Format("High resolution limit: %.1f A",output_classification->high_resolution_limit));
 	if (my_parent->AutoPercentUsedRadioYes->GetValue() == true)
 	{
 		my_parent->WriteInfoText(wxString::Format("Using %.0f %% of the particles (%i per class)", output_classification->percent_used, myroundint((float(output_classification->number_of_particles) * output_classification->percent_used * 0.01) / float(output_classification->number_of_classes))));

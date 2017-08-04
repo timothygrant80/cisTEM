@@ -183,6 +183,7 @@ bool Merge2DApp::DoCalculation()
 
 	wxPrintf("\nTotal logp = %g\n", sum_logp_total);
 
+	delete [] list_of_nozero_classes;
 	delete [] class_averages;
 	delete [] temp_averages;
 	delete [] CTF_sums;

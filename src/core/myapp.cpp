@@ -32,6 +32,8 @@ bool MyApp::OnInit()
 
 	queue_timer_set = false;
 
+	currently_running_a_job = false;
+
 	time_of_last_queue_send = 0;
 	number_of_results_sent = 0;
 

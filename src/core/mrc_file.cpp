@@ -8,12 +8,14 @@ MRCFile::MRCFile()
 
 MRCFile::MRCFile(std::string filename, bool overwrite)
 {
+	rewrite_header_on_close = false;
 	OpenFile(filename, overwrite);
 
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite,bool wait_for_file_to_exist)
 {
+	rewrite_header_on_close = false;
 	OpenFile(filename, overwrite,wait_for_file_to_exist);
 
 }

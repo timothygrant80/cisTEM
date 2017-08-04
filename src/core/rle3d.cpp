@@ -288,7 +288,7 @@ void rle3d::Write(const char *filename)
       abort();
     }
 
-    for (long counter = 0; counter <= number_of_coordinates; counter ++)
+    for (long counter = 0; counter < number_of_coordinates; counter ++)
     {
         fprintf (output_file, "%d %d %d %d\n", int(rle_coordinates[counter].x_pos), int(rle_coordinates[counter].y_pos), int(rle_coordinates[counter].z_pos), int(rle_coordinates[counter].length));
 
@@ -317,7 +317,7 @@ void rle3d::GroupConnected()
 
 
 
-	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
 	{
 		if (coord_counter == 0)
 		{
@@ -337,7 +337,7 @@ void rle3d::GroupConnected()
 				if (rle_coordinates[coord_counter].z_pos - rle_coordinates[reverse_coord_counter].z_pos > 1)
 				{
 					// if the current coord has an z value of 2 slices before or more we can stop the search..
-					reverse_coord_counter = 0;
+					break;
 
 				}
 				else
@@ -415,7 +415,7 @@ void rle3d::ConnectedSizeDecodeTo(Image &output3d)
 	long inner_pixel_counter;
 	long start_address;
 
-	int i,inner_x;
+	int inner_x;
 
 	// are we allocated...
 	MyDebugAssertTrue(allocated_coordinates > 0, "Decoding from  unallocated rle3d")
@@ -432,18 +432,18 @@ void rle3d::ConnectedSizeDecodeTo(Image &output3d)
 
 	GroupConnected();
 
-	long group_size[number_of_groups];
+	long group_size[number_of_groups + 1];
 
 	// clear group sizes..
 
-	for (group_counter = 0; group_counter < number_of_groups; group_counter++)
+	for (group_counter = 0; group_counter <= number_of_groups; group_counter++)
 	{
 		group_size[group_counter] = 0;
 	}
 
 	// first of all - how many pixels are in all the groups group..
 
-	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
 	{
 		group_size[rle_coordinates[coord_counter].group_number] += rle_coordinates[coord_counter].length;
 
@@ -451,15 +451,16 @@ void rle3d::ConnectedSizeDecodeTo(Image &output3d)
 
 	// now decode..
 
-	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
 	{
 		start_address = output3d.ReturnReal1DAddressFromPhysicalCoord(rle_coordinates[coord_counter].x_pos, rle_coordinates[coord_counter].y_pos, rle_coordinates[coord_counter].z_pos);
 		inner_pixel_counter = 0;
-		inner_x = i;
+		inner_x = rle_coordinates[coord_counter].x_pos;
 
 		for (pixel_counter = 0; pixel_counter < rle_coordinates[coord_counter].length; pixel_counter++)
 		{
 
+			MyDebugAssertTrue(start_address + inner_pixel_counter < output3d.real_memory_allocated, "Invalid array location")
 			output3d.real_values[start_address + inner_pixel_counter] = group_size[rle_coordinates[coord_counter].group_number];
 			inner_pixel_counter++;
 			inner_x++;

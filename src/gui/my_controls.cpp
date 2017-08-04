@@ -1598,36 +1598,72 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 	ImageFile input_file;
 	MRCFile output_file;
 
+	float original_average_value;
+
 	float average_value;
-//	long address;
-	//float minimum_size = pow(30.0 / pixel_size, 3); // 30A cubed
+	float average_of_100_max;
+	float threshold_value;
+	long address;
+
+
+	float minimum_size = pow(40.0 / pixel_size, 3) / pixel_size; // 40A cubed
 
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
 	{
+
 		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
+/* OLD
 		average_value = input_image.ReturnAverageOfRealValues();
+		input_image.SetMinimumValue(average_value);
+		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+
+*/
+
+		//NEW
+		original_average_value = input_image.ReturnAverageOfRealValues();
 
 		// remove disconnected density
 
-		//buffer_image.CopyFrom(&input_image);
-		//buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
-		//buffer_image.Binarise(average_value);
+		buffer_image.CopyFrom(&input_image);
+		buffer_image.SetMinimumValue(original_average_value);
+		buffer_image.ForwardFFT();
+		buffer_image.CosineMask(pixel_size / 50.0f, pixel_size / 10.0f);
+		buffer_image.BackwardFFT();
 
-		//rle3d my_rle3d(buffer_image);
-		//size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-		//my_rle3d.ConnectedSizeDecodeTo(size_image);
+		average_value = buffer_image.ReturnAverageOfRealValues();
+		average_of_100_max = buffer_image.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
+		threshold_value = average_value + ((average_of_100_max - average_value) * 0.05);
 
-		input_image.SetMinimumValue(average_value);
 
-		//for (address = 0; address < input_image.real_memory_allocated; address++)
-		//{
-		//	if (size_image.real_values[address] < minimum_size) input_image.real_values[address] = average_value;
-		//}
+		buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+		buffer_image.Binarise(threshold_value);
+
+	//	buffer_image.QuickAndDirtyWriteSlices("/tmp/new_bin.mrc", 1, buffer_image.logical_z_dimension);
+
+		rle3d my_rle3d(buffer_image);
+		size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+		my_rle3d.ConnectedSizeDecodeTo(size_image);
+	//	size_image.QuickAndDirtyWriteSlices("/tmp/size.mrc", 1, size_image.logical_z_dimension);
+		size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
+
+	//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
+
+		for (address = 0; address < input_image.real_memory_allocated; address++)
+		{
+			if (size_image.real_values[address] == 0.0f) input_image.real_values[address] = original_average_value;
+		}
+
+
+		input_image.SetMinimumValue(original_average_value);
 
 		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
+		//input_image.QuickAndDirtyWriteSlices("/tmp/masked.mrc", 1, input_image.logical_z_dimension);
+
+
+	// END OF NEW
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
@@ -1666,7 +1702,7 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 		current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
 		//current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
 		input_image.CreateOrthogonalProjectionsImage(&current_output);
-		current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
+		//current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
 
 
 		// if there are multiple classes, take care of it.

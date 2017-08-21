@@ -141,7 +141,7 @@ WXTEST
 
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1 * 1000 + $2) * 1000 + $3;}'`
-if test -n "$vers" && test "$vers" -ge 3000000; then
+if test -n "$vers" && test "$vers" -eq 3000002; then
         WX_CPPFLAGS="`$WXCONFIG --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
         WX_LIBS="`$WXCONFIG --libs richtext,std,aui`"
@@ -151,7 +151,7 @@ if test -n "$vers" && test "$vers" -ge 3000000; then
         WX_LIBS_BASE="`$WXCONFIG --libs base,net`"
         wx_is_available=1
 else
-        AC_MSG_ERROR("wxWidgets version > 3.0.0 required.")
+        AC_MSG_ERROR("Only wxWidgets version 3.0.2 is currently supported.")
         wx_is_available=0
 fi
 

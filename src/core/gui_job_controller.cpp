@@ -182,7 +182,6 @@ void GuiJobController::KillJob(int job_to_kill)
 		{
 			job_list[job_to_kill].socket->Notify(false);
 			WriteToSocket(job_list[job_to_kill].socket, socket_time_to_die, SOCKET_CODE_SIZE);
-
 			job_list[job_to_kill].socket->Destroy();
 		}
 		job_list[job_to_kill].socket = NULL;

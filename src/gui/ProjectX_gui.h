@@ -166,6 +166,14 @@ class AbInitio3DPanelParent : public JobPanel
 		NumericTextCtrl* InitialResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;
 		NumericTextCtrl* FinalResolutionLimitTextCtrl;
+		wxStaticText* GlobalMaskRadiusStaticText;
+		NumericTextCtrl* GlobalMaskRadiusTextCtrl;
+		wxStaticText* InnerMaskRadiusStaticText1;
+		NumericTextCtrl* InnerMaskRadiusTextCtrl;
+		wxStaticText* SearchRangeXStaticText;
+		NumericTextCtrl* SearchRangeXTextCtrl;
+		wxStaticText* SearchRangeYStaticText;
+		NumericTextCtrl* SearchRangeYTextCtrl;
 		wxStaticText* m_staticText324;
 		wxRadioButton* AutoMaskYesRadio;
 		wxRadioButton* AutoMaskNoRadio;

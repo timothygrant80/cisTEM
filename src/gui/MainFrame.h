@@ -73,6 +73,8 @@ class MyMainFrame : public MainFrame
 		wxString ReturnRefine3DScratchDirectory();
 		wxString ReturnAutoRefine3DScratchDirectory();
 
+		bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
+
 
 
 		//LaunchJob(JobPanel *parent_panel, )

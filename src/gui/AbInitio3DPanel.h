@@ -27,9 +27,12 @@ public:
 
 	long number_of_received_particle_results;
 
+	RefinementPackage *active_refinement_package;
 	Refinement *input_refinement;
 	Refinement *output_refinement;
 
+	RunProfile active_refinement_run_profile;
+	RunProfile active_reconstruction_run_profile;
 
 	//float startup_percent_used;
 	float current_high_res_limit;
@@ -37,7 +40,25 @@ public:
 
 	float start_percent_used;
 	float end_percent_used;
+
+	float active_start_percent_used;
+	float active_end_percent_used;
 	float current_percent_used;
+
+	float active_start_res;
+	float active_end_res;
+
+	bool active_should_automask;
+	bool active_auto_set_percent_used;
+
+	float active_inner_mask_radius;
+	float active_global_mask_radius;
+
+	float active_search_range_x;
+	float active_search_range_y;
+
+	bool active_should_apply_blurring;
+	bool active_smoothing_factor;
 
 	int number_of_starts_to_run;
 	int number_of_starts_run;

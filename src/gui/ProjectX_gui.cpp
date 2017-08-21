@@ -303,6 +303,34 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	FinalResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("9.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( FinalResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	GlobalMaskRadiusStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	GlobalMaskRadiusStaticText->Wrap( -1 );
+	fgSizer1->Add( GlobalMaskRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	GlobalMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( GlobalMaskRadiusTextCtrl, 0, wxALL, 5 );
+	
+	InnerMaskRadiusStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Inner Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusStaticText1->Wrap( -1 );
+	fgSizer1->Add( InnerMaskRadiusStaticText1, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL, 5 );
+	
+	SearchRangeXStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Range in X (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	SearchRangeXStaticText->Wrap( -1 );
+	fgSizer1->Add( SearchRangeXStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	SearchRangeXTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( SearchRangeXTextCtrl, 0, wxALL, 5 );
+	
+	SearchRangeYStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Range in Y (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	SearchRangeYStaticText->Wrap( -1 );
+	fgSizer1->Add( SearchRangeYStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	SearchRangeYTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( SearchRangeYTextCtrl, 0, wxALL, 5 );
+	
 	m_staticText324 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Auto-Masking?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText324->Wrap( -1 );
 	fgSizer1->Add( m_staticText324, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -5316,7 +5344,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000, 20 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000, 15 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 	
 	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );

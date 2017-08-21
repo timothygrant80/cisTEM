@@ -8130,6 +8130,7 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	delete cosine_edge;
 	delete temp_image;
 
+
 	return float(sum);
 }
 
@@ -8347,7 +8348,7 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 			for (i = 0; i < this->logical_x_dimension; i++)
 			{
 				proj_one.real_values[proj_one.ReturnReal1DAddressFromPhysicalCoord(i, j, 0)] += this->real_values[input_counter];
-				proj_two.real_values[proj_two.ReturnReal1DAddressFromPhysicalCoord(k, j, 0)] += this->real_values[input_counter];
+				proj_two.real_values[proj_two.ReturnReal1DAddressFromPhysicalCoord(j, k, 0)] += this->real_values[input_counter];
 				proj_three.real_values[proj_three.ReturnReal1DAddressFromPhysicalCoord(i, k, 0)] += this->real_values[input_counter];
 
 				input_counter++;
@@ -8365,7 +8366,7 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 		{
 
 			slice_one.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(i, j, this->physical_address_of_box_center_z);
-			slice_two.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(this->physical_address_of_box_center_x, j, i);
+			slice_two.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(this->physical_address_of_box_center_x, i, j);
 			slice_three.real_values[output_counter] = this->ReturnRealPixelFromPhysicalCoord(i, this->physical_address_of_box_center_x, j);
 
 			output_counter++;

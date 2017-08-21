@@ -910,10 +910,26 @@ void ClassificationManager::BeginRefinementCycle()
 	number_of_rounds_run = 0;
 	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
 
-	current_refinement_package_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).asset_id;
+	active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
+	current_refinement_package_asset_id = active_refinement_package->asset_id;
+	active_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 
 	my_parent->PlotPanel->Clear();
 	my_parent->PlotPanel->my_notebook->SetSelection(0);
+
+	active_number_of_classes = my_parent->NumberClassesSpinCtrl->GetValue();
+	active_low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
+	active_start_high_resolution_limit = my_parent->HighResolutionLimitStartTextCtrl->ReturnValue();
+	active_finish_high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
+	active_mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
+	active_angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
+	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
+	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
+	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
+	active_exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
+	active_auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
+	active_percent_used = my_parent->PercentUsedTextCtrl->ReturnValue();
+
 
 	if (my_parent->InputParametersComboBox->GetSelection() == 0)
 	{
@@ -926,7 +942,7 @@ void ClassificationManager::BeginRefinementCycle()
 	}
 	else
 	{
-		current_input_classification_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).classification_ids[my_parent->InputParametersComboBox->GetSelection() - 1];
+		current_input_classification_id = active_refinement_package->classification_ids[my_parent->InputParametersComboBox->GetSelection() - 1];
 		first_round_id = current_input_classification_id;
 		wxPrintf("classification list id %i = %li\n", my_parent->InputParametersComboBox->GetSelection() - 1, current_input_classification_id);
 		wxPrintf("Getting classification for classification id %li\n", current_input_classification_id);
@@ -950,17 +966,17 @@ void ClassificationManager::RunInitialStartJob()
 	output_classification->classification_was_imported_or_generated = true;
 	output_classification->datetime_of_run = wxDateTime::Now();
 	output_classification->starting_classification_id = -1;
-	output_classification->number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
-	output_classification->number_of_classes = my_parent->NumberClassesSpinCtrl->GetValue();
-	output_classification->low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-	output_classification->high_resolution_limit = my_parent->HighResolutionLimitStartTextCtrl->ReturnValue();
-	output_classification->mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
-	output_classification->angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
-	output_classification->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-	output_classification->search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
-	output_classification->smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
-	output_classification->exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
-	output_classification->auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
+	output_classification->number_of_particles = active_refinement_package->contained_particles.GetCount();
+	output_classification->number_of_classes = active_number_of_classes;
+	output_classification->low_resolution_limit = active_low_resolution_limit;
+	output_classification->high_resolution_limit = active_start_high_resolution_limit;
+	output_classification->mask_radius = active_mask_radius;
+	output_classification->angular_search_step = active_angular_search_step;
+	output_classification->search_range_x = active_search_range_x;
+	output_classification->search_range_y = active_search_range_y;
+	output_classification->smoothing_factor = active_smoothing_factor;
+	output_classification->exclude_blank_edges = active_exclude_blank_edges;
+	output_classification->auto_percent_used = active_auto_percent_used;
 
 	output_classification->percent_used = (float(output_classification->number_of_classes * 300) / float(output_classification->number_of_particles)) * 100.0;
 	if (output_classification->percent_used > 100.0) output_classification->percent_used = 100.0;
@@ -972,10 +988,10 @@ void ClassificationManager::RunInitialStartJob()
 		output_classification->classification_results[counter].position_in_stack = counter + 1;
 	}
 
-	wxString input_parameter_file = output_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()));
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine2d", 1);
+	wxString input_parameter_file = output_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", active_refinement_package);
+	my_parent->my_job_package.Reset(active_run_profile, "refine2d", 1);
 
-	wxString input_particle_images =  refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
+	wxString input_particle_images =  active_refinement_package->stack_filename;
 	wxString input_class_averages = "/dev/null";
 	wxString output_parameter_file = "/dev/null";
 	wxString output_class_averages = output_classification->class_average_file;
@@ -983,11 +999,11 @@ void ClassificationManager::RunInitialStartJob()
 	int first_particle = 1;
 	int last_particle = output_classification->number_of_particles;
 	float percent_used = output_classification->percent_used / 100.00;
-	float pixel_size = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
-	float voltage_kV = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
-	float spherical_aberration_mm = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-	float amplitude_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
-	float mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
+	float pixel_size = active_refinement_package->contained_particles[0].pixel_size;
+	float voltage_kV = active_refinement_package->contained_particles[0].microscope_voltage;
+	float spherical_aberration_mm = active_refinement_package->contained_particles[0].spherical_aberration;
+	float amplitude_contrast = active_refinement_package->contained_particles[0].amplitude_contrast;
+	float mask_radius = active_mask_radius;
 	float low_resolution_limit =output_classification->low_resolution_limit;
 	float high_resolution_limit = output_classification->high_resolution_limit;
 	float angular_step = output_classification->angular_search_step;
@@ -996,7 +1012,7 @@ void ClassificationManager::RunInitialStartJob()
 	float smoothing_factor = output_classification->smoothing_factor;
 	int padding_factor = 2;
 	bool normalize_particles = true;
-	bool invert_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
+	bool invert_contrast = active_refinement_package->stack_has_white_protein;
 	bool exclude_blank_edges = output_classification->exclude_blank_edges;
 	bool dump_arrays = false;
 	wxString dump_file = "/dev/null";
@@ -1031,7 +1047,7 @@ void ClassificationManager::RunInitialStartJob()
 
 
 	my_parent->WriteBlueText("Creating Initial References...");
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1112,17 +1128,17 @@ void ClassificationManager::RunRefinementJob()
 	output_classification->classification_was_imported_or_generated = false;
 	output_classification->datetime_of_run = wxDateTime::Now();
 	output_classification->starting_classification_id = input_classification->classification_id;
-	output_classification->number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
+	output_classification->number_of_particles = active_refinement_package->contained_particles.GetCount();
 	output_classification->number_of_classes = input_classification->number_of_classes;
-	output_classification->low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
+	output_classification->low_resolution_limit = active_low_resolution_limit;
 	//output_classification->high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-	output_classification->mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
-	output_classification->angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
-	output_classification->search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-	output_classification->search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
-	output_classification->smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
-	output_classification->exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
-	output_classification->auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
+	output_classification->mask_radius = active_mask_radius;
+	output_classification->angular_search_step = active_angular_search_step;
+	output_classification->search_range_x = active_search_range_x;
+	output_classification->search_range_y = active_search_range_y;
+	output_classification->smoothing_factor = active_smoothing_factor;
+	output_classification->exclude_blank_edges = active_exclude_blank_edges;
+	output_classification->auto_percent_used = active_auto_percent_used;
 
 	// Ramp up the high resolution limit
 	if (number_of_rounds_to_run > 1)
@@ -1137,16 +1153,16 @@ void ClassificationManager::RunRefinementJob()
 		}
 		if (number_of_rounds_run >= reach_max_high_res_at_cycle)
 		{
-			output_classification->high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
+			output_classification->high_resolution_limit = active_finish_high_resolution_limit;
 		}
 		else
 		{
-			output_classification->high_resolution_limit = my_parent->HighResolutionLimitStartTextCtrl->ReturnValue() + float(number_of_rounds_run) / float(reach_max_high_res_at_cycle - 1) * (my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue() - my_parent->HighResolutionLimitStartTextCtrl->ReturnValue());
+			output_classification->high_resolution_limit = active_start_high_resolution_limit + float(number_of_rounds_run) / float(reach_max_high_res_at_cycle - 1) * (active_finish_high_resolution_limit - active_start_high_resolution_limit);
 		}
 	}
 	else
 	{
-		output_classification->high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
+		output_classification->high_resolution_limit = active_finish_high_resolution_limit;
 	}
 
 	if (output_classification->auto_percent_used == true)
@@ -1211,7 +1227,7 @@ void ClassificationManager::RunRefinementJob()
 	}
 	else
 	{
-		output_classification->percent_used = my_parent->PercentUsedTextCtrl->ReturnValue();
+		output_classification->percent_used = active_percent_used;
 	}
 
 	output_classification->SizeAndFillWithEmpty(output_classification->number_of_particles);
@@ -1221,22 +1237,22 @@ void ClassificationManager::RunRefinementJob()
 		output_classification->classification_results[counter].position_in_stack = counter + 1;
 	}
 
-	wxString input_parameter_file = input_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()));
+	wxString input_parameter_file = input_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", active_refinement_package);
 
-	number_of_refinement_processes = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].ReturnTotalJobs();
+	number_of_refinement_processes = active_run_profile.ReturnTotalJobs();
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
 	number_of_particles = output_classification->number_of_particles;
 
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1.0;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine2d", number_of_refinement_jobs);
+	my_parent->my_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_jobs);
 	current_particle_counter = 1.0;
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
 	{
 
-		wxString input_particle_images =  refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
+		wxString input_particle_images =  active_refinement_package->stack_filename;
 		wxString input_class_averages = input_classification->class_average_file;
 
 		wxString output_parameter_file = "/dev/null";
@@ -1253,11 +1269,11 @@ void ClassificationManager::RunRefinementJob()
 		output_parameter_file = "/dev/null";
 
 		float percent_used = output_classification->percent_used / 100.00;
-		float pixel_size = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
-		float voltage_kV = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
-		float spherical_aberration_mm = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-		float amplitude_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
-		float mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
+		float pixel_size = active_refinement_package->contained_particles[0].pixel_size;
+		float voltage_kV = active_refinement_package->contained_particles[0].microscope_voltage;
+		float spherical_aberration_mm = active_refinement_package->contained_particles[0].spherical_aberration;
+		float amplitude_contrast = active_refinement_package->contained_particles[0].amplitude_contrast;
+		float mask_radius = active_mask_radius;
 		float low_resolution_limit =output_classification->low_resolution_limit;
 		float high_resolution_limit = output_classification->high_resolution_limit;
 		float angular_step = output_classification->angular_search_step;
@@ -1266,7 +1282,7 @@ void ClassificationManager::RunRefinementJob()
 		float smoothing_factor = output_classification->smoothing_factor;
 		int padding_factor = 2;
 		bool normalize_particles = true;
-		bool invert_contrast = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
+		bool invert_contrast = active_refinement_package->stack_has_white_protein;
 		bool exclude_blank_edges = output_classification->exclude_blank_edges;
 		bool dump_arrays = true;
 		wxString dump_file = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
@@ -1308,7 +1324,7 @@ void ClassificationManager::RunRefinementJob()
 
 	}
 
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1529,7 +1545,7 @@ void ClassificationManager::RunMerge2dJob()
 
 	running_job_type = MERGE;
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "merge2d", 1);
+	my_parent->my_job_package.Reset(active_run_profile, "merge2d", 1);
 
 	wxString output_class_averages = output_classification->class_average_file;
 	wxString dump_file_seed = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_.dump", output_classification->classification_id);
@@ -1540,7 +1556,7 @@ void ClassificationManager::RunMerge2dJob()
 
 	my_parent->WriteBlueText("Merging Class Averages...");
 
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1725,7 +1741,7 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->AngularPlotPanel->SetSymmetryAndNumber(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry,output_refinement->number_of_particles);
+			my_parent->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,output_refinement->number_of_particles);
 			my_parent->AngularPlotPanel->Show(true);
 			my_parent->FSCResultsPanel->Show(false);
 			my_parent->Layout();
@@ -1922,7 +1938,7 @@ void ClassificationManager::ProcessAllJobsFinished()
 		// add the volumes to the database..
 
 		output_refinement->reference_volume_ids.Clear();
-		refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].references_for_next_refinement.Clear();
+		active_refinement_package->references_for_next_refinement.Clear();
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
 		my_parent->WriteInfoText("");
@@ -1951,7 +1967,7 @@ void ClassificationManager::ProcessAllJobsFinished()
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
 
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].references_for_next_refinement.Add(temp_asset.asset_id);
+			active_refinement_package->references_for_next_refinement.Add(temp_asset.asset_id);
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
 
 
@@ -2128,11 +2144,11 @@ void ClassificationManager::ProcessAllJobsFinished()
 
 			// add this refinment to the refinement package..
 
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].last_refinment_id = output_refinement->refinement_id;
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].refinement_ids.Add(output_refinement->refinement_id);
+			active_refinement_package->last_refinment_id = output_refinement->refinement_id;
+			active_refinement_package->refinement_ids.Add(output_refinement->refinement_id);
 
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=%li WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", output_refinement->refinement_id, current_refinement_package_asset_id));
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].refinement_ids.GetCount(),  output_refinement->refinement_id));
+			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, active_refinement_package->refinement_ids.GetCount(),  output_refinement->refinement_id));
 
 			volume_asset_panel->is_dirty = true;
 			refinement_package_asset_panel->is_dirty = true;
@@ -2175,8 +2191,8 @@ void ClassificationManager::CycleRefinement()
 
 	// add classification id to the refinement package..
 
-	refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].classification_ids.Add(output_classification->classification_id);
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", current_refinement_package_asset_id, refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].classification_ids.GetCount(),  output_classification->classification_id));
+	active_refinement_package->classification_ids.Add(output_classification->classification_id);
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", current_refinement_package_asset_id, active_refinement_package->classification_ids.GetCount(),  output_classification->classification_id));
 
 
 	if (start_with_random == true)

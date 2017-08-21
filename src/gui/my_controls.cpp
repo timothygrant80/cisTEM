@@ -1647,6 +1647,10 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 		size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
 		my_rle3d.ConnectedSizeDecodeTo(size_image);
 	//	size_image.QuickAndDirtyWriteSlices("/tmp/size.mrc", 1, size_image.logical_z_dimension);
+
+		//float maximum_size = kDa_to_Angstrom3(100.0f) / pixel_size;
+		//maximum_size = std::min(maximum_size, size_image.ReturnMaximumValue());
+		//size_image.Binarise(maximum_size - 1.0f);
 		size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
 
 	//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);

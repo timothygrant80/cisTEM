@@ -16,6 +16,8 @@ class MyFindCTFPanel : public FindCTFPanel
 		Image result_image;
 		wxBitmap result_bitmap;
 
+		AssetGroup active_group;
+
 public:
 
 		MyFindCTFPanel( wxWindow* parent );

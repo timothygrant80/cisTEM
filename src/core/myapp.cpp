@@ -484,7 +484,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 
 	    	  sock->Destroy();
 	    	  ExitMainLoop();
-	    	  abort();
+	    	  exit(0);
 
 	    	  return;
 
@@ -517,6 +517,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	}
 
 	        ExitMainLoop();
+	        exit(0);
 	        return;
 
 	        break;
@@ -1101,15 +1102,14 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 delete lock;
 
 				 // give the thread some time to die..
-				 wxSleep(15);
-
+				 wxSleep(5);
 				 // process thread events in case it has done something
 				 Yield(); //(wxEVT_CATEGORY_THREAD);
-
 				 // finish
 				 sock->Destroy();
 				 if (work_thread != NULL) work_thread->Kill();
 	 		     ExitMainLoop();
+	 		     exit(0);
 	 		     return;
 			 }
 
@@ -1124,12 +1124,32 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 		 {
 
 		     wxPrintf("JOB  : Master Socket Disconnected!!\n");
-		     sock->Destroy();
+			 wxMutexLocker *lock = new wxMutexLocker(job_lock);
 
-		     if (work_thread != NULL) work_thread->Kill();
-		     ExitMainLoop();
-		     return;
+			 if (lock->IsOk() == true)
+			 {
+				 thread_next_action = THREAD_DIE;
+			 }
+			 else
+			 {
+				 SocketSendError("Job Lock Error!");
+				 MyPrintWithDetails("Can't get job lock!");
+			 }
 
+			 delete lock;
+
+			 // give the thread some time to die..
+			 wxSleep(5);
+
+			 // process thread events in case it has done something
+			 Yield(); //(wxEVT_CATEGORY_THREAD);
+
+			 // finish
+			 sock->Destroy();
+			 if (work_thread != NULL) work_thread->Kill();
+			 ExitMainLoop();
+			 exit(0);
+			 return;
 		     break;
 		  }
 		 default: ;
@@ -1363,6 +1383,7 @@ JobResult * MyApp::PopJobFromResultQueue()
 wxThread::ExitCode CalculateThread::Entry()
 {
 	int thread_action_copy;
+	long millis_sleeping = 0;
 
 	while (1==1)
 	{
@@ -1380,6 +1401,7 @@ wxThread::ExitCode CalculateThread::Entry()
 		if (main_thread_pointer->thread_next_action == THREAD_START_NEXT_JOB)
 		{
 			main_thread_pointer->thread_next_action = THREAD_SLEEP;
+			millis_sleeping = 0;
 		}
 
 		delete lock;
@@ -1394,7 +1416,19 @@ wxThread::ExitCode CalculateThread::Entry()
 			wxQueueEvent(main_thread_pointer, my_thread_event);
 		}
 		else
-		if (thread_action_copy == THREAD_SLEEP) wxMilliSleep(100);
+		if (thread_action_copy == THREAD_SLEEP)
+		{
+			wxMilliSleep(100);
+			millis_sleeping += 100;
+
+			if (millis_sleeping > 10000)
+			{
+				// we have been waiting for 10 seconds, something probably went wrong - so die.
+				wxPrintf("Calculation thread has been waiting for something to do for 10 seconds - going to finish\n");
+				QueueError("Calculation thread has been waiting for something to do for 10 seconds - going to finish");
+				break;
+			}
+		}
 		else
 		if (thread_action_copy == THREAD_DIE) break;
 	}
@@ -1411,7 +1445,6 @@ void  CalculateThread::QueueError(wxString error_to_queue)
 {
 	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SENDERROR);
 	test_event->SetString(error_to_queue);
-
 	wxQueueEvent(main_thread_pointer, test_event);
 }
 
@@ -1419,7 +1452,6 @@ void  CalculateThread::QueueInfo(wxString info_to_queue)
 {
 	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SENDINFO);
 	test_event->SetString(info_to_queue);
-
 	wxQueueEvent(main_thread_pointer, test_event);
 }
 

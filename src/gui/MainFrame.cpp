@@ -425,6 +425,9 @@ void MyMainFrame::StartNewProject()
 		}
 		else
 		{
+			// there are no default run profiles.. so lets add a default local..
+
+			run_profiles_panel->AddDefaultLocalProfile();
 			//	wxPrintf("no default run profiles (%s)\n", default_run_profile_path);
 		}
 
@@ -490,9 +493,57 @@ void MyMainFrame::OpenProject(wxString project_filename)
 			}
 		}
 
+		// DO DATABASE VERSION CHECK HERE!
+
+
+
+
+
+		// has the database file been moved?  If so, attempt to convert it..
+
+		if (current_project.database.database_file.GetPath() != current_project.project_directory.GetFullPath())
+		{
+			// database has moved?
+
+			wxMessageDialog *my_dialog = new wxMessageDialog(this, wxString::Format("It looks like this project has been moved :-\n\nCurrent Dir. \t: %s\nStored Dir. \t: %s\n\ncisTEM can attempt to migrate the project, updating all paths to point to the current directory. It is wise to make a backup of the database before trying this.\n\nNote : This will only affect paths contained within the project folder, paths to files outside the project folder will remain unchanged.\n\nAttempt to migrate the project?", current_project.database.database_file.GetPath(), current_project.project_directory.GetFullPath()), "Database has moved?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+			my_dialog->SetYesNoLabels("Migrate", "No");
+
+			if (my_dialog->ShowModal() != wxID_YES)
+			{
+					my_dialog->Destroy();
+					current_project.Close(false);
+					return;
+			}
+			else
+			{
+				// migrate...
+				my_dialog->Destroy();
+
+				if (MigrateProject(current_project.project_directory.GetFullPath(), current_project.database.database_file.GetPath()) == false)
+				{
+					// something went wrong
+
+					wxMessageDialog error(this, "Something went wrong!", "Something went wrong!");
+					current_project.Close(false);
+					return;
+				}
+				else
+				{
+					// close and reopen
+					current_project.Close(false);
+					if (current_project.OpenProjectFromFile(project_filename) == false) return;
+				}
+
+			}
+
+
+		}
+
+
 		// if we got here, we can take ownership and carry on..
 
 		current_project.database.SetProcessLockInfo(my_process_id, my_hostname);
+
 
 		int counter;
 		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
@@ -527,7 +578,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 	}
 	else
 	{
-		wxMessageBox( wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist? Perhaps the database is already open somewhere else?", project_filename), "Cannot open database!", wxICON_ERROR);
+		wxMessageBox( wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist?", project_filename), "Cannot open database!", wxICON_ERROR);
 		MyPrintWithDetails("An error occured opening the database file..");
 	}
 
@@ -676,4 +727,52 @@ wxString MyMainFrame::ReturnRefine3DScratchDirectory()
 wxString MyMainFrame::ReturnAutoRefine3DScratchDirectory()
 {
 	return current_project.scratch_directory.GetFullPath() + "/AutoRefine3D/";
+}
+
+bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_project_directory)
+{
+	// this is very boring.. go through and update all the links in the database..
+	// start transaction
+
+	current_project.database.Begin();
+
+	// Master settings..
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET PROJECT_DIRECTORY = '%s';", new_project_directory).ToUTF8().data());
+
+	// Movie Assets
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE MOVIE_ASSETS SET FILENAME = REPLACE(FILENAME, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Image Assets
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE IMAGE_ASSETS SET FILENAME = REPLACE(FILENAME, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Volume Assets
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE VOLUME_ASSETS SET FILENAME = REPLACE(FILENAME, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Refinement Package Assets
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET STACK_FILENAME = REPLACE(STACK_FILENAME, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Movie alignment list
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE MOVIE_ALIGNMENT_LIST SET OUTPUT_FILE = REPLACE(OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Estimated CTF Parameters
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE ESTIMATED_CTF_PARAMETERS SET OUTPUT_DIAGNOSTIC_FILE = REPLACE(OUTPUT_DIAGNOSTIC_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Classification List
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_LIST SET CLASS_AVERAGE_FILE = REPLACE(CLASS_AVERAGE_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+
+	// Commit
+
+	current_project.database.Commit();
+
+	// everything should be ok?
+
+	return true;
+
 }

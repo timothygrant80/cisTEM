@@ -59,6 +59,7 @@ public:
 
 	void AddProfile(RunProfile *profile_to_add);
 	void AddBlankProfile();
+	void AddDefaultLocalProfile();
 	void RemoveProfile(int number_to_remove);
 	void RemoveAllProfiles();
 

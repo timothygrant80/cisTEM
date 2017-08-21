@@ -587,15 +587,13 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		pixel_size = current_image_asset->pixel_size / float(scale_factor);
 
 	}
-
-	if (DoesFileExist(small_image_filename) == false)
+	else
 	{
 		image_file = parent_image_filename;
 		pixel_size = image_pixel_size;
 	}
 
-
-	ResultDisplayPanel->Draw(image_file,array_of_particle_positions, maximum_radius_of_particle, pixel_size);
+	if (DoesFileExist(image_file) == true) ResultDisplayPanel->Draw(image_file,array_of_particle_positions, maximum_radius_of_particle, pixel_size);
 	RightPanel->Layout();
 
 }

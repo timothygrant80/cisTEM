@@ -16,6 +16,7 @@
 #define NO_POPUP                     2048
 #define START_WITH_NO_LABEL          4096
 #define SKIP_LEFTCLICK_TO_PARENT     8192
+#define CAN_MOVE_TABS				 16384
 
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1

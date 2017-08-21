@@ -140,15 +140,15 @@ void MyMovieFilterDialog::BuildSearchCommand()
 	int number_checked = ReturnNumberChecked();
 	int number_accounted_for = 0;
 
-	search_command = "SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST";
+	search_command = "SELECT DISTINCT MOVIE_ALIGNMENT_LIST.MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST,IMAGE_ASSETS WHERE MOVIE_ALIGNMENT_LIST.ALIGNMENT_ID=IMAGE_ASSETS.ALIGNMENT_ID AND IMAGE_ASSETS.PARENT_MOVIE_ID=MOVIE_ALIGNMENT_LIST.MOVIE_ASSET_ID";
 
 	if (number_checked > 0)
 	{
-		search_command += " WHERE";
+		search_command += " AND";
 
 		if (asset_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MOVIE_ASSET_ID BETWEEN %i AND %i", asset_id_filter->GetLowValue(), asset_id_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.MOVIE_ASSET_ID BETWEEN %i AND %i", asset_id_filter->GetLowValue(), asset_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -156,7 +156,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (alignment_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" ALIGNMENT_ID BETWEEN %i AND %i", alignment_id_filter->GetLowValue(), alignment_id_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.ALIGNMENT_ID BETWEEN %i AND %i", alignment_id_filter->GetLowValue(), alignment_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -164,7 +164,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (date_of_run_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DATETIME_OF_RUN BETWEEN %li AND %li", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.DATETIME_OF_RUN BETWEEN %li AND %li", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -172,7 +172,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (job_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" ALIGNMENT_JOB_ID BETWEEN %f AND %f", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.ALIGNMENT_JOB_ID BETWEEN %f AND %f", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -180,7 +180,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (voltage_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" VOLTAGE BETWEEN %f AND %f", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.VOLTAGE BETWEEN %f AND %f", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -188,7 +188,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (pixel_size_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PIXEL_SIZE BETWEEN %f AND %f", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.PIXEL_SIZE BETWEEN %f AND %f", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -196,7 +196,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (exposure_per_frame_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" EXPOSURE_PER_FRAME BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.EXPOSURE_PER_FRAME BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -204,7 +204,7 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 		if (pre_exposure_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PRE_EXPOSURE_AMOUNT BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
+			search_command += wxString::Format(" MOVIE_ALIGNMENT_LIST.PRE_EXPOSURE_AMOUNT BETWEEN %f AND %f", exposure_per_frame_filter->GetLowValue(), exposure_per_frame_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -215,21 +215,21 @@ void MyMovieFilterDialog::BuildSearchCommand()
 
 	// do the ordering
 
-	if (AssetIDRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ASSET_ID";
+	if (AssetIDRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.MOVIE_ASSET_ID";
 	else
-	if (AlignmentIDRadioButton->GetValue() == true) search_command += " ORDER BY ALIGNMENT_ID";
+	if (AlignmentIDRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.ALIGNMENT_ID";
 	else
-	if (DateOfRunRadioButton->GetValue() == true) search_command += " ORDER BY DATETIME_OF_RUN";
+	if (DateOfRunRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.DATETIME_OF_RUN";
 	else
-	if (JobIDRadioButton->GetValue() == true) search_command += " ORDER BY ALIGNMENT_JOB_ID";
+	if (JobIDRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.ALIGNMENT_JOB_ID";
 	else
-	if (VoltageRadioButton->GetValue() == true) search_command += " ORDER BY VOLTAGE";
+	if (VoltageRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.VOLTAGE";
 	else
-	if (PixelSizeRadioButton->GetValue() == true) search_command += " ORDER BY PIXEL_SIZE";
+	if (PixelSizeRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.PIXEL_SIZE";
 	else
-	if (ExposureRadioButton->GetValue() == true) search_command += " ORDER BY EXPOSURE_PER_FRAME";
+	if (ExposureRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.EXPOSURE_PER_FRAME";
 	else
-	if (PreExposureRadioButton->GetValue() == true) search_command += " ORDER BY PRE_EXPOSURE_AMOUNT";
+	if (PreExposureRadioButton->GetValue() == true) search_command += " ORDER BY MOVIE_ALIGNMENT_LIST.PRE_EXPOSURE_AMOUNT";
 
 
 
@@ -433,15 +433,15 @@ void MyCTFFilterDialog::BuildSearchCommand()
 	int number_checked = ReturnNumberChecked();
 	int number_accounted_for = 0;
 
-	search_command = "SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS";
+	search_command = "SELECT DISTINCT ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS,IMAGE_ASSETS WHERE IMAGE_ASSETS.CTF_ESTIMATION_ID=ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID";
 
 	if (number_checked > 0)
 	{
-		search_command += " WHERE";
+		search_command += " AND";
 
 		if (asset_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" IMAGE_ASSET_ID BETWEEN %i AND %i", asset_id_filter->GetLowValue(), asset_id_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID BETWEEN %i AND %i", asset_id_filter->GetLowValue(), asset_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -449,7 +449,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (estimation_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" CTF_ESTIMATION_ID BETWEEN %i AND %i", estimation_id_filter->GetLowValue(), estimation_id_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID BETWEEN %i AND %i", estimation_id_filter->GetLowValue(), estimation_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -457,7 +457,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (date_of_run_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DATETIME_OF_RUN BETWEEN %li AND %li", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.DATETIME_OF_RUN BETWEEN %li AND %li", date_of_run_filter->GetLowValue(), date_of_run_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -465,7 +465,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (job_id_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" CTF_ESTIMATION_JOB_ID BETWEEN %i AND %i", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_JOB_ID BETWEEN %i AND %i", job_id_filter->GetLowValue(), job_id_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -473,7 +473,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (defocus_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" (DEFOCUS1+DEFOCUS2)/2 BETWEEN %f AND %f", defocus_filter->GetLowValue(), defocus_filter->GetHighValue());
+			search_command += wxString::Format(" (ESTIMATED_CTF_PARAMETERS.DEFOCUS1+ESTIMATED_CTF_PARAMETERS.DEFOCUS2)/2 BETWEEN %f AND %f", defocus_filter->GetLowValue(), defocus_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -481,15 +481,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (astigmatism_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" ABS(DEFOCUS1-DEFOCUS2) BETWEEN %f AND %f", astigmatism_filter->GetLowValue(), astigmatism_filter->GetHighValue());
-			number_accounted_for++;
-
-			if (number_accounted_for < number_checked) search_command += " AND";
-		}
-
-		if (astigmatism_filter->field_checkbox->IsChecked() == true)
-		{
-			search_command += wxString::Format(" ABS(DEFOCUS1-DEFOCUS2) BETWEEN %f AND %f", astigmatism_filter->GetLowValue(), astigmatism_filter->GetHighValue());
+			search_command += wxString::Format(" ABS(ESTIMATED_CTF_PARAMETERS.DEFOCUS1-ESTIMATED_CTF_PARAMETERS.DEFOCUS2) BETWEEN %f AND %f", astigmatism_filter->GetLowValue(), astigmatism_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -497,7 +489,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (score_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" SCORE BETWEEN %f AND %f", score_filter->GetLowValue(), score_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.SCORE BETWEEN %f AND %f", score_filter->GetLowValue(), score_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -505,7 +497,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (ring_resolution_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DETECTED_RING_RESOLUTION BETWEEN %f AND %f", ring_resolution_filter->GetLowValue(), ring_resolution_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.DETECTED_RING_RESOLUTION BETWEEN %f AND %f", ring_resolution_filter->GetLowValue(), ring_resolution_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -513,7 +505,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (alias_resolution_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DETECTED_ALIAS_RESOLUTION BETWEEN %f AND %f", alias_resolution_filter->GetLowValue(), alias_resolution_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.DETECTED_ALIAS_RESOLUTION BETWEEN %f AND %f", alias_resolution_filter->GetLowValue(), alias_resolution_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -521,7 +513,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (additional_phase_shift_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" ADDITIONAL_PHASE_SHIFT BETWEEN %f AND %f", additional_phase_shift_filter->GetLowValue(), additional_phase_shift_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.ADDITIONAL_PHASE_SHIFT BETWEEN %f AND %f", additional_phase_shift_filter->GetLowValue(), additional_phase_shift_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -530,7 +522,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (voltage_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" VOLTAGE BETWEEN %f AND %f", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.VOLTAGE BETWEEN %f AND %f", voltage_filter->GetLowValue(), voltage_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -539,7 +531,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (spherical_aberration_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" SPHERICAL_ABERRATION BETWEEN %f AND %f", spherical_aberration_filter->GetLowValue(), spherical_aberration_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.SPHERICAL_ABERRATION BETWEEN %f AND %f", spherical_aberration_filter->GetLowValue(), spherical_aberration_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -547,7 +539,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (pixel_size_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PIXEL_SIZE BETWEEN %f AND %f", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.PIXEL_SIZE BETWEEN %f AND %f", pixel_size_filter->GetLowValue(), pixel_size_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -555,7 +547,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (amplitude_contrast_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" AMPLITUDE_CONTRAST BETWEEN %f AND %f", amplitude_contrast_filter->GetLowValue(), amplitude_contrast_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.AMPLITUDE_CONTRAST BETWEEN %f AND %f", amplitude_contrast_filter->GetLowValue(), amplitude_contrast_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -563,7 +555,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (box_size_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" BOX_SIZE BETWEEN %i AND %i", box_size_filter->GetLowValue(), box_size_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.BOX_SIZE BETWEEN %i AND %i", box_size_filter->GetLowValue(), box_size_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -571,7 +563,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (min_resolution_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MIN_RESOLUTION BETWEEN %f AND %f", min_resolution_filter->GetLowValue(), min_resolution_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MIN_RESOLUTION BETWEEN %f AND %f", min_resolution_filter->GetLowValue(), min_resolution_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -580,7 +572,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (max_resolution_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MAX_RESOLUTION BETWEEN %f AND %f", max_resolution_filter->GetLowValue(), max_resolution_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MAX_RESOLUTION BETWEEN %f AND %f", max_resolution_filter->GetLowValue(), max_resolution_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -589,7 +581,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (min_defocus_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MIN_DEFOCUS BETWEEN %f AND %f", min_defocus_filter->GetLowValue(), min_defocus_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MIN_DEFOCUS BETWEEN %f AND %f", min_defocus_filter->GetLowValue(), min_defocus_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -597,7 +589,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (max_defocus_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MAX_DEFOCUS BETWEEN %f AND %f", max_defocus_filter->GetLowValue(), max_defocus_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MAX_DEFOCUS BETWEEN %f AND %f", max_defocus_filter->GetLowValue(), max_defocus_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -606,7 +598,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (defocus_step_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" DEFOCUS_STEP BETWEEN %f AND %f", defocus_step_filter->GetLowValue(), defocus_step_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.DEFOCUS_STEP BETWEEN %f AND %f", defocus_step_filter->GetLowValue(), defocus_step_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -614,7 +606,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (tolerated_astigmatism_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" TOLERATED_ASTIGMATISM BETWEEN %f AND %f", tolerated_astigmatism_filter->GetLowValue(), tolerated_astigmatism_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.TOLERATED_ASTIGMATISM BETWEEN %f AND %f", tolerated_astigmatism_filter->GetLowValue(), tolerated_astigmatism_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -622,7 +614,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (min_phase_shift_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MIN_PHASE_SHIFT BETWEEN %f AND %f", min_phase_shift_filter->GetLowValue(), min_phase_shift_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MIN_PHASE_SHIFT BETWEEN %f AND %f", min_phase_shift_filter->GetLowValue(), min_phase_shift_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -630,7 +622,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (max_phase_shift_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" MAX_PHASE_SHIFT BETWEEN %f AND %f", max_phase_shift_filter->GetLowValue(), max_phase_shift_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.MAX_PHASE_SHIFT BETWEEN %f AND %f", max_phase_shift_filter->GetLowValue(), max_phase_shift_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -639,7 +631,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 		if (phase_shift_step_filter->field_checkbox->IsChecked() == true)
 		{
-			search_command += wxString::Format(" PHASE_SHIFT_STEP BETWEEN %f AND %f", phase_shift_step_filter->GetLowValue(), phase_shift_step_filter->GetHighValue());
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.PHASE_SHIFT_STEP BETWEEN %f AND %f", phase_shift_step_filter->GetLowValue(), phase_shift_step_filter->GetHighValue());
 			number_accounted_for++;
 
 			if (number_accounted_for < number_checked) search_command += " AND";
@@ -649,55 +641,55 @@ void MyCTFFilterDialog::BuildSearchCommand()
 
 	// do the ordering
 
-	if (asset_id_radio->GetValue() == true) search_command += " ORDER BY IMAGE_ASSET_ID";
+	if (asset_id_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID";
 	else
-	if (estimation_id_radio->GetValue() == true) search_command += " ORDER BY CTF_ESTIMATION_ID";
+	if (estimation_id_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID";
 	else
-	if (date_radio->GetValue() == true) search_command += " ORDER BY DATETIME_OF_RUN";
+	if (date_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DATETIME_OF_RUN";
 	else
-	if (job_id_radio->GetValue() == true) search_command += " ORDER BY CTF_ESTIMATION_JOB_ID";
+	if (job_id_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_JOB_ID";
 	else
-	if (defocus_radio->GetValue() == true) search_command += " ORDER BY (DEFOCUS1+DEFOCUS2)/2";
+	if (defocus_radio->GetValue() == true) search_command += " ORDER BY (ESTIMATED_CTF_PARAMETERS.DEFOCUS1+ESTIMATED_CTF_PARAMETERS.DEFOCUS2)/2";
 	else
-	if (astigmatism_radio->GetValue() == true) search_command += " ORDER BY ABS(DEFOCUS1-DEFOCUS2)";
+	if (astigmatism_radio->GetValue() == true) search_command += " ORDER BY ABS(ESTIMATED_CTF_PARAMETERS.DEFOCUS1-ESTIMATED_CTF_PARAMETERS.DEFOCUS2)";
 	else
-	if (astigmatism_angle_radio->GetValue() == true) search_command += " ORDER BY DEFOCUS_ANGLE";
+	if (astigmatism_angle_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DEFOCUS_ANGLE";
 	else
-	if (score_radio->GetValue() == true) search_command += " ORDER BY SCORE";
+	if (score_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.CORE";
 	else
-	if (ring_resolution_radio->GetValue() == true) search_command += " ORDER BY DETECTED_RING_RESOLUTION";
+	if (ring_resolution_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DETECTED_RING_RESOLUTION";
 	else
-	if (alias_resolution_radio->GetValue() == true) search_command += " ORDER BY DETECTED_ALIAS_RESOLUTION";
+	if (alias_resolution_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DETECTED_ALIAS_RESOLUTION";
 	else
-	if (additional_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ADDITIONAL_PHASE_SHIFT";
+	if (additional_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.ADDITIONAL_PHASE_SHIFT";
 	else
-	if (voltage_radio->GetValue() == true) search_command += " ORDER BY VOLTAGE";
+	if (voltage_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.VOLTAGE";
 	else
-	if (spherical_aberration_radio->GetValue() == true) search_command += " ORDER BY SPHERICAL_ABERRATION";
+	if (spherical_aberration_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.SPHERICAL_ABERRATION";
 	else
-	if (pixel_size_radio->GetValue() == true) search_command += " ORDER BY PIXEL_SIZE";
+	if (pixel_size_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.PIXEL_SIZE";
 	else
-	if (amplitude_contrast_radio->GetValue() == true) search_command += " ORDER BY AMPLITUDE_CONTRAST";
+	if (amplitude_contrast_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.AMPLITUDE_CONTRAST";
 	else
-	if (box_size_radio->GetValue() == true) search_command += " ORDER BY BOX_SIZE";
+	if (box_size_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.BOX_SIZE";
 	else
-	if (min_resolution_radio->GetValue() == true) search_command += " ORDER BY MIN_RESOLUTION";
+	if (min_resolution_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MIN_RESOLUTION";
 	else
-	if (max_resolution_radio->GetValue() == true) search_command += " ORDER BY MAX_RESOLUTION";
+	if (max_resolution_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MAX_RESOLUTION";
 	else
-	if (min_defocus_radio->GetValue() == true) search_command += " ORDER BY MIN_DEFOCUS";
+	if (min_defocus_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MIN_DEFOCUS";
 	else
-	if (max_defocus_radio->GetValue() == true) search_command += " ORDER BY MAX_DEFOCUS";
+	if (max_defocus_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MAX_DEFOCUS";
 	else
-	if (defocus_step_radio->GetValue() == true) search_command += " ORDER BY DEFOCUS_STEP";
+	if (defocus_step_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DEFOCUS_STEP";
 	else
-	if (tolerated_astigmatism_radio->GetValue() == true) search_command += " ORDER BY TOLERATED_ASTIGMATISM";
+	if (tolerated_astigmatism_radio->GetValue() == true) search_command += " ESTIMATED_CTF_PARAMETERS.ORDER BY TOLERATED_ASTIGMATISM";
 	else
-	if (min_phase_shift_radio->GetValue() == true) search_command += " ORDER BY MIN_PHASE_SHIFT";
+	if (min_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MIN_PHASE_SHIFT";
 	else
-	if (max_phase_shift_radio->GetValue() == true) search_command += " ORDER BY MAX_PHASE_SHIFT";
+	if (max_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MAX_PHASE_SHIFT";
 	else
-	if (phase_shift_step_radio->GetValue() == true) search_command += " ORDER BY PHASE_SHIFT_STEP";
+	if (phase_shift_step_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.PHASE_SHIFT_STEP";
 
 }
 

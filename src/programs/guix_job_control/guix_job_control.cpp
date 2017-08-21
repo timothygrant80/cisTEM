@@ -837,14 +837,6 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	      else
 		  if (memcmp(socket_input_buffer, socket_time_to_die, SOCKET_CODE_SIZE) == 0)
 		  {
-			  // destroy the server..
-
-			  if (socket_server != NULL) socket_server->Destroy();
-
-			  // close Gui connection..
-
-			  sock->Destroy();
-
 			  // pass message on to master if we have one..
 
 			  if (have_assigned_master == true)
@@ -854,10 +846,18 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 				  master_socket->Destroy();
 			  }
 
+			  // destroy the server..
+
+			  if (socket_server != NULL) socket_server->Destroy();
+
+			  // close Gui connection..
+
+			  sock->Destroy();
+
 			  // exit..
 
 			  ExitMainLoop();
-			  abort();
+			  exit(0);
 			  return;
 		  }
 
@@ -874,7 +874,7 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	        wxPrintf("JOB CONTROL : GUI Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();
-	        abort();
+	        exit(0);
 
 	        break;
 	    }

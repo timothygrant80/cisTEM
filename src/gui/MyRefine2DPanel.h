@@ -34,8 +34,24 @@ public:
 
 	long number_of_received_particle_results;
 
+	RefinementPackage *active_refinement_package;
 	Classification *input_classification;
 	Classification *output_classification;
+
+	RunProfile active_run_profile;
+
+	int active_number_of_classes;
+	float active_low_resolution_limit;
+	float active_start_high_resolution_limit;
+	float active_finish_high_resolution_limit;
+	float active_percent_used;
+	float active_mask_radius;
+	float active_angular_search_step;
+	float active_search_range_x;
+	float active_search_range_y;
+	float active_smoothing_factor;
+	bool active_exclude_blank_edges;
+	bool active_auto_percent_used;
 
 	void SetParent(MyRefine2DPanel *wanted_parent);
 

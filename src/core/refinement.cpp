@@ -130,7 +130,7 @@ RefinementResult Refinement::ReturnRefinementResultByClassAndPositionInStack(int
 		if (class_refinement_results[wanted_class].particle_refinement_results[counter].position_in_stack == wanted_position_in_stack) return class_refinement_results[wanted_class].particle_refinement_results[counter];
 	}
 
-	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle");
+	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle - Class #%i, Pos = %li", wanted_class, wanted_position_in_stack);
 	abort();
 }
 

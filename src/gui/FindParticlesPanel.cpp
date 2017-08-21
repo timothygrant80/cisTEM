@@ -943,11 +943,12 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 {
 	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
 
+	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
 
 	// Package the job details..
 
 	long counter;
-	long number_of_jobs = image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many images / movies in the selected group..
+	long number_of_jobs =  active_group.number_of_members; // how many images / movies in the selected group..
 
 	bool ok_number_conversion;
 
@@ -1026,7 +1027,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
 
-		current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+		current_image_asset = image_asset_panel->ReturnAssetPointer(active_group.members[counter]);
 
 		input_filename 			=	current_image_asset->filename.GetFullPath().ToStdString();
 		pixel_size				=	current_image_asset->pixel_size;
@@ -1439,7 +1440,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
 			wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
 
-			if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),result_to_process->job_number),1,1,1);
+			if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process, image_asset_panel->ReturnAssetID(active_group.members[result_to_process->job_number]),1,1,1);
 			float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
 			float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
 			PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
@@ -1558,7 +1559,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiiii", 		picking_id,
 																						picking_job_id,
 																						(long int) now.GetAsDOS(),
-																						image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter),
+																						image_asset_panel->ReturnAssetID(active_group.members[counter]),
 																						PickingAlgorithmComboBox->GetSelection(),
 																						CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
 																						MaximumParticleRadiusNumericCtrl->ReturnValue(),
@@ -1581,7 +1582,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	{
 		for (int job_counter = 0; job_counter < my_job_tracker.total_number_of_jobs; job_counter ++ )
 		{
-			parent_id = image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),job_counter);
+			parent_id = image_asset_panel->ReturnAssetID(active_group.members[job_counter]);
 			main_frame->current_project.database.RemoveParticlePositionsWithGivenParentImageIDFromGroup(particle_position_asset_panel->ReturnGroupID(group_counter),parent_id);
 		}
 
@@ -1600,7 +1601,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	picking_id = starting_picking_id + 1;
 	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
 	{
-		temp_array_of_assets = ParticlePositionsFromJobResults(&buffered_results[counter],image_asset_panel->ReturnGroupMemberID(GroupComboBox->GetSelection(),counter),picking_job_id,picking_id,starting_asset_id);
+		temp_array_of_assets = ParticlePositionsFromJobResults(&buffered_results[counter],image_asset_panel->ReturnAssetID(active_group.members[counter]),picking_job_id,picking_id,starting_asset_id);
 		WX_APPEND_ARRAY(array_of_assets,temp_array_of_assets);
 		starting_asset_id += temp_array_of_assets.GetCount();
 		picking_id++;

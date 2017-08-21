@@ -40,6 +40,8 @@ class MyRunProfilesPanel : public RunProfilesPanel
 		void OnExportButtonClick( wxCommandEvent& event );
 		void OnDuplicateProfileClick( wxCommandEvent& event );
 
+		void AddDefaultLocalProfile();
+
 		void GuiAddressAutoClick( wxCommandEvent& event );
 		void GuiAddressSpecifyClick( wxCommandEvent& event );
 		void ControllerAddressAutoClick( wxCommandEvent& event );

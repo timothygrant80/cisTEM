@@ -507,6 +507,7 @@ bool MyRunProfilesPanel::ImportRunProfilesFromDisk(wxString filename)
 
 void MyRunProfilesPanel::OnAddProfileClick( wxCommandEvent& event )
 {
+	/*
 	run_profile_manager.AddBlankProfile();
 	main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer());
 	main_frame->DirtyRunProfiles();
@@ -514,9 +515,23 @@ void MyRunProfilesPanel::OnAddProfileClick( wxCommandEvent& event )
 
 	FillProfilesBox();
 	SetSelectedProfile(run_profile_manager.number_of_run_profiles - 1);
+	*/
 
-
+	AddDefaultLocalProfile();
 }
+
+void MyRunProfilesPanel::AddDefaultLocalProfile()
+{
+	run_profile_manager.AddDefaultLocalProfile();
+	main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer());
+	main_frame->DirtyRunProfiles();
+
+
+	FillProfilesBox();
+	SetSelectedProfile(run_profile_manager.number_of_run_profiles - 1);
+}
+
+
 
 void MyRunProfilesPanel::OnRemoveProfileClick( wxCommandEvent& event )
 {
@@ -689,7 +704,7 @@ void MyRunProfilesPanel::ManagerTextChanged( wxCommandEvent& event )
 
 void MyRunProfilesPanel::AddCommandButtonClick( wxCommandEvent& event )
 {
-	buffer_profile.AddCommand("$command", 1, 100);
+	buffer_profile.AddCommand("$command", 1, 10);
 	FillCommandsBox();
 
 	SetSelectedCommand(buffer_profile.number_of_run_commands - 1);

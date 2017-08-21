@@ -16,6 +16,48 @@ public:
 	bool start_with_reconstruction;
 	MyRefine3DPanel *my_parent;
 
+	float active_low_resolution_limit;
+	float active_high_resolution_limit;
+	float active_mask_radius;
+	float active_signed_cc_limit;
+	float active_global_mask_radius;
+	int active_number_results_to_refine;
+	float active_angular_search_step;
+	float active_search_range_x;
+	float active_search_range_y;
+	float active_classification_high_res_limit;
+	bool active_should_focus_classify;
+	float active_sphere_x_coord;
+	float active_sphere_y_coord;
+	float active_sphere_z_coord;
+	bool active_should_refine_ctf;
+	float active_defocus_search_range;
+	float active_defocus_search_step;
+	float active_percent_used;
+	float active_inner_mask_radius;
+	float active_resolution_limit_rec;
+	float active_score_weight_conversion;
+	float active_score_threshold;
+	bool active_adjust_scores;
+	bool active_crop_images;
+	bool active_should_apply_blurring;
+	float active_smoothing_factor;
+	float active_sphere_radius;
+	bool active_do_global_refinement;
+	bool active_also_refine_input;
+	bool active_should_refine_psi;
+	bool active_should_refine_theta;
+	bool active_should_refine_phi;
+	bool active_should_refine_x_shift;
+	bool active_should_refine_y_shift;
+	bool active_should_mask;
+	bool active_should_auto_mask;
+	wxString active_mask_filename;
+	bool active_should_low_pass_filter_mask;
+	float active_mask_filter_resolution;
+	float active_mask_edge;
+	float active_mask_weight;
+
 	long current_job_starttime;
 	long time_of_last_update;
 	int number_of_generated_3ds;
@@ -31,8 +73,12 @@ public:
 
 	long number_of_received_particle_results;
 
+	RefinementPackage *active_refinement_package;
 	Refinement *input_refinement;
 	Refinement *output_refinement;
+
+	RunProfile active_refinement_run_profile;
+	RunProfile active_reconstruction_run_profile;
 
 	wxArrayString current_reference_filenames;
 
@@ -93,7 +139,6 @@ class MyRefine3DPanel : public Refine3DPanel
 		int length_of_process_number;
 
 		RefinementManager my_refinement_manager;
-		RefinementPackage *input_package;
 
 	public:
 

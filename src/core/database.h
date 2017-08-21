@@ -5,7 +5,7 @@ class Database {
 	bool in_batch_select;
 	bool is_in_begin_commit;
 
-	wxFileName database_file;
+
 
 	sqlite3_stmt *batch_statement;
 	bool should_do_local_commit; // used for functions to decide whether to do a commit themselves, or to leave it for someone else to commit. if already in a begin, it won't do begin commit.
@@ -14,6 +14,7 @@ public :
 
 	sqlite3 *sqlite_database;
 	int last_return_code;
+	wxFileName database_file;
 
 	Database();
 	~Database();

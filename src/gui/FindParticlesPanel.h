@@ -16,6 +16,8 @@ class MyFindParticlesPanel : public FindParticlesPanel
 		//Image result_image;
 		//wxBitmap result_bitmap;
 
+		AssetGroup active_group;
+
 public:
 
 		MyFindParticlesPanel( wxWindow* parent );

@@ -22,6 +22,7 @@ class CalculateThread : public wxThread
 	protected:
 
     	virtual ExitCode Entry();
+        long time_sleeping;
 
 };
 

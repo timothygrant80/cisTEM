@@ -300,6 +300,53 @@ void RunProfileManager::AddBlankProfile()
 	run_profiles[number_of_run_profiles].gui_address = "";
 	run_profiles[number_of_run_profiles].controller_address = "";
 
+	run_profiles[number_of_run_profiles].AddCommand("$command", 2, 10);
+
+	number_of_run_profiles++;
+
+}
+
+void RunProfileManager::AddDefaultLocalProfile()
+{
+	// check we have enough memory
+
+	RunProfile *buffer;
+
+	if (number_of_run_profiles >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_allocated < 100) number_allocated *= 2;
+		else number_allocated += 100;
+
+		buffer = new RunProfile[number_allocated];
+
+		for (long counter = 0; counter < number_of_run_profiles; counter++)
+		{
+			buffer[counter] = run_profiles[counter];
+		}
+
+		delete [] run_profiles;
+		run_profiles = buffer;
+	}
+
+	wxString execution_command = wxStandardPaths::Get().GetExecutablePath();
+	execution_command = execution_command.BeforeLast('/');
+	execution_command += "/$command";
+
+	current_id_number++;
+	run_profiles[number_of_run_profiles].id = current_id_number;
+	run_profiles[number_of_run_profiles].name = "Default Local";
+	run_profiles[number_of_run_profiles].number_of_run_commands = 0;
+	run_profiles[number_of_run_profiles].manager_command = execution_command;
+	run_profiles[number_of_run_profiles].gui_address = "";
+	run_profiles[number_of_run_profiles].controller_address = "";
+
+	int number_of_cores = wxThread::GetCPUCount();
+	if (number_of_cores == -1) number_of_cores = 1;
+	number_of_cores++;
+
+	run_profiles[number_of_run_profiles].AddCommand(execution_command, number_of_cores, 10);
 	number_of_run_profiles++;
 
 }

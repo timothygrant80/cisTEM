@@ -43,9 +43,10 @@ wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
 inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes)
 {
 
-#ifdef DEBUG
 	bool should_abort = false;
-//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+
+#ifdef DEBUG
+	//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 	//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
 	if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
 #endif
@@ -55,20 +56,20 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 	socket->Write(buffer, nbytes);
 
 	int number_of_retries = 0;
-	while (socket->LastWriteCount() == 0 && number_of_retries < 50)
+	while (socket->LastWriteCount() == 0 && number_of_retries < 10)
 	{
-		wxMilliSleep(250);
+		wxMilliSleep(100);
 		socket->WaitForWrite();
 		socket->Write(buffer, nbytes);
 		number_of_retries++;
 	}
 
-#ifdef DEBUG
-	if (socket->LastWriteCount() != nbytes) {MyPrintWithDetails("Socket didn't write all bytes! (%u / %u) with %i retries ", socket->LastWriteCount(), nbytes, number_of_retries); should_abort = true;}
-	if (socket->Error() == true) {MyPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+	if (socket->LastWriteCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't write all bytes! (%u / %u) with %i retries ", socket->LastWriteCount(), nbytes, number_of_retries); should_abort = true;}
+	if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
 
 	if (should_abort == true)
 	{
+#ifdef DEBUG
 		wxIPV4address peer_address;
 		socket->GetPeer(peer_address);
 
@@ -77,17 +78,21 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 		socket = NULL;
 		wxFAIL;
 		abort();
+#else
+		exit(-1);
+#endif
 	}
 
-#endif
+
 
 }
 
 inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes)
 {
-#ifdef DEBUG
 	bool should_abort = false;
-//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+
+#ifdef DEBUG
+	//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 	//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
 	if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
 #endif
@@ -97,19 +102,19 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 	socket->Read(buffer, nbytes);
 
 	int number_of_retries = 0;
-	while (socket->LastReadCount() == 0 && number_of_retries < 50)
+	while (socket->LastReadCount() == 0 && number_of_retries < 10)
 	{
-		wxMilliSleep(250);
+		wxMilliSleep(100);
 		socket->WaitForRead();
 		socket->Read(buffer, nbytes);
 		number_of_retries++;
 	}
 
-#ifdef DEBUG
-	if (socket->LastReadCount() != nbytes) {MyPrintWithDetails("Socket didn't read all bytes! (%u / %u) with %i retries ", socket->LastReadCount(), nbytes, number_of_retries); should_abort = true;}
-	if (socket->Error() == true) {MyPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+	if (socket->LastReadCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't read all bytes! (%u / %u) with %i retries ", socket->LastReadCount(), nbytes, number_of_retries); should_abort = true;}
+	if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
 	if (should_abort == true)
 	{
+#ifdef DEBUG
 		wxIPV4address peer_address;
 		socket->GetPeer(peer_address);
 
@@ -118,8 +123,12 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 		socket = NULL;
 		wxFAIL;
 		abort();
-	}
+#else
+		exit(-1);
 #endif
+
+	}
+
 
 }
 

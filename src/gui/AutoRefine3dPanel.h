@@ -15,6 +15,18 @@ class AutoRefinementManager
 public:
 	AutoRefine3DPanel *my_parent;
 
+	bool active_should_auto_mask;
+	float active_low_resolution_limit;
+	float active_mask_radius;
+	float active_global_mask_radius;
+	int active_number_results_to_refine;
+	float active_search_range_x;
+	float active_search_range_y;
+	float active_inner_mask_radius;
+	bool active_should_apply_blurring;
+	float active_smoothing_factor;
+	bool active_auto_crop;
+
 	long current_job_starttime;
 	long time_of_last_update;
 	int number_of_generated_3ds;
@@ -50,8 +62,13 @@ public:
 
 	bool this_is_the_final_round;
 
+	RefinementPackage *active_refinement_package;
 	Refinement *input_refinement;
 	Refinement *output_refinement;
+
+	RunProfile active_refinement_run_profile;
+	RunProfile active_reconstruction_run_profile;
+
 
 	wxArrayString current_reference_filenames;
 

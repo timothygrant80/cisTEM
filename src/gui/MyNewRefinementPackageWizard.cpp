@@ -672,7 +672,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				// take out weird values..
 
-				current_image.ReplaceOutliersWithMean(4.5);
+				current_image.ReplaceOutliersWithMean(6);
 
 				current_loaded_image_id = current_particle_parent_image_id;
 				average_value_at_edges = current_image.ReturnAverageOfRealValuesOnEdges();
@@ -951,7 +951,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 					current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle_parent_image_id));
 					current_image.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath().ToStdString(), 1);
-					current_image.ReplaceOutliersWithMean(4.5);
+					if (current_image_asset->protein_is_white) current_image.InvertRealValues();
+					current_image.ReplaceOutliersWithMean(6);
 					current_loaded_image_id = current_particle_parent_image_id;
 					average_value_at_edges = current_image.ReturnAverageOfRealValuesOnEdges();
 
@@ -1097,9 +1098,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				for (class_counter = 0; class_counter < refinement_to_copy->number_of_classes; class_counter++)
 				{
-					if (refinement_to_copy->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy > highest_occupancy)
+					//if (refinement_to_copy->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy > highest_occupancy)
+				    if (refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(class_counter, template_refinement_package->contained_particles[particle_counter].position_in_stack).occupancy > highest_occupancy)
 					{
-						highest_occupancy = refinement_to_copy->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+						highest_occupancy = refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(class_counter, template_refinement_package->contained_particles[particle_counter].position_in_stack).occupancy;
 						best_class = class_counter;
 					}
 
@@ -1145,17 +1147,17 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			if (class_setup_pageA->my_panel->CarryOverYesButton->GetValue() == false) // yes we do
 			{
-				image_for_new_stack.ReadSlice(input_stack, refinement_to_copy->class_refinement_results[0].particle_refinement_results[particles_to_take[particle_counter]].position_in_stack);
+				image_for_new_stack.ReadSlice(input_stack, template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);
 				image_for_new_stack.WriteSlice(output_stack, particle_counter + 1);
 			}
 
 			for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
 			{
-				RefinementResult *active_result = NULL;
+				RefinementResult active_result;
 
 				// set the active result for this class..
 
-				if (template_refinement_package->number_of_classes == 1) active_result = &refinement_to_copy->class_refinement_results[0].particle_refinement_results[particles_to_take[particle_counter]]; // only option
+				if (template_refinement_package->number_of_classes == 1) active_result = refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(0, template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);//&refinement_to_copy->class_refinement_results[0].particle_refinement_results[particles_to_take[particle_counter]]; // only option
 				else
 				{
 					// so does this class have more than one input
@@ -1163,7 +1165,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 					if (selected_input_classes.GetCount() == 1) // there is only one class, so easy..
 					{
-						active_result = &refinement_to_copy->class_refinement_results[selected_input_classes[0]].particle_refinement_results[particles_to_take[particle_counter]];
+						//active_result = &refinement_to_copy->class_refinement_results[selected_input_classes[0]].particle_refinement_results[particles_to_take[particle_counter]];
+						active_result = refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(selected_input_classes[0], template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);
 					}
 					else // so we have multiple classes, are we taking best occupancy or random?
 					{
@@ -1173,37 +1176,40 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 							for (input_class_counter = 0; input_class_counter < selected_input_classes.GetCount(); input_class_counter++)
 							{
-								if (refinement_to_copy->class_refinement_results[selected_input_classes[input_class_counter]].particle_refinement_results[particles_to_take[particle_counter]].occupancy > highest_occupancy)
+								//if (refinement_to_copy->class_refinement_results[selected_input_classes[input_class_counter]].particle_refinement_results[particles_to_take[particle_counter]].occupancy > highest_occupancy)
+								if (refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(selected_input_classes[input_class_counter], template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack).occupancy > highest_occupancy)
 								{
-									highest_occupancy = refinement_to_copy->class_refinement_results[selected_input_classes[input_class_counter]].particle_refinement_results[particles_to_take[particle_counter]].occupancy;
+									//highest_occupancy = refinement_to_copy->class_refinement_results[selected_input_classes[input_class_counter]].particle_refinement_results[particles_to_take[particle_counter]].occupancy;
+									highest_occupancy = refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(selected_input_classes[input_class_counter], template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack).occupancy;
 									best_class = selected_input_classes[input_class_counter];
 								}
 							}
 
-							active_result = &refinement_to_copy->class_refinement_results[best_class].particle_refinement_results[particles_to_take[particle_counter]];
+							//active_result = &refinement_to_copy->class_refinement_results[best_class].particle_refinement_results[particles_to_take[particle_counter]];
+							active_result = refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(best_class, template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);
 
 						}
 						else // random
 						{
 							// choose a random class
 
-							active_result = &refinement_to_copy->class_refinement_results[selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * selected_input_classes.GetCount()))]].particle_refinement_results[particles_to_take[particle_counter]];
+							//active_result = &refinement_to_copy->class_refinement_results[selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * selected_input_classes.GetCount()))]].particle_refinement_results[particles_to_take[particle_counter]];
+							int current_class = selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * selected_input_classes.GetCount()))];
+							refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(current_class, template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);
 
 						}
 
 					}
 				}
 
-				MyDebugAssertTrue(active_result != NULL, "Oops, active result should never be NULL here");
-
 				if (class_setup_pageA->my_panel->CarryOverYesButton->GetValue() == false) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = particle_counter + 1;
-				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = active_result->position_in_stack;
+				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = active_result.position_in_stack;
 
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1 = active_result->defocus1;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2 = active_result->defocus2;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle = active_result->defocus_angle;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = active_result->phase_shift;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = active_result->logp;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus1 = active_result.defocus1;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus2 = active_result.defocus2;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle = active_result.defocus_angle;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = active_result.phase_shift;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = active_result.logp;
 
 				// did the user select randomise occupancies?
 
@@ -1216,14 +1222,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = 100.0;
 				}
 
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi = active_result->phi;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].theta = active_result->theta;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].psi = active_result->psi;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift = active_result->xshift;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift = active_result->yshift;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = active_result->score;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = active_result->image_is_active;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = active_result->sigma;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi = active_result.phi;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].theta = active_result.theta;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].psi = active_result.psi;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].xshift = active_result.xshift;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].yshift = active_result.yshift;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = active_result.score;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = active_result.image_is_active;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = active_result.sigma;
 			}
 
 			my_dialog->Update(particle_counter + 1);

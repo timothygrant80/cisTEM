@@ -52,6 +52,7 @@ bool MakeSizeMap::DoCalculation()
 
 	my_input_volume.ReadSlices(&input3d_file, 1, input3d_file.ReturnNumberOfSlices());
 	my_size_map.Allocate(my_input_volume.logical_x_dimension, my_input_volume.logical_y_dimension, my_input_volume.logical_z_dimension, true);
+	my_size_map.SetToConstant(0.0);
 	wxPrintf("\nBinarising...\n");
 	my_input_volume.Binarise(binarise_value);
 	//my_input_volume.QuickAndDirtyWriteSlices("/tmp/bin.mrc", 1, my_input_volume.logical_z_dimension);

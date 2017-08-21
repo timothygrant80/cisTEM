@@ -1204,15 +1204,64 @@ void RefinementManager::BeginRefinementCycle()
 {
 	start_with_reconstruction = false;
 
+	active_low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
+	active_high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
+	active_mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
+	active_signed_cc_limit = my_parent->SignedCCResolutionTextCtrl->ReturnValue();
+	active_global_mask_radius = my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
+	active_number_results_to_refine = my_parent->NumberToRefineSpinCtrl->GetValue();
+	active_angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
+	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
+	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
+	active_classification_high_res_limit = my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
+	active_should_focus_classify = my_parent->SphereClassificatonYesRadio->GetValue();
+	active_sphere_x_coord = my_parent->SphereXTextCtrl->ReturnValue();
+	active_sphere_y_coord = my_parent->SphereYTextCtrl->ReturnValue();
+	active_sphere_z_coord = my_parent->SphereZTextCtrl->ReturnValue();
+	active_should_refine_ctf = my_parent->RefineCTFYesRadio->GetValue();
+	active_defocus_search_range = my_parent->DefocusSearchRangeTextCtrl->ReturnValue();
+	active_defocus_search_step = my_parent->DefocusSearchStepTextCtrl->ReturnValue();
+	active_percent_used = my_parent->PercentUsedTextCtrl->ReturnValue();
+	active_inner_mask_radius = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
+	active_resolution_limit_rec = my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
+	active_score_weight_conversion	= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
+	active_score_threshold	= my_parent->ReconstructioScoreThreshold->ReturnValue();
+	active_adjust_scores = my_parent->AdjustScoreForDefocusYesRadio->GetValue();
+	active_crop_images	= my_parent->AutoCropYesRadioButton->GetValue();
+	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();
+	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
+	active_sphere_radius = my_parent->SphereRadiusTextCtrl->ReturnValue();
+	active_do_global_refinement = my_parent->GlobalRefinementRadio->GetValue();
+	active_also_refine_input = my_parent->AlsoRefineInputNoRadio->GetValue();
+	active_should_refine_psi = my_parent->RefinePsiCheckBox->GetValue();
+	active_should_refine_theta = my_parent->RefineThetaCheckBox->GetValue();
+	active_should_refine_phi = my_parent->RefinePhiCheckBox->GetValue();
+	active_should_refine_x_shift = my_parent->RefineXShiftCheckBox->GetValue();
+	active_should_refine_y_shift = my_parent->RefineYShiftCheckBox->GetValue();
+	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
+	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
+
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
+	else active_mask_filename = "";
+
+	active_should_low_pass_filter_mask = my_parent->LowPassMaskYesRadio->GetValue();
+	active_mask_filter_resolution = my_parent->MaskFilterResolutionText->ReturnValue();
+	active_mask_edge = my_parent->MaskEdgeTextCtrl->ReturnValue();
+	active_mask_weight = my_parent->MaskWeightTextCtrl->ReturnValue();
+
+	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
+	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
+
 	number_of_rounds_run = 0;
 	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
 
-	my_parent->input_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
-	current_refinement_package_asset_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).asset_id;
-	current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).refinement_ids[my_parent->InputParametersComboBox->GetSelection()];
+	active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
+
+	current_refinement_package_asset_id = active_refinement_package->asset_id;
+	current_input_refinement_id = active_refinement_package->refinement_ids[my_parent->InputParametersComboBox->GetSelection()];
 
 	int class_counter;
-	int number_of_classes = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes;
+	int number_of_classes = active_refinement_package->number_of_classes;
 
 	wxString blank_string = "";
 	current_reference_filenames.Clear();
@@ -1223,9 +1272,9 @@ void RefinementManager::BeginRefinementCycle()
 
 	// get the data..
 
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		if (refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter] == -1) start_with_reconstruction = true;
+		if (active_refinement_package->references_for_next_refinement[class_counter] == -1) start_with_reconstruction = true;
 	}
 
 	my_parent->Freeze();
@@ -1267,7 +1316,7 @@ void RefinementManager::BeginRefinementCycle()
 
 		for (class_counter = 0; class_counter < number_of_classes; class_counter++)
 		{
-			current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
+			current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
 
 		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
@@ -1295,7 +1344,7 @@ void RefinementManager::RunRefinementJob()
 	output_refinement->refinement_id = current_output_refinement_id;
 	output_refinement->refinement_package_asset_id = current_refinement_package_asset_id;
 
-	if (my_parent->GlobalRefinementRadio->GetValue() == true)
+	if (active_do_global_refinement == true)
 	{
 		output_refinement->name = wxString::Format("Global Search #%li", current_output_refinement_id);
 	}
@@ -1305,29 +1354,29 @@ void RefinementManager::RunRefinementJob()
 	output_refinement->datetime_of_run = wxDateTime::Now();
 	output_refinement->starting_refinement_id = current_input_refinement_id;
 
-	for (int class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
+	for (int class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		output_refinement->class_refinement_results[class_counter].low_resolution_limit = my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = my_parent->SignedCCResolutionTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].global_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].global_mask_radius = my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].number_results_to_refine = my_parent->NumberToRefineSpinCtrl->GetValue();
-		output_refinement->class_refinement_results[class_counter].angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].classification_resolution_limit = my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].should_focus_classify = my_parent->SphereClassificatonYesRadio->GetValue();
-		output_refinement->class_refinement_results[class_counter].sphere_x_coord = my_parent->SphereXTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].sphere_y_coord = my_parent->SphereYTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].sphere_z_coord = my_parent->SphereZTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].should_refine_ctf = my_parent->RefineCTFYesRadio->GetValue();
-		output_refinement->class_refinement_results[class_counter].defocus_search_range = my_parent->DefocusSearchRangeTextCtrl->ReturnValue();
-		output_refinement->class_refinement_results[class_counter].defocus_search_step = my_parent->DefocusSearchStepTextCtrl->ReturnValue();
+		output_refinement->class_refinement_results[class_counter].low_resolution_limit = active_low_resolution_limit;
+		output_refinement->class_refinement_results[class_counter].high_resolution_limit = active_high_resolution_limit;
+		output_refinement->class_refinement_results[class_counter].mask_radius = active_mask_radius;
+		output_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = active_signed_cc_limit;
+		output_refinement->class_refinement_results[class_counter].global_resolution_limit = active_high_resolution_limit;
+		output_refinement->class_refinement_results[class_counter].global_mask_radius = active_global_mask_radius;
+		output_refinement->class_refinement_results[class_counter].number_results_to_refine = active_number_results_to_refine;
+		output_refinement->class_refinement_results[class_counter].angular_search_step = active_angular_search_step;
+		output_refinement->class_refinement_results[class_counter].search_range_x = active_search_range_x;
+		output_refinement->class_refinement_results[class_counter].search_range_y = active_search_range_y;
+		output_refinement->class_refinement_results[class_counter].classification_resolution_limit = active_classification_high_res_limit;
+		output_refinement->class_refinement_results[class_counter].should_focus_classify = active_should_focus_classify;
+		output_refinement->class_refinement_results[class_counter].sphere_x_coord = active_sphere_x_coord;
+		output_refinement->class_refinement_results[class_counter].sphere_y_coord = active_sphere_y_coord;
+		output_refinement->class_refinement_results[class_counter].sphere_z_coord = active_sphere_z_coord;
+		output_refinement->class_refinement_results[class_counter].should_refine_ctf = active_should_refine_ctf;
+		output_refinement->class_refinement_results[class_counter].defocus_search_range = active_defocus_search_range;
+		output_refinement->class_refinement_results[class_counter].defocus_search_step = active_defocus_search_step;
 	}
 
-	output_refinement->percent_used = my_parent->PercentUsedTextCtrl->ReturnValue();
+	output_refinement->percent_used = active_percent_used;
 
 	output_refinement->resolution_statistics_box_size = input_refinement->resolution_statistics_box_size;
 	output_refinement->resolution_statistics_pixel_size = input_refinement->resolution_statistics_pixel_size;
@@ -1339,7 +1388,7 @@ void RefinementManager::RunRefinementJob()
 	my_parent->ShowRefinementResultsPanel->AngularPlotPanel->Clear();
 
 	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i\n", number_of_rounds_run + 1, number_of_rounds_to_run));
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1389,9 +1438,9 @@ void RefinementManager::SetupMerge3dJob()
 {
 	int class_counter;
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()], "merge3d", refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
+	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
 
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
 		wxString output_reconstruction_1			= "/dev/null";
 		wxString output_reconstruction_2			= "/dev/null";
@@ -1400,9 +1449,9 @@ void RefinementManager::SetupMerge3dJob()
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
 
 		wxString output_resolution_statistics		= "/dev/null";
-		float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-		float    inner_mask_radius					= my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
-		float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
+		float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
+		float    inner_mask_radius					= active_inner_mask_radius;
+		float    outer_mask_radius					= active_mask_radius;
 		wxString dump_file_seed_1 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
 		wxString dump_file_seed_2 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
@@ -1434,7 +1483,7 @@ void RefinementManager::RunMerge3dJob()
 	else
 	my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
 
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1495,7 +1544,7 @@ void RefinementManager::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
 
-	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0, 1.0);
+	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", active_percent_used / 100.0, 1.0);
 	else
 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par");
 
@@ -1511,29 +1560,29 @@ void RefinementManager::SetupReconstructionJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_reconstruction_processes = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].ReturnTotalJobs();
+	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
 	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
 
-	number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
+	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
 	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
 	particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()], "reconstruct3d", number_of_reconstruction_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
+	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
 		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
-			wxString input_particle_stack 		= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
+			wxString input_particle_stack 		= active_refinement_package->stack_filename;
 			wxString input_parameter_file 		= written_parameter_files[class_counter];
 			wxString output_reconstruction_1    = "/dev/null";
 			wxString output_reconstruction_2			= "/dev/null";
 			wxString output_reconstruction_filtered		= "/dev/null";
 			wxString output_resolution_statistics		= "/dev/null";
-			wxString my_symmetry						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
+			wxString my_symmetry						= active_refinement_package->symmetry;
 
 			long	 first_particle						= myroundint(current_particle_counter);
 
@@ -1543,19 +1592,19 @@ void RefinementManager::SetupReconstructionJob()
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
 
-			float 	 pixel_size							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
-			float    voltage_kV							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm			= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
-			float 	 molecular_mass_kDa					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-			float    inner_mask_radius					= my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
-			float    outer_mask_radius					= my_parent->MaskRadiusTextCtrl->ReturnValue();
-			float    resolution_limit_rec				= my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
-			float    score_weight_conversion			= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
-			float    score_threshold					= my_parent->ReconstructioScoreThreshold->ReturnValue();
-			bool	 adjust_scores						= my_parent->AdjustScoreForDefocusYesRadio->GetValue();
-			bool	 invert_contrast					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
-			bool	 crop_images						= my_parent->AutoCropYesRadioButton->GetValue();
+			float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
+			float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
+			float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
+			float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
+			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
+			float    inner_mask_radius					= active_inner_mask_radius;
+			float    outer_mask_radius					= active_mask_radius;
+			float    resolution_limit_rec				= active_resolution_limit_rec;
+			float    score_weight_conversion			= active_score_weight_conversion;
+			float    score_threshold					= active_score_threshold;
+			bool	 adjust_scores						= active_adjust_scores;
+			bool	 invert_contrast					= active_refinement_package->stack_has_white_protein;
+			bool	 crop_images						= active_crop_images;
 			bool	 dump_arrays						= true;
 			wxString dump_file_1 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
 			wxString dump_file_2 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
@@ -1564,11 +1613,11 @@ void RefinementManager::SetupReconstructionJob()
 			bool	 use_input_reconstruction;
 
 
-			if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true)
+			if (active_should_apply_blurring == true)
 			{
 				// do we have a reference..
 
-				if (refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter] == -1)
+				if (active_refinement_package->references_for_next_refinement[class_counter] == -1)
 				{
 					input_reconstruction			= "/dev/null";
 					use_input_reconstruction		= false;
@@ -1587,8 +1636,8 @@ void RefinementManager::SetupReconstructionJob()
 				use_input_reconstruction		= false;
 			}
 
-			float    resolution_limit_ref               = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-			float	 smoothing_factor					= my_parent->SmoothingFactorTextCtrl->ReturnValue();
+			float    resolution_limit_ref               = active_high_resolution_limit;
+			float	 smoothing_factor					= active_smoothing_factor;
 			float    padding							= 1.0f;
 			bool	 normalize_particles				= true;
 			bool	 exclude_blank_edges				= false;
@@ -1672,7 +1721,7 @@ void RefinementManager::RunReconstructionJob()
 
 	}
 
-	current_job_id = main_frame->job_controller.AddJob(my_parent, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()].gui_address);
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
@@ -1734,23 +1783,23 @@ void RefinementManager::SetupRefinementJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_refinement_processes = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].ReturnTotalJobs();
+	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
 
-	number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
+	number_of_particles = active_refinement_package->contained_particles.GetCount();
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
+	my_parent->my_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
 
-	for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
 		current_particle_counter = 1;
 
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
 
-			wxString input_particle_images					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
+			wxString input_particle_images					= active_refinement_package->stack_filename;
 			wxString input_parameter_file 					= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_par_%li_%i.par", current_input_refinement_id, class_counter + 1);
 			wxString input_reconstruction					= current_reference_filenames.Item(class_counter);
 			wxString input_reconstruction_statistics 		= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_stats_%li_%i.txt", current_input_refinement_id, class_counter + 1);
@@ -1762,7 +1811,7 @@ void RefinementManager::SetupRefinementJob()
 			//wxString output_parameter_file					= "/dev/null";
 			wxString ouput_shift_file						= "/dev/null";
 
-			wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
+			wxString my_symmetry							= active_refinement_package->symmetry;
 			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
@@ -1771,7 +1820,7 @@ void RefinementManager::SetupRefinementJob()
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
 
-			float	 percent_used							= my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0;
+			float	 percent_used							= active_percent_used / 100.0;
 
 #ifdef DEBUG
 			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li_%i.par", first_particle, last_particle, class_counter);
@@ -1781,37 +1830,37 @@ void RefinementManager::SetupRefinementJob()
 
 			// for now we take the paramters of the first image!!!!
 
-			float 	 pixel_size								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
-			float    voltage_kV								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm				= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-			float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
-			float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-			float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
-			float    inner_mask_radius                      = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
-			float    low_resolution_limit					= my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-			float    high_resolution_limit					= my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-			float	 signed_CC_limit						= my_parent->SignedCCResolutionTextCtrl->ReturnValue();
-			float	 classification_resolution_limit		= my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
-			float    mask_radius_search						= my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
-			float	 high_resolution_limit_search			= my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-			float	 angular_step							= my_parent->AngularStepTextCtrl->ReturnValue();
-			int		 best_parameters_to_keep				= my_parent->NumberToRefineSpinCtrl->GetValue();
-			float	 max_search_x							= my_parent->SearchRangeXTextCtrl->ReturnValue();
-			float	 max_search_y							= my_parent->SearchRangeYTextCtrl->ReturnValue();
-			float    mask_center_2d_x						= my_parent->SphereXTextCtrl->ReturnValue();
-			float 	 mask_center_2d_y						= my_parent->SphereYTextCtrl->ReturnValue();
-			float    mask_center_2d_z						= my_parent->SphereZTextCtrl->ReturnValue();
-			float    mask_radius_2d							= my_parent->SphereRadiusTextCtrl->ReturnValue();
+			float 	 pixel_size								= active_refinement_package->contained_particles[0].pixel_size;
+			float    voltage_kV								= active_refinement_package->contained_particles[0].microscope_voltage;
+			float 	 spherical_aberration_mm				= active_refinement_package->contained_particles[0].spherical_aberration;
+			float    amplitude_contrast						= active_refinement_package->contained_particles[0].amplitude_contrast;
+			float	 molecular_mass_kDa						= active_refinement_package->estimated_particle_weight_in_kda;
+			float    mask_radius							= active_mask_radius;
+			float    inner_mask_radius                      = active_inner_mask_radius;
+			float    low_resolution_limit					= active_low_resolution_limit;
+			float    high_resolution_limit					= active_high_resolution_limit;
+			float	 signed_CC_limit						= active_signed_cc_limit;
+			float	 classification_resolution_limit		= active_classification_high_res_limit;
+			float    mask_radius_search						= active_global_mask_radius;
+			float	 high_resolution_limit_search			= active_high_resolution_limit;
+			float	 angular_step							= active_angular_search_step;
+			int		 best_parameters_to_keep				= active_number_results_to_refine;
+			float	 max_search_x							= active_search_range_x;
+			float	 max_search_y							= active_search_range_y;
+			float    mask_center_2d_x						= active_sphere_x_coord;
+			float 	 mask_center_2d_y						= active_sphere_y_coord;
+			float    mask_center_2d_z						= active_sphere_z_coord;
+			float    mask_radius_2d							= active_sphere_radius;
 
-			float	 defocus_search_range					= my_parent->DefocusSearchRangeTextCtrl->ReturnValue();
-			float	 defocus_step							= my_parent->DefocusSearchStepTextCtrl->ReturnValue();
+			float	 defocus_search_range					= active_defocus_search_range;
+			float	 defocus_step							= active_defocus_search_step;
 			float	 padding								= 1.0;
 
 			bool global_search;
 			bool local_refinement;
 			bool global_local_refinemnent = false;
 
-			if (my_parent->GlobalRefinementRadio->GetValue() == true)
+			if (active_do_global_refinement == true)
 			{
 				global_search = true;
 				local_refinement = false;
@@ -1822,24 +1871,24 @@ void RefinementManager::SetupRefinementJob()
 				local_refinement = true;
 			}
 
-			bool ignore_input_parameters = my_parent->AlsoRefineInputNoRadio->GetValue();
+			bool ignore_input_parameters = active_also_refine_input;
 
 
-			bool refine_psi 								= my_parent->RefinePsiCheckBox->GetValue();
-			bool refine_theta								= my_parent->RefineThetaCheckBox->GetValue();
-			bool refine_phi									= my_parent->RefinePhiCheckBox->GetValue();
-			bool refine_x_shift								= my_parent->RefineXShiftCheckBox->GetValue();
-			bool refine_y_shift								= my_parent->RefineYShiftCheckBox->GetValue();
+			bool refine_psi 								= active_should_refine_psi;
+			bool refine_theta								= active_should_refine_theta;
+			bool refine_phi									= active_should_refine_phi;
+			bool refine_x_shift								= active_should_refine_x_shift;
+			bool refine_y_shift								= active_should_refine_y_shift;
 			bool calculate_matching_projections				= false;
-			bool apply_2d_masking							= my_parent->SphereClassificatonYesRadio->GetValue();
-			bool ctf_refinement								= my_parent->RefineCTFYesRadio->GetValue();
-			bool invert_contrast							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_has_white_protein;
+			bool apply_2d_masking							= active_should_focus_classify;
+			bool ctf_refinement								= active_should_refine_ctf;
+			bool invert_contrast							= active_refinement_package->stack_has_white_protein;
 
 			bool normalize_particles = true;
 			bool exclude_blank_edges = false;
 			bool normalize_input_3d;
 
-			if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true) normalize_input_3d = false;
+			if (active_should_apply_blurring == true) normalize_input_3d = false;
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
@@ -2119,7 +2168,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry,output_refinement->number_of_particles);
+			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,output_refinement->number_of_particles);
 			my_parent->Layout();
 		}
 		else
@@ -2305,7 +2354,7 @@ void RefinementManager::ProcessAllJobsFinished()
 		// add the volumes etc to the database..
 		main_frame->current_project.database.Begin();
 		output_refinement->reference_volume_ids.Clear();
-		refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].references_for_next_refinement.Clear();
+		active_refinement_package->references_for_next_refinement.Clear();
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
 		my_parent->WriteInfoText("");
@@ -2321,7 +2370,7 @@ void RefinementManager::ProcessAllJobsFinished()
 			}
 			else
 			{
-				if (my_parent->GlobalRefinementRadio->GetValue() == true)
+				if (active_do_global_refinement == true)
 				{
 					temp_asset.asset_name = wxString::Format("Global #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 				}
@@ -2333,7 +2382,7 @@ void RefinementManager::ProcessAllJobsFinished()
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
 
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].references_for_next_refinement.Add(temp_asset.asset_id);
+			active_refinement_package->references_for_next_refinement.Add(temp_asset.asset_id);
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
 
 
@@ -2416,8 +2465,8 @@ void RefinementManager::ProcessAllJobsFinished()
 
 			// add this refinment to the refinement package..
 
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].last_refinment_id = output_refinement->refinement_id;
-			refinement_package_asset_panel->all_refinement_packages[my_parent->RefinementPackageComboBox->GetSelection()].refinement_ids.Add(output_refinement->refinement_id);
+			active_refinement_package->last_refinment_id = output_refinement->refinement_id;
+			active_refinement_package->refinement_ids.Add(output_refinement->refinement_id);
 
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=%li WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", output_refinement->refinement_id, current_refinement_package_asset_id));
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, main_frame->current_project.database.ReturnSingleLongFromSelectCommand(wxString::Format("SELECT MAX(REFINEMENT_NUMBER) FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", current_refinement_package_asset_id)) + 1,  output_refinement->refinement_id));
@@ -2452,11 +2501,11 @@ void RefinementManager::ProcessAllJobsFinished()
 
 void RefinementManager::DoMasking()
 {
-	MyDebugAssertTrue(my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true, "DoMasking called, when masking not selected!");
+	MyDebugAssertTrue(active_should_mask == true || active_should_auto_mask == true, "DoMasking called, when masking not selected!");
 
 	wxArrayString masked_filenames;
 	wxString current_masked_filename;
-	wxString filename_of_mask = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
+	wxString filename_of_mask = active_mask_filename;
 
 	for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
 	{
@@ -2467,16 +2516,16 @@ void RefinementManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	if (my_parent->UseMaskCheckBox->GetValue() == true) // user selected masking
+	if (active_should_mask == true) // user selected masking
 	{
-		float wanted_cosine_edge_width = my_parent->MaskEdgeTextCtrl->ReturnValue();
-		float wanted_weight_outside_mask = my_parent->MaskWeightTextCtrl->ReturnValue();
+		float wanted_cosine_edge_width = active_mask_edge;
+		float wanted_weight_outside_mask = active_mask_weight;
 
 		float wanted_low_pass_filter_radius;
 
-		if (my_parent->LowPassMaskYesRadio->GetValue() == true)
+		if (active_should_low_pass_filter_mask == true)
 		{
-			wanted_low_pass_filter_radius = my_parent->MaskFilterResolutionText->ReturnValue();
+			wanted_low_pass_filter_radius = active_mask_filter_resolution;
 		}
 		else
 		{
@@ -2498,7 +2547,7 @@ void RefinementManager::DoMasking()
 	}
 	else
 	{
-		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, my_parent->input_package->estimated_particle_size_in_angstroms * 0.75);
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75);
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2523,7 +2572,7 @@ void RefinementManager::CycleRefinement()
 		output_refinement = new Refinement;
 		start_with_reconstruction = false;
 
-		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+		if (active_should_mask == true || active_should_auto_mask == true)
 		{
 			DoMasking();
 		}
@@ -2544,7 +2593,7 @@ void RefinementManager::CycleRefinement()
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
 
-			if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+			if (active_should_mask == true || active_should_auto_mask == true)
 			{
 				DoMasking();
 			}

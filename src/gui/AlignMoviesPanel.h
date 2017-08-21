@@ -13,6 +13,7 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 		bool running_job;
+		AssetGroup active_group;
 
 
 

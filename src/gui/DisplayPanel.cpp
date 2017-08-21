@@ -68,14 +68,12 @@ void DisplayPanel::Initialise(int wanted_style_flags)
 	}
 	else
 	{
-		if ((style_flags & CAN_CLOSE_TABS) == CAN_CLOSE_TABS)
-		{
-			my_notebook = new DisplayNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_CLOSE_ON_ACTIVE_TAB|wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_TAB_MOVE|wxAUI_NB_TOP|wxAUI_NB_WINDOWLIST_BUTTON );
-		}
-		else
-		{
-			my_notebook = new DisplayNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_TAB_MOVE|wxAUI_NB_TOP|wxAUI_NB_WINDOWLIST_BUTTON );
-		}
+		long flags =  wxAUI_NB_SCROLL_BUTTONS|wxAUI_NB_TOP|wxAUI_NB_WINDOWLIST_BUTTON;
+
+		if ((style_flags & CAN_CLOSE_TABS) == CAN_CLOSE_TABS) flags |=  wxAUI_NB_CLOSE_ON_ACTIVE_TAB;
+		if ((style_flags & CAN_MOVE_TABS) == CAN_MOVE_TABS) flags |=  wxAUI_NB_TAB_MOVE;
+
+		my_notebook = new DisplayNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, flags);
 
 		MainSizer->Add( my_notebook, 1, wxEXPAND | wxALL, 5 );
 	}

@@ -248,6 +248,8 @@ void MyFindParticlesPanel::FillImageComboBox()
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -359,17 +361,21 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 		RightPanel->Layout();
 
 		// Do the pick
-		PickingParametersPanel->Freeze();
-		ExpertOptionsPanel->Freeze();
+		{
+			wxBusyCursor wait;
 
-		SetAllUserParametersForParticleFinder();
+			PickingParametersPanel->Freeze();
+			ExpertOptionsPanel->Freeze();
 
-		particle_finder.DoItAll();
+			SetAllUserParametersForParticleFinder();
 
-		DrawResultsFromParticleFinder();
+			particle_finder.DoItAll();
 
-		PickingParametersPanel->Thaw();
-		ExpertOptionsPanel->Thaw();
+			DrawResultsFromParticleFinder();
+
+			PickingParametersPanel->Thaw();
+			ExpertOptionsPanel->Thaw();
+		}
 
 
 	}
@@ -394,6 +400,8 @@ void MyFindParticlesPanel::OnNewCharacteristicParticleRadius()
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -416,6 +424,8 @@ void MyFindParticlesPanel::OnNewThresholdPeakHeight()
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -443,6 +453,8 @@ void MyFindParticlesPanel::OnNewMaximumParticleRadius()
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -466,6 +478,8 @@ void MyFindParticlesPanel::OnNewHighestResolution()
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -546,6 +560,8 @@ void MyFindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& even
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -564,6 +580,8 @@ void MyFindParticlesPanel::OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& eve
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -582,6 +600,8 @@ void MyFindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -600,6 +620,8 @@ void MyFindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl( wxSpinEvent& event
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -618,6 +640,8 @@ void MyFindParticlesPanel::OnAlgorithmToFindBackgroundChoice( wxCommandEvent& ev
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -644,6 +668,8 @@ void MyFindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent
 		MinimumDistanceFromEdgesSpinCtrl->SetValue(ReturnDefaultMinimumDistanceFromEdges());
 		if (AutoPickRefreshCheckBox->GetValue())
 		{
+			wxBusyCursor wait;
+
 			PickingParametersPanel->Freeze();
 			ExpertOptionsPanel->Freeze();
 
@@ -676,6 +702,8 @@ void MyFindParticlesPanel::OnImageComboBox( wxCommandEvent & event )
 {
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
+		wxBusyCursor wait;
+
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
@@ -924,18 +952,21 @@ void MyFindParticlesPanel::OnTestOnCurrentMicrographButtonClick( wxCommandEvent 
 	LeftPanel->Layout();
 	RightPanel->Layout();
 
+	{
+		wxBusyCursor wait;
 
-	PickingParametersPanel->Freeze();
-	ExpertOptionsPanel->Freeze();
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
 
-	SetAllUserParametersForParticleFinder();
+		SetAllUserParametersForParticleFinder();
 
-	particle_finder.DoItAll();
+		particle_finder.DoItAll();
 
-	DrawResultsFromParticleFinder();
+		DrawResultsFromParticleFinder();
 
-	PickingParametersPanel->Thaw();
-	ExpertOptionsPanel->Thaw();
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
 
 }
 

@@ -9,6 +9,8 @@ PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindo
 
 	//CTF2DResultsPanel->font_size_multiplier = 1.5;
 
+	PickingResultsImagePanel->UnsetToolTip();
+
 	LowResFilterTextCtrl->SetMinMaxValue(0.1, FLT_MAX);
 
 }
@@ -17,12 +19,14 @@ PickingResultsDisplayPanel::~PickingResultsDisplayPanel()
 {
 	//Unbind(wxEVT_COMBOBOX, &ShowCTFResultsPanel::OnFitTypeRadioButton, this);
 	//Unbind(wxEVT_COMBOBOX, &ShowCTFResultsPanel::OnFitTypeRadioButton, this);
+	PickingResultsImagePanel->UnsetToolTip();
 
 }
 
 void PickingResultsDisplayPanel::Clear()
 {
 	PickingResultsImagePanel->should_show = false;
+	PickingResultsImagePanel->UnsetToolTip();
 	Refresh();
 }
 
@@ -42,6 +46,8 @@ void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfPar
 	PickingResultsImagePanel->UpdateImageInBitmap();
 
 	PickingResultsImagePanel->should_show = true;
+
+	PickingResultsImagePanel->SetToolTip(wxString::Format(wxT("%i coordinates picked"),int(array_of_assets.GetCount())));
 
 	PickingResultsImagePanel->Refresh();
 

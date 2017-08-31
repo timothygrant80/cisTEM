@@ -47,6 +47,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	float mag_distortion_angle;
 	float mag_distortion_major_scale;
 	float mag_distortion_minor_scale;
+	int first_frame;
+	int last_frame;
 
 
 
@@ -94,6 +96,9 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 {
 	 		 gain_filename = my_input->GetFilenameFromUser("Gain image filename", "The filename of the camera's gain reference image", "my_gain_reference.dm4", true);
 	 	 }
+
+	 	 first_frame = my_input->GetIntFromUser("First frame to use for sum", "You can use this to ignore the first n frames", "1", 1);
+	 	 last_frame = my_input->GetIntFromUser("Last frame to use for sum (0 for last frame)", "You can use this to ignore the last n frames", "0", 0);
  	 }
  	 else
  	 {
@@ -107,6 +112,9 @@ void UnBlurApp::DoInteractiveUserInput()
  		 should_restore_power = true;
  		 movie_is_gain_corrected = true;
  		 gain_filename = "";
+ 		 first_frame = 1;
+ 		 last_frame = 0;
+
  	 }
 
 	correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
@@ -132,8 +140,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	bool write_out_small_sum_image = false;
 	std::string small_sum_image_filename = "/dev/null";
 
-	my_current_job.Reset(23);
-	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfffbtbt",input_filename.c_str(),
+	my_current_job.Reset(25);
+	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfffbtbtii",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -159,7 +167,9 @@ void UnBlurApp::DoInteractiveUserInput()
 																 write_out_amplitude_spectrum,
 																 amplitude_spectrum_filename.c_str(),
 																 write_out_small_sum_image,
-																 small_sum_image_filename.c_str());
+																 small_sum_image_filename.c_str(),
+																 first_frame,
+																 last_frame);
 
 
 }
@@ -211,6 +221,8 @@ bool UnBlurApp::DoCalculation()
 	std::string amplitude_spectrum_filename 		= my_current_job.arguments[24].ReturnStringArgument();
 	bool 		write_out_small_sum_image 			= my_current_job.arguments[25].ReturnBoolArgument();
 	std::string small_sum_image_filename 			= my_current_job.arguments[26].ReturnStringArgument();
+	int         first_frame							= my_current_job.arguments[27].ReturnIntegerArgument();
+	int         last_frame							= my_current_job.arguments[28].ReturnIntegerArgument();
 
 
 	//my_current_job.PrintAllArguments();
@@ -240,6 +252,20 @@ bool UnBlurApp::DoCalculation()
 	}
 
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
+
+	if (last_frame == 0) last_frame = number_of_input_images;
+
+	if (first_frame > number_of_input_images)
+	{
+		SendError(wxString::Format("(%s) First frame is greater than total number of frames, using frame 1 instead.", input_filename));
+		first_frame = 1;
+	}
+
+	if (last_frame > number_of_input_images)
+	{
+		SendError(wxString::Format("(%s) Specified last frame is greater than total number of frames.. using last frame instead."));
+		last_frame = number_of_input_images;
+	}
 
 	long slice_byte_size;
 
@@ -483,7 +509,7 @@ bool UnBlurApp::DoCalculation()
 			dose_filter_sum_of_squares[pixel_counter] = 0.0;
 		}
 
-		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
 
@@ -506,7 +532,7 @@ bool UnBlurApp::DoCalculation()
 	}
 	else // just add them
 	{
-		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			sum_image.AddImage(&image_stack[image_counter]);
 		}
@@ -634,7 +660,7 @@ bool UnBlurApp::DoCalculation()
 		result_array[image_counter] = x_shifts[image_counter] * output_pixel_size;
 		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
 
-	//	wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 	}
 
 	my_result.SetResult(number_of_input_images * 2, result_array);

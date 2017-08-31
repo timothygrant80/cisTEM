@@ -173,12 +173,13 @@ public :
 	virtual VolumeAsset* ReturnVolumeAssetPointer(long wanted_asset);
 
 	virtual int ReturnAssetID(long wanted_asset) = 0;
+	virtual long ReturnParentAssetID(long wanted_asset) = 0;
 	virtual wxString ReturnAssetName(long wanted_asset) = 0;
 	virtual int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0) = 0;
 	virtual int ReturnArrayPositionFromParentID(int wanted_id) = 0;
 	virtual wxString ReturnAssetFullFilename(long wanted_asst) = 0;
 
-	long ReturnNumberOfAssets();
+	long ReturnNumberOfAssets() {return number_of_assets;}
 };
 
 
@@ -194,6 +195,7 @@ public:
 	MovieAsset * ReturnMovieAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	long ReturnParentAssetID(long wanted_asset);
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0 );
 	int ReturnArrayPositionFromParentID(int wanted_id);
@@ -219,6 +221,7 @@ public:
 	ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	long ReturnParentAssetID(long wanted_asset);
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0 );
 	int ReturnArrayPositionFromParentID(int wanted_id);
@@ -244,6 +247,7 @@ public:
 	ParticlePositionAsset * ReturnParticlePositionAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	long ReturnParentAssetID(long wanted_asset);
 	wxString ReturnAssetName(long wanted_asset) {return wxEmptyString;};
 	wxString ReturnAssetFullFilename(long wanted_asst)  {return wxEmptyString;};
 	int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0 );
@@ -270,6 +274,7 @@ public:
 	VolumeAsset * ReturnVolumeAssetPointer(long wanted_asset);
 
 	int ReturnAssetID(long wanted_asset);
+	long ReturnParentAssetID(long wanted_asset);
 	wxString ReturnAssetName(long wanted_asset);
 	int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0 );
 	int ReturnArrayPositionFromParentID(int wanted_id);

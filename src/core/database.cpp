@@ -106,6 +106,62 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	return value;
 }
 
+wxArrayLong Database::ReturnLongArrayFromSelectCommand(wxString select_command)
+{
+	wxArrayLong longs_to_return;
+
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	long current_value;
+
+	Prepare(select_command, &current_statement);
+	Step(current_statement);
+
+	return_code = Step(current_statement);
+
+	while (return_code == SQLITE_ROW)
+	{
+		current_value = sqlite3_column_int64(current_statement, 0);
+		longs_to_return.Add(current_value);
+		return_code = Step(current_statement);
+	}
+
+	Finalize(current_statement);
+
+	return longs_to_return;
+
+}
+
+wxArrayString Database::ReturnStringArrayFromSelectCommand(wxString select_command)
+{
+	wxArrayString strings_to_return;
+
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	wxString current_value;
+
+	Prepare(select_command, &current_statement);
+	Step(current_statement);
+
+	return_code = Step(current_statement);
+
+	while (return_code == SQLITE_ROW)
+	{
+		current_value = sqlite3_column_text(current_statement, 0);
+		strings_to_return.Add(current_value);
+		return_code = Step(current_statement);
+	}
+
+	Finalize(current_statement);
+
+	return strings_to_return;
+
+}
+
 long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -171,6 +227,11 @@ long Database::ReturnHighestRefinementID()
 long Database::ReturnHighestStartupID()
 {
 	return ReturnSingleLongFromSelectCommand("SELECT MAX(STARTUP_ID) FROM STARTUP_LIST");
+}
+
+long Database::ReturnHighestReconstructionID()
+{
+	return ReturnSingleLongFromSelectCommand("SELECT MAX(RECONSTRUCTION_ID) FROM RECONSTRUCTION_LIST");
 }
 
 long Database::ReturnHighestClassificationID()
@@ -603,7 +664,7 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	CheckSuccess(success);
-	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiiiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM" );
 	CheckSuccess(success);
 
 	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
@@ -628,8 +689,11 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateStartupListTable();
 	CheckSuccess(success);
+	success = CreateReconstructionListTable();
+	CheckSuccess(success);
 
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
+	CheckSuccess(success);
 	return success;
 }
 
@@ -1649,6 +1713,18 @@ void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_
 	}
 
 }
+
+void Database::AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, wxArrayLong result_volume_ids)
+{
+	InsertOrReplace("RECONSTRUCTION_LIST", "Plltrrrriiiir", "RECONSTRUCTION_ID", "REFINEMENT_PACKAGE_ID", "REFINEMENT_ID", "NAME", "INNER_MASK_RADIUS", "OUTER_MASK_RADIUS", "RESOLUTION_LIMIT", "SCORE_WEIGHT_CONVERSION", "SHOULD_ADJUST_SCORES", "SHOULD_CROP_IMAGES", "SHOULD_SAVE_HALF_MAPS", "SHOULD_LIKELIHOOD_BLUR", "SMOOTHING_FACTOR", reconstruction_id, refinement_package_asset_id, refinement_id, name.ToUTF8().data(), inner_mask_radius, outer_mask_radius, resolution_limit, score_weight_conversion, int(should_adjust_score), int(should_crop_images), int (should_save_half_maps), int (should_likelihood_blur), smoothing_factor);
+	CreateReconstructionResultTable(reconstruction_id);
+
+	for (int class_counter = 0; class_counter < result_volume_ids.GetCount(); class_counter++)
+	{
+		InsertOrReplace(wxString::Format("RECONSTRUCTION_RESULT_%li", reconstruction_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID", class_counter + 1, result_volume_ids[class_counter]);
+	}
+}
+
 
 void Database::AddRefinement(Refinement *refinement_to_add)
 {

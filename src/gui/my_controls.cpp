@@ -1634,8 +1634,8 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 		buffer_image.BackwardFFT();
 
 		average_value = buffer_image.ReturnAverageOfRealValues();
-		average_of_100_max = buffer_image.ReturnAverageOfMaxN(100, mask_radius / pixel_size);
-		threshold_value = average_value + ((average_of_100_max - average_value) * 0.05);
+		average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, mask_radius / pixel_size);
+		threshold_value = average_value + ((average_of_100_max - average_value) * 0.03);
 
 
 		buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
@@ -1662,7 +1662,6 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 
 
 		input_image.SetMinimumValue(original_average_value);
-
 		input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
 		//input_image.QuickAndDirtyWriteSlices("/tmp/masked.mrc", 1, input_image.logical_z_dimension);
 

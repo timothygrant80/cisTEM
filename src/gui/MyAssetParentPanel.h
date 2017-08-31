@@ -44,6 +44,10 @@ private:
 
 		virtual void DisplaySelectedItems();
 
+		virtual int ShowDeleteMessageDialog() = 0;
+		virtual int ShowDeleteAllMessageDialog() = 0;
+
+		virtual void CompletelyRemoveAsset(long wanted_asset) = 0;
 		virtual void RemoveAssetFromDatabase(long wanted_asset) = 0;
 		virtual void RenameAsset(long wanted_asset, wxString wanted_name) = 0;
 		virtual void RemoveFromGroupInDatabase(int wanted_group, int wanted_asset_id) = 0;
@@ -55,6 +59,7 @@ private:
 		virtual void FillAssetSpecificContentsList() = 0;
 		virtual void ImportAllFromDatabase() = 0;
 		virtual void DirtyGroups() = 0;
+		virtual void DoAfterDeletionCleanup() = 0;
 
 	public:
 
@@ -72,13 +77,9 @@ private:
 		MyAssetParentPanel( wxWindow* parent );
 		~MyAssetParentPanel();
 
-
-
 		virtual void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset) = 0;
 		virtual void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog = NULL) = 0;
 		long ReturnGroupMember(long wanted_group, long wanted_member);
-
-
 
 		void FillContentsList();
 		void AddAsset(Asset *asset_to_add);
@@ -109,25 +110,19 @@ private:
 		wxString ReturnAssetLongFilename(long wanted_asset);
 
 		long ReturnGroupSize(long wanted_group);
-
 		int ReturnGroupMemberID(long wanted_group, long wanted_member);
-
-		void CompletelyRemoveAsset(long wanted_asset);
-		void RemoveAssetFromGroups(long wanted_asset);
-
+		void RemoveAssetFromGroups(long wanted_asset, bool dirty_groups = true);
 		void FillGroupList();
-
 
 		void SetSelectedGroup(long wanted_group);
 
 		//void CheckActiveButtons();
 
-
 		int ReturnArrayPositionFromParentID(int wanted_id);
 		int ReturnArrayPositionFromAssetID(int wanted_id);
 		int ReturnAssetID(int wanted_asset);
 		wxString ReturnAssetName(long wanted_asset);
-		int ReturnParentID(int wanted_asset);
+		long ReturnParentAssetID(long wanted_asset);
 
 		//bool IsFileAnAsset(wxFileName file_to_check) = 0;
 		virtual Asset* ReturnAssetPointer(long wanted_asset) = 0;
@@ -135,9 +130,6 @@ private:
 
 
 		void Reset();
-
-
-
 
 
 		virtual void UpdateInfo() = 0;

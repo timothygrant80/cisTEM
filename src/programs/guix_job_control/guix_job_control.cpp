@@ -871,6 +871,17 @@ void JobControlApp::OnGuiSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
+	    	if (have_assigned_master == true)
+	    	{
+	    		master_socket->Notify(false);
+	    		WriteToSocket(master_socket, socket_time_to_die, SOCKET_CODE_SIZE);
+	    		 master_socket->Destroy();
+	    	}
+
+	    	// destroy the server..
+
+	    	if (socket_server != NULL) socket_server->Destroy();
+
 	        wxPrintf("JOB CONTROL : GUI Socket Disconnected!!\n");
 	        sock->Destroy();
 	        ExitMainLoop();

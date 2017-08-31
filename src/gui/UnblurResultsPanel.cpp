@@ -87,7 +87,7 @@ UnblurResultsPanel::~UnblurResultsPanel()
 void UnblurResultsPanel::Clear()
 {
 	ClearGraph();
-	ImageDisplayPanel->CloseAllTabs();
+	ImageDisplayPanel->Clear();
 	SpectraPanel->should_show = false;
 	SpectraPanel->PanelImage.Allocate(1,1,1);
 	SpectraPanel->Refresh();

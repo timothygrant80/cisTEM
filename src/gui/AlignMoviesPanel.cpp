@@ -29,6 +29,13 @@ AlignMoviesPanel( parent )
 
 	GraphPanel->SpectraPanel->use_auto_contrast = false;
 
+	wxSize input_size = InputSizer->GetMinSize();
+	input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
+	input_size.y = -1;
+	ExpertPanel->SetMinSize(input_size);
+	ExpertPanel->SetSize(input_size);
+
+
 	SetInfo();
 
 }
@@ -87,7 +94,7 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses.  This exposure weighting is described in (Grant and Grigorieff, 2015)."));
+	InfoText->WriteText(wxT("Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses.  This exposure weighting is described in (Grant and Grigorieff, 2015a).  During this step, any anisotropic magnification distortions present in the images can also be corrected (Grant and Grigorieff, 2015b), using the parameters that were entered during movie import. "));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -163,7 +170,7 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->WriteText(wxT("This B-Factor is applied to the reference sum prior to alignment.  It is intended to low-pass filter the images in order to prevent alignment to spurious noise peaks and detector artifacts."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Mask Central Cross : "));
+	InfoText->WriteText(wxT("Mask Central Cross? : "));
 	InfoText->EndBold();
 	InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centred on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
 	InfoText->Newline();
@@ -177,6 +184,28 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->EndBold();
 	InfoText->WriteText(wxT("The width of the vertical line in the central cross mask. It is only used if Mask Central Cross is selected."));
 	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Include All Frames in Sum? : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If selected, all of the input frames will be used to create the final sum.  If you wish to specify a subset (e.g. to ignore the first couple of frames), untick this option."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("First Frame to Sum : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If not summing all frames then this is the first frame that will be included in the sum."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Last Frame to Sum : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If not summing all frames then this is the last frame that will be included in the sum. Entering 0 will use the last frame of the movie."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Also Save Scaled Sum? : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("If selected a scaled version of the sum will be written to disk to use for faster display later in the project."));
+	InfoText->Newline();
+
+
 	InfoText->Newline();
 	InfoText->EndAlignment();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -219,20 +248,6 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->Newline();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. "));
-	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.06980");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.7554/eLife.06980"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-
-	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.,"));
 	InfoText->EndBold();
 	InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. "));
@@ -249,7 +264,7 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Scheres, S.H.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT(" Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. "));
+	InfoText->WriteText(wxT(" 2014. Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. "));
 	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.03665");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
@@ -258,6 +273,36 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
 	InfoText->Newline();
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. "));
+	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.06980");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.7554/eLife.06980"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2015. Automatic estimation and correction of anisotropic magnification distortion in electron microscopes. J. Struct. Biol. 192, 204-208. "));
+	InfoText->BeginURL("https://doi.org/10.1016/j.jsb.2015.08.006");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/j.jsb.2015.08.006"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+
 
 	InfoText->EndSuppressUndo();
 
@@ -325,6 +370,36 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				FillRunProfileComboBox();
 				run_profiles_are_dirty = false;
 			}
+
+			if (mask_central_cross_checkbox->GetValue() == true)
+			{
+				horizontal_mask_static_text->Enable(true);
+				vertical_mask_static_text->Enable(true);
+				horizontal_mask_spinctrl->Enable(true);
+				vertical_mask_spinctrl->Enable(true);
+			}
+			else
+			{
+				horizontal_mask_static_text->Enable(false);
+				vertical_mask_static_text->Enable(false);
+				horizontal_mask_spinctrl->Enable(false);
+				vertical_mask_spinctrl->Enable(false);
+			}
+
+			if (include_all_frames_checkbox->GetValue() == false)
+			{
+				first_frame_static_text->Enable(true);
+				last_frame_static_text->Enable(true);
+				first_frame_spin_ctrl->Enable(true);
+				last_frame_spin_ctrl->Enable(true);
+			}
+			else
+			{
+				first_frame_static_text->Enable(false);
+				last_frame_static_text->Enable(false);
+				first_frame_spin_ctrl->Enable(false);
+				last_frame_spin_ctrl->Enable(false);
+			}
 		}
 		else
 		{
@@ -382,6 +457,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int max_iterations;
 	int bfactor;
 	int number_of_processes;
+
+	int first_frame;
+	int last_frame;
 
 	int current_asset_id;
 	int number_of_previous_alignments;
@@ -458,6 +536,19 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	vertical_mask = vertical_mask_spinctrl->GetValue();
 
+	// first_frame
+
+	if (include_all_frames_checkbox->GetValue() == true)
+	{
+		first_frame = 1;
+		last_frame = 0;
+	}
+	else
+	{
+		first_frame = first_frame_spin_ctrl->GetValue();
+		last_frame = last_frame_spin_ctrl->GetValue();
+	}
+
 	// allocate space for the buffered results..
 
 	buffered_results = new JobResult[number_of_jobs];
@@ -526,7 +617,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
 
 
-		my_job_package.AddJob("ssfffbbfifbiifffbsfbfffbtbt",current_filename.c_str(), //0
+		my_job_package.AddJob("ssfffbbfifbiifffbsfbfffbtbtii",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -552,7 +643,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														write_out_amplitude_spectrum,
 														amplitude_spectrum_filename.ToStdString().c_str(),
 														write_out_small_sum_image,
-														small_sum_image_filename.ToStdString().c_str());
+														small_sum_image_filename.ToStdString().c_str(),
+														first_frame,
+														last_frame);
 
 		my_progress_dialog->Update(counter + 1);
 	}
@@ -970,7 +1063,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	// loop over all the jobs, and add them..
 
-	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 19, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK" );
+	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM" );
 
 	wxDateTime now = wxDateTime::Now();
 
@@ -979,7 +1072,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiii", alignment_id,
+		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
 				                                                                    (long int) now.GetAsDOS(),
 																					alignment_job_id,
 																					movie_asset_panel->ReturnAssetID(active_group.members[counter]),
@@ -997,7 +1090,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																					int(my_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
 																					my_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
 																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
-																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument() // vertical mask
+																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument(), // vertical mask
+																					include_all_frames_checkbox->GetValue(), // include all frames
+																					my_job_package.jobs[counter].arguments[27].ReturnIntegerArgument(), // first_frame
+																					my_job_package.jobs[counter].arguments[28].ReturnIntegerArgument() // last_frame
 																					);
 
 		alignment_id++;

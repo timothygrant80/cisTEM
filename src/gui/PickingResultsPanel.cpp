@@ -169,8 +169,8 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 	doing_panel_fill = true;
 	current_fill_command = wanted_command;
 
-	ResultDataView->Freeze();
-	ResultDataView->Clear();
+	Freeze();
+	Clear();
 
 	ResultDataView->AppendTextColumn("ID");//, wxDATAVIEW_CELL_INERT,1, wxALIGN_LEFT, 0);
 	ResultDataView->AppendTextColumn("File");//, wxDATAVIEW_CELL_INERT,1, wxALIGN_LEFT,wxDATAVIEW_COL_RESIZABLE);
@@ -362,12 +362,13 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 		}
 		ResultDataView->SizeColumns();
 
-		ResultDataView->Thaw();
 	}
 	else
 	{
 		main_frame->current_project.database.EndBatchSelect();
 	}
+
+	Thaw();
 
 
 
@@ -676,6 +677,8 @@ void MyPickingResultsPanel::Clear()
 	selected_column = -1;
 
 	ResultDataView->Clear();
+	ResultDisplayPanel->Clear();
+	//PickingResultsImagePanel->Clear();
 }
 
 void MyPickingResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )

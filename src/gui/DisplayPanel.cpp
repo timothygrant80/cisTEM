@@ -550,6 +550,7 @@ void DisplayPanel::UpdateToolbar(void)
 	    Toolbar->EnableTool(Toolbar_Auto, false);
 	    Toolbar->EnableTool(Toolbar_Global, false);
 	    Toolbar->EnableTool(Toolbar_Manual, false);
+	    Toolbar->EnableTool(Toolbar_Invert, false);
 
 	    Toolbar->EnableTool(Toolbar_High_Quality, false);
 
@@ -606,6 +607,7 @@ void DisplayPanel::UpdateToolbar(void)
 			Toolbar->EnableTool(Toolbar_Auto, true);
 			Toolbar->EnableTool(Toolbar_Global, true);
 			Toolbar->EnableTool(Toolbar_Manual, true);
+
 			if ((style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE) Toolbar->EnableTool(Toolbar_Refresh, true);
 			Toolbar->EnableTool(Toolbar_Histogram, true);
 

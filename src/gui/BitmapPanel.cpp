@@ -51,6 +51,7 @@ void BitmapPanel::Clear()
     dc.SetBackground(*wxWHITE_BRUSH);
     dc.Clear();
     Thaw();
+    Refresh();
 }
 
 void BitmapPanel::OnEraseBackground(wxEraseEvent& event)

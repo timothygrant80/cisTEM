@@ -30,5 +30,11 @@ class MyVolumeAssetPanel : public MyAssetParentPanel
 		void RenameAsset(long wanted_asset, wxString wanted_name);
 		bool IsFileAnAsset(wxFileName file_to_check);
 
+		int ShowDeleteMessageDialog();
+		int ShowDeleteAllMessageDialog();
+		void CompletelyRemoveAsset(long wanted_asset);
+		void CompletelyRemoveAssetByID(long wanted_asset_id);
+		void DoAfterDeletionCleanup();
+
 };
 

@@ -509,6 +509,12 @@ int MovieAssetList::ReturnAssetID(long wanted_asset)
 	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_id;
 }
 
+long MovieAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].parent_id;
+}
+
+
 wxString MovieAssetList::ReturnAssetName(long wanted_asset)
 {
 	return  reinterpret_cast <MovieAsset *> (assets)[wanted_asset].asset_name;
@@ -673,14 +679,24 @@ Asset * ImageAssetList::ReturnAssetPointer(long wanted_asset)
 
 ImageAsset * ImageAssetList::ReturnImageAssetPointer(long wanted_asset)
 {
-	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
-	return & reinterpret_cast <ImageAsset *> (assets)[wanted_asset];
+	if (wanted_asset >= 0 && wanted_asset < number_of_assets) return & reinterpret_cast <ImageAsset *> (assets)[wanted_asset];
+	else
+	{
+		MyDebugPrintWithDetails("Requesting an asset (%li) that doesn't exist!", wanted_asset);
+		return NULL;
+	}
 }
 
 int ImageAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].asset_id;
 }
+
+long ImageAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <ImageAsset *> (assets)[wanted_asset].parent_id;
+}
+
 
 wxString ImageAssetList::ReturnAssetName(long wanted_asset)
 {
@@ -821,6 +837,11 @@ ParticlePositionAsset * ParticlePositionAssetList::ReturnParticlePositionAssetPo
 int ParticlePositionAssetList::ReturnAssetID(long wanted_asset)
 {
 	return  reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset].asset_id;
+}
+
+long ParticlePositionAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <ParticlePositionAsset *> (assets)[wanted_asset].parent_id;
 }
 
 int ParticlePositionAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
@@ -1002,6 +1023,11 @@ Asset * VolumeAssetList::ReturnAssetPointer(long wanted_asset)
 {
 	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
 	return & reinterpret_cast <VolumeAsset *> (assets)[wanted_asset];
+}
+
+long VolumeAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <VolumeAsset *> (assets)[wanted_asset].parent_id;
 }
 
 VolumeAsset * VolumeAssetList::ReturnVolumeAssetPointer(long wanted_asset)

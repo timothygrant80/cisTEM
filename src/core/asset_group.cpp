@@ -212,12 +212,17 @@ void AssetGroupList::AddMemberToGroup(long wanted_group_number, long member_to_a
 
 long AssetGroupList::ReturnGroupMember(long wanted_group_number, long wanted_member)
 {
-	if (wanted_group_number >= number_of_groups)
+	if (wanted_group_number >= number_of_groups || wanted_group_number < 0)
 	{
-		wxPrintf("Error! Trying to add to a group that does not exist\n\n");
-		exit(-1);
+		MyDebugPrintWithDetails("Trying to request a group that doesn't exist (%li)", wanted_group_number);
+		return -1;
 	}
 
+	if (wanted_member < 0 || wanted_group_number >= groups[wanted_group_number].number_of_members)
+	{
+		MyDebugPrintWithDetails("Trying to request a member that doesn't exist (%li)", wanted_member);
+		return -1;
+	}
 
 	return groups[wanted_group_number].members[wanted_member];
 }

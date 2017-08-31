@@ -71,6 +71,9 @@ public :
 	long ReturnSingleLongFromSelectCommand(wxString select_command);
 	double ReturnSingleDoubleFromSelectCommand(wxString select_command);
 
+	wxArrayLong ReturnLongArrayFromSelectCommand(wxString select_command);
+	wxArrayString ReturnStringArrayFromSelectCommand(wxString select_command);
+
 	bool DoesTableExist(wxString table_name);
 
 	void ReturnProcessLockInfo(long &active_process_id, wxString &active_hostname);
@@ -80,6 +83,7 @@ public :
 
 	long ReturnHighestRefinementID();
 	long ReturnHighestStartupID();
+	long ReturnHighestReconstructionID();
 	long ReturnHighestClassificationID();
 	int ReturnHighestAlignmentID();
 	int ReturnHighestAlignmentJobID();
@@ -191,6 +195,9 @@ public :
 	bool CreateStartupListTable() { return CreateTable("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR");};
 	bool CreateStartupResultTable(const long startup_id) {return CreateTable(wxString::Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
 
+	bool CreateReconstructionListTable() { return CreateTable("RECONSTRUCTION_LIST", "Plltrrrriiiir", "RECONSTRUCTION_ID", "REFINEMENT_PACKAGE_ID", "REFINEMENT_ID", "NAME", "INNER_MASK_RADIUS", "OUTER_MASK_RADIUS", "RESOLUTION_LIMIT", "SCORE_WEIGHT_CONVERSION", "SHOULD_ADJUST_SCORES", "SHOULD_CROP_IMAGES", "SHOULD_SAVE_HALF_MAPS", "SHOULD_LIKELIHOOD_BLUR", "SMOOTHING_FACTOR");}
+	bool CreateReconstructionResultTable(const long reconstruction_id) {return CreateTable(wxString::Format("RECONSTRUCTION_RESULT_%li", reconstruction_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");}
+
 	void DoVacuum() {ExecuteSQL("VACUUM");}
 
 	// Convenience select functions...
@@ -236,6 +243,7 @@ public :
 	void EndAllRefinementPackagesSelect() {EndBatchSelect();};
 
 	void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used,  float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
+	void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, wxArrayLong result_volume_ids);
 
 	// Convenience CTF parameter function
 	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );

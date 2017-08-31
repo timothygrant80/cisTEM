@@ -1,6 +1,10 @@
 #include "../core/gui_core_headers.h"
 
 extern MyVolumeAssetPanel *volume_asset_panel;
+extern MyRefine2DPanel *classification_panel;
+extern AbInitio3DPanel *ab_initio_3d_panel;
+extern AutoRefine3DPanel *auto_refine_3d_panel;
+extern MyRefine3DPanel *refine_3d_panel;
 
 MyRefinementPackageAssetPanel::MyRefinementPackageAssetPanel( wxWindow* parent )
 :
@@ -62,11 +66,51 @@ void MyRefinementPackageAssetPanel::OnExportClick( wxCommandEvent& event )
 	my_wizard->Destroy();
 }
 
+void MyRefinementPackageAssetPanel::RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id)
+{
+	int refinement_package_counter;
+	int reference_id_counter;
+
+	for (refinement_package_counter = 0; refinement_package_counter < all_refinement_packages.GetCount(); refinement_package_counter++)
+	{
+		for (reference_id_counter = all_refinement_packages[refinement_package_counter].references_for_next_refinement.GetCount() -1; reference_id_counter >= 0; reference_id_counter--)
+		{
+			if (all_refinement_packages[refinement_package_counter].references_for_next_refinement[reference_id_counter] == wanted_volume_asset_id) all_refinement_packages[refinement_package_counter].references_for_next_refinement[reference_id_counter] = -1;
+		}
+	}
+
+}
+
+void MyRefinementPackageAssetPanel::RemoveImageFromAllRefinementPackages(long wanted_image_asset_id)
+{
+	int refinement_package_counter;
+	int contained_particle_counter;
+
+	for (refinement_package_counter = 0; refinement_package_counter < all_refinement_packages.GetCount(); refinement_package_counter++)
+	{
+		for (contained_particle_counter = all_refinement_packages[refinement_package_counter].contained_particles.GetCount() -1; contained_particle_counter >= 0; contained_particle_counter--)
+		{
+			if (all_refinement_packages[refinement_package_counter].contained_particles[contained_particle_counter].parent_image_id == wanted_image_asset_id) all_refinement_packages[refinement_package_counter].contained_particles[contained_particle_counter].parent_image_id  = -1;
+		}
+	}
+
+}
+
 void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 {
 	if (selected_refinement_package >= 0)
 	{
-		wxMessageDialog *check_dialog = new wxMessageDialog(this, "This will remove the refinement package from your ENTIRE project!\n\nYou probably shouldn't do this if you have used it. Are you sure you want to continue?", "Are you sure?", wxYES_NO);
+		// check if there is a running job which uses refinement packages, if there is refuse to delete the refinement package.
+
+		if (classification_panel->running_job == true || ab_initio_3d_panel->running_job == true || auto_refine_3d_panel->running_job == true || refine_3d_panel->running_job == true)
+		{
+
+			wxMessageDialog error_dialog(this, "Sorry! - You cannot delete refinement packages when any of the following are running (jobs are not marked finished until you press the finish button) :-\n\n2D Classification\nAb-Inito 3D\nAuto Refine\nManual Refine\n\nThis is to stop the database getting messed up. Sorry again!", "There are jobs running", wxICON_ERROR);
+			error_dialog.ShowModal();
+			return;
+		}
+
+		wxMessageDialog *check_dialog = new wxMessageDialog(this, "This will remove the refinement package from your entire project, including all classifications / refinements that have been run on it.\n\nAlso note that this is just a database deletion, the particle stacks are not deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO);
 
 		if (check_dialog->ShowModal() ==  wxID_YES)
 		{

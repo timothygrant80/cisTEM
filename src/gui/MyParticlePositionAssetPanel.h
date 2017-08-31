@@ -32,6 +32,11 @@ class MyParticlePositionAssetPanel : public MyAssetParentPanel
 		void RenameAsset(long wanted_asset, wxString wanted_name) {};
 		wxString ReturnItemText(long item, long column) const;
 
+		int ShowDeleteMessageDialog();
+		int ShowDeleteAllMessageDialog();
+		void CompletelyRemoveAsset(long wanted_asset);
+		void DoAfterDeletionCleanup();
+
 		ParticlePositionAsset* ReturnAssetPointer(long wanted_asset);
 
 };

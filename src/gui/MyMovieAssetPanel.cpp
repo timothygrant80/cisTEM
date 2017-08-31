@@ -1,6 +1,9 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyImageAssetPanel *image_asset_panel;
+extern MyMovieAlignResultsPanel *movie_results_panel;
+
 MyMovieAssetPanel::MyMovieAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
@@ -61,6 +64,82 @@ void MyMovieAssetPanel::UpdateInfo()
 
 }
 
+int MyMovieAssetPanel::ShowDeleteMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the selected movies from your ENTIRE project! Including all alignments where they are an input.\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+int MyMovieAssetPanel::ShowDeleteAllMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove ALL movies from your ENTIRE project! Including all alignments where they are an input.\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+void MyMovieAssetPanel::CompletelyRemoveAsset(long wanted_asset)
+{
+	long counter;
+	long found_position;
+	long wanted_asset_id = all_assets_list->ReturnAssetID(wanted_asset);
+
+	CompletelyRemoveAssetByID(wanted_asset_id);
+}
+
+void MyMovieAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
+{
+	long array_location;
+	long counter;
+
+	wxArrayLong alignment_ids;
+	wxArrayString tables;
+
+	array_location = ReturnArrayPositionFromAssetID(wanted_asset_id);
+
+	// remove all move alignments where it is the result..
+
+	alignment_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(wxString::Format("SELECT ALIGNMENT_ID FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%li", wanted_asset_id));
+
+	for (counter = 0; counter < alignment_ids.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE MOVIE_ALIGNMENT_PARAMETERS_%li;", alignment_ids[counter]));
+	}
+
+	// and from the main list..
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%li", wanted_asset_id));
+
+	// remove it from the asset list..
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM MOVIE_ASSETS WHERE MOVIE_ASSET_ID=%li", wanted_asset_id));
+
+	// we need to change all image assets that have this asset as a parent, to have a parent of -1
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE IMAGE_ASSETS SET PARENT_MOVIE_ID=-1 WHERE PARENT_MOVIE_ID=%li", wanted_asset_id));
+
+	// do this in memory also..
+
+	for (counter = image_asset_panel->ReturnNumberOfAssets() - 1; counter >= 0; counter--)
+	{
+		if (image_asset_panel->ReturnAssetPointer(counter)->parent_id == wanted_asset_id)
+		{
+			image_asset_panel->ReturnAssetPointer(counter)->parent_id = -1;
+		}
+	}
+
+	RemoveAssetFromGroups(array_location, false);
+	all_assets_list->RemoveAsset(array_location);
+
+
+}
+
+void MyMovieAssetPanel::DoAfterDeletionCleanup()
+{
+	main_frame->DirtyMovieGroups();
+	is_dirty = true;
+	image_asset_panel->is_dirty = true;
+	movie_results_panel->Clear();
+}
+
 bool MyMovieAssetPanel::IsFileAnAsset(wxFileName file_to_check)
 {
 	if (reinterpret_cast <MovieAssetList*>  (all_assets_list)->FindFile(file_to_check) == -1) return false;
@@ -112,17 +191,16 @@ void MyMovieAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, w
 
 void  MyMovieAssetPanel::RemoveAllFromDatabase()
 {
-	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
+	long number_of_assets = ReturnNumberOfAssets();
+	OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Deleting", "Deleting Assets...", number_of_assets, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
+	for (long counter = number_of_assets - 1; counter >= 0; counter--)
 	{
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE MOVIE_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
+		CompletelyRemoveAsset(counter);
+		my_dialog->Update(number_of_assets - counter);
 	}
 
-	main_frame->current_project.database.ExecuteSQL("DROP TABLE MOVIE_GROUP_LIST");
-	main_frame->current_project.database.CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-
-	main_frame->current_project.database.ExecuteSQL("DROP TABLE MOVIE_ASSETS");
-	main_frame->current_project.database.CreateMovieAssetTable();
-
+	my_dialog->Destroy();
 
 }
 

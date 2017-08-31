@@ -362,9 +362,14 @@ void Refine2DResultsPanel::FillSelectionManagerListCtrl(bool select_latest)
 
 void Refine2DResultsPanel::OnDeselected( wxListEvent& event )
 {
+	// if we are editing, this is called before endedit.. which leads to a crash as endedit wants to know the selected one.
+	// so just end enditing here if we are editing..
+
+	if ( SelectionManagerListCtrl->GetEditControl() != NULL)
 	SelectionManagerListCtrl->current_selection = -1;
 	SelectionManagerListCtrl->current_selection_id = -10;
 	ClassumDisplayPanel->ClearSelection(true);
+
 }
 
 void Refine2DResultsPanel::OnSelected( wxListEvent& event )
@@ -385,20 +390,32 @@ void Refine2DResultsPanel::OnActivated( wxListEvent& event )
 	SelectionManagerListCtrl->EditLabel(event.GetIndex());
 }
 
+void Refine2DResultsPanel::OnBeginLabelEdit( wxListEvent& event )
+{
+	SelectionManagerListCtrl->position_being_edited  = SelectionManagerListCtrl->ReturnCurrentSelection();
+	//wxPrintf("BeginEdit, position_being_edited = %li\n\n", SelectionManagerListCtrl->position_being_edited);
+}
+
+
 void Refine2DResultsPanel::OnEndLabelEdit( wxListEvent& event )
 {
+
 	if (event.GetLabel() == wxEmptyString)
 	{
 		event.Veto();
+		SelectionManagerListCtrl->position_being_edited = -1;
 	}
 	else
 	{
-		ClassificationSelection *current_selection = &refinement_package_asset_panel->all_classification_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelectionOriginalArrayPosition());
-		current_selection->name = event.GetLabel();
-		SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection()).name = event.GetLabel();
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET SELECTION_NAME=\"%s\" WHERE SELECTION_ID=%li", current_selection->name, current_selection->selection_id));
-		SelectionManagerListCtrl->RefreshItem(SelectionManagerListCtrl->ReturnCurrentSelection());
-
+		if (SelectionManagerListCtrl->position_being_edited >= 0)
+		{
+			ClassificationSelection *current_selection = &refinement_package_asset_panel->all_classification_selections.Item(SelectionManagerListCtrl->original_classum_selection_array_positions.Item(SelectionManagerListCtrl->position_being_edited));
+			current_selection->name = event.GetLabel();
+			SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->position_being_edited).name = event.GetLabel();
+			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET SELECTION_NAME=\"%s\" WHERE SELECTION_ID=%li", current_selection->name, current_selection->selection_id));
+			SelectionManagerListCtrl->RefreshItem(SelectionManagerListCtrl->position_being_edited);
+			SelectionManagerListCtrl->position_being_edited = -1;
+		}
 	}
 
 }

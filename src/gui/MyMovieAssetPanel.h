@@ -44,5 +44,11 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		MovieAsset* ReturnAssetPointer(long wanted_asset);
 		wxString ReturnItemText(long item, long column) const;
 
+		int ShowDeleteMessageDialog();
+		int ShowDeleteAllMessageDialog();
+		void CompletelyRemoveAsset(long wanted_asset);
+		void CompletelyRemoveAssetByID(long wanted_asset_id);
+		void DoAfterDeletionCleanup();
+
 };
 

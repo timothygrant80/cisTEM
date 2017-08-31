@@ -91,6 +91,7 @@
 #include "../gui/MyVolumeChooserDialog.h"
 #include "../gui/MyRefine2DPanel.h"
 #include "../gui/MyRefine3DPanel.h"
+#include "../gui/Generate3DPanel.h"
 #include "../gui/PlotFSCPanel.h"
 #include "../gui/MyFSCPanel.h"
 #include "../gui/MyRefinementResultsPanel.h"

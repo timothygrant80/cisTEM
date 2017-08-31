@@ -238,6 +238,9 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	int should_mask_central_cross;
 	int horizontal_mask;
 	int vertical_mask;
+	int include_all_frames;
+	int first_frame;
+	int last_frame;
 
 	// get the alignment_id and all the other details..;
 
@@ -249,7 +252,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 		abort();
 	}
 
-	main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiii", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask);
+	main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiii", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame);
 	main_frame->current_project.database.EndBatchSelect();
 
 	RightPanel->Freeze();
@@ -282,6 +285,12 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 
 	HorizontalMaskStaticText->SetLabel(wxString::Format("%i px", horizontal_mask));
 	VerticalMaskStaticText->SetLabel(wxString::Format("%i px", vertical_mask));
+
+	if (include_all_frames == 1) IncludeAllFramesStaticText->SetLabel("Yes");
+	else IncludeAllFramesStaticText->SetLabel("No");
+
+	FirstFrameStaticText->SetLabel(wxString::Format("%i", first_frame));
+	LastFrameStaticText->SetLabel(wxString::Format("%i", last_frame));
 
 	// now get the result, and draw it as we go..
 

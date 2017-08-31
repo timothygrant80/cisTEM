@@ -14,7 +14,7 @@ AssetParentPanel( parent )
 	selected_content = -1;
 	highlighted_item = -1;
 
-	current_asset_number = 0;
+	current_asset_number = 1;
 	current_group_number = 0;
 
 	should_veto_motion = true;
@@ -32,22 +32,7 @@ MyAssetParentPanel::~MyAssetParentPanel()
 }
 
 
-
-
-void MyAssetParentPanel::CompletelyRemoveAsset(long wanted_asset)
-{
-	long counter;
-	long found_position;
-
-	// first off remove it from the asset list..
-
-	RemoveAssetFromDatabase(wanted_asset);
-
-	RemoveAssetFromGroups(wanted_asset);
-}
-
-
-void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset)
+void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset, bool dirty_groups)
 {
 	long counter;
 	long found_position;
@@ -76,7 +61,7 @@ void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset)
 
 	all_groups_list->ShiftMembersDueToAssetRemoval(wanted_asset);
 
-	DirtyGroups();
+	if (dirty_groups == true) DirtyGroups();
 }
 
 void MyAssetParentPanel::OnDisplayButtonClick( wxCommandEvent& event )
@@ -131,13 +116,15 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 
 	if (number_selected > 0)
 	{
-		if (selected_group == 0)
+		if (selected_group == 0) // this is from all assets..
 		{
-			wxMessageDialog *check_dialog = new wxMessageDialog(this, "This will remove the selected assets from your ENTIRE project! Are you sure you want to continue?", "Are you sure?", wxYES_NO);
-
-			if (check_dialog->ShowModal() ==  wxID_YES)
+			if (ShowDeleteMessageDialog() ==  wxID_YES)
 			{
 				item = -1;
+
+				OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Deleting", "Deleting Assets...", number_selected, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
+				main_frame->current_project.database.Begin(); // start a transaction
 
 				for ( ;; )
 				{
@@ -159,9 +146,14 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 					CompletelyRemoveAsset(adjusted_item);
 					already_removed[number_removed] = item;
 					number_removed++;
+					my_dialog->Update(number_removed);
 
 
 				}
+
+				main_frame->current_project.database.Commit(); // commit transaction
+				DoAfterDeletionCleanup();
+				my_dialog->Destroy();
 			}
 		}
 		else
@@ -330,13 +322,15 @@ void MyAssetParentPanel::RemoveAllAssetsClick( wxCommandEvent& event )
 	{
 		if (all_assets_list->number_of_assets > 0)
 		{
-			wxMessageDialog *check_dialog = new wxMessageDialog(this, "This will remove ALL assets and groups from your ENTIRE project! Are you sure you want to continue?", "Are you really really sure?", wxYES_NO);
-
-			if (check_dialog->ShowModal() ==  wxID_YES)
+			if (ShowDeleteAllMessageDialog() ==  wxID_YES)
 			{
 				// delete from database..
 
+				main_frame->current_project.database.Begin();
 				RemoveAllFromDatabase();
+				main_frame->current_project.database.Commit();
+
+				DoAfterDeletionCleanup();
 
 				// delete from gui..
 
@@ -890,6 +884,11 @@ int MyAssetParentPanel::ReturnArrayPositionFromAssetID(int wanted_id)
 	return all_assets_list->ReturnArrayPositionFromID(wanted_id);
 }
 
+long MyAssetParentPanel::ReturnParentAssetID(long wanted_asset)
+{
+	return all_assets_list->ReturnParentAssetID(wanted_asset);
+}
+
 int MyAssetParentPanel::ReturnAssetID(int wanted_asset)
 {
 	return all_assets_list->ReturnAssetID(wanted_asset);
@@ -949,10 +948,11 @@ void MyAssetParentPanel::Reset()
 
 	SetSelectedGroup(0);
 	selected_content = -1;
+	current_asset_number = 1;
 
 	FillGroupList();
 	FillContentsList();
-	main_frame->RecalculateAssetBrowser();
+	//main_frame->RecalculateAssetBrowser();
 	UpdateInfo();
 	DirtyGroups();
 

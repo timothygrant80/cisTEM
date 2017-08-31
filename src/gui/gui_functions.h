@@ -36,4 +36,5 @@ void global_delete_refine2d_scratch();
 void global_delete_refine3d_scratch();
 void global_delete_startup_scratch();
 void global_delete_autorefine3d_scratch();
+void global_delete_generate3d_scratch();
 

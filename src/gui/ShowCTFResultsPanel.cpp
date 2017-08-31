@@ -47,6 +47,17 @@ void ShowCTFResultsPanel::Clear()
 {
 	CTF2DResultsPanel->should_show = false;
 	CTFPlotPanel->Clear();
+
+	Defocus1Text->SetLabel("");
+	Defocus2Text->SetLabel("");
+	AngleText->SetLabel("");
+
+	PhaseShiftText->SetLabel("");
+	ScoreText->SetLabel("");
+	FitResText->SetLabel("");
+	AliasResText->SetLabel("");
+	ImageFileText->SetLabel("");
+
 	Refresh();
 }
 

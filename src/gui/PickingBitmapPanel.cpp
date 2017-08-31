@@ -492,6 +492,8 @@ void PickingBitmapPanel::SetupPanelBitmap()
 
 void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
 {
+	if (should_show == true)
+	{
 	int x_pos, y_pos;
 	event.GetPosition(&x_pos,&y_pos);
 	if (event.ControlDown())
@@ -505,7 +507,7 @@ void PickingBitmapPanel::OnLeftDown(wxMouseEvent & event)
 	{
 		doing_shift_delete = true;
 	}
-
+	}
 	event.Skip();
 }
 
@@ -525,6 +527,8 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 {
 	extern MyPickingResultsPanel *picking_results_panel;
 
+	if (should_show == true)
+	{
 	if (doing_shift_delete == true)
 	{
 		doing_shift_delete = false;
@@ -565,6 +569,7 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 	}
 	Refresh();
 	Update();
+	}
 	event.Skip();
 }
 

@@ -307,6 +307,11 @@ void global_delete_startup_scratch()
 void global_delete_autorefine3d_scratch()
 {
 	main_frame->ClearAutoRefine3DScratch();
+}
+
+void global_delete_generate3d_scratch()
+{
+	main_frame->ClearGenerate3DScratch();
 
 }
 

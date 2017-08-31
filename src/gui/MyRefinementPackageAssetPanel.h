@@ -45,6 +45,9 @@ class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
 		void OnVolumeListItemActivated( wxListEvent& event );
 		void ReDrawActiveReferences();
 
+		void RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id);
+		void RemoveImageFromAllRefinementPackages(long wanted_image_asset_id);
+
 	//	Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
 		ShortRefinementInfo* ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id);
 		void ImportAllRefinementInfosFromDatabase();

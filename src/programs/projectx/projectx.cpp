@@ -22,6 +22,7 @@ MyRefine2DPanel *classification_panel;
 AbInitio3DPanel *ab_initio_3d_panel;
 AutoRefine3DPanel *auto_refine_3d_panel;
 MyRefine3DPanel *refine_3d_panel;
+Generate3DPanel *generate_3d_panel;
 
 MyOverviewPanel *overview_panel;
 ActionsPanel *actions_panel;
@@ -78,6 +79,7 @@ bool MyGuiApp::OnInit()
 	#include "../../gui/icons/abinitio_icon.cpp"
 	#include "../../gui/icons/growth.cpp"
 	#include "../../gui/icons/manual_refine_icon.cpp"
+	#include "../../gui/icons/generate3d_icon.cpp"
 
 	#include "../../gui/icons/run_profiles_icon.cpp"
 
@@ -122,6 +124,7 @@ bool MyGuiApp::OnInit()
 	ab_initio_3d_panel = new AbInitio3DPanel(actions_panel->ActionsBook);
 	auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
 	refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
+	generate_3d_panel = new Generate3DPanel(actions_panel->ActionsBook);
 
 	movie_results_panel = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
 	ctf_results_panel = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -159,6 +162,7 @@ bool MyGuiApp::OnInit()
 	wxBitmap ab_initio_3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(abinitio_icon);
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 	wxBitmap manual_refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(manual_refine_icon);
+	wxBitmap generate3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(generate3d_icon);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
@@ -180,6 +184,7 @@ bool MyGuiApp::OnInit()
 	ActionsBookIconImages->Add(ab_initio_3d_icon_bmp);
 	ActionsBookIconImages->Add(refine3d_icon_bmp);
 	ActionsBookIconImages->Add(manual_refine3d_icon_bmp);
+	ActionsBookIconImages->Add(generate3d_icon_bmp);
 
 	AssetsBookIconImages->Add(movie_icon_bmp);
 	AssetsBookIconImages->Add(image_icon_bmp);
@@ -221,6 +226,7 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(ab_initio_3d_panel,"Ab-Initio 3D",false, 4);
 	actions_panel->ActionsBook->AddPage(auto_refine_3d_panel,"Auto Refine",false, 5);
 	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Manual Refine",false, 6);
+	actions_panel->ActionsBook->AddPage(generate_3d_panel,"Generate 3D",false, 7);
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

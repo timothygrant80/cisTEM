@@ -284,10 +284,10 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		}
 */
 
-		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.33f);
-		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.33f);
+		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
+		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
 
-		float    mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms;
+		float    mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
 
 		GlobalMaskRadiusTextCtrl->ChangeValueFloat(mask_radius);
 		InnerMaskRadiusTextCtrl->ChangeValueFloat(0.0f);
@@ -982,9 +982,16 @@ void AbInitioManager::BeginRefinementCycle()
 			if (number_of_classes == 1) input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
 			else input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.00 / input_refinement->number_of_classes;
 
+			/* for a scheme that does not put more views at the top - use :-
+			*/
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
+
+
+			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
+			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
@@ -2145,7 +2152,7 @@ void AbInitioManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75);
+	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_global_mask_radius);
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{

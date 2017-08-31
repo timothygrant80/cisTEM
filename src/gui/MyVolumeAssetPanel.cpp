@@ -1,6 +1,9 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+extern MyRefine3DPanel *refine_3d_panel;
+
 //extern MyImageAssetPanel *image_asset_panel;
 
 MyVolumeAssetPanel::MyVolumeAssetPanel( wxWindow* parent )
@@ -73,6 +76,83 @@ VolumeAsset* MyVolumeAssetPanel::ReturnAssetPointer(long wanted_asset)
 	return all_assets_list->ReturnVolumeAssetPointer(wanted_asset);
 }
 
+int MyVolumeAssetPanel::ShowDeleteMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the selected volume(s) from your ENTIRE project!\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+
+}
+
+int MyVolumeAssetPanel::ShowDeleteAllMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the ALL volumes from your ENTIRE project!\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+void MyVolumeAssetPanel::CompletelyRemoveAsset(long wanted_asset)
+{
+	long wanted_asset_id = all_assets_list->ReturnAssetID(wanted_asset);
+	if (wanted_asset >= 0 && wanted_asset_id < all_assets_list->ReturnNumberOfAssets())	CompletelyRemoveAssetByID(wanted_asset_id);
+}
+
+void MyVolumeAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
+{
+	long counter;
+	long asset_array_position;
+
+	wxArrayString tables;
+
+	// set an reference to this 3D in startups to 0 all startup jobs that produced this 3D..
+
+	tables = main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE name like 'STARTUP_RESULT_%'");
+
+	// go through all the tables and replace this..
+
+	for (counter = 0; counter < tables.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET VOLUME_ASSET_ID=0 WHERE VOLUME_ASSET_ID=%li", tables[counter], wanted_asset_id));
+	}
+
+	// refinement_package_current_references
+
+	tables = main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE name like 'REFINEMENT_PACKAGE_CURRENT_REFERENCES_%'");
+
+	for (counter = 0; counter < tables.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET VOLUME_ASSET_ID=-1 WHERE VOLUME_ASSET_ID=%li", tables[counter], wanted_asset_id));
+	}
+
+	// refinement details
+
+	tables = main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE name like 'REFINEMENT_DETAILS_%'");
+
+	for (counter = 0; counter < tables.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET REFERENCE_VOLUME_ASSET_ID=0 WHERE REFERENCE_VOLUME_ASSET_ID=%li", tables[counter], wanted_asset_id));
+	}
+
+	// delete from in memory refinement package assets
+
+	refinement_package_asset_panel->RemoveVolumeFromAllRefinementPackages(wanted_asset_id);
+
+
+	// now delete from volume_assets
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=%li", wanted_asset_id).ToUTF8().data());
+
+	asset_array_position = all_assets_list->ReturnArrayPositionFromID(wanted_asset_id);
+	all_assets_list->RemoveAsset(asset_array_position);
+	RemoveAssetFromGroups(asset_array_position);
+}
+
+void MyVolumeAssetPanel::DoAfterDeletionCleanup()
+{
+	main_frame->DirtyVolumes();
+	refinement_package_asset_panel->ReDrawActiveReferences();
+	refine_3d_panel->ReDrawActiveReferences();
+}
+
+
 void MyVolumeAssetPanel::RemoveAssetFromDatabase(long wanted_asset)
 {
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=%i", all_assets_list->ReturnAssetID(wanted_asset)).ToUTF8().data());
@@ -99,6 +179,7 @@ void MyVolumeAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, 
 
 void  MyVolumeAssetPanel::RemoveAllFromDatabase()
 {
+	/*
 	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
 	{
 		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE VOLUME_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
@@ -109,6 +190,12 @@ void  MyVolumeAssetPanel::RemoveAllFromDatabase()
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE VOLUME_ASSETS");
 	main_frame->current_project.database.CreateVolumeAssetTable();
+	*/
+
+	for (long counter = ReturnNumberOfAssets() -1; counter >= 0; counter--)
+	{
+		CompletelyRemoveAsset(counter);
+	}
 
 
 

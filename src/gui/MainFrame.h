@@ -66,12 +66,14 @@ class MyMainFrame : public MainFrame
 		void ClearRefine2DScratch();
 		void ClearRefine3DScratch();
 		void ClearAutoRefine3DScratch();
+		void ClearGenerate3DScratch();
 
 		wxString ReturnScratchDirectory();
 		wxString ReturnStartupScratchDirectory();
 		wxString ReturnRefine2DScratchDirectory();
 		wxString ReturnRefine3DScratchDirectory();
 		wxString ReturnAutoRefine3DScratchDirectory();
+		wxString ReturnGenerate3DScratchDirectory();
 
 		bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
 

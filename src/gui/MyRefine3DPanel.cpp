@@ -490,7 +490,7 @@ void MyRefine3DPanel::SetDefaults()
 
 		AdjustScoreForDefocusYesRadio->SetValue(true);
 		AdjustScoreForDefocusNoRadio->SetValue(false);
-		ReconstructioScoreThreshold->SetValue("0.00");
+		ReconstructionScoreThreshold->SetValue("0.00");
 		ReconstructionResolutionLimitTextCtrl->SetValue("0.00");
 		AutoCropYesRadioButton->SetValue(false);
 		AutoCropNoRadioButton->SetValue(true);
@@ -1225,7 +1225,7 @@ void RefinementManager::BeginRefinementCycle()
 	active_inner_mask_radius = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
 	active_resolution_limit_rec = my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
 	active_score_weight_conversion	= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
-	active_score_threshold	= my_parent->ReconstructioScoreThreshold->ReturnValue();
+	active_score_threshold	= my_parent->ReconstructionScoreThreshold->ReturnValue();
 	active_adjust_scores = my_parent->AdjustScoreForDefocusYesRadio->GetValue();
 	active_crop_images	= my_parent->AutoCropYesRadioButton->GetValue();
 	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();

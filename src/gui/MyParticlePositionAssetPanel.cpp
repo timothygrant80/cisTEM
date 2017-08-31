@@ -76,6 +76,37 @@ ParticlePositionAsset* MyParticlePositionAssetPanel::ReturnAssetPointer(long wan
 	return all_assets_list->ReturnParticlePositionAssetPointer(wanted_asset);
 }
 
+
+int MyParticlePositionAssetPanel::ShowDeleteMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the selected particle positions from your ENTIRE project!  It will also remove them from the relevant particle picking results.\n\nIn general, if the positions were created from within cisTEM (i.e. they weren't imported) you probably don't want to do this, you probably want to remove them using the particle picking results panel. Any changes you make here\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+}
+
+
+int MyParticlePositionAssetPanel::ShowDeleteAllMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the selected particle positions from your ENTIRE project!  It will also remove them from the relevant particle picking results.\n\nIn general, if the positions were created from within cisTEM (i.e. they weren't imported) you probably don't want to do this, you probably want to remove them using the particle picking results panel.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+void MyParticlePositionAssetPanel::CompletelyRemoveAsset(long wanted_asset)
+{
+	long counter;
+	long found_position;
+
+	// first off remove it from the asset list..
+
+	RemoveAssetFromDatabase(wanted_asset);
+	RemoveAssetFromGroups(wanted_asset);
+}
+
+void MyParticlePositionAssetPanel::DoAfterDeletionCleanup()
+{
+
+}
+
+
+
 void MyParticlePositionAssetPanel::RemoveAssetFromDatabase(long wanted_asset)
 {
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM PARTICLE_POSITION_ASSETS WHERE PARTICLE_POSITION_ASSET_ID=%i", all_assets_list->ReturnAssetID(wanted_asset)).ToUTF8().data());

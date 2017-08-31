@@ -275,6 +275,8 @@ class ClassificationSelectionListCtrl: public wxListCtrl {
 	long current_selection_id;
 	long selection_id_upon_clear;
 
+	long position_being_edited;
+
 	ArrayofClassificationSelections all_valid_selections;
 	wxArrayInt original_classum_selection_array_positions;
 

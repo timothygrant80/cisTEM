@@ -15,7 +15,7 @@ RefinementResultsPanel( parent )
 	FSCPlotPanel->Clear();
 	currently_displayed_refinement = NULL;
 
-	OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+	OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | NO_NOTEBOOK);
 
 //	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }

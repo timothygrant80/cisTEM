@@ -35,6 +35,7 @@ public:
 	void OnSelected( wxListEvent& event );
 	void OnActivated( wxListEvent& event );
 	void OnEndLabelEdit( wxListEvent& event );
+	void OnBeginLabelEdit( wxListEvent& event );
 
 	void Clear();
 	void ClearJobInfo();

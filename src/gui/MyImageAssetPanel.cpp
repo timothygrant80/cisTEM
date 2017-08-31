@@ -1,6 +1,12 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+extern MyParticlePositionAssetPanel *particle_position_asset_panel;
+extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+extern MyFindCTFResultsPanel *ctf_results_panel;
+extern MyPickingResultsPanel *picking_results_panel;
+extern MyMovieAlignResultsPanel *movie_results_panel;
+
 MyImageAssetPanel::MyImageAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
@@ -84,6 +90,115 @@ bool MyImageAssetPanel::IsFileAnAsset(wxFileName file_to_check)
 	else return true;
 }
 
+int MyImageAssetPanel::ShowDeleteMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove the selected image(s) from your ENTIRE project! Including all movie alignments, CTF estimations and particle picks associated with the image.\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+int MyImageAssetPanel::ShowDeleteAllMessageDialog()
+{
+	wxMessageDialog check_dialog(this, "This will remove ALL images from your ENTIRE project! Including all movie alignments, CTF estimations and particle picks associated with the image.\n\nNote that this is only a database deletion, no data files are deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
+}
+
+void MyImageAssetPanel::CompletelyRemoveAsset(long wanted_asset)
+{
+	long counter;
+	long found_position;
+	long wanted_asset_id = all_assets_list->ReturnAssetID(wanted_asset);
+
+	CompletelyRemoveAssetByID(wanted_asset_id);
+
+
+}
+
+void MyImageAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
+{
+	long array_location;
+	long parent_movie_id;
+	long counter;
+
+	wxArrayLong alignment_ids;
+	wxArrayString tables;
+
+	array_location = ReturnArrayPositionFromAssetID(wanted_asset_id);
+
+	// remove all move alignments where it is the result..
+
+	parent_movie_id = ReturnParentAssetID(array_location);
+	alignment_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(wxString::Format("SELECT ALIGNMENT_ID FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%li", parent_movie_id));
+
+	for (counter = 0; counter < alignment_ids.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE MOVIE_ALIGNMENT_PARAMETERS_%li;", alignment_ids[counter]));
+	}
+
+	// and from the main list..
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%li", parent_movie_id));
+
+	// remove all CTF estimations where it is an input..
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%li", wanted_asset_id));
+
+	// remove all picking jobs and results..
+
+	tables = main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE name like 'PARTICLE_PICKING_RESULTS_%';");
+
+	for (counter = 0; counter < tables.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM %s WHERE PARENT_IMAGE_ASSET_ID=%li;",  tables[counter], wanted_asset_id));
+	}
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM PARTICLE_PICKING_LIST WHERE PARENT_IMAGE_ASSET_ID=%li;", wanted_asset_id));
+
+	// remove relevant particle location assets..
+
+	for (counter = particle_position_asset_panel->ReturnNumberOfAssets() - 1; counter >= 0; counter--)
+	{
+		if (particle_position_asset_panel->ReturnParentAssetID(counter) == wanted_asset_id)
+		{
+			particle_position_asset_panel->CompletelyRemoveAsset(counter);
+		}
+	}
+
+	// sigh, this is really dull
+
+	// we need to go through ALL the refinement package assets and set anything with the relevant image_asset_id to -1 so manipulations will be done on the stack, not recut out.
+
+	tables = main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE name like 'REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%';");
+
+	for (counter = 0; counter < tables.GetCount(); counter++)
+	{
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET PARENT_IMAGE_ASSET_ID=-1 WHERE PARENT_IMAGE_ASSET_ID=%li;", tables[counter], wanted_asset_id));
+	}
+
+	// we need to do that in memory also.
+
+	refinement_package_asset_panel->RemoveImageFromAllRefinementPackages(wanted_asset_id);
+
+	// remove it from the asset list..
+
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM IMAGE_ASSETS WHERE IMAGE_ASSET_ID=%li", wanted_asset_id));
+
+	RemoveAssetFromGroups(array_location, false);
+	all_assets_list->RemoveAsset(array_location);
+
+
+}
+
+void MyImageAssetPanel::DoAfterDeletionCleanup()
+{
+	main_frame->DirtyImageGroups();
+	movie_results_panel->Clear();
+	movie_results_panel->is_dirty = true;
+
+	ctf_results_panel->is_dirty = true;
+	picking_results_panel->is_dirty = true;
+}
+
+
 ImageAsset* MyImageAssetPanel::ReturnAssetPointer(long wanted_asset)
 {
 	return all_assets_list->ReturnImageAssetPointer(wanted_asset);
@@ -129,6 +244,7 @@ void MyImageAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, w
 
 void  MyImageAssetPanel::RemoveAllFromDatabase()
 {
+	/*
 	main_frame->current_project.database.Begin();
 	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
 	{
@@ -138,6 +254,18 @@ void  MyImageAssetPanel::RemoveAllFromDatabase()
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE IMAGE_GROUP_LIST");
 	main_frame->current_project.database.CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
 	main_frame->current_project.database.Commit();
+	*/
+
+	long number_of_assets = ReturnNumberOfAssets();
+	OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Deleting", "Deleting Assets...", number_of_assets, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
+	for (long counter = number_of_assets - 1; counter >= 0; counter--)
+	{
+		my_dialog->Update(number_of_assets - counter);
+		CompletelyRemoveAsset(counter);
+	}
+
+	my_dialog->Destroy();
 
 }
 
@@ -263,37 +391,41 @@ void MyImageAssetPanel::FillAssetSpecificContentsList()
 
 wxString MyImageAssetPanel::ReturnItemText(long item, long column) const
 {
+	ImageAsset *current_asset = all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item));
+	if (current_asset == NULL) return "";
+
 	switch(column)
 	{
 	    case 0  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
+	    	return wxString::Format(wxT("%i"), current_asset->asset_id);
 	       break;
 	    case 1  :
-	    	return all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_name;
+	    	return current_asset->asset_name;
 	       break;
 	    case 2  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->parent_id);
+	    	return wxString::Format(wxT("%i"), current_asset->parent_id);
 	       break;
 	    case 3  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->alignment_id);
+	    	return wxString::Format(wxT("%i"), current_asset->alignment_id);
 	       break;
 	    case 4  :
-	    	return wxString::Format(wxT("%i"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);
+	    	return wxString::Format(wxT("%i"), current_asset->x_size);
 	       break;
 	    case 5  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_size);
+	    	return wxString::Format(wxT("%i"), current_asset->y_size);
 		   break;
 	    case 6  :
-	    	return wxString::Format(wxT("%.4f"),all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
+	    	return wxString::Format(wxT("%.4f"), current_asset->pixel_size);
 		   break;
 	    case 7  :
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->spherical_aberration);
+	    	return wxString::Format(wxT("%.2f"), current_asset->spherical_aberration);
 	    	break;
 	    case 8  :
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->microscope_voltage);
+	    	return wxString::Format(wxT("%.2f"), current_asset->microscope_voltage);
 	    	break;
 	    case 9  :
-			return wxString::Format(wxT("%i"), all_assets_list->ReturnImageAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->protein_is_white);
+			if (current_asset->protein_is_white == true) return "Yes";
+			else return "No";
 			break;
 
 	    default :

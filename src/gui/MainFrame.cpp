@@ -18,6 +18,7 @@ extern MyRefine2DPanel *classification_panel;
 extern MyRefine3DPanel *refine_3d_panel;
 extern AutoRefine3DPanel *auto_refine_3d_panel;
 extern AbInitio3DPanel *ab_initio_3d_panel;
+extern Generate3DPanel *generate_3d_panel;
 
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
@@ -276,12 +277,15 @@ void MyMainFrame::DirtyRefinementPackages()
 	refinement_results_panel->is_dirty=true;
 	refine2d_results_panel->refinement_package_combo_is_dirty = true;
 	ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
+	generate_3d_panel->refinement_package_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinements()
 {
 	refine_3d_panel->input_params_combo_is_dirty = true;
 	refinement_results_panel->input_params_are_dirty = true;
+	generate_3d_panel->input_params_combo_is_dirty = true;
+
 }
 
 void MyMainFrame::DirtyClassifications()
@@ -304,6 +308,8 @@ void MyMainFrame::DirtyRunProfiles()
 	refine_3d_panel->run_profiles_are_dirty = true;
 	auto_refine_3d_panel->run_profiles_are_dirty = true;
 	ab_initio_3d_panel->run_profiles_are_dirty = true;
+	generate_3d_panel->run_profiles_are_dirty = true;
+
 }
 
 
@@ -622,7 +628,6 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	volume_asset_panel->Reset();
 	particle_position_asset_panel->Reset();
 	refinement_package_asset_panel->Reset();
-	RecalculateAssetBrowser();
 	run_profiles_panel->Reset();
 	movie_results_panel->Clear();
 	ctf_results_panel->Clear();
@@ -678,6 +683,7 @@ void MyMainFrame::ClearScratchDirectory()
 	ClearRefine2DScratch();
 	ClearRefine3DScratch();
 	ClearAutoRefine3DScratch();
+	ClearGenerate3DScratch();
 }
 
 void MyMainFrame::ClearStartupScratch()
@@ -704,6 +710,12 @@ void MyMainFrame::ClearAutoRefine3DScratch()
 	if (wxDir::Exists(ReturnAutoRefine3DScratchDirectory()) == false) wxFileName::Mkdir(ReturnAutoRefine3DScratchDirectory());
 }
 
+void MyMainFrame::ClearGenerate3DScratch()
+{
+	if (wxDir::Exists(ReturnGenerate3DScratchDirectory()) == true) wxFileName::Rmdir(ReturnGenerate3DScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnGenerate3DScratchDirectory()) == false) wxFileName::Mkdir(ReturnGenerate3DScratchDirectory());
+}
+
 wxString MyMainFrame::ReturnScratchDirectory()
 {
 	return current_project.scratch_directory.GetFullPath();
@@ -727,6 +739,11 @@ wxString MyMainFrame::ReturnRefine3DScratchDirectory()
 wxString MyMainFrame::ReturnAutoRefine3DScratchDirectory()
 {
 	return current_project.scratch_directory.GetFullPath() + "/AutoRefine3D/";
+}
+
+wxString MyMainFrame::ReturnGenerate3DScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/Generate3D/";
 }
 
 bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_project_directory)

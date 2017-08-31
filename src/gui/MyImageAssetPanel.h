@@ -29,6 +29,13 @@ class MyImageAssetPanel : public MyAssetParentPanel
 		void FillAssetSpecificContentsList();
 		void UpdateInfo();
 
+		int ShowDeleteMessageDialog();
+		int ShowDeleteAllMessageDialog();
+		void CompletelyRemoveAsset(long wanted_asset);
+		void CompletelyRemoveAssetByID(long wanted_asset_id);
+		void DoAfterDeletionCleanup();
+
+		long ReturnAlignmentID(long wanted_asset);
 
 
 		void RenameAsset(long wanted_asset, wxString wanted_name);

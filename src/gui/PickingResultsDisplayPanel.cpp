@@ -38,15 +38,10 @@ void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfPar
 	//PickingResultsImagePanel->Clear();
 
 	PickingResultsImagePanel->SetImageFilename(image_filename,pixel_size_in_angstroms);
-
 	PickingResultsImagePanel->SetParticleCoordinatesAndRadius(array_of_assets, particle_radius_in_angstroms);
-
 	PickingResultsImagePanel->UpdateScalingAndDimensions();
-
 	PickingResultsImagePanel->UpdateImageInBitmap();
-
 	PickingResultsImagePanel->should_show = true;
-
 	PickingResultsImagePanel->SetToolTip(wxString::Format(wxT("%i coordinates picked"),int(array_of_assets.GetCount())));
 
 	PickingResultsImagePanel->Refresh();

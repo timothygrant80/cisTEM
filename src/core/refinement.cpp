@@ -53,6 +53,8 @@ ClassRefinementResults::ClassRefinementResults()
 	defocus_search_step = 0;
 	average_occupancy = 0.0f;
 	estimated_resolution = 0.0f;
+	reconstructed_volume_asset_id = -1;
+	reconstruction_id = -1;
 }
 
 ClassRefinementResults::~ClassRefinementResults()

@@ -1074,6 +1074,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 	{
 
 		OrthDrawerThread *result_thread;
+		ShortRefinementInfo *pointer_to_refinement_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(input_refinement->refinement_id);
 
 		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions");
 		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction");
@@ -1100,16 +1101,26 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
 		WriteInfoText("");
-		wxArrayLong output_volume_asset_ids;
 
 		for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 		{
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
-			output_volume_asset_ids.Add(temp_asset.asset_id);
+
+			if (active_update_statistics == true)
+			{
+				main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_DETAILS_%li SET RECONSTRUCTED_VOLUME_ASSET_ID=%li, RECONSTRUCTION_ID=%li WHERE CLASS_NUMBER=%i;", input_refinement->refinement_id, long(temp_asset.asset_id), current_reconstruction_id, class_counter));
+				pointer_to_refinement_info->reconstructed_volume_asset_ids[class_counter] = temp_asset.asset_id;
+			}
+
 			temp_asset.asset_name = wxString::Format("Generated from #%li - Class #%i", input_refinement->refinement_id, class_counter + 1);
 			temp_asset.filename = output_filenames[class_counter];
 			volume_asset_panel->AddAsset(&temp_asset);
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+
+			// add the reconstruction job..
+
+			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, input_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, active_save_half_maps, false, 1.0, class_counter + 1, long(temp_asset.asset_id));
+
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
@@ -1147,10 +1158,6 @@ void Generate3DPanel::ProcessAllJobsFinished()
 			ShowRefinementResultsPanel->TopBottomSplitter->SplitHorizontally(ShowRefinementResultsPanel->TopPanel, ShowRefinementResultsPanel->BottomPanel);
 			ShowRefinementResultsPanel->FSCResultsPanel->Show(true);
 		}*/
-
-		// add the job..
-
-		main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, input_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, active_save_half_maps, false, 1.0, output_volume_asset_ids);
 
 		main_frame->current_project.database.Commit();
 		main_frame->DirtyVolumes();

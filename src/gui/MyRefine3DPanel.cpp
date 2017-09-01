@@ -1267,6 +1267,9 @@ void RefinementManager::BeginRefinementCycle()
 	current_reference_filenames.Clear();
 	current_reference_filenames.Add(blank_string, number_of_classes);
 
+	current_reference_asset_ids.Clear();
+	current_reference_asset_ids.Add(-1, number_of_classes);
+
 	// check scratch directory.
 	global_delete_refine3d_scratch();
 
@@ -1317,6 +1320,7 @@ void RefinementManager::BeginRefinementCycle()
 		for (class_counter = 0; class_counter < number_of_classes; class_counter++)
 		{
 			current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
+			current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
 
 		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
@@ -2327,6 +2331,7 @@ void RefinementManager::ProcessAllJobsFinished()
 	else
 	if (running_job_type == MERGE)
 	{
+		long current_reconstruction_id;
 
 		OrthDrawerThread *result_thread;
 
@@ -2345,7 +2350,6 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		VolumeAsset temp_asset;
 
-		temp_asset.reconstruction_job_id = current_output_refinement_id;
 		temp_asset.pixel_size = output_refinement->resolution_statistics_pixel_size;
 		temp_asset.x_size = output_refinement->resolution_statistics_box_size;
 		temp_asset.y_size = output_refinement->resolution_statistics_box_size;
@@ -2355,6 +2359,10 @@ void RefinementManager::ProcessAllJobsFinished()
 		main_frame->current_project.database.Begin();
 		output_refinement->reference_volume_ids.Clear();
 		active_refinement_package->references_for_next_refinement.Clear();
+
+		current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+		temp_asset.reconstruction_job_id = current_reconstruction_id;
+
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
 		my_parent->WriteInfoText("");
@@ -2362,6 +2370,9 @@ void RefinementManager::ProcessAllJobsFinished()
 		for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 		{
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
+
+			output_refinement->reference_volume_ids.Add(current_reference_asset_ids[class_counter]);
+			current_reference_asset_ids[class_counter] = temp_asset.asset_id;
 
 			if (start_with_reconstruction == true)
 			{
@@ -2377,6 +2388,13 @@ void RefinementManager::ProcessAllJobsFinished()
 				else temp_asset.asset_name = wxString::Format("Local #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 
 			}
+			// set the output volume
+			output_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = temp_asset.asset_id;
+			output_refinement->class_refinement_results[class_counter].reconstruction_id = current_reconstruction_id;
+
+			// add the reconstruction job
+
+			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
 
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);

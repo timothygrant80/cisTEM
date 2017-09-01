@@ -81,6 +81,7 @@ public:
 	RunProfile active_reconstruction_run_profile;
 
 	wxArrayString current_reference_filenames;
+	wxArrayLong current_reference_asset_ids;
 
 	void SetParent(MyRefine3DPanel *wanted_parent);
 

@@ -132,7 +132,6 @@ void MyRefinementPackageAssetPanel::OnDeleteClick( wxCommandEvent& event )
 				if (all_refinement_short_infos.Item(counter).refinement_package_asset_id == all_refinement_packages.Item(selected_refinement_package).asset_id)
 				{
 					main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_LIST WHERE REFINEMENT_ID=%li", all_refinement_short_infos.Item(counter).refinement_id ));
-					main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_REFERENCE_VOLUME_IDS_%li", all_refinement_short_infos.Item(counter).refinement_id));
 
 					for (class_counter = 1; class_counter <= all_refinement_short_infos.Item(counter).number_of_classes; class_counter++)
 					{
@@ -520,6 +519,7 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 	all_refinement_short_infos.Clear();
 	double average_occupancy;
 	double estimated_resolution;
+	long reconstructed_volume_asset_id;
 	int class_counter;
 	sqlite3_stmt *list_statement = NULL;
 
@@ -528,7 +528,7 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 	while (more_data == true)
 	{
 		more_data = main_frame->current_project.database.GetFromBatchSelect("lltli", &temp_info.refinement_id, &temp_info.refinement_package_asset_id, &temp_info.name, &temp_info.number_of_particles, &temp_info.number_of_classes);
-		main_frame->current_project.database.Prepare(wxString::Format("SELECT AVERAGE_OCCUPANCY, ESTIMATED_RESOLUTION FROM REFINEMENT_DETAILS_%li", temp_info.refinement_id), &list_statement);
+		main_frame->current_project.database.Prepare(wxString::Format("SELECT AVERAGE_OCCUPANCY, ESTIMATED_RESOLUTION, RECONSTRUCTED_VOLUME_ASSET_ID FROM REFINEMENT_DETAILS_%li", temp_info.refinement_id), &list_statement);
 
 		temp_info.average_occupancy.Clear();
 		temp_info.estimated_resolution.Clear();
@@ -538,11 +538,13 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 			main_frame->current_project.database.Step(list_statement);
 			average_occupancy = sqlite3_column_double(list_statement, 0);
 			estimated_resolution = sqlite3_column_double(list_statement, 1);
+			reconstructed_volume_asset_id = sqlite3_column_int64(list_statement, 2);
 
 			//wxPrintf("Average Occ. = %f, Res. = %f\n", average_occupancy, estimated_resolution);
 
 			temp_info.average_occupancy.Add(average_occupancy);
 			temp_info.estimated_resolution.Add(estimated_resolution);
+			temp_info.reconstructed_volume_asset_ids.Add(reconstructed_volume_asset_id);
 		}
 
 		main_frame->current_project.database.Finalize(list_statement);

@@ -334,16 +334,17 @@ class RefinementResultsPanel : public wxPanel
 	
 	protected:
 		wxSplitterWindow* m_splitter7;
-		wxPanel* m_panel48;
+		wxPanel* m_panel49;
 		wxStaticText* m_staticText284;
 		wxStaticText* m_staticText285;
-		MyFSCPanel* FSCPlotPanel;
-		wxPanel* m_panel49;
+		wxStaticLine* m_staticline126;
 		wxSplitterWindow* m_splitter16;
 		wxPanel* m_panel124;
-		DisplayPanel* OrthPanel;
+		MyFSCPanel* FSCPlotPanel;
 		wxPanel* m_panel125;
 		AngularDistributionPlotPanel* AngularPlotPanel;
+		wxPanel* m_panel48;
+		DisplayPanel* OrthPanel;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }

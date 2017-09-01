@@ -850,6 +850,9 @@ void AutoRefinementManager::BeginRefinementCycle()
 	current_reference_filenames.Clear();
 	current_reference_filenames.Add(blank_string, number_of_classes);
 
+	current_reference_asset_ids.Clear();
+	current_reference_asset_ids.Add(-1, number_of_classes);
+
 	active_should_auto_mask = my_parent->AutoMaskYesRadio->GetValue();
 
 	// Clear scratch..
@@ -931,6 +934,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	for (class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
 		current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(my_parent->ReferenceSelectPanel->ReturnSelection());
+		current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(my_parent->ReferenceSelectPanel->ReturnSelection());
 	}
 
 	// Do we need to do masking them?
@@ -1964,6 +1968,10 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 	else
 	if (running_job_type == MERGE)
 	{
+		long current_reconstruction_id;
+		float current_resolution_limit_rec;
+		float    current_score_weight_conversion;
+
 		// launch drawer thread..
 
 		main_frame->ClearAutoRefine3DScratch();
@@ -1981,7 +1989,6 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 		VolumeAsset temp_asset;
 
-		temp_asset.reconstruction_job_id = current_output_refinement_id;
 		temp_asset.pixel_size = output_refinement->resolution_statistics_pixel_size;
 		temp_asset.x_size = output_refinement->resolution_statistics_box_size;
 		temp_asset.y_size = output_refinement->resolution_statistics_box_size;
@@ -1992,6 +1999,8 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		output_refinement->reference_volume_ids.Clear();
 		active_refinement_package->references_for_next_refinement.Clear();
 
+		current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+
 		main_frame->current_project.database.Begin();
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
@@ -2000,20 +2009,40 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 		{
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
+
+			// add the reconstruction, get a reconstruction_id
+
+			temp_asset.reconstruction_job_id = current_reconstruction_id;
+
+			// add the reconstruction job
+
+			if (this_is_the_final_round == true) current_resolution_limit_rec = 0;
+			else
+			current_resolution_limit_rec = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 10 );
+
+			if (class_high_res_limits[class_counter] < 8) current_score_weight_conversion = 2;
+			else current_score_weight_conversion = 0.0;
+
+			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, current_resolution_limit_rec, current_score_weight_conversion, false, active_auto_crop, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
+
 			temp_asset.asset_name = wxString::Format("Auto #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
-			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
+
+			output_refinement->reference_volume_ids.Add(current_reference_asset_ids[class_counter]);
+			current_reference_asset_ids[class_counter] = temp_asset.asset_id;
+
+			// set the output volume
+			output_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = temp_asset.asset_id;
+			output_refinement->class_refinement_results[class_counter].reconstruction_id = current_reconstruction_id;
 
 			active_refinement_package->references_for_next_refinement.Add(temp_asset.asset_id);
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
-
 
 			volume_asset_panel->AddAsset(&temp_asset);
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
-
 		wxArrayFloat average_occupancies = output_refinement->UpdatePSSNR();
 
 		my_parent->WriteInfoText("");

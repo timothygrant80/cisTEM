@@ -3,6 +3,7 @@
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
+extern MyVolumeAssetPanel *volume_asset_panel;
 
 
 MyRefinementResultsPanel::MyRefinementResultsPanel( wxWindow* parent )
@@ -15,7 +16,7 @@ RefinementResultsPanel( parent )
 	FSCPlotPanel->Clear();
 	currently_displayed_refinement = NULL;
 
-	OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | NO_NOTEBOOK);
+	OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
 
 //	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }
@@ -46,6 +47,7 @@ void MyRefinementResultsPanel::FillInputParametersComboBox(void)
 		FillParameterListCtrl();
 		FSCPlotPanel->AddRefinement(currently_displayed_refinement);
 		FillAngles();
+		DrawOrthViews();
 	}
 }
 
@@ -112,6 +114,7 @@ void MyRefinementResultsPanel::OnInputParametersComboBox( wxCommandEvent& event 
 		FillParameterListCtrl();
 		FSCPlotPanel->AddRefinement(currently_displayed_refinement);
 		FillAngles();
+		DrawOrthViews();
 		//AngularPlotPanel->Clear();
 	}
 
@@ -141,6 +144,31 @@ void MyRefinementResultsPanel::FillAngles()
 
 	}
 
+}
+
+void MyRefinementResultsPanel::DrawOrthViews()
+{
+	if (RefinementPackageComboBox->GetSelection() >= 0 && currently_displayed_refinement != NULL)
+	{
+		wxString current_orth_filename;
+		long array_position;
+		OrthPanel->Freeze();
+		OrthPanel->Clear();
+
+		for (int class_counter = 0; class_counter< currently_displayed_refinement->number_of_classes; class_counter++)
+		{
+			// open the relevant orth view (if available)
+			array_position = volume_asset_panel->ReturnArrayPositionFromAssetID(currently_displayed_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id);
+			if (array_position != -1)
+			{
+				current_orth_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + "/OrthViews/" + volume_asset_panel->ReturnAssetShortFilename(array_position);
+
+				if (DoesFileExist(current_orth_filename) == true) OrthPanel->OpenFile(current_orth_filename, wxString::Format("Class #%i", class_counter + 1));
+			}
+		}
+
+		OrthPanel->Thaw();
+	}
 }
 
 

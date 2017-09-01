@@ -13,6 +13,7 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 	void FillInputParametersComboBox(void);
 	void FillParameterListCtrl();
 	void FillAngles();
+	void DrawOrthViews();
 
 	void OnUpdateUI( wxUpdateUIEvent& event );
 

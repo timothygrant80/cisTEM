@@ -53,6 +53,9 @@ public :
 	float defocus_search_range;
 	float defocus_search_step;
 
+	long reconstructed_volume_asset_id;
+	long reconstruction_id;
+
 	float average_occupancy;
 	float estimated_resolution;
 
@@ -85,6 +88,7 @@ public :
 	wxArrayFloat UpdatePSSNR();
 
 	wxArrayLong reference_volume_ids;
+
 	ArrayofClassRefinementResults class_refinement_results;
 
 	float ReturnChangeInAverageOccupancy(Refinement &other_refinement);
@@ -114,6 +118,7 @@ public :
 
 	wxArrayFloat average_occupancy;
 	wxArrayFloat estimated_resolution;
+	wxArrayLong  reconstructed_volume_asset_ids;
 
 	ShortRefinementInfo & operator = (const Refinement &other_refinement);
 	ShortRefinementInfo & operator = (const Refinement *other_other_refinement);

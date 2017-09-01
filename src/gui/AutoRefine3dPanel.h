@@ -71,6 +71,7 @@ public:
 
 
 	wxArrayString current_reference_filenames;
+	wxArrayLong current_reference_asset_ids;
 
 	void SetParent(AutoRefine3DPanel *wanted_parent);
 

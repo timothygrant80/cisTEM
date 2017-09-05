@@ -87,9 +87,14 @@ ShortRefinementInfo & ShortRefinementInfo::operator = (const Refinement *other_r
 	number_of_particles = other_refinement->number_of_particles;
 	number_of_classes = other_refinement->number_of_classes;
 
+	average_occupancy.Clear();
+	reconstructed_volume_asset_ids.Clear();
+	estimated_resolution.Clear();
+
 	for (int counter = 0; counter < number_of_classes; counter++)
 	{
 		average_occupancy.Add(other_refinement->class_refinement_results[counter].average_occupancy);
+		reconstructed_volume_asset_ids.Add(other_refinement->class_refinement_results[counter].reconstructed_volume_asset_id);
 		if (other_refinement->resolution_statistics_are_generated == true) estimated_resolution.Add(0.0f);
 		else estimated_resolution.Add(other_refinement->class_refinement_results[counter].class_resolution_statistics.ReturnEstimatedResolution());
 	}

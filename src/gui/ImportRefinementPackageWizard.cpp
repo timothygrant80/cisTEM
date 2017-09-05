@@ -374,11 +374,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		main_frame->current_project.database.AddRefinement(&temp_refinement);
 
 		ShortRefinementInfo temp_info;
-		temp_info.refinement_id = temp_refinement.refinement_id;
-		temp_info.name = temp_refinement.name;
-		temp_info.number_of_classes = temp_refinement.number_of_classes;
-		temp_info.number_of_particles = temp_refinement.number_of_particles;
-		temp_info.refinement_package_asset_id = temp_refinement.refinement_package_asset_id;
+		temp_info = temp_refinement;
 
 		refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
 		main_frame->current_project.database.Commit();

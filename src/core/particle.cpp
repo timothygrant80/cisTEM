@@ -371,6 +371,9 @@ void Particle::WeightBySSNR(Curve &SSNR, int include_reference_weighting, bool n
 	if (include_reference_weighting != 0) includes_reference_ssnr_weighting = true;
 	else includes_reference_ssnr_weighting = false;
 
+	// Apply cosine filter to reduce ringing
+	particle_image->CosineMask(filter_radius_high - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
+
 	delete snr_image;
 }
 

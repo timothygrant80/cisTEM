@@ -309,7 +309,7 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 
 			if (current_particle.parent_image_id >= 0)
 			{
-				micrograph_filename = image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromParentID(current_particle.parent_image_id));
+				micrograph_filename = image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle.parent_image_id));
 			}
 			else
 			{

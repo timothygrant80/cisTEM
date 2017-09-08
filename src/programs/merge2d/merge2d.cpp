@@ -86,7 +86,7 @@ bool Merge2DApp::DoCalculation()
 	}
 	else
 	{
-		if (! DoesFileExistWithWait(dump_file, 30))
+		if (! DoesFileExistWithWait(dump_file, 90))
 		{
 			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
 			abort();

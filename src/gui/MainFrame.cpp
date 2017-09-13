@@ -439,6 +439,8 @@ void MyMainFrame::StartNewProject()
 
 		AddProjectToRecentProjects(current_project.database.ReturnFilename());
 		ClearScratchDirectory();
+
+		overview_panel->SetProjectInfo();
 	}
 	else
 	{
@@ -580,7 +582,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 
 		AddProjectToRecentProjects(project_filename);
 		ClearScratchDirectory();
-		overview_panel->InfoText->Show(false);
+		overview_panel->SetProjectInfo();
 	}
 	else
 	{
@@ -604,6 +606,7 @@ void MyMainFrame::GetFileAndOpenProject()
 
 	if (openFileDialog.ShowModal() == wxID_CANCEL) return;
 	OpenProject(openFileDialog.GetPath());
+	overview_panel->SetProjectInfo();
 }
 
 void MyMainFrame::OnFileOpenProject( wxCommandEvent& event )

@@ -1,5 +1,8 @@
 #include "../core/gui_core_headers.h"
 
+extern MyMovieAssetPanel *movie_asset_panel;
+extern MyImageAssetPanel *image_asset_panel;
+
 MyOverviewPanel::MyOverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
 :
 OverviewPanel( parent, id, pos, size, style )
@@ -7,6 +10,65 @@ OverviewPanel( parent, id, pos, size, style )
 	SetWelcomeInfo();
 
 }
+
+void MyOverviewPanel::SetProjectInfo()
+{
+	#include "icons/cisTEM_logo_800.cpp"
+
+	InfoText->Clear();
+	InfoText->EndAllStyles();
+
+	wxLogNull *suppress_png_warnings = new wxLogNull;
+	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_logo_800);
+	delete suppress_png_warnings;
+
+	InfoText->GetCaret()->Hide();
+	InfoText->BeginSuppressUndo();
+
+	InfoText->Newline();
+	InfoText->Newline();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->WriteImage(logo_bmp);
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	if (image_asset_panel->ReturnNumberOfAssets() == 0 && movie_asset_panel->ReturnNumberOfAssets() == 0)
+	{
+		InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+		InfoText->Newline();
+		InfoText->Newline();
+		InfoText->WriteText(wxT("To get started, go to the Assets panel and import some movies or images..."));
+		InfoText->Newline();
+		InfoText->Newline();
+	}
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->BeginUnderline();
+	InfoText->WriteText(wxString::Format("Project summary"));
+	InfoText->EndUnderline();
+	InfoText->EndBold();
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTER);
+	InfoText->BeginFontSize(12);
+	InfoText->WriteText(wxString::Format("Project name: %s\n", main_frame->current_project.project_name));
+	InfoText->WriteText(wxString::Format("Project directory: %s\n", main_frame->current_project.project_directory.GetFullPath()));
+	InfoText->WriteText(wxString::Format("Total CPU hours: %0.2lf\n", main_frame->current_project.total_cpu_hours));
+	InfoText->WriteText(wxString::Format("Total number of jobs run: %i\n", main_frame->current_project.total_jobs_run));
+
+
+	InfoText->EndSuppressUndo();
+	InfoText->EndAllStyles();
+
+}
+
 
 void MyOverviewPanel::SetWelcomeInfo()
 {

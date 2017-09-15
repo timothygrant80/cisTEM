@@ -51,6 +51,7 @@ public :
 	//bool DeleteTable(const char *table_name);
 	bool InsertOrReplace(const char *table_name, const char *column_format, ...);
 	bool GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run);
+	bool SetProjectStatistics(double &total_cpu_hours, int &total_jobs_run);
 	bool CreateAllTables();
 
 	void BeginBatchInsert(const char *table_name, int number_of_columns, ...);

@@ -1037,6 +1037,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	float tolerated_astigmatism;
 	wxString current_table_name;
 
+	extern MyOverviewPanel *overview_panel;
+
 
 	// find the current highest alignment number in the database, then increment by one
 
@@ -1192,8 +1194,15 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	main_frame->current_project.database.EndImageAssetInsert();
 
 	// Global Commit
-
 	main_frame->current_project.database.Commit();
+
+
+	// Update project statistics (in database and in overview panel)
+	main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
+	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++) { main_frame->current_project.total_cpu_hours += buffered_results[counter].result_data[7]; }
+	main_frame->current_project.WriteProjectStatisticsToDatabase();
+	overview_panel->SetProjectInfo();
+
 	my_progress_dialog->Destroy();
 	ctf_results_panel->is_dirty = true;
 

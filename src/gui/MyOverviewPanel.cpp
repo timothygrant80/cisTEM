@@ -60,7 +60,7 @@ void MyOverviewPanel::SetProjectInfo()
 	InfoText->BeginFontSize(12);
 	InfoText->WriteText(wxString::Format("Project name: %s\n", main_frame->current_project.project_name));
 	InfoText->WriteText(wxString::Format("Project directory: %s\n", main_frame->current_project.project_directory.GetFullPath()));
-	InfoText->WriteText(wxString::Format("Total CPU hours: %0.2lf\n", main_frame->current_project.total_cpu_hours));
+	InfoText->WriteText(wxString::Format("Total CPU hours: %0.3lf\n", main_frame->current_project.total_cpu_hours));
 	InfoText->WriteText(wxString::Format("Total number of jobs run: %i\n", main_frame->current_project.total_jobs_run));
 
 

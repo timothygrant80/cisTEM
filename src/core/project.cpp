@@ -236,8 +236,14 @@ bool Project::ReadMasterSettings()
 	return success;
 }
 
+bool Project::WriteProjectStatisticsToDatabase()
+{
+	database.SetProjectStatistics(total_cpu_hours,total_jobs_run);
+}
+
 void Project::Close(bool remove_lock)
 {
+	WriteProjectStatisticsToDatabase();
 	database.Close(remove_lock);
 
 	is_open = false;

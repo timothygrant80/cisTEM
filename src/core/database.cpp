@@ -803,6 +803,14 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	return true;
 }
 
+bool Database::SetProjectStatistics(double &total_cpu_hours, int &total_jobs_run)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f",total_jobs_run,float(total_cpu_hours)));
+	return true;
+}
+
 bool Database::DoesTableExist(wxString table_name)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");

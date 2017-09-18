@@ -243,21 +243,21 @@ void SetupDefaultColorMap()
 	default_colormap.Add(color1);
 	wxColor color2(128, 0, 0);
 	default_colormap.Add(color2);
-	wxColor color3(255, 206, 0);
+	wxColor color3(139, 182, 182);
 	default_colormap.Add(color3);
-	wxColor color4(139, 182, 182);
+	wxColor color4(0, 0, 128);
 	default_colormap.Add(color4);
-	wxColor color5(0, 0, 128);
+	wxColor color5(255, 0, 255);
 	default_colormap.Add(color5);
-	wxColor color6(255, 0, 255);
+	wxColor color6(255,255, 0);
 	default_colormap.Add(color6);
-	wxColor color7(255,255, 0);
+	wxColor color7(115, 229, 229);
 	default_colormap.Add(color7);
-	wxColor color8(115, 229, 229);
+	wxColor color8(128, 0, 128);
 	default_colormap.Add(color8);
-	wxColor color9(128, 0, 128);
+	wxColor color9(156, 206, 0);
 	default_colormap.Add(color9);
-	wxColor color10(156, 206, 0);
+	wxColor color10(255, 206, 0);
 	default_colormap.Add(color10);
 	wxColor color11(206, 156, 255);
 	default_colormap.Add(color11);
@@ -279,10 +279,127 @@ void SetupDefaultColorMap()
 	default_colormap.Add(color19);
 	wxColor color20(0, 0, 0);
 	default_colormap.Add(color20);
+}
 
+void SetupDefaultColorBar()
+{
+	wxColour buffer_colour;
+	unsigned char current_red = 0;
+	unsigned char current_blue = 128;
+	unsigned current_green = 0;
+	int counter;
 
+	for (counter = 0; counter < 127; counter++)
+	{
+			buffer_colour.Set(current_red, current_green, current_blue);
+			default_colorbar.Add(buffer_colour);
+			current_blue++;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 255; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_green+=1;
+		//current_blue-=1;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 127; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		//current_green+=1;
+		//current_blue-=1;
+		current_red+=1;
+		//current_green+=1;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 128; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_red+=1;
+		current_blue-=1;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 127; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_blue--;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 255; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		//current_red+=1;
+		current_green-=1;
+	}
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	buffer_colour.Set(current_red, current_green, current_blue);
+	default_colorbar.Add(buffer_colour);
+
+	/*
+	for (counter = 0; counter < 127; counter++)
+	{
+			buffer_colour.Set(current_red, current_green, current_blue);
+			default_colorbar.Add(buffer_colour);
+			current_blue++;
+	}
+
+//	wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 51; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_green+=5;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 51; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_blue-=5;
+	}
+
+	//wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 51; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_red+=5;
+	}
+
+	//("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+
+	for (counter = 0; counter < 255; counter++)
+	{
+		buffer_colour.Set(current_red, current_green, current_blue);
+		default_colorbar.Add(buffer_colour);
+		current_green--;
+	}
+
+//	wxPrintf("r=%u, g=%u, b=%u\n", current_red, current_green, current_blue);
+*/
 
 }
+
 
 void global_delete_scratch()
 {

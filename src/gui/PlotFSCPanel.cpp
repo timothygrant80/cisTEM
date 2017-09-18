@@ -1,6 +1,9 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
+#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
+//WX_DEFINE_ARRAY(ArrayofmpFXYVectors);
+
 PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
 : wxPanel(parent, id, pos, size, style, name)
 {
@@ -11,13 +14,14 @@ PlotFSCPanel::PlotFSCPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	GraphSizer->Fit( this );
 
 	current_plot_window = new mpWindow( this, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
-    current_plot_window->SetMargins(20, 20, 60, 60);
+    current_plot_window->SetMargins(20, 20, 50, 60);
 
     GraphSizer->Add(current_plot_window, 1, wxEXPAND );
     current_plot_window->EnableDoubleBuffer(true);
     current_plot_window->EnableMousePanZoom(false);
 
 	number_of_added_fscs = 0;
+	current_nyquist = 0;
 
 }
 
@@ -62,6 +66,7 @@ void PlotFSCPanel::Clear(bool update_display)
 {
 	current_plot_window->Freeze();
 	current_plot_window->DelAllLayers( true, false );
+	FSC_Layers.Clear();
 	SetupBaseLayers();
 
 	number_of_added_fscs = 0;
@@ -90,7 +95,7 @@ void PlotFSCPanel::AddPartFSC(ResolutionStatistics *statistics_to_add, float wan
 		current_FSC_vector_layer->SetPen(vectorpen);
 		current_FSC_vector_layer->SetDrawOutsideMargins(false);
 
-		for (int point_counter = 1; point_counter < statistics_to_add->part_FSC.number_of_points; point_counter++)
+		for (int point_counter = 1; point_counter < statistics_to_add->part_FSC.number_of_points - 1; point_counter++)
 		{
 			if (statistics_to_add->part_FSC.data_x[point_counter] >= wanted_nyquist && statistics_to_add->part_FSC.data_x[point_counter] < 1000)
 			{
@@ -101,8 +106,35 @@ void PlotFSCPanel::AddPartFSC(ResolutionStatistics *statistics_to_add, float wan
 
 		current_FSC_vector_layer->SetData(current_spatial_frequency_data, current_FSC_data);
 		current_plot_window->AddLayer(current_FSC_vector_layer);
+		FSC_Layers.Add(current_FSC_vector_layer);
 		number_of_added_fscs++;
 	}
+}
+
+void PlotFSCPanel::HighlightClass(int wanted_class) // first class is 0!
+{
+	current_plot_window->DelAllLayers( false, false );
+	SetupBaseLayers();
+	wxColour colour_buffer;
+
+	for (int class_counter = 0; class_counter < number_of_added_fscs; class_counter++)
+	{
+		if (class_counter != wanted_class)
+		{
+			//colour_buffer = default_colormap[class_counter];//.ChangeLightness(150);
+			colour_buffer.Set(default_colormap[class_counter].Red(), default_colormap[class_counter].Green(), default_colormap[class_counter].Blue(), 128);
+			wxPen vectorpen(colour_buffer, 1, wxSOLID);
+			FSC_Layers[class_counter]->SetPen(vectorpen);
+			current_plot_window->AddLayer(FSC_Layers[class_counter]);
+		}
+	}
+
+	//colour_buffer = default_colormap[wanted_class];
+	colour_buffer.Set(default_colormap[wanted_class].Red(), default_colormap[wanted_class].Green(), default_colormap[wanted_class].Blue());
+	wxPen vectorpen(colour_buffer, 2, wxSOLID);
+	FSC_Layers[wanted_class]->SetPen(vectorpen);
+	current_plot_window->AddLayer(FSC_Layers[wanted_class]);
+	Draw(current_nyquist);
 }
 
 
@@ -111,6 +143,7 @@ void PlotFSCPanel::Draw(float nyquist)
 {
 	current_plot_window->Freeze();
 	current_plot_window->Fit(0, 1./ nyquist, 0, 1.05);
+	current_nyquist = nyquist;
 
 	refinement_limit->SetSpatialFrequency(current_refinement_resolution_limit);
 

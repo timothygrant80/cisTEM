@@ -63,6 +63,7 @@ public:
 
 	void UpdateToolbar();
 	void ChangeFocusToPanel(void);
+	void ReDrawCurrentPanel();
 
 	void SetSelectionSquareLocation(long wanted_location);
 
@@ -109,6 +110,8 @@ DisplayNotebook : public wxAuiNotebook
 	void OnClosed(wxAuiNotebookEvent& event);
 	void ChildGotFocus(wxChildFocusEvent& event);
 	void GotFocus(wxFocusEvent& event);
+	void OnEraseBackground(wxEraseEvent& event);
+	void OnPaint(wxPaintEvent& evt );
 
 	/*
 	void OnRightClick(wxMouseEvent& event);

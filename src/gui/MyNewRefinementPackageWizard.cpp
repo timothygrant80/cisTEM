@@ -727,7 +727,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
 
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
@@ -935,7 +935,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
 
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
-					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
@@ -995,7 +995,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
 
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
-					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+					//temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
@@ -1258,8 +1259,15 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	}
 
-	wxPrintf("Ref ID = %li\n", temp_refinement.reference_volume_ids.Item(0));
+	//wxPrintf("Ref ID = %li\n", temp_refinement.reference_volume_ids.Item(0));
 	main_frame->current_project.database.AddRefinement(&temp_refinement);
+
+	ArrayofAngularDistributionHistograms all_histograms = temp_refinement.ReturnAngularDistributions(temp_refinement_package->symmetry);
+	for (class_counter = 1; class_counter <= temp_refinement.number_of_classes; class_counter++)
+	{
+		main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter - 1], temp_refinement.refinement_id, class_counter);
+	}
+
 
 	ShortRefinementInfo temp_info;
 	temp_info = temp_refinement;

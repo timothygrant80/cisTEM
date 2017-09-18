@@ -1241,6 +1241,8 @@ void RefinementManager::BeginRefinementCycle()
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
 
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
+	else active_mask_asset_id = -1;
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_filename = "";
 
@@ -1378,6 +1380,15 @@ void RefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].should_refine_ctf = active_should_refine_ctf;
 		output_refinement->class_refinement_results[class_counter].defocus_search_range = active_defocus_search_range;
 		output_refinement->class_refinement_results[class_counter].defocus_search_step = active_defocus_search_step;
+
+		output_refinement->class_refinement_results[class_counter].should_auto_mask = active_should_auto_mask;
+		output_refinement->class_refinement_results[class_counter].should_refine_input_params = active_also_refine_input;
+		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = active_should_mask;
+		output_refinement->class_refinement_results[class_counter].mask_asset_id = active_mask_asset_id;
+		output_refinement->class_refinement_results[class_counter].mask_edge_width = active_mask_edge;
+		output_refinement->class_refinement_results[class_counter].outside_mask_weight = active_mask_weight;
+		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = active_should_low_pass_filter_mask;
+		output_refinement->class_refinement_results[class_counter].filter_resolution = active_mask_filter_resolution;
 	}
 
 	output_refinement->percent_used = active_percent_used;
@@ -2172,7 +2183,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,output_refinement->number_of_particles);
+			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,long(float(output_refinement->number_of_particles) * active_percent_used * 0.01f));
 			my_parent->Layout();
 		}
 		else
@@ -2476,6 +2487,14 @@ void RefinementManager::ProcessAllJobsFinished()
 		}
 		else
 		{
+			// calculate angular distribution histograms
+			ArrayofAngularDistributionHistograms all_histograms = output_refinement->ReturnAngularDistributions(active_refinement_package->symmetry);
+
+			for (class_counter = 1; class_counter <= output_refinement->number_of_classes; class_counter++)
+			{
+				main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter - 1], output_refinement->refinement_id, class_counter);
+			}
+
 			main_frame->current_project.database.AddRefinement(output_refinement);
 			ShortRefinementInfo temp_info;
 			temp_info = output_refinement;

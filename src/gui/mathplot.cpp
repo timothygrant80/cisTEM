@@ -46,6 +46,7 @@
 #include <wx/msgdlg.h>
 #include <wx/image.h>
 #include <wx/tipwin.h>
+#include <wx/graphics.h>
 
 #include <cmath>
 #include <cstdio> // used only for debug
@@ -787,7 +788,9 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 		}
 		else
 		{
-
+			wxGraphicsContext *gc = wxGraphicsContext::Create( w.m_buff_dc ); // i want transparency, this is a hack
+			gc->SetPen(m_pen);
+			wxGraphicsPath path = gc->CreatePath();
 			// Old code
 			wxCoord x0=0,c0=0;
 			bool    first = TRUE;
@@ -856,7 +859,9 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 
 						if (c1 >= minYpx && c1 <= maxYpx)
 						{
-							dc.DrawLine(x0, c0, x1, c1);
+							//dc.DrawLine(x0, c0, x1, c1);
+							path.MoveToPoint(x0, c0);
+							path.AddLineToPoint(x1, c1);
 							UpdateViewBoundary(x1, c1);
 						}
 						else
@@ -866,7 +871,9 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 								if (c1 <= minYpx) temp_y = minYpx;
 								else temp_y = maxYpx;
 
-								dc.DrawLine(x0, c0, x1, temp_y);
+								path.MoveToPoint(x0, c0);
+								path.AddLineToPoint(x1, temp_y);
+								//dc.DrawLine(x0, c0, x1, temp_y);
 								UpdateViewBoundary(x1, temp_y);
 							}
 						}
@@ -875,6 +882,9 @@ void mpFXY::Plot(wxDC & dc, mpWindow & w)
 				}
 				x0=x1; c0=c1;
 			}
+
+			gc->StrokePath(path);
+			delete gc;
 		}
 
 		if (!m_name.IsEmpty() && m_showName)
@@ -2473,7 +2483,7 @@ void mpWindow::GetBoundingBox(double* bbox)
 
 bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSize, bool fit)
 {
-/*	int sizeX, sizeY;
+	int sizeX, sizeY;
 	int bk_scrX, bk_scrY;
 	if (imageSize == wxDefaultSize) {
 		sizeX = m_scrX;
@@ -2487,12 +2497,11 @@ bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSi
 	}
 
     wxBitmap screenBuffer(sizeX,sizeY);
-    wxMemoryDC screenDC;
-    screenDC.SelectObject(screenBuffer);
-    screenDC.SetPen( *wxTRANSPARENT_PEN );
+    m_buff_dc.SelectObject(screenBuffer);
+    m_buff_dc.SetPen( *wxTRANSPARENT_PEN );
     wxBrush brush( GetBackgroundColour() );
-    screenDC.SetBrush( brush );
-    screenDC.DrawRectangle(0,0,sizeX,sizeY);
+    m_buff_dc.SetBrush( brush );
+    m_buff_dc.DrawRectangle(0,0,sizeX,sizeY);
 
 	if (fit) {
 		Fit(m_minX, m_maxX, m_minY, m_maxY, &sizeX, &sizeY);
@@ -2502,7 +2511,7 @@ bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSi
     // Draw all the layers:
     wxLayerList::iterator li;
     for (li = m_layers.begin(); li != m_layers.end(); li++)
-    	(*li)->Plot(screenDC, *this);
+    	(*li)->Plot(m_buff_dc, *this);
 
 	if (imageSize != wxDefaultSize) {
 		// Restore dimensions
@@ -2511,8 +2520,8 @@ bool mpWindow::SaveScreenshot(const wxString& filename, int type, wxSize imageSi
 		UpdateAll();
 	}
     // Once drawing is complete, actually save screen shot
-    wxImage screenImage = screenBuffer.ConvertToImage();
-    return screenImage.SaveFile(filename, type);*/
+
+    return screenBuffer.SaveFile(filename, wxBITMAP_TYPE_PNG);
 }
 
 void mpWindow::SetMargins(int top, int right, int bottom, int left)

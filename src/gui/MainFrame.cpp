@@ -97,6 +97,14 @@ void MyMainFrame::OnCharHook( wxKeyEvent& event )
 		}
 	}
 
+#ifdef DEBUG
+
+	if (event.GetKeyCode() == WXK_F12)
+	{
+		SetSize(wxDefaultCoord, wxDefaultCoord, 1855, 1025);
+	}
+#endif
+
 	event.Skip();
 }
 
@@ -455,7 +463,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 
 	if (wxDirExists(project_filename + ".lock"))
 	{
-		wxMessageDialog *my_dialog = new wxMessageDialog(this, "There is a lock file for this database, implying another process is writing to it. If multiple processes access the database, it may lead to corruption! A stale lock file can be leftover due to a crashed process, if you are sure that this lock file is stale then select override to delete it and continue.  If not, then select No until you are sure no other process is connected to the database.\n\nBacking up your database regularly doesn't hurt!\n\nDo you want to override?", "Database locked", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+		wxMessageDialog *my_dialog = new wxMessageDialog(this, "There is a lock file for this database, implying another process is writing to it. If multiple processes access the database, it may lead to corruption! A stale lock file can be leftover due to a crashed process, if you are sure that this lock file is stale then select override to delete it and continue.  If not, then select No until you are sure no other process is connected to the database.\n\nYou should backup your database (and journal) before you proceed\n\nDo you want to override?", "Database locked", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
 		my_dialog->SetYesNoLabels("Override", "No");
 
 		if (my_dialog->ShowModal() != wxID_YES)
@@ -463,6 +471,15 @@ void MyMainFrame::OpenProject(wxString project_filename)
 			my_dialog->Destroy();
 			return;
 		}
+
+		// there is a weird bug, whereby when opening a database with a hot journal and dot-file locking, the databse is not rolled back correctly (at least sometimes).
+		// as a kind of hack, if the user has said ok to continue, i'm going to open it with no locking (which should roll back the journal) then close it again.
+
+		current_project.database.Open(project_filename, true);
+		current_project.database.Close(false);
+
+
+		// delete lock file
 
 		wxFileName::Rmdir(project_filename + ".lock", wxPATH_RMDIR_RECURSIVE);
 
@@ -794,5 +811,6 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 	// everything should be ok?
 
 	return true;
-
 }
+
+

@@ -6,11 +6,22 @@ FSCPanel( parent, id, pos, size, style )
 {
 	wxLogNull *suppress_png_warnings = new wxLogNull;
 	#include "icons/show_text.cpp"
+	#include "icons/small_save_icon.cpp"
 	//#include "icons/notepad.cpp"
 	wxBitmap notepad_bmp = wxBITMAP_PNG_FROM_DATA(show_text);
+	wxBitmap save_bmp = wxBITMAP_PNG_FROM_DATA(small_save_icon);
+
 	FSCDetailsButton->SetBitmap(notepad_bmp);
+	SaveButton->SetBitmap(save_bmp);
+
+	highlighted_class = -1;
 
 
+}
+
+void MyFSCPanel::HighlightClass(int wanted_class)
+{
+	if (highlighted_class != wanted_class) PlotPanel->HighlightClass(wanted_class);
 }
 
 void MyFSCPanel::PopupTextClick( wxCommandEvent& event )
@@ -46,6 +57,22 @@ void MyFSCPanel::PopupTextClick( wxCommandEvent& event )
 	text_dialog->OutputTextCtrl->ShowPosition(0);
 	text_dialog->ShowModal();
 	text_dialog->Destroy();
+}
+
+void MyFSCPanel::SaveImageClick( wxCommandEvent& event )
+{
+	ProperOverwriteCheckSaveDialog *saveFileDialog;
+	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save png image"), "PNG files (*.png)|*.png", ".png");
+	if (saveFileDialog->ShowModal() == wxID_CANCEL)
+	{
+		saveFileDialog->Destroy();
+		return;
+	}
+
+	// save the file then..
+
+	PlotPanel->current_plot_window->SaveScreenshot(saveFileDialog->ReturnProperPath(), wxBITMAP_TYPE_PNG,wxSize(800,400));
+	saveFileDialog->Destroy();
 }
 
 void MyFSCPanel::AddRefinement(Refinement *refinement_to_plot)

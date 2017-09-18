@@ -57,6 +57,7 @@ public:
 	float active_mask_filter_resolution;
 	float active_mask_edge;
 	float active_mask_weight;
+	long active_mask_asset_id;
 
 	long current_job_starttime;
 	long time_of_last_update;

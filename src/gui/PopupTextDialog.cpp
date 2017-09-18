@@ -5,7 +5,7 @@ PopupTextDialog::PopupTextDialog (wxWindow *parent, wxWindowID id, const wxStrin
 :
 PopupTextDialogParent( parent, id, title, pos, size, style)
 {
-
+	ClipBoardButton->SetBitmap(wxArtProvider::GetBitmap(wxART_COPY));
 }
 
 void PopupTextDialog::OnCopyToClipboardClick( wxCommandEvent& event )
@@ -15,4 +15,24 @@ void PopupTextDialog::OnCopyToClipboardClick( wxCommandEvent& event )
 	    wxTheClipboard->SetData( new wxTextDataObject(OutputTextCtrl->GetValue()) );
 	    wxTheClipboard->Close();
 	}
+}
+void PopupTextDialog::OnSaveButtonClick( wxCommandEvent& event )
+{
+	ProperOverwriteCheckSaveDialog *saveFileDialog;
+	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save txt file"), "PNG files (*.txt)|*.txt", ".txt");
+	if (saveFileDialog->ShowModal() == wxID_CANCEL)
+	{
+		saveFileDialog->Destroy();
+		return;
+	}
+
+	// save the file then..
+
+	OutputTextCtrl->SaveFile(saveFileDialog->ReturnProperPath());
+	saveFileDialog->Destroy();
+}
+
+void PopupTextDialog::OnCloseButtonClick(wxCommandEvent &event)
+{
+	Destroy();
 }

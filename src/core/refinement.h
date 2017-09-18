@@ -59,6 +59,16 @@ public :
 	float average_occupancy;
 	float estimated_resolution;
 
+	bool should_auto_mask;
+	bool should_refine_input_params;
+	bool should_use_supplied_mask;
+	long mask_asset_id;
+	float mask_edge_width;
+	float outside_mask_weight;
+	bool should_low_pass_filter_mask;
+	float filter_resolution;
+
+
 	ArrayofRefinementResults particle_refinement_results;
 };
 
@@ -80,6 +90,7 @@ public :
 	int number_of_classes;
 	float percent_used;
 
+
 	int resolution_statistics_box_size;
 	float resolution_statistics_pixel_size;
 
@@ -99,6 +110,10 @@ public :
 
 	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
 	wxArrayString WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor = 1.0f);
+
+	int ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle);
+	ArrayofAngularDistributionHistograms ReturnAngularDistributions(wxString desired_symmetry);
+	void FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram &histogram_to_fill);
 
 
 };

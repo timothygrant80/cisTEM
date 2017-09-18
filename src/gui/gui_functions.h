@@ -30,6 +30,7 @@ class RunSimpleFunctionThread : public wxThread
 };
 
 void SetupDefaultColorMap();
+void SetupDefaultColorBar();
 
 void global_delete_scratch();
 void global_delete_refine2d_scratch();
@@ -37,4 +38,30 @@ void global_delete_refine3d_scratch();
 void global_delete_startup_scratch();
 void global_delete_autorefine3d_scratch();
 void global_delete_generate3d_scratch();
+
+inline wxColour GetColourBarValue(float current_value, float min_value, float max_value)
+{
+	if (current_value <= min_value)
+	{
+		 return default_colorbar[0];
+	}
+	else
+	if (current_value >= max_value)
+	{
+		return default_colorbar[default_colorbar.GetCount() - 1];
+	}
+	else
+	{
+
+		float range = (max_value - min_value) / float(default_colorbar.GetCount());
+		int bar_position = myroundint((current_value - min_value) / range);
+
+		if (bar_position < 0) bar_position = 0;
+		else
+		if (bar_position > default_colorbar.GetCount() - 1) bar_position = default_colorbar.GetCount();
+
+		return default_colorbar[bar_position];
+
+	}
+}
 

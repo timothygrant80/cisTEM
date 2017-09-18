@@ -19,13 +19,12 @@ public :
 	void OnEraseBackground(wxEraseEvent& event);
 	void Clear();
 
-	void UpdateScalingAndDimensions();
+	virtual void UpdateScalingAndDimensions();
 	void UpdateProjCircleRadius();
 
-	void SetupBitmap();
-
-
-	void AddRefinementResult(RefinementResult *refinement_result_to_add);
+	virtual void SetupBitmap();
+	virtual void AddRefinementResult(RefinementResult *refinement_result_to_add);
+	void DrawBlueDot(RefinementResult &refinement_result_to_draw);
 
 	float ReturnRadiusFromTheta(const float theta);
 	//void XYFromPhiTheta(const float phi, const float theta, int &x, int &y);
@@ -50,14 +49,38 @@ public :
 	float		margin_between_major_ticks_and_labels;
 	float		margin_between_circles_and_theta_labels;
 
+	float  		bar_width;
+	float  		bar_height;
+
+	float    bar_x;
+	float    bar_y;
+
 	float		proj_circle_radius;
 
 	int colour_change_step;
 
-
-
+	AngularDistributionHistogram distribution_histogram;
 
 };
+
+
+
+class AngularDistributionPlotPanelHistogram : public AngularDistributionPlotPanel
+{
+
+public :
+
+	AngularDistributionPlotPanelHistogram(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
+	~AngularDistributionPlotPanelHistogram();
+
+
+	void SetupBitmap();
+	void AddRefinementResult(RefinementResult *refinement_result_to_add);
+	void UpdateScalingAndDimensions();
+	void DrawPlot();
+
+};
+
 
 
 

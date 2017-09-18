@@ -1224,6 +1224,11 @@ public:
 		@return reference to axis colour used in theme */
 	const wxColour& GetAxesColour() { return m_axColour; };
 
+	// MOVING THIS HERE FOR TRANSPARENCY HACK
+
+	wxMemoryDC  m_buff_dc;
+
+
 protected:
     void OnPaint         (wxPaintEvent     &event); //!< Paint handler, will plot all attached layers
     void OnSize          (wxSizeEvent      &event); //!< Size handler, will update scroll bar sizes
@@ -1289,7 +1294,7 @@ protected:
     int m_marginTop, m_marginRight, m_marginBottom, m_marginLeft;
 
     int         m_last_lx,m_last_ly;   //!< For double buffering
-    wxMemoryDC  m_buff_dc;             //!< For double buffering
+    // wxMemoryDC  m_buff_dc;             //!< For double buffering
     wxBitmap    *m_buff_bmp;            //!< For double buffering
     bool        m_enableDoubleBuffer;  //!< For double buffering
     bool        m_enableMouseNavigation;  //!< For pan/zoom with the mouse.

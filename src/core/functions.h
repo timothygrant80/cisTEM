@@ -36,6 +36,7 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+
 float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float major_axis_scale, float minor_axis_scale);
 
 wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
@@ -305,3 +306,15 @@ inline bool IsAValidSymmetry(wxString *string_to_check)
 float ReturnSumOfLogP(float logp1, float logp2, float log_range);
 
 int ReturnNumberofAsymmetricUnits(wxString symmetry);
+
+inline float ConvertProjectionXYToThetaInDegrees(float x, float y) // assumes that max x,y is 1
+{
+	return rad_2_deg(asin(sqrtf(powf(x,2) + powf(y,2))));
+}
+
+inline float ConvertXYToPhiInDegrees(float x, float y)
+{
+	if (x == 0 && y==0) return 0;
+	else return rad_2_deg(atan2f(y, x));
+}
+

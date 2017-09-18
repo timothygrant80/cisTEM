@@ -107,6 +107,8 @@
 #include "../gui/AutoRefine3dPanel.h"
 #include "../gui/DisplayRefinementResultsPanel.h"
 #include "../gui/PopupTextDialog.h"
+#include "../gui/LargeAngularPlotDialog.h"
+#include "../gui/RefinementParametersDialog.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

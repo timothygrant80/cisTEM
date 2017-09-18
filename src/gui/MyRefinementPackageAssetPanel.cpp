@@ -532,6 +532,7 @@ void MyRefinementPackageAssetPanel::ImportAllRefinementInfosFromDatabase()
 
 		temp_info.average_occupancy.Clear();
 		temp_info.estimated_resolution.Clear();
+		temp_info.reconstructed_volume_asset_ids.Clear();
 
 		for (class_counter = 0; class_counter < temp_info.number_of_classes; class_counter++)
 		{

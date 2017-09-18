@@ -10,8 +10,9 @@ Database::Database()
 	in_batch_select = false;
 	batch_statement = NULL;
 
-	is_in_begin_commit = false;
 	should_do_local_commit = false;
+
+	number_of_active_transactions = 0;
 
 	sqlite3_config(SQLITE_CONFIG_SINGLETHREAD); // we only need access from a single thread right now, and this should be a little faster as it avoids mutex checks;
 
@@ -509,7 +510,7 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
     return true;
 }
 
-bool Database::Open(wxFileName file_to_open)
+bool Database::Open(wxFileName file_to_open, bool disable_locking)
 {
 	int return_code;
 
@@ -530,7 +531,8 @@ bool Database::Open(wxFileName file_to_open)
 	}
 
 
-	return_code = sqlite3_open_v2(file_to_open.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-dotfile");
+	if (disable_locking == true) return_code = sqlite3_open_v2(file_to_open.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-none");
+	else return_code = sqlite3_open_v2(file_to_open.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-dotfile");
 
 	if( return_code )
 	{
@@ -538,7 +540,7 @@ bool Database::Open(wxFileName file_to_open)
 	    return false;
 	}
 
-//	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
+	//	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
 //	ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
 //	ExecuteSQL("PRAGMA main.synchronous=NORMAL;");
 //	ExecuteSQL("PRAGMA main.page_size=4096;");
@@ -649,6 +651,8 @@ bool Database::CreateAllTables()
 
 	// this succes thing won't work, as it needs to be checked each time - oh well!
 
+	BeginCommitLocker active_locker(this);
+
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
 	CheckSuccess(success);
 	success = CreateProcessLockTable();
@@ -691,9 +695,9 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateReconstructionListTable();
 	CheckSuccess(success);
-
 	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtii", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED");
 	CheckSuccess(success);
+
 	return success;
 }
 
@@ -870,7 +874,7 @@ void Database::Close(bool remove_lock)
 {
 	if (is_open == true)
 	{
-		Begin();
+		BeginCommitLocker active_locker(this);
 		// drop any ownership..
 		if (remove_lock == true)
 		{
@@ -890,7 +894,14 @@ void Database::Close(bool remove_lock)
 		}
 
 		ExecuteSQL("PRAGMA optimize");
-		Commit();
+
+
+		active_locker.Commit(); // Force commit
+
+		// here the begin commit should be 0..
+
+		if (number_of_active_transactions != 0) MyPrintWithDetails("Warning: Transaction number (%i) is not 0 upon close!\n", number_of_active_transactions);
+
 
 		int return_code = sqlite3_close(sqlite_database);
 		MyDebugAssertTrue(return_code == SQLITE_OK, "SQL close error, return code : %i\n", return_code );
@@ -917,18 +928,9 @@ void Database::BeginBatchInsert(const char *table_name, int number_of_columns, .
 	va_list args;
 	va_start(args, number_of_columns);
 
-	// check to see if we are part of a larger transaction.
+	// add a begin
 
-	if (is_in_begin_commit == false)
-	{
-		Begin();
-		should_do_local_commit = true;
-	}
-	else
-	{
-		should_do_local_commit = false;
-	}
-
+	Begin();
 
 	sql_command = "INSERT OR REPLACE INTO ";
 	sql_command += table_name;
@@ -1018,7 +1020,7 @@ void Database::EndBatchInsert()
 	int return_code;
 	char *error_message = NULL;
 
-	if (should_do_local_commit == true) Commit();
+	Commit();
 
 	Finalize(batch_statement);
     in_batch_insert = false;
@@ -1098,7 +1100,6 @@ bool Database::BeginBatchSelect(const char *select_command)
 	MyDebugAssertTrue(in_batch_select == false, "Starting batch select but already in batch select mode");
 
 	in_batch_select = true;
-	int return_code;
 
 	Prepare(select_command, &batch_statement);
 	last_return_code = Step(batch_statement);
@@ -1219,8 +1220,8 @@ void Database::BeginAllVolumeGroupsSelect()
 
 void Database::BeginAllRefinementPackagesSelect()
 {
-	BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");}
-
+	BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");
+}
 
 
 
@@ -1641,6 +1642,7 @@ VolumeAsset Database::GetNextVolumeAsset()
 bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 {
 
+	BeginCommitLocker active_locker(this);
 	InsertOrReplace("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID", profile_to_add->id, profile_to_add->name.ToUTF8().data(), profile_to_add->manager_command.ToUTF8().data(), profile_to_add->gui_address.ToUTF8().data(), profile_to_add->controller_address.ToUTF8().data(), profile_to_add->id);
 	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id));
 	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "DELAY_TIME_IN_MS");
@@ -1653,12 +1655,14 @@ bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 
 bool Database::DeleteRunProfile(int wanted_id)
 {
+	BeginCommitLocker active_locker(this);
 	ExecuteSQL(wxString::Format("DELETE FROM RUN_PROFILES WHERE RUN_PROFILE_ID=%i", wanted_id).ToUTF8().data());
 	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", wanted_id));
 }
 
 void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 {
+	BeginCommitLocker active_locker(this);
 	int temp_int = asset_to_add->stack_has_white_protein;
 	InsertOrReplace("REFINEMENT_PACKAGE_ASSETS", "Pttitrriiii", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STACK_FILENAME", "STACK_BOX_SIZE", "SYMMETRY", "MOLECULAR_WEIGHT", "PARTICLE_SIZE", "NUMBER_OF_CLASSES", "NUMBER_OF_REFINEMENTS", "LAST_REFINEMENT_ID", "STACK_HAS_WHITE_PROTEIN", asset_to_add->asset_id, asset_to_add->name.ToUTF8().data(), asset_to_add->stack_filename.ToUTF8().data(), asset_to_add->stack_box_size, asset_to_add->symmetry.ToUTF8().data(), asset_to_add->estimated_particle_weight_in_kda, asset_to_add->estimated_particle_size_in_angstroms, asset_to_add->number_of_classes, asset_to_add->number_of_run_refinments, asset_to_add->last_refinment_id, temp_int);
 	CreateRefinementPackageContainedParticlesTable(asset_to_add->asset_id);
@@ -1707,11 +1711,11 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	}
 
 	EndBatchInsert();
-
 }
 
 void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used,  float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids)
 {
+	BeginCommitLocker active_locker(this);
 	InsertOrReplace("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR", startup_job_id, refinement_package_asset_id, name.ToUTF8().data(), number_of_starts, number_of_cycles, initial_res_limit, final_res_limit, int(auto_mask), int(auto_percent_used), initial_percent_used, final_percent_used, mask_radius, int(apply_blurring), smoothing_factor);
 	CreateStartupResultTable(startup_job_id);
 
@@ -1727,6 +1731,36 @@ void Database::AddReconstructionJob(long reconstruction_id, long refinement_pack
 	InsertOrReplace("RECONSTRUCTION_LIST", "Plltrrrriiiiril", "RECONSTRUCTION_ID", "REFINEMENT_PACKAGE_ID", "REFINEMENT_ID", "NAME", "INNER_MASK_RADIUS", "OUTER_MASK_RADIUS", "RESOLUTION_LIMIT", "SCORE_WEIGHT_CONVERSION", "SHOULD_ADJUST_SCORES", "SHOULD_CROP_IMAGES", "SHOULD_SAVE_HALF_MAPS", "SHOULD_LIKELIHOOD_BLUR", "SMOOTHING_FACTOR", "CLASS_NUMBER", "VOLUME_ASSET_ID", reconstruction_id, refinement_package_asset_id, refinement_id, name.ToUTF8().data(), inner_mask_radius, outer_mask_radius, resolution_limit, score_weight_conversion, int(should_adjust_score), int(should_crop_images), int (should_save_half_maps), int (should_likelihood_blur), smoothing_factor, class_number, volume_asset_id);
 }
 
+void Database::GetReconstructionJob(long wanted_reconstruction_id, long &refinement_package_asset_id, long &refinement_id, wxString &name, float &inner_mask_radius, float &outer_mask_radius, float &resolution_limit, float &score_weight_conversion, bool &should_adjust_score, bool &should_crop_images, bool &should_save_half_maps, bool &should_likelihood_blur, float &smoothing_factor, int &class_number, long &volume_asset_id)
+{
+	wxString sql_select_command;
+	sqlite3_stmt *list_statement = NULL;
+	int return_code;
+
+	sql_select_command = wxString::Format("SELECT * FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=%li", wanted_reconstruction_id);
+	Prepare(sql_select_command, &list_statement);
+
+	return_code = Step(list_statement);
+
+	refinement_package_asset_id = sqlite3_column_int64(list_statement, 1);
+	refinement_id = sqlite3_column_int64(list_statement, 2);
+	name = sqlite3_column_text(list_statement, 3);
+	inner_mask_radius = sqlite3_column_double(list_statement, 4);
+	outer_mask_radius = sqlite3_column_double(list_statement, 5);
+	resolution_limit = sqlite3_column_double(list_statement, 6);
+	score_weight_conversion = sqlite3_column_double(list_statement, 7);
+	should_adjust_score = sqlite3_column_int(list_statement, 8);
+	should_crop_images = sqlite3_column_int(list_statement, 9);
+	should_save_half_maps = sqlite3_column_int(list_statement, 10);
+	should_likelihood_blur = sqlite3_column_int(list_statement, 11);
+	smoothing_factor = sqlite3_column_double(list_statement, 12);
+	class_number = sqlite3_column_int(list_statement, 13);
+	volume_asset_id = sqlite3_column_int64(list_statement, 14);
+
+	Finalize(list_statement);
+
+}
+
 
 void Database::AddRefinement(Refinement *refinement_to_add)
 {
@@ -1735,12 +1769,9 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 	bool should_commit = false;
 	float estimated_resolution;
 
-	if (is_in_begin_commit == false)
-	{
-		Begin();
-		should_commit = true;
-	}
-	InsertOrReplace("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "RESOLUTION_STATISTICS_ARE_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->resolution_statistics_are_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size);
+	BeginCommitLocker active_locker(this);
+
+	InsertOrReplace("REFINEMENT_LIST", "Pltillllirr", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "RESOLUTION_STATISTICS_ARE_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", "PERCENT_USED", refinement_to_add->refinement_id, refinement_to_add->refinement_package_asset_id, refinement_to_add->name.ToUTF8().data(), refinement_to_add->resolution_statistics_are_generated, refinement_to_add->datetime_of_run.GetAsDOS(), refinement_to_add->starting_refinement_id, refinement_to_add->number_of_particles, refinement_to_add->number_of_classes, refinement_to_add->resolution_statistics_box_size, refinement_to_add->resolution_statistics_pixel_size, refinement_to_add->percent_used);
 
 	for (class_counter = 0; class_counter < refinement_to_add->number_of_classes; class_counter++)
 	{
@@ -1751,7 +1782,7 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 		if (refinement_to_add->resolution_statistics_are_generated == true) estimated_resolution = 0.0;
 		else estimated_resolution = refinement_to_add->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution();
 
-		InsertOrReplace(wxString::Format("REFINEMENT_DETAILS_%li", refinement_to_add->refinement_id), "ilrrrrrrirrrrirrrrirrrrll", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "AVERAGE_OCCUPANCY", "ESTIMATED_RESOLUTION", "RECONSTRUCTED_VOLUME_ASSET_ID", "RECONSTRUCTION_ID", class_counter + 1, refinement_to_add->reference_volume_ids[class_counter], refinement_to_add->class_refinement_results[class_counter].low_resolution_limit, refinement_to_add->class_refinement_results[class_counter].high_resolution_limit, refinement_to_add->class_refinement_results[class_counter].mask_radius, refinement_to_add->class_refinement_results[class_counter].signed_cc_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_mask_radius, refinement_to_add->class_refinement_results[class_counter].number_results_to_refine, refinement_to_add->class_refinement_results[class_counter].angular_search_step, refinement_to_add->class_refinement_results[class_counter].search_range_x, refinement_to_add->class_refinement_results[class_counter].search_range_y, refinement_to_add->class_refinement_results[class_counter].classification_resolution_limit, refinement_to_add->class_refinement_results[class_counter].should_focus_classify, refinement_to_add->class_refinement_results[class_counter].sphere_x_coord, refinement_to_add->class_refinement_results[class_counter].sphere_y_coord, refinement_to_add->class_refinement_results[class_counter].sphere_z_coord, refinement_to_add->class_refinement_results[class_counter].sphere_radius, refinement_to_add->class_refinement_results[class_counter].should_refine_ctf, refinement_to_add->class_refinement_results[class_counter].defocus_search_range, refinement_to_add->class_refinement_results[class_counter].defocus_search_step, refinement_to_add->class_refinement_results[class_counter].average_occupancy, estimated_resolution, refinement_to_add->class_refinement_results[class_counter].reconstructed_volume_asset_id, refinement_to_add->class_refinement_results[class_counter].reconstruction_id);
+		InsertOrReplace(wxString::Format("REFINEMENT_DETAILS_%li", refinement_to_add->refinement_id), "ilrrrrrrirrrrirrrrirrrrlliiilrrir", "CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT", "GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD", "SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_SEARCH_STEP", "AVERAGE_OCCUPANCY", "ESTIMATED_RESOLUTION", "RECONSTRUCTED_VOLUME_ASSET_ID", "RECONSTRUCTION_ID", "SHOULD_AUTOMASK", "SHOULD_REFINE_INPUT_PARAMS", "SHOULD_USE_SUPPLIED_MASK", "MASK_ASSET_ID", "MASK_EDGE_WIDTH", "OUTSIDE_MASK_WEIGHT", "SHOULD_LOWPASS_OUTSIDE_MASK", "MASK_FILTER_RESOLUTION", class_counter + 1, refinement_to_add->reference_volume_ids[class_counter], refinement_to_add->class_refinement_results[class_counter].low_resolution_limit, refinement_to_add->class_refinement_results[class_counter].high_resolution_limit, refinement_to_add->class_refinement_results[class_counter].mask_radius, refinement_to_add->class_refinement_results[class_counter].signed_cc_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_resolution_limit, refinement_to_add->class_refinement_results[class_counter].global_mask_radius, refinement_to_add->class_refinement_results[class_counter].number_results_to_refine, refinement_to_add->class_refinement_results[class_counter].angular_search_step, refinement_to_add->class_refinement_results[class_counter].search_range_x, refinement_to_add->class_refinement_results[class_counter].search_range_y, refinement_to_add->class_refinement_results[class_counter].classification_resolution_limit, refinement_to_add->class_refinement_results[class_counter].should_focus_classify, refinement_to_add->class_refinement_results[class_counter].sphere_x_coord, refinement_to_add->class_refinement_results[class_counter].sphere_y_coord, refinement_to_add->class_refinement_results[class_counter].sphere_z_coord, refinement_to_add->class_refinement_results[class_counter].sphere_radius, refinement_to_add->class_refinement_results[class_counter].should_refine_ctf, refinement_to_add->class_refinement_results[class_counter].defocus_search_range, refinement_to_add->class_refinement_results[class_counter].defocus_search_step, refinement_to_add->class_refinement_results[class_counter].average_occupancy, estimated_resolution, refinement_to_add->class_refinement_results[class_counter].reconstructed_volume_asset_id, refinement_to_add->class_refinement_results[class_counter].reconstruction_id, refinement_to_add->class_refinement_results[class_counter].should_auto_mask, refinement_to_add->class_refinement_results[class_counter].should_refine_input_params, refinement_to_add->class_refinement_results[class_counter].should_use_supplied_mask, refinement_to_add->class_refinement_results[class_counter].mask_asset_id, refinement_to_add->class_refinement_results[class_counter].mask_edge_width, refinement_to_add->class_refinement_results[class_counter].outside_mask_weight, refinement_to_add->class_refinement_results[class_counter].should_low_pass_filter_mask, refinement_to_add->class_refinement_results[class_counter].filter_resolution);
 	}
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
@@ -1779,8 +1810,6 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 		EndBatchInsert();
 	}
 
-	if (should_commit == true) Commit();
-
 }
 
 
@@ -1789,15 +1818,7 @@ void Database::UpdateRefinementResolutionStatistics(Refinement *refinement_to_ad
 	int class_counter;
 	long counter;
 
-	if (is_in_begin_commit == false)
-	{
-		Begin();
-		should_do_local_commit = true;
-	}
-	else
-	{
-		should_do_local_commit = false;
-	}
+	BeginCommitLocker active_locker(this);
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
@@ -1817,12 +1838,9 @@ void Database::UpdateRefinementResolutionStatistics(Refinement *refinement_to_ad
 
 		EndBatchInsert();
 	}
-
-	if (should_do_local_commit == true) Commit();
-
 }
 
-Refinement *Database::GetRefinementByID(long wanted_refinement_id)
+Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_particle_info)
 {
 	wxString sql_select_command;
 	int return_code;
@@ -1861,6 +1879,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 	temp_refinement->number_of_classes = sqlite3_column_int(list_statement, 7);
 	temp_refinement->resolution_statistics_box_size = sqlite3_column_int(list_statement, 8);
 	temp_refinement->resolution_statistics_pixel_size = sqlite3_column_double(list_statement, 9);
+	temp_refinement->percent_used = sqlite3_column_double(list_statement, 10);
 
 	Finalize(list_statement);
 
@@ -1901,23 +1920,33 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 		temp_refinement->class_refinement_results[class_counter].estimated_resolution = sqlite3_column_double(list_statement, 22);
 		temp_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = sqlite3_column_int64(list_statement, 23);
 		temp_refinement->class_refinement_results[class_counter].reconstruction_id = sqlite3_column_int64(list_statement, 24);
+		temp_refinement->class_refinement_results[class_counter].should_auto_mask = sqlite3_column_int(list_statement, 24);
+		temp_refinement->class_refinement_results[class_counter].should_refine_input_params = sqlite3_column_int(list_statement, 24);
+		temp_refinement->class_refinement_results[class_counter].should_use_supplied_mask = sqlite3_column_int(list_statement, 25);
+		temp_refinement->class_refinement_results[class_counter].mask_asset_id = sqlite3_column_int64(list_statement, 26);
+		temp_refinement->class_refinement_results[class_counter].mask_edge_width = sqlite3_column_double(list_statement, 27);
+		temp_refinement->class_refinement_results[class_counter].outside_mask_weight = sqlite3_column_double(list_statement, 28);
+		temp_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = sqlite3_column_int(list_statement, 29);
+		temp_refinement->class_refinement_results[class_counter].filter_resolution = sqlite3_column_double(list_statement, 30);
 	}
 
 	Finalize(list_statement);
 
-	for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
+	if (include_particle_info == true)
 	{
-		temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Alloc(temp_refinement->number_of_particles);
-		sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESULT_%li_%i", temp_refinement->refinement_id, class_counter + 1);
-
-		more_data = BeginBatchSelect(sql_select_command);
-
-		temp_refinement->class_refinement_results[class_counter].average_occupancy = 0.0f;
-		number_of_active_images = 0;
-
-		while (more_data == true)
+		for (class_counter = 0; class_counter < temp_refinement->number_of_classes; class_counter++)
 		{
-			more_data = GetFromBatchSelect("lsssssssssssssi", &temp_result.position_in_stack,
+			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Alloc(temp_refinement->number_of_particles);
+			sql_select_command = wxString::Format("SELECT * FROM REFINEMENT_RESULT_%li_%i", temp_refinement->refinement_id, class_counter + 1);
+
+			more_data = BeginBatchSelect(sql_select_command);
+
+			temp_refinement->class_refinement_results[class_counter].average_occupancy = 0.0f;
+			number_of_active_images = 0;
+
+			while (more_data == true)
+			{
+				more_data = GetFromBatchSelect("lsssssssssssssi", &temp_result.position_in_stack,
 					                                                                              &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
@@ -1933,17 +1962,17 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id)
 																								  &temp_result.score,
 																								  &temp_result.image_is_active);
 
-			temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
+				temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
 
-			if (temp_result.image_is_active >= 0.0)
-			{
-				temp_refinement->class_refinement_results[class_counter].average_occupancy += temp_result.occupancy;
-				number_of_active_images++;
+				if (temp_result.image_is_active >= 0.0)
+				{
+					temp_refinement->class_refinement_results[class_counter].average_occupancy += temp_result.occupancy;
+					number_of_active_images++;
+				}
 			}
+			if (number_of_active_images > 0) temp_refinement->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
+			EndBatchSelect();
 		}
-		if (number_of_active_images > 0) temp_refinement->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
-		EndBatchSelect();
-
 	}
 
 	// resolution statistics
@@ -1981,6 +2010,8 @@ void Database::AddClassification(Classification *classification_to_add)
 	MyDebugAssertTrue(classification_to_add->number_of_particles == classification_to_add->classification_results.GetCount(), "Number of results does not equal number of particles in this classification");
 	long counter;
 
+	BeginCommitLocker active_locker(this);
+
 	InsertOrReplace("CLASSIFICATION_LIST", "Plttilllirrrrrrriir", "CLASSIFICATION_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "CLASS_AVERAGE_FILE", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_CLASSIFICATION_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "SMOOTHING_FACTOR", "EXCLUDE_BLANK_EDGES", "AUTO_PERCENT_USED", "PERCENT_USED", classification_to_add->classification_id, classification_to_add->refinement_package_asset_id, classification_to_add->name.ToUTF8().data(), classification_to_add->class_average_file.ToUTF8().data(), classification_to_add->classification_was_imported_or_generated, classification_to_add->datetime_of_run.GetAsDOS(), classification_to_add->starting_classification_id, classification_to_add->number_of_particles, classification_to_add->number_of_classes, classification_to_add->low_resolution_limit, classification_to_add->high_resolution_limit, classification_to_add->mask_radius, classification_to_add->angular_search_step, classification_to_add->search_range_x, classification_to_add->search_range_y, classification_to_add->smoothing_factor, classification_to_add->exclude_blank_edges, classification_to_add->auto_percent_used, classification_to_add->percent_used);
 	CreateClassificationResultTable(classification_to_add->classification_id);
 
@@ -1992,6 +2023,7 @@ void Database::AddClassification(Classification *classification_to_add)
 	}
 
 	EndBatchInsert();
+
 }
 
 Classification *Database::GetClassificationByID(long wanted_classification_id)
@@ -2066,6 +2098,7 @@ Classification *Database::GetClassificationByID(long wanted_classification_id)
 
 void Database::AddClassificationSelection(ClassificationSelection *classification_selection_to_add)
 {
+	BeginCommitLocker active_locker(this);
 	InsertOrReplace("CLASSIFICATION_SELECTION_LIST", "ltlllii", "SELECTION_ID", "SELECTION_NAME", "CREATION_DATE", "REFINEMENT_PACKAGE_ID", "CLASSIFICATION_ID", "NUMBER_OF_CLASSES", "NUMBER_OF_SELECTIONS", classification_selection_to_add->selection_id, classification_selection_to_add->name.ToUTF8().data(), classification_selection_to_add->creation_date.GetAsDOS(), classification_selection_to_add->refinement_package_asset_id, classification_selection_to_add->classification_id, classification_selection_to_add->number_of_classes, classification_selection_to_add->number_of_selections);
 	CreateClassificationSelectionTable(classification_selection_to_add->selection_id);
 
@@ -2104,10 +2137,58 @@ void Database::ReturnProcessLockInfo(long &active_process_id, wxString &active_h
 
 void Database::SetProcessLockInfo(long &active_process_id, wxString &active_hostname)
 {
-	Begin();
+	BeginCommitLocker active_locker(this);
 	DeleteTable("PROCESS_LOCK");
 	CreateProcessLockTable();
 	InsertOrReplace("PROCESS_LOCK", "plt", "NUMBER", "ACTIVE_PROCESS", "ACTIVE_HOST", 1, active_process_id, active_hostname.ToUTF8().data());
-	Commit();
+}
+
+void Database::AddRefinementAngularDistribution(AngularDistributionHistogram &histogram_to_add, long refinement_id, int class_number)
+{
+	BeginCommitLocker active_locker(this);
+	CreateRefinementAngularDistributionTable(refinement_id, class_number);
+	BeginBatchInsert(wxString::Format("REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", refinement_id, class_number), 2, "BIN_NUMBER", "NUMBER_IN_BIN");
+
+	for (int bin_counter = 0; bin_counter < histogram_to_add.histogram_data.GetCount(); bin_counter++)
+	{
+		AddToBatchInsert("ir", bin_counter, histogram_to_add.histogram_data[bin_counter]);
+	}
+
+	EndBatchInsert();
+}
+
+void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinement_id, int wanted_class_number, AngularDistributionHistogram &histogram_to_fill) // must be correct size
+{
+	float temp_float;
+	bool more_data;
+	int bin_counter = 0;
+
+	more_data = BeginBatchSelect(wxString::Format("SELECT NUMBER_IN_BIN FROM REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", wanted_refinement_id, wanted_class_number));
+
+	while (more_data == true)
+	{
+		more_data = GetFromBatchSelect("s", &temp_float);
+		histogram_to_fill.histogram_data[bin_counter] = temp_float;//fabsf(global_random_number_generator.GetUniformRandom() * 50);
+		bin_counter++;
+	}
+
+	EndBatchSelect();
+}
+
+BeginCommitLocker::BeginCommitLocker(Database *wanted_database)
+{
+	active_database = wanted_database;
+	already_sent_commit = false;
+	active_database->Begin();
+}
+BeginCommitLocker::~BeginCommitLocker()
+{
+	if (already_sent_commit == false) active_database->Commit();
+}
+void BeginCommitLocker::Commit()
+{
+	MyDebugAssertTrue(already_sent_commit == false, "Commiting multiple times!");
+	already_sent_commit = true;
+	active_database->Commit();
 }
 

@@ -99,6 +99,7 @@ bool MyGuiApp::OnInit()
 	wxConfig::Set(cistem_config);
 
 	SetupDefaultColorMap();
+	SetupDefaultColorBar();
 
 	// Left hand Panels
 

@@ -8,6 +8,24 @@
 #ifndef __MyControls__
 #define __MyControls__
 
+class NoFocusBitmapButton : public wxBitmapButton
+{
+public:
+
+	NoFocusBitmapButton(wxWindow *parent, wxWindowID id, const wxBitmap &bitmap, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxBU_AUTODRAW, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxButtonNameStr)
+	:
+	wxBitmapButton(parent, id, bitmap, pos, size, style, validator, name)
+	{
+		Bind(wxEVT_SET_FOCUS, &NoFocusBitmapButton::OnFocus, this);
+	}
+
+	bool AcceptsFocus() const  {return false;}
+	bool AcceptsFocusFromKeyboard() const {return false;}
+	void OnFocus(wxFocusEvent& event){Freeze();Disable();Enable();Thaw();} // nasty hack, I don't want these buttons to focus
+
+
+};
+
 class MemoryComboBox : public wxOwnerDrawnComboBox
 {
 public :
@@ -248,13 +266,19 @@ class ReferenceVolumesListControlRefinement: public ReferenceVolumesListControl{
 
 };
 
+class RefinementParametersDialog;
 
 class RefinementParametersListCtrl: public wxListCtrl{
+
+	RefinementParametersDialog *parent_dialog;
+
 	public:
 	RefinementParametersListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
 	virtual wxString OnGetItemText(long item, long column) const;
 
 	int ReturnGuessAtColumnTextWidth(int wanted_column);
+	void SetParent(RefinementParametersDialog *wanted_parent);
+
 
 };
 

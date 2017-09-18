@@ -252,7 +252,7 @@ void DisplayPanel::CloseAllTabs()
 			MainSizer->Detach(no_notebook_panel);
 			no_notebook_panel->Destroy();
 			no_notebook_panel = NULL;
-			Layout();
+			//Layout();
 		}
 	}
 	else
@@ -677,7 +677,7 @@ void DisplayPanel::UpdateToolbar(void)
 
 	}
 
-	Layout();
+	Toolbar->Layout();
 	Refresh();
 	Update();
 
@@ -2924,7 +2924,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 	// is our stored bitmap the correct size? if not redraw
 
 	if (window_x_size != panel_bitmap.GetWidth() || window_y_size != panel_bitmap.GetHeight()) ReDrawPanel();
-	else
+	//else
 	{
 		//just redraw the areas that have changed..
 

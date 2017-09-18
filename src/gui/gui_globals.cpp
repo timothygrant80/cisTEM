@@ -6,3 +6,4 @@ wxDEFINE_EVENT(MY_ORTH_DRAW_EVENT, MyOrthDrawEvent);
 WX_DEFINE_OBJARRAY(ArrayofColors);
 
 ArrayofColors default_colormap;
+ArrayofColors default_colorbar;

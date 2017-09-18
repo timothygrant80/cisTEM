@@ -6,7 +6,13 @@ class AssetPickerComboPanel : public AssetPickerComboPanelParent
 public :
 
 	AssetPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	virtual ~AssetPickerComboPanel();
 	void ParentPopUpSelectorClicked(wxCommandEvent& event);
+
+	void OnSize(wxSizeEvent& event);
+	void OnUpdateUI( wxUpdateUIEvent& event );
+	void OnNextButtonClick( wxCommandEvent& event);
+	void OnPreviousButtonClick( wxCommandEvent& event);
 
 	void SetSelection(int wanted_selection) {AssetComboBox->SetSelection(wanted_selection);}
 	void SetSelectionWithEvent(int wanted_selection)

@@ -12,6 +12,7 @@
 #include <wx/xrc/xmlres.h>
 class AbInitioPlotPanel;
 class AngularDistributionPlotPanel;
+class AngularDistributionPlotPanelHistogram;
 class AssetPickerListCtrl;
 class AutoWrapStaticText;
 class BitmapPanel;
@@ -29,6 +30,7 @@ class JobPanel;
 class MemoryComboBox;
 class MovieGroupPickerComboPanel;
 class MyFSCPanel;
+class NoFocusBitmapButton;
 class NumericTextCtrl;
 class PickingBitmapPanel;
 class PickingResultsDisplayPanel;
@@ -37,6 +39,7 @@ class ReferenceVolumesListControl;
 class ReferenceVolumesListControlRefinement;
 class RefinementPackageListControl;
 class RefinementPackagePickerComboPanel;
+class RefinementParametersListCtrl;
 class RefinementPickerComboPanel;
 class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
@@ -128,10 +131,19 @@ class AssetPickerComboPanelParent : public wxPanel
 	private:
 	
 	protected:
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnSize( wxSizeEvent& event ) { event.Skip(); }
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
 	
 	public:
 		MemoryComboBox* AssetComboBox;
-		wxBitmapButton* WindowSelectButton;
+		NoFocusBitmapButton* PreviousButton;
+		NoFocusBitmapButton* NextButton;
+		NoFocusBitmapButton* WindowSelectButton;
 		
 		AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL ); 
 		~AssetPickerComboPanelParent();
@@ -337,37 +349,131 @@ class RefinementResultsPanel : public wxPanel
 		wxPanel* m_panel49;
 		wxStaticText* m_staticText284;
 		wxStaticText* m_staticText285;
-		wxStaticLine* m_staticline126;
 		wxSplitterWindow* m_splitter16;
 		wxPanel* m_panel124;
 		MyFSCPanel* FSCPlotPanel;
 		wxPanel* m_panel125;
-		AngularDistributionPlotPanel* AngularPlotPanel;
-		wxPanel* m_panel48;
+		wxStaticText* m_staticText708;
+		wxStaticLine* m_staticline132;
+		wxStaticLine* m_staticline131;
+		AngularDistributionPlotPanelHistogram* AngularPlotPanel;
+		wxPanel* RightPanel;
+		wxToggleButton* JobDetailsToggleButton;
+		wxStaticLine* m_staticline133;
+		wxPanel* JobDetailsPanel;
+		wxFlexGridSizer* InfoSizer;
+		wxStaticText* m_staticText72;
+		wxStaticText* RefinementIDStaticText;
+		wxStaticText* m_staticText74;
+		wxStaticText* DateOfRunStaticText;
+		wxStaticText* m_staticText93;
+		wxStaticText* TimeOfRunStaticText;
+		wxStaticText* m_staticText785;
+		wxStaticText* PercentUsedStaticText;
+		wxStaticText* m_staticText83;
+		wxStaticText* ReferenceVolumeIDStaticText;
+		wxStaticText* m_staticText82;
+		wxStaticText* ReferenceRefinementIDStaticText;
+		wxStaticText* m_staticText85;
+		wxStaticText* LowResLimitStaticText;
+		wxStaticText* m_staticText87;
+		wxStaticText* HighResLimitStaticText;
+		wxStaticText* m_staticText89;
+		wxStaticText* MaskRadiusStaticText;
+		wxStaticText* m_staticText777;
+		wxStaticText* SignedCCResLimitStaticText;
+		wxStaticText* m_staticText779;
+		wxStaticText* GlobalResLimitStaticText;
+		wxStaticText* m_staticText781;
+		wxStaticText* GlobalMaskRadiusStaticText;
+		wxStaticText* m_staticText783;
+		wxStaticText* NumberResultsRefinedStaticText;
+		wxStaticText* m_staticText91;
+		wxStaticText* AngularSearchStepStaticText;
+		wxStaticText* m_staticText79;
+		wxStaticText* SearchRangeXStaticText;
+		wxStaticText* m_staticText99;
+		wxStaticText* SearchRangeYStaticText;
+		wxStaticText* m_staticText95;
+		wxStaticText* ClassificationResLimitStaticText;
+		wxStaticText* LargeAstigExpectedLabel;
+		wxStaticText* ShouldFocusClassifyStaticText;
+		wxStaticText* ToleratedAstigLabel;
+		wxStaticText* SphereXCoordStaticText;
+		wxStaticText* NumberOfAveragedFramesLabel;
+		wxStaticText* SphereYCoordStaticText;
+		wxStaticText* m_staticText787;
+		wxStaticText* SphereZCoordStaticText;
+		wxStaticText* m_staticText789;
+		wxStaticText* SphereRadiusStaticText;
+		wxStaticText* m_staticText791;
+		wxStaticText* ShouldRefineCTFStaticText;
+		wxStaticText* m_staticText793;
+		wxStaticText* DefocusSearchRangeStaticText;
+		wxStaticText* m_staticText795;
+		wxStaticText* DefocusSearchStepStaticText;
+		wxStaticText* m_staticText797;
+		wxStaticText* ShouldAutoMaskStaticText;
+		wxStaticText* m_staticText799;
+		wxStaticText* RefineInputParamsStaticText;
+		wxStaticText* m_staticText801;
+		wxStaticText* UseSuppliedMaskStaticText;
+		wxStaticText* m_staticText803;
+		wxStaticText* MaskAssetIDStaticText;
+		wxStaticText* m_staticText805;
+		wxStaticText* MaskEdgeWidthStaticText;
+		wxStaticText* m_staticText807;
+		wxStaticText* MaskOutsideWeightStaticText;
+		wxStaticText* m_staticText809;
+		wxStaticText* ShouldFilterOutsideMaskStaticText;
+		wxStaticText* m_staticText811;
+		wxStaticText* MaskFilterResolutionStaticText;
+		wxStaticText* m_staticText813;
+		wxStaticText* ReconstructionIDStaticText;
+		wxStaticText* m_staticText815;
+		wxStaticText* InnerMaskRadiusStaticText;
+		wxStaticText* m_staticText817;
+		wxStaticText* OuterMaskRadiusStaticText;
+		wxStaticText* m_staticText820;
+		wxStaticText* ResolutionCutOffStaticText;
+		wxStaticText* Score;
+		wxStaticText* ScoreWeightConstantStaticText;
+		wxStaticText* m_staticText823;
+		wxStaticText* AdjustScoresStaticText;
+		wxStaticText* m_staticText825;
+		wxStaticText* ShouldCropImagesStaticText;
+		wxStaticText* m_staticText827;
+		wxStaticText* ShouldLikelihoodBlurStaticText;
+		wxStaticText* m_staticText829;
+		wxStaticText* SmoothingFactorStaticText;
+		wxStaticLine* m_staticline30;
 		DisplayPanel* OrthPanel;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnRefinementPackageComboBox( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnInputParametersComboBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void PopupParametersClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void AngularPlotPopupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
-		MemoryComboBox* RefinementPackageComboBox;
-		MemoryComboBox* InputParametersComboBox;
+		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
+		RefinementPickerComboPanel* InputParametersComboBox;
+		NoFocusBitmapButton* ParametersDetailButton;
+		NoFocusBitmapButton* AngularPlotDetailsButton;
 		
 		RefinementResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1007,587 ), long style = wxTAB_TRAVERSAL ); 
 		~RefinementResultsPanel();
 		
 		void m_splitter7OnIdle( wxIdleEvent& )
 		{
-			m_splitter7->SetSashPosition( 800 );
+			m_splitter7->SetSashPosition( 900 );
 			m_splitter7->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter7OnIdle ), NULL, this );
 		}
 		
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
-			m_splitter16->SetSashPosition( 0 );
+			m_splitter16->SetSashPosition( 350 );
 			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter16OnIdle ), NULL, this );
 		}
 	
@@ -2622,11 +2728,13 @@ class FSCPanel : public wxPanel
 		PlotFSCPanel* PlotPanel;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void SaveImageClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void PopupTextClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
-		wxBitmapButton* FSCDetailsButton;
+		NoFocusBitmapButton* SaveButton;
+		NoFocusBitmapButton* FSCDetailsButton;
 		
 		FSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
 		~FSCPanel();
@@ -2903,16 +3011,72 @@ class PopupTextDialogParent : public wxDialog
 	protected:
 		wxButton* CloseButton;
 		wxButton* ClipBoardButton;
+		wxButton* m_button146;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCopyToClipboardClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
 		wxTextCtrl* OutputTextCtrl;
 		
-		PopupTextDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxCAPTION|wxRESIZE_BORDER ); 
+		PopupTextDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
 		~PopupTextDialogParent();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class LargeAngularPlotDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class LargeAngularPlotDialogParent : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxButton* CloseButton;
+		wxButton* ClipBoardButton;
+		wxButton* SaveButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCopyToClipboardClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		AngularDistributionPlotPanelHistogram* AngularPlotPanel;
+		
+		LargeAngularPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
+		~LargeAngularPlotDialogParent();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RefinementParametersDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class RefinementParametersDialogParent : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxToolBar* ClassToolBar;
+		wxStaticText* m_staticText831;
+		wxStaticLine* m_staticline137;
+		RefinementParametersListCtrl* ParameterListCtrl;
+		wxButton* CloseButton;
+		wxButton* SaveButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		RefinementParametersDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
+		~RefinementParametersDialogParent();
 	
 };
 

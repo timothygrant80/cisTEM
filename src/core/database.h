@@ -3,9 +3,8 @@ class Database {
 	bool is_open;
 	bool in_batch_insert;
 	bool in_batch_select;
-	bool is_in_begin_commit;
 
-
+	int number_of_active_transactions;
 
 	sqlite3_stmt *batch_statement;
 	bool should_do_local_commit; // used for functions to decide whether to do a commit themselves, or to leave it for someone else to commit. if already in a begin, it won't do begin commit.
@@ -24,26 +23,23 @@ public :
 	wxString ReturnFilename() {return database_file.GetFullPath();};
 
 	bool CreateNewDatabase(wxFileName database_file);
-	bool Open(wxFileName file_to_open);
+	bool Open(wxFileName file_to_open, bool disable_locking = false);
 
 
-	void Begin()
+	inline void Begin()
 	{
-		if (is_in_begin_commit == false)
-		{
-			is_in_begin_commit = true;
-			ExecuteSQL("BEGIN IMMEDIATE;");// we can start, otherwise, we are already in begin commit
-		}
+		if (number_of_active_transactions == 0) ExecuteSQL("BEGIN IMMEDIATE;");// we can start, otherwise, we are already in begin commit
+		number_of_active_transactions++;
 
-	};
+	//	MyPrintWithDetails("\nBegin %i\n", number_of_active_transactions);
+	}
 
-	void Commit()
+	inline void Commit()
 	{
-		if (is_in_begin_commit == true)
-		{
-			is_in_begin_commit = false;
-			ExecuteSQL("COMMIT;"); // only do this if we are actually in a section
-		}
+		number_of_active_transactions--;
+		if (number_of_active_transactions == 0)	ExecuteSQL("COMMIT;");
+
+		//MyPrintWithDetails("\nCommit %i\n", number_of_active_transactions);
 	}
 
 	bool CreateTable(const char *table_name, const char *column_format, ...);
@@ -173,16 +169,22 @@ public :
 	bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID");};
 	bool CreateRefinementPackageClassificationsList(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li", refinement_package_asset_id), "pl", "CLASSIFICATION_NUMBER", "CLASSIFICATION_ID");};
 
-	bool CreateRefinementListTable() {return CreateTable("REFINEMENT_LIST", "Pltillllir", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "RESOLUTION_STATISTICS_ARE_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE");};
-	bool CreateRefinementDetailsTable(const long refinement_id) {return CreateTable(wxString::Format("REFINEMENT_DETAILS_%li", refinement_id), "plrrrrrrirrrrirrrrirrrrll",	"CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT",
-																																											"HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT",
-																																											"GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE",
-																																											"ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y",
-																																											"CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD",
-																																											"SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE",
-																																											"DEFOCUS_SEARCH_STEP", "AVERAGE_OCCUPANCY", "ESTIMATED_RESOLUTION", "RECONSTRUCTED_VOLUME_ASSET_ID", "RECONSTRUCTION_ID");};
+	bool CreateRefinementListTable() {return CreateTable("REFINEMENT_LIST", "Pltillllirr", "REFINEMENT_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "RESOLUTION_STATISTICS_ARE_GENERATED", "DATETIME_OF_RUN", "STARTING_REFINEMENT_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "RESOLUTION_STATISTICS_BOX_SIZE", "RESOLUTION_STATISTICS_PIXEL_SIZE", "PERCENT_USED");};
+
+	bool CreateRefinementDetailsTable(const long refinement_id) {return CreateTable(wxString::Format("REFINEMENT_DETAILS_%li", refinement_id), "plrrrrrrirrrrirrrrirrrrlliiilrrir",		"CLASS_NUMBER", "REFERENCE_VOLUME_ASSET_ID", "LOW_RESOLUTION_LIMIT",
+																																														"HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "SIGNED_CC_RESOLUTION_LIMIT",
+																																														"GLOBAL_RESOLUTION_LIMIT", "GLOBAL_MASK_RADIUS", "NUMBER_RESULTS_TO_REFINE",
+																																														"ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y",
+																																														"CLASSIFICATION_RESOLUTION_LIMIT", "SHOULD_FOCUS_CLASSIFY", "SPHERE_X_COORD",
+																																														"SPHERE_Y_COORD", "SPHERE_Z_COORD", "SPHERE_RADIUS", "SHOULD_REFINE_CTF", "DEFOCUS_SEARCH_RANGE",
+																																														"DEFOCUS_SEARCH_STEP", "AVERAGE_OCCUPANCY", "ESTIMATED_RESOLUTION", "RECONSTRUCTED_VOLUME_ASSET_ID",
+																																														"RECONSTRUCTION_ID", "SHOULD_AUTOMASK", "SHOULD_REFINE_INPUT_PARAMS", "SHOULD_USE_SUPPLIED_MASK",
+																																														"MASK_ASSET_ID", "MASK_EDGE_WIDTH", "OUTSIDE_MASK_WEIGHT", "SHOULD_LOWPASS_OUTSIDE_MASK", "MASK_FILTER_RESOLUTION");};
+
+
 	bool CreateRefinementResultTable(const long refinement_id, const int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrri", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE");};
-	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_counter) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_counter), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
+	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_number), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
+	bool CreateRefinementAngularDistributionTable(const long refinement_id, const int class_number) { return CreateTable(wxString::Format("REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", refinement_id, class_number), "pr", "BIN_NUMBER", "NUMBER_IN_BIN");}
 
 	bool CreateClassificationListTable() {return CreateTable("CLASSIFICATION_LIST", "Plttilllirrrrrrriir", "CLASSIFICATION_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "CLASS_AVERAGE_FILE", "REFINEMENT_WAS_IMPORTED_OR_GENERATED", "DATETIME_OF_RUN", "STARTING_CLASSIFICATION_ID", "NUMBER_OF_PARTICLES", "NUMBER_OF_CLASSES", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "MASK_RADIUS", "ANGULAR_SEARCH_STEP", "SEARCH_RANGE_X", "SEARCH_RANGE_Y", "SMOOTHING_FACTOR", "EXCLUDE_BLANK_EDGES", "AUTO_PERCENT_USED", "PERCENT_USED" );	};
 	bool CreateClassificationResultTable(const long classification_id) {return CreateTable(wxString::Format("CLASSIFICATION_RESULT_%li", classification_id), "Prrrirr", "POSITION_IN_STACK", "PSI", "XSHIFT", "YSHIFT", "BEST_CLASS", "SIGMA", "LOGP");};
@@ -197,6 +199,8 @@ public :
 	bool CreateStartupResultTable(const long startup_id) {return CreateTable(wxString::Format("STARTUP_RESULT_%li", startup_id), "pl", "CLASS_NUMBER", "VOLUME_ASSET_ID");};
 
 	bool CreateReconstructionListTable() { return CreateTable("RECONSTRUCTION_LIST", "Plltrrrriiiiril", "RECONSTRUCTION_ID", "REFINEMENT_PACKAGE_ID", "REFINEMENT_ID", "NAME", "INNER_MASK_RADIUS", "OUTER_MASK_RADIUS", "RESOLUTION_LIMIT", "SCORE_WEIGHT_CONVERSION", "SHOULD_ADJUST_SCORES", "SHOULD_CROP_IMAGES", "SHOULD_SAVE_HALF_MAPS", "SHOULD_LIKELIHOOD_BLUR", "SMOOTHING_FACTOR", "CLASS_NUMBER", "VOLUME_ASSET_ID");}
+
+
 
 	void DoVacuum() {ExecuteSQL("VACUUM");}
 
@@ -244,6 +248,7 @@ public :
 
 	void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used,  float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
 	void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, int class_number, long volume_asset_id);
+	void GetReconstructionJob(long wanted_reconstruction_id, long &refinement_package_asset_id, long &refinement_id, wxString &name, float &inner_mask_radius, float &outer_mask_radius, float &resolution_limit, float &score_weight_conversion, bool &should_adjust_score, bool &should_crop_images, bool &should_save_half_maps, bool &should_likelihood_blur, float &smoothing_factor, int &class_number, long &volume_asset_id);
 
 	// Convenience CTF parameter function
 	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );
@@ -266,7 +271,11 @@ public :
 	void AddRefinement(Refinement *refinement_to_add);
 	void UpdateRefinementResolutionStatistics(Refinement *refinement_to_update);
 
-	Refinement *GetRefinementByID(long wanted_refinement_id);
+	void AddRefinementAngularDistribution(AngularDistributionHistogram &histogram_to_add, long refinement_id, int class_number);
+	void  GetRefinementAngularDistributionHistogramData(long wanted_refinement_id, int wanted_class_number, AngularDistributionHistogram &histogram_to_fill);
+
+
+	Refinement *GetRefinementByID(long wanted_refinement_id, bool include_particle_info = true);
 
 	void AddClassification(Classification *classification_to_add);
 	Classification *GetClassificationByID(long wanted_classification_id);
@@ -274,7 +283,17 @@ public :
 	void AddClassificationSelection(ClassificationSelection *classification_selection_to_add);
 	//ClassificationSelection *GetClassificationSelectionByID(long wanted_selection_id);
 
-
-
-
 };
+
+
+class BeginCommitLocker  // just call begin in the contructor, and commit in the destructor, if it hasn't already been called.
+{
+	Database *active_database;
+	bool already_sent_commit;
+
+public:
+	BeginCommitLocker(Database *wanted_database);
+	~BeginCommitLocker();
+	void Commit();
+};
+

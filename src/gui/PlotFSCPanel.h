@@ -5,6 +5,8 @@
 #include "../gui/mathplot.h"
 #include <wx/panel.h>
 
+WX_DEFINE_ARRAY(mpFXYVector *, ArrayofmpFXYVectors);
+
 class RefinementLimit : public mpFY
 {
 
@@ -33,12 +35,16 @@ PlotFSCPanel : public wxPanel
 	void AddPartFSC(ResolutionStatistics *statistics_to_add, float wanted_nyquist);
 	void Draw(float nyquist);
 	void SetupBaseLayers();
+	void HighlightClass(int wanted_class);
+
+	ArrayofmpFXYVectors FSC_Layers;
 
 
 
 	float current_refinement_resolution_limit;
 
 
+	float current_nyquist;
 	mpWindow        *current_plot_window;
 	mpTitle         *title;
 	mpScaleX * current_xaxis;

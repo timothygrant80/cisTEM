@@ -63,6 +63,7 @@ const std::complex<float> I(0.0,1.0);
 #include "reconstruct_3d.h"
 #include "electron_dose.h"
 #include "run_profiles.h"
+#include "angular_distribution_histogram.h"
 #include "refinement_package.h"
 #include "refinement.h"
 #include "classification.h"

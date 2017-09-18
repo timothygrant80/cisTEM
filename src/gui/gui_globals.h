@@ -70,4 +70,6 @@ typedef void (wxEvtHandler::*MyOrthDrawEventFunction)(MyOrthDrawEvent &);
 #define MyOrthDrawEventHandler(func) wxEVENT_HANDLER_CAST(MyOrthDrawEventFunction, func)
 
 WX_DECLARE_OBJARRAY(wxColor, ArrayofColors);
+
 extern ArrayofColors default_colormap;
+extern ArrayofColors default_colorbar;

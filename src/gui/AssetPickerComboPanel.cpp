@@ -22,11 +22,61 @@ AssetPickerComboPanel::AssetPickerComboPanel(wxWindow* parent, wxWindowID id, co
 {
 	wxLogNull *suppress_png_warnings = new wxLogNull;
 	#include "icons/window_plus_icon_16.cpp"
+	#include "icons/up_arrow.cpp"
+	#include "icons/down_arrow.cpp"
 	wxBitmap window_plus_icon = wxBITMAP_PNG_FROM_DATA(window_plus_icon_16);
+	wxBitmap up_arrow = wxBITMAP_PNG_FROM_DATA(up_arrow);
+	wxBitmap down_arrow = wxBITMAP_PNG_FROM_DATA(down_arrow);
+
 	WindowSelectButton->SetBitmap(window_plus_icon);
+	NextButton->SetBitmap(down_arrow);
+	PreviousButton->SetBitmap(up_arrow);
+	WindowSelectButton->Bind(wxEVT_BUTTON, &AssetPickerComboPanel::ParentPopUpSelectorClicked, this);
 
-	Bind(wxEVT_BUTTON, &AssetPickerComboPanel::ParentPopUpSelectorClicked, this);
 
+}
+
+AssetPickerComboPanel::~AssetPickerComboPanel()
+{
+}
+
+void AssetPickerComboPanel::OnNextButtonClick( wxCommandEvent& event)
+{
+	if (AssetComboBox->GetSelection() < AssetComboBox->GetCount() - 1) SetSelectionWithEvent(AssetComboBox->GetSelection() + 1);
+}
+
+void AssetPickerComboPanel::OnPreviousButtonClick( wxCommandEvent& event)
+{
+	if (AssetComboBox->GetSelection() > 0) SetSelectionWithEvent(AssetComboBox->GetSelection() - 1);
+}
+
+
+void AssetPickerComboPanel::OnSize(wxSizeEvent& event)
+{
+	int min_size = PreviousButton->GetSize().y + NextButton->GetSize().y;
+	AssetComboBox->SetMinSize(wxSize(-1, min_size));
+	AssetComboBox->SetSize(wxSize(-1, min_size));
+	WindowSelectButton->SetMinSize(wxSize(min_size, min_size));
+	WindowSelectButton->SetSize(wxSize(min_size, min_size));
+	event.Skip();
+}
+
+void AssetPickerComboPanel::OnUpdateUI( wxUpdateUIEvent& event )
+{
+	if (AssetComboBox->GetCount() > 0)
+	{
+		if (AssetComboBox->GetSelection() > 0) PreviousButton->Enable(true);
+		else PreviousButton->Enable(false);
+
+		if (AssetComboBox->GetSelection() < AssetComboBox->GetCount() - 1) NextButton->Enable(true);
+		else NextButton->Enable(false);
+	}
+	else
+	{
+		PreviousButton->Enable(false);
+		NextButton->Enable(false);
+	}
+	event.Skip();
 }
 
 void AssetPickerComboPanel::ParentPopUpSelectorClicked(wxCommandEvent& event)

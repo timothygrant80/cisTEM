@@ -1006,6 +1006,14 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].should_refine_ctf = false;
 		output_refinement->class_refinement_results[class_counter].defocus_search_range = 0;
 		output_refinement->class_refinement_results[class_counter].defocus_search_step = 0;
+		output_refinement->class_refinement_results[class_counter].should_auto_mask = active_should_auto_mask;
+		output_refinement->class_refinement_results[class_counter].should_refine_input_params = true;
+		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = false;
+		output_refinement->class_refinement_results[class_counter].mask_asset_id = -1;
+		output_refinement->class_refinement_results[class_counter].mask_edge_width = 0.0f;
+		output_refinement->class_refinement_results[class_counter].outside_mask_weight = 0.0f;
+		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = false;
+		output_refinement->class_refinement_results[class_counter].filter_resolution = 0.0f;
 	}
 
 	output_refinement->percent_used = current_percent_used;
@@ -1753,7 +1761,14 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,output_refinement->number_of_particles);
+
+			float percent_used_used_multiplier;
+			if (number_of_rounds_run == 0) percent_used_used_multiplier = 1.0f;
+			else percent_used_used_multiplier = (current_percent_used * 3.0f) * 0.01f;
+
+			if (percent_used_used_multiplier > 1.0f) percent_used_used_multiplier = 1.0f;
+
+			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry, long(float(output_refinement->number_of_particles) * percent_used_used_multiplier));
 			my_parent->Layout();
 		}
 		else
@@ -2061,6 +2076,14 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 		my_parent->WriteInfoText("");
 
+		// calculate angular distribution histograms
+		ArrayofAngularDistributionHistograms all_histograms = output_refinement->ReturnAngularDistributions(active_refinement_package->symmetry);
+
+		for (class_counter = 1; class_counter <= output_refinement->number_of_classes; class_counter++)
+		{
+			main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter - 1], output_refinement->refinement_id, class_counter);
+		}
+
 		main_frame->current_project.database.AddRefinement(output_refinement);
 		ShortRefinementInfo temp_info;
 		temp_info = output_refinement;
@@ -2080,6 +2103,8 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 	//		my_parent->SetDefaults();
 		refinement_results_panel->is_dirty = true;
+
+
 
 		my_parent->ShowRefinementResultsPanel->FSCResultsPanel->AddRefinement(output_refinement);
 

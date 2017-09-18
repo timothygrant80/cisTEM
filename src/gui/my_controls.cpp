@@ -1302,7 +1302,12 @@ RefinementParametersListCtrl::RefinementParametersListCtrl(wxWindow *parent, wxW
 :
 wxListCtrl(parent, id, pos, size, style, validator, name)
 {
+	parent_dialog = NULL;
+}
 
+void RefinementParametersListCtrl::SetParent(RefinementParametersDialog *wanted_parent)
+{
+	parent_dialog = wanted_parent;
 }
 
 wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) const
@@ -1310,58 +1315,59 @@ wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) con
 
 //	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
 
-	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && refinement_results_panel->RefinementPackageComboBox->GetCount() > 0)
+	if (parent_dialog != NULL)
 	{
-		Refinement *current_refinement = refinement_results_panel->currently_displayed_refinement;
+		int current_class = parent_dialog->current_class;
+		Refinement *current_refinement = refinement_results_panel->buffered_full_refinement;
 
 		//wxPrintf("getting text for column %li column\n", column);
 
 		switch(column)
 		{
 		    case 0  : // position_in_stack
-		    	return wxString::Format("%li",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].position_in_stack);
+		    	return wxString::Format("%li",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].position_in_stack);
 		    	break;
 		    case 1  : // psi
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].psi);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].psi);
 		     	break;
 		    case 2  : // theta
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].theta);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].theta);
 		     	break;
 		    case 3  : // phi
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].phi);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phi);
 		     	break;
 		    case 4  : // xshift
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].xshift);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].xshift);
 		     	break;
 		    case 5  : // yshift
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].yshift);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].yshift);
 		     	break;
 		    case 6  : // defocus1
-		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus1);
+		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus1);
 		     	break;
 		    case 7  : // defocus2
-		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus2);
+		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus2);
 		     	break;
 		    case 8  : // defocus_angle
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].defocus_angle);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus_angle);
 		     	break;
 		    case 9  : // phase shift
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].phase_shift);
+		    	return wxString::Format("%.2f",rad_2_deg(current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phase_shift));
 		       	break;
 		    case 10  : // occupancy
-		    	return wxString::Format("%.1f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].occupancy);
+		    	return wxString::Format("%.1f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].occupancy);
 		     	break;
 		    case 11  : // logp
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].logp);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].logp);
 		     	break;
 		    case 12  : // sigma
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].sigma);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].sigma);
 		     	break;
 		    case 13 : // score
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].score);
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].score);
 		     	break;
 		    case 14 : // image is active
-		    	if (current_refinement->class_refinement_results[refinement_results_panel->current_class].particle_refinement_results[item].image_is_active < 0) return "No";
+		    	if (current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_is_active < 0) return "No";
 		    	else return "Yes";
 		     	break;
 		   default :

@@ -55,6 +55,14 @@ ClassRefinementResults::ClassRefinementResults()
 	estimated_resolution = 0.0f;
 	reconstructed_volume_asset_id = -1;
 	reconstruction_id = -1;
+	should_auto_mask = false;
+	should_refine_input_params = true;
+	should_use_supplied_mask = false;
+	mask_asset_id = -1;
+	mask_edge_width = 10;
+	outside_mask_weight = 0.0;
+	should_low_pass_filter_mask = false;
+	filter_resolution = 30.0;
 }
 
 ClassRefinementResults::~ClassRefinementResults()
@@ -115,11 +123,89 @@ Refinement::Refinement()
 	percent_used = 0.0;
 	resolution_statistics_pixel_size = 0;
 	resolution_statistics_box_size = 0;
+	percent_used = 100.0f;
 }
 
 Refinement::~Refinement()
 {
 
+}
+
+void Refinement::FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram &histogram_to_fill)
+{
+	long particle_counter;
+	int symmetry_counter;
+	// for symmetry;
+
+	SymmetryMatrix symmetry_matrices;
+	AnglesAndShifts angles_and_shifts;
+	RotationMatrix temp_matrix;
+
+	float proj_x;
+	float proj_y;
+	float proj_z;
+	float north_pole_x = 0.0f;
+	float north_pole_y = 0.0f;
+	float north_pole_z = 1.0f;
+
+	float sym_theta;
+	float sym_phi;
+
+	symmetry_matrices.Init(wanted_symmetry);
+	histogram_to_fill.Init(number_of_theta_bins, number_of_phi_bins);
+
+	for (particle_counter = 0; particle_counter < number_of_particles; particle_counter ++ )
+	{
+		if (class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_is_active >= 0)
+		{
+			if (ReturnClassWithHighestOccupanyForGivenParticle(particle_counter) == wanted_class)
+			{
+				// Setup a angles and shifts
+				angles_and_shifts.Init(class_refinement_results[wanted_class].particle_refinement_results[particle_counter].phi, class_refinement_results[wanted_class].particle_refinement_results[particle_counter].theta, class_refinement_results[wanted_class].particle_refinement_results[particle_counter].psi,0.0,0.0);
+
+				// Loop over symmetry-related views
+				for (symmetry_counter = 0; symmetry_counter < symmetry_matrices.number_of_matrices; symmetry_counter ++ )
+				{
+
+					// Get the rotation matrix for the current orientation and current symmetry-related view
+					temp_matrix = symmetry_matrices.rot_mat[symmetry_counter] * angles_and_shifts.euler_matrix;
+
+					// Rotate a vector which initially points at the north pole
+					temp_matrix.RotateCoords(north_pole_x, north_pole_y, north_pole_z, proj_x, proj_y, proj_z);
+
+					// If we are in the southern hemisphere, we will need to plot the equivalent projection in the northen hemisphere
+					if (proj_z < 0.0)
+					{
+						proj_z = - proj_z;
+						proj_y = - proj_y;
+						proj_x = - proj_x;
+					}
+
+					// Add to histogram
+
+					sym_theta = ConvertProjectionXYToThetaInDegrees(proj_x, proj_y);
+					sym_phi = ConvertXYToPhiInDegrees(proj_x, proj_y);
+
+					histogram_to_fill.AddPosition(sym_theta, sym_phi);
+				}
+			}
+		}
+	}
+}
+
+ArrayofAngularDistributionHistograms Refinement::ReturnAngularDistributions(wxString desired_symmetry)
+{
+	ArrayofAngularDistributionHistograms all_histograms;
+	AngularDistributionHistogram blank;
+
+	all_histograms.Add(blank, number_of_classes);
+
+	for (int class_counter = 0; class_counter < number_of_classes; class_counter++)
+	{
+		FillAngularDistributionHistogram(desired_symmetry, class_counter, 18, 72, all_histograms[class_counter]);
+	}
+
+	return all_histograms;
 }
 
 RefinementResult Refinement::ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack)
@@ -139,6 +225,24 @@ RefinementResult Refinement::ReturnRefinementResultByClassAndPositionInStack(int
 
 	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle - Class #%i, Pos = %li", wanted_class, wanted_position_in_stack);
 	abort();
+}
+
+int Refinement::ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle) // starts at 0
+{
+	MyDebugAssertTrue(wanted_particle >= 0 && wanted_particle < number_of_particles, "wanted_particle (%li) is out of range", wanted_particle);
+	float best_occupancy = -FLT_MAX;
+	int best_class = 0;
+
+	for (int class_counter = 0; class_counter < number_of_classes; class_counter++)
+	{
+		if (class_refinement_results[class_counter].particle_refinement_results[wanted_particle].occupancy > best_occupancy)
+		{
+			best_occupancy = class_refinement_results[class_counter].particle_refinement_results[wanted_particle].occupancy;
+			best_class = class_counter;
+		}
+	}
+
+	return best_class;
 }
 
 void Refinement::WriteSingleClassFrealignParameterFile(wxString filename,int wanted_class, float percent_used_overide, float sigma_override)

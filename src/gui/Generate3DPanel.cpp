@@ -896,7 +896,7 @@ void Generate3DPanel::SetupMerge3dJob()
 		wxString dump_file_seed_2 					= main_frame->ReturnGenerate3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", input_refinement->refinement_id, class_counter);
 
 		bool save_orthogonal_views_image = true;
-		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i_map2.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
+		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
 
 		my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
@@ -1108,7 +1108,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 
 			if (active_update_statistics == true)
 			{
-				main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_DETAILS_%li SET RECONSTRUCTED_VOLUME_ASSET_ID=%li, RECONSTRUCTION_ID=%li WHERE CLASS_NUMBER=%i;", input_refinement->refinement_id, long(temp_asset.asset_id), current_reconstruction_id, class_counter));
+				main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_DETAILS_%li SET RECONSTRUCTED_VOLUME_ASSET_ID=%li, RECONSTRUCTION_ID=%li WHERE CLASS_NUMBER=%i;", input_refinement->refinement_id, long(temp_asset.asset_id), current_reconstruction_id, class_counter + 1));
 				pointer_to_refinement_info->reconstructed_volume_asset_ids[class_counter] = temp_asset.asset_id;
 			}
 

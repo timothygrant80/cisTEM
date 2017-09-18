@@ -17,6 +17,7 @@ class MyFSCPanel : public FSCPanel
 		// Handlers for FSCPanel events.
 		//void OnClassComboBoxChange( wxCommandEvent& event );
 		Refinement *my_refinement;
+		int highlighted_class;
 	public:
 		/** Constructor */
 		MyFSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL );
@@ -24,6 +25,8 @@ class MyFSCPanel : public FSCPanel
 		void Clear();
 
 		void PopupTextClick( wxCommandEvent& event );
+		void SaveImageClick( wxCommandEvent& event );
+		void HighlightClass(int wanted_class);
 
 	//// end generated class members
 	

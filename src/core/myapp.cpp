@@ -37,6 +37,8 @@ bool MyApp::OnInit()
 	time_of_last_queue_send = 0;
 	number_of_results_sent = 0;
 
+	total_milliseconds_spent_on_threads = 0;
+
 	wxString current_address;
 	wxArrayString possible_controller_addresses;
 	wxIPV4address junk_address;
@@ -44,10 +46,10 @@ bool MyApp::OnInit()
 
 	// Bind the thread events
 
-	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyApp::OnThreadComplete, this); // Called when DoCalculation finishes
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDERROR, &MyApp::OnThreadSendError, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &MyApp::OnThreadSendInfo, this);
-	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this); // When thread is about to die
 	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
 
 	// Connect to the controller program..
@@ -79,7 +81,9 @@ bool MyApp::OnInit()
 	{
 		is_running_locally = true;
 		DoInteractiveUserInput();
+		stopwatch.Start();
 		DoCalculation();
+		total_milliseconds_spent_on_threads += stopwatch.Time();
 		fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
 		exit(0);
 	}
@@ -358,9 +362,9 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 				  active_controller_address.Service(master_port);
 
 				  // Setup the event handler and subscribe to most events
-				   controller_socket->SetEventHandler(*this, SOCKET_ID);
-				   controller_socket->SetNotify(wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
-				   controller_socket->Notify(true);
+				  controller_socket->SetEventHandler(*this, SOCKET_ID);
+				  controller_socket->SetNotify(wxSOCKET_INPUT_FLAG |wxSOCKET_LOST_FLAG);
+				  controller_socket->Notify(true);
 
 				  controller_socket->Connect(active_controller_address, false);
 				  controller_socket->WaitOnConnect(10);
@@ -374,8 +378,8 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
 				  }
 
-					// Start the worker thread..
-
+                  // Start the worker thread..
+				  stopwatch.Start();
 				  work_thread = new CalculateThread(this);
 
 				  if ( work_thread->Run() != wxTHREAD_NO_ERROR )
@@ -542,6 +546,11 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	else
 	{
 		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE);
+
+		// Receive timing for that slave before its thread dies
+		long milliseconds_spent_on_slave_thread;
+		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
+		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 	}
 }
 
@@ -606,11 +615,14 @@ void MyApp::SendAllJobsFinished()
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	WriteToSocket(controller_socket, &total_milliseconds_spent_on_threads, sizeof(long));
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 }
 
+
+// This is when running on the master. It handles events on the socket connected to the slaves
 void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 {
 
@@ -622,7 +634,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 	float *result;
 
 	// First, print a message
-/*	switch(event.GetSocketEvent())
+	/*	switch(event.GetSocketEvent())
 	{
 	   case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
 	   case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
@@ -634,142 +646,154 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 	// Now we process the event
 	switch(event.GetSocketEvent())
 	{
-		 case wxSOCKET_INPUT:
-		 {
-			 // We disable input events, so that the test doesn't trigger
-			 // wxSocketEvent again.
-			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+	case wxSOCKET_INPUT:
+	{
+		// We disable input events, so that the test doesn't trigger
+		// wxSocketEvent again.
+		sock->SetNotify(wxSOCKET_LOST_FLAG);
+		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
-			 if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
-			 {
-				// MyDebugPrint("JOB MASTER : SEND NEXT JOB");
+		if (memcmp(socket_input_buffer, socket_send_next_job, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// MyDebugPrint("JOB MASTER : SEND NEXT JOB");
 
-				 // if there is a result to send on, get it..
+			// if there is a result to send on, get it..
+			JobResult temp_result;
+			temp_result.ReceiveFromSocket(sock);
 
-				 JobResult temp_result;
-		    	 temp_result.ReceiveFromSocket(sock);
-		    	 SendNextJobTo(sock);
+			// Send the next job
+			SendNextJobTo(sock);
 
-		    	 // Send info that the job has finished, and if necessary the result..
+			// Send info that the job has finished, and if necessary the result..
 
-		    	 if (temp_result.job_number != -1)
-		    	 {
-		    		 if (temp_result.result_size > 0)
-		    		 {
-		    			 SendJobResult(&temp_result);
-		    		 }
-		    		 else // just say job finished..
-		    		 {
-		    			 SendJobFinished(temp_result.job_number);
-		    		 }
+			if (temp_result.job_number != -1)
+			{
+				if (temp_result.result_size > 0)
+				{
+					SendJobResult(&temp_result);
+				}
+				else // just say job finished..
+				{
+					SendJobFinished(temp_result.job_number);
+				}
 
-		    		 number_of_finished_jobs++;
-		    		 my_job_package.jobs[temp_result.job_number].has_been_run = true;
+				number_of_finished_jobs++;
+				my_job_package.jobs[temp_result.job_number].has_been_run = true;
 
-		    		 if (number_of_finished_jobs == my_job_package.number_of_jobs)
-		    		 {
+				if (number_of_finished_jobs == my_job_package.number_of_jobs)
+				{
 
-		    			 SendAllJobsFinished();
+					SendAllJobsFinished();
 
-		    			 //wxPrintf("Sending all jobs finished\n");
+					//wxPrintf("Sending all jobs finished\n");
 
-		    			 if (my_job_package.ReturnNumberOfJobsRemaining() != 0)
-		    			 {
-		    				 SocketSendError("All jobs should be finished, but job package is not empty.");
-		    			 }
+					if (my_job_package.ReturnNumberOfJobsRemaining() != 0)
+					{
+						SocketSendError("All jobs should be finished, but job package is not empty.");
+					}
 
-		    		   	 // time to die!
+					// time to die!
 
-		    			 controller_socket->Destroy();
-		    			 ExitMainLoop();
-		    			 return;
+					controller_socket->Destroy();
+					ExitMainLoop();
+					return;
 
-		    		 }
-		    	 }
-			 }
-			 else
-			 if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-			 {
-				 // got an error message..
-				 //MyDebugPrint("JOB MASTER : Error Message");
-				wxString error_message;
+				}
+			}
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// got an error message..
+			//MyDebugPrint("JOB MASTER : Error Message");
+			wxString error_message;
 
-				error_message = ReceivewxStringFromSocket(sock);
+			error_message = ReceivewxStringFromSocket(sock);
 
-				// send the error message up the chain..
+			// send the error message up the chain..
 
-				SocketSendError(error_message);
-			 }
-			 else
-			 if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-			 {
-				 // got an error message..
-				 //MyDebugPrint("JOB MASTER : Error Message");
-				wxString info_message;
+			SocketSendError(error_message);
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// got an error message..
+			//MyDebugPrint("JOB MASTER : Error Message");
+			wxString info_message;
 
-				info_message = ReceivewxStringFromSocket(sock);
+			info_message = ReceivewxStringFromSocket(sock);
 
-				// send the error message up the chain..
+			// send the error message up the chain..
 
-				SocketSendInfo(info_message);
-			 }
-			 else
-			 if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-			 {
-				 JobResult temp_result;
-			     temp_result.ReceiveFromSocket(sock);
-			   // wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
-			     SendJobResult(&temp_result);
-			 }
-			 else
-			 if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-			 {
-				 ArrayofJobResults temp_array;
-				 //wxPrintf("(Master) Receieved socket_job_result_queue - receiving queue from slave\n");
-				 ReceiveResultQueueFromSocket(sock, temp_array);
+			SocketSendInfo(info_message);
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			JobResult temp_result;
+			temp_result.ReceiveFromSocket(sock);
+			// wxPrintf("Sending int. Job Master (%f)\n", temp_result.result_data[0]);
+			SendJobResult(&temp_result);
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			ArrayofJobResults temp_array;
+			//wxPrintf("(Master) Receieved socket_job_result_queue - receiving queue from slave\n");
+			ReceiveResultQueueFromSocket(sock, temp_array);
 
-				 // copy these results to our own result queue
+			// copy these results to our own result queue
 
-				 for (int counter = 0; counter < temp_array.GetCount(); counter++)
-				 {
-						job_queue.Add(temp_array.Item(counter));
-				 }
+			for (int counter = 0; counter < temp_array.GetCount(); counter++)
+			{
+				job_queue.Add(temp_array.Item(counter));
+			}
 
-				 if (queue_timer_set == false)
-				 {
-						 queue_timer_set = true;
- 						 queue_timer = new wxTimer(this, 2);
- 						 queue_timer->StartOnce(1000);
-				 }
-
-			 }
-
+			if (queue_timer_set == false)
+			{
+				queue_timer_set = true;
+				queue_timer = new wxTimer(this, 2);
+				queue_timer->StartOnce(1000);
+			}
 
 
+		}
+		/*
+		else
+		if (memcmp(socket_input_buffer, socket_send_timing_for_thread, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			long milliseconds_spent_on_slave_thread;
+			ReadFromSocket(sock, &milliseconds_spent_on_slave_thread, sizeof(long));
+			total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
+			wxPrintf("master received this timing: %ld\n",milliseconds_spent_on_slave_thread);
+		}
+		*/
 
-			 // Enable input events again.
 
-			 sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-			 break;
-		 }
 
-		 case wxSOCKET_LOST:
-		 {
-			 if (number_of_dispatched_jobs < my_job_package.number_of_jobs)
-			 {
-				 SocketSendError("Error: A slave has disconnected before all jobs are finished.");
-			 }
 
-		     //wxPrintf("JOB Master : a slave socket Disconnected!!\n");
+		// Enable input events again.
 
-		     sock->Destroy();
-		     //ExitMainLoop();
-		     //abort();
+		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+		break;
+	}
 
-		     break;
-		  }
-		 default: ;
+	case wxSOCKET_LOST:
+	{
+		if (number_of_dispatched_jobs < my_job_package.number_of_jobs)
+		{
+			SocketSendError("Error: A slave has disconnected before all jobs are finished.");
+		}
+
+		//wxPrintf("JOB Master : a slave socket Disconnected!!\n");
+
+		sock->Destroy();
+		//ExitMainLoop();
+		//abort();
+
+		break;
+	}
+	default: ;
 	}
 
 
@@ -1085,6 +1109,13 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 else
 			 if (memcmp(socket_input_buffer, socket_time_to_die, SOCKET_CODE_SIZE) == 0) // identification
 			 {
+
+				 // Timing stuff here
+				long milliseconds_spent_by_thread = stopwatch.Time();
+				controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+				WriteToSocket(controller_socket, &milliseconds_spent_by_thread, sizeof(long));
+				controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
 			   	  // time to die!
 				 wxMutexLocker *lock = new wxMutexLocker(job_lock);
 
@@ -1175,6 +1206,7 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 	// if there is a result - send it to the gui..
 	my_result.job_number = my_current_job.job_number;
 	my_result.SendToSocket(controller_socket);
+
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 	// clear the results queue..
@@ -1183,6 +1215,7 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 void MyApp::OnThreadEnding(wxThreadEvent& my_event)
 {
 	SendAllResultsFromResultQueue();
+
 	work_thread = NULL;
 }
 

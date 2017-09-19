@@ -1040,157 +1040,164 @@ void MyRefine3DPanel::FillRunProfileComboBoxes()
 
 void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 {
-      SETUP_SOCKET_CODES
+	SETUP_SOCKET_CODES
 
-	  wxString s = _("OnSocketEvent: ");
-	  wxSocketBase *sock = event.GetSocket();
-	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
+	wxString s = _("OnSocketEvent: ");
+	wxSocketBase *sock = event.GetSocket();
+	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
 	//  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
 
-	  // First, print a message
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	    case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	    default             : s.Append(_("Unexpected event !\n")); break;
-	  }
+	// First, print a message
+	switch(event.GetSocketEvent())
+	{
+	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
+	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
+	default             : s.Append(_("Unexpected event !\n")); break;
+	}
 
-	  //m_text->AppendText(s);
+	//m_text->AppendText(s);
 
-	  //MyDebugPrint(s);
+	//MyDebugPrint(s);
 
-	  // Now we process the event
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_INPUT:
-	    {
-	      // We disable input events, so that the test doesn't trigger
-	      // wxSocketEvent again.
-	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-	    	  // send the job details..
-
-	    	  //wxPrintf("Sending Job Details...\n");
-	    	  my_job_package.SendJobPackage(sock);
-
-	      }
-	      else
-	      if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-
-	    	  wxString error_message;
-   			  error_message = ReceivewxStringFromSocket(sock);
-
-   			  WriteErrorText(error_message);
-    	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-
-	    	  wxString info_message;
-   			  info_message = ReceivewxStringFromSocket(sock);
-
-   			  WriteInfoText(info_message);
-    	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	 		 // which job is finished?
-
-	 		 int finished_job;
-	 		 ReadFromSocket(sock, &finished_job, 4);
-
-	 		 my_job_tracker.MarkJobFinished();
-
-//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-	 		 //WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-	 	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	    	  JobResult temp_result;
-	    	  temp_result.ReceiveFromSocket(sock);
-
-	    	  // send the result to the
-
-	    	  my_refinement_manager.ProcessJobResult(&temp_result);
-	    	  wxPrintf("Warning: Received socket_job_result - should this happen?");
-
-	 	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	    	  ArrayofJobResults temp_queue;
-	    	  ReceiveResultQueueFromSocket(sock, temp_queue);
-
-	    	  for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-	    	  {
-	    		  my_refinement_manager.ProcessJobResult(&temp_queue.Item(counter));
-	    	  }
-	 	  }
-	      else
-		  if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		  {
-			  // how many connections are there?
-
-			  int number_of_connections;
-			  ReadFromSocket(sock, &number_of_connections, 4);
-
-              my_job_tracker.AddConnection();
-
-    //          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-              //WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-              // send the info to the gui
-
-              int total_processes = my_job_package.my_profile.ReturnTotalJobs();
-              if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-              else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
+	// Now we process the event
+	switch(event.GetSocketEvent())
+	{
+	case wxSOCKET_INPUT:
+	{
+		// We disable input events, so that the test doesn't trigger
+		// wxSocketEvent again.
+		sock->SetNotify(wxSOCKET_LOST_FLAG);
+		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 
-		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
+		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// send the job details..
 
-			  if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-		      else
-			  if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			  else
-		      NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		  }
-	      else
-		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		  {
-			  my_refinement_manager.ProcessAllJobsFinished();
-		  }
+			//wxPrintf("Sending Job Details...\n");
+			my_job_package.SendJobPackage(sock);
 
-	      // Enable input events again.
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+		{
 
-	      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+			wxString error_message;
+			error_message = ReceivewxStringFromSocket(sock);
 
-	      break;
-	    }
+			WriteErrorText(error_message);
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
+		{
+
+			wxString info_message;
+			info_message = ReceivewxStringFromSocket(sock);
+
+			WriteInfoText(info_message);
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// which job is finished?
+
+			int finished_job;
+			ReadFromSocket(sock, &finished_job, 4);
+
+			my_job_tracker.MarkJobFinished();
+
+			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			JobResult temp_result;
+			temp_result.ReceiveFromSocket(sock);
+
+			// send the result to the
+
+			my_refinement_manager.ProcessJobResult(&temp_result);
+			wxPrintf("Warning: Received socket_job_result - should this happen?");
+
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			ArrayofJobResults temp_queue;
+			ReceiveResultQueueFromSocket(sock, temp_queue);
+
+			for (int counter = 0; counter < temp_queue.GetCount(); counter++)
+			{
+				my_refinement_manager.ProcessJobResult(&temp_queue.Item(counter));
+			}
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// how many connections are there?
+
+			int number_of_connections;
+			ReadFromSocket(sock, &number_of_connections, 4);
+
+			my_job_tracker.AddConnection();
+
+			//          if (graph_is_hidden == true) ProgressBar->Pulse();
+
+			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
+
+			// send the info to the gui
+
+			int total_processes = my_job_package.my_profile.ReturnTotalJobs();
+			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
+			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
 
 
-	    case wxSOCKET_LOST:
-	    {
+			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
 
-	    	//MyDebugPrint("Socket Disconnected!!\n");
-	        sock->Destroy();
-	        break;
-	    }
-	    default: ;
-	  }
+			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
+			else
+			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
+			else
+			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
+			else
+			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
+			else
+			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
+			else
+				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
+		}
+		else
+		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			// As soon as it sends us the message that all jobs are finished, the controller should also
+			// send timing info - we need to remember this
+			long timing_from_controller;
+			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
+			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
+			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
+
+			my_refinement_manager.ProcessAllJobsFinished();
+		}
+
+		// Enable input events again.
+
+		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+
+		break;
+	}
+
+
+	case wxSOCKET_LOST:
+	{
+
+		//MyDebugPrint("Socket Disconnected!!\n");
+		sock->Destroy();
+		break;
+	}
+	default: ;
+	}
 
 }
 
@@ -2317,6 +2324,11 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 
 void RefinementManager::ProcessAllJobsFinished()
 {
+
+	// Update the GUI with project timings
+	extern MyOverviewPanel *overview_panel;
+	overview_panel->SetProjectInfo();
+
 
 	if (running_job_type == REFINEMENT)
 	{

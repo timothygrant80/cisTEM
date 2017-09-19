@@ -50,6 +50,7 @@ public:
 		void WriteErrorText(wxString text_to_write);
 
 		void ProcessResult(JobResult *result_to_process);
+		void ProcessAllJobsFinished();
 		void UpdateProgressBar();
 
 		virtual void OnJobSocketEvent(wxSocketEvent& event);

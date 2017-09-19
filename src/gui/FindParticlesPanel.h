@@ -32,6 +32,7 @@ public:
 		void OnGroupComboBox( wxCommandEvent& event );
 		void OnImageComboBox( wxCommandEvent& event );
 		void WriteResultToDataBase();
+		void ProcessAllJobsFinished();
 		void OnExpertOptionsToggle( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();

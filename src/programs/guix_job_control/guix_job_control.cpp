@@ -69,7 +69,7 @@ JobControlApp : public wxAppConsole
 	void SendJobResult(JobResult *result_to_send);
 	void SendJobResultQueue(ArrayofJobResults &queue_to_send);
 
-	void SendAllJobsFinished();
+	void SendAllJobsFinished(long total_timing_from_master);
 	void SendNumberofConnections();
 
 	void OnThreadLaunchJob(wxThreadEvent &event);
@@ -646,7 +646,9 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 		 else
 		 if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
 		 {
-			 SendAllJobsFinished();
+			 long total_milliseconds_from_master;
+			 ReadFromSocket(sock, &total_milliseconds_from_master, sizeof(long));
+			 SendAllJobsFinished(total_milliseconds_from_master);
 		 }
 
 
@@ -712,7 +714,7 @@ void JobControlApp::SendJobResultQueue(ArrayofJobResults &queue_to_send)
 }
 
 
-void JobControlApp::SendAllJobsFinished()
+void JobControlApp::SendAllJobsFinished(long total_timing_from_master)
 {
 	//	SETUP_SOCKET_CODES
 
@@ -720,6 +722,7 @@ void JobControlApp::SendAllJobsFinished()
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	WriteToSocket(gui_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE);
+	WriteToSocket(gui_socket, &total_timing_from_master, sizeof(long));
 
 	gui_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 

@@ -47,6 +47,9 @@ MyApp : public wxAppConsole
 		void OnZombieTimer(wxTimerEvent& event);
 		void OnQueueTimer(wxTimerEvent& event);
 
+		wxStopWatch stopwatch;
+		long total_milliseconds_spent_on_threads;
+
 	public:
 		virtual bool OnInit();
 

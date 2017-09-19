@@ -1,8 +1,11 @@
 #ifndef __RefinementParametersDialog__
 #define __RefinementParametersDialog__
 
+
+
 class RefinementParametersDialog : public RefinementParametersDialogParent
 {
+	wxArrayLong class_button_ids;
 
 public :
 
@@ -11,6 +14,9 @@ public :
 	void OnCloseButtonClick(wxCommandEvent &event);
 	void OnSaveButtonClick(wxCommandEvent &event);
 	void OnSelectionChange(wxCommandEvent &event);
+	void OnCharHook( wxKeyEvent& event );
+
+	void SetActiveClassButton(int wanted_class);
 };
 
 #endif

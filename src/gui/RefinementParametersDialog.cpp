@@ -12,6 +12,10 @@ RefinementParametersDialogParent( parent, id, title, pos, size, style)
 	int frame_position_y;
 	int columns_width = 0;
 
+	wxToolBarToolBase *current_button_pointer;
+
+	Bind(wxEVT_CHAR_HOOK, &RefinementParametersDialog::OnCharHook, this);
+
 	current_class = 0;
 	ParameterListCtrl->SetParent(this);
 
@@ -46,8 +50,10 @@ RefinementParametersDialogParent( parent, id, title, pos, size, style)
 
 	for (int class_counter = 1; class_counter <= refinement_results_panel->buffered_full_refinement->number_of_classes; class_counter++)
 	{
-		if (class_counter < 10)	ClassToolBar->AddTool( wxID_ANY, wxString::Format(wxT(" %i "), class_counter), wxNullBitmap, wxNullBitmap, wxITEM_RADIO, wxEmptyString, wxEmptyString, NULL );
-		else ClassToolBar->AddTool( wxID_ANY, wxString::Format(wxT("%i"), class_counter), wxNullBitmap, wxNullBitmap, wxITEM_RADIO, wxEmptyString, wxEmptyString, NULL );
+		if (class_counter < 10)	current_button_pointer = ClassToolBar->AddTool( wxID_ANY, wxString::Format(wxT(" %i "), class_counter), wxNullBitmap, wxNullBitmap, wxITEM_RADIO, wxEmptyString, wxEmptyString, NULL );
+		else current_button_pointer = ClassToolBar->AddTool( wxID_ANY, wxString::Format(wxT("%i"), class_counter), wxNullBitmap, wxNullBitmap, wxITEM_RADIO, wxEmptyString, wxEmptyString, NULL );
+
+		class_button_ids.Add(current_button_pointer->GetId());
 	}
 
 	ClassToolBar->Realize();
@@ -73,6 +79,8 @@ RefinementParametersDialogParent( parent, id, title, pos, size, style)
 	int new_y_pos = (frame_position_y + (frame_height / 2) - myroundint(float(frame_height) * 0.95f / 2.0f));
 
 	Move(new_x_pos, new_y_pos);
+
+	ParameterListCtrl->SetFocus();
 }
 
 void RefinementParametersDialog::OnSelectionChange(wxCommandEvent &event)
@@ -90,7 +98,7 @@ void RefinementParametersDialog::OnSelectionChange(wxCommandEvent &event)
 
 		if (button_label.ToLong(&button_number) == true)
 		{
-			wxPrintf("clicked on button %li\n", button_number);
+		//	wxPrintf("clicked on button %li\n", button_number);
 			current_class = button_number - 1;
 			ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
 		}
@@ -98,6 +106,44 @@ void RefinementParametersDialog::OnSelectionChange(wxCommandEvent &event)
 
 
 
+}
+
+void RefinementParametersDialog::OnCharHook( wxKeyEvent& event )
+{
+
+	if (event.GetKeyCode() == WXK_LEFT)
+	{
+		current_class--;
+		if (current_class < 0)
+		{
+			current_class = refinement_results_panel->buffered_full_refinement->number_of_classes - 1;
+		}
+
+		SetActiveClassButton(current_class);
+		ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
+
+	}
+	else
+	if (event.GetKeyCode() == WXK_RIGHT)
+	{
+		current_class++;
+
+		if (current_class >= refinement_results_panel->buffered_full_refinement->number_of_classes)
+		{
+			current_class = 0;
+		}
+
+		SetActiveClassButton(current_class);
+		ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);
+
+	}
+
+	event.Skip();
+}
+
+void RefinementParametersDialog::SetActiveClassButton(int wanted_class)
+{
+	ClassToolBar->ToggleTool(class_button_ids[wanted_class], true);
 }
 
 void RefinementParametersDialog::OnSaveButtonClick(wxCommandEvent &event)

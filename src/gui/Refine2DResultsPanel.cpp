@@ -47,7 +47,10 @@ void Refine2DResultsPanel::OnClassumRightClick( wxMouseEvent& event )
 		if (selected_class < 1 || selected_class > current_classification->number_of_classes) selected_class = 1;
 
 		wxArrayLong wanted_images = main_frame->current_project.database.Return2DClassMembers(current_class, selected_class);
-		ParticleDisplayPanel->ChangeFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+
+		if (wanted_images.GetCount() == 0)ParticleDisplayPanel->Clear();
+		else ParticleDisplayPanel->ChangeFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+
 		ClassumDisplayPanel->SetSelectionSquareLocation(selected_class);
 		ClassNumberStaticText->SetLabel(wxString::Format("Class Members - Class #%i", selected_class));
 	}
@@ -129,7 +132,10 @@ void Refine2DResultsPanel::FillInputParametersComboBox(void)
 			wxArrayLong wanted_images = main_frame->current_project.database.Return2DClassMembers(current_class, selected_class);
 
 			ClassumDisplayPanel->ChangeFile(current_classification->class_average_file, "");
-			ParticleDisplayPanel->ChangeFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+
+			if (wanted_images.GetCount() == 0)ParticleDisplayPanel->Clear();
+			else ParticleDisplayPanel->ChangeFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+
 			ClassumDisplayPanel->SetSelectionSquareLocation(selected_class);
 			ClassNumberStaticText->SetLabel(wxString::Format("Class Members - Class #%i", selected_class));
 
@@ -338,8 +344,10 @@ void Refine2DResultsPanel::OnInputParametersComboBox( wxCommandEvent& event )
 
 		ShortClassificationInfo *current_classification = refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].classification_ids[InputParametersComboBox->GetSelection()]);
 
-		ClassumDisplayPanel->OpenFile(current_classification->class_average_file, "");
-		ParticleDisplayPanel->OpenFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+		ClassumDisplayPanel->ChangeFile(current_classification->class_average_file, "");
+		if (wanted_images.GetCount() == 0) ParticleDisplayPanel->Clear();
+		else ParticleDisplayPanel->ChangeFile(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].stack_filename, "", &wanted_images);
+
 		ClassumDisplayPanel->SetSelectionSquareLocation(selected_class);
 		WriteJobInfo(current_classification->classification_id);
 		FillSelectionManagerListCtrl();

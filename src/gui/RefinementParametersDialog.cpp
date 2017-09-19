@@ -102,9 +102,9 @@ void RefinementParametersDialog::OnSelectionChange(wxCommandEvent &event)
 
 void RefinementParametersDialog::OnSaveButtonClick(wxCommandEvent &event)
 {
-	/*
+
 	ProperOverwriteCheckSaveDialog *saveFileDialog;
-	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save png image"), "PNG files (*.png)|*.png", ".png");
+	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save par file"), "par files (*.par)|*.par", ".par");
 	if (saveFileDialog->ShowModal() == wxID_CANCEL)
 	{
 		saveFileDialog->Destroy();
@@ -112,9 +112,8 @@ void RefinementParametersDialog::OnSaveButtonClick(wxCommandEvent &event)
 	}
 
 	// save the file then..
-
-	AngularPlotPanel->buffer_bitmap.SaveFile(saveFileDialog->ReturnProperPath(), wxBITMAP_TYPE_PNG);
-	saveFileDialog->Destroy();*/
+	refinement_results_panel->buffered_full_refinement->WriteSingleClassFrealignParameterFile(saveFileDialog->ReturnProperPath(), current_class);
+	saveFileDialog->Destroy();
 }
 
 void RefinementParametersDialog::OnCloseButtonClick(wxCommandEvent &event)

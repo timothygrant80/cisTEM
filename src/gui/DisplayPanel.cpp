@@ -761,6 +761,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 		no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
 		my_panel = no_notebook_panel;
 		MainSizer->Insert( 1, no_notebook_panel, 1, wxEXPAND | wxALL, 5 );
+		Layout();
 	}
 	else
 	{

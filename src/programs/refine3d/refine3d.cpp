@@ -476,10 +476,10 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d));
 	my_output_par_file.WriteCommentLine("C");
 //	my_output_par_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score         Change");
-	my_output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
+	my_output_par_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
 	fflush(my_output_par_file.parameter_file);
 //	my_output_par_shifts_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score");
-	my_output_par_shifts_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE");
+	my_output_par_shifts_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE");
 
 	if (! refine_particle.parameter_map[1] && ! refine_particle.parameter_map[2] && ! refine_particle.parameter_map[3] && ! refine_particle.parameter_map[4] && ! refine_particle.parameter_map[5])
 	{

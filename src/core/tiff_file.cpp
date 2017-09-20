@@ -145,7 +145,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
 				{
 					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
-					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in buffer");
+					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
 
 					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
 					for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)
@@ -165,7 +165,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
 				{
 					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
-					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() * 2,"Unexpected number of bytes in buffer");
+					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() * 2,"Unexpected number of bytes in uint16 buffer");
 
 					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
 					for (long counter = 0; counter < number_of_bytes_placed_in_buffer/2; counter ++)
@@ -178,9 +178,39 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 			}
 				break;
 			default:
-				MyPrintfRed("Error. Unsupported bit depth: %i. Filename = %s, Directory # %i\n",bits_per_sample,filename.GetFullPath(),directory_counter);
+				MyPrintfRed("Error. Unsupported uint bit depth: %i. Filename = %s, Directory # %i\n",bits_per_sample,filename.GetFullPath(),directory_counter);
 				break;
 			}
+			break;
+		case SAMPLEFORMAT_IEEEFP:
+		{
+			switch (bits_per_sample)
+			{
+			case 32:
+			{
+				float * buf = new float[TIFFStripSize(tif)/4];
+
+				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
+				{
+					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
+					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() * 4,"Unexpected number of bytes in float buffer");
+
+					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
+					for (long counter = 0; counter < number_of_bytes_placed_in_buffer/4; counter ++)
+					{
+						output_array[output_counter] = buf[counter];
+						output_counter ++;
+					}
+				}
+				delete [] buf;
+			}
+				break;
+			default:
+				MyPrintfRed("Error. Unsupported float bit depth: %i. Filename = %s, Directory # %i\n",bits_per_sample,filename.GetFullPath(),directory_counter);
+				break;
+			}
+			break;
+		}
 			break;
 		default:
 			MyPrintfRed("Error. Unsupported sample format: %i. Filename = %s, Directory # %i\n",sample_format,filename.GetFullPath(),directory_counter);

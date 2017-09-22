@@ -60,7 +60,8 @@ bool Resample::DoCalculation()
 
 	Image my_image;
 
-	pixel_size = my_input_file.ReturnPixelSize();
+	// pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
+	pixel_size = my_input_file.ReturnPixelSize() * float(my_input_file.ReturnXSize()) / float(new_x_size);
 
 	if (is_a_volume == true)
 	{
@@ -96,8 +97,6 @@ bool Resample::DoCalculation()
 
 	}
 
-	// pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
-	pixel_size *= float(my_image.logical_x_dimension) / float(new_x_size);
 	my_output_file.SetPixelSize(pixel_size);
 	my_output_file.WriteHeader();
 

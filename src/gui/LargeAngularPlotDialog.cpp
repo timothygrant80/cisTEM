@@ -13,12 +13,12 @@ LargeAngularPlotDialogParent( parent, id, title, pos, size, style)
 	main_frame->GetClientSize(&frame_width, &frame_height);
 	main_frame->GetPosition(&frame_position_x, &frame_position_y);
 
-	SetSize(wxSize(frame_height, myroundint(float(frame_height * 0.95f))));
+	SetSize(wxSize(frame_height, myroundint(float(frame_height * 0.9f))));
 
 	// ok so how big is this dialog now?
 
 	int new_x_pos = (frame_position_x + (frame_width / 2) - (frame_height / 2));
-	int new_y_pos = (frame_position_y + (frame_height / 2) - myroundint(float(frame_height) * 0.95f / 2.0f));
+	int new_y_pos = (frame_position_y + (frame_height / 2) - myroundint(float(frame_height) * 0.9f / 2.0f));
 
 	Move(new_x_pos, new_y_pos);
 }

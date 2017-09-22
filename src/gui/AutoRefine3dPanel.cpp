@@ -1940,6 +1940,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 	float sigma;
 	float score;
 	int image_is_active;
+
 	if (running_job_type == REFINEMENT)
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
@@ -1973,7 +1974,11 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].phase_shift;
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].logp;
 				}
+
+				output_refinement->class_refinement_results[class_counter].average_occupancy = 100.0f / output_refinement->number_of_classes;
 			}
+
+
 		}
 		else // calculate occupancies..
 		{

@@ -6464,6 +6464,231 @@ Refine3DPanel::~Refine3DPanel()
 	
 }
 
+Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer589;
+	bSizer589 = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer15;
+	fgSizer15 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer15->SetFlexibleDirection( wxBOTH );
+	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText262 = new wxStaticText( this, wxID_ANY, wxT("Input Volume :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262->Wrap( -1 );
+	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( RefinementPackageComboBox, 1, wxEXPAND | wxALL, 5 );
+	
+	UseMaskCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Supply a Mask? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer15->Add( UseMaskCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	MaskSelectPanel = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	MaskSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( MaskSelectPanel, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer589->Add( fgSizer15, 0, wxEXPAND, 5 );
+	
+	m_staticline129 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer589->Add( m_staticline129, 0, wxEXPAND | wxALL, 5 );
+	
+	m_splitter19 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter19->SetSashGravity( 0 );
+	m_splitter19->SetSashSize( 0 );
+	m_splitter19->Connect( wxEVT_IDLE, wxIdleEventHandler( Sharpen3DPanelParent::m_splitter19OnIdle ), NULL, this );
+	
+	InvertHandednessNoButton = new wxPanel( m_splitter19, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer588;
+	bSizer588 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer473;
+	bSizer473 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer588->Add( bSizer473, 0, wxEXPAND, 5 );
+	
+	ExpertPanel = new wxScrolledWindow( InvertHandednessNoButton, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
+	ExpertPanel->SetScrollRate( 5, 5 );
+	InputSizer = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer1;
+	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer1->SetFlexibleDirection( wxBOTH );
+	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText1006 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("General Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText1006->Wrap( -1 );
+	m_staticText1006->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( m_staticText1006, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText1007 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Flatten From Res. (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText1007->Wrap( -1 );
+	fgSizer1->Add( m_staticText1007, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	FlattenFromTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( FlattenFromTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticText1008 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resolution Cut-Off (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText1008->Wrap( -1 );
+	fgSizer1->Add( m_staticText1008, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	CutOffResTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( CutOffResTextCtrl, 0, wxALL, 5 );
+	
+	m_staticText1011 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter Edge-Width (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText1011->Wrap( -1 );
+	fgSizer1->Add( m_staticText1011, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	InnerMaskRadiusTextCtrl1 = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( InnerMaskRadiusTextCtrl1, 0, wxALL, 5 );
+	
+	m_staticText638 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Additional B-Factor (Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText638->Wrap( -1 );
+	fgSizer1->Add( m_staticText638, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	AdditionalBFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( AdditionalBFactorTextCtrl, 0, wxALL, 5 );
+	
+	m_staticText639 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use FSC Weighting?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText639->Wrap( -1 );
+	fgSizer1->Add( m_staticText639, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer266121;
+	bSizer266121 = new wxBoxSizer( wxHORIZONTAL );
+	
+	UseFSCWeightingYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266121->Add( UseFSCWeightingYesButton, 0, wxALL, 5 );
+	
+	UseFSCWeightingNoButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266121->Add( UseFSCWeightingNoButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer266121, 1, wxEXPAND, 5 );
+	
+	m_staticText641 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tSSNR Scale Factor :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText641->Wrap( -1 );
+	fgSizer1->Add( m_staticText641, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	SSNRScaleFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( SSNRScaleFactorTextCtrl, 0, wxALL, 5 );
+	
+	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText202->Wrap( -1 );
+	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
+	
+	fgSizer1->Add( m_staticText202, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText331 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Inner Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText331->Wrap( -1 );
+	fgSizer1->Add( m_staticText331, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outer Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText196->Wrap( -1 );
+	fgSizer1->Add( m_staticText196, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	MaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	AutoMaskStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use AutoMasking?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoMaskStaticText->Wrap( -1 );
+	fgSizer1->Add( AutoMaskStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26612;
+	bSizer26612 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoMaskYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26612->Add( AutoMaskYesRadioButton, 0, wxALL, 5 );
+	
+	AutoMaskNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26612->Add( AutoMaskNoRadioButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26612, 1, wxEXPAND, 5 );
+	
+	m_staticText671 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Handedness"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText671->Wrap( -1 );
+	m_staticText671->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( m_staticText671, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText642 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Invert Handedness? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText642->Wrap( -1 );
+	fgSizer1->Add( m_staticText642, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer266122;
+	bSizer266122 = new wxBoxSizer( wxHORIZONTAL );
+	
+	InvertHandednessYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266122->Add( InvertHandednessYesButton, 0, wxALL, 5 );
+	
+	AutoMaskNoRadioButton1 = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266122->Add( AutoMaskNoRadioButton1, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer266122, 1, wxEXPAND, 5 );
+	
+	
+	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
+	
+	
+	ExpertPanel->SetSizer( InputSizer );
+	ExpertPanel->Layout();
+	InputSizer->Fit( ExpertPanel );
+	bSizer588->Add( ExpertPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	InvertHandednessNoButton->SetSizer( bSizer588 );
+	InvertHandednessNoButton->Layout();
+	bSizer588->Fit( InvertHandednessNoButton );
+	ResultDisplayPanel = new DisplayPanel( m_splitter19, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	m_splitter19->SplitVertically( InvertHandednessNoButton, ResultDisplayPanel, 350 );
+	bSizer589->Add( m_splitter19, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer589 );
+	this->Layout();
+	
+	// Connect Events
+	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Sharpen3DPanelParent::OnUseMaskCheckBox ), NULL, this );
+	UseFSCWeightingYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseFSCWeightingNoButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	InvertHandednessYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton1->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+}
+
+Sharpen3DPanelParent::~Sharpen3DPanelParent()
+{
+	// Disconnect Events
+	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Sharpen3DPanelParent::OnUseMaskCheckBox ), NULL, this );
+	UseFSCWeightingYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseFSCWeightingNoButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	InvertHandednessYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton1->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	
+}
+
 Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : JobPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer43;
@@ -10425,7 +10650,7 @@ LargeAngularPlotDialogParent::LargeAngularPlotDialogParent( wxWindow* parent, wx
 	wxBoxSizer* bSizer363;
 	bSizer363 = new wxBoxSizer( wxVERTICAL );
 	
-	AngularPlotPanel = new AngularDistributionPlotPanelHistogram( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	AngularPlotPanel = new AngularDistributionPlotPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	bSizer363->Add( AngularPlotPanel, 1, wxEXPAND | wxALL, 5 );
 	
 	wxBoxSizer* bSizer380;

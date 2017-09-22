@@ -32,6 +32,7 @@ RefinementResultsPanel( parent )
 	AngularPlotDetailsButton->SetBitmap(angles_popup_bmp);
 	ParametersDetailButton->SetBitmap(parameters_popup_bmp);
 
+
 //	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }
 
@@ -185,7 +186,7 @@ void MyRefinementResultsPanel::OnInputParametersComboBox( wxCommandEvent& event 
 
 void MyRefinementResultsPanel::FillAngles(int wanted_class)
 {
-	if (RefinementPackageComboBox->GetSelection() >= 0)
+	if (RefinementPackageComboBox->GetSelection() >= 0 && OrthPanel->my_notebook->GetSelection()>= 0)
 	{
 		AngularPlotPanel->Freeze();
 		//AngularPlotPanel->Clear();
@@ -217,8 +218,6 @@ void MyRefinementResultsPanel::DrawOrthViews()
 
 		if (OrthPanel->my_notebook->GetPageCount() != currently_displayed_refinement->number_of_classes)
 		{
-			wxPrintf("Clearing\n");
-
 			OrthPanel->Clear();
 
 			for (int class_counter = 0; class_counter< currently_displayed_refinement->number_of_classes; class_counter++)
@@ -241,7 +240,27 @@ void MyRefinementResultsPanel::DrawOrthViews()
 					}
 					else
 					{
-						wxPrintf("Can't find Orth File\n");
+						Image *dummy = new Image;
+						dummy->Allocate(300,200, 1);
+						dummy->SetToConstant(0.0f);
+
+						if (currently_displayed_refinement->number_of_classes == 1)	OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[0].estimated_resolution));
+						else
+						{
+							OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2f%%, %.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[class_counter].average_occupancy, currently_displayed_refinement->class_refinement_results[class_counter].estimated_resolution));
+						}
+					}
+				}
+				else
+				{
+					Image *dummy = new Image;
+					dummy->Allocate(300,200, 1);
+					dummy->SetToConstant(0.0f);
+
+					if (currently_displayed_refinement->number_of_classes == 1)	OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[0].estimated_resolution));
+					else
+					{
+						OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2f%%, %.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[class_counter].average_occupancy, currently_displayed_refinement->class_refinement_results[class_counter].estimated_resolution));
 					}
 				}
 			}
@@ -274,7 +293,27 @@ void MyRefinementResultsPanel::DrawOrthViews()
 					}
 					else
 					{
-						wxPrintf("Can't find Orth File\n");
+						Image *dummy = new Image;
+						dummy->Allocate(300,200, 1);
+						dummy->SetToConstant(0.0f);
+
+						if (currently_displayed_refinement->number_of_classes == 1)	OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[0].estimated_resolution));
+						else
+						{
+							OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2f%%, %.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[class_counter].average_occupancy, currently_displayed_refinement->class_refinement_results[class_counter].estimated_resolution));
+						}
+					}
+				}
+				else
+				{
+					Image *dummy = new Image;
+					dummy->Allocate(300,200, 1);
+					dummy->SetToConstant(0.0f);
+
+					if (currently_displayed_refinement->number_of_classes == 1)	OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[0].estimated_resolution));
+					else
+					{
+						OrthPanel->ChangeImage(dummy, wxString::Format(wxT("#%i (%.2f%%, %.2fÅ)"), class_counter + 1, currently_displayed_refinement->class_refinement_results[class_counter].average_occupancy, currently_displayed_refinement->class_refinement_results[class_counter].estimated_resolution));
 					}
 				}
 			}
@@ -299,9 +338,31 @@ void MyRefinementResultsPanel::AngularPlotPopupClick(wxCommandEvent& event)
 {
 	if (RefinementPackageComboBox->GetSelection() >= 0 && OrthPanel->my_notebook->GetPageCount() > 0)
 	{
-		LargeAngularPlotDialog *plot_dialog = new LargeAngularPlotDialog(this, wxID_ANY, "Angular Plot");
+		long particle_counter;
+		int class_counter;
+		int wanted_class = OrthPanel->my_notebook->GetSelection();
+		wxArrayLong images_to_add;
+
 		UpdateBufferedFullRefinement();
-		buffered_full_refinement->FillAngularDistributionHistogram(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry, OrthPanel->my_notebook->GetSelection(), 72, 288, plot_dialog->AngularPlotPanel->distribution_histogram);
+		LargeAngularPlotDialog *plot_dialog = new LargeAngularPlotDialog(this, wxID_ANY, "Angular Plot");
+
+		for (particle_counter = 0; particle_counter < buffered_full_refinement->number_of_particles; particle_counter++)
+		{
+			if (buffered_full_refinement->ReturnClassWithHighestOccupanyForGivenParticle(particle_counter) == wanted_class)
+			{
+				if (buffered_full_refinement->class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_is_active >= 0) images_to_add.Add(particle_counter);
+			}
+		}
+
+		plot_dialog->AngularPlotPanel->draw_axis_overlay_instead_of_underlay = true;
+		plot_dialog->AngularPlotPanel->SetSymmetryAndNumber(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry, images_to_add.GetCount());
+
+		for (particle_counter = 0; particle_counter < images_to_add.GetCount(); particle_counter++)
+		{
+			plot_dialog->AngularPlotPanel->AddRefinementResult(&buffered_full_refinement->class_refinement_results[wanted_class].particle_refinement_results[images_to_add[particle_counter]]);
+		}
+
+		//buffered_full_refinement->FillAngularDistributionHistogram(refinement_package_asset_panel->all_refinement_packages[RefinementPackageComboBox->GetSelection()].symmetry, OrthPanel->my_notebook->GetSelection(), 72, 288, plot_dialog->AngularPlotPanel->distribution_histogram);
 		plot_dialog->ShowModal();
 		plot_dialog->Destroy();
 	}

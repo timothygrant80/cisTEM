@@ -972,7 +972,8 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 
 
 	// add the panel
-    if (current_panel->current_location < 0 || current_panel->current_location > current_panel->my_file.ReturnNumberOfSlices()) current_panel->current_location = 1;
+
+	current_panel->current_location = 1;
 	current_panel->should_refresh = true;
 	current_panel->panel_image_has_correct_greys = false;
 	current_panel->panel_image_has_correct_scale = false;

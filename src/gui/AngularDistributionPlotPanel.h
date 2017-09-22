@@ -9,7 +9,7 @@ class AngularDistributionPlotPanel : public wxPanel
 {
 public :
 
-
+	bool draw_axis_overlay_instead_of_underlay;
 
 	AngularDistributionPlotPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
 	~AngularDistributionPlotPanel();
@@ -24,7 +24,10 @@ public :
 
 	virtual void SetupBitmap();
 	virtual void AddRefinementResult(RefinementResult *refinement_result_to_add);
+
 	void DrawBlueDot(RefinementResult &refinement_result_to_draw);
+	void DrawAxisOverlay(int min_value, int max_value);
+	void DrawAxisUnderlay();
 
 	float ReturnRadiusFromTheta(const float theta);
 	//void XYFromPhiTheta(const float phi, const float theta, int &x, int &y);
@@ -52,14 +55,15 @@ public :
 	float  		bar_width;
 	float  		bar_height;
 
-	float    bar_x;
-	float    bar_y;
+	float   	 bar_x;
+	float   	 bar_y;
 
 	float		proj_circle_radius;
 
 	int colour_change_step;
+	int min_number_of_projections_to_be_red;
 
-	AngularDistributionHistogram distribution_histogram;
+
 
 };
 
@@ -70,14 +74,15 @@ class AngularDistributionPlotPanelHistogram : public AngularDistributionPlotPane
 
 public :
 
+	AngularDistributionHistogram distribution_histogram;
+
 	AngularDistributionPlotPanelHistogram(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
 	~AngularDistributionPlotPanelHistogram();
 
 
 	void SetupBitmap();
-	void AddRefinementResult(RefinementResult *refinement_result_to_add);
+	void DrawPlot(int min_value, int max_value);
 	void UpdateScalingAndDimensions();
-	void DrawPlot();
 
 };
 

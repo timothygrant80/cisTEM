@@ -97,7 +97,7 @@ bool Resample::DoCalculation()
 	}
 
 	// pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
-	pixel_size *= my_image.logical_x_dimension / new_x_size;
+	pixel_size *= float(my_image.logical_x_dimension) / float(new_x_size);
 	my_output_file.SetPixelSize(pixel_size);
 	my_output_file.WriteHeader();
 

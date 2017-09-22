@@ -109,6 +109,7 @@
 #include "../gui/PopupTextDialog.h"
 #include "../gui/LargeAngularPlotDialog.h"
 #include "../gui/RefinementParametersDialog.h"
+#include "../gui/Sharpen3DPanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

@@ -53,11 +53,14 @@ bool Resample::DoCalculation()
 	int         new_x_size                          = my_current_job.arguments[3].ReturnIntegerArgument();
 	int         new_y_size                          = my_current_job.arguments[4].ReturnIntegerArgument();
 	int         new_z_size                          = my_current_job.arguments[5].ReturnIntegerArgument();
+	float		pixel_size;
 
 	MRCFile my_input_file(input_filename,false);
 	MRCFile my_output_file(output_filename,true);
 
 	Image my_image;
+
+	pixel_size = my_input_file.ReturnPixelSize();
 
 	if (is_a_volume == true)
 	{
@@ -92,6 +95,11 @@ bool Resample::DoCalculation()
 		wxPrintf("\n\n");
 
 	}
+
+	// pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
+	pixel_size *= my_image.logical_x_dimension / new_x_size;
+	my_output_file.SetPixelSize(pixel_size);
+	my_output_file.WriteHeader();
 
 	return true;
 }

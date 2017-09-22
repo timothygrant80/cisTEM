@@ -36,7 +36,7 @@ void Resize::DoInteractiveUserInput()
 		        new_z_size          =       my_input->GetIntFromUser("New Z-Size", "Wanted new Z size", "100",1);
 	}
 
-	bool       should_normalise     =       my_input->GetYesNoFromUser("Normalise and Zero-float Input?", "If yes, images will also be normalised and zero floated", "YES");
+	bool       should_normalise     =       my_input->GetYesNoFromUser("Normalize and Zero-float Input?", "If yes, images will also be normalized and zero floated", "NO");
 
 	delete my_input;
 
@@ -56,11 +56,14 @@ bool Resize::DoCalculation()
 	int         new_y_size                          = my_current_job.arguments[4].ReturnIntegerArgument();
 	int         new_z_size                          = my_current_job.arguments[5].ReturnIntegerArgument();
 	bool        should_normalise                    = my_current_job.arguments[6].ReturnBoolArgument();
+	float		pixel_size;
 
 	MRCFile my_input_file(input_filename,false);
 	MRCFile my_output_file(output_filename,true);
 
 	Image my_image;
+
+	pixel_size = my_input_file.ReturnPixelSize();
 
 	if (is_a_volume == true)
 	{
@@ -101,6 +104,9 @@ bool Resize::DoCalculation()
 		wxPrintf("\n\n");
 
 	}
+
+	my_output_file.SetPixelSize(pixel_size);
+	my_output_file.WriteHeader();
 
 	return true;
 }

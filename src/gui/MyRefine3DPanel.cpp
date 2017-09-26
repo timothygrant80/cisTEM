@@ -55,7 +55,7 @@ Refine3DPanel( parent )
 	selected_refinement_package = -1;
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine3DPanel::OnRefinementPackageComboBox, this);
-	Bind(MY_ORTH_DRAW_EVENT, &MyRefine3DPanel::OnOrthThreadComplete, this);
+	Bind(RETURN_PROCESSED_IMAGE_EVT, &MyRefine3DPanel::OnOrthThreadComplete, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 
@@ -596,8 +596,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				RefinementPackageComboBox->Enable(true);
 				InputParametersComboBox->Enable(true);
-
-				UseMaskCheckBox->Enable(true);
 
 				if (UseMaskCheckBox->GetValue() == true)
 				{
@@ -2383,9 +2381,6 @@ void RefinementManager::ProcessAllJobsFinished()
 		output_refinement->reference_volume_ids.Clear();
 		active_refinement_package->references_for_next_refinement.Clear();
 
-		current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
-		temp_asset.reconstruction_job_id = current_reconstruction_id;
-
 		main_frame->current_project.database.BeginVolumeAssetInsert();
 
 		my_parent->WriteInfoText("");
@@ -2416,6 +2411,9 @@ void RefinementManager::ProcessAllJobsFinished()
 			output_refinement->class_refinement_results[class_counter].reconstruction_id = current_reconstruction_id;
 
 			// add the reconstruction job
+
+			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+			temp_asset.reconstruction_job_id = current_reconstruction_id;
 
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
@@ -2676,7 +2674,7 @@ void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 }
 
 
-void MyRefine3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
+void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 {
 
 	Image *new_image = my_event.GetImage();

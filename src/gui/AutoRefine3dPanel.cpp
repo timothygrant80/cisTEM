@@ -56,7 +56,7 @@ AutoRefine3DPanelParent( parent )
 
 	RefinementPackageSelectPanel->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AutoRefine3DPanel::OnRefinementPackageComboBox, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
-	Bind(MY_ORTH_DRAW_EVENT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
+	Bind(RETURN_PROCESSED_IMAGE_EVT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
 
@@ -2032,7 +2032,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		output_refinement->reference_volume_ids.Clear();
 		active_refinement_package->references_for_next_refinement.Clear();
 
-		current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+
 
 		main_frame->current_project.database.Begin();
 		main_frame->current_project.database.BeginVolumeAssetInsert();
@@ -2045,6 +2045,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 			// add the reconstruction, get a reconstruction_id
 
+			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
 			temp_asset.reconstruction_job_id = current_reconstruction_id;
 
 			// add the reconstruction job
@@ -2055,6 +2056,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 			if (class_high_res_limits[class_counter] < 8) current_score_weight_conversion = 2;
 			else current_score_weight_conversion = 0.0;
+
 
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, current_resolution_limit_rec, current_score_weight_conversion, false, active_auto_crop, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
@@ -2362,7 +2364,7 @@ void AutoRefinementManager::OnMaskerThreadComplete()
 	RunRefinementJob();
 }
 
-void AutoRefine3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
+void AutoRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 {
 
 	Image *new_image = my_event.GetImage();

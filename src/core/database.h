@@ -76,6 +76,8 @@ public :
 	void ReturnProcessLockInfo(long &active_process_id, wxString &active_hostname);
 	void SetProcessLockInfo(long &active_process_id, wxString &active_hostname);
 
+	long ReturnRefinementIDGivenReconstructionID(long reconstruction_id);
+
 	// Get various id numbers and counts
 
 	long ReturnHighestRefinementID();

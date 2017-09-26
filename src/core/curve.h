@@ -64,4 +64,10 @@ public:
 	void SquareRoot();
 	void Reciprocal();
 	void ZeroAfterIndex(int index);
+	float ReturnAverageValue();
+
+	void GetXMinMax(float &min_value, float &max_value);
+	void GetYMinMax(float &min_value, float &max_value);
 };
+
+WX_DECLARE_OBJARRAY(Curve, ArrayofCurves);

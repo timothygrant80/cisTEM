@@ -110,6 +110,7 @@
 #include "../gui/LargeAngularPlotDialog.h"
 #include "../gui/RefinementParametersDialog.h"
 #include "../gui/Sharpen3DPanel.h"
+#include "../gui/PlotCurvePanel.h"
 
 #define REFINEMENT 0
 #define RECONSTRUCTION 1

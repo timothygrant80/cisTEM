@@ -1,4 +1,6 @@
 #include "core_headers.h"
+#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
+WX_DEFINE_OBJARRAY(ArrayofCurves);
 
 void LS_POLY(float *x_data, float *y_data, int number_of_points, int order_of_polynomial, float *output_smoothed_curve, float *output_coefficients);
 
@@ -27,7 +29,27 @@ Curve::Curve()
 Curve::Curve( const Curve &other_curve) // copy constructor
 {
 	MyDebugPrint("Warning: copying a curve object");
-	 *this = other_curve;
+
+	have_polynomial = false;
+	have_savitzky_golay = false;
+
+	number_of_points = 0;
+	allocated_space_for_points = 100;
+
+	data_x = new float[100];
+	data_y = new float[100];
+
+	polynomial_fit = NULL; // allocate on fit..
+	savitzky_golay_fit = NULL;
+	savitzky_golay_coefficients = NULL;
+
+	polynomial_order = 0;
+	polynomial_coefficients = NULL;
+
+	savitzky_golay_polynomial_order = 0;
+	savitzky_golay_window_size = 0;
+
+	*this = other_curve;
 	 //abort();
 }
 
@@ -242,6 +264,20 @@ void Curve::AddWith(Curve *other_curve)
 	{
 		data_y[counter] += other_curve->data_y[counter];
 	}
+}
+
+float Curve::ReturnAverageValue()
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to average");
+
+	float sum = 0.0f;
+
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		sum += data_y[counter];
+	}
+
+	return sum / float(number_of_points);
 }
 
 void Curve::ZeroAfterIndex(int index)
@@ -465,9 +501,37 @@ void Curve::WriteToFile(wxString output_file)
 	}
 }
 
+
+
 void Curve::CopyFrom(Curve *other_curve)
 {
 	*this = other_curve;
+}
+
+
+void Curve::GetXMinMax(float &min_value, float &max_value)
+{
+	min_value = FLT_MAX;
+	max_value = -FLT_MAX;
+
+	for (int point_counter = 0; point_counter < number_of_points; point_counter++)
+	{
+		min_value = std::min(min_value, data_x[point_counter]);
+		max_value = std::max(max_value, data_x[point_counter]);
+	}
+
+}
+
+void Curve::GetYMinMax(float &min_value, float &max_value)
+{
+	min_value = FLT_MAX;
+	max_value = -FLT_MAX;
+
+	for (int point_counter = 0; point_counter < number_of_points; point_counter++)
+	{
+		min_value = std::min(min_value, data_y[point_counter]);
+		max_value = std::max(max_value, data_y[point_counter]);
+	}
 }
 
 void Curve::CheckMemory()

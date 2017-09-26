@@ -118,7 +118,7 @@ wxArrayLong Database::ReturnLongArrayFromSelectCommand(wxString select_command)
 	long current_value;
 
 	Prepare(select_command, &current_statement);
-	Step(current_statement);
+	//Step(current_statement);
 
 	return_code = Step(current_statement);
 
@@ -135,6 +135,11 @@ wxArrayLong Database::ReturnLongArrayFromSelectCommand(wxString select_command)
 
 }
 
+long Database::ReturnRefinementIDGivenReconstructionID(long reconstruction_id)
+{
+	return ReturnSingleLongFromSelectCommand(wxString::Format("SELECT REFINEMENT_ID FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=%li", reconstruction_id));
+}
+
 wxArrayString Database::ReturnStringArrayFromSelectCommand(wxString select_command)
 {
 	wxArrayString strings_to_return;
@@ -146,7 +151,6 @@ wxArrayString Database::ReturnStringArrayFromSelectCommand(wxString select_comma
 	wxString current_value;
 
 	Prepare(select_command, &current_statement);
-	Step(current_statement);
 
 	return_code = Step(current_statement);
 

@@ -34,6 +34,7 @@ class NoFocusBitmapButton;
 class NumericTextCtrl;
 class PickingBitmapPanel;
 class PickingResultsDisplayPanel;
+class PlotCurvePanel;
 class PlotFSCPanel;
 class ReferenceVolumesListControl;
 class ReferenceVolumesListControlRefinement;
@@ -1719,54 +1720,65 @@ class Sharpen3DPanelParent : public wxPanel
 		wxCheckBox* UseMaskCheckBox;
 		VolumeAssetPickerComboPanel* MaskSelectPanel;
 		wxStaticLine* m_staticline129;
-		wxSplitterWindow* m_splitter19;
-		wxPanel* InvertHandednessNoButton;
-		wxScrolledWindow* ExpertPanel;
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText1006;
 		wxStaticText* m_staticText1007;
 		NumericTextCtrl* FlattenFromTextCtrl;
-		wxStaticText* m_staticText1008;
+		wxStaticText* m_staticText10081;
 		NumericTextCtrl* CutOffResTextCtrl;
-		wxStaticText* m_staticText1011;
-		NumericTextCtrl* InnerMaskRadiusTextCtrl1;
 		wxStaticText* m_staticText638;
-		NumericTextCtrl* AdditionalBFactorTextCtrl;
-		wxStaticText* m_staticText639;
+		NumericTextCtrl* AdditionalLowBFactorTextCtrl;
+		wxStaticText* m_staticText600;
+		NumericTextCtrl* AdditionalHighBFactorTextCtrl;
+		wxStaticText* m_staticText10111;
+		NumericTextCtrl* FilterEdgeWidthTextCtrl;
+		wxStaticText* UseFSCWeightingStaticText;
 		wxRadioButton* UseFSCWeightingYesButton;
 		wxRadioButton* UseFSCWeightingNoButton;
-		wxStaticText* m_staticText641;
+		wxStaticText* SSNRScaleFactorText;
 		NumericTextCtrl* SSNRScaleFactorTextCtrl;
+		wxStaticLine* m_staticline136;
 		wxStaticText* m_staticText202;
-		wxStaticText* m_staticText331;
+		wxStaticText* InnerMaskRadiusStaticText;
 		NumericTextCtrl* InnerMaskRadiusTextCtrl;
-		wxStaticText* m_staticText196;
-		NumericTextCtrl* MaskRadiusTextCtrl;
-		wxStaticText* AutoMaskStaticText;
-		wxRadioButton* AutoMaskYesRadioButton;
-		wxRadioButton* AutoMaskNoRadioButton;
+		wxStaticText* OuterMaskRadiusStaticText;
+		NumericTextCtrl* OuterMaskRadiusTextCtrl;
 		wxStaticText* m_staticText671;
 		wxStaticText* m_staticText642;
 		wxRadioButton* InvertHandednessYesButton;
-		wxRadioButton* AutoMaskNoRadioButton1;
+		wxRadioButton* InvertHandednessNoButton;
+		wxStaticText* m_staticText6721;
+		wxRadioButton* CorrectGriddingYesButton;
+		wxRadioButton* CorrectGriddingNoButton;
+		wxStaticLine* m_staticline138;
+		wxStaticText* m_staticText699;
+		wxStaticLine* m_staticline137;
+		PlotCurvePanel* GuinierPlot;
+		wxStaticLine* m_staticline135;
 		DisplayPanel* ResultDisplayPanel;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline130;
+		wxButton* RunJobButton;
+		wxGauge* ProgressGuage;
+		wxButton* ImportResultButton;
+		wxButton* SaveResultButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void OnRunButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImportResultClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveResultClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
-		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
+		VolumeAssetPickerComboPanel* VolumeComboBox;
 		
 		Sharpen3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1086,669 ), long style = wxTAB_TRAVERSAL ); 
 		~Sharpen3DPanelParent();
-		
-		void m_splitter19OnIdle( wxIdleEvent& )
-		{
-			m_splitter19->SetSashPosition( 350 );
-			m_splitter19->Disconnect( wxEVT_IDLE, wxIdleEventHandler( Sharpen3DPanelParent::m_splitter19OnIdle ), NULL, this );
-		}
 	
 };
 

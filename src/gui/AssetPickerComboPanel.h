@@ -38,7 +38,7 @@ class VolumeAssetPickerComboPanel : public AssetPickerComboPanel
 {
 public:
 	VolumeAssetPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	bool FillComboBox(bool include_generate_from_params=false) {AssetComboBox->FillWithVolumeAssets(include_generate_from_params);}
+	bool FillComboBox(bool include_generate_from_params=false, bool always_select_latest = false) {AssetComboBox->FillWithVolumeAssets(include_generate_from_params, always_select_latest);}
 };
 
 class RefinementPackagePickerComboPanel : public AssetPickerComboPanel

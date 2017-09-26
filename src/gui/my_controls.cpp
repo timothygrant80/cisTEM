@@ -262,7 +262,7 @@ bool MemoryComboBox::FillWithRefinementPackages()
 	else return false;
 }
 
-bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
+bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, bool always_select_newest)
 {
 	extern MyVolumeAssetPanel *volume_asset_panel;
 
@@ -302,7 +302,11 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params)
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1) SetSelection(0);
+		if (new_selection == -1)
+		{
+			if (always_select_newest == false) SetSelection(0);
+			else SetSelection(GetCount() - 1);
+		}
 		else SetSelection(new_selection);
 	}
 
@@ -1694,7 +1698,7 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 {
 	// we are going to make a bitmap panel, calculate the orth image, add it to the bitmap panel, then return that for the gui to draw, this is a bit crazy maybe
 
-	MyOrthDrawEvent *finished_event = new MyOrthDrawEvent(MY_ORTH_DRAW_EVENT); // for sending back the panel
+	ReturnProcessedImageEvent *finished_event = new ReturnProcessedImageEvent(RETURN_PROCESSED_IMAGE_EVT); // for sending back the panel
 
 	if (DoesFileExist(filenames_of_volumes.Item(0)) == true)
 	{

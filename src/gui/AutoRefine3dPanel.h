@@ -164,7 +164,7 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
-		void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
+		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 };
 
 class AutoRefine3DMaskerThread : public wxThread

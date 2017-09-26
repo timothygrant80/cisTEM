@@ -19,6 +19,7 @@ extern MyRefine3DPanel *refine_3d_panel;
 extern AutoRefine3DPanel *auto_refine_3d_panel;
 extern AbInitio3DPanel *ab_initio_3d_panel;
 extern Generate3DPanel *generate_3d_panel;
+extern Sharpen3DPanel *sharpen_3d_panel;
 
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
@@ -251,6 +252,7 @@ void MyMainFrame::DirtyVolumes()
 	volume_asset_panel->is_dirty = true;
 	refine_3d_panel->volumes_are_dirty = true;
 	auto_refine_3d_panel->volumes_are_dirty = true;
+	sharpen_3d_panel->volumes_are_dirty = true;
 
 }
 

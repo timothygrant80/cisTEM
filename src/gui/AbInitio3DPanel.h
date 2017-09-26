@@ -138,7 +138,7 @@ public:
 
 	void OnJobSocketEvent(wxSocketEvent& event);
 	void OnMaskerThreadComplete(wxThreadEvent& my_event);
-	void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
+	void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 
 	int length_of_process_number;
 

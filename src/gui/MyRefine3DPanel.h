@@ -185,7 +185,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		void OnRefinementPackageComboBox( wxCommandEvent& event );
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
-		void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
+		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 };
 

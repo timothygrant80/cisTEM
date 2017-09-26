@@ -36,7 +36,7 @@ class Generate3DPanel : public Generate3DPanelParent
 		long current_job_starttime;
 
 		wxArrayString output_filenames;
-		long current_reconstruction_id;
+
 
 		//int length_of_process_number;
 
@@ -88,7 +88,7 @@ class Generate3DPanel : public Generate3DPanelParent
 		void OnRefinementPackageComboBox( wxCommandEvent& event );
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
-		void OnOrthThreadComplete(MyOrthDrawEvent& my_event);
+		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 
 		void ProcessJobResult(JobResult *result_to_process);
 		void ProcessAllJobsFinished();

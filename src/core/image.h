@@ -6,6 +6,7 @@
 
 class ReconstructedVolume;
 class EulerSearch;
+class ResolutionStatistics;
 
 class Image {
 
@@ -328,6 +329,8 @@ public:
 	void SubtractSquaredImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
 	void ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, float bfactor_high, float bfactor_res_limit);
+	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
+	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
 	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);
@@ -378,7 +381,7 @@ public:
 	void Sine1D(int number_of_periods);
 
 	// for displaying
-	void CreateOrthogonalProjectionsImage(Image *image_to_create);
+	void CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections = true);
 };
 
 

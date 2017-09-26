@@ -6931,6 +6931,126 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
 
 }
 
+void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
+{
+
+	float cosine_edge = 10.0;
+
+	Curve power_spectrum;
+	Curve number_of_terms;
+	Curve copy_of_rec_SSNR = input_resolution_statistics->rec_SSNR;
+
+	power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+
+	if (original_log_plot != NULL) original_log_plot->SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	if (sharpened_log_plot != NULL) sharpened_log_plot->SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+
+	Image buffer_image;
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+	buffer_image.CopyFrom(this);
+
+	if (outer_mask_radius == 0.0) outer_mask_radius = logical_x_dimension / 2.0;
+
+	if (input_mask == NULL) buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
+	else
+	{
+		buffer_image.ApplyMask(*input_mask, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
+	}
+
+	ForwardFFT();
+	buffer_image.ForwardFFT();
+
+	buffer_image.Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_terms);
+	power_spectrum.SquareRoot();
+
+	if (original_log_plot != NULL)
+	{
+		for (int counter = 0; counter < original_log_plot->number_of_points; counter++)
+		{
+			if (original_log_plot->data_x[counter] == 0.0)
+			{
+				original_log_plot->data_x[counter] = (pixel_size * original_log_plot->data_x[counter + 1]);
+				original_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter+1]);
+			}
+			else
+			{
+				original_log_plot->data_x[counter] = (pixel_size * original_log_plot->data_x[counter]);
+				if (power_spectrum.data_y[counter] <= 0.0f) original_log_plot->data_y[counter] = 0.0;
+				original_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter]);
+
+			}
+
+		}
+	}
+
+	ApplyBFactorAndWhiten(power_spectrum, additional_bfactor_low / pixel_size / pixel_size, additional_bfactor_high / pixel_size / pixel_size, pixel_size / start_res_for_whitening);
+
+	if (input_resolution_statistics != NULL)
+	{
+		if (statistics_scale_factor != 1.0) copy_of_rec_SSNR.MultiplyByConstant(statistics_scale_factor);
+		OptimalFilterSSNR(copy_of_rec_SSNR);
+
+	}
+
+	CosineMask(pixel_size / resolution_limit - pixel_size / 2.0 / filter_edge, pixel_size / filter_edge);
+
+	BackwardFFT();
+
+	if (sharpened_log_plot != NULL)
+	{
+		buffer_image.CopyFrom(this);
+		if (input_mask == NULL) buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
+		else
+		{
+			buffer_image.ApplyMask(*input_mask, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
+		}
+
+		buffer_image.ForwardFFT();
+
+		buffer_image.Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_terms);
+		power_spectrum.SquareRoot();
+
+		for (int counter = 0; counter < sharpened_log_plot->number_of_points; counter++)
+		{
+			if (sharpened_log_plot->data_x[counter] == 0.0)
+			{
+				sharpened_log_plot->data_x[counter] = (pixel_size * sharpened_log_plot->data_x[counter + 1]);
+				sharpened_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter+1]);
+			}
+			else
+			{
+				sharpened_log_plot->data_x[counter] = (pixel_size * sharpened_log_plot->data_x[counter]);
+				if (power_spectrum.data_y[counter] <= 0.0f) sharpened_log_plot->data_y[counter] = 0.0;
+				sharpened_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter]);
+			}
+		}
+	}
+
+	if (invert_hand == true) InvertHandedness();
+}
+
+void Image::InvertHandedness()
+{
+	int i, j;
+	long offset, pixel_counter;
+	pixel_counter = 0;
+
+	Image buffer_image;
+	buffer_image.CopyFrom(this);
+
+	for (j = logical_z_dimension - 1; j >= 0; j--)
+	{
+		offset = j * (logical_x_dimension + padding_jump_value) * logical_y_dimension;
+
+		for (i = 0; i < (logical_x_dimension + padding_jump_value) * logical_y_dimension; i++)
+		{
+			real_values[pixel_counter] = buffer_image.real_values[i + offset];
+			pixel_counter++;
+		}
+	}
+}
+
 void Image::ApplyBFactor(float bfactor) // add real space and windows later, probably to an overloaded function
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -8387,11 +8507,19 @@ float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_m
 }
 
 
-void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
+void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections)
 {
 	MyDebugAssertTrue(this->IsCubic() == true, "Only Cubic Volumes Supported");
 	// don't allocate so i can use Allocateaspointing to slice in 3d.
-	MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+
+#ifdef DEBUG
+	if (include_projections == true)
+	{
+		MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+	}
+	else MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+#endif
+
 
 	int i,j, k;
 
@@ -8407,35 +8535,44 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 	slice_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
 	slice_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
 
-	proj_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
-	proj_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
-	proj_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	slice_one.SetToConstant(0.0);
+	slice_two.SetToConstant(0.0);
+	slice_three.SetToConstant(0.0);
 
-	proj_one.SetToConstant(0.0);
-	proj_two.SetToConstant(0.0);
-	proj_three.SetToConstant(0.0);
 
-	proj_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
-	proj_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
-	proj_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+	if (include_projections == true)
+	{
+		proj_one.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+		proj_two.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+		proj_three.Allocate(this->logical_x_dimension, this->logical_y_dimension, true);
+
+		proj_one.SetToConstant(0.0);
+		proj_two.SetToConstant(0.0);
+		proj_three.SetToConstant(0.0);
+	}
+
 
 	long input_counter = 0;
 	long output_counter;
 
-	for (k = 0; k < this->logical_z_dimension; k++)
+	if (include_projections == true)
 	{
-		for (j = 0; j < this->logical_y_dimension; j++)
+
+		for (k = 0; k < this->logical_z_dimension; k++)
 		{
-			for (i = 0; i < this->logical_x_dimension; i++)
+			for (j = 0; j < this->logical_y_dimension; j++)
 			{
-				proj_one.real_values[proj_one.ReturnReal1DAddressFromPhysicalCoord(i, j, 0)] += this->real_values[input_counter];
-				proj_two.real_values[proj_two.ReturnReal1DAddressFromPhysicalCoord(j, k, 0)] += this->real_values[input_counter];
-				proj_three.real_values[proj_three.ReturnReal1DAddressFromPhysicalCoord(i, k, 0)] += this->real_values[input_counter];
+				for (i = 0; i < this->logical_x_dimension; i++)
+				{
+					proj_one.real_values[proj_one.ReturnReal1DAddressFromPhysicalCoord(i, j, 0)] += this->real_values[input_counter];
+					proj_two.real_values[proj_two.ReturnReal1DAddressFromPhysicalCoord(j, k, 0)] += this->real_values[input_counter];
+					proj_three.real_values[proj_three.ReturnReal1DAddressFromPhysicalCoord(i, k, 0)] += this->real_values[input_counter];
 
-				input_counter++;
+					input_counter++;
+				}
+
+				input_counter += this->padding_jump_value;
 			}
-
-			input_counter += this->padding_jump_value;
 		}
 	}
 
@@ -8482,24 +8619,28 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 	slice_three.AddConstant(-min_value);
 	slice_three.DivideByConstant(max_value - min_value);
 
-	proj_one.GetMinMax(min_value, max_value);
+	if (include_projections == true)
+	{
 
-	proj_two.GetMinMax(current_min_value, current_max_value);
-	min_value = std::min(min_value, current_min_value);
-	max_value = std::max(max_value, current_max_value);
+		proj_one.GetMinMax(min_value, max_value);
 
-	proj_three.GetMinMax(current_min_value, current_max_value);
-	min_value = std::min(min_value, current_min_value);
-	max_value = std::max(max_value, current_max_value);
+		proj_two.GetMinMax(current_min_value, current_max_value);
+		min_value = std::min(min_value, current_min_value);
+		max_value = std::max(max_value, current_max_value);
 
-	proj_one.AddConstant(-min_value);
-	proj_one.DivideByConstant(max_value - min_value);
+		proj_three.GetMinMax(current_min_value, current_max_value);
+		min_value = std::min(min_value, current_min_value);
+		max_value = std::max(max_value, current_max_value);
 
-	proj_two.AddConstant(-min_value);
-	proj_two.DivideByConstant(max_value - min_value);
+		proj_one.AddConstant(-min_value);
+		proj_one.DivideByConstant(max_value - min_value);
 
-	proj_three.AddConstant(-min_value);
-	proj_three.DivideByConstant(max_value - min_value);
+		proj_two.AddConstant(-min_value);
+		proj_two.DivideByConstant(max_value - min_value);
+
+		proj_three.AddConstant(-min_value);
+		proj_three.DivideByConstant(max_value - min_value);
+	}
 
 	output_counter = 0;
 
@@ -8507,7 +8648,7 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 	{
 		for (i = 0; i < image_to_create->logical_x_dimension; i++)
 		{
-			if (j < this->logical_y_dimension)
+			if (j < this->logical_y_dimension && include_projections == true)
 			{
 				if (i < this->logical_x_dimension)
 				{
@@ -8528,16 +8669,19 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create)
 			{
 				if (i < this->logical_x_dimension)
 				{
-					image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j  - this->logical_y_dimension, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j  - this->logical_y_dimension, 0);
+					else image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j, 0);
 				}
 				else
 				if (i < this->logical_x_dimension * 2)
 				{
-					image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j  - this->logical_y_dimension, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j  - this->logical_y_dimension, 0);
+					else image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j, 0);
 				}
 				else
 				{
-					image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j  - this->logical_y_dimension, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j  - this->logical_y_dimension, 0);
+					image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
 				}
 			}
 			output_counter++;

@@ -1,20 +1,21 @@
-
-class MyOrthDrawEvent;
-wxDECLARE_EVENT(MY_ORTH_DRAW_EVENT, MyOrthDrawEvent);
+class ReturnProcessedImageEvent;
+class ReturnSharpeningResultsEvent;
+wxDECLARE_EVENT(RETURN_PROCESSED_IMAGE_EVT, ReturnProcessedImageEvent);
+wxDECLARE_EVENT(RETURN_SHARPENING_RESULTS_EVT, ReturnSharpeningResultsEvent);
 wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 
-class MyOrthDrawEvent: public wxCommandEvent
+class ReturnProcessedImageEvent: public wxCommandEvent
 {
 public:
-	MyOrthDrawEvent(wxEventType commandType = MY_ORTH_DRAW_EVENT, int id = 0)
+	ReturnProcessedImageEvent(wxEventType commandType = RETURN_PROCESSED_IMAGE_EVT, int id = 0)
         		:  wxCommandEvent(commandType, id) { }
 
 	// You *must* copy here the data to be transported
-	MyOrthDrawEvent(const MyOrthDrawEvent& event)
+	ReturnProcessedImageEvent(const ReturnProcessedImageEvent& event)
         		:  wxCommandEvent(event) { this->SetImage(event.GetImage()); }
 
 	// Required for sending with wxPostEvent()
-	wxEvent* Clone() const { return new MyOrthDrawEvent(*this); }
+	wxEvent* Clone() const { return new ReturnProcessedImageEvent(*this); }
 
 	Image* GetImage() const { return m_image; }
 	void SetImage( Image *image) { m_image = image; }
@@ -22,6 +23,58 @@ public:
 private:
 	Image *m_image;
 };
+
+typedef void (wxEvtHandler::*ReturnProcessedImageEventFunction)(ReturnProcessedImageEvent &);
+#define ReturnProcessedImageEventHandler(func) wxEVENT_HANDLER_CAST(ReturnProcessedImageEventFunction, func)
+
+class ReturnSharpeningResultsEvent: public wxCommandEvent
+{
+public:
+	ReturnSharpeningResultsEvent(wxEventType commandType = RETURN_SHARPENING_RESULTS_EVT, int id = 0) :  wxCommandEvent(commandType, id)
+	{
+		m_sharpened_image = NULL;
+		m_original_orth_image = NULL;
+		m_sharpened_orth_image = NULL;
+		m_original_curve = NULL;
+		m_sharpened_curve = NULL;
+
+	}
+
+	// You *must* copy here the data to be transported
+	ReturnSharpeningResultsEvent(const ReturnSharpeningResultsEvent& event) :  wxCommandEvent(event)
+	{
+		this->SetSharpenedImage(event.GetSharpenedImage());
+		this->SetOriginalOrthImage(event.GetOriginalOrthImage());
+		this->SetOriginalCurve(event.GetOriginalCurve());
+		this->SetSharpenedCurve(event.GetSharpenedCurve());
+	}
+
+	// Required for sending with wxPostEvent()
+	wxEvent* Clone() const { return new ReturnSharpeningResultsEvent(*this); }
+
+	Image* GetSharpenedImage() const { return m_sharpened_image; }
+	Image* GetOriginalOrthImage() const { return m_original_orth_image; }
+	Image* GetSharpenedOrthImage() const { return m_sharpened_orth_image; }
+	Curve* GetOriginalCurve() const { return m_original_curve; }
+	Curve* GetSharpenedCurve() const { return m_sharpened_curve; }
+
+	void SetSharpenedImage( Image *image) { m_sharpened_image = image; }
+	void SetOriginalOrthImage( Image *image) { m_original_orth_image = image; }
+	void SetSharpenedOrthImage( Image *image) { m_sharpened_orth_image = image; }
+	void SetOriginalCurve(Curve *curve) { m_original_curve = curve;}
+	void SetSharpenedCurve(Curve *curve) { m_sharpened_curve = curve;}
+
+private:
+	Image *m_sharpened_image;
+	Image *m_original_orth_image;
+	Image *m_sharpened_orth_image;
+	Curve *m_original_curve;
+	Curve *m_sharpened_curve;
+};
+
+typedef void (wxEvtHandler::*ReturnSharpeningResultsEventFunction)(ReturnSharpeningResultsEvent &);
+#define ReturnSharpeningResultsEventHandler(func) wxEVENT_HANDLER_CAST(ReturnSharpeningResultsEventFunction, func)
+
 
 class OrthDrawerThread : public wxThread
 {
@@ -66,8 +119,7 @@ class AutoMaskerThread : public wxThread
 };
 
 
-typedef void (wxEvtHandler::*MyOrthDrawEventFunction)(MyOrthDrawEvent &);
-#define MyOrthDrawEventHandler(func) wxEVENT_HANDLER_CAST(MyOrthDrawEventFunction, func)
+
 
 WX_DECLARE_OBJARRAY(wxColor, ArrayofColors);
 

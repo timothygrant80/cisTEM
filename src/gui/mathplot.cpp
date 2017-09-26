@@ -1085,13 +1085,18 @@ void mpScaleX::Plot(wxDC & dc, mpWindow & w)
 #ifdef MATHPLOT_DO_LOGGING
 		wxLogMessage(wxT("mpScaleX::Plot: n: %f -> p = %d"), n, p);
 #endif
-			if ((p >= startPx) && (p <= endPx)) {
-				if (m_ticks) { // draw axis ticks
+			if ((p >= startPx) && (p <= endPx))
+			{
+				if (m_ticks)
+				{ // draw axis ticks
 					if (m_flags == mpALIGN_BORDER_BOTTOM)
 						dc.DrawLine( p, orgy, p, orgy-4);
 					else
 						dc.DrawLine( p, orgy, p, orgy+4);
-				} else { // draw grid dotted lines
+				}
+				else
+				{
+					/*// draw grid dotted lines
 					m_pen.SetStyle(wxDOT);
 					dc.SetPen(m_pen);
 					if ((m_flags == mpALIGN_BOTTOM) && !m_drawOutsideMargins) {
@@ -1100,24 +1105,31 @@ void mpScaleX::Plot(wxDC & dc, mpWindow & w)
 						if ((m_flags == mpALIGN_TOP) && !m_drawOutsideMargins) {
 							dc.DrawLine( p, orgy-4, p, maxYpx );
 						} else {
-							dc.DrawLine( p, 0/*-w.GetScrY()*/, p, w.GetScrY() );
+
+							dc.DrawLine( p, 0, p, w.GetScrY() );
 						}
 					}
 					m_pen.SetStyle(wxSOLID);
-					dc.SetPen(m_pen);
+					dc.SetPen(m_pen);*/
 				}
 				// Write ticks labels in s string
+
 				if (m_labelType == mpX_NORMAL)
 					s.Printf(fmt, n);
-				else if (m_labelType == mpX_DATETIME) {
+				else if (m_labelType == mpX_DATETIME)
+				{
 					time_t when = (time_t)n;
 					struct tm tm = *localtime(&when);
 					s.Printf(fmt, (double)tm.tm_year+1900, (double)tm.tm_mon+1, (double)tm.tm_mday, (double)tm.tm_hour, (double)tm.tm_min, (double)tm.tm_sec);
-				} else if (m_labelType == mpX_DATE) {
+				}
+				else if (m_labelType == mpX_DATE)
+				{
 					time_t when = (time_t)n;
 					struct tm tm = *localtime(&when);
 					s.Printf(fmt, (double)tm.tm_year+1900, (double)tm.tm_mon+1, (double)tm.tm_mday);
-				} else if ((m_labelType == mpX_TIME) || (m_labelType == mpX_HOURS)) {
+				}
+				else if ((m_labelType == mpX_TIME) || (m_labelType == mpX_HOURS))
+				{
 					double modulus = fabs(n);
 					double sign = n/modulus;
 					double hh = floor(modulus/3600);
@@ -1133,15 +1145,6 @@ void mpScaleX::Plot(wxDC & dc, mpWindow & w)
 				}
 				dc.GetTextExtent(s, &tx, &ty);
 				labelH = (labelH <= ty) ? ty : labelH;
-/*				if ((p-tx/2-tmp) > 64) { // Problem about non-regular axis labels
-					if ((m_flags == mpALIGN_BORDER_BOTTOM) || (m_flags == mpALIGN_TOP)) {
-						dc.DrawText( s, p-tx/2, orgy-4-ty);
-					} else {
-						dc.DrawText( s, p-tx/2, orgy+4);
-					}
-					tmp=p+tx/2;
-				}
-				*/
 				maxExtent = (tx > maxExtent) ? tx : maxExtent; // Keep in mind max label width
 			}
 		}
@@ -1179,10 +1182,12 @@ void mpScaleX::Plot(wxDC & dc, mpWindow & w)
 						s.Printf(fmt, sign*mm, ss);
 				}
 				dc.GetTextExtent(s, &tx, &ty);
+				if (m_ticks){
 				if ((m_flags == mpALIGN_BORDER_BOTTOM) || (m_flags == mpALIGN_TOP)) {
 					dc.DrawText( s, p-tx/2, orgy-4-ty);
 				} else {
 					dc.DrawText( s, p-tx/2, orgy+4);
+				}
 				}
 			}
 		}
@@ -1328,7 +1333,22 @@ void mpScaleY::Plot(wxDC & dc, mpWindow & w)
 				} else {
 					dc.DrawLine( orgx-4, p, orgx, p); //( orgx, p, orgx+4, p);
 				}
-			} else {
+
+				// Print ticks labels
+				s.Printf(fmt, n);
+				dc.GetTextExtent(s, &tx, &ty);
+				#ifdef MATHPLOT_DO_LOGGING
+							if (ty != labelHeigth) wxLogMessage(wxT("mpScaleY::Plot: ty(%f) and labelHeigth(%f) differ!"), ty, labelHeigth);
+				#endif
+				labelW = (labelW <= tx) ? tx : labelW;
+				if ((tmp-p+labelHeigth/2) > mpMIN_Y_AXIS_LABEL_SEPARATION) {
+						if ((m_flags == mpALIGN_BORDER_LEFT) || (m_flags == mpALIGN_RIGHT))
+						dc.DrawText( s, orgx+4, p-ty/2);
+						else
+						dc.DrawText( s, orgx-4-tx, p-ty/2); //( s, orgx+4, p-ty/2);
+						tmp=p-labelHeigth/2;
+				}
+			} else {/*
 				m_pen.SetStyle(wxDOT);
 				dc.SetPen( m_pen);
 				if ((m_flags == mpALIGN_LEFT) && !m_drawOutsideMargins) {
@@ -1337,26 +1357,13 @@ void mpScaleY::Plot(wxDC & dc, mpWindow & w)
 					if ((m_flags == mpALIGN_RIGHT) && !m_drawOutsideMargins) {
 					dc.DrawLine( minYpx, p, orgx+4, p);
 								} else {
-					dc.DrawLine( 0/*-w.GetScrX()*/, p, w.GetScrX(), p);
+					dc.DrawLine( 0, p, w.GetScrX(), p);
 						}
 				}
 				m_pen.SetStyle(wxSOLID);
-				dc.SetPen( m_pen);
+				dc.SetPen( m_pen);*/
 			}
-			// Print ticks labels
-			s.Printf(fmt, n);
-			dc.GetTextExtent(s, &tx, &ty);
-#ifdef MATHPLOT_DO_LOGGING
-			if (ty != labelHeigth) wxLogMessage(wxT("mpScaleY::Plot: ty(%f) and labelHeigth(%f) differ!"), ty, labelHeigth);
-#endif
-			labelW = (labelW <= tx) ? tx : labelW;
-			if ((tmp-p+labelHeigth/2) > mpMIN_Y_AXIS_LABEL_SEPARATION) {
-				if ((m_flags == mpALIGN_BORDER_LEFT) || (m_flags == mpALIGN_RIGHT))
-					dc.DrawText( s, orgx+4, p-ty/2);
-				else
-					dc.DrawText( s, orgx-4-tx, p-ty/2); //( s, orgx+4, p-ty/2);
-				tmp=p-labelHeigth/2;
-			}
+
 		}
 		}
 		// Draw axis name

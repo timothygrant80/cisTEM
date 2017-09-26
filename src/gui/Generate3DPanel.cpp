@@ -27,7 +27,7 @@ Generate3DPanelParent( parent )
 	selected_refinement_package = -1;
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &Generate3DPanel::OnRefinementPackageComboBox, this);
-	Bind(MY_ORTH_DRAW_EVENT, &Generate3DPanel::OnOrthThreadComplete, this);
+	Bind(RETURN_PROCESSED_IMAGE_EVT, &Generate3DPanel::OnOrthThreadComplete, this);
 
 	if (ShowRefinementResultsPanel->TopBottomSplitter->IsSplit() == true) ShowRefinementResultsPanel->TopBottomSplitter->Unsplit(ShowRefinementResultsPanel->TopPanel);
 
@@ -871,7 +871,7 @@ void Generate3DPanel::SetupMerge3dJob()
 {
 	int class_counter;
 
-	current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+	long number_of_3d_jobs = main_frame->current_project.database.ReturnSingleLongFromSelectCommand("select count(*) from refinement_list;");
 
 	my_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
 	output_filenames.Clear();
@@ -884,8 +884,8 @@ void Generate3DPanel::SetupMerge3dJob()
 
 		if (active_save_half_maps == true)
 		{
-			output_reconstruction_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i_map1.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
-			output_reconstruction_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i_map2.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
+			output_reconstruction_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i_map1.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
+			output_reconstruction_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i_map2.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
 
 		}
 		else
@@ -893,7 +893,7 @@ void Generate3DPanel::SetupMerge3dJob()
 			output_reconstruction_1 = "/dev/null";
 			output_reconstruction_2 = "/dev/null";
 		}
-		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
 		output_filenames.Add(output_reconstruction_filtered);
 
 		wxString output_resolution_statistics		= "/dev/null";
@@ -904,7 +904,7 @@ void Generate3DPanel::SetupMerge3dJob()
 		wxString dump_file_seed_2 					= main_frame->ReturnGenerate3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", input_refinement->refinement_id, class_counter);
 
 		bool save_orthogonal_views_image = true;
-		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", current_reconstruction_id, input_refinement->refinement_id, class_counter + 1);
+		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
 
 		my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
@@ -1076,6 +1076,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 	extern MyOverviewPanel *overview_panel;
 	overview_panel->SetProjectInfo();
 
+
 	if (running_job_type == RECONSTRUCTION)
 	{
 		main_frame->job_controller.KillJob(my_job_id);
@@ -1085,6 +1086,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 	else
 	if (running_job_type == MERGE)
 	{
+		long current_reconstruction_id;
 
 		OrthDrawerThread *result_thread;
 		ShortRefinementInfo *pointer_to_refinement_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(input_refinement->refinement_id);
@@ -1103,7 +1105,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 
 		VolumeAsset temp_asset;
 
-		temp_asset.reconstruction_job_id = current_reconstruction_id;
+
 		temp_asset.pixel_size = input_refinement->resolution_statistics_pixel_size;
 		temp_asset.x_size = input_refinement->resolution_statistics_box_size;
 		temp_asset.y_size = input_refinement->resolution_statistics_box_size;
@@ -1117,6 +1119,8 @@ void Generate3DPanel::ProcessAllJobsFinished()
 
 		for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 		{
+			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+			temp_asset.reconstruction_job_id = current_reconstruction_id;
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
 
 			if (active_update_statistics == true)
@@ -1187,7 +1191,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 
 }
 
-void Generate3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
+void Generate3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 {
 
 	Image *new_image = my_event.GetImage();

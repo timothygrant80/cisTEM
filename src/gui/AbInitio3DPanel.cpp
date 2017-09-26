@@ -30,7 +30,7 @@ AbInitio3DPanelParent( parent )
 	my_abinitio_manager.SetParent(this);
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AbInitio3DPanel::OnRefinementPackageComboBox, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
-	Bind(MY_ORTH_DRAW_EVENT, &AbInitio3DPanel::OnOrthThreadComplete, this);
+	Bind(RETURN_PROCESSED_IMAGE_EVT, &AbInitio3DPanel::OnOrthThreadComplete, this);
 	FillRefinementPackagesComboBox();
 
 	// limits
@@ -818,7 +818,7 @@ void AbInitio3DPanel::TakeCurrent()
 		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
 		{
 
-			temp_asset.reconstruction_job_id = current_startup_id;
+			temp_asset.reconstruction_job_id = -1;
 			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
 			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
 			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
@@ -889,7 +889,7 @@ void AbInitio3DPanel::TakeLastStart()
 		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
 		{
 
-			temp_asset.reconstruction_job_id = current_startup_id;
+			temp_asset.reconstruction_job_id = -1;
 			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
 			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
 			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
@@ -2122,7 +2122,7 @@ void AbInitioManager::ProcessAllJobsFinished()
 	}
 }
 
-void AbInitio3DPanel::OnOrthThreadComplete(MyOrthDrawEvent& my_event)
+void AbInitio3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 {
 	// in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..
 

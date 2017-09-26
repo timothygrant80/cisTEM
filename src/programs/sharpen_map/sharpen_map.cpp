@@ -30,7 +30,8 @@ void SharpenMap::DoInteractiveUserInput()
 	float pixel_size		= my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
 	float inner_mask_radius	= my_input->GetFloatFromUser("Inner mask radius (A)", "Inner radius of mask to be applied to the input map, in Angstroms", "0.0", 0.0);
 	float outer_mask_radius	= my_input->GetFloatFromUser("Outer mask radius (A)", "Outer radius of mask to be applied to the input map, in Angstroms", "100.0", 0.0);
-	float bfactor			= my_input->GetFloatFromUser("B-Factor (A^2)", "B-factor to be applied to dampen the map after spectral flattening, in Angstroms squared", "0.0");
+	float bfactor_low		= my_input->GetFloatFromUser("Low-res B-Factor (A^2)", "B-factor to be applied to the non-flattened part of the amplitude spectrum, in Angstroms squared", "0.0");
+	float bfactor_high		= my_input->GetFloatFromUser("High-res B-Factor (A^2)", "B-factor to be applied to the flattened part of the amplitude spectrum, in Angstroms squared", "0.0");
 	float bfactor_res_limit	= my_input->GetFloatFromUser("Low resolution limit for spectral flattening (A)", "The resolution at which spectral flattening starts being applied, in Angstroms", "8.0", 0.0);
 	float resolution_limit	= my_input->GetFloatFromUser("High resolution limit (A)", "Resolution of low-pass filter applied to final output maps, in Angstroms", "3.0", 0.0);
 	float filter_edge		= my_input->GetFloatFromUser("Filter edge width (A)", "Cosine edge used with the low-pass filter, in Angstroms", "20.0", 0.0);
@@ -41,9 +42,9 @@ void SharpenMap::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(15);
-	my_current_job.ManualSetArguments("ttttbffffffffbb", input_volume.ToUTF8().data(), output_volume.ToUTF8().data(), input_mask.ToUTF8().data(), res_statistics.ToUTF8().data(),
-			use_statistics, pixel_size, inner_mask_radius, outer_mask_radius, bfactor, bfactor_res_limit, resolution_limit, filter_edge, fudge_SSNR, use_mask, invert_hand);
+	my_current_job.Reset(16);
+	my_current_job.ManualSetArguments("ttttbfffffffffbb", input_volume.ToUTF8().data(), output_volume.ToUTF8().data(), input_mask.ToUTF8().data(), res_statistics.ToUTF8().data(),
+			use_statistics, pixel_size, inner_mask_radius, outer_mask_radius, bfactor_low, bfactor_high, bfactor_res_limit, resolution_limit, filter_edge, fudge_SSNR, use_mask, invert_hand);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -59,14 +60,15 @@ bool SharpenMap::DoCalculation()
 	float pixel_size		= my_current_job.arguments[5].ReturnFloatArgument();
 	float inner_mask_radius	= my_current_job.arguments[6].ReturnFloatArgument();
 	float outer_mask_radius	= my_current_job.arguments[7].ReturnFloatArgument();
-	float bfactor			= my_current_job.arguments[8].ReturnFloatArgument();
-	float bfactor_res_limit	= my_current_job.arguments[9].ReturnFloatArgument();
-	float resolution_limit	= my_current_job.arguments[10].ReturnFloatArgument();
-	float filter_edge		= my_current_job.arguments[11].ReturnFloatArgument();
-	float fudge_SSNR		= my_current_job.arguments[12].ReturnFloatArgument();
-//	float fudge_FSC			= my_current_job.arguments[12].ReturnFloatArgument();
-	bool use_mask			= my_current_job.arguments[13].ReturnBoolArgument();
-	bool invert_hand		= my_current_job.arguments[14].ReturnBoolArgument();
+	float bfactor_low		= my_current_job.arguments[8].ReturnFloatArgument();
+	float bfactor_high		= my_current_job.arguments[9].ReturnFloatArgument();
+	float bfactor_res_limit	= my_current_job.arguments[10].ReturnFloatArgument();
+	float resolution_limit	= my_current_job.arguments[11].ReturnFloatArgument();
+	float filter_edge		= my_current_job.arguments[12].ReturnFloatArgument();
+	float fudge_SSNR		= my_current_job.arguments[13].ReturnFloatArgument();
+//	float fudge_FSC			= my_current_job.arguments[13].ReturnFloatArgument();
+	bool use_mask			= my_current_job.arguments[14].ReturnBoolArgument();
+	bool invert_hand		= my_current_job.arguments[15].ReturnBoolArgument();
 
 	MRCFile input_file(input_volume.ToStdString(), false);
 	MRCFile output_file(output_volume.ToStdString(), true);
@@ -132,7 +134,7 @@ bool SharpenMap::DoCalculation()
 	power_spectrum.SquareRoot();
 //	wxPrintf("Done with 3D spectrum. Starting slice estimation...\n");
 
-	output_map.ApplyBFactorAndWhiten(power_spectrum, bfactor / pixel_size / pixel_size, pixel_size / bfactor_res_limit);
+	output_map.ApplyBFactorAndWhiten(power_spectrum, bfactor_low / pixel_size / pixel_size, bfactor_high / pixel_size / pixel_size, pixel_size / bfactor_res_limit);
 //	if (use_statistics) output_map.OptimalFilterFSC(input_statistics.part_FSC);
 	if (use_statistics) output_map.OptimalFilterSSNR(input_statistics.rec_SSNR);
 	output_map.CosineMask(pixel_size / resolution_limit - pixel_size / 2.0 / filter_edge, pixel_size / filter_edge);

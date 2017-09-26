@@ -6974,7 +6974,7 @@ void Image::ApplyBFactor(float bfactor) // add real space and windows later, pro
 	}
 }
 
-void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bfactor_res_limit)
+void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, float bfactor_high, float bfactor_res_limit)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -7018,8 +7018,8 @@ void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor, float bf
 				// compute radius, in units of physical Fourier pixels
 				bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-				if (frequency_squared <= bfactor_res_limit2) filter_value = exp(-bfactor * frequency_squared * 0.25);
-				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit * exp(-bfactor * frequency_squared * 0.25) / power_spectrum.data_y[bin];
+				if (frequency_squared <= bfactor_res_limit2) filter_value = exp(-bfactor_low * frequency_squared * 0.25);
+				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit * exp(-(bfactor_low * bfactor_res_limit2 + bfactor_high * (frequency_squared - bfactor_res_limit2)) * 0.25) / power_spectrum.data_y[bin];
 //				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
 				else filter_value = 0.0;
 

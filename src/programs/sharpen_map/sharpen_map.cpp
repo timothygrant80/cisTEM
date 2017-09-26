@@ -70,19 +70,14 @@ bool SharpenMap::DoCalculation()
 	bool use_mask			= my_current_job.arguments[14].ReturnBoolArgument();
 	bool invert_hand		= my_current_job.arguments[15].ReturnBoolArgument();
 
+	Image input_map;
+	Image *mask_volume = NULL;
+
 	MRCFile input_file(input_volume.ToStdString(), false);
 	MRCFile output_file(output_volume.ToStdString(), true);
-	MRCFile *input_mask_file;
 
-	int i, j;
-	long offset, pixel_counter;
-	float cosine_edge = 10.0;
-	Image input_map;
-	Image mask_volume;
-	Image output_map;
-
-	Curve power_spectrum;
-	Curve number_of_terms;
+	MRCFile *input_mask_file = NULL;
+	ResolutionStatistics *input_statistics = NULL;
 
 	if (input_file.ReturnZSize() <= 1)
 	{
@@ -90,74 +85,37 @@ bool SharpenMap::DoCalculation()
 		abort();
 	}
 
+
 	if (use_mask)
 	{
+		mask_volume = new Image;
 		input_mask_file = new MRCFile(input_mask.ToStdString(), false);
 		if (input_file.ReturnXSize() != input_mask_file->ReturnXSize() || input_file.ReturnYSize() != input_mask_file->ReturnYSize() || input_file.ReturnZSize() != input_mask_file->ReturnZSize())
 		{
 			wxPrintf("\nVolume and mask file have different dimensions\n");
 			abort();
 		}
-		else mask_volume.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
+		else mask_volume->Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
 	}
 
 	input_map.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
-	output_map.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
 
-	ResolutionStatistics input_statistics(pixel_size, input_map.logical_y_dimension);
 	if (use_statistics)
 	{
-		input_statistics.ReadStatisticsFromFile(res_statistics);
-//		if (fudge_FSC != 1.0) input_statistics.part_FSC.ResampleCurve(&input_statistics.part_FSC, myroundint(input_statistics.part_FSC.number_of_points * fudge_FSC));
-		if (fudge_SSNR != 1.0) input_statistics.rec_SSNR.MultiplyByConstant(fudge_SSNR);
+		input_statistics = new ResolutionStatistics(pixel_size, input_map.logical_y_dimension);
+		input_statistics->ReadStatisticsFromFile(res_statistics);
 	}
 
-//	wxPrintf("\nCalculating 3D spectrum...\n");
-
-	power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((output_map.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((output_map.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
 	input_map.ReadSlices(&input_file, 1, input_file.ReturnZSize());
-	output_map.CopyFrom(&input_map);
-	output_map.ForwardFFT();
 
-	if (outer_mask_radius == 0.0) outer_mask_radius = input_map.logical_x_dimension / 2.0;
 	if (use_mask)
 	{
-		mask_volume.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
-		wxPrintf("\nMask volume = %g voxels\n\n", input_map.ApplyMask(mask_volume, cosine_edge / pixel_size, 0.0, 0.0, 0.0));
+		mask_volume->ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
 	}
-	else input_map.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
-//	else input_map.CosineMask(mask_radius / pixel_size, cosine_edge / pixel_size);
 
-	input_map.ForwardFFT();
-	input_map.Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_terms);
-	power_spectrum.SquareRoot();
-//	wxPrintf("Done with 3D spectrum. Starting slice estimation...\n");
-
-	output_map.ApplyBFactorAndWhiten(power_spectrum, bfactor_low / pixel_size / pixel_size, bfactor_high / pixel_size / pixel_size, pixel_size / bfactor_res_limit);
-//	if (use_statistics) output_map.OptimalFilterFSC(input_statistics.part_FSC);
-	if (use_statistics) output_map.OptimalFilterSSNR(input_statistics.rec_SSNR);
-	output_map.CosineMask(pixel_size / resolution_limit - pixel_size / 2.0 / filter_edge, pixel_size / filter_edge);
-	output_map.BackwardFFT();
-
-	if (invert_hand)
-	{
-		pixel_counter = 0;
-		for (j = output_map.logical_z_dimension - 1; j >= 0; j--)
-		{
-			offset = j * (output_map.logical_x_dimension + output_map.padding_jump_value) * output_map.logical_y_dimension;
-			for (i = 0; i < (output_map.logical_x_dimension + output_map.padding_jump_value) * output_map.logical_y_dimension; i++)
-			{
-				input_map.real_values[pixel_counter] = output_map.real_values[i + offset];
-				pixel_counter++;
-			}
-		}
-		input_map.is_in_real_space = true;
-		input_map.WriteSlices(&output_file, 1, input_file.ReturnZSize());
-	}
-	else output_map.WriteSlices(&output_file, 1, input_file.ReturnZSize());
-
-	if (use_mask) delete input_mask_file;
+	input_map.SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius , bfactor_res_limit, bfactor_low, bfactor_high, filter_edge, mask_volume, input_statistics, fudge_SSNR);
+	input_map.is_in_real_space = true;
+	input_map.WriteSlices(&output_file, 1, input_file.ReturnZSize());
 
 //	wxPrintf("Done with 3D B-factor application.\n");
 
@@ -165,4 +123,11 @@ bool SharpenMap::DoCalculation()
 	output_file.WriteHeader();
 
 	return true;
+
+	if (use_mask == true)
+	{
+		delete input_mask_file;
+		delete mask_volume;
+	}
+	if (use_statistics == true) delete input_statistics;
 }

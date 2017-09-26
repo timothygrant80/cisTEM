@@ -242,6 +242,11 @@ bool UnBlurApp::DoCalculation()
 
 	// The Files
 
+	if (! DoesFileExist(input_filename))
+	{
+		SendError(wxString::Format("Error: Input movie %s not found\n", input_filename));
+		exit(-1);
+	}
 	ImageFile input_file(input_filename, false);
 	//MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
 	ImageFile gain_file;
@@ -330,7 +335,7 @@ bool UnBlurApp::DoCalculation()
 	{
 		SendError(wxString::Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
 		wxSleep(10);
-		abort();
+		exit(-1);
 	}
 
 	// Read in gain reference
@@ -351,7 +356,7 @@ bool UnBlurApp::DoCalculation()
 			{
 				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter+1, input_filename, gain_filename));
 				wxSleep(10);
-				abort();
+				exit(-1);
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter].MultiplyPixelWise(gain_image);

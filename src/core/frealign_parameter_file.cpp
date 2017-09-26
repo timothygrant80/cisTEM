@@ -4,7 +4,7 @@
 {
 	parameter_file = NULL;
 	MyPrintWithDetails("FrealignParameterFile has been declared with no filename.\n");
-	abort();
+	abort;
 } */
 
 FrealignParameterFile::FrealignParameterFile()
@@ -48,7 +48,7 @@ void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_typ
 		if (parameter_file == NULL)
 		{
 			MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for write\n", wanted_filename);
-			abort();
+			abort;
 		}
 	}
 	else
@@ -57,7 +57,7 @@ void FrealignParameterFile::Open(wxString wanted_filename, int wanted_access_typ
 		if (parameter_file == NULL)
 		{
 			MyPrintWithDetails("Error: Cannot open Frealign parameter file (%s) for read\n", wanted_filename);
-			abort();
+			abort;
 		}
 		records_per_line = 17;
 	}
@@ -437,7 +437,7 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage, bool exclu
 	if (sum_occ == 0.0)
 	{
 		MyPrintWithDetails("Error: Number of particles selected = 0; please change score threshold\n");
-		abort();
+		abort;
 	}
 
 	return threshold;

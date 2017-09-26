@@ -199,6 +199,16 @@ bool Refine2DApp::DoCalculation()
 	ZeroFloatArray(parameter_average, input_particle.number_of_parameters);
 	ZeroFloatArray(parameter_variance, input_particle.number_of_parameters);
 
+	if (! DoesFileExist(input_parameter_file))
+	{
+		SendError(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
+		exit(-1);
+	}
+	if (! DoesFileExist(input_particle_images))
+	{
+		SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+		exit(-1);
+	}
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	FrealignParameterFile output_par_file(ouput_parameter_file, OPEN_TO_WRITE);
@@ -208,17 +218,22 @@ bool Refine2DApp::DoCalculation()
 
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
-		MyPrintWithDetails("Error: Particles are not square\n");
-		abort();
+		SendError("Error: Particles are not square\n");
+		exit(-1);
 	}
 
 	if (number_of_classes == 0)
 	{
+		if (! DoesFileExist(input_class_averages))
+		{
+			SendError(wxString::Format("Error: Input class averages %s not found\n", input_class_averages));
+			exit(-1);
+		}
 		input_classes = new MRCFile (input_class_averages.ToStdString(), false);
 		if (input_classes->ReturnXSize() != input_stack.ReturnXSize() || input_classes->ReturnYSize() != input_stack.ReturnYSize() )
 		{
-			MyPrintWithDetails("Error: Dimension of particles and input classes differ\n");
-			abort();
+			SendError("Error: Dimension of particles and input classes differ\n");
+			exit(-1);
 		}
 		number_of_classes = input_classes->ReturnZSize();
 	}
@@ -227,8 +242,8 @@ bool Refine2DApp::DoCalculation()
 
 	if (last_particle < first_particle && last_particle != 0)
 	{
-		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-		abort();
+		SendError("Error: Number of last particle to refine smaller than number of first particle to refine\n");
+		exit(-1);
 	}
 
 	if (last_particle == 0) last_particle = input_stack.ReturnZSize();
@@ -621,6 +636,8 @@ bool Refine2DApp::DoCalculation()
 			input_image.ForwardFFT();
 			// Whiten noise
 			input_image.ApplyCurveFilter(&noise_power_spectrum);
+			// Apply cosine filter to reduce ringing
+			input_image.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
 			input_image.BackwardFFT();
 			// Normalize background variance and average
 			variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);

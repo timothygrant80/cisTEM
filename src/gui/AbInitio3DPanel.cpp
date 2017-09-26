@@ -263,7 +263,8 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 	{
 		ExpertPanel->Freeze();
 
-		/*wxString current_symmetry_string = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry;
+		float 	 molecular_mass_kDa = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
+		wxString current_symmetry_string = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry;
 		wxChar   symmetry_type;
 
 		current_symmetry_string = current_symmetry_string.Trim();
@@ -284,8 +285,8 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		}
 */
 
-		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
-		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
+		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.15f);
+		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.15f);
 
 		float    mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
 
@@ -296,7 +297,14 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		NumberStartsSpinCtrl->SetValue(2);
 		NumberRoundsSpinCtrl->SetValue(40);
 
-		InitialResolutionLimitTextCtrl->ChangeValueFloat(20);
+		if (symmetry_type == 'O' || symmetry_type == 'I' || molecular_mass_kDa <= 200.0f)
+		{
+			InitialResolutionLimitTextCtrl->ChangeValueFloat(20);
+		}
+		else
+		{
+			InitialResolutionLimitTextCtrl->ChangeValueFloat(30);
+		}
 		FinalResolutionLimitTextCtrl->ChangeValueFloat(8);
 		AutoPercentUsedYesRadio->SetValue(true);
 
@@ -1177,7 +1185,12 @@ void AbInitioManager::CycleRefinement()
 			//current_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 			//next_high_res_limit = start_res + (end_res - start_res) * sqrtf(float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
 
+//			current_high_res_limit = active_start_res + (active_end_res - active_start_res) * powf((float(number_of_rounds_run) / float(number_of_rounds_to_run - 1)), 1.0);
+//			next_high_res_limit = active_start_res + (active_end_res - active_start_res) * powf((float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1)), 1.0);
 			current_high_res_limit = active_start_res + (active_end_res - active_start_res) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			if (number_of_rounds_run % myroundint(number_of_rounds_to_run / 10.0f) <= 1 && number_of_rounds_run <= number_of_rounds_to_run * 0.8f) current_high_res_limit = active_start_res;
+//			if (number_of_rounds_run % myroundint(number_of_rounds_to_run / 10.0f) <= 1 && number_of_rounds_run <= number_of_rounds_to_run * 0.8f)
+//				current_high_res_limit = active_start_res + (active_end_res - active_start_res) * (0.3 * float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 			next_high_res_limit = active_start_res + (active_end_res - active_start_res) * (float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
 
 

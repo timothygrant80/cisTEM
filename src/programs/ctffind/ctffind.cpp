@@ -273,8 +273,8 @@ void CtffindApp::DoInteractiveUserInput()
 		wxStringTokenizer tokenizer(my_string,",");
 		if (tokenizer.CountTokens() != 5)
 		{
-			MyPrintfRed("Bad number of arguments (%i, expected %i) in line 3 of input\n",tokenizer.CountTokens(),5);
-			abort();
+			SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 3 of input\n",tokenizer.CountTokens(),5));
+			exit(-1);
 		}
 		token_counter = -1;
 		while (tokenizer.HasMoreTokens())
@@ -306,8 +306,8 @@ void CtffindApp::DoInteractiveUserInput()
 		tokenizer.SetString(my_string,",");
 		if (tokenizer.CountTokens() != 7)
 		{
-			MyPrintfRed("Bad number of arguments (%i, expected %i) in line 4 of input\n",tokenizer.CountTokens(),7);
-			abort();
+			SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 4 of input\n",tokenizer.CountTokens(),7));
+			exit(-1);
 		}
 		token_counter = -1;
 		while (tokenizer.HasMoreTokens())
@@ -358,8 +358,8 @@ void CtffindApp::DoInteractiveUserInput()
 			tokenizer.SetString(my_string,",");
 			if (tokenizer.CountTokens() != 2)
 			{
-				MyPrintfRed("Bad number of arguments (%i, expected %i) in line 5 of input\n",tokenizer.CountTokens(),2);
-				abort();
+				SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 5 of input\n",tokenizer.CountTokens(),2));
+				exit(-1);
 			}
 			while (tokenizer.HasMoreTokens())
 			{
@@ -387,8 +387,8 @@ void CtffindApp::DoInteractiveUserInput()
 			tokenizer.SetString(my_string,",");
 			if (tokenizer.CountTokens() != 4)
 			{
-				MyPrintfRed("Bad number of arguments (%i, expected %i) in line 6 of input\n",tokenizer.CountTokens(),4);
-				abort();
+				SendError(wxString::Format("Bad number of arguments (%i, expected %i) in line 6 of input\n",tokenizer.CountTokens(),4));
+				exit(-1);
 			}
 			while (tokenizer.HasMoreTokens())
 			{
@@ -1986,7 +1986,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 			if (at_a_maximum && at_a_minimum)
 			{
 				MyPrintfRed("Rescale spectrum: Error. At a minimum and a maximum simultaneously.");
-				abort();
+				exit(-1);
 			}
 		}
 
@@ -2232,7 +2232,7 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
 	if (chosen_bin == -1)
 	{
 		MyPrintfRed("Could not find bin\n");
-		abort();
+		exit(-1);
 	}
 	else
 	{

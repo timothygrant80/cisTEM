@@ -131,16 +131,16 @@ bool Merge3DApp::DoCalculation()
 	{
 		if (! DoesFileExist(dump_file))
 		{
-			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-			abort();
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
 	else
 	{
 		if (! DoesFileExistWithWait(dump_file, 90))
 		{
-			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-			abort();
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
 

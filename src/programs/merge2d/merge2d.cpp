@@ -80,16 +80,16 @@ bool Merge2DApp::DoCalculation()
 	{
 		if (! DoesFileExist(dump_file))
 		{
-			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-			abort();
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
 	else
 	{
 		if (! DoesFileExistWithWait(dump_file, 90))
 		{
-			MyPrintWithDetails("Error: Dump file %s not found\n", dump_file);
-			abort();
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
 
@@ -273,8 +273,8 @@ void Merge2DApp::ReadArrays(wxString filename)
 
 	if (input_xy_dimensions != xy_dimensions || input_number_of_classes != number_of_classes || input_number_of_nonzero_classes != number_of_nonzero_classes || input_pixel_size != pixel_size)
 	{
-		MyPrintWithDetails("Error: Dump file incompatible with 2D class averages\n");
-		abort();
+		SendError("Error: Dump file incompatible with 2D class averages\n");
+		exit(-1);
 	}
 	char_pointer = (char *) list_of_nozero_classes;
 	b_stream.read(char_pointer, sizeof(int) * number_of_classes);

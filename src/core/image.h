@@ -320,6 +320,7 @@ public:
 	void CopyLoopingAndAddressingFrom(Image *other_image);
 	void Consume(Image *other_image);
 	void RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
+	void DilateBinarizedMask(float dilation_radius);
 	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
 	void AddImage(Image *other_image);

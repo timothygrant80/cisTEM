@@ -6690,6 +6690,87 @@ void Image::RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wa
 	delete [] buffer;
 }
 
+void Image::DilateBinarizedMask(float dilation_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	int i, j, k;
+	int l, m, n, m2, n2;
+	int lim, nlim;
+	long pixel_counter = 0;
+	long shifted_counter = 0;
+	float dilation_radius_squared = powf(dilation_radius, 2);
+	float *buffer = new float[number_of_real_space_pixels];
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				buffer[shifted_counter] = real_values[pixel_counter];
+				pixel_counter++;
+				shifted_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	lim = myroundint(dilation_radius);
+	if (IsEven(lim)) lim++;
+	nlim = lim;
+	if (logical_z_dimension == 1) nlim = 0;
+	for (n = -nlim; n <= nlim; n += 2)
+	{
+		n2 = n * n;
+		for (m = -lim; m <= lim; m += 2)
+		{
+			m2 = m * m;
+			for (l = -lim; l <= lim; l += 2)
+			{
+				if (l * l + m2 + n2 <= dilation_radius_squared)
+				{
+					shifted_counter = - l - logical_x_dimension * (m + logical_y_dimension * n);
+					shifted_counter = remainderf(float(shifted_counter), float(number_of_real_space_pixels));
+					if (shifted_counter < 0) shifted_counter += number_of_real_space_pixels;
+
+					pixel_counter = 0;
+					for (k = 0; k < logical_z_dimension; k++)
+					{
+						for (j = 0; j < logical_y_dimension; j++)
+						{
+							for (i = 0; i < logical_x_dimension; i++)
+							{
+								real_values[pixel_counter] += buffer[shifted_counter];
+								pixel_counter++;
+								shifted_counter++;
+								if (shifted_counter >= number_of_real_space_pixels) shifted_counter -= number_of_real_space_pixels;
+							}
+							pixel_counter += padding_jump_value;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				if (real_values[pixel_counter] != 0.0) real_values[pixel_counter] = 1.0;
+				pixel_counter++;
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+	delete [] buffer;
+}
+
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");

@@ -212,9 +212,27 @@ bool Reconstruct3DApp::DoCalculation()
 	bool rotational_blurring = true;
 	wxDateTime my_time_in;
 
+	if (! DoesFileExist(input_parameter_file))
+	{
+		SendError(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
+		exit(-1);
+	}
+	if (! DoesFileExist(input_particle_stack))
+	{
+		SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_stack));
+		exit(-1);
+	}
 	MRCFile input_file(input_particle_stack.ToStdString(), false);
 	MRCFile *input_3d_file;
-	if (use_input_reconstruction) input_3d_file = new MRCFile(input_reconstruction.ToStdString(), false);
+	if (use_input_reconstruction)
+	{
+		if (! DoesFileExist(input_reconstruction))
+		{
+			SendError(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
+			exit(-1);
+		}
+		input_3d_file = new MRCFile(input_reconstruction.ToStdString(), false);
+	}
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	input_par_file.ReadFile(true, input_file.ReturnZSize());
 /*	input_par_file.ReduceAngles();
@@ -244,13 +262,13 @@ bool Reconstruct3DApp::DoCalculation()
 	}
 	if (input_file.ReturnXSize() != input_file.ReturnYSize())
 	{
-		MyPrintWithDetails("Error: Particles are not square\n");
-		abort();
+		SendError("Error: Particles are not square\n");
+		exit(-1);
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
-		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-		abort();
+		SendError("Error: Number of last particle to refine smaller than number of first particle to refine\n");
+		exit(-1);
 	}
 
 	if (last_particle == 0) last_particle = input_file.ReturnZSize();

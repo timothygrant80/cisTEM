@@ -370,7 +370,22 @@ bool Refine3DApp::DoCalculation()
 	ZeroFloatArray(cg_starting_point, refine_particle.number_of_parameters);
 	ZeroFloatArray(cg_accuracy, refine_particle.number_of_parameters);
 
-//	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
+	if (! DoesFileExist(input_parameter_file))
+	{
+		SendError(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
+		exit(-1);
+	}
+	if (! DoesFileExist(input_particle_images))
+	{
+		SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
+		exit(-1);
+	}
+	if (! DoesFileExist(input_reconstruction))
+	{
+		SendError(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
+		exit(-1);
+	}
+	//	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 
@@ -390,27 +405,27 @@ bool Refine3DApp::DoCalculation()
 
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
-		MyPrintWithDetails("Error: Particles are not square\n");
+		SendError("Error: Particles are not square\n");
 		input_stack.PrintInfo();
-		abort();
+		exit(-1);
 	}
 	if ((input_file.ReturnXSize() != input_file.ReturnYSize()) || (input_file.ReturnXSize() != input_file.ReturnZSize()))
 	{
-		MyPrintWithDetails("Error: Input reconstruction is not cubic\n");
+		SendError("Error: Input reconstruction is not cubic\n");
 		input_file.PrintInfo();
-		abort();
+		exit(-1);
 	}
 	if (input_file.ReturnXSize() != input_stack.ReturnXSize())
 	{
-		MyPrintWithDetails("Error: Dimension of particles and input reconstruction differ\n");
+		SendError("Error: Dimension of particles and input reconstruction differ\n");
 		input_file.PrintInfo();
 		input_stack.PrintInfo();
-		abort();
+		exit(-1);
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
-		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-		abort();
+		SendError("Error: Number of last particle to refine smaller than number of first particle to refine\n");
+		exit(-1);
 	}
 
 	if (last_particle == 0) last_particle = input_stack.ReturnZSize();
@@ -513,6 +528,11 @@ bool Refine3DApp::DoCalculation()
 	ResolutionStatistics refine_statistics;
 	if (use_statistics)
 	{
+		if (! DoesFileExist(input_reconstruction_statistics))
+		{
+			SendError(wxString::Format("Error: Input statistics %s not found\n", input_reconstruction_statistics));
+			exit(-1);
+		}
 		input_statistics.ReadStatisticsFromFile(input_reconstruction_statistics);
 	}
 	else
@@ -777,6 +797,8 @@ bool Refine3DApp::DoCalculation()
 			input_image.ForwardFFT();
 			// Whiten noise
 			input_image.ApplyCurveFilter(&noise_power_spectrum);
+			// Apply cosine filter to reduce ringing
+//			input_image.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
 			input_image.BackwardFFT();
 			// Normalize background variance and average
 			variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);

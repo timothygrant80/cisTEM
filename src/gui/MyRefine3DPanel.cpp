@@ -594,6 +594,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageComboBox->GetCount() > 0)
 			{
+
 				RefinementPackageComboBox->Enable(true);
 				InputParametersComboBox->Enable(true);
 
@@ -604,7 +605,11 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				else
 				{
 					MaskSelectPanel->Enable(false);
-					MaskSelectPanel->AssetComboBox->ChangeValue("");
+					if (MaskSelectPanel->GetCount() > 0)
+					{
+						MaskSelectPanel->Clear();
+						MaskSelectPanel->AssetComboBox->ChangeValue("");
+					}
 				}
 
 				if (PleaseCreateRefinementPackageText->IsShown())

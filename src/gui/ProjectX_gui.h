@@ -1777,7 +1777,7 @@ class Sharpen3DPanelParent : public wxPanel
 	public:
 		VolumeAssetPickerComboPanel* VolumeComboBox;
 		
-		Sharpen3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1086,669 ), long style = wxTAB_TRAVERSAL ); 
+		Sharpen3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1124,1252 ), long style = wxTAB_TRAVERSAL ); 
 		~Sharpen3DPanelParent();
 	
 };

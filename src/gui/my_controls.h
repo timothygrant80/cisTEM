@@ -44,6 +44,8 @@ public :
 	void AddMemoryItems(wxArrayString wanted_texts, wxArrayLong wanted_ids);
 
 	void SetSelection(int n);
+	void SetSelectionWithEvent(int n);
+
 
 	bool FillWithRunProfiles();
 	bool FillWithRefinementPackages();

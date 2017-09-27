@@ -13,13 +13,14 @@ OverviewPanel( parent, id, pos, size, style )
 
 void MyOverviewPanel::SetProjectInfo()
 {
-	#include "icons/cisTEM_logo_800.cpp"
+	//#include "icons/cisTEM_logo_800.cpp"
+	#include "icons/cisTEM_beta_logo_800.cpp"
 
 	InfoText->Clear();
 	InfoText->EndAllStyles();
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_logo_800);
+	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_beta_logo_800);
 	delete suppress_png_warnings;
 
 	InfoText->GetCaret()->Hide();
@@ -72,13 +73,14 @@ void MyOverviewPanel::SetProjectInfo()
 
 void MyOverviewPanel::SetWelcomeInfo()
 {
-	#include "icons/cisTEM_logo_800.cpp"
+	//#include "icons/cisTEM_logo_800.cpp"
+	#include "icons/cisTEM_beta_logo_800.cpp"
 
 	InfoText->Clear();
 	InfoText->EndAllStyles();
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_logo_800);
+	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_beta_logo_800);
 	delete suppress_png_warnings;
 
 	InfoText->GetCaret()->Hide();
@@ -121,7 +123,7 @@ void MyOverviewPanel::SetWelcomeInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
-	InfoText->WriteText(wxString::Format("Version : 0.1 (Compiled : %s )",  __DATE__));
+	InfoText->WriteText(wxString::Format("Version : 1.0-beta (Compiled : %s )",  __DATE__));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndFontSize();

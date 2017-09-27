@@ -6938,7 +6938,9 @@ void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_ha
 
 	Curve power_spectrum;
 	Curve number_of_terms;
-	Curve copy_of_rec_SSNR = input_resolution_statistics->rec_SSNR;
+	Curve copy_of_rec_SSNR;
+
+	if (input_resolution_statistics != NULL) copy_of_rec_SSNR = input_resolution_statistics->rec_SSNR;
 
 	power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
 	number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
@@ -8681,7 +8683,7 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 				else
 				{
 					if (include_projections == true) image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j  - this->logical_y_dimension, 0);
-					image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
+					else image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
 				}
 			}
 			output_counter++;

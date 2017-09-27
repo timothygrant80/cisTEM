@@ -56,7 +56,13 @@ void Sharpen3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("This panel is for sharpening your maps to make them look better! The info below is for Generate 3D, this panel text needs to be written."));
+	InfoText->WriteText(wxT("The high-resolution signal in 3D reconstructions is usually dampened by various factors, including the envelope function affecting the CTF of the microscope, the modulation transfer function (MTF) of the detector, beam-induced motion, and alignment and interpolation errors introduced during image processing. Structural heterogeneity present in the particles may also contribute. It is common practice to express this dampening by a B-factor, expressed in Å2 and given as exp(-0.25 B/d2) where d is the resolution (in Å) at which the dampening occurs. To visualize the high-resolution details in a reconstructed map, its amplitudes have to be restored by applying a negative B-factor, thereby sharpening the map."));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->WriteText(wxT("This panel provides the user with a few parameters to sharpen a map. In the simplest case, a map can be sharpened by providing a negative B-factor. However, because B-factor sharpening involves multiplication with an exponential function, the noise at high resolution can easily be over-amplified. A more robust method to restore the amplitudes at high resolution that also works if the dampening cannot be described with a simple B-factor can be achieved by flattening (i.e. whitening) the amplitude spectrum at high resolution. The panel provides a flexible way to combine B-factor sharpening and spectral flattening to optimize the visibility of high-resolution details in the final map. Optionally, the resolution statistics can be used to apply figure-of-merit (FOM) weighting (Rosenthal & Henderson, 2003) and a 3D mask can be supplied to remove background noise from the map for more accurate sharpening. Finally, the handedness of the map can be inverted if it is wrong and the real-space dampening of densities near the edge of the reconstruction box due to trilinear interpolation used during reconstruction can be corrected."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -73,72 +79,98 @@ void Sharpen3DPanel::SetInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Input Refinement Package : "));
+	InfoText->WriteText(wxT("Input Volume : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The name of the refinement package previously set up in the Assets panel (providing details of particle locations, box size and imaging parameters)."));
+	InfoText->WriteText(wxT("The volume (reconstruction) to be sharpened."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Input Parameters : "));
+	InfoText->WriteText(wxT("Supply a Mask? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The source of the starting parameters for this reconstruction run."));
+	InfoText->WriteText(wxT("Should the volume be masked to make sharpening more accurate? If checked, a volume containing the 3D mask must be selected."));
 	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Flatten From Res. (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The low-resolution limit of the part of the amplitude spectrum to be flattened (whitened). This should normally be a resolution beyond which the influence of the shape transform of the particle is negligible, between 8 – 10 Å."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Resolution Cut-Off (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The high-resolution limit applied to the sharpened map. The filter edge is given by a cosine function of width specified by 'Filter Edge-Width.'"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Pre-Cut-Off B-Factor (Å2) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The B-factor to be applied to the low-resolution end of the amplitude spectrum, up to the point given as “Flatten From Res.” A B-factor of -90 Å2 is usually appropriate for cryo-EM maps calculated using data collected on direct detectors."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Post-Cut-Off B-Factor (Å2) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The B-factor to be applied to the high-resolution end of the amplitude spectrum, from to the point given as “Flatten From Res.” This will apply a B-factor after flattening the spectrum. A value between 0 and 25 Å2 is usually appropriate since the flattening should restore most of the high-resolution signal without the need for further amplification."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Filter Edge-Width (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The width of the cosine edge of the resolution cut-off applied to the final sharpened map. The width of the cosine is given as 1/w, where w is the value entered here."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Use FOM Weighting? "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the sharpened map be weighted using a figure of merit (FOM) derived from the resolution statistics describing the map? (see Rosenthal & Henderson, 2003)"));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("SSNR Scale Factor : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The FOM values are calculated as SSNR/(1+SSNR) where SSNR is the spectral signal-to-noise ratio of the map to be sharpened (calculated as part of the reconstruction). The scale factor allows users to change the effective SSNR values used in this calculation. This can be useful, for example, if the SSNR represents the average signal in a reconstruction but FOM weighting should be performed using a higher SSNR that represents the signal when more disordered parts are excluded from the map. A higher SSNR leads to less filtering that may be more appropriate for high-resolution details in the better parts of a map."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Inner Mask Radius (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The radius describing the inner bounds of the particle. This is usually set to 0 unless the particle is hollow or has largely disordered density in its center, such as the genome of a spherical virus."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Outer Mask Radius (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The radius describing the outer bounds of the particle. A spherical mask with this radius will be applied to the map before sharpening unless a 3D mask volume is supplied."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Invert Handedness?"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the handedness of the sharpened map be inverted? If a reconstruction was initiated using the ab-initio procedure, the handedness will be undetermined and may have to be inverted if found incorrect."));
+	InfoText->Newline();
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Correct Gridding Error? "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("Should the handedness of the sharpened map be inverted? If a reconstruction was initiated using the ab-initio procedure, the handedness will be undetermined and may have to be inverted if found incorrect."));
+	InfoText->Newline();
+	InfoText->Newline();
+
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("Expert Options"));
+	InfoText->WriteText(wxT("References"));
 	InfoText->EndBold();
 	InfoText->EndUnderline();
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Inner/Outer Mask Radius (Å) : "));
+	InfoText->WriteText(wxT("Rosenthal, P. B. & Henderson, R.,"));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Radii describing a spherical mask with an inner and outer radius that will be applied to the final reconstruction and to the half reconstructions to calculate Fourier Shell Correlation curve. The inner radius is normally set to 0.0 but can assume non-zero values to remove density inside a particle if it represents largely disordered features, such as the genomic RNA or DNA of a virus."));
-	InfoText->Newline();
+	InfoText->WriteText(wxT(" 2003. Optimal determination of particle orientation, absolute hand, and contrast loss in single-particle electron cryomicroscopy. J. Mol. Biol. 333, 721-745. "));
+	InfoText->BeginURL("https://doi.org/10.1016/j.jmb.2003.07.013");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Score to B-factor Constant (Å2) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The particles inserted into a reconstruction will be weighted according to their scores. The weighting function is akin to a B-factor, attenuating high-resolution signal of particles with lower scores more strongly than of particles with higher scores. The B-factor applied to each particle prior to insertion into the reconstruction is calculated as B = (score – average score) * constant * 0.25. Users are encouraged to calculate reconstructions with different values to find a value that produces the highest resolution. Values between 0 and 10 are reasonable (0 will disable weighting)."));
+	InfoText->WriteText(wxT("doi:10.1016/j.jmb.2003.07.013"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->EndAlignment();
 	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Adjust Score for Defocus? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Scores sometimes depend on the amount of image defocus. A larger defocus amplifies low-resolution features in the image and this may lead to higher particle scores compared to particles from an image with a small defocus. Adjusting the scores for this difference makes sure that particles with smaller defocus are not systematically downweighted by the above B-factor weighting."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Score Threshold : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Resolution Limit (Å) : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The reconstruction calculation can be accelerated by limiting its resolution. It is important to make sure that the resolution limit entered here is higher than the resolution used for refinement in the following cycle."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Autocrop Images? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Also Save Half-Maps? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If yes, the reconstruction half maps will also be saved as '_map1' and '_map2' in the volume assets folder."));
-	InfoText->Newline();
-
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Overwrite Statistics? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If yes, the resolution statistics (essentially the FSC) for the input refinement will be overwritten."));
 	InfoText->Newline();
 
 }
@@ -165,7 +197,7 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 
 	// are there enough members in the selected group.
-	Freeze();
+
 	if (main_frame->current_project.is_open == false)
 	{
 		Enable(false);
@@ -190,7 +222,13 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			MaskSelectPanel->Enable(false);
 			MaskSelectPanel->AssetComboBox->Enable(false);
-			MaskSelectPanel->AssetComboBox->ChangeValue("");
+
+			if (MaskSelectPanel->AssetComboBox->GetCount() > 0)
+			{
+				MaskSelectPanel->AssetComboBox->Clear();
+				MaskSelectPanel->AssetComboBox->ChangeValue("");
+			}
+
 			InnerMaskRadiusStaticText->Enable(true);
 			InnerMaskRadiusTextCtrl->Enable(true);
 			OuterMaskRadiusStaticText->Enable(true);
@@ -251,7 +289,7 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 		}
 	}
-	Thaw();
+
 }
 
 void Sharpen3DPanel::FillVolumePanels()

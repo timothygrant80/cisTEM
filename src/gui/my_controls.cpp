@@ -40,6 +40,19 @@ void MemoryComboBox::SetSelection(int n)
 	wxOwnerDrawnComboBox::SetSelection(n);
 }
 
+void MemoryComboBox::SetSelectionWithEvent(int n)
+{
+	if (n >= 0 && n < GetCount() - 1)
+	{
+		currently_selected_id = associated_ids.Item(n);
+	}
+
+	wxOwnerDrawnComboBox::SetSelection(n);
+
+	wxCommandEvent *change_event = new wxCommandEvent(wxEVT_COMBOBOX);
+	GetEventHandler()->QueueEvent(change_event);
+}
+
 void MemoryComboBox::Clear()
 {
 	associated_ids.clear();
@@ -103,7 +116,7 @@ bool MemoryComboBox::FillWithRunProfiles()
 
 	if (GetCount() > 0)
 	{
-		SetSelection(new_selection);
+		SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -142,7 +155,7 @@ bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group)
 
 	if (GetCount() > 0)
 	{
-		SetSelection(new_selection);
+		SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -178,7 +191,7 @@ bool MemoryComboBox::FillWithImages(long wanted_image_group)
 
 	if (GetCount() > 0)
 	{
-		SetSelection(new_selection);
+		SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -218,7 +231,7 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
 
 	if (GetCount() > 0)
 	{
-		SetSelection(new_selection);
+		SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -252,7 +265,7 @@ bool MemoryComboBox::FillWithRefinementPackages()
 	if (GetCount() > 0)
 	{
 		if (new_selection == -1) SetSelection(GetCount() - 1);
-		else SetSelection(new_selection);
+		else SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -304,10 +317,10 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 	{
 		if (new_selection == -1)
 		{
-			if (always_select_newest == false) SetSelection(0);
-			else SetSelection(GetCount() - 1);
+			if (always_select_newest == false) SetSelectionWithEvent(0);
+			else SetSelectionWithEvent(GetCount() - 1);
 		}
-		else SetSelection(new_selection);
+		else SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -343,8 +356,8 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1 || always_select_newest == true) SetSelection(GetCount() - 1);
-		else SetSelection(new_selection);
+		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
+		else SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -378,8 +391,8 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool al
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1 || always_select_newest == true) SetSelection(GetCount() - 1);
-		else SetSelection(new_selection);
+		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
+		else SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
@@ -1584,7 +1597,7 @@ ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id,
 
 	VolumeComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	VolumeComboBox->FillComboBox(true);
-	VolumeComboBox->SetSelection(0);
+	VolumeComboBox->SetSelectionWithEvent(0);
 	bSizer201->Add( VolumeComboBox, 1, wxALL, 5 );
 	MainSizer->Add( bSizer201, 1, 0, 5 );
 	class_number = -1;

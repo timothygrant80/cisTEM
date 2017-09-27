@@ -6564,7 +6564,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	FilterEdgeWidthTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( FilterEdgeWidthTextCtrl, 0, wxALL, 5 );
 	
-	UseFSCWeightingStaticText = new wxStaticText( this, wxID_ANY, wxT("Use FSC Weighting? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	UseFSCWeightingStaticText = new wxStaticText( this, wxID_ANY, wxT("Use FOM Weighting? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	UseFSCWeightingStaticText->Wrap( -1 );
 	fgSizer1->Add( UseFSCWeightingStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -6646,7 +6646,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	fgSizer11->Add( bSizer266122, 1, wxEXPAND, 5 );
 	
-	m_staticText6721 = new wxStaticText( this, wxID_ANY, wxT("Correct Gridding Error :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6721 = new wxStaticText( this, wxID_ANY, wxT("Correct Gridding Error? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText6721->Wrap( -1 );
 	fgSizer11->Add( m_staticText6721, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -6672,6 +6672,9 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	InputSizer->Add( m_staticline138, 0, wxEXPAND | wxALL, 5 );
 	
 	
+	InputSizer->Add( 0, 0, 0, wxEXPAND, 5 );
+	
+	
 	InputSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	m_staticText699 = new wxStaticText( this, wxID_ANY, wxT("Plot of Relative Log Amplitudes"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6685,9 +6688,9 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	GuinierPlot = new PlotCurvePanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	GuinierPlot->SetMinSize( wxSize( -1,300 ) );
-	GuinierPlot->SetMaxSize( wxSize( -1,300 ) );
+	GuinierPlot->SetMaxSize( wxSize( -1,400 ) );
 	
-	InputSizer->Add( GuinierPlot, 1, wxALIGN_BOTTOM|wxALL|wxEXPAND, 5 );
+	InputSizer->Add( GuinierPlot, 100, wxALIGN_BOTTOM|wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer488->Add( InputSizer, 0, wxEXPAND, 5 );

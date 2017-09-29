@@ -141,7 +141,7 @@ void Sharpen3DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Correct Gridding Error? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Should the handedness of the sharpened map be inverted? If a reconstruction was initiated using the ab-initio procedure, the handedness will be undetermined and may have to be inverted if found incorrect."));
+	InfoText->WriteText(wxT("Should the reconstruction be corrected for interpolation errors that attenuate the density towards the edges?"));
 	InfoText->Newline();
 	InfoText->Newline();
 

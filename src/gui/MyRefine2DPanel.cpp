@@ -444,9 +444,15 @@ void MyRefine2DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Low/High-Resolution Limit (Å) : "));
+	InfoText->WriteText(wxT("Low-Resolution Limit (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The data used for classification is usually bandpass-limited to exclude spurious low-resolution features in the particle background (set by the low-resolution limit) and high-resolution noise (set by the high-resolution limit). It is good practice to set the low-resolution limit to 2.5x the approximate particle mask radius. The high-resolution limit should be selected to remove data with low signal-to-noise ratio, and to help speed up the calculation. For example, setting the high-resolution limit to 8 Å includes signal originating from protein secondary structure that often helps generate recognizable features in the class averages (see example above)."));
+	InfoText->WriteText(wxT("The data used for classification is usually bandpass-limited to exclude spurious low-resolution features in the particle background. It is therefore good practice to set the low-resolution limit to 2.5x the approximate particle mask radius."));
+	InfoText->Newline();
+
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("High-Resolution Limit (start/finish) (Å) : "));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT("The high-resolution bandpass limit should be selected to remove data with low signal-to-noise ratio, and to help speed up the calculation. Since the class averages are not well defined initially, the starting limit should be set to a low resolution, for example 40 Å. The limit used for the final iterations should be set sufficiently high, for example 8 Å, to include signal originating from protein secondary structure that often helps generate recognizable features in the class averages (see example above)."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();

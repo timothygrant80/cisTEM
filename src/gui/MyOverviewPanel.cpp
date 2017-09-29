@@ -110,10 +110,10 @@ void MyOverviewPanel::SetWelcomeInfo()
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
 	InfoText->WriteText(wxT("For more information, manuals and tutorials please visit "));
-	InfoText->BeginURL("http://www.cistem.org");
+	InfoText->BeginURL("http://cistem.org");
 	InfoText->BeginUnderline();
 	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("www.cistem.org"));
+	InfoText->WriteText(wxT("cistem.org"));
 	InfoText->EndURL();
 	InfoText->EndTextColour();
 	InfoText->EndUnderline();
@@ -233,6 +233,6 @@ void MyOverviewPanel::OnInfoURL(wxTextUrlEvent& event)
 		 main_frame->GetFileAndOpenProject();
 	 }
 	 else
-	 if (my_style.GetURL() == "http://www.cistem.org") wxLaunchDefaultBrowser(my_style.GetURL());
+	 if (my_style.GetURL() == "http://cistem.org") wxLaunchDefaultBrowser(my_style.GetURL());
 	 else main_frame->OpenProject(my_style.GetURL());
 }

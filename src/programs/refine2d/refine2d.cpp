@@ -254,7 +254,7 @@ bool Refine2DApp::DoCalculation()
 	// Read whole parameter file to work out average values and variances
 
 	images_to_process = 0;
-	mask_falloff = 10.0;
+	mask_falloff = 20.0;
 	log_range = 20.0;
 	image_counter = 0;
 	for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
@@ -785,7 +785,8 @@ bool Refine2DApp::DoCalculation()
 	for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 	{
 		class_averages[current_class].ForwardFFT();
-		class_averages[current_class].CosineMask(0.45 / binning_factor, pixel_size / mask_falloff);
+//		class_averages[current_class].CosineMask(0.45 / binning_factor, pixel_size / mask_falloff);
+//		class_averages[current_class].CosineMask(0.45 / binning_factor, 0.1 / binning_factor);
 	}
 
 	if (dump_arrays)

@@ -616,7 +616,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	ctf_input_image->CalculateCTFImage(input_ctf);
 	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
 //	temp_image1->PhaseFlipPixelWise(*ctf_image);
-	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+//	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45 / 20.0, 0.1);
 	temp_image1->ClipInto(&padded_unbinned_image);
 	padded_unbinned_image.BackwardFFT();
 	padded_unbinned_image.ClipInto(projection_image);
@@ -624,7 +625,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	projection_image->PhaseFlipPixelWise(*ctf_input_image);
 
 //	temp_image2->MultiplyPixelWiseReal(*ctf_image);
-	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+//	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.45, 0.1);
 	temp_image2->ClipInto(&padded_unbinned_image);
 	padded_unbinned_image.BackwardFFT();
 	padded_unbinned_image.ClipInto(temp_projection);
@@ -1209,7 +1211,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		sum_image->ForwardFFT();
 		if (uncrop)
 		{
-			sum_image->CosineMask(0.5 - pixel_size / 10.0, pixel_size / 5.0);
+			sum_image->CosineMask(0.45, 0.1);
 			sum_image->ClipInto(&cropped_input_image);
 			cropped_input_image.BackwardFFT();
 			cropped_input_image.ClipIntoLargerRealSpace2D(&blurred_image, cropped_input_image.ReturnAverageOfRealValuesOnEdges());

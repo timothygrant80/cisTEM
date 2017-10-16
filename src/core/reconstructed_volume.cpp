@@ -548,10 +548,12 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	// Check if binning was used and resize reconstruction accordingly
 	if (pixel_size != original_pixel_size)
 	{
-		density_map.CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+//		density_map.CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+		density_map.CosineMask(0.45, 0.1);
 		density_map.Resize(original_box_size, original_box_size, original_box_size);
 	}
-	else density_map.CosineMask(0.5, original_pixel_size / 10.0);
+	else density_map.CosineMask(0.45, 0.1);
+//	else density_map.CosineMask(0.5, original_pixel_size / 10.0);
 	density_map.BackwardFFT();
 	// Need to run Correct3D if cropping was not used
 	// Correct3D is necessary to correct the signal in the map but it also amplifies the noise. Try without this...
@@ -646,7 +648,8 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &densi
 		density_map.ForwardFFT();
 	}
 	if (pixel_size != original_pixel_size) density_map.Resize(original_box_size, original_box_size, original_box_size);
-	density_map.CosineMask(0.5, 1.0 / 20.0);
+//	density_map.CosineMask(0.5, 1.0 / 20.0);
+	density_map.CosineMask(0.475, 0.05);
 	density_map.BackwardFFT();
 	if (intermediate_box_size == box_size) Correct3D(outer_mask_radius / original_pixel_size);
 	CosineRingMask(inner_mask_radius / original_pixel_size, outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size);

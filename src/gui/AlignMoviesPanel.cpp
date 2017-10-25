@@ -898,6 +898,9 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
 			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
 
+			// Update project statistics in the database
+			main_frame->current_project.WriteProjectStatisticsToDatabase();
+
 			// Other stuff to do once all jobs finished
 			ProcessAllJobsFinished();
 		}

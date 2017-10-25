@@ -28,6 +28,8 @@ Refine2DPanel( parent )
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
 	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);
 
+	input_params_combo_is_dirty = false;
+
 	/*
 	buffered_results = NULL;
 
@@ -1528,6 +1530,9 @@ void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
 			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
 			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
+
+			// Update project statistics in the database
+			main_frame->current_project.WriteProjectStatisticsToDatabase();
 
 			// Other stuff to do once all jobs finished
 			my_classification_manager.ProcessAllJobsFinished();

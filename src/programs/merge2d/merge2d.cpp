@@ -120,13 +120,27 @@ bool Merge2DApp::DoCalculation()
 	sum_logp_total = - std::numeric_limits<float>::max();
 	sum_snr = 0.0;
 	images_processed = 0;
-	while (DoesFileExist(dump_file))
+	if (is_running_locally)
 	{
-		wxPrintf("%s\n", dump_file);
-		ReadArrays(dump_file);
-		AddArrays();
-		i++;
-		dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
+		while (DoesFileExist(dump_file))
+		{
+			wxPrintf("%s\n", dump_file);
+			ReadArrays(dump_file);
+			AddArrays();
+			i++;
+			dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
+		}
+	}
+	else
+	{
+		while (DoesFileExistWithWait(dump_file, 10))
+		{
+			wxPrintf("%s\n", dump_file);
+			ReadArrays(dump_file);
+			AddArrays();
+			i++;
+			dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
+		}
 	}
 
 	MRCFile output_classes(ouput_class_averages.ToStdString(), true);

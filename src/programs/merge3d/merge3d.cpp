@@ -156,24 +156,52 @@ bool Merge3DApp::DoCalculation()
 	wxPrintf("\nReading reconstruction arrays...\n\n");
 
 	count = 1;
-	while (DoesFileExist(dump_file))
+	if (is_running_locally)
 	{
-		wxPrintf("%s\n", dump_file);
-		temp_reconstruction.ReadArrays(dump_file);
-		my_reconstruction_1 += temp_reconstruction;
-		count++;
-		dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
+		while (DoesFileExist(dump_file))
+		{
+			wxPrintf("%s\n", dump_file);
+			temp_reconstruction.ReadArrays(dump_file);
+			my_reconstruction_1 += temp_reconstruction;
+			count++;
+			dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
+		}
+	}
+	else
+	{
+		while (DoesFileExistWithWait(dump_file,10))
+		{
+			wxPrintf("%s\n", dump_file);
+			temp_reconstruction.ReadArrays(dump_file);
+			my_reconstruction_1 += temp_reconstruction;
+			count++;
+			dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
+		}
 	}
 
 	count = 1;
 	dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
-	while (DoesFileExist(dump_file))
+	if (is_running_locally)
 	{
-		wxPrintf("%s\n", dump_file);
-		temp_reconstruction.ReadArrays(dump_file);
-		my_reconstruction_2 += temp_reconstruction;
-		count++;
-		dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
+		while (DoesFileExist(dump_file))
+		{
+			wxPrintf("%s\n", dump_file);
+			temp_reconstruction.ReadArrays(dump_file);
+			my_reconstruction_2 += temp_reconstruction;
+			count++;
+			dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
+		}
+	}
+	else
+	{
+		while (DoesFileExistWithWait(dump_file,10))
+		{
+			wxPrintf("%s\n", dump_file);
+			temp_reconstruction.ReadArrays(dump_file);
+			my_reconstruction_2 += temp_reconstruction;
+			count++;
+			dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
+		}
 	}
 	wxPrintf("\nFinished reading arrays\n");
 

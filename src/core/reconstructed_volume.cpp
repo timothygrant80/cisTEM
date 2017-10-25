@@ -5,6 +5,7 @@ ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa)
 	has_been_initialized = false;
 	mask_volume_in_voxels = 0.0;
 	molecular_mass_in_kDa = wanted_molecular_mass_in_kDa;
+	mask_radius = 0.0;
 	has_masked_applied = false;
 	was_corrected = false;
 //	has_statistics = false;
@@ -18,6 +19,8 @@ ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa)
 	current_psi = 0.0;
 	current_shift_x = 0.0;
 	current_shift_y = 0.0;
+	current_mask_radius = 0.0;
+	current_mask_falloff = 0.0;
 	current_whitening = false;
 	current_swap_quadrants = false;
 	whitened_projection = false;
@@ -78,6 +81,8 @@ ReconstructedVolume & ReconstructedVolume::operator = (const ReconstructedVolume
 		current_psi = other_volume->current_psi;
 		current_shift_x = other_volume->current_shift_x;
 		current_shift_y = other_volume->current_shift_y;
+		current_mask_radius = other_volume->current_mask_radius;
+		current_mask_falloff = other_volume->current_mask_falloff;
 		current_whitening = other_volume->current_whitening;
 		current_swap_quadrants = other_volume->current_swap_quadrants;
 		whitened_projection = other_volume->whitened_projection;
@@ -452,7 +457,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D &reconstruction, int &ori
 	int box_size = reconstruction.logical_x_dimension;
 	MRCFile output_file;
 
-	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	InitWithReconstruct3D(reconstruction, pixel_size);
 	Calculate3DSimple(reconstruction);
 	density_map.SwapRealSpaceQuadrants();
 	if (intermediate_box_size != box_size)
@@ -498,7 +503,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	density_map_1.Deallocate();
 	density_map_2.Deallocate();
-	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	InitWithReconstruct3D(reconstruction, pixel_size);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);
 	mask_volume_fraction = mask_volume_in_voxels / particle_area_in_pixels / original_box_size;
@@ -601,7 +606,7 @@ void ReconstructedVolume::FinalizeML(Reconstruct3D &reconstruction, Image &densi
 
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
-	InitWithReconstruct3D(reconstruction, original_pixel_size);
+	InitWithReconstruct3D(reconstruction, pixel_size);
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);

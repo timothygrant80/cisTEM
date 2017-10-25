@@ -2566,7 +2566,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 void Image::CalculateCTFImage(CTF &ctf_of_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated for CTF image");
-	MyDebugAssertTrue(is_in_real_space == false, "CTF image not in Fourier space");
+//	MyDebugAssertTrue(is_in_real_space == false, "CTF image not in Fourier space");
 
 	int i;
 	int j;
@@ -2605,6 +2605,8 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 			pixel_counter++;
 		}
 	}
+
+	is_in_real_space = false;
 }
 
 // Apply a cosine-edge mask. By default, pixels on the outside of the mask radius are flattened. If invert=true, the pixels near the center are flattened. This does not currently work when quadrants are swapped.

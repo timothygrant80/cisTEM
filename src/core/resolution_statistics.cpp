@@ -489,10 +489,13 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 		FSC.FitSavitzkyGolayToData(window, 3);
 		for (i = 0; i < number_of_bins_extended; i++)
 		{
-	//		wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
-			if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
+//			wxPrintf("FSC,fit = %i %g %g\n", i, FSC.data_y[i], FSC.savitzky_golay_fit[i]);
+//			if (FSC.data_y[i] < 0.8) FSC.data_y[i] = FSC.savitzky_golay_fit[i];
 			// Make a smooth transition between original FSC curve and smoothed curve
-			else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
+//			else FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - FSC.data_y[i]) / 0.2) + FSC.savitzky_golay_fit[i] * (1.0 - FSC.data_y[i]) / 0.2;
+			// Make a smooth transition between original FSC curve and smoothed curve
+//			if (FSC.data_y[i] < 0.5) FSC.data_y[i] = FSC.data_y[i] * (1.0 - fabsf(1.0 - FSC.data_y[i])) + FSC.savitzky_golay_fit[i] * fabsf(1.0 - FSC.data_y[i]);
+			FSC.data_y[i] = FSC.data_y[i] * (1.0 - (1.0 - fabsf(FSC.data_y[i]))) + FSC.savitzky_golay_fit[i] * (1.0 - fabsf(FSC.data_y[i]));
 			if (FSC.data_y[i] > 1.0) FSC.data_y[i] = 1.0;
 			if (FSC.data_y[i] < -1.0) FSC.data_y[i] = -1.0;
 		}

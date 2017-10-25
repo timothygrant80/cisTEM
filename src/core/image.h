@@ -75,6 +75,8 @@ public:
 	bool      	 planned;										// !< Whether the plan has been setup by/for FFTW
 	bool         image_memory_should_not_be_deallocated;	    // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
 
+	static wxMutex s_mutexProtectingFFTW;
+
 	// Methods
 
 	Image();
@@ -354,6 +356,7 @@ public:
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
 	float ReturnMaximumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);
+	float ReturnMinimumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);
 	void SetMaximumValue(float new_maximum_value);
 	void SetMinimumValue(float new_minimum_value);
 	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);

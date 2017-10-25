@@ -1,6 +1,8 @@
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
 
+wxMutex Image::s_mutexProtectingFFTW;
+
 Image::Image()
 {
 	logical_x_dimension = 0;
@@ -3518,6 +3520,8 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 
     if (planned == false)
     {
+    	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+    	MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
     	if (logical_z_dimension > 1)
     	{
     		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
@@ -4665,6 +4669,58 @@ float Image::ReturnMaximumValue(float minimum_distance_from_center, float minimu
 	return maximum_value;
 }
 
+// Find the largest voxel value, only considering voxels which are at least a certain distance from the center and from the edge in each dimension
+float Image::ReturnMinimumValue(float minimum_distance_from_center, float minimum_distance_from_edge)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	int i,j,k;
+	int i_dist_from_center, j_dist_from_center, k_dist_from_center;
+	float minimum_value = std::numeric_limits<float>::max();
+	const int last_acceptable_address_x = logical_x_dimension - minimum_distance_from_edge - 1;
+	const int last_acceptable_address_y = logical_y_dimension - minimum_distance_from_edge - 1;
+	const int last_acceptable_address_z = logical_z_dimension - minimum_distance_from_edge - 1;
+	long address = 0;
+
+
+	for (k=0;k<logical_z_dimension;k++)
+	{
+		if (logical_z_dimension > 1)
+		{
+			k_dist_from_center = abs(k - physical_address_of_box_center_z);
+			if (k_dist_from_center < minimum_distance_from_center || k < minimum_distance_from_edge || k > last_acceptable_address_z)
+			{
+				address += logical_y_dimension * (logical_x_dimension + padding_jump_value);
+				continue;
+			}
+		}
+		for (j=0;j<logical_y_dimension;j++)
+		{
+			j_dist_from_center = abs(j - physical_address_of_box_center_y);
+			if (j_dist_from_center < minimum_distance_from_center || j < minimum_distance_from_edge || j > last_acceptable_address_y)
+			{
+				address += logical_x_dimension + padding_jump_value;
+				continue;
+			}
+			for (i=0;i<logical_x_dimension;i++)
+			{
+				i_dist_from_center = abs(i - physical_address_of_box_center_x);
+				if (i_dist_from_center < minimum_distance_from_center || i < minimum_distance_from_edge || i > last_acceptable_address_x)
+				{
+					address++;
+					continue;
+				}
+
+				minimum_value = std::min(minimum_value,real_values[address]);
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+
+	return minimum_value;
+}
 
 float Image::ReturnMedianOfRealValues()
 {
@@ -5270,7 +5326,7 @@ void Image::AverageRadially()
 
 //  \brief  Compute the 1D rotational average
 //			The first element will be the value at the center/origin of the image.
-//			It is assume the X axis of the Curve object has been setup already. It should run from 0.0 to the maximum value
+//			It is assumed the X axis of the Curve object has been setup already. It should run from 0.0 to the maximum value
 //			possible, which is approximately sqrt(2)*0.5 in Fourier space or sqrt(2)*0.5*logical_dimension in real space
 //			(to compute this properly, use ReturnMaximumDiagonalRadius * fourier_voxel_size). To use
 //			The Fourier space radius convention in real space, give fractional_radius_in_real_space

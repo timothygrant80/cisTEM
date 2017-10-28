@@ -525,14 +525,15 @@ void MyFindCTFResultsPanel::OnValueChanged(wxDataViewEvent &event)
 			{
 				// we need to update the database for the resulting image asset
 
-				int image_asset = image_asset_panel->ReturnAssetID(per_row_array_position[row]);
+				int image_asset_position = per_row_array_position[row];
+				int image_asset_id = image_asset_panel->ReturnAssetID(image_asset_position);
 				int estimation_job_id = ctf_estimation_job_ids[column - 2];
 
-				MyDebugAssertTrue(image_asset >= 0, "Something went wrong finding an image asset");
+				MyDebugAssertTrue(image_asset_id >= 0, "Something went wrong finding an image asset");
 
 				// we need to get the details of the selected movie alignment, and update the image asset.
 
-				int estimation_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT CTF_ESTIMATION_ID FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i",image_asset, estimation_job_id));
+				int estimation_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT CTF_ESTIMATION_ID FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i",image_asset_id, estimation_job_id));
 				bool should_continue;
 
 				//should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT CTF_ESTIMATION_ID FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i",image_asset_id, estimation_job_id));
@@ -547,9 +548,9 @@ void MyFindCTFResultsPanel::OnValueChanged(wxDataViewEvent &event)
 				//main_frame->current_project.database.EndBatchSelect();
 
 				main_frame->current_project.database.BeginImageAssetInsert();
-				main_frame->current_project.database.AddNextImageAsset(image_asset,  image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, image_asset_panel->ReturnAssetPointer(image_asset)->filename.GetFullPath(),  image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  image_asset_panel->ReturnAssetPointer(image_asset)->alignment_id, estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration, image_asset_panel->ReturnAssetPointer(image_asset)->protein_is_white);
+				main_frame->current_project.database.AddNextImageAsset(image_asset_id,  image_asset_panel->ReturnAssetPointer(image_asset_position)->asset_name, image_asset_panel->ReturnAssetPointer(image_asset_position)->filename.GetFullPath(),  image_asset_panel->ReturnAssetPointer(image_asset_position)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset_position)->parent_id,  image_asset_panel->ReturnAssetPointer(image_asset_position)->alignment_id, estimation_id, image_asset_panel->ReturnAssetPointer(image_asset_position)->x_size, image_asset_panel->ReturnAssetPointer(image_asset_position)->y_size, image_asset_panel->ReturnAssetPointer(image_asset_position)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset_position)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset_position)->spherical_aberration, image_asset_panel->ReturnAssetPointer(image_asset_position)->protein_is_white);
 				main_frame->current_project.database.EndImageAssetInsert();
-				image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id = estimation_id;
+				image_asset_panel->ReturnAssetPointer(image_asset_position)->ctf_estimation_id = estimation_id;
 				image_asset_panel->is_dirty = true;
 
 

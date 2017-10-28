@@ -218,9 +218,9 @@ long AssetGroupList::ReturnGroupMember(long wanted_group_number, long wanted_mem
 		return -1;
 	}
 
-	if (wanted_member < 0 || wanted_group_number >= groups[wanted_group_number].number_of_members)
+	if (wanted_member < 0 || wanted_member >= groups[wanted_group_number].number_of_members)
 	{
-		MyDebugPrintWithDetails("Trying to request a member that doesn't exist (%li)", wanted_member);
+		MyDebugPrintWithDetails("Trying to request a member that doesn't exist (%li; number of members in group %li is %li)", wanted_member, wanted_group_number, groups[wanted_group_number].number_of_members);
 		return -1;
 	}
 

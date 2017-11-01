@@ -17,6 +17,7 @@ class CalculateThread : public wxThread
     	void QueueError(wxString error_to_queue);
     	void QueueInfo(wxString info_to_queue);
     	void MarkIntermediateResultAvailable();
+    	void SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save);
 
 
 	protected:
@@ -49,6 +50,8 @@ MyApp : public wxAppConsole
 
 		wxStopWatch stopwatch;
 		long total_milliseconds_spent_on_threads;
+		MRCFile master_output_file;
+
 
 	public:
 		virtual bool OnInit();
@@ -108,12 +111,10 @@ MyApp : public wxAppConsole
 
 		long time_of_last_queue_send;
 
-
 		void AddJobToResultQueue(JobResult *);
 		JobResult * PopJobFromResultQueue();
 		void SendAllResultsFromResultQueue();
-
-
+		void SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save);
 		private:
 
 		void SendJobFinished(int job_number);
@@ -137,11 +138,13 @@ MyApp : public wxAppConsole
 		void OnControllerSocketEvent(wxSocketEvent& event);
 
 
+
 		void OnServerEvent(wxSocketEvent& event);
 		void OnThreadComplete(wxThreadEvent& my_event);
 		void OnThreadEnding(wxThreadEvent& my_event);
 		void OnThreadSendError(wxThreadEvent& my_event);
 		void OnThreadSendInfo(wxThreadEvent& my_event);
 		void OnThreadIntermediateResultAvailable(wxThreadEvent& my_event);
+		void OnThreadSendImageResult(wxThreadEvent& my_event);
 };
 

@@ -4,6 +4,7 @@ SETUP_SOCKET_CODES
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_ENDING, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, wxThreadEvent);
@@ -51,6 +52,8 @@ bool MyApp::OnInit()
 	Bind(wxEVT_COMMAND_MYTHREAD_SENDINFO, &MyApp::OnThreadSendInfo, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this); // When thread is about to die
 	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT, &MyApp::OnThreadSendImageResult, this);
+
 
 	// Connect to the controller program..
 
@@ -478,7 +481,12 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	  {
 	    		  if (slave_sockets[counter] != NULL)
 	    		  {
+	    			  long milliseconds_spent_on_slave_thread;
+	    			  slave_sockets[counter]->SetNotify(false);
 	    			  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
+	    			  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    			  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
+
 	    			  slave_sockets[counter]->Destroy();
 	  	    		  slave_sockets[counter] = NULL;
 
@@ -513,7 +521,12 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	{
 	    	  if (slave_sockets[counter] != NULL)
 	    	  {
+	    		  long milliseconds_spent_on_slave_thread;
+	    		  slave_sockets[counter]->SetNotify(false);
 	    		  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
+	    		  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    		  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
+
 	    		  slave_sockets[counter]->Destroy();
 	  	    	  slave_sockets[counter] = NULL;
     		  }
@@ -551,6 +564,9 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		long milliseconds_spent_on_slave_thread;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
+		socket->Destroy();
+		socket = NULL;
+
 	}
 }
 
@@ -685,7 +701,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 					SendAllJobsFinished();
 
-					//wxPrintf("Sending all jobs finished\n");
+					//wxPrintf("Sending all jobs finished (%li / %i)\n", number_of_finished_jobs, my_job_package.number_of_jobs);
 
 					if (my_job_package.ReturnNumberOfJobsRemaining() != 0)
 					{
@@ -700,6 +716,8 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 				}
 			}
+
+			if (sock == NULL) return;
 		}
 		else
 		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
@@ -755,9 +773,44 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 				queue_timer = new wxTimer(this, 2);
 				queue_timer->StartOnce(1000);
 			}
-
-
 		}
+		else
+		if (memcmp(socket_input_buffer, socket_result_with_image_to_write, SOCKET_CODE_SIZE) == 0) // identification
+		{
+			Image image_to_write;
+			int details[3];
+
+			ReadFromSocket(sock, details, sizeof(int) * 3);
+			image_to_write.Allocate(details[0], details[1], 1);
+			int position_in_stack = details[2];
+			ReadFromSocket(sock, image_to_write.real_values, image_to_write.real_memory_allocated * sizeof(float));
+			wxString filename_to_write;
+			filename_to_write = ReceivewxStringFromSocket(sock);
+
+			if (master_output_file.IsOpen() == false || master_output_file.filename != filename_to_write)
+			{
+				master_output_file.OpenFile(filename_to_write.ToStdString(), true);
+				image_to_write.WriteSlice(&master_output_file, 1); // to setup the file..
+			}
+
+			image_to_write.WriteSlice(&master_output_file, position_in_stack);
+
+			float temp_float;
+			temp_float = position_in_stack;
+
+			JobResult job_to_queue;
+			job_to_queue.SetResult(1, &temp_float);
+			job_queue.Add(job_to_queue);
+
+
+			if (queue_timer_set == false)
+			{
+				queue_timer_set = true;
+				queue_timer = new wxTimer(this, 2);
+				queue_timer->StartOnce(1000);
+			}
+		}
+
 		/*
 		else
 		if (memcmp(socket_input_buffer, socket_send_timing_for_thread, SOCKET_CODE_SIZE) == 0) // identification
@@ -1237,6 +1290,30 @@ void MyApp::OnThreadIntermediateResultAvailable(wxThreadEvent& my_event)
 	SendAllResultsFromResultQueue();
 }
 
+void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
+{
+	MyDebugAssertTrue(i_am_the_master == false, "OnThreadSendImageResult called by master!");
+
+	Image image_to_send;
+	image_to_send = my_event.GetPayload<Image>();
+	int position_in_stack = my_event.GetInt();
+	wxString filename_to_write = my_event.GetString();
+	int details[3];
+
+	details[0] = image_to_send.logical_x_dimension;
+	details[1] = image_to_send.logical_y_dimension;
+	details[2] = position_in_stack;
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+	WriteToSocket(controller_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE);
+	WriteToSocket(controller_socket, details, sizeof(int) * 3);
+	WriteToSocket(controller_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float));
+	SendwxStringToSocket(&filename_to_write, controller_socket);
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
 void MyApp::SendAllResultsFromResultQueue()
 {
 	// have we sent results within the last second? if so wait 1s
@@ -1384,9 +1461,21 @@ void MyApp::AddJobToResultQueue(JobResult * result_to_add)
 	{
 		wxPrintf("Work thread is NULL!\n");
 	}
-
-
 }
+
+void MyApp::SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save)
+{
+	if (work_thread != NULL)
+	{
+		work_thread->SendProcessedImageResult(image_to_send, position_in_stack, filename_to_save);
+	}
+	else
+	{
+		wxPrintf("Work thread is NULL!\n");
+	}
+}
+
+
 
 JobResult * MyApp::PopJobFromResultQueue()
 {
@@ -1493,6 +1582,15 @@ void CalculateThread::MarkIntermediateResultAvailable()
 	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE);
 	wxQueueEvent(main_thread_pointer, test_event);
 	//wxPrintf("CalculateThread::Queueing Result Available Event..\n");
+}
+
+void CalculateThread::SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save)
+{
+	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT);
+	test_event->SetInt(position_in_stack);
+	test_event->SetString(filename_to_save);
+	test_event->SetPayload(*image_to_send);
+	wxQueueEvent(main_thread_pointer, test_event);
 }
 
 CalculateThread::~CalculateThread()

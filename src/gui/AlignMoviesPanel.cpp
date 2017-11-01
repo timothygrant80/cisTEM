@@ -796,51 +796,51 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	// Now we process the event
 	switch(event.GetSocketEvent())
 	{
-	case wxSOCKET_INPUT:
-	{
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
+		case wxSOCKET_INPUT:
 		{
-			// send the job details..
+			// We disable input events, so that the test doesn't trigger
+			// wxSocketEvent again.
+			sock->SetNotify(wxSOCKET_LOST_FLAG);
+			ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
 
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
+			if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
+			{
+				// send the job details..
 
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
+				//wxPrintf("Sending Job Details...\n");
+				my_job_package.SendJobPackage(sock);
 
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
+			}
+			else
+			if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
+			{
 
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
+				wxString error_message;
+				error_message = ReceivewxStringFromSocket(sock);
 
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
+				WriteErrorText(error_message);
+			}
+			else
+			if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
+			{
 
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
+				wxString info_message;
+				info_message = ReceivewxStringFromSocket(sock);
 
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
+				WriteInfoText(info_message);
+			}
+			else
+			if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
+			{
+				// which job is finished?
 
-			my_job_tracker.MarkJobFinished();
+				int finished_job;
+				ReadFromSocket(sock, &finished_job, 4);
 
-			if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
+				my_job_tracker.MarkJobFinished();
+
+				if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
+				//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
 		}
 		else
 		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
@@ -903,6 +903,7 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 			// Other stuff to do once all jobs finished
 			ProcessAllJobsFinished();
+			return;
 		}
 
 
@@ -918,7 +919,8 @@ void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 
 		//MyDebugPrint("Socket Disconnected!!\n");
-		sock->Destroy();
+		//sock->Destroy();
+		main_frame->job_controller.KillJob(my_job_id);
 		break;
 	}
 	default: ;

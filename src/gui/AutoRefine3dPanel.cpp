@@ -665,8 +665,6 @@ void AutoRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	wxSocketBase *sock = event.GetSocket();
 	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
-	//  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
 	// First, print a message
 	switch(event.GetSocketEvent())
 	{
@@ -684,6 +682,9 @@ void AutoRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 	case wxSOCKET_INPUT:
 	{
+
+		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
+
 		// We disable input events, so that the test doesn't trigger
 		// wxSocketEvent again.
 		sock->SetNotify(wxSOCKET_LOST_FLAG);
@@ -1109,6 +1110,8 @@ void AutoRefinementManager::RunRefinementJob()
 
 void AutoRefinementManager::SetupMerge3dJob()
 {
+	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs() - 1;
+
 	int class_counter;
 
 	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
@@ -1131,7 +1134,7 @@ void AutoRefinementManager::SetupMerge3dJob()
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
-		my_parent->my_job_package.AddJob("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1140,7 +1143,8 @@ void AutoRefinementManager::SetupMerge3dJob()
 														dump_file_seed_2.ToUTF8().data(),
 														class_counter + 1,
 														save_orthogonal_views_image,
-														orthogonal_views_filename.ToUTF8().data());
+														orthogonal_views_filename.ToUTF8().data(),
+														number_of_reconstruction_jobs);
 	}
 }
 
@@ -1249,7 +1253,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
 	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
-	particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
+	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
 
 	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 

@@ -1290,7 +1290,6 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	wxSocketBase *sock = event.GetSocket();
 	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
-	MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
 
 	// First, print a message
 	switch(event.GetSocketEvent())
@@ -1309,6 +1308,9 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 	case wxSOCKET_INPUT:
 	{
+
+		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
+
 		// We disable input events, so that the test doesn't trigger
 		// wxSocketEvent again.
 		sock->SetNotify(wxSOCKET_LOST_FLAG);

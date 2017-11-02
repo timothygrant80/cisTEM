@@ -1400,7 +1400,6 @@ void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	wxSocketBase *sock = event.GetSocket();
 	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
-	//  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
 
 	// First, print a message
 	switch(event.GetSocketEvent())
@@ -1419,6 +1418,9 @@ void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 	case wxSOCKET_INPUT:
 	{
+
+		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
+
 		// We disable input events, so that the test doesn't trigger
 		// wxSocketEvent again.
 		sock->SetNotify(wxSOCKET_LOST_FLAG);
@@ -1562,6 +1564,8 @@ void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 void ClassificationManager::RunMerge2dJob()
 {
 
+	int number_of_refinement_jobs = my_parent->my_job_package.my_profile.ReturnTotalJobs() - 1;
+
 	running_job_type = MERGE;
 
 	my_parent->my_job_package.Reset(active_run_profile, "merge2d", 1);
@@ -1569,8 +1573,9 @@ void ClassificationManager::RunMerge2dJob()
 	wxString output_class_averages = output_classification->class_average_file;
 	wxString dump_file_seed = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_.dump", output_classification->classification_id);
 
-	my_parent->my_job_package.AddJob("tt",	output_class_averages.ToUTF8().data(),
-											dump_file_seed.ToUTF8().data());
+	my_parent->my_job_package.AddJob("tti",	output_class_averages.ToUTF8().data(),
+											dump_file_seed.ToUTF8().data(),
+											number_of_refinement_jobs);
 	// start job..
 
 	my_parent->WriteBlueText("Merging Class Averages...");

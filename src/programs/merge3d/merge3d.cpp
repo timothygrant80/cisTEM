@@ -201,8 +201,8 @@ bool Merge3DApp::DoCalculation()
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
 			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics);
 
-	float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
-	SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
+	//float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
+	//SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
 
 	if (save_orthogonal_views_image == true)
 	{

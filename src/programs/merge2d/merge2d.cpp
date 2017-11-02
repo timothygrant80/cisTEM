@@ -49,12 +49,14 @@ void Merge2DApp::DoInteractiveUserInput()
 
 	ouput_class_averages = my_input->GetFilenameFromUser("Output class averages", "The refined 2D class averages", "my_refined_classes.mrc", false);
 	dump_file_seed = my_input->GetFilenameFromUser("Seed for input dump filenames for intermediate arrays", "The seed name of the dump files with the intermediate 2D class sums", "dump_file_seed_.dat", false);
+	int number_of_dump_files = my_input->GetIntFromUser("Number of dump files", "The number of dump files that should be read from disk and merged", "1", 1);
 
 	delete my_input;
 
-	my_current_job.Reset(2);
-	my_current_job.ManualSetArguments("tt",	ouput_class_averages.ToUTF8().data(),
-												dump_file_seed.ToUTF8().data());
+	my_current_job.Reset(3);
+	my_current_job.ManualSetArguments("tti",	ouput_class_averages.ToUTF8().data(),
+												dump_file_seed.ToUTF8().data(),
+												number_of_dump_files);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -63,6 +65,7 @@ bool Merge2DApp::DoCalculation()
 {
 	wxString ouput_class_averages				= my_current_job.arguments[0].ReturnStringArgument();
 	dump_file_seed 								= my_current_job.arguments[1].ReturnStringArgument();
+	int number_of_dump_files					= my_current_job.arguments[2].ReturnIntegerArgument();
 
 	int			i;
 	int			current_class;
@@ -76,25 +79,18 @@ bool Merge2DApp::DoCalculation()
 	wxString	dump_file;
 
 	dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", 1) + "." + extension;
-	if (is_running_locally)
+
+	if ( (is_running_locally && DoesFileExist(dump_file)) || (!is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
 	{
-		if (! DoesFileExist(dump_file))
-		{
-			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
-			exit(-1);
-		}
+		ReadArrayHeader(dump_file);
+		wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, pixel size = %f\n", number_of_classes, number_of_nonzero_classes, xy_dimensions, pixel_size);
+
 	}
 	else
 	{
-		if (! DoesFileExistWithWait(dump_file, 90))
-		{
-			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
-			exit(-1);
-		}
+		SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+		exit(-1);
 	}
-
-	ReadArrayHeader(dump_file);
-	wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, pixel size = %f\n", number_of_classes, number_of_nonzero_classes, xy_dimensions, pixel_size);
 
 	list_of_nozero_classes = new int [number_of_classes];
 	class_logp = new float [number_of_nonzero_classes];
@@ -120,26 +116,21 @@ bool Merge2DApp::DoCalculation()
 	sum_logp_total = - std::numeric_limits<float>::max();
 	sum_snr = 0.0;
 	images_processed = 0;
-	if (is_running_locally)
+
+	for (i = 1; i <= number_of_dump_files; i ++)
 	{
-		while (DoesFileExist(dump_file))
+		dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
+		wxPrintf("%s\n", dump_file);
+
+		if ( (is_running_locally && DoesFileExist(dump_file)) || (!is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
 		{
-			wxPrintf("%s\n", dump_file);
 			ReadArrays(dump_file);
 			AddArrays();
-			i++;
-			dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
 		}
-	}
-	else
-	{
-		while (DoesFileExistWithWait(dump_file, 10))
+		else
 		{
-			wxPrintf("%s\n", dump_file);
-			ReadArrays(dump_file);
-			AddArrays();
-			i++;
-			dump_file = wxFileName::StripExtension(dump_file_seed) + wxString::Format("%i", i) + "." + extension;
+			SendError(wxString::Format("Error: Dump file not found: %s\n",dump_file));
+			exit(-1);
 		}
 	}
 

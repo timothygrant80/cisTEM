@@ -26,6 +26,7 @@ void Merge3DApp::DoInteractiveUserInput()
 	float		outer_mask_radius = 100.0;
 	wxString	dump_file_seed_1;
 	wxString	dump_file_seed_2;
+	int			number_of_dump_files;
 
 	UserInput *my_input = new UserInput("Merge3D", 1.01);
 
@@ -38,6 +39,7 @@ void Merge3DApp::DoInteractiveUserInput()
 	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
 	dump_file_seed_1 = my_input->GetFilenameFromUser("Seed for input dump filenames for odd particles", "The seed name of the first dump files with the intermediate reconstruction arrays", "dump_file_seed_1_.dat", false);
 	dump_file_seed_2 = my_input->GetFilenameFromUser("Seed for input dump filenames for even particles", "The seed name of the second dump files with the intermediate reconstruction arrays", "dump_file_seed_2_.dat", false);
+	number_of_dump_files = my_input->GetIntFromUser("Number of dump files", "The number of dump files that should be read from disk and merged", "1", 1);
 
 	delete my_input;
 
@@ -45,7 +47,7 @@ void Merge3DApp::DoInteractiveUserInput()
 	bool save_orthogonal_views_image = false;
 	wxString orthogonal_views_filename = "";
 	my_current_job.Reset(12);
-	my_current_job.ManualSetArguments("ttttfffttibt",	output_reconstruction_1.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
@@ -54,7 +56,8 @@ void Merge3DApp::DoInteractiveUserInput()
 													dump_file_seed_2.ToUTF8().data(),
 													class_number_for_gui,
 													save_orthogonal_views_image,
-													orthogonal_views_filename.ToUTF8().data());
+													orthogonal_views_filename.ToUTF8().data(),
+													number_of_dump_files);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -73,6 +76,7 @@ bool Merge3DApp::DoCalculation()
 	int class_number_for_gui					= my_current_job.arguments[9].ReturnIntegerArgument();
 	bool save_orthogonal_views_image			= my_current_job.arguments[10].ReturnBoolArgument();
 	wxString orthogonal_views_filename			= my_current_job.arguments[11].ReturnStringArgument();
+	int number_of_dump_files					= my_current_job.arguments[12].ReturnIntegerArgument();
 
 	ResolutionStatistics *gui_statistics = NULL;
 
@@ -127,21 +131,15 @@ bool Merge3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C");
 
 	dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", 1) + "." + extension;
-	if (is_running_locally)
+
+	if ( (is_running_locally && DoesFileExist(dump_file)) || (!is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
 	{
-		if (! DoesFileExist(dump_file))
-		{
-			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
-			exit(-1);
-		}
+		//
 	}
 	else
 	{
-		if (! DoesFileExistWithWait(dump_file, 90))
-		{
-			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
-			exit(-1);
-		}
+		SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+		exit(-1);
 	}
 
 	Reconstruct3D temp_reconstruction;
@@ -153,56 +151,41 @@ bool Merge3DApp::DoCalculation()
 	Reconstruct3D my_reconstruction_1(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
 	Reconstruct3D my_reconstruction_2(logical_x_dimension, logical_y_dimension, logical_z_dimension, pixel_size, average_occupancy, average_sigma, sigma_bfactor_conversion, my_symmetry);
 
+
 	wxPrintf("\nReading reconstruction arrays...\n\n");
 
-	count = 1;
-	if (is_running_locally)
+	for (count = 1; count <= number_of_dump_files; count ++ )
 	{
-		while (DoesFileExist(dump_file))
+		dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
+		wxPrintf("%s\n", dump_file);
+		if ( (is_running_locally && DoesFileExist(dump_file)) || (!is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
 		{
-			wxPrintf("%s\n", dump_file);
 			temp_reconstruction.ReadArrays(dump_file);
 			my_reconstruction_1 += temp_reconstruction;
-			count++;
-			dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
 		}
-	}
-	else
-	{
-		while (DoesFileExistWithWait(dump_file,10))
+		else
 		{
-			wxPrintf("%s\n", dump_file);
-			temp_reconstruction.ReadArrays(dump_file);
-			my_reconstruction_1 += temp_reconstruction;
-			count++;
-			dump_file = wxFileName::StripExtension(dump_file_seed_1) + wxString::Format("%i", count) + "." + extension;
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
 
-	count = 1;
-	dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
-	if (is_running_locally)
+	for (count = 1; count <= number_of_dump_files; count ++ )
 	{
-		while (DoesFileExist(dump_file))
+		dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
+		wxPrintf("%s\n", dump_file);
+		if ( (is_running_locally && DoesFileExist(dump_file)) || (!is_running_locally && DoesFileExistWithWait(dump_file, 90)) ) // C++ standard says if LHS of OR is true, RHS never gets evaluated
 		{
-			wxPrintf("%s\n", dump_file);
 			temp_reconstruction.ReadArrays(dump_file);
 			my_reconstruction_2 += temp_reconstruction;
-			count++;
-			dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
 		}
-	}
-	else
-	{
-		while (DoesFileExistWithWait(dump_file,10))
+		else
 		{
-			wxPrintf("%s\n", dump_file);
-			temp_reconstruction.ReadArrays(dump_file);
-			my_reconstruction_2 += temp_reconstruction;
-			count++;
-			dump_file = wxFileName::StripExtension(dump_file_seed_2) + wxString::Format("%i", count) + "." + extension;
+			SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
+			exit(-1);
 		}
 	}
+
 	wxPrintf("\nFinished reading arrays\n");
 
 	output_3d1.FinalizeSimple(my_reconstruction_1, original_x_dimension, original_pixel_size, pixel_size,
@@ -217,6 +200,9 @@ bool Merge3DApp::DoCalculation()
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
 			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics);
+
+	float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
+	SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
 
 	if (save_orthogonal_views_image == true)
 	{

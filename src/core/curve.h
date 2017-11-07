@@ -64,6 +64,7 @@ public:
 	void SquareRoot();
 	void Reciprocal();
 	void ZeroAfterIndex(int index);
+	void FlattenBeforeIndex(int index);
 	float ReturnAverageValue();
 
 	void GetXMinMax(float &min_value, float &max_value);

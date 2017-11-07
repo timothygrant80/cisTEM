@@ -293,6 +293,17 @@ void Curve::ZeroAfterIndex(int index)
 	}
 }
 
+void Curve::FlattenBeforeIndex(int index)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	if (index > number_of_points) index = number_of_points;
+	for (int counter = 0; counter < index; counter++)
+	{
+		data_y[counter] = data_y[index];
+	}
+}
+
 void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 {
 	MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");

@@ -767,7 +767,8 @@ void ResolutionStatistics::GenerateDefaultStatistics(float molecular_mass_in_kDa
 	float resolution;
 	float ssnr;
 	float fsc;
-	float particle_diameter = 2.0 * powf(3.0 * kDa_to_Angstrom3(molecular_mass_in_kDa) / 4.0 / PI / powf(pixel_size,3) ,1.0 / 3.0);
+//	float particle_diameter = 2.0 * powf(3.0 * kDa_to_Angstrom3(molecular_mass_in_kDa) / 4.0 / PI / powf(pixel_size,3) ,1.0 / 3.0);
+	float particle_diameter = 2.0 * powf(3.0 * kDa_to_Angstrom3(molecular_mass_in_kDa) / 4.0 / PI,1.0 / 3.0);
 	int number_of_bins2 = 2 * (number_of_bins - 1);
 	int number_of_bins_extended = int((number_of_bins2 / 2 + 1) * sqrtf(3.0)) + 1;
 

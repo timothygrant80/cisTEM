@@ -380,7 +380,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		all_histograms = temp_refinement.ReturnAngularDistributions(temp_refinement_package->symmetry);
 		for (int class_counter = 0; class_counter < temp_refinement.number_of_classes; class_counter++)
 		{
-			main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], temp_refinement.refinement_id, class_counter);
+			main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], temp_refinement.refinement_id, class_counter + 1);
 		}
 
 

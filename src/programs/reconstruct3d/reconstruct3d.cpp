@@ -331,10 +331,17 @@ bool Reconstruct3DApp::DoCalculation()
 	if (resolution_limit_rec != 0.0)
 	{
 		binning_factor = resolution_limit_rec / pixel_size / 2.0;
-		intermediate_box_size = ReturnClosestFactorizedUpper(original_box_size / binning_factor, 3, true);
+
+		//intermediate_box_size = ReturnClosestFactorizedUpper(original_box_size / binning_factor, 3, true);
+		// ADDing a safety 1/3rd!!! - TIM
+		intermediate_box_size = ReturnSafeBinnedBoxSize(original_box_size, binning_factor);
+		intermediate_box_size = ReturnClosestFactorizedUpper(intermediate_box_size, 3, true);
+
 		if (intermediate_box_size > original_box_size) intermediate_box_size = original_box_size;
 		binning_factor = float(original_box_size) / float(intermediate_box_size);
 		pixel_size *= binning_factor;
+
+		wxPrintf("After : binning_factor = %f, pixel_size = %f\n", binning_factor, pixel_size);
 		if (crop_images)
 		{
 			box_size = ReturnClosestFactorizedUpper(myroundint(3.0 * outer_mask_radius / pixel_size), 3, true);
@@ -364,7 +371,7 @@ bool Reconstruct3DApp::DoCalculation()
 	Particle input_particle(box_size, box_size);
 	input_particle.AllocateCTFImage(box_size, box_size);
 	if (use_input_reconstruction) unmasked_image.Allocate(box_size, box_size, true);
-	current_ctf_image.Allocate(original_box_size, original_box_size, true);
+	current_ctf_image.Allocate(original_box_size, original_box_size, false);
 	temp_image.Allocate(original_box_size, original_box_size, true);
 	temp3_image.Allocate(original_box_size, original_box_size, false);
 	if (resolution_limit_rec != 0.0 && crop_images) temp2_image.Allocate(intermediate_box_size, intermediate_box_size, true);

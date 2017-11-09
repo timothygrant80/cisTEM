@@ -79,11 +79,13 @@ typedef void (wxEvtHandler::*ReturnSharpeningResultsEventFunction)(ReturnSharpen
 class OrthDrawerThread : public wxThread
 {
 	public:
-	OrthDrawerThread(wxWindow *parent, wxArrayString wanted_filenames_of_volumes, wxString wanted_tab_name) : wxThread(wxTHREAD_DETACHED)
+	OrthDrawerThread(wxWindow *parent, wxArrayString wanted_filenames_of_volumes, wxString wanted_tab_name, float wanted_scale_factor = 1.0f, float wanted_mask_radius_in_pixels = 0.0f) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		filenames_of_volumes = wanted_filenames_of_volumes;
 		tab_name = wanted_tab_name;
+		scale_factor = wanted_scale_factor;
+		mask_radius_in_pixels = wanted_mask_radius_in_pixels;
 	}
 
 	protected:
@@ -91,9 +93,12 @@ class OrthDrawerThread : public wxThread
 	wxWindow *main_thread_pointer;
 	wxArrayString filenames_of_volumes;
 	wxString tab_name;
+	float scale_factor;
+	float mask_radius_in_pixels;
 
     virtual ExitCode Entry();
 };
+
 
 class AutoMaskerThread : public wxThread
 {

@@ -10,7 +10,7 @@ MyRefinementResultsPanel::MyRefinementResultsPanel( wxWindow* parent )
 :
 RefinementResultsPanel( parent )
 {
-	is_dirty = false;
+	refinement_package_is_dirty = false;
 	input_params_are_dirty = false;
 	current_class = 0;
 	FSCPlotPanel->Clear();
@@ -142,9 +142,9 @@ void MyRefinementResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 	{
 		Enable(true);
 
-		if (is_dirty == true)
+		if (refinement_package_is_dirty == true)
 		{
-			is_dirty = false;
+			refinement_package_is_dirty = false;
 			FillRefinementPackageComboBox();
 			//AngularPlotPanel->Clear();
 		//	FillAngles();

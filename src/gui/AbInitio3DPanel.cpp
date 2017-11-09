@@ -1,8 +1,11 @@
 #include "../core/gui_core_headers.h"
+wxDEFINE_EVENT(wxEVT_RESAMPLE_VOLUME_EVENT, ReturnProcessedImageEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_IMPOSESYMMETRY_DONE, wxThreadEvent);
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
+
 
 
 AbInitio3DPanel::AbInitio3DPanel( wxWindow* parent )
@@ -31,6 +34,8 @@ AbInitio3DPanelParent( parent )
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AbInitio3DPanel::OnRefinementPackageComboBox, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &AbInitio3DPanel::OnOrthThreadComplete, this);
+	Bind(wxEVT_RESAMPLE_VOLUME_EVENT, &AbInitio3DPanel::OnVolumeResampled, this);
+	Bind(wxEVT_COMMAND_IMPOSESYMMETRY_DONE, &AbInitio3DPanel::OnImposeSymmetryThreadComplete, this);
 	FillRefinementPackagesComboBox();
 
 	// limits
@@ -44,6 +49,12 @@ AbInitio3DPanelParent( parent )
 
 void AbInitio3DPanel::SetInfo()
 {
+	wxLogNull *suppress_png_warnings = new wxLogNull;
+
+	#include "icons/VSV_startup_800.cpp"
+	wxBitmap vsv_startup_bmp = wxBITMAP_PNG_FROM_DATA(VSV_startup_800);
+	delete suppress_png_warnings;
+
 	InfoText->GetCaret()->Hide();
 
 	InfoText->BeginSuppressUndo();
@@ -60,9 +71,17 @@ void AbInitio3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("When a prior 3D reconstruction of a molecule or complex is available that has a closely related structure, it is usually fastest and safest to use it to initialize 3D refinement and reconstruction of a new dataset. However, in many cases such a structure is not available, or an independently determined structure is desired. Ab-initio 3D reconstruction offers a way to start refinement and reconstruction without any prior structural information."));
+	InfoText->WriteText(wxT("When a prior 3D reconstruction of a molecule or complex is available that has a closely related structure, it is usually fastest and safest to use it to initialize 3D refinement and reconstruction of a new dataset. However, in many cases such a structure is not available, or an independently determined structure is desired. Ab-initio 3D reconstruction offers a way to start refinement and reconstruction without any prior structural information. The following figure shows an ab-initio 3D reconstruction of VSV polymerase (Liang et al. 2015):"));
 	InfoText->Newline();
 	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->WriteImage(vsv_startup_bmp);
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
 	InfoText->WriteText(wxT("It is advisable to precede the ab-initio step with a 2D classification step to remove junk particles and select a high-quality subset of the data. A refinement package has to be created (in Assets) that will be used with the ab-initio procedure, either from selected 2D classes or using picked particle position. The idea of the ab-initio algorithm is to iteratively improve a 3D reconstruction, starting with a reconstruction calculated from random Euler angles, by aligning a small percentage of the data against the current reconstruction and increasing the refinement resolution and percentage at each iteration (Grigorieff, 2016). This procedure can also be carried out using multiple references that must be specified when creating the refinement package. The procedure stops after a user-specified number of refinement cycles and restarts if more than one starts are specified."));
 	InfoText->Newline();
 	InfoText->Newline();
@@ -303,7 +322,7 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		}
 		else
 		{
-			InitialResolutionLimitTextCtrl->ChangeValueFloat(30);
+			InitialResolutionLimitTextCtrl->ChangeValueFloat(20);
 		}
 		FinalResolutionLimitTextCtrl->ChangeValueFloat(8);
 		AutoPercentUsedYesRadio->SetValue(true);
@@ -313,6 +332,8 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 
 		ApplyBlurringNoRadioButton->SetValue(true);
 		SmoothingFactorTextCtrl->ChangeValueFloat(1.00);
+
+		AlwaysApplySymmetryNoButton->SetValue(true);
 
 		ExpertPanel->Thaw();
 	}
@@ -649,9 +670,29 @@ void AbInitio3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			temp_result.ReceiveFromSocket(sock);
 
 			// send the result to the
+			if (my_abinitio_manager.running_job_type == ALIGN_SYMMETRY)
+			{
+					// is this better than all the current_best?
 
-			my_abinitio_manager.ProcessJobResult(&temp_result);
-			wxPrintf("Warning: Received socket_job_result - should this happen?");
+				int current_class = temp_result.result_data[7] + 0.5;
+
+				//wxPrintf("got final result %f, %f, %f - %f, %f, %f = %f\n", temp_result.result_data[0], temp_result.result_data[1], temp_result.result_data[2], temp_result.result_data[3], temp_result.result_data[4], temp_result.result_data[5], temp_result.result_data[6]);
+				if (temp_result.result_data[6] > my_abinitio_manager.align_sym_best_correlations[current_class])
+				{
+					my_abinitio_manager.align_sym_best_correlations[current_class] = temp_result.result_data[6];
+					my_abinitio_manager.align_sym_best_x_rots[current_class] = temp_result.result_data[0];
+					my_abinitio_manager.align_sym_best_y_rots[current_class] = temp_result.result_data[1];
+					my_abinitio_manager.align_sym_best_z_rots[current_class] = temp_result.result_data[2];
+					my_abinitio_manager.align_sym_best_x_shifts[current_class] = temp_result.result_data[3];
+					my_abinitio_manager.align_sym_best_y_shifts[current_class] = temp_result.result_data[4];
+					my_abinitio_manager.align_sym_best_z_shifts[current_class] = temp_result.result_data[5];
+				}
+			}
+			else
+			{
+				my_abinitio_manager.ProcessJobResult(&temp_result);
+			}
+			//wxPrintf("Warning: Received socket_job_result - should this happen?");
 
 		}
 		else
@@ -783,143 +824,47 @@ void AbInitio3DPanel::TakeCurrentClicked( wxCommandEvent& event )
 
 void AbInitio3DPanel::TakeCurrent()
 {
-	// import the current 3ds into the database.
-
-	wxString current_output_filename;
 	wxString input_file;
-	wxArrayString all_output_filenames;
+	number_of_resampled_volumes_recieved = 0;
 
-	bool have_error = false;
-	long current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
-
-	// copy the files..
+	current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
 
 	for (int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
 	{
-
-		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
-		all_output_filenames.Add(current_output_filename);
-
-		// what is the current round number
-
 		int current_round_number = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) + my_abinitio_manager.number_of_rounds_run - 1;
 		input_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_%i_%i.mrc", current_round_number, class_counter);
+		ResampleVolumeThread *resample_thread = new ResampleVolumeThread(this, input_file, my_abinitio_manager.active_refinement_package->stack_box_size, my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
 
-		if (wxCopyFile(input_file, current_output_filename) == false)
+		if ( resample_thread->Run() != wxTHREAD_NO_ERROR )
 		{
-			have_error = true;
-			WriteErrorText(wxString::Format("Cannot Copy File (%s to %s) - Startup volumes were not imported", input_file, current_output_filename));
-		}
-	}
-
-	if (have_error == false) // now add to database
-	{
-		VolumeAsset temp_asset;
-		wxArrayLong volume_asset_ids;
-
-		main_frame->current_project.database.Begin();
-		main_frame->current_project.database.BeginVolumeAssetInsert();
-
-		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
-		{
-
-			temp_asset.reconstruction_job_id = -1;
-			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
-			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-			temp_asset.z_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-
-			temp_asset.asset_id = volume_asset_panel->current_asset_number;
-			volume_asset_ids.Add(temp_asset.asset_id);
-			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, class_counter + 1);
-			temp_asset.filename = all_output_filenames[class_counter];
-
-			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			WriteErrorText("Error: Cannot start resample thread, results not saved");
+			delete resample_thread;
 		}
 
-		main_frame->current_project.database.EndVolumeAssetInsert();
-
-		// now add the details of the startup job..
-
-		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.input_refinement->resolution_statistics_box_size * 0.45 * my_abinitio_manager.input_refinement->resolution_statistics_pixel_size,  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
-		main_frame->current_project.database.Commit();
 	}
-
-	main_frame->DirtyVolumes();
-
-
-
 }
 
 void AbInitio3DPanel::TakeLastStart()
 {
-	// import the current 3ds into the database.
-
-	wxString current_output_filename;
 	wxString input_file;
-	wxArrayString all_output_filenames;
-
-	bool have_error = false;
-	long current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
-
-	// copy the files..
+	number_of_resampled_volumes_recieved = 0;
+		current_startup_id = main_frame->current_project.database.ReturnHighestStartupID() + 1;
 
 	for (int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
 	{
-
-		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
-		all_output_filenames.Add(current_output_filename);
-
 		// what is the round number of the end of the last start..
 
 		int last_start_round_number = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) - 1;
 		input_file = main_frame->current_project.scratch_directory.GetFullPath() + wxString::Format("/Startup/startup3d_%i_%i.mrc", last_start_round_number, class_counter);
 
-		if (wxCopyFile(input_file, current_output_filename) == false)
+		ResampleVolumeThread *resample_thread = new ResampleVolumeThread(this, input_file, my_abinitio_manager.active_refinement_package->stack_box_size, my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
+
+		if ( resample_thread->Run() != wxTHREAD_NO_ERROR )
 		{
-			have_error = true;
-			WriteErrorText(wxString::Format("Cannot Copy File (%s to %s) - Startup volumes were not imported", input_file, current_output_filename));
+			WriteErrorText("Error: Cannot start resample thread, results not saved");
+			delete resample_thread;
 		}
 	}
-
-	if (have_error == false) // now add to database
-	{
-		VolumeAsset temp_asset;
-		wxArrayLong volume_asset_ids;
-
-		main_frame->current_project.database.Begin();
-		main_frame->current_project.database.BeginVolumeAssetInsert();
-
-		for (int class_counter = 0; class_counter < my_abinitio_manager.current_reference_filenames.GetCount(); class_counter++)
-		{
-
-			temp_asset.reconstruction_job_id = -1;
-			temp_asset.pixel_size = my_abinitio_manager.input_refinement->resolution_statistics_pixel_size;
-			temp_asset.x_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-			temp_asset.y_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-			temp_asset.z_size = my_abinitio_manager.input_refinement->resolution_statistics_box_size;
-
-			temp_asset.asset_id = volume_asset_panel->current_asset_number;
-			volume_asset_ids.Add(temp_asset.asset_id);
-			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, class_counter + 1);
-			temp_asset.filename = all_output_filenames[class_counter];
-
-			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
-		}
-
-		main_frame->current_project.database.EndVolumeAssetInsert();
-
-		// now add the details of the startup job..
-
-		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.input_refinement->resolution_statistics_box_size * 0.45 * my_abinitio_manager.input_refinement->resolution_statistics_pixel_size,  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
-		main_frame->current_project.database.Commit();
-	}
-
-	main_frame->DirtyVolumes();
-
-
 }
 
 AbInitioManager::AbInitioManager()
@@ -946,34 +891,6 @@ void AbInitioManager::BeginRefinementCycle()
 	number_of_starts_run = 0;
 	number_of_rounds_run = 0;
 
-	number_of_starts_to_run = my_parent->NumberStartsSpinCtrl->GetValue();
-	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
-
-	active_start_res = my_parent->InitialResolutionLimitTextCtrl->ReturnValue();
-	active_end_res = my_parent->FinalResolutionLimitTextCtrl->ReturnValue();
-
-	active_start_percent_used = my_parent->StartPercentUsedTextCtrl->ReturnValue();
-	active_end_percent_used = my_parent->EndPercentUsedTextCtrl->ReturnValue();
-
-	active_inner_mask_radius = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
-
-	my_parent->PlotPanel->Clear();
-	my_parent->PlotPanel->my_notebook->SetSelection(0);
-
-	active_should_automask = my_parent->AutoMaskYesRadio->GetValue();
-	active_global_mask_radius = my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
-
-	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();
-	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
-
-	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
-
-	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
-	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
-
-	active_auto_set_percent_used = my_parent->AutoPercentUsedYesRadio->GetValue();
-
 	// set the active refinement package..
 
 	active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
@@ -987,6 +904,40 @@ void AbInitioManager::BeginRefinementCycle()
 	input_refinement->refinement_id = 0;
 	output_refinement = input_refinement;
 	current_output_refinement_id = input_refinement->refinement_id;
+
+
+	number_of_starts_to_run = my_parent->NumberStartsSpinCtrl->GetValue();
+	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
+
+	active_start_res = my_parent->InitialResolutionLimitTextCtrl->ReturnValue();
+	active_end_res = my_parent->FinalResolutionLimitTextCtrl->ReturnValue();
+
+	active_start_percent_used = my_parent->StartPercentUsedTextCtrl->ReturnValue();
+	active_end_percent_used = my_parent->EndPercentUsedTextCtrl->ReturnValue();
+
+	active_inner_mask_radius = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
+	active_always_apply_symmetry = my_parent->AlwaysApplySymmetryYesButton->GetValue();
+
+	my_parent->PlotPanel->Clear();
+	my_parent->PlotPanel->my_notebook->SetSelection(0);
+
+	active_should_automask = my_parent->AutoMaskYesRadio->GetValue();
+	active_global_mask_radius = my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
+	active_global_mask_radius = std::min(active_global_mask_radius, input_refinement->resolution_statistics_box_size * 0.45f * input_refinement->resolution_statistics_pixel_size);
+
+	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();
+	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
+
+	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
+	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
+
+	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
+	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
+
+	active_auto_set_percent_used = my_parent->AutoPercentUsedYesRadio->GetValue();
+
+	if (active_always_apply_symmetry == true && active_refinement_package->symmetry != "C1") apply_symmetry = true;
+	else apply_symmetry = false;
 
 	// work out the percent used
 
@@ -1012,8 +963,8 @@ void AbInitioManager::BeginRefinementCycle()
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = global_random_number_generator.GetUniformRandom() * 25.0f;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = global_random_number_generator.GetUniformRandom() * 25.0f;;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
@@ -1051,7 +1002,7 @@ void AbInitioManager::BeginRefinementCycle()
 	{
 		int symmetry_number = ReturnNumberofAsymmetricUnits(active_refinement_package->symmetry);
 
-		long number_of_asym_units = number_of_particles * symmetry_number;
+		long number_of_asym_units = number_of_particles;
 
 		long wanted_start_number_of_asym_units = 2500 * number_of_classes;
 		long wanted_end_number_of_asym_units = 10000 * number_of_classes;
@@ -1061,22 +1012,33 @@ void AbInitioManager::BeginRefinementCycle()
 		start_percent_used = (float(wanted_start_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
 		end_percent_used = (float(wanted_end_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
 
+		symmetry_start_percent_used = (float(wanted_start_number_of_asym_units) / float(number_of_asym_units  * symmetry_number)) * 100.0;
+		symmetry_end_percent_used = (float(wanted_end_number_of_asym_units) / float(number_of_asym_units  * symmetry_number)) * 100.0;
+
 		if (start_percent_used > 100.0) start_percent_used = 100.0;
 		if (end_percent_used > 100.0) end_percent_used = 100.0;
 
-		if (end_percent_used > 25)
-		{
-			if (number_of_classes > 1) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
-			else my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles", end_percent_used));
-		}
+		if (symmetry_start_percent_used > 100.0f) symmetry_start_percent_used = 100.0f;
+		if (symmetry_end_percent_used > 100.0) symmetry_end_percent_used = 100.0;
+
+		//	if (end_percent_used > 25)
+		//	{
+		//		if (number_of_classes > 1) my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles or reduce the number of classes", end_percent_used));
+		//		else my_parent->WriteWarningText(wxString::Format("Warning : Using max %.2f %% of the images per round, this is quite high, you may wish to increase the number of particles", end_percent_used));
+		//	}
 	}
 	else
 	{
 		start_percent_used = active_start_percent_used;
 		end_percent_used = active_end_percent_used;
+
+		symmetry_start_percent_used = active_start_percent_used;
+		symmetry_end_percent_used = active_start_percent_used;
 	}
 
-	current_percent_used = start_percent_used;
+	if (apply_symmetry == false) current_percent_used = start_percent_used;
+	else current_percent_used = symmetry_start_percent_used;
+
 
 /*
 	startup_percent_used = (float(wanted_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
@@ -1110,9 +1072,23 @@ void AbInitioManager::BeginRefinementCycle()
 
 	my_parent->ExpertToggleButton->Enable(false);
 
+	// are we pre-preparing the stack?
 
-	SetupReconstructionJob();
-	RunReconstructionJob();
+	if (active_end_res > active_refinement_package->contained_particles[0].pixel_size * 3.0f )
+	{
+		SetupPrepareStackJob();
+		RunPrepareStackJob();
+	}
+	else // just start the reconstruction job
+	{
+		stack_has_been_precomputed = false;
+		active_pixel_size = active_refinement_package->contained_particles[0].pixel_size;
+		active_stack_filename = active_refinement_package->stack_filename;
+		stack_bin_factor = 1.0f;
+
+		SetupReconstructionJob();
+		RunReconstructionJob();
+	}
 }
 
 void AbInitioManager::UpdatePlotPanel()
@@ -1193,7 +1169,7 @@ void AbInitioManager::CycleRefinement()
 //			current_high_res_limit = active_start_res + (active_end_res - active_start_res) * powf((float(number_of_rounds_run) / float(number_of_rounds_to_run - 1)), 1.0);
 //			next_high_res_limit = active_start_res + (active_end_res - active_start_res) * powf((float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1)), 1.0);
 			current_high_res_limit = active_start_res + (active_end_res - active_start_res) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-			if (number_of_rounds_run % myroundint(number_of_rounds_to_run / 10.0f) <= 1 && number_of_rounds_run <= number_of_rounds_to_run * 0.8f) current_high_res_limit = active_start_res;
+			if (number_of_rounds_run % myroundint(number_of_rounds_to_run / 10.0f) <= 1 && number_of_rounds_run <= number_of_rounds_to_run * 0.65f) current_high_res_limit = active_start_res;
 //			if (number_of_rounds_run % myroundint(number_of_rounds_to_run / 10.0f) <= 1 && number_of_rounds_run <= number_of_rounds_to_run * 0.8f)
 //				current_high_res_limit = active_start_res + (active_end_res - active_start_res) * (0.3 * float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 			next_high_res_limit = active_start_res + (active_end_res - active_start_res) * (float(number_of_rounds_run + 1) / float(number_of_rounds_to_run - 1));
@@ -1202,17 +1178,26 @@ void AbInitioManager::CycleRefinement()
 			if (next_high_res_limit < 0.0) next_high_res_limit = 0.0;
 
 			//current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-			current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+		//	current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			if (apply_symmetry == true)	current_percent_used = symmetry_start_percent_used + (symmetry_end_percent_used - symmetry_start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			else current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
-
-			if (active_should_automask == true)
+			if (number_of_rounds_run == myroundint(float(number_of_rounds_to_run) * 0.75f) && active_refinement_package->symmetry != "C1" && active_always_apply_symmetry == false && number_of_starts_run == 0) // we need to align to the symmetry
 			{
-				DoMasking();
+				SetupAlignSymmetryJob();
+				RunAlignSymmetryJob();
 			}
 			else
 			{
-				SetupRefinementJob();
-				RunRefinementJob();
+				if (active_should_automask == true)
+				{
+					DoMasking();
+				}
+				else
+				{
+					SetupRefinementJob();
+					RunRefinementJob();
+				}
 			}
 		}
 		else
@@ -1236,7 +1221,9 @@ void AbInitioManager::CycleRefinement()
 				if (next_high_res_limit < 0.0) next_high_res_limit = 0.0;
 
 				//current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * sqrtf(float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-				current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				if (apply_symmetry == true)	current_percent_used = symmetry_start_percent_used + (symmetry_end_percent_used - symmetry_start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				else current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+				//current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
 				if (active_should_automask == true)
 				{
@@ -1254,25 +1241,21 @@ void AbInitioManager::CycleRefinement()
 			{
 				UpdatePlotPanel();
 				number_of_starts_run--;
-				my_parent->TakeCurrent();
 
-				delete input_refinement;
-				delete output_refinement;
-
-				// write to the database..
-
-
+				main_frame->job_controller.KillJob(my_parent->my_job_id);
+				my_parent->Freeze();
 				my_parent->WriteBlueText("All refinement cycles are finished!");
+				my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
 				my_parent->CancelAlignmentButton->Show(false);
 				my_parent->CurrentLineOne->Show(false);
 				my_parent->CurrentLineTwo->Show(false);
 				my_parent->TakeCurrentResultButton->Show(false);
 				my_parent->TakeLastStartResultButton->Show(false);
 				my_parent->FinishButton->Show(true);
-				my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
-				my_parent->ProgressBar->SetValue(100);
 				my_parent->ProgressPanel->Layout();
+				my_parent->Thaw();
 
+				my_parent->TakeCurrent();
 			}
 
 		}
@@ -1320,13 +1303,16 @@ void AbInitioManager::SetupReconstructionJob()
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
-			wxString input_particle_stack 		= active_refinement_package->stack_filename;
+			wxString input_particle_stack 		= active_stack_filename;//active_refinement_package->stack_filename;
 			wxString input_parameter_file 		= written_parameter_files[class_counter];
 			wxString output_reconstruction_1    = "/dev/null";
 			wxString output_reconstruction_2			= "/dev/null";
 			wxString output_reconstruction_filtered		= "/dev/null";
 			wxString output_resolution_statistics		= "/dev/null";
-			wxString my_symmetry						= active_refinement_package->symmetry;
+			wxString my_symmetry;
+
+			if (apply_symmetry == true)	my_symmetry = active_refinement_package->symmetry;
+			else my_symmetry = "C1";
 
 			long	 first_particle						= myroundint(current_particle_counter);
 
@@ -1336,14 +1322,14 @@ void AbInitioManager::SetupReconstructionJob()
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
 
-			float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
+			float 	 pixel_size							= active_pixel_size;//active_refinement_package->contained_particles[0].pixel_size;
 			float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
 			float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= active_inner_mask_radius;
 			float    outer_mask_radius					= active_global_mask_radius;
-			outer_mask_radius = std::min(outer_mask_radius, input_refinement->resolution_statistics_box_size * 0.45f * input_refinement->resolution_statistics_pixel_size);
+
 
 			float    resolution_limit_rec;
 
@@ -1352,7 +1338,11 @@ void AbInitioManager::SetupReconstructionJob()
 			float    score_weight_conversion			= 0;
 
 			float    score_threshold;
-			if (current_percent_used * 3.0f < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
+			float percent_multiplier;
+
+			percent_multiplier = 2.5 + (3.5 - 2.5) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+
+			if (current_percent_used * percent_multiplier < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
 			else score_threshold = current_percent_used / 100.0; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
 
 			// overwrites above
@@ -1395,7 +1385,11 @@ void AbInitioManager::SetupReconstructionJob()
 			float    resolution_limit_ref               = current_high_res_limit;
 			float	 smoothing_factor					= active_smoothing_factor;
 			float    padding							= 1.0f;
-			bool	 normalize_particles				= true;
+			bool	 normalize_particles;
+
+			if (stack_has_been_precomputed == true) normalize_particles = false;
+			else normalize_particles = true;
+
 			bool	 exclude_blank_edges				= false;
 			bool	 split_even_odd						= false;
 			bool     centre_mass                        = true;
@@ -1442,6 +1436,7 @@ void AbInitioManager::SetupReconstructionJob()
 
 	}
 }
+
 
 
 // for now we take the paramter
@@ -1546,8 +1541,26 @@ void AbInitioManager::SetupMerge3dJob()
 
 		bool save_orthogonal_views_image = false;
 		wxString orthogonal_views_filename = "";
+		float weiner_nominator;
 
-		my_parent->my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
+		/*if (start_with_reconstruction == true) weiner_nominator = 100.0f;
+		else
+		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 50.0f;
+		else iner_nominator = 1.0f;
+
+		*/
+		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 200.0f;
+		else
+		if (number_of_starts_run == 0)
+		{
+			weiner_nominator = 100 + (1 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run / 2));
+			if (weiner_nominator < 1.0f) weiner_nominator = 1.0f;
+		}
+		else weiner_nominator = 1.0f;
+
+		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", weiner_nominator));
+
+		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1557,7 +1570,8 @@ void AbInitioManager::SetupMerge3dJob()
 														class_counter + 1,
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
-														number_of_reconstruction_jobs);
+														number_of_reconstruction_jobs,
+														weiner_nominator);
 	}
 }
 
@@ -1646,14 +1660,14 @@ void AbInitioManager::SetupRefinementJob()
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0.0;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = 0.0f;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = 0.0f;
 
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
 		}
 
-		input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
+		if (number_of_rounds_run < 3) input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
 	}
 
 
@@ -1681,7 +1695,7 @@ void AbInitioManager::SetupRefinementJob()
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
 
-			wxString input_particle_images					= active_refinement_package->stack_filename;
+			wxString input_particle_images					= active_stack_filename;//active_refinement_package->stack_filename;
 			wxString input_parameter_file 					= written_parameter_files.Item(class_counter);
 			wxString input_reconstruction					= current_reference_filenames.Item(class_counter);
 			wxString input_reconstruction_statistics 		= written_res_files.Item(class_counter);
@@ -1692,7 +1706,10 @@ void AbInitioManager::SetupRefinementJob()
 			//wxString ouput_shift_file						= "/tmp/output_shift.shft";
 			wxString ouput_shift_file						= "/dev/null";
 
-			wxString my_symmetry							= active_refinement_package->symmetry;
+			wxString my_symmetry;
+			if (apply_symmetry == true) my_symmetry = active_refinement_package->symmetry;
+			else my_symmetry = "C1";
+
 			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
@@ -1704,7 +1721,10 @@ void AbInitioManager::SetupRefinementJob()
 
 
 			float percent_used;
-			percent_used = current_percent_used * 3.0f;
+			float percent_multiplier;
+
+			percent_multiplier = 2.5 + (3.5 - 2.5) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			percent_used = current_percent_used * percent_multiplier;
 			if (percent_used > 100.0f) percent_used = 100.0f;
 			percent_used *= 0.01f;
 
@@ -1719,14 +1739,14 @@ void AbInitioManager::SetupRefinementJob()
 
 			// for now we take the paramters of the first image!!!!
 
-			float 	 pixel_size								= active_refinement_package->contained_particles[0].pixel_size;
+			float 	 pixel_size								= active_pixel_size;//active_refinement_package->contained_particles[0].pixel_size;
 			float    voltage_kV								= active_refinement_package->contained_particles[0].microscope_voltage;
 			float 	 spherical_aberration_mm				= active_refinement_package->contained_particles[0].spherical_aberration;
 			float    amplitude_contrast						= active_refinement_package->contained_particles[0].amplitude_contrast;
 			float	 molecular_mass_kDa						= active_refinement_package->estimated_particle_weight_in_kda;
 
 			float    mask_radius							= active_global_mask_radius;
-			mask_radius = std::min(mask_radius, input_refinement->resolution_statistics_box_size * 0.45f * input_refinement->resolution_statistics_pixel_size);
+
 			float    inner_mask_radius						= active_inner_mask_radius;
 
 			float low_resolution_limit = active_refinement_package->estimated_particle_size_in_angstroms;
@@ -1738,11 +1758,17 @@ void AbInitioManager::SetupRefinementJob()
 //			float    mask_radius_search						= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
 			float    mask_radius_search						= mask_radius;
 			float	 high_resolution_limit_search			= current_high_res_limit;
-			float	 angular_step							= CalculateAngularStep(current_high_res_limit, active_refinement_package->estimated_particle_size_in_angstroms * 0.5);
+			float	 angular_step							= CalculateAngularStep(current_high_res_limit, 75.0f);
+			//my_parent->WriteInfoText(wxString::Format("angular sampling = %f degrees", angular_step));
 
 		//	if (angular_step < 30.0) angular_step = 30.0;
 
-			int		 best_parameters_to_keep				= 20;
+			int		 best_parameters_to_keep;
+
+			//if (number_of_rounds_run < 5) best_parameters_to_keep = 20;
+			//else best_parameters_to_keep = -10000;
+			best_parameters_to_keep = -10000;
+
 			float	 max_search_x							= active_search_range_x;
 			float	 max_search_y							= active_search_range_y;
 			float    mask_center_2d_x						= 0.0;
@@ -1763,12 +1789,23 @@ void AbInitioManager::SetupRefinementJob()
 			bool refine_phi									= true;
 			bool refine_x_shift								= true;
 			bool refine_y_shift								= true;
+
+		/*	if (number_of_rounds_run == 0 && number_of_starts_run == 0)
+			{
+				refine_x_shift = false;
+				refine_y_shift = false;
+			}*/
+
 			bool calculate_matching_projections				= false;
 			bool apply_2d_masking							= false;
 			bool ctf_refinement								= false;
 			bool invert_contrast							= active_refinement_package->stack_has_white_protein;
 
-			bool normalize_particles = true;
+			bool normalize_particles;
+
+			if (stack_has_been_precomputed == true) normalize_particles = false;
+			else normalize_particles = true;
+
 			bool exclude_blank_edges = false;
 			bool normalize_input_3d;
 
@@ -1902,6 +1939,291 @@ void AbInitioManager::RunRefinementJob()
 
 	my_parent->ProgressBar->Pulse();
 }
+
+
+
+void AbInitioManager::SetupPrepareStackJob()
+{
+	int class_counter;
+	int particles_per_job;
+	int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+	int	number_of_refinement_jobs = number_of_refinement_processes - 1;
+
+	int	number_of_particles = active_refinement_package->contained_particles.GetCount();
+	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1;
+	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
+
+	my_parent->my_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
+
+	float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
+	float current_particle_counter = 1.0f;
+
+	for (int counter = 0; counter < number_of_refinement_jobs; counter++)
+	{
+
+		wxString input_particle_images 				= active_refinement_package->stack_filename;
+		wxString output_particle_images 			= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
+		float pixel_size				          	= active_refinement_package->contained_particles[0].pixel_size;;
+		float  mask_radius                          = active_global_mask_radius;
+		bool resample_box							= true;
+		int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
+		bool process_a_subset						= true;
+		int	 first_particle							= myroundint(current_particle_counter);
+
+		current_particle_counter += particles_per_job;
+		if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+
+		int	 last_particle							= myroundint(current_particle_counter);
+		current_particle_counter++;
+
+		my_parent->my_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
+													output_particle_images.ToUTF8().data(),
+													pixel_size,
+													mask_radius,
+													resample_box,
+													wanted_output_box_size,
+													process_a_subset,
+													first_particle,
+													last_particle);
+
+	}
+
+}
+
+void AbInitioManager::RunPrepareStackJob()
+{
+	running_job_type = PREPARE_STACK;
+	number_of_received_particle_results = 0;
+
+	// launch a controller
+
+	current_job_starttime = time(NULL);
+	time_of_last_update = current_job_starttime;
+
+	my_parent->WriteBlueText("Preparing Input Stack...");
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
+	my_parent->my_job_id = current_job_id;
+
+	if (current_job_id != -1)
+	{
+		long number_of_refinement_processes;
+		if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
+		else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+
+		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
+		else
+		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
+		else
+		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
+		else
+		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
+		else
+		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
+		else
+		my_parent->length_of_process_number = 1;
+
+		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
+		else
+
+		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
+		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+		my_parent->Layout();
+		my_parent->running_job = true;
+		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+	}
+
+	my_parent->ProgressBar->Pulse();
+}
+
+void AbInitioManager::SetupAlignSymmetryJob()
+{
+
+	int class_counter;
+	float start_angle = -90.0f;
+	float end_angle = 90.f;
+	float wanted_intial_angular_step = 4.0f;
+
+	float current_start_angle;
+	float angle_step;
+
+	int number_of_refinement_processes= active_refinement_run_profile.ReturnTotalJobs() ;
+	int	number_of_refinement_jobs_per_class = (number_of_refinement_processes - 1) / active_refinement_package->number_of_classes;
+
+	if (number_of_refinement_jobs_per_class < 1)
+	{
+		number_of_refinement_jobs_per_class = 1;
+		angle_step = end_angle - start_angle;
+
+	}
+	else
+	{
+		angle_step = (end_angle - start_angle) / float(number_of_refinement_jobs_per_class - 1);
+	}
+
+	// i seem to be calculating it kind of wrong above, directy count it below (this is nasty, and shouldn't be necessary, but is quick)
+
+	number_of_refinement_jobs_per_class = 0;
+	for (current_start_angle = start_angle; current_start_angle <= end_angle; current_start_angle += angle_step )
+	{
+		number_of_refinement_jobs_per_class++;
+	}
+
+	number_of_expected_results = 0;
+
+	align_sym_best_correlations.Clear();
+	align_sym_best_x_rots.Clear();
+	align_sym_best_y_rots.Clear();
+	align_sym_best_z_rots.Clear();
+	align_sym_best_x_shifts.Clear();
+	align_sym_best_y_shifts.Clear();
+	align_sym_best_z_shifts.Clear();
+
+	//wxPrintf("reset job package with %i\n", number_of_refinement_jobs_per_class * active_refinement_package->number_of_classes);
+
+	my_parent->my_job_package.Reset(active_refinement_run_profile, "align_symmetry", number_of_refinement_jobs_per_class * active_refinement_package->number_of_classes);
+
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		align_sym_best_correlations.Add(-FLT_MAX);
+		align_sym_best_x_rots.Add(0.0f);
+		align_sym_best_y_rots.Add(0.0f);
+		align_sym_best_z_rots.Add(0.0f);
+		align_sym_best_x_shifts.Add(0.0f);
+		align_sym_best_y_shifts.Add(0.0f);
+		align_sym_best_z_shifts.Add(0.0f);
+
+		for (current_start_angle = start_angle; current_start_angle <= end_angle; current_start_angle += angle_step )
+		{
+			wxString input_volume_file = current_reference_filenames.Item(class_counter);
+			wxString wanted_symmetry = active_refinement_package->symmetry;
+			wxString output_volume_file_no_sym = "";
+			wxString output_volume_file_with_sym = "";
+			float start_angle_for_search = current_start_angle;
+			float end_angle_for_search = current_start_angle + angle_step;
+			float initial_angular_step = wanted_intial_angular_step;
+
+			my_parent->my_job_package.AddJob("ttttfffi",	input_volume_file.ToUTF8().data(),
+															wanted_symmetry.ToUTF8().data(),
+															output_volume_file_no_sym.ToUTF8().data(),
+															output_volume_file_with_sym.ToUTF8().data(),
+															start_angle_for_search,
+															end_angle_for_search,
+															initial_angular_step,
+															class_counter);
+
+			// this is nasty, just copy and paste from align symmetry to count how many results will be expected
+
+			float current_angular_step = initial_angular_step * 5.0f;
+			float best_x_this_round = 0.0f;
+			float best_y_this_round = 0.0f;
+			float best_z_this_round = 0.0f;
+
+			float low_search_limit_x = start_angle_for_search;
+			float high_search_limit_x = end_angle_for_search;
+
+			float low_search_limit_y = -90.0f;
+			float high_search_limit_y = 90.0f;
+
+			float low_search_limit_z = -90.0f;
+			float high_search_limit_z = 90.0f;
+
+			float current_z_angle;
+			float current_y_angle;
+			float current_x_angle;
+
+			while (current_angular_step > 0.1f)
+			{
+				current_angular_step /= 5.0f;
+				if (current_angular_step < 0.1f) current_angular_step = 0.1f;
+
+				for (current_z_angle = low_search_limit_z; current_z_angle <= high_search_limit_z; current_z_angle += current_angular_step)
+				{
+					for(current_y_angle = low_search_limit_y; current_y_angle <= high_search_limit_y; current_y_angle += current_angular_step)
+					{
+						for (current_x_angle = low_search_limit_x; current_x_angle <= high_search_limit_x; current_x_angle += current_angular_step)
+						{
+							number_of_expected_results++;
+						}
+					}
+				}
+
+				low_search_limit_x = best_x_this_round - current_angular_step;
+				high_search_limit_x = best_x_this_round + current_angular_step;
+
+				low_search_limit_y = best_y_this_round - current_angular_step;
+				high_search_limit_y = best_y_this_round + current_angular_step;
+
+				low_search_limit_z = best_z_this_round - current_angular_step;
+				high_search_limit_z = best_z_this_round + current_angular_step;
+			}
+		}
+	}
+}
+
+void AbInitioManager::RunAlignSymmetryJob()
+{
+	running_job_type = ALIGN_SYMMETRY;
+	number_of_received_particle_results = 0;
+
+	// launch a controller
+
+	current_job_starttime = time(NULL);
+	time_of_last_update = current_job_starttime;
+
+	if (active_refinement_package->number_of_classes > 1) my_parent->WriteBlueText("Aligning 3D's to symmetry axes...");
+	else my_parent->WriteBlueText("Aligning 3D to symmetry axes...");
+
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
+	my_parent->my_job_id = current_job_id;
+
+	if (current_job_id != -1)
+	{
+		long number_of_refinement_processes;
+		if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
+		else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+
+		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
+		else
+		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
+		else
+		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
+		else
+		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
+		else
+		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
+		else
+		my_parent->length_of_process_number = 1;
+
+		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
+		else
+		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
+		else
+
+		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
+		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+		my_parent->Layout();
+		my_parent->running_job = true;
+		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+	}
+
+	my_parent->ProgressBar->Pulse();
+}
+
+
 
 
 
@@ -2063,6 +2385,75 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.AddPoint(current_resolution, rec_ssnr);
 		}
 	}
+	else
+	if (running_job_type == PREPARE_STACK)
+	{
+		//wxPrintf("got result\n");
+		number_of_received_particle_results++;
+		long current_time = time(NULL);
+
+		if (number_of_received_particle_results == 1)
+		{
+			current_job_starttime = current_time;
+			time_of_last_update = 0;
+		}
+		else
+		if (current_time != time_of_last_update)
+		{
+			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles) * 100.0;
+			time_of_last_update = current_time;
+			if (current_percentage > 100) current_percentage = 100;
+			my_parent->ProgressBar->SetValue(current_percentage);
+			long job_time = current_time - current_job_starttime;
+			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
+			long seconds_remaining = float((input_refinement->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
+
+			TimeRemaining time_remaining;
+
+			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
+			else time_remaining.hours = 0;
+
+			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
+			else time_remaining.minutes = 0;
+
+			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+		}
+	}
+	else
+	if (running_job_type == ALIGN_SYMMETRY)
+	{
+		number_of_received_particle_results++;
+		long current_time = time(NULL);
+
+		if (number_of_received_particle_results == 1)
+		{
+			current_job_starttime = current_time;
+			time_of_last_update = 0;
+		}
+		else
+		if (current_time != time_of_last_update)
+		{
+			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
+			time_of_last_update = current_time;
+			if (current_percentage > 100) current_percentage = 100;
+			my_parent->ProgressBar->SetValue(current_percentage);
+			long job_time = current_time - current_job_starttime;
+			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
+			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
+
+			TimeRemaining time_remaining;
+
+			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
+			else time_remaining.hours = 0;
+
+			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
+			else time_remaining.minutes = 0;
+
+			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+		}
+	}
 }
 
 
@@ -2102,9 +2493,9 @@ void AbInitioManager::ProcessAllJobsFinished()
 
 		OrthDrawerThread *result_thread;
 
-		if (start_with_reconstruction == true)	result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, "Random Angles");
+		if (start_with_reconstruction == true)	result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, "Random Start", stack_bin_factor, active_global_mask_radius / active_pixel_size);
 		else
-		result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i,%i", number_of_starts_run, number_of_rounds_run));
+		result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i,%i", number_of_starts_run, number_of_rounds_run), stack_bin_factor, active_global_mask_radius / active_pixel_size);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2128,6 +2519,68 @@ void AbInitioManager::ProcessAllJobsFinished()
 		}
 
 		CycleRefinement();
+	}
+	else
+	if (running_job_type == PREPARE_STACK)
+	{
+		// get the box size of the stack so we can set the pixel size etc..
+
+		/*active_pixel_size = event.GetPayload<float>();
+		preparing_stack = false;*/
+		wxString new_stack_file = main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
+		MRCFile check_file(new_stack_file.ToStdString(), false, true);
+
+		stack_bin_factor = float(active_refinement_package->stack_box_size) / float(check_file.ReturnXSize());
+		active_pixel_size = active_refinement_package->contained_particles[0].pixel_size * stack_bin_factor;
+		active_stack_filename = new_stack_file;
+		stack_has_been_precomputed = true;
+
+		input_refinement->resolution_statistics_pixel_size = active_pixel_size;
+		input_refinement->resolution_statistics_box_size = check_file.ReturnXSize();
+
+		SetupReconstructionJob();
+		RunReconstructionJob();
+	}
+	else
+	if (running_job_type == ALIGN_SYMMETRY)
+	{
+		// we have the alignment, we now need to apply it - launch a seperate thread.
+
+		wxArrayString symmetry_filenames;
+		wxFileName current_ref_filename;
+		wxString current_symmetry_filename;
+
+		for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
+		{
+			current_ref_filename = current_reference_filenames.Item(class_counter);
+			current_ref_filename.ClearExt();
+			current_symmetry_filename = current_ref_filename.GetFullPath();
+			current_symmetry_filename += "_sym.mrc";
+
+			symmetry_filenames.Add(current_symmetry_filename);
+		}
+
+		//my_parent->TimeRemainingText->SetLabel("Time Remaining : 000h:00m:01s");
+		my_parent->ProgressBar->SetValue(100);
+
+
+		ImposeAlignmentAndSymmetryThread *symmetry_thread = new ImposeAlignmentAndSymmetryThread(my_parent, current_reference_filenames, symmetry_filenames, align_sym_best_x_rots, align_sym_best_y_rots, align_sym_best_z_rots, align_sym_best_x_shifts, align_sym_best_y_shifts, align_sym_best_z_shifts, active_refinement_package->symmetry);
+
+		if ( symmetry_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot start symmetry imposition thread, things are about to go wrong!");
+			delete symmetry_thread;
+		}
+		else
+		{
+			current_reference_filenames = symmetry_filenames;
+			// turn on symmetry
+			apply_symmetry = true;
+			// recalculate percent used.
+			current_percent_used = symmetry_start_percent_used + (symmetry_end_percent_used - symmetry_start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+
+			return; // just return, we will startup again when the thread finishes.
+		}
 	}
 }
 
@@ -2200,4 +2653,120 @@ void AbInitioManager::DoMasking()
 	}
 }
 
+void AbInitio3DPanel::OnImposeSymmetryThreadComplete(wxThreadEvent& event)
+{
+	if (my_abinitio_manager.active_should_automask == true)
+	{
+		my_abinitio_manager.DoMasking();
+	}
+	else
+	{
+		my_abinitio_manager.SetupRefinementJob();
+		my_abinitio_manager.RunRefinementJob();
+	}
 
+}
+
+void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
+{
+	// in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..
+
+	Image *new_image = my_event.GetImage();
+	number_of_resampled_volumes_recieved++;
+	wxString current_output_filename;
+
+	if (new_image != NULL)
+	{
+		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, my_event.GetInt());
+		new_image->QuickAndDirtyWriteSlices(current_output_filename.ToStdString(), 1, new_image->logical_z_dimension);
+	}
+
+	if (number_of_resampled_volumes_recieved == my_abinitio_manager.input_refinement->number_of_classes)
+	{
+		VolumeAsset temp_asset;
+		main_frame->current_project.database.Begin();
+		main_frame->current_project.database.BeginVolumeAssetInsert();
+
+		wxArrayLong volume_asset_ids;
+
+		for (int class_counter = 1; class_counter <= my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
+		{
+			temp_asset.reconstruction_job_id = -1;
+			temp_asset.pixel_size = my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size;
+			temp_asset.x_size = new_image->logical_x_dimension;
+			temp_asset.y_size = new_image->logical_y_dimension;
+			temp_asset.z_size = new_image->logical_z_dimension;
+			temp_asset.asset_id = volume_asset_panel->current_asset_number;
+			volume_asset_ids.Add(temp_asset.asset_id);
+			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, my_event.GetInt());
+
+			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter);
+			temp_asset.filename = current_output_filename;
+			volume_asset_panel->AddAsset(&temp_asset);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.EndVolumeAssetInsert();
+		}
+
+		// now add the details of the startup job..
+
+		main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue(), FinalResolutionLimitTextCtrl->ReturnValue(), AutoMaskYesRadio->GetValue(), AutoPercentUsedYesRadio->GetValue(), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.active_global_mask_radius,  ApplyBlurringYesRadioButton->GetValue(), SmoothingFactorTextCtrl->ReturnValue(), volume_asset_ids);
+		main_frame->current_project.database.Commit();
+
+		FinishButton->Enable(true);
+		main_frame->DirtyVolumes();
+	}
+
+	if (new_image != NULL) delete new_image;
+
+}
+
+wxThread::ExitCode ResampleVolumeThread::Entry()
+{
+	ImageFile input_file(input_volume.ToStdString());
+	Image *resampled_volume = new Image;
+
+	ReturnProcessedImageEvent *finished_event = new ReturnProcessedImageEvent(wxEVT_RESAMPLE_VOLUME_EVENT); // for sending back the panel
+
+	resampled_volume->ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+	resampled_volume->ForwardFFT();
+	resampled_volume->Resize(box_size, box_size, box_size);
+	resampled_volume->BackwardFFT();
+
+	finished_event->SetImage(resampled_volume);
+	finished_event->SetInt(class_number);
+
+	wxQueueEvent(parent_window, finished_event);
+}
+
+wxThread::ExitCode ImposeAlignmentAndSymmetryThread::Entry()
+{
+	Image input_volume;
+
+	ImageFile input_file;
+	MRCFile output_file;
+
+	RotationMatrix current_matrix;
+	RotationMatrix inverse_matrix;
+
+	for (int class_counter = 0; class_counter < input_volumes.GetCount(); class_counter++)
+	{
+		input_file.OpenFile(input_volumes.Item(class_counter).ToStdString(), false);
+		input_volume.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+		input_file.CloseFile();
+
+		current_matrix.SetToRotation(x_rots[class_counter], y_rots[class_counter], z_rots[class_counter]);
+		inverse_matrix = current_matrix.ReturnTransposed();
+
+		//wxPrintf("Imposing %f, %f, %f - %f, %f, %f\n", x_rots[class_counter], y_rots[class_counter], z_rots[class_counter], x_shifts[class_counter], y_shifts[class_counter], z_shifts[class_counter]);
+		input_volume.Rotate3DThenShiftThenApplySymmetry(inverse_matrix, x_shifts[class_counter], y_shifts[class_counter], z_shifts[class_counter], input_volume.logical_x_dimension / 2.0f, symmetry);
+
+		output_file.OpenFile(output_volumes.Item(class_counter).ToStdString(), true);
+		input_volume.WriteSlices(&output_file, 1, input_volume.logical_z_dimension);
+		output_file.CloseFile();
+	}
+
+	// send event to say we are done..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_IMPOSESYMMETRY_DONE);
+	wxQueueEvent(parent_window, my_thread_event);
+}

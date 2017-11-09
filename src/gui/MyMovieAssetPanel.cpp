@@ -20,7 +20,7 @@ MyAssetParentPanel( parent )
 	Label9Title->SetLabel("Cs : ");
 
 	AssetTypeText->SetLabel("Movies");
-
+	NewFromParentButton->Show(false);
 	all_groups_list->groups[0].SetName("All Movies");
 	all_assets_list = new MovieAssetList;
 	FillGroupList();

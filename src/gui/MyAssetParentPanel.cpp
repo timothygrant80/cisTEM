@@ -963,6 +963,8 @@ void MyAssetParentPanel::EnableNewFromParentButton()
 	//NewFromParentButton->Enable(false);
 }
 
+
+
 void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	if (main_frame->current_project.is_open == false)

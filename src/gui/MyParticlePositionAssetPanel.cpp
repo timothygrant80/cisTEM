@@ -25,6 +25,9 @@ MyAssetParentPanel( parent )
 
 	UpdateInfo();
 
+	NewFromParentButton->SetLabel("New from\nimage group");
+	EnableNewFromParentButton();
+
 
 	AssetTypeText->SetLabel("Particle Positions");
 
@@ -33,6 +36,12 @@ MyAssetParentPanel( parent )
 	FillGroupList();
 	FillContentsList();
 }
+
+void MyParticlePositionAssetPanel::EnableNewFromParentButton()
+{
+	NewFromParentButton->Enable(image_asset_panel->ReturnNumberOfGroups() > 1);
+}
+
 
 MyParticlePositionAssetPanel::~MyParticlePositionAssetPanel()
 {
@@ -325,6 +334,78 @@ wxString MyParticlePositionAssetPanel::ReturnItemText(long item, long column) co
 	}
 
 }
+
+
+void MyParticlePositionAssetPanel::NewFromParentClick( wxCommandEvent & event )
+{
+	MyDebugAssertTrue(image_asset_panel->ReturnNumberOfGroups() > 1,"No image groups to work from. Button should have been disabled");
+
+	// Ask the user which movie group they want to "copy"
+	// We can only allow them to copy a group where each member has a corresponding image (output by unblur, with the corresponding parent_id)
+	wxArrayString my_choices;
+	wxArrayInt choice_group_numbers;
+
+	for (long group_counter = 1; group_counter < image_asset_panel->ReturnNumberOfGroups(); group_counter ++ )
+	{
+		my_choices.Add(image_asset_panel->ReturnGroupName(group_counter));
+	}
+
+	// Generate a dialog for the user
+	wxSingleChoiceDialog	*group_choice = new wxSingleChoiceDialog(this, "Make a group from which image group?", "Select Group", my_choices);
+
+	// Assuming the user chose a group, generate a new image group
+	int selected_group_number;
+
+	if (group_choice->ShowModal() ==  wxID_OK)
+	{
+		selected_group_number = group_choice->GetSelection() + 1;
+
+		main_frame->current_project.database.Begin();
+		wxString new_group_name = image_asset_panel->ReturnGroupName(selected_group_number);
+		current_group_number++;
+		all_groups_list->AddGroup(new_group_name);
+		all_groups_list->groups[all_groups_list->number_of_groups-1].id  = current_group_number;
+		AddGroupToDatabase(current_group_number, new_group_name, current_group_number);
+
+		// ProgressBar..
+
+		wxArrayLong particle_positions_to_add;
+
+		long current_image_asset_id;
+
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Creating group",	"Adding to group...", image_asset_panel->ReturnGroupSize(selected_group_number), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_REMAINING_TIME);
+
+		for (long image_counter = 0; image_counter < image_asset_panel->ReturnGroupSize(selected_group_number); image_counter ++ )
+		{
+			current_image_asset_id = image_asset_panel->ReturnAssetID(image_asset_panel->ReturnGroupMember(selected_group_number, image_counter));
+			for (long particle_counter = 0; particle_counter < ReturnNumberOfAssets(); particle_counter++)
+			{
+				if (ReturnParentAssetID(particle_counter) == current_image_asset_id)
+				{
+					all_groups_list->groups[all_groups_list->number_of_groups-1].AddMember(particle_counter);
+					InsertGroupMemberToDatabase(all_groups_list->number_of_groups-1, all_groups_list->groups[all_groups_list->number_of_groups-1].number_of_members - 1);
+				}
+
+
+			}
+
+			my_progress_dialog->Update(image_counter + 1);
+		}
+
+		my_progress_dialog->Destroy();
+		main_frame->current_project.database.Commit();
+
+		FillGroupList();
+		FillContentsList();
+		DirtyGroups();
+		main_frame->RecalculateAssetBrowser();
+
+	}
+
+	group_choice->Destroy();
+
+}
+
 
 void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {

@@ -189,7 +189,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map niko_test 
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry niko_test 
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -415,6 +415,16 @@ make_size_map_SOURCES = programs/make_size_map/make_size_map.cpp
 make_size_map_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_size_map_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 make_size_map_LDADD = libcore.a $(WX_LIBS_BASE)
+
+align_symmetry_SOURCES = programs/align_symmetry/align_symmetry.cpp
+align_symmetry_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+align_symmetry_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+align_symmetry_LDADD = libcore.a $(WX_LIBS_BASE)
+
+prepare_stack_SOURCES = programs/prepare_stack/prepare_stack.cpp
+prepare_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_LDADD = libcore.a $(WX_LIBS_BASE)
 
 niko_test_SOURCES = programs/niko_test/niko_test.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)

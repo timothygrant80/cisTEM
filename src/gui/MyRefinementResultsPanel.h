@@ -4,7 +4,7 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 
 	public:
 
-	bool is_dirty;
+	bool refinement_package_is_dirty;
 	bool input_params_are_dirty;
 
 	long refinement_id_of_buffered_refinement;

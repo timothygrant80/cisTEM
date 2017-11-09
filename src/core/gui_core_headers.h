@@ -116,3 +116,5 @@
 #define RECONSTRUCTION 1
 #define MERGE 2
 #define STARTUP 3
+#define PREPARE_STACK 4
+#define ALIGN_SYMMETRY 5

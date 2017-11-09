@@ -155,6 +155,19 @@ void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	WriteToSocket(socket, buffer.data(), length_of_string);
 }
 
+// This is here as when the binned resolution is too close to the refinement resolution or reconstruction
+// resolution (could be 1 or other or both), then it seems to cause some problems - e.g. in Proteasome.
+// I'm going to add a 1.3 factor here, but this can be changed.
+//
+// My plan is to use this function all the places it is calculated in the code, so that changing it here will change
+// it everywhere.
+
+int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor)
+{
+	//return (original_box_size / bin_factor) * 1.3f;
+	return myroundint(float(original_box_size) / bin_factor);
+}
+
 wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 {
 

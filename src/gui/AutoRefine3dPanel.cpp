@@ -100,7 +100,7 @@ void AutoRefine3DPanel::SetInfo()
 
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Manual Refine panel). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options)."));
+	InfoText->WriteText(wxT("This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Manual Refine panel). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options).  If the starting reference contains errors, the refinement may finish before converging to the correct answer.  This can often be solved by running another auto-refinement beginning with the result of the previous refinement.  In some cases multiple rounds may be needed to reach full convergence."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -180,7 +180,7 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Global Mask Radius (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("The radius describing the area within the boxed-out particles that contains the particles. This radius us usually larger than the particle radius to account for particles that are not perfectly centered. The best value will depend on the way the particles were picked."));
+	InfoText->WriteText(wxT("The radius describing the area within the boxed-out particles that contains the particles. This radius is usually larger than the particle radius to account for particles that are not perfectly centered. The best value will depend on the way the particles were picked."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();
@@ -303,8 +303,8 @@ void AutoRefine3DPanel::SetDefaults()
 
 		calculated_high_resolution_cutoff = 30.0;
 
-		local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageSelectPanel->GetSelection()).estimated_particle_size_in_angstroms * 0.5;
-		global_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageSelectPanel->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
+		local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageSelectPanel->GetSelection()).estimated_particle_size_in_angstroms * 0.65;
+		global_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageSelectPanel->GetSelection()).estimated_particle_size_in_angstroms * 0.8;
 
 		search_range = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageSelectPanel->GetSelection()).estimated_particle_size_in_angstroms * 0.15;
 
@@ -1133,8 +1133,9 @@ void AutoRefinementManager::SetupMerge3dJob()
 
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+		float weiner_nominator = 1.0f;
 
-		my_parent->my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1144,7 +1145,7 @@ void AutoRefinementManager::SetupMerge3dJob()
 														class_counter + 1,
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
-														number_of_reconstruction_jobs);
+														number_of_reconstruction_jobs, weiner_nominator);
 	}
 }
 
@@ -2015,7 +2016,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		// launch drawer thread..
 
 		main_frame->ClearAutoRefine3DScratch();
-		OrthDrawerThread *result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1));
+		OrthDrawerThread *result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2125,11 +2126,12 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, main_frame->current_project.database.ReturnSingleLongFromSelectCommand(wxString::Format("SELECT MAX(REFINEMENT_NUMBER) FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", current_refinement_package_asset_id)) + 1,  output_refinement->refinement_id));
 
 		main_frame->current_project.database.Commit();
-		volume_asset_panel->is_dirty = true;
-		refinement_package_asset_panel->is_dirty = true;
+		main_frame->DirtyVolumes();
+		main_frame->DirtyRefinements();
+		///refinement_package_asset_panel->is_dirty = true;
 
 	//		my_parent->SetDefaults();
-		refinement_results_panel->is_dirty = true;
+		//refinement_results_panel->is_dirty = true;
 
 
 

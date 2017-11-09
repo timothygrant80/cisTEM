@@ -36,6 +36,8 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor);
+
 
 float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float major_axis_scale, float minor_axis_scale);
 

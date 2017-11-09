@@ -33,11 +33,9 @@ void Sharpen3DPanel::SetInfo()
 {
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-//	#include "icons/niko_picture1.cpp"
-//	wxBitmap niko_picture1_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture1);
 
-	//#include "icons/niko_picture2.cpp"
-	//wxBitmap niko_picture2_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture2);
+	#include "icons/vsv_sharpening.cpp"
+	wxBitmap vsv_sharpening_bmp = wxBITMAP_PNG_FROM_DATA(vsv_sharpening);
 	delete suppress_png_warnings;
 
 	InfoText->GetCaret()->Hide();
@@ -62,7 +60,13 @@ void Sharpen3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("This panel provides the user with a few parameters to sharpen a map. In the simplest case, a map can be sharpened by providing a negative B-factor. However, because B-factor sharpening involves multiplication with an exponential function, the noise at high resolution can easily be over-amplified. A more robust method to restore the amplitudes at high resolution that also works if the dampening cannot be described with a simple B-factor can be achieved by flattening (i.e. whitening) the amplitude spectrum at high resolution. The panel provides a flexible way to combine B-factor sharpening and spectral flattening to optimize the visibility of high-resolution details in the final map. Optionally, the resolution statistics can be used to apply figure-of-merit (FOM) weighting (Rosenthal & Henderson, 2003) and a 3D mask can be supplied to remove background noise from the map for more accurate sharpening. Finally, the handedness of the map can be inverted if it is wrong and the real-space dampening of densities near the edge of the reconstruction box due to trilinear interpolation used during reconstruction can be corrected."));
+	InfoText->WriteText(wxT("This panel provides the user with a few parameters to sharpen a map. In the simplest case, a map can be sharpened by providing a negative B-factor. However, because B-factor sharpening involves multiplication with an exponential function, the noise at high resolution can easily be over-amplified. A more robust method to restore the amplitudes at high resolution that also works if the dampening cannot be described with a simple B-factor can be achieved by flattening (i.e. whitening) the amplitude spectrum at high resolution. The panel provides a flexible way to combine B-factor sharpening and spectral flattening to optimize the visibility of high-resolution details in the final map. Optionally, the resolution statistics can be used to apply figure-of-merit (FOM) weighting (Rosenthal & Henderson, 2003) and a 3D mask can be supplied to remove background noise from the map for more accurate sharpening. Finally, the handedness of the map can be inverted if it is wrong and the real-space dampening of densities near the edge of the reconstruction box due to trilinear interpolation used during reconstruction can be corrected. The following figure shows an example of 3-Å map of VSV polymerase (Liang et al. 2015) before and after sharpening"));
+	InfoText->Newline();
+	InfoText->Newline();
+	InfoText->EndAlignment();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	InfoText->WriteImage(vsv_sharpening_bmp);
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -172,6 +176,23 @@ void Sharpen3DPanel::SetInfo()
 	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Liang, B., Li, Z., Jenni, S., Rahmeh, A. A., Morin, B. M., Grant, T., Grigorieff, N., Harrison, S. C., Whelan, S. P.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2015. Structure of the L protein of vesicular stomatitis virus from electron cryomicroscopy. Cell 162, 314-327."));
+	InfoText->BeginURL("http://dx.doi.org/10.1016/j.cell.2015.06.018");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/j.cell.2015.06.018"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->EndAlignment();
+	InfoText->Newline();
+	InfoText->Newline();
+
 
 }
 
@@ -397,28 +418,45 @@ void Sharpen3DPanel::OnVolumeComboBox( wxCommandEvent& event )
 			long refinement_id = main_frame->current_project.database.ReturnRefinementIDGivenReconstructionID(selected_volume->reconstruction_job_id);
 			ShortRefinementInfo *short_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_id);
 
-			if (short_info->reconstructed_volume_asset_ids[found_class - 1] == selected_volume->asset_id)
+			if (short_info != NULL)
 			{
-				// this all checks out.. get the refinement
-
-				if (active_refinement == NULL) active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
-				else
+				if (short_info->reconstructed_volume_asset_ids[found_class - 1] == selected_volume->asset_id)
 				{
-					if (active_refinement->refinement_id != refinement_id) // get the new one
+					// this all checks out.. get the refinement
+					if (active_refinement == NULL) active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
+					else
 					{
-						delete active_refinement;
-						active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
-
+						if (active_refinement->refinement_id != refinement_id) // get the new one
+						{
+							delete active_refinement;
+							active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
+						}
 					}
 				}
+				else // they don't match, so the 3D for this refinement must have been regenerated, and we have no details
+				{
+					if (active_refinement != NULL)
+					{
+						delete active_refinement;
+						active_refinement = NULL;
+					}
+
+					inner_mask_radius = 0.0f;
+					outer_mask_radius = selected_volume->pixel_size * float(selected_volume->x_size) * 0.5;
+				}
+
 			}
-			else // they don't match, so the 3D for this refinement must have been regenerated, and we have no details
+			else
 			{
 				if (active_refinement != NULL)
 				{
 					delete active_refinement;
 					active_refinement = NULL;
 				}
+
+				inner_mask_radius = 0.0f;
+				outer_mask_radius = selected_volume->pixel_size * float(selected_volume->x_size) * 0.5;
+
 			}
 		}
 		else // we don't have the refinement

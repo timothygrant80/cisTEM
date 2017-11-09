@@ -135,7 +135,7 @@ AssetPickerComboPanelParent::AssetPickerComboPanelParent( wxWindow* parent, wxWi
 	bSizer436 = new wxBoxSizer( wxHORIZONTAL );
 	
 	AssetComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
-	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL, 0 );
+	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL|wxEXPAND, 0 );
 	
 	wxBoxSizer* bSizer494;
 	bSizer494 = new wxBoxSizer( wxVERTICAL );
@@ -238,7 +238,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	m_staticText264->Wrap( -1 );
 	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 1000, 40 );
+	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 5, 100, 40 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
 	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
@@ -403,6 +403,22 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	EndPercentUsedTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("9.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( EndPercentUsedTextCtrl, 0, wxALL, 5 );
+	
+	AlwaysApplySymmetryStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Always Apply Symmetry?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AlwaysApplySymmetryStaticText->Wrap( -1 );
+	fgSizer1->Add( AlwaysApplySymmetryStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26611;
+	bSizer26611 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AlwaysApplySymmetryYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26611->Add( AlwaysApplySymmetryYesButton, 0, wxALL, 5 );
+	
+	AlwaysApplySymmetryNoButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26611->Add( AlwaysApplySymmetryNoButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26611, 1, wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
 	
 	m_staticText532 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("3D Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText532->Wrap( -1 );

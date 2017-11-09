@@ -284,7 +284,7 @@ void MyMainFrame::DirtyRefinementPackages()
 	classification_panel->refinement_package_combo_is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
 	auto_refine_3d_panel->refinement_package_combo_is_dirty = true;
-	refinement_results_panel->is_dirty=true;
+	refinement_results_panel->refinement_package_is_dirty = true;
 	refine2d_results_panel->refinement_package_combo_is_dirty = true;
 	ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
 	generate_3d_panel->refinement_package_combo_is_dirty = true;

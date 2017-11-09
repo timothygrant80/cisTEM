@@ -46,8 +46,9 @@ void Merge3DApp::DoInteractiveUserInput()
 	int class_number_for_gui = 1;
 	bool save_orthogonal_views_image = false;
 	wxString orthogonal_views_filename = "";
+	float weiner_nominator = 1.0f;
 	my_current_job.Reset(12);
-	my_current_job.ManualSetArguments("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
@@ -57,7 +58,8 @@ void Merge3DApp::DoInteractiveUserInput()
 													class_number_for_gui,
 													save_orthogonal_views_image,
 													orthogonal_views_filename.ToUTF8().data(),
-													number_of_dump_files);
+													number_of_dump_files,
+													weiner_nominator);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -77,7 +79,7 @@ bool Merge3DApp::DoCalculation()
 	bool save_orthogonal_views_image			= my_current_job.arguments[10].ReturnBoolArgument();
 	wxString orthogonal_views_filename			= my_current_job.arguments[11].ReturnStringArgument();
 	int number_of_dump_files					= my_current_job.arguments[12].ReturnIntegerArgument();
-
+	float weiner_nominator                      = my_current_job.arguments[13].ReturnFloatArgument();
 	ResolutionStatistics *gui_statistics = NULL;
 
 	if (is_running_locally == false) gui_statistics = new ResolutionStatistics;
@@ -199,7 +201,7 @@ bool Merge3DApp::DoCalculation()
 
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics);
+			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics, weiner_nominator);
 
 	//float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
 	//SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));

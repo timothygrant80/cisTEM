@@ -197,6 +197,9 @@ class AbInitio3DPanelParent : public JobPanel
 		NumericTextCtrl* StartPercentUsedTextCtrl;
 		wxStaticText* FinalPercentUsedStaticText;
 		NumericTextCtrl* EndPercentUsedTextCtrl;
+		wxStaticText* AlwaysApplySymmetryStaticText;
+		wxRadioButton* AlwaysApplySymmetryYesButton;
+		wxRadioButton* AlwaysApplySymmetryNoButton;
 		wxStaticText* m_staticText532;
 		wxStaticText* m_staticText363;
 		wxRadioButton* ApplyBlurringYesRadioButton;

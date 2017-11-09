@@ -50,9 +50,9 @@ void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map
 	for (i = 0; i < 5; i++) {parameter_map[i] = wanted_parameter_map[i + 1];};
 	resolution_limit = wanted_resolution_limit;
 
+	//if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
 	best_parameters_to_keep = wanted_parameters_to_keep;
-	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
-	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
+	//Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
 void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
@@ -69,6 +69,15 @@ void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular
 
 	SetSymmetryLimits();
 	CalculateGridSearchPositions();
+
+	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
+	
+	if (number_of_search_positions< best_parameters_to_keep)
+	{
+		best_parameters_to_keep = number_of_search_positions;
+	}
+	
+	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
 // This method has not been tested
@@ -85,6 +94,15 @@ void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_s
 
 	SetSymmetryLimits();
 	CalculateRandomSearchPositions();
+
+	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
+
+	if (number_of_search_positions  < best_parameters_to_keep)
+	{
+		best_parameters_to_keep = number_of_search_positions;
+	}
+
+	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
 void EulerSearch::CalculateGridSearchPositions()

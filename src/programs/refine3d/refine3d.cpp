@@ -357,6 +357,19 @@ bool Refine3DApp::DoCalculation()
 	float average;
 	float average_density_max;
 	bool skip_local_refinement = false;
+
+	bool take_random_best_parameter;
+
+	if (best_parameters_to_keep < 0)
+	{
+		best_parameters_to_keep = -best_parameters_to_keep;
+		take_random_best_parameter = true;
+	}
+	else
+	{
+		take_random_best_parameter = false;
+	}
+
 	wxDateTime my_time_in;
 //	wxDateTime my_time_out;
 
@@ -698,13 +711,14 @@ bool Refine3DApp::DoCalculation()
 		if (search_particle.parameter_map[1] && search_particle.parameter_map[2])
 		{
 			global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, search_reference_3d.pixel_size / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+			if (global_euler_search.best_parameters_to_keep != best_parameters_to_keep) best_parameters_to_keep = global_euler_search.best_parameters_to_keep;
 			projection_cache = new Image [global_euler_search.number_of_search_positions];
 			for (i = 0; i < global_euler_search.number_of_search_positions; i++)
 			{
 				projection_cache[i].Allocate(search_reference_3d.density_map.logical_x_dimension, search_reference_3d.density_map.logical_y_dimension, false);
 			}
 			search_reference_3d.density_map.GenerateReferenceProjections(projection_cache, global_euler_search, search_reference_3d.pixel_size / high_resolution_limit_search);
-			wxPrintf("\nNumber of global search views = %i\n", global_euler_search.number_of_search_positions);
+			wxPrintf("\nNumber of global search views = %i (best_parameters to keep = %i)\n", global_euler_search.number_of_search_positions, global_euler_search.best_parameters_to_keep);
 		}
 //		search_projection_image.RotateFourier2DGenerateIndex(kernel_index, psi_max, psi_step, psi_start);
 
@@ -934,6 +948,7 @@ bool Refine3DApp::DoCalculation()
 				if (search_particle.parameter_map[1] && ! search_particle.parameter_map[2])
 				{
 					global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, input_parameters[2], psi_max, psi_step, psi_start, search_reference_3d.pixel_size / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+					if (global_euler_search.best_parameters_to_keep != best_parameters_to_keep) best_parameters_to_keep = global_euler_search.best_parameters_to_keep;
 					if (! search_particle.parameter_map[3]) global_euler_search.psi_start = 360.0 - input_parameters[3];
 					global_euler_search.Run(search_particle, search_reference_3d.density_map, input_parameters + 1, projection_cache);
 				}
@@ -941,6 +956,7 @@ bool Refine3DApp::DoCalculation()
 				if (! search_particle.parameter_map[1] && search_particle.parameter_map[2])
 				{
 					global_euler_search.InitGrid(my_symmetry, angular_step, input_parameters[1], 0.0, psi_max, psi_step, psi_start, search_reference_3d.pixel_size / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+					if (global_euler_search.best_parameters_to_keep != best_parameters_to_keep) best_parameters_to_keep = global_euler_search.best_parameters_to_keep;
 					if (! search_particle.parameter_map[3]) global_euler_search.psi_start = 360.0 - input_parameters[3];
 					global_euler_search.Run(search_particle, search_reference_3d.density_map, input_parameters + 1, projection_cache);
 				}
@@ -948,6 +964,7 @@ bool Refine3DApp::DoCalculation()
 				if (search_particle.parameter_map[1] && search_particle.parameter_map[2])
 				{
 					if (! search_particle.parameter_map[3]) global_euler_search.psi_start = 360.0 - input_parameters[3];
+					if (global_euler_search.best_parameters_to_keep != best_parameters_to_keep) best_parameters_to_keep = global_euler_search.best_parameters_to_keep;
 					global_euler_search.Run(search_particle, search_reference_3d.density_map, input_parameters + 1, projection_cache);
 				}
 				else
@@ -972,9 +989,55 @@ bool Refine3DApp::DoCalculation()
 				search_particle.UnmapParametersToExternal(output_parameters, cg_starting_point);
 				if (ignore_input_angles && best_parameters_to_keep >= 1) istart = 1;
 				else istart = 0;
+
+
+				if (take_random_best_parameter == true)
+				{
+					float best_value = global_euler_search.list_of_best_parameters[1][5];
+					float worst_value = global_euler_search.list_of_best_parameters[best_parameters_to_keep][5];;
+					float diff = best_value - worst_value;
+					float top_percent = best_value - (diff * 0.15);
+					int number_to_keep = 1;
+
+					for (int counter = 2; counter <= best_parameters_to_keep; counter++)
+					{
+						if (global_euler_search.list_of_best_parameters[counter][5] >= top_percent)
+						{
+							number_to_keep++;
+						}
+					}
+
+					int parameter_to_keep = myroundint(((global_random_number_generator.GetUniformRandom() + 1.0) / 2.0) * float(number_to_keep - 1)) + 1;
+					//wxPrintf("best_value = %f, worst_value = %f, top 10%% = %f, number_above = %i, number to take = %i\n", best_value, worst_value, top_percent, number_to_keep, parameter_to_keep);
+
+
+					for (j = 1; j < 6; j++)
+					{
+						search_parameters[j] = global_euler_search.list_of_best_parameters[parameter_to_keep][j - 1];
+					}
+
+					if (! search_particle.parameter_map[4]) search_parameters[4] = input_parameters[4];
+					if (! search_particle.parameter_map[5]) search_parameters[5] = input_parameters[5];
+					search_particle.SetParameters(search_parameters);
+					search_particle.MapParameters(cg_starting_point);
+					search_parameters[15] = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, search_particle.number_of_search_dimensions, cg_starting_point, cg_accuracy);
+					output_parameters[15] = search_parameters[15];
+					if (! local_refinement) input_parameters[15] = output_parameters[15];
+
+					temp_float = - 100.0 * conjugate_gradient_minimizer.Run();
+					search_particle.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues());
+					output_parameters[15] = temp_float;
+				}
+				else
+				{
+
 				for (i = istart; i <= best_parameters_to_keep; i++)
 				{
-					for (j = 1; j < 6; j++) {search_parameters[j] = global_euler_search.list_of_best_parameters[i][j - 1];}
+					for (j = 1; j < 6; j++)
+					{
+						search_parameters[j] = global_euler_search.list_of_best_parameters[i][j - 1];
+
+					}
 //					wxPrintf("parameters in  = %i %g, %g, %g, %g, %g %g\n", i, search_parameters[3], search_parameters[2],
 //							search_parameters[1], search_parameters[4], search_parameters[5], global_euler_search.list_of_best_parameters[i][5]);
 					if (! search_particle.parameter_map[4]) search_parameters[4] = input_parameters[4];
@@ -1011,6 +1074,8 @@ bool Refine3DApp::DoCalculation()
 //					wxPrintf("refine in, out, keep = %i %g %g %g\n", i, search_parameters[15], temp_float, output_parameters[15]);
 //					wxPrintf("parameters out = %g, %g, %g, %g, %g\n", output_parameters[3], output_parameters[2],
 //							output_parameters[1], output_parameters[4], output_parameters[5]);
+				}
+
 				}
 				refine_particle.SetParameters(output_parameters, true);
 //				my_time_out = wxDateTime::UNow(); wxPrintf("global search done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());

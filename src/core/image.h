@@ -7,6 +7,7 @@
 class ReconstructedVolume;
 class EulerSearch;
 class ResolutionStatistics;
+class RotationMatrix;
 
 class Image {
 
@@ -129,6 +130,9 @@ public:
 	void MirrorXFourier2D(Image &mirrored_image);
 	void MirrorYFourier2D(Image &mirrored_image);
 	void RotateQuadrants(Image &rotated_image, int quad_i);
+	void Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix &wanted_matrix, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry="C1"); // use identiy matrix to just impose sym
+	void Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix &wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry = "C1"); // like above but with shift
+	void Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels = 0.0, wxString wanted_symmetry = "C1");
 	void GenerateReferenceProjections(Image *projections, EulerSearch &parameters, float resolution);
 	void RotateFourier2DGenerateIndex(Kernel2D **&kernel_index, float psi_max, float psi_step, float psi_start, bool invert_angle = false);
 	void RotateFourier2DDeleteIndex(Kernel2D **&kernel_index, float psi_max, float psi_step);
@@ -141,6 +145,7 @@ public:
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
+	void ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wanted_matrix, float resolution_limit = 1.0, bool apply_resolution_limit = true);
 	std::complex<float> ReturnNearestFourier2D(float &x, float &y);
 	std::complex<float> ReturnLinearInterpolatedFourier2D(float &x, float &y);
 	std::complex<float> ReturnLinearInterpolatedFourier(float &x, float &y, float &z);
@@ -292,6 +297,8 @@ public:
 	void SquareRootRealValues();
 	void ExponentiateRealValues();
 
+	long ReturnNumberofNonZeroPixels();
+
 	void ForwardFFT(bool should_scale = true);
 	void BackwardFFT();
 
@@ -384,7 +391,7 @@ public:
 	void Sine1D(int number_of_periods);
 
 	// for displaying
-	void CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections = true);
+	void CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections = true, float scale_factor = 1.0f, float mask_radius_in_pixels = 0.0f);
 };
 
 

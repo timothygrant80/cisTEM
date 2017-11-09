@@ -376,8 +376,9 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		refinement_package_asset_panel->AddAsset(temp_refinement_package);
 		main_frame->current_project.database.AddRefinement(&temp_refinement);
 
-		ArrayofAngularDistributionHistograms all_histograms = temp_refinement.ReturnAngularDistributions(temp_refinement_package->symmetry);
-		for (int class_counter = 1; class_counter <= temp_refinement.number_of_classes; class_counter++)
+		ArrayofAngularDistributionHistograms all_histograms;
+		all_histograms = temp_refinement.ReturnAngularDistributions(temp_refinement_package->symmetry);
+		for (int class_counter = 0; class_counter < temp_refinement.number_of_classes; class_counter++)
 		{
 			main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], temp_refinement.refinement_id, class_counter);
 		}

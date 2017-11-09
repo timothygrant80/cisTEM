@@ -11,6 +11,9 @@ class MyParticlePositionAssetPanel : public MyAssetParentPanel
 		~MyParticlePositionAssetPanel();
 
 		void ImportAssetClick( wxCommandEvent& event );
+		void NewFromParentClick( wxCommandEvent & event );
+
+		void EnableNewFromParentButton();
 
 		void RemoveAssetFromDatabase(long wanted_asset);
 		void RemoveFromGroupInDatabase(int wanted_group_id, int wanted_asset_id);

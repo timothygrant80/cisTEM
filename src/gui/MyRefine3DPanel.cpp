@@ -442,8 +442,8 @@ void MyRefine3DPanel::SetDefaults()
 		//if (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() > calculated_high_resolution_cutoff) calculated_high_resolution_cutoff = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p8Resolution();
 		}
 
-		local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5;
-		global_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
+		local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.65;
+		global_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.8;
 
 		global_angular_step = CalculateAngularStep(calculated_high_resolution_cutoff, local_mask_radius);
 
@@ -1489,8 +1489,9 @@ void RefinementManager::SetupMerge3dJob()
 
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+		float weiner_nominator = 1.0f;
 
-		my_parent->my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
 															output_reconstruction_filtered.ToUTF8().data(),
 															output_resolution_statistics.ToUTF8().data(),
@@ -1500,7 +1501,7 @@ void RefinementManager::SetupMerge3dJob()
 															class_counter + 1,
 															save_orthogonal_views_image,
 															orthogonal_views_filename.ToUTF8().data(),
-															number_of_reconstruction_jobs);
+															number_of_reconstruction_jobs, weiner_nominator);
 	}
 }
 
@@ -2369,8 +2370,8 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		OrthDrawerThread *result_thread;
 
-		if (start_with_reconstruction == true) result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0));
-		else result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1));
+		if (start_with_reconstruction == true) result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
+		else result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2471,11 +2472,12 @@ void RefinementManager::ProcessAllJobsFinished()
 		{
 			long point_counter;
 
-			volume_asset_panel->is_dirty = true;
-			refinement_package_asset_panel->is_dirty = true;
-			my_parent->input_params_combo_is_dirty = true;
+			main_frame->DirtyVolumes();
+			//volume_asset_panel->is_dirty = true;
+			//refinement_package_asset_panel->is_dirty = true;
+			//my_parent->input_params_combo_is_dirty = true;
 		//	my_parent->SetDefaults();
-			refinement_results_panel->is_dirty = true;
+//			refinement_results_panel->is_dirty = true;
 
 			Refinement *current_refinement = main_frame->current_project.database.GetRefinementByID(output_refinement->refinement_id);
 			//update resolution statistics in database and gui..
@@ -2530,11 +2532,15 @@ void RefinementManager::ProcessAllJobsFinished()
 
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=%li WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", output_refinement->refinement_id, current_refinement_package_asset_id));
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, main_frame->current_project.database.ReturnSingleLongFromSelectCommand(wxString::Format("SELECT MAX(REFINEMENT_NUMBER) FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", current_refinement_package_asset_id)) + 1,  output_refinement->refinement_id));
-			volume_asset_panel->is_dirty = true;
-			refinement_package_asset_panel->is_dirty = true;
-			my_parent->input_params_combo_is_dirty = true;
+
+			main_frame->DirtyVolumes();
+			main_frame->DirtyRefinements();
+
+//			volume_asset_panel->is_dirty = true;
+	//		refinement_package_asset_panel->is_dirty = true;
+		//	my_parent->input_params_combo_is_dirty = true;
 	//		my_parent->SetDefaults();
-			refinement_results_panel->is_dirty = true;
+			//refinement_results_panel->is_dirty = true;
 
 			my_parent->ShowRefinementResultsPanel->FSCResultsPanel->AddRefinement(output_refinement);
 

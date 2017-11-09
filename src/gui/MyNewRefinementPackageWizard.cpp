@@ -1099,6 +1099,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				for (class_counter = 0; class_counter < refinement_to_copy->number_of_classes; class_counter++)
 				{
+					//wxPrintf("class counter = %i, particle_counter = %li\n", class_counter, particle_counter);
 					//if (refinement_to_copy->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy > highest_occupancy)
 				    if (refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(class_counter, template_refinement_package->contained_particles[particle_counter].position_in_stack).occupancy > highest_occupancy)
 					{
@@ -1195,7 +1196,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 							// choose a random class
 
 							//active_result = &refinement_to_copy->class_refinement_results[selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * selected_input_classes.GetCount()))]].particle_refinement_results[particles_to_take[particle_counter]];
-							int current_class = selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * selected_input_classes.GetCount()))];
+							int current_class = selected_input_classes[myroundint(fabsf(global_random_number_generator.GetUniformRandom() * (selected_input_classes.GetCount()-1)))];
 							refinement_to_copy->ReturnRefinementResultByClassAndPositionInStack(current_class, template_refinement_package->contained_particles[particles_to_take[particle_counter]].position_in_stack);
 
 						}

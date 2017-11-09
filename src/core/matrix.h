@@ -23,6 +23,8 @@ public:
 	RotationMatrix ReturnTransposed();
 	void SetToIdentity();
 	void SetToConstant(float constant);
+	void SetToRotation(float input_x, float input_y, float input_z);
+
 	void SetToValues(float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22);
 	inline void RotateCoords(float &input_x_coord, float &input_y_coord, float &input_z_coord, float &output_x_coord, float &output_y_coord, float &output_z_coord)
 	{

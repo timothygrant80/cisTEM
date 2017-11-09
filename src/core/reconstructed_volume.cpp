@@ -149,23 +149,24 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 	if (apply_binning && high_resolution_limit > 0.0)
 	{
 		binning_factor = high_resolution_limit / pixel_size / 2.0;
+
 		if (approximate_binning)
 		{
-			fourier_size_x = ReturnClosestFactorizedLower(density_map.logical_x_dimension / binning_factor, 3, true);
-			fourier_size_y = ReturnClosestFactorizedLower(density_map.logical_y_dimension / binning_factor, 3, true);
-			fourier_size_z = ReturnClosestFactorizedLower(density_map.logical_z_dimension / binning_factor, 3, true);
+			fourier_size_x = ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(density_map.logical_x_dimension, binning_factor), 3, true);
+			fourier_size_y = ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(density_map.logical_y_dimension, binning_factor), 3, true);
+			fourier_size_z = ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(density_map.logical_z_dimension, binning_factor), 3, true);
 		}
 		else
 		{
 			fourier_size_x = int(density_map.logical_x_dimension / binning_factor + 0.5);
 			if (! IsEven(fourier_size_x)) fourier_size_x++;
-//			fourier_size_x += 2;
+			//			fourier_size_x += 2;
 			fourier_size_y = int(density_map.logical_y_dimension / binning_factor + 0.5);
 			if (! IsEven(fourier_size_y)) fourier_size_y++;
-//			fourier_size_y += 2;
+			//			fourier_size_y += 2;
 			fourier_size_z = int(density_map.logical_z_dimension / binning_factor + 0.5);
 			if (! IsEven(fourier_size_z)) fourier_size_z++;
-//			fourier_size_z += 2;
+			//			fourier_size_z += 2;
 		}
 		// The following line assumes that we have a cubic volume
 		binning_factor = float(density_map.logical_x_dimension) / float(fourier_size_x);
@@ -341,7 +342,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D &reconstruction)
 	}
 }
 
-void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics)
+void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics, float weiner_filter_nominator)
 {
 	MyDebugAssertTrue(has_been_initialized, "Error: reconstruction volume has not been initialized");
 //	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
@@ -378,7 +379,8 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 		{
 //			wiener_constant[i] = 1.0 / statistics.part_SSNR.data_y[i];
 			wiener_constant[i] = 1.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
-//			wiener_constant[i] = 32.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
+			wiener_constant[i] = weiner_filter_nominator / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
+	//		wiener_constant[i] = 1;
 		}
 		else wiener_constant[i] = 0.0;
 	}
@@ -480,7 +482,7 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D &reconstruction, int &ori
 
 void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 		float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
-		bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics)
+		bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics, float weiner_filter_nominator)
 {
 	int original_box_size = density_map_1.logical_x_dimension;
 	int intermediate_box_size = myroundint(original_box_size / pixel_size * original_pixel_size);
@@ -536,7 +538,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 		copy_of_statistics->CopyFrom(statistics);
 	}
 
-	Calculate3DOptimal(reconstruction, cropped_statistics);
+	Calculate3DOptimal(reconstruction, cropped_statistics, weiner_filter_nominator);
 	density_map.SwapRealSpaceQuadrants();
 	// Check if cropping was used and resize reconstruction accordingly
 	if (intermediate_box_size != box_size)

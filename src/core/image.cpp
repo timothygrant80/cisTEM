@@ -65,7 +65,7 @@ Image::Image( const Image &other_image) // copy constructor
 {
 	image_memory_should_not_be_deallocated = false;
 	MyDebugPrint("Warning: copying an image object");
-	 *this = other_image;
+	*this = other_image;
 }
 
 Image::~Image()
@@ -2220,6 +2220,138 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	image_to_extract.is_in_real_space = false;
 }
 
+void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wanted_matrix, float resolution_limit, bool apply_resolution_limit)
+{
+	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
+	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
+	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
+	MyDebugAssertTrue(! object_is_centred_in_box, "Image volume quadrants not swapped");
+
+	int i;
+	int j;
+
+	long pixel_counter;
+	long pixel_counter2;
+
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+	float z_coordinate_2d = 0.0;
+
+	float x_coordinate_3d;
+	float y_coordinate_3d;
+	float z_coordinate_3d;
+
+	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
+	float y_coord_sq;
+
+	image_to_extract.object_is_centred_in_box = false;
+	image_to_extract.is_in_real_space = false;
+//	image_to_extract.SetToConstant(0.0);
+
+	if (apply_resolution_limit)
+	{
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j;
+			y_coord_sq = powf(y_coordinate_2d,2);
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			{
+				x_coordinate_2d = i;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
+				{
+					wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				}
+				else
+				{
+					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				}
+			}
+		}
+	// Now deal with special case of i = 0
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j;
+			x_coordinate_2d = 0;
+			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
+			{
+				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+			}
+			else
+			{
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
+			}
+		}
+	// Deal with pixel at edge if image dimensions are even
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		{
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			x_coordinate_2d = 0;
+			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
+			{
+				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			}
+			else
+			{
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+			}
+		}
+	}
+	else
+	{
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j;
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			{
+				x_coordinate_2d = i;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			}
+		}
+// Now deal with special case of i = 0
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		{
+			y_coordinate_2d = j;
+			x_coordinate_2d = 0;
+			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+		}
+// Deal with pixel at edge if image dimensions are even
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		{
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			x_coordinate_2d = 0;
+			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+		}
+	}
+
+// Set origin to zero to generate a projection with average set to zero
+	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
+// This was changed to make projections compatible with ML algorithm
+//	image_to_extract.complex_values[0] = complex_values[0];
+
+	image_to_extract.is_in_real_space = false;
+}
+
 std::complex<float> Image::ReturnNearestFourier2D(float &x, float &y)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -2490,9 +2622,9 @@ void Image::AddByLinearInterpolationReal(float &wanted_physical_x_coordinate, fl
 	float weight_z;
 
 	MyDebugAssertTrue(is_in_real_space == true, "Error: attempting REAL insertion into COMPLEX image");
-	MyDebugAssertTrue(wanted_physical_x_coordinate >= 0 && wanted_physical_x_coordinate <= logical_x_dimension, "Error: attempting insertion outside image X boundaries");
-	MyDebugAssertTrue(wanted_physical_y_coordinate >= 0 && wanted_physical_y_coordinate <= logical_y_dimension, "Error: attempting insertion outside image Y boundaries");
-	MyDebugAssertTrue(wanted_physical_z_coordinate >= 0 && wanted_physical_z_coordinate <= logical_z_dimension, "Error: attempting insertion outside image Z boundaries");
+	MyDebugAssertTrue(wanted_physical_x_coordinate >= 0 && wanted_physical_x_coordinate < logical_x_dimension, "Error: attempting insertion outside image X boundaries");
+	MyDebugAssertTrue(wanted_physical_y_coordinate >= 0 && wanted_physical_y_coordinate < logical_y_dimension, "Error: attempting insertion outside image Y boundaries");
+	MyDebugAssertTrue(wanted_physical_z_coordinate >= 0 && wanted_physical_z_coordinate < logical_z_dimension, "Error: attempting insertion outside image Z boundaries");
 
 	int_x_coordinate = int(wanted_physical_x_coordinate);
 	int_y_coordinate = int(wanted_physical_y_coordinate);
@@ -2929,7 +3061,7 @@ void Image::CircleMask(float wanted_mask_radius, bool invert)
 
 				distance_from_center_squared = x + y + z;
 
-				if (abs(distance_from_center_squared-wanted_mask_radius_squared) <= 2.0)
+				if (abs(distance_from_center_squared-wanted_mask_radius_squared) <= 4.0)
 				{
 					number_of_pixels++;
 					average_value += real_values[pixel_counter];
@@ -4120,7 +4252,7 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 		input_file->rewrite_header_on_close = true;
 	}
 
-	MyDebugAssertTrue(logical_x_dimension == input_file->ReturnXSize() || logical_y_dimension == input_file->ReturnYSize(), "Image dimensions and file dimensions differ!");
+	MyDebugAssertTrue(logical_x_dimension == input_file->ReturnXSize() || logical_y_dimension == input_file->ReturnYSize(), "Image dimensions (%i, %i) and file dimensions (%i, %i) differ!", logical_x_dimension, logical_y_dimension, input_file->ReturnXSize(), input_file->ReturnYSize());
 
 	// if the image is complex.. make a temp image and transform it..
 
@@ -4349,6 +4481,33 @@ pure function GetMaximumDiagonalRadius(self)  result(maximum_radius)
 
 end function GetMaximumDiagonalRadius
 */
+
+long Image::ReturnNumberofNonZeroPixels()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in Real Space");
+
+	int i, j, k;
+	long number_of_non_zero_pixels = 0;
+	long address = 0;
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				if (real_values[address] != 0.0f) number_of_non_zero_pixels++;
+
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+
+	return number_of_non_zero_pixels;
+
+}
 
 float Image::ReturnSigmaOfFourierValuesOnEdges()
 {
@@ -4596,7 +4755,7 @@ float Image::ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius)
 
 				distance_from_center_squared = x + y + z;
 
-				if (fabsf(distance_from_center_squared -mask_radius_squared) < 2.0)
+				if (fabsf(distance_from_center_squared -mask_radius_squared) < 4.0)
 				{
 					sum += real_values[address];
 					number_of_pixels++;
@@ -7387,10 +7546,16 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 
 	// multiply by the complex conjugate
 
-	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+
+#ifdef MKL
+	// Use the MKL - not sure whether this can work in place
+	vmcMulByConj(real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (complex_values),reinterpret_cast <MKL_Complex8 *> (other_image->complex_values),reinterpret_cast <MKL_Complex8 *> (complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
+#else
+	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
 	{
-		complex_values[pixel_counter] *= conj(other_image->complex_values[pixel_counter]);
+		complex_values[pixel_counter] *= conj(other_image.complex_values[pixel_counter]);
 	}
+#endif
 
 	if (object_is_centred_in_box == true)
 	{
@@ -8012,6 +8177,154 @@ bool Image::ContainsBlankEdges(float mask_radius)
 	return blank_edge;
 }
 
+
+
+void Image::Rotate3DByRotationMatrixAndOrApplySymmetry(RotationMatrix &wanted_matrix, float wanted_max_radius_in_pixels, wxString wanted_symmetry)
+{
+	Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(wanted_matrix, 0.0f, 0.0f, 0.0f, wanted_max_radius_in_pixels, wanted_symmetry);
+}
+
+void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix &wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, wxString wanted_symmetry) // like above but with shift
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+
+	long pixel_counter = 0;
+	int i,j,k;
+	float x,y,z;
+	int symmetry_counter;
+	float x_squared, y_squared, z_squared;
+	float rotated_x, rotated_y, rotated_z;
+
+	Image buffer_image;
+	SymmetryMatrix symmetry_matrices;
+	RotationMatrix temp_matrix;
+	symmetry_matrices.Init(wanted_symmetry);
+
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
+	buffer_image.SetToConstant(0.0f);
+
+	float max_radius_squared;
+	if(wanted_max_radius_in_pixels == 0.0f) logical_x_dimension / 2.0f - 1.0f;
+	else max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = k - physical_address_of_box_center_z;
+		z_squared = powf(z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = j - physical_address_of_box_center_y;
+			y_squared = powf(y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = i - physical_address_of_box_center_x;
+
+				if (z_squared + y_squared + powf(x, 2) < max_radius_squared)
+				{
+					for (symmetry_counter = 0; symmetry_counter < symmetry_matrices.number_of_matrices; symmetry_counter ++ )
+					{
+						temp_matrix = symmetry_matrices.rot_mat[symmetry_counter] * wanted_matrix;
+						temp_matrix.RotateCoords(x, y, z, rotated_x, rotated_y, rotated_z);
+
+						rotated_x += float(physical_address_of_box_center_x) + wanted_x_shift;
+						rotated_y += float(physical_address_of_box_center_y) + wanted_y_shift;
+						rotated_z += float(physical_address_of_box_center_z) + wanted_z_shift;
+
+						if (rotated_x >= 0 && rotated_x < logical_x_dimension - 1 && rotated_y >= 0 && rotated_y < logical_y_dimension - 1 && rotated_z >= 0 && rotated_z < logical_z_dimension - 1)
+						{
+							buffer_image.AddByLinearInterpolationReal(rotated_x, rotated_y, rotated_z, real_values[pixel_counter]);
+						}
+					}
+				}
+
+				pixel_counter++;
+			}
+
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	Consume(&buffer_image);
+}
+
+void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, float wanted_x_shift, float wanted_y_shift, float wanted_z_shift, float wanted_max_radius_in_pixels, wxString wanted_symmetry)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+
+	long pixel_counter = 0;
+	int i,j,k;
+	float x,y,z;
+	int symmetry_counter;
+	float x_squared, y_squared, z_squared;
+	float rotated_x, rotated_y, rotated_z;
+	float symmetry_x, symmetry_y, symmetry_z;
+
+	Image buffer_image;
+	SymmetryMatrix symmetry_matrices;
+	RotationMatrix temp_matrix;
+	symmetry_matrices.Init(wanted_symmetry);
+
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
+	buffer_image.SetToConstant(0.0f);
+
+	float max_radius_squared;
+	if(wanted_max_radius_in_pixels == 0.0f) logical_x_dimension / 2.0f - 1.0f;
+	else max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
+
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = k - physical_address_of_box_center_z;
+		z_squared = powf(z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = j - physical_address_of_box_center_y;
+			y_squared = powf(y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = i - physical_address_of_box_center_x;
+
+				if (z_squared + y_squared + powf(x, 2) < max_radius_squared)
+				{
+					wanted_matrix.RotateCoords(x, y, z, rotated_x, rotated_y, rotated_z);
+					rotated_x += wanted_x_shift;
+					rotated_y += wanted_y_shift;
+					rotated_z += wanted_z_shift;
+
+					for (symmetry_counter = 0; symmetry_counter < symmetry_matrices.number_of_matrices; symmetry_counter ++ )
+					{
+
+						symmetry_matrices.rot_mat[symmetry_counter].RotateCoords(rotated_x, rotated_y, rotated_z, symmetry_x,symmetry_y, symmetry_z);
+
+						symmetry_x += float(physical_address_of_box_center_x);
+						symmetry_y += float(physical_address_of_box_center_y);
+						symmetry_z += float(physical_address_of_box_center_z);
+
+						if (symmetry_x >= 0 && symmetry_x < logical_x_dimension - 1 && symmetry_y >= 0 && symmetry_y < logical_y_dimension - 1 && symmetry_z >= 0 && symmetry_z < logical_z_dimension - 1)
+						{
+							buffer_image.AddByLinearInterpolationReal(symmetry_x, symmetry_y, symmetry_z, real_values[pixel_counter]);
+						}
+					}
+				}
+
+				pixel_counter++;
+			}
+
+			pixel_counter += padding_jump_value;
+		}
+	}
+
+	Consume(&buffer_image);
+
+}
+
 void Image::Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels)
 {
 	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
@@ -8567,7 +8880,7 @@ float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_m
 }
 
 
-void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections)
+void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool include_projections, float scale_factor, float mask_radius_in_pixels)
 {
 	MyDebugAssertTrue(this->IsCubic() == true, "Only Cubic Volumes Supported");
 	// don't allocate so i can use Allocateaspointing to slice in 3d.
@@ -8575,9 +8888,9 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 #ifdef DEBUG
 	if (include_projections == true)
 	{
-		MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+		MyDebugAssertTrue(image_to_create->logical_x_dimension == myroundint(float(logical_x_dimension) * scale_factor) * 3.0 && image_to_create->logical_y_dimension == myroundint(float(logical_y_dimension) * scale_factor) * 2 && image_to_create->is_in_real_space == true, "Output image not setup correctly");
 	}
-	else MyDebugAssertTrue(image_to_create->logical_x_dimension == logical_x_dimension * 3 && image_to_create->logical_y_dimension == logical_y_dimension && image_to_create->is_in_real_space == true, "Output image not setup correctly");
+	else MyDebugAssertTrue(image_to_create->logical_x_dimension == myroundint(float(logical_x_dimension) * scale_factor) * 3.0 && image_to_create->logical_y_dimension == myroundint(float(logical_y_dimension) * scale_factor) && image_to_create->is_in_real_space == true, "Output image not setup correctly");
 #endif
 
 
@@ -8660,6 +8973,43 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 	float current_min_value;
 	float current_max_value;
 
+	if (scale_factor != 1.0)
+	{
+		slice_one.ForwardFFT();
+		slice_one.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+		slice_one.BackwardFFT();
+		slice_one.Normalize(1.0);
+
+		slice_two.ForwardFFT();
+		slice_two.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+		slice_two.BackwardFFT();
+		slice_two.Normalize(1.0);
+
+		slice_three.ForwardFFT();
+		slice_three.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+		slice_three.BackwardFFT();
+		slice_three.Normalize(1.0);
+
+		if (include_projections == true)
+		{
+			proj_one.ForwardFFT();
+			proj_one.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+			proj_one.BackwardFFT();
+			proj_one.Normalize(1.0);
+
+			proj_two.ForwardFFT();
+			proj_two.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+			proj_two.BackwardFFT();
+			proj_two.Normalize(1.0);
+
+			proj_three.ForwardFFT();
+			proj_three.Resize(myroundint(this->logical_x_dimension * scale_factor), myroundint(this->logical_y_dimension * scale_factor), 1);
+			proj_three.BackwardFFT();
+			proj_three.Normalize(1.0);
+
+		}
+
+	}
 	slice_one.GetMinMax(min_value, max_value);
 
 	slice_two.GetMinMax(current_min_value, current_max_value);
@@ -8704,44 +9054,59 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 
 	output_counter = 0;
 
+
+	if (mask_radius_in_pixels != 0.0f)
+	{
+		slice_one.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, slice_one.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+		slice_two.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, slice_two.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+		slice_three.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, slice_three.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+
+		if (include_projections == true)
+		{
+			proj_one.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, proj_one.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+			proj_two.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, proj_two.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+			proj_three.CircleMaskWithValue(mask_radius_in_pixels * scale_factor, proj_three.ReturnAverageOfRealValuesAtRadius(mask_radius_in_pixels * scale_factor));
+		}
+	}
+
 	for (j = 0; j < image_to_create->logical_y_dimension; j++)
 	{
 		for (i = 0; i < image_to_create->logical_x_dimension; i++)
 		{
-			if (j < this->logical_y_dimension && include_projections == true)
+			if (j < slice_one.logical_y_dimension && include_projections == true)
 			{
-				if (i < this->logical_x_dimension)
+				if (i < proj_one.logical_x_dimension)
 				{
 					image_to_create->real_values[output_counter] = proj_one.ReturnRealPixelFromPhysicalCoord(i, j, 0);
 				}
 				else
-				if (i < this->logical_x_dimension * 2)
+				if (i < proj_one.logical_x_dimension * 2)
 				{
-					image_to_create->real_values[output_counter] = proj_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j, 0);
+					image_to_create->real_values[output_counter] = proj_two.ReturnRealPixelFromPhysicalCoord(i - proj_two.logical_x_dimension, j, 0);
 				}
 				else
 				{
-					image_to_create->real_values[output_counter] = proj_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
+					image_to_create->real_values[output_counter] = proj_three.ReturnRealPixelFromPhysicalCoord(i - proj_three.logical_x_dimension * 2, j, 0);
 				}
 
 			}
 			else
 			{
-				if (i < this->logical_x_dimension)
+				if (i < slice_one.logical_x_dimension)
 				{
-					if (include_projections == true) image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j  - this->logical_y_dimension, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j  - slice_one.logical_y_dimension, 0);
 					else image_to_create->real_values[output_counter] = slice_one.ReturnRealPixelFromPhysicalCoord(i, j, 0);
 				}
 				else
-				if (i < this->logical_x_dimension * 2)
+				if (i < slice_one.logical_x_dimension * 2)
 				{
-					if (include_projections == true) image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j  - this->logical_y_dimension, 0);
-					else image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension, j, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - slice_two.logical_x_dimension, j  - slice_two.logical_y_dimension, 0);
+					else image_to_create->real_values[output_counter] = slice_two.ReturnRealPixelFromPhysicalCoord(i - slice_two.logical_x_dimension, j, 0);
 				}
 				else
 				{
-					if (include_projections == true) image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j  - this->logical_y_dimension, 0);
-					else image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - this->logical_x_dimension * 2, j, 0);
+					if (include_projections == true) image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - slice_three.logical_x_dimension * 2, j  - slice_three.logical_y_dimension, 0);
+					else image_to_create->real_values[output_counter] = slice_three.ReturnRealPixelFromPhysicalCoord(i - slice_three.logical_x_dimension * 2, j, 0);
 				}
 			}
 			output_counter++;
@@ -8750,7 +9115,6 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 		output_counter += image_to_create->padding_jump_value;
 	}
 }
-
 
 /*
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

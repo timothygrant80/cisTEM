@@ -1722,13 +1722,14 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 
 		Image *new_image = new Image;
-		new_image->Allocate(input_file.ReturnXSize() * 3, input_file.ReturnYSize() * 2, filenames_of_volumes.GetCount(), true);
+		if (input_file.ReturnXSize() > 500) scale_factor = 500.0f / float(input_file.ReturnXSize());
+		new_image->Allocate(myroundint(float(input_file.ReturnXSize()) * scale_factor) * 3, myroundint(float(input_file.ReturnYSize()) * scale_factor) * 2.0, filenames_of_volumes.GetCount(), true);
 		input_file.CloseFile();
 
 		Image current_output;
 		current_output.AllocateAsPointingToSliceIn3D(new_image, 1);
 		//current_output.QuickAndDirtyWriteSlice("/tmp/before.mrc", 1);
-		input_image.CreateOrthogonalProjectionsImage(&current_output);
+		input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
 		//current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
 
 
@@ -1748,18 +1749,27 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 			input_file.CloseFile();
 
 			current_output.AllocateAsPointingToSliceIn3D(new_image, class_counter);
-			input_image.CreateOrthogonalProjectionsImage(&current_output);
+			input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
 		}
 
 
-		if (new_image->logical_x_dimension > 1500)
+	/*	if (new_image->logical_x_dimension > 1500)
 		{
-			float scale_factor = new_image->logical_x_dimension / 1500;
+			float downscale_factor = new_image->logical_x_dimension / 1500;
 			new_image->ForwardFFT();
-			new_image->Resize(myroundint(new_image->logical_x_dimension * scale_factor), myroundint(new_image->logical_y_dimension * scale_factor), 1);
+			new_image->Resize(myroundint(new_image->logical_x_dimension * downscale_factor), myroundint(new_image->logical_y_dimension * downscale_factor), 1);
 			new_image->BackwardFFT();
 		}
-
+		else
+		{
+			if (scale_factor != 1.0f)
+			{
+				new_image->ForwardFFT();
+				new_image->Resize(myroundint(new_image->logical_x_dimension * scale_factor), myroundint(new_image->logical_y_dimension * scale_factor), 1);
+				new_image->BackwardFFT();
+			}
+		}
+*/
 
 		finished_event->SetImage(new_image);
 		finished_event->SetString(tab_name);
@@ -1775,5 +1785,3 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 
 
 }
-
-

@@ -49,7 +49,7 @@ public:
 	void CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius = 0.0, float mask_falloff = 0.0,
 			float resolution_limit = 1.0, bool swap_quadrants = false, bool apply_shifts = false, bool whiten = false, bool apply_ctf = false, bool abolute_ctf = false);
 	void Calculate3DSimple(Reconstruct3D &reconstruction);
-	void Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics);
+	void Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics, float weiner_filter_nominater = 1.0f);
 	float Correct3D(float mask_radius = 0.0);
 	void CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge);
 	void CosineMask(float wanted_mask_radius, float wanted_mask_edge);
@@ -58,7 +58,7 @@ public:
 			float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff, wxString &output_volume);
 	void FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
-			bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
+			bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL, float weiner_filter_nominator = 1.0f);
 	void FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);

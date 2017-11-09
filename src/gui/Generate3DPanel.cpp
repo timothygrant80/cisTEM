@@ -911,6 +911,7 @@ void Generate3DPanel::SetupMerge3dJob()
 
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
+		float weiner_nominator = 1.0f;
 
 		my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
@@ -922,7 +923,7 @@ void Generate3DPanel::SetupMerge3dJob()
 															class_counter + 1,
 															save_orthogonal_views_image,
 															orthogonal_views_filename.ToUTF8().data(),
-															number_of_reconstruction_jobs);
+															number_of_reconstruction_jobs, weiner_nominator);
 	}
 }
 
@@ -1170,7 +1171,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		if (active_update_statistics == true)
 		{
 			main_frame->current_project.database.UpdateRefinementResolutionStatistics(input_refinement);
-			refinement_results_panel->is_dirty = true;
+			main_frame->DirtyRefinements();
 		}
 
 		long point_counter;

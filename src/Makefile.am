@@ -178,6 +178,8 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/cisTEM_beta_logo_800.cpp \
                  gui/icons/up_arrow.cpp \
                  gui/icons/down_arrow.cpp \
+                 gui/icons/VSV_startup_800.cpp \
+                 gui/icons/vsv_sharpening.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp

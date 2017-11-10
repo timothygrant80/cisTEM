@@ -589,7 +589,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			GlobalRefinementRadio->Enable(true);
 			NumberRoundsSpinCtrl->Enable(true);
 			HighResolutionLimitTextCtrl->Enable(true);
-
+			UseMaskCheckBox->Enable(true);
 			ExpertToggleButton->Enable(true);
 
 			if (RefinementPackageComboBox->GetCount() > 0)

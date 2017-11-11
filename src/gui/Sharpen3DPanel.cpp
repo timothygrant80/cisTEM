@@ -526,7 +526,7 @@ void Sharpen3DPanel::OnRunButtonClick( wxCommandEvent& event )
 	else input_mask_filename = "";
 
 	ResolutionStatistics *input_resolution_statistics;
-	if (active_refinement == NULL) input_resolution_statistics = NULL;
+	if (active_refinement == NULL || UseFSCWeightingYesButton->GetValue() == false) input_resolution_statistics = NULL;
 	else input_resolution_statistics = &active_refinement->class_refinement_results[active_class].class_resolution_statistics;
 
 	float statistics_scale_factor = SSNRScaleFactorTextCtrl->ReturnValue();

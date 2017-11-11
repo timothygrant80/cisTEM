@@ -35,6 +35,7 @@ public:
 	void ResampleCurve(Curve *input_curve, int wanted_number_of_points);
 	float ReturnLinearInterpolationFromI(float wanted_i);
 	float ReturnLinearInterpolationFromX(float wanted_x);
+	CurvePoint ReturnValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x);
 	void AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x);
 	void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
 	int ReturnIndexOfNearestPreviousBin(float wanted_x);

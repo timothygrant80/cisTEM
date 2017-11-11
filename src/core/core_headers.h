@@ -11,6 +11,13 @@ typedef struct Kernel2D {
   float pixel_weight[4];
 } Kernel2D;
 
+typedef struct CurvePoint {
+  int   index_m;
+  int   index_n;
+  float value_m;
+  float value_n;
+} CurvePoint;
+
 #include <string>
 #include <iostream>
 #include <fstream>

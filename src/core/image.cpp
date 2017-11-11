@@ -5600,7 +5600,6 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 // It is assumed the curve objects are already setup with an X axis in reciprocal pixels (i.e. origin is 0.0, Nyquist is 0.5)
 void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values)
 {
-
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
 	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
 	MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
@@ -5610,18 +5609,23 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 	MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
 	MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points-1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points-1], "Curves need to have the same ending point");
 
-
 	int i,j,k;
 	float sq_dist_x, sq_dist_y, sq_dist_z;
 	int counter;
 	long address;
 	float spatial_frequency;
 	int number_of_hermitian_mates = 0;
+//	CurvePoint return_value;
+//	double *power;
+//	double *sum;
 
 	// Make sure the curves are clean
 	curve_with_average_power->ZeroYData();
 	curve_with_number_of_values->ZeroYData();
-
+//	power = new double [curve_with_average_power->number_of_points];
+//	sum = new double [curve_with_number_of_values->number_of_points];
+//	ZeroDoubleArray(power, curve_with_average_power->number_of_points);
+//	ZeroDoubleArray(sum, curve_with_number_of_values->number_of_points);
 
 	// Get amplitudes and sum them into the curve object
 	address = 0;
@@ -5645,6 +5649,12 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 					spatial_frequency = sqrtf(sq_dist_x+sq_dist_y+sq_dist_z);
 
 					// TODO: this could be made faster by doing both interpolations in one go, so one wouldn't have to work out twice between which points the interpolation will happen
+//					return_value = curve_with_average_power->ReturnValueAtXUsingLinearInterpolation(spatial_frequency, real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address]), true);
+//					power[return_value.index_m] += return_value.value_m;
+//					power[return_value.index_n] += return_value.value_n;
+//					return_value = curve_with_average_power->ReturnValueAtXUsingLinearInterpolation(spatial_frequency, 1.0, true);
+//					sum[return_value.index_m] += return_value.value_m;
+//					sum[return_value.index_n] += return_value.value_n;
 					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address]), true );
 					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0, true);
 
@@ -5658,7 +5668,9 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 	for ( counter = 0; counter < curve_with_average_power->number_of_points; counter ++ )
 	{
 		if ( curve_with_number_of_values->data_y[counter] > 0.0 )
+//		if (sum[counter] > 0.0)
 		{
+//			curve_with_average_power->data_y[counter] = power[counter] / sum[counter];
 			curve_with_average_power->data_y[counter] /= curve_with_number_of_values->data_y[counter];
 		}
 		else
@@ -5667,6 +5679,8 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 		}
 	}
 
+//	delete [] power;
+//	delete [] sum;
 }
 
 //END_FOR_STAND_ALONE_CTFFIND
@@ -7151,6 +7165,7 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
 void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
 {
 
+	int number_of_bins2 = int((logical_x_dimension / 2.0) * sqrtf(3.0) + 1.0);
 	float cosine_edge = 10.0;
 
 	Curve power_spectrum;
@@ -7159,11 +7174,11 @@ void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_ha
 
 	if (input_resolution_statistics != NULL) copy_of_rec_SSNR = input_resolution_statistics->rec_SSNR;
 
-	power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	power_spectrum.SetupXAxis(0.0, (number_of_bins2 - 1) / float(logical_x_dimension), number_of_bins2);
+	number_of_terms.SetupXAxis(0.0, (number_of_bins2 - 1) / float(logical_x_dimension), number_of_bins2);
 
-	if (original_log_plot != NULL) original_log_plot->SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	if (sharpened_log_plot != NULL) sharpened_log_plot->SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	if (original_log_plot != NULL) original_log_plot->SetupXAxis(0.0, (number_of_bins2 - 1) / float(logical_x_dimension), number_of_bins2);
+	if (sharpened_log_plot != NULL) sharpened_log_plot->SetupXAxis(0.0, (number_of_bins2 - 1) / float(logical_x_dimension), number_of_bins2);
 
 	Image buffer_image;
 	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
@@ -7333,7 +7348,7 @@ void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, floa
 	float bfactor_res_limit2 = powf(bfactor_res_limit, 2);
 	float filter_value_blimit;
 
-	bin = int(sqrtf(bfactor_res_limit2) * number_of_bins2);
+	bin = myroundint(sqrtf(bfactor_res_limit2) * number_of_bins2);
 	filter_value_blimit = power_spectrum.data_y[bin];
 //	filter_value_blimit = exp(-bfactor * bfactor_res_limit2 * 0.25) * power_spectrum.data_y[bin];
 
@@ -7355,7 +7370,7 @@ void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, floa
 				//frequency = sqrt(frequency_squared);
 
 				// compute radius, in units of physical Fourier pixels
-				bin = int(sqrtf(frequency_squared) * number_of_bins2);
+				bin = myroundint(sqrtf(frequency_squared) * number_of_bins2);
 
 				if (frequency_squared <= bfactor_res_limit2) filter_value = exp(-bfactor_low * frequency_squared * 0.25);
 				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit * exp(-(bfactor_low * bfactor_res_limit2 + bfactor_high * (frequency_squared - bfactor_res_limit2)) * 0.25) / power_spectrum.data_y[bin];

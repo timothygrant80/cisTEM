@@ -450,31 +450,52 @@ void Curve::SquareRoot()
 }
 
 
-// If it the data_x values form a linear axies (i.e. they are regularly spaced), give assume_linear_x true.
-void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
+CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
 	MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1] + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
 	int index_of_previous_bin;
+	CurvePoint return_value;
 	if (assume_linear_x)
 	{
-		index_of_previous_bin = int((wanted_x - data_x[0])/(data_x[1]-data_x[0]));
+		index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
 	}
 	else
 	{
 		index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
 	}
 
-	if (index_of_previous_bin == number_of_points-1){
-		data_y[number_of_points-1] += value_to_add;
+	if (index_of_previous_bin == number_of_points - 1)
+	{
+		return_value.index_m = index_of_previous_bin;
+		return_value.index_n = index_of_previous_bin;
+		return_value.value_m = value_to_add;
+		return_value.value_n = 0.0;
 	}
 	else
 	{
-		float distance = (wanted_x - data_x[index_of_previous_bin])/(data_x[index_of_previous_bin+1] - data_x[index_of_previous_bin]);
-		data_y[index_of_previous_bin]   += value_to_add * (1.0 - distance);
-		data_y[index_of_previous_bin+1] += value_to_add * distance;
+		float distance = (wanted_x - data_x[index_of_previous_bin]) / (data_x[index_of_previous_bin + 1] - data_x[index_of_previous_bin]);
+		return_value.index_m = index_of_previous_bin;
+		return_value.index_n = index_of_previous_bin + 1;
+		return_value.value_m = value_to_add * (1.0 - distance);
+		return_value.value_n = value_to_add * distance;
 	}
+
+	return return_value;
+}
+
+// If it the data_x values form a linear axies (i.e. they are regularly spaced), give assume_linear_x true.
+void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1] + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
+
+	CurvePoint return_value;
+
+	return_value = ReturnValueAtXUsingLinearInterpolation(wanted_x, value_to_add, assume_linear_x);
+	data_y[return_value.index_m] += return_value.value_m;
+	data_y[return_value.index_n] += return_value.value_n;
 }
 
 void Curve::AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add)

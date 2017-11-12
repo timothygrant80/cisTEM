@@ -3592,6 +3592,8 @@ void Image::Deallocate()
 
 	if (planned == true)
 	{
+		wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+    	MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
 		fftwf_destroy_plan(plan_fwd);
 		fftwf_destroy_plan(plan_bwd);
 		planned = false;
@@ -3718,6 +3720,9 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
 
     if (planned == false)
     {
+    	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+        MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
+
     	if (logical_z_dimension > 1)
     	{
     		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);

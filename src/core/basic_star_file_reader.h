@@ -36,8 +36,10 @@ class BasicStarFileReader {
 public:
 
 	wxString    filename;
-    wxFileInputStream *input_file_stream;
-    wxTextInputStream *input_text_stream;
+  //  wxFileInputStream *input_file_stream;
+  //  wxTextInputStream *input_text_stream;
+
+	wxTextFile *input_file;
 
 	ArrayofStarFileParameters cached_parameters;
 

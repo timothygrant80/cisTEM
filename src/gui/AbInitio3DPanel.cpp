@@ -1754,7 +1754,7 @@ void AbInitioManager::SetupRefinementJob()
 
 			float    high_resolution_limit					= current_high_res_limit;
 			float	 signed_CC_limit						= 0.0;
-			float	 classification_resolution_limit		= current_high_res_limit;
+			float	 classification_resolution_limit		= 8.0;
 //			float    mask_radius_search						= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
 			float    mask_radius_search						= mask_radius;
 			float	 high_resolution_limit_search			= current_high_res_limit;
@@ -1945,13 +1945,15 @@ void AbInitioManager::RunRefinementJob()
 void AbInitioManager::SetupPrepareStackJob()
 {
 	int class_counter;
-	int particles_per_job;
+	float particles_per_job;
 	int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
 	int	number_of_refinement_jobs = number_of_refinement_processes - 1;
 
 	int	number_of_particles = active_refinement_package->contained_particles.GetCount();
-	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
+//	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1.0f;
+//	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
+	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
+	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->my_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
 
@@ -1975,6 +1977,8 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		int	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
+
+		wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
 
 		my_parent->my_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
 													output_particle_images.ToUTF8().data(),

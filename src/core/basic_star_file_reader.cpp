@@ -19,8 +19,10 @@ StarFileParameters::StarFileParameters()
 BasicStarFileReader::BasicStarFileReader()
 {
 	filename = "";
-	input_file_stream = NULL;
-	input_text_stream = NULL;
+//	input_file_stream = NULL;
+//	input_text_stream = NULL;
+
+	input_file = NULL;
 
 	current_position_in_stack = 0;
 	current_column = 0;
@@ -54,10 +56,14 @@ void BasicStarFileReader::Open(wxString wanted_filename)
 
 	filename = wanted_filename;
 
-	input_file_stream = new wxFileInputStream(wanted_filename);
-	input_text_stream = new wxTextInputStream(*input_file_stream);
+//	input_file_stream = new wxFileInputStream(wanted_filename);
+//	input_text_stream = new wxTextInputStream(*input_file_stream);
 
-	if (input_file_stream->IsOk() == false)
+	input_file = new wxTextFile(wanted_filename);
+	input_file->Open();
+
+	//if (input_file_stream->IsOk() == false)
+	if (input_file->IsOpened() == false)
 	{
 		MyPrintWithDetails("Error: Cannot open star file (%s) for read\n", wanted_filename);
 		abort();
@@ -68,7 +74,7 @@ void BasicStarFileReader::Close()
 {
 	cached_parameters.Clear();
 
-	if (input_text_stream != NULL) delete input_text_stream;
+/*	if (input_text_stream != NULL) delete input_text_stream;
 	if (input_file_stream != NULL)
 	{
 		if (input_file_stream->GetFile()->IsOpened() == true) input_file_stream->GetFile()->Close();
@@ -76,7 +82,9 @@ void BasicStarFileReader::Close()
 	}
 
 	input_file_stream = NULL;
-	input_text_stream = NULL;
+	input_text_stream = NULL;*/
+
+	if (input_file != NULL) delete input_file;
 
 }
 
@@ -223,8 +231,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	Open(wanted_filename);
 	wxString current_line;
 
-	MyDebugAssertTrue(input_file_stream != NULL, "FileStream is NULL!");
-	MyDebugAssertTrue(input_file_stream->IsOk(), "File not open");
+	//MyDebugAssertTrue(input_file_stream != NULL, "FileStream is NULL!");
+	MyDebugAssertTrue(input_file->IsOpened(), "File not open");
 
 	bool found_valid_data_block = false;
 	bool found_valid_loop_block = false;
@@ -232,9 +240,11 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 
 	// find a data block
 
-	while (input_file_stream->Eof() == false)
+	//while (input_file_stream->Eof() == false)
+	while (input_file->Eof() == false)
 	{
-		current_line = input_text_stream->ReadLine();
+		//current_line = input_text_stream->ReadLine();
+		current_line = input_file->GetNextLine();
 		current_line = current_line.Trim(true);
 		current_line = current_line.Trim(false);
 		if (current_line.Find("data_") != wxNOT_FOUND)
@@ -254,9 +264,11 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 
 	// find a loop block
 
-	while (input_file_stream->Eof() == false)
+	//while (input_file_stream->Eof() == false)
+	while (input_file->Eof() == false)
 	{
-		current_line = input_text_stream->ReadLine();
+		//current_line = input_text_stream->ReadLine();
+		current_line = input_file->GetNextLine();
 		current_line = current_line.Trim(true);
 		current_line = current_line.Trim(false);
 
@@ -276,9 +288,11 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 
 	// now we can get headers..
 
-	while (input_file_stream->Eof() == false)
+	//while (input_file_stream->Eof() == false)
+	while (input_file->Eof() == false)
 	{
-		current_line = input_text_stream->ReadLine();
+		//current_line = input_text_stream->ReadLine();
+		current_line = input_file->GetNextLine();
 		current_line = current_line.Trim(true);
 		current_line = current_line.Trim(false);
 
@@ -377,9 +391,11 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 
 	// loop over the data lines and fill in..
 
-	while (input_file_stream->Eof() == false)
+	//while (input_file_stream->Eof() == false)
+	while (input_file->Eof() == false)
 	{
-		current_line = input_text_stream->ReadLine();
+		//current_line = input_text_stream->ReadLine();
+		current_line = input_file->GetNextLine();
 		current_line = current_line.Trim(true);
 		current_line = current_line.Trim(false);
 

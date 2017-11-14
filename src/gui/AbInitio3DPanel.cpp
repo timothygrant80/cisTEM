@@ -2693,7 +2693,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 
 		wxArrayLong volume_asset_ids;
 
-		for (int class_counter = 1; class_counter <= my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
+		for (int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++)
 		{
 			temp_asset.reconstruction_job_id = -1;
 			temp_asset.pixel_size = my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size;
@@ -2708,8 +2708,9 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 			temp_asset.filename = current_output_filename;
 			volume_asset_panel->AddAsset(&temp_asset);
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
-			main_frame->current_project.database.EndVolumeAssetInsert();
 		}
+
+		main_frame->current_project.database.EndVolumeAssetInsert();
 
 		// now add the details of the startup job..
 

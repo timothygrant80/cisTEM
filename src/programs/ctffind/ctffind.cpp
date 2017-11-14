@@ -1400,23 +1400,47 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Generate diagnostic image
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
-		current_output_location = current_micrograph_number;
-		average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
-		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0)) * average_spectrum->logical_x_dimension,
-															      	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
-																	average,sigma);
-		average_spectrum->CircleMask(5.0,true);
-		average_spectrum->SetMaximumValueOnCentralCross(average);
-		average_spectrum->SetMinimumAndMaximumValues(average - 4.0 * sigma, average + 4.0 * sigma);
-		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0)) * average_spectrum->logical_x_dimension,
-																	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
-																	average,sigma);
-		average_spectrum->AddConstant(-1.0 * average);
-		average_spectrum->MultiplyByConstant(1.0 / sigma);
-		average_spectrum->AddConstant(average);
+	    //average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
+	    current_output_location = current_micrograph_number;
+	    average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
 
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
+		/*
+		 *  Attempt some renormalisations - we want to do this over a range not affected by the central peak or strong Thon rings,
+		 *  so as to emphasize the "regular" Thon rings
+		 */
+
+	    float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0));
+		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,0.0));
+		float normalization_radius_min = start_zero * average_spectrum->logical_x_dimension;
+		float normalization_radius_max = finish_zero * average_spectrum->logical_x_dimension;
+
+		if (start_zero > current_ctf.GetHighestFrequencyForFitting() || start_zero < current_ctf.GetLowestFrequencyForFitting() || finish_zero > current_ctf.GetHighestFrequencyForFitting() || finish_zero < current_ctf.GetLowestFrequencyForFitting())
+		{
+			normalization_radius_max = current_ctf.GetHighestFrequencyForFitting() * average_spectrum->logical_x_dimension;
+			normalization_radius_min = std::max(0.5f * normalization_radius_max, current_ctf.GetLowestFrequencyForFitting() * average_spectrum->logical_x_dimension);
+		}
+
+		MyDebugAssertTrue(normalization_radius_max > normalization_radius_min,"Bad values for min (%f) and max (%f) normalization radii\n");
+
+		if (normalization_radius_max - normalization_radius_min > 2.0)
+		{
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+																		normalization_radius_max,
+																		average,sigma);
+			average_spectrum->CircleMask(5.0,true);
+			average_spectrum->SetMaximumValueOnCentralCross(average);
+			average_spectrum->SetMinimumAndMaximumValues(average - 4.0 * sigma, average + 4.0 * sigma);
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+																		normalization_radius_max,
+																		average,sigma);
+			average_spectrum->AddConstant(-1.0 * average);
+			average_spectrum->MultiplyByConstant(1.0 / sigma);
+			average_spectrum->AddConstant(average);
+		}
+
+
+	    //average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
+
 
 		// 1D rotational average
 		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
@@ -1473,11 +1497,13 @@ bool CtffindApp::DoCalculation()
 		// Until what frequency were CTF rings detected?
 		if (compute_extra_stats)
 		{
-			static float low_threshold = 0.2;
+			static float low_threshold = 0.1;
 			static float frc_significance_threshold = 0.5; // In analogy to the usual criterion when comparing experimental results to the atomic model
+			static float high_threshold = 0.66;
 			bool at_last_bin_with_good_fit;
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
+			int number_of_bins_above_high_threshold = 0;
 			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,0.0))*average_spectrum->logical_x_dimension);
 			//wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
 			last_bin_with_good_fit = -1;
@@ -1486,7 +1512,7 @@ bool CtffindApp::DoCalculation()
 				//wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
 				at_last_bin_with_good_fit = ( (number_of_bins_above_low_threshold          > 3) &&   ( fit_frc[counter] < low_threshold)  )
 											||
-											( (number_of_bins_above_significance_threshold > 3) &&   ( fit_frc[counter] < frc_significance_threshold) );
+											( (number_of_bins_above_high_threshold         > 3) &&   ( fit_frc[counter] < frc_significance_threshold) );
 				if (at_last_bin_with_good_fit)
 				{
 					last_bin_with_good_fit = counter;
@@ -1495,16 +1521,17 @@ bool CtffindApp::DoCalculation()
 				// Count number of bins above given thresholds
 				if (fit_frc[counter] > low_threshold) number_of_bins_above_low_threshold++;
 				if (fit_frc[counter] > frc_significance_threshold) number_of_bins_above_significance_threshold++;
+				if (fit_frc[counter] > high_threshold) number_of_bins_above_high_threshold++;
 			}
 			//wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
 			if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra-first_bin_to_check) last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
+			if ( number_of_bins_above_significance_threshold == 0 ) last_bin_with_good_fit = 1;
 			last_bin_with_good_fit = std::min(last_bin_with_good_fit,number_of_bins_in_1d_spectra);
 		}
 		else
 		{
-			last_bin_with_good_fit = 0;
+			last_bin_with_good_fit = 1;
 		}
-
 		#ifdef DEBUG
 		//MyDebugAssertTrue(last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra,"Did not find last bin with good fit: %i", last_bin_with_good_fit);
 		if (! (last_bin_with_good_fit >= 0 && last_bin_with_good_fit < number_of_bins_in_1d_spectra) )
@@ -1514,7 +1541,7 @@ bool CtffindApp::DoCalculation()
 		#else
 		if (last_bin_with_good_fit < 0 && last_bin_with_good_fit >= number_of_bins_in_1d_spectra)
 		{
-			last_bin_with_good_fit = 0;
+			last_bin_with_good_fit = 1;
 		}
 		#endif
 
@@ -1526,9 +1553,11 @@ bool CtffindApp::DoCalculation()
 			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
-		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(2,0.0))*average_spectrum->logical_x_dimension,
-																	std::max(current_ctf.GetHighestFrequencyForFitting(),sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0)))*average_spectrum->logical_x_dimension,
+
+		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+																	normalization_radius_max,
 																	average,sigma);
+
 		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);

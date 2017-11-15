@@ -8,7 +8,7 @@ Sharpen3DPanel::Sharpen3DPanel( wxWindow* parent )
 Sharpen3DPanelParent( parent )
 {
 	ResultDisplayPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | START_WITH_NO_LABEL | FIRST_LOCATION_ONLY);
-	GuinierPlot->Initialise("", "", true, 20, 20, 20, 20, false);
+	GuinierPlot->Initialise(wxT("Spatial Freq. (1/Å)"), "", true, 20, 50, 20, 20, true, false);
 	SetInfo();
 
 	volumes_are_dirty = false;
@@ -566,6 +566,16 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
 
 	GuinierPlot->Clear();
 
+	VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(VolumeComboBox->GetSelection());
+
+	// convert curves to spatial frequency
+	for (int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++)
+	{
+		original_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / original_curve->data_x[point_counter]);
+		sharpened_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / sharpened_curve->data_x[point_counter]);
+	}
+
+
 	if (original_curve != NULL && sharpened_curve != NULL)
 	{
 
@@ -573,13 +583,15 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
 		float max_y = -FLT_MAX;
 		float scale_factor = original_curve->data_y[1] / sharpened_curve->data_y[1];
 
+
+
 		// scale the curves
 
 		sharpened_curve->MultiplyByConstant(scale_factor);
 
 		for (int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++)
 		{
-			if (original_curve->data_x[point_counter] <= 0.5)
+			if (original_curve->data_x[point_counter] <= 1.0f / (selected_volume->pixel_size / 0.5f))
 			{
 				min_y = std::min(min_y, original_curve->data_y[point_counter]);
 				min_y = std::min(min_y, sharpened_curve->data_y[point_counter]);
@@ -591,7 +603,7 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
 
 		GuinierPlot->AddCurve(*original_curve, wxColour(0, 0, 255), "Original");
 		GuinierPlot->AddCurve(*sharpened_curve, wxColour(255, 0, 0), "Sharpened");
-		GuinierPlot->Draw(0.0f, 0.5f, max_y-10, max_y);
+		GuinierPlot->Draw(0.0f, 1.0f / (selected_volume->pixel_size / 0.5f), max_y-10, max_y);
 	}
 
 	if (original_curve != NULL) delete original_curve;
@@ -664,10 +676,6 @@ wxThread::ExitCode SharpenMapThread::Entry()
 
 		volume_to_sharpen->ReadSlices(map_file, 1, map_file->ReturnNumberOfSlices());
 
-		// if we are correcting sinc, do it
-
-		if (correct_sinc == true) volume_to_sharpen->CorrectSinc(outer_mask_radius);
-
 		// calculate an orthogonal view of this..
 
 		original_orth_image->Allocate(map_file->ReturnXSize() * 3, map_file->ReturnYSize(), 1, true);
@@ -696,6 +704,11 @@ wxThread::ExitCode SharpenMapThread::Entry()
 		Curve *sharpened_curve = new Curve;
 
 		volume_to_sharpen->SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, mask_image, input_resolution_statistics, statistics_scale_factor, original_curve, sharpened_curve);
+
+		// if we are correcting sinc, do it
+
+		if (correct_sinc == true) volume_to_sharpen->CorrectSinc(outer_mask_radius);
+
 
 		finished_event->SetSharpenedImage(volume_to_sharpen);
 		finished_event->SetOriginalCurve(original_curve);

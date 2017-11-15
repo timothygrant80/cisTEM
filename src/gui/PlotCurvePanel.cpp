@@ -31,8 +31,8 @@ void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wante
 
 	wxFont graphFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
-	current_xaxis = new mpScaleX(wanted_x_axis_text, mpALIGN_BOTTOM, should_draw_axis_ticks, mpX_NORMAL);
-	current_yaxis = new mpScaleY(wanted_y_axis_text, mpALIGN_LEFT, should_draw_axis_ticks);
+	current_xaxis = new mpScaleX(wanted_x_axis_text, mpALIGN_BOTTOM, should_draw_x_axis_ticks, mpX_NORMAL);
+	current_yaxis = new mpScaleY(wanted_y_axis_text, mpALIGN_LEFT, should_draw_y_axis_ticks);
 
 	title = new mpTitle("");
 	legend = new mpTopInfoLegend();
@@ -61,12 +61,13 @@ PlotCurvePanel::~PlotCurvePanel()
 	delete current_plot_window;
 }
 
-void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_axis_ticks)
+void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_x_axis_ticks, bool wanted_draw_y_axis_ticks)
 {
 	current_plot_window->SetMargins(20, 20, 50, 60);
 	current_plot_window->SetMargins(wanted_top_margin, wanted_right_margin, wanted_bottom_margin, wanted_left_margin);
 	legend_is_visible = show_legend;
-	should_draw_axis_ticks = wanted_draw_axis_ticks;
+	should_draw_x_axis_ticks = wanted_draw_x_axis_ticks;
+	should_draw_y_axis_ticks = wanted_draw_y_axis_ticks;
 	stored_x_axis_text = wanted_x_axis_text;
 	stored_y_axis_text = wanted_y_axis_text;
 

@@ -258,6 +258,8 @@ void Refinement::WriteSingleClassFrealignParameterFile(wxString filename,int wan
 
 	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(filename, OPEN_TO_WRITE);
 
+	my_output_par_file->WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
+
 	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 	{
 		output_parameters[0] = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].position_in_stack;
@@ -328,7 +330,6 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-
 		current_filename = base_filename + wxString::Format("_%li_%i.par", refinement_id, class_counter + 1);
 		output_filenames.Add(current_filename);
 		WriteSingleClassFrealignParameterFile(current_filename, class_counter, percent_used_overide, sigma_override);

@@ -68,6 +68,8 @@ public:
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();
 
+	void RemoveFilesFromScratch();
+
 
 };
 

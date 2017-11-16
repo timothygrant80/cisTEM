@@ -653,6 +653,7 @@ void MyRefine2DPanel::TerminateButtonClick( wxCommandEvent& event )
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
+	global_delete_refine2d_scratch();
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
 }
@@ -1391,6 +1392,23 @@ void ClassificationManager::RunRefinementJob()
 
 }
 
+/*
+ * After merging is done, the temporary dump files can be removed from the scratch directory
+ *
+ * (could have done this with wxDir::GetAllFiles to get a list of all the files, but I'm weary of relying on the filesystem
+ * in case there are NFS-style caching issues)
+ */
+void ClassificationManager::RemoveFilesFromScratch()
+{
+	int number_of_refinement_jobs = active_run_profile.ReturnTotalJobs() - 1;
+	wxString dump_file;
+	for (int job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
+	{
+		dump_file = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
+		wxRemoveFile(dump_file);
+	}
+}
+
 
 void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 {
@@ -1924,7 +1942,8 @@ void ClassificationManager::ProcessAllJobsFinished()
 	if (running_job_type == MERGE)
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
-		global_delete_refine2d_scratch();
+		RemoveFilesFromScratch();
+		//global_delete_refine2d_scratch();
 		CycleRefinement();
 	}
 
@@ -2292,6 +2311,7 @@ void ClassificationManager::CycleRefinement()
 			delete output_classification;
 			my_parent->WriteBlueText("All refinement cycles are finished!");
 			my_parent->CancelAlignmentButton->Show(false);
+			global_delete_refine2d_scratch();
 			my_parent->FinishButton->Show(true);
 			my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
 			my_parent->ProgressBar->SetValue(100);

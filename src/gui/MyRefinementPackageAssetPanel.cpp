@@ -479,7 +479,12 @@ void MyRefinementPackageAssetPanel::OnEndEdit( wxListEvent& event )
 
 			// do in database also..
 
-			wxString sql_command = wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET NAME='%s' WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", all_refinement_packages.Item(event.GetIndex()).name, all_refinement_packages.Item(event.GetIndex()).asset_id);
+			wxString safe_name = all_refinement_packages.Item(event.GetIndex()).name;
+
+			//escape apostrophes
+			safe_name.Replace("'", "''");
+
+			wxString sql_command = wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET NAME='%s' WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", safe_name, all_refinement_packages.Item(event.GetIndex()).asset_id);
 			main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 			main_frame->DirtyRefinementPackages();

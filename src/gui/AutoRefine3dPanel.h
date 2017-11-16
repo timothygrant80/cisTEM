@@ -126,6 +126,10 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 		AutoRefinementManager my_refinement_manager;
 
+		int active_orth_thread_id;
+		int active_mask_thread_id;
+		int next_thread_id;
+
 	public:
 
 
@@ -165,31 +169,6 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
-};
-
-class AutoRefine3DMaskerThread : public wxThread
-{
-	public:
-	AutoRefine3DMaskerThread(AutoRefine3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_mask_radius, float wanted_pixel_size) : wxThread(wxTHREAD_DETACHED)
-	{
-		main_thread_pointer = parent;
-		input_files = wanted_input_files;
-		output_files = wanted_output_files;
-		mask_radius = wanted_mask_radius;
-		pixel_size = wanted_pixel_size;
-	}
-
-	protected:
-
-	AutoRefine3DPanel *main_thread_pointer;
-	wxArrayString input_files;
-	wxArrayString output_files;
-
-	float mask_radius;
-	float pixel_size;
-
-
-    virtual ExitCode Entry();
 };
 
 #endif

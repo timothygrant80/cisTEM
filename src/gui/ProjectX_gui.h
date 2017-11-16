@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -101,7 +101,6 @@ class MainFrame : public wxFrame
 		wxPanel* LeftPanel;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
-		wxMenu* ExportMenu;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
@@ -110,9 +109,6 @@ class MainFrame : public wxFrame
 		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnExportCoordinatesToImagic( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnExportToFrealign( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnExportToRelion( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:

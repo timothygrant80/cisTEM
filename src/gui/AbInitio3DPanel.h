@@ -155,6 +155,12 @@ public:
 	JobPackage my_job_package;
 	JobTracker my_job_tracker;
 
+	int active_orth_thread_id;
+	int active_mask_thread_id;
+	int active_sym_thread_id;
+
+	int next_thread_id;
+
 	bool running_job;
 
 
@@ -219,7 +225,7 @@ class ResampleVolumeThread : public wxThread
 class ImposeAlignmentAndSymmetryThread : public wxThread
 {
 	public:
-	ImposeAlignmentAndSymmetryThread(wxWindow *wanted_parent_window, wxArrayString wanted_input_volumes, wxArrayString wanted_output_volumes, wxArrayFloat wanted_x_rots, wxArrayFloat wanted_y_rots, wxArrayFloat wanted_z_rots, wxArrayFloat wanted_x_shifts, wxArrayFloat wanted_y_shifts, wxArrayFloat wanted_z_shifts, wxString wanted_symmetry)
+	ImposeAlignmentAndSymmetryThread(wxWindow *wanted_parent_window, wxArrayString wanted_input_volumes, wxArrayString wanted_output_volumes, wxArrayFloat wanted_x_rots, wxArrayFloat wanted_y_rots, wxArrayFloat wanted_z_rots, wxArrayFloat wanted_x_shifts, wxArrayFloat wanted_y_shifts, wxArrayFloat wanted_z_shifts, wxString wanted_symmetry, int wanted_thread_id = -1)
 	{
 		parent_window = wanted_parent_window;
 		input_volumes = wanted_input_volumes;
@@ -231,6 +237,7 @@ class ImposeAlignmentAndSymmetryThread : public wxThread
 		y_shifts = wanted_y_shifts;
 		z_shifts = wanted_z_shifts;
 		symmetry = wanted_symmetry;
+		thread_id = wanted_thread_id;
 	}
 
 	wxWindow *parent_window;
@@ -243,6 +250,7 @@ class ImposeAlignmentAndSymmetryThread : public wxThread
 	wxArrayFloat y_shifts;
 	wxArrayFloat z_shifts;
 	wxString symmetry;
+	int thread_id;
 
 	protected:
 

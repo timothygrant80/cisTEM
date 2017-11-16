@@ -1701,6 +1701,8 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 	// send finished event..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_AUTOMASKERTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
+
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
 	return (wxThread::ExitCode)0;     // success
@@ -1712,6 +1714,7 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 	// we are going to make a bitmap panel, calculate the orth image, add it to the bitmap panel, then return that for the gui to draw, this is a bit crazy maybe
 
 	ReturnProcessedImageEvent *finished_event = new ReturnProcessedImageEvent(RETURN_PROCESSED_IMAGE_EVT); // for sending back the panel
+	finished_event->SetInt(thread_id);
 
 	if (DoesFileExist(filenames_of_volumes.Item(0)) == true)
 	{
@@ -1773,7 +1776,6 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 
 		finished_event->SetImage(new_image);
 		finished_event->SetString(tab_name);
-
 	}
 	else
 	{

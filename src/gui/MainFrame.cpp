@@ -668,16 +668,16 @@ void MyMainFrame::OnFileMenuUpdate( wxUpdateUIEvent& event )
 	if (current_project.is_open == true)
 	{
 		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(true);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(true);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Frealign"))->Enable(true);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Relion"))->Enable(true);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(true);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Frealign"))->Enable(true);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Relion"))->Enable(true);
 	}
 	else
 	{
 		FileMenu->FindItem(FileMenu->FindItem("Close Project"))->Enable(false);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(false);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Frealign"))->Enable(false);
-		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Relion"))->Enable(false);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export coordinates to Imagic"))->Enable(false);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Frealign"))->Enable(false);
+//		ExportMenu->FindItem(ExportMenu->FindItem("Export particles to Relion"))->Enable(false);
 	}
 }
 

@@ -709,7 +709,6 @@ wxThread::ExitCode SharpenMapThread::Entry()
 
 		if (correct_sinc == true) volume_to_sharpen->CorrectSinc(outer_mask_radius);
 
-
 		finished_event->SetSharpenedImage(volume_to_sharpen);
 		finished_event->SetOriginalCurve(original_curve);
 		finished_event->SetSharpenedCurve(sharpened_curve);

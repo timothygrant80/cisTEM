@@ -38,6 +38,9 @@ Generate3DPanelParent( parent )
 	ShowRefinementResultsPanel->FSCResultsPanel->Show(true);
 
 	FillRefinementPackagesComboBox();
+
+	active_orth_thread_id = -1;
+	next_thread_id = 1;
 }
 
 void Generate3DPanel::SetInfo()
@@ -377,6 +380,8 @@ void Generate3DPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
 
+	active_orth_thread_id = -1;
+
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
@@ -705,7 +710,7 @@ void Generate3DPanel::SetupReconstructionJob()
 			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
@@ -1099,8 +1104,11 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		OrthDrawerThread *result_thread;
 		ShortRefinementInfo *pointer_to_refinement_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(input_refinement->refinement_id);
 
-		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions");
-		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction");
+		active_orth_thread_id = next_thread_id;
+		next_thread_id++;
+
+		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
+		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -1204,15 +1212,22 @@ void Generate3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 
 	Image *new_image = my_event.GetImage();
 
-	if (new_image != NULL)
+	if (my_event.GetInt() == active_orth_thread_id)
 	{
-		ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
-
-	/*	if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+		if (new_image != NULL)
 		{
-			ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
-			Layout();
+			ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
+
+			/*	if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+			{
+				ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
+				Layout();
+			}
+			*/
 		}
-		*/
+	}
+	else
+	{
+		delete new_image;
 	}
 }

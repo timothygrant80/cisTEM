@@ -19,6 +19,9 @@ class Generate3DPanel : public Generate3DPanelParent
 		int length_of_process_number;
 		//RefinementManager my_refinement_manager;
 
+		int active_orth_thread_id;
+		int next_thread_id;
+
 	public:
 
 		long time_of_last_result_update;

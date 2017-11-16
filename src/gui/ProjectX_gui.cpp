@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -82,21 +82,6 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	
 	m_menubar1->Append( FileMenu, wxT("Project") ); 
 	
-	ExportMenu = new wxMenu();
-	wxMenuItem* ExportCoordinatesToImagic;
-	ExportCoordinatesToImagic = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export coordinates to Imagic") ) , wxEmptyString, wxITEM_NORMAL );
-	ExportMenu->Append( ExportCoordinatesToImagic );
-	
-	wxMenuItem* ExportToFrealign;
-	ExportToFrealign = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export particles to Frealign") ) , wxEmptyString, wxITEM_NORMAL );
-	ExportMenu->Append( ExportToFrealign );
-	
-	wxMenuItem* ExportToRelion;
-	ExportToRelion = new wxMenuItem( ExportMenu, wxID_ANY, wxString( wxT("Export particles to Relion") ) , wxEmptyString, wxITEM_NORMAL );
-	ExportMenu->Append( ExportToRelion );
-	
-	m_menubar1->Append( ExportMenu, wxT("Export") ); 
-	
 	this->SetMenuBar( m_menubar1 );
 	
 	
@@ -109,9 +94,6 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Connect( FileOpenProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Connect( FileCloseProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Connect( FileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
-	this->Connect( ExportCoordinatesToImagic->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
-	this->Connect( ExportToFrealign->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
-	this->Connect( ExportToRelion->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToRelion ) );
 }
 
 MainFrame::~MainFrame()
@@ -123,9 +105,6 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
-	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportCoordinatesToImagic ) );
-	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToFrealign ) );
-	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnExportToRelion ) );
 	
 }
 

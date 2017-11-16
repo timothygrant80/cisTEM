@@ -79,13 +79,14 @@ typedef void (wxEvtHandler::*ReturnSharpeningResultsEventFunction)(ReturnSharpen
 class OrthDrawerThread : public wxThread
 {
 	public:
-	OrthDrawerThread(wxWindow *parent, wxArrayString wanted_filenames_of_volumes, wxString wanted_tab_name, float wanted_scale_factor = 1.0f, float wanted_mask_radius_in_pixels = 0.0f) : wxThread(wxTHREAD_DETACHED)
+	OrthDrawerThread(wxWindow *parent, wxArrayString wanted_filenames_of_volumes, wxString wanted_tab_name, float wanted_scale_factor = 1.0f, float wanted_mask_radius_in_pixels = 0.0f, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		filenames_of_volumes = wanted_filenames_of_volumes;
 		tab_name = wanted_tab_name;
 		scale_factor = wanted_scale_factor;
 		mask_radius_in_pixels = wanted_mask_radius_in_pixels;
+		thread_id = wanted_thread_id;
 	}
 
 	protected:
@@ -95,6 +96,7 @@ class OrthDrawerThread : public wxThread
 	wxString tab_name;
 	float scale_factor;
 	float mask_radius_in_pixels;
+	int thread_id;
 
     virtual ExitCode Entry();
 };
@@ -103,13 +105,14 @@ class OrthDrawerThread : public wxThread
 class AutoMaskerThread : public wxThread
 {
 	public:
-	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius) : wxThread(wxTHREAD_DETACHED)
+	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		input_files = wanted_input_files;
 		output_files = wanted_output_files;
 		pixel_size = wanted_pixel_size;
 		mask_radius = wanted_mask_radius;
+		thread_id = wanted_thread_id;
 	}
 
 	protected:
@@ -119,6 +122,7 @@ class AutoMaskerThread : public wxThread
 	wxArrayString output_files;
 	float pixel_size;
 	float mask_radius;
+	int thread_id;
 
     virtual ExitCode Entry();
 };

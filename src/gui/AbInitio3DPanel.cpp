@@ -45,6 +45,11 @@ AbInitio3DPanelParent( parent )
 	StartPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
 	EndPercentUsedTextCtrl->SetMinMaxValue(0.001, 100);
 	SmoothingFactorTextCtrl->SetMinMaxValue(0, 1);
+
+	active_orth_thread_id = -1;
+	active_mask_thread_id = -1;
+	active_sym_thread_id = -1;
+	next_thread_id = 1;
 }
 
 void AbInitio3DPanel::SetInfo()
@@ -530,6 +535,11 @@ void AbInitio3DPanel::TerminateButtonClick( wxCommandEvent& event )
 	main_frame->job_controller.KillJob(my_job_id);
 	Freeze();
 	WriteBlueText("Terminated Job");
+
+	active_mask_thread_id = -1;
+	active_sym_thread_id = -1;
+	active_orth_thread_id = -1;
+
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
 	CurrentLineOne->Show(false);
@@ -787,6 +797,11 @@ void AbInitio3DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
 void AbInitio3DPanel::TakeLastStartClicked( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
+
+	active_mask_thread_id = -1;
+	active_sym_thread_id = -1;
+	active_orth_thread_id = -1;
+
 	Freeze();
 	WriteBlueText("Terminating job, and importing the result at the end of the previous start.");
 	TimeRemainingText->SetLabel("Time Remaining : Stopped");
@@ -806,6 +821,11 @@ void AbInitio3DPanel::TakeLastStartClicked( wxCommandEvent& event )
 void AbInitio3DPanel::TakeCurrentClicked( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
+
+	active_mask_thread_id = -1;
+	active_sym_thread_id = -1;
+	active_orth_thread_id = -1;
+
 	Freeze();
 	WriteBlueText("Terminating job, and importing the current result.");
 	TimeRemainingText->SetLabel("Time Remaining : Stopped");
@@ -1317,7 +1337,7 @@ void AbInitioManager::SetupReconstructionJob()
 			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
@@ -1713,7 +1733,7 @@ void AbInitioManager::SetupRefinementJob()
 			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
@@ -1973,7 +1993,7 @@ void AbInitioManager::SetupPrepareStackJob()
 		int	 first_particle							= myroundint(current_particle_counter);
 
 		current_particle_counter += particles_per_job;
-		if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+		if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
 
 		int	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
@@ -2496,10 +2516,12 @@ void AbInitioManager::ProcessAllJobsFinished()
 		// prepare the orth projections..
 
 		OrthDrawerThread *result_thread;
+		my_parent->active_orth_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
 
-		if (start_with_reconstruction == true)	result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, "Random Start", stack_bin_factor, active_global_mask_radius / active_pixel_size);
+		if (start_with_reconstruction == true)	result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, "Random Start", stack_bin_factor, active_global_mask_radius / active_pixel_size, my_parent->active_orth_thread_id);
 		else
-		result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i,%i", number_of_starts_run, number_of_rounds_run), stack_bin_factor, active_global_mask_radius / active_pixel_size);
+		result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i,%i", number_of_starts_run, number_of_rounds_run), stack_bin_factor, active_global_mask_radius / active_pixel_size, my_parent->active_orth_thread_id);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2567,8 +2589,10 @@ void AbInitioManager::ProcessAllJobsFinished()
 		//my_parent->TimeRemainingText->SetLabel("Time Remaining : 000h:00m:01s");
 		my_parent->ProgressBar->SetValue(100);
 
+		my_parent->active_sym_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
 
-		ImposeAlignmentAndSymmetryThread *symmetry_thread = new ImposeAlignmentAndSymmetryThread(my_parent, current_reference_filenames, symmetry_filenames, align_sym_best_x_rots, align_sym_best_y_rots, align_sym_best_z_rots, align_sym_best_x_shifts, align_sym_best_y_shifts, align_sym_best_z_shifts, active_refinement_package->symmetry);
+		ImposeAlignmentAndSymmetryThread *symmetry_thread = new ImposeAlignmentAndSymmetryThread(my_parent, current_reference_filenames, symmetry_filenames, align_sym_best_x_rots, align_sym_best_y_rots, align_sym_best_z_rots, align_sym_best_x_shifts, align_sym_best_y_shifts, align_sym_best_z_shifts, active_refinement_package->symmetry, my_parent->active_sym_thread_id);
 
 		if ( symmetry_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2594,22 +2618,29 @@ void AbInitio3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 
 	Image *new_image = my_event.GetImage();
 
-	if (new_image != NULL)
+	if (my_event.GetInt() == active_orth_thread_id)
 	{
-		ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
-
-		if (OrthResultsPanel->IsShown() == false)
+		if (new_image != NULL)
 		{
-			OrthResultsPanel->Show(true);
-			Layout();
+			ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
+			if (OrthResultsPanel->IsShown() == false)
+			{
+				OrthResultsPanel->Show(true);
+				Layout();
+			}
 		}
+	}
+	else
+	{
+		wxPrintf("No %i, not %i\n", my_event.GetInt(), active_orth_thread_id);
+		delete new_image;
 	}
 }
 
 
 void AbInitio3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 {
-	my_abinitio_manager.OnMaskerThreadComplete();
+	if (my_event.GetInt() == active_mask_thread_id) my_abinitio_manager.OnMaskerThreadComplete();
 }
 
 
@@ -2643,7 +2674,10 @@ void AbInitioManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_global_mask_radius);
+	my_parent->active_mask_thread_id = my_parent->next_thread_id;
+	my_parent->next_thread_id++;
+
+	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_global_mask_radius, my_parent->active_mask_thread_id );
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -2659,14 +2693,17 @@ void AbInitioManager::DoMasking()
 
 void AbInitio3DPanel::OnImposeSymmetryThreadComplete(wxThreadEvent& event)
 {
-	if (my_abinitio_manager.active_should_automask == true)
+	if (event.GetInt() == active_sym_thread_id)
 	{
-		my_abinitio_manager.DoMasking();
-	}
-	else
-	{
-		my_abinitio_manager.SetupRefinementJob();
-		my_abinitio_manager.RunRefinementJob();
+		if (my_abinitio_manager.active_should_automask == true)
+		{
+			my_abinitio_manager.DoMasking();
+		}
+		else
+		{
+			my_abinitio_manager.SetupRefinementJob();
+			my_abinitio_manager.RunRefinementJob();
+		}
 	}
 
 }
@@ -2704,7 +2741,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 			volume_asset_ids.Add(temp_asset.asset_id);
 			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, my_event.GetInt());
 
-			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter);
+			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
 			temp_asset.filename = current_output_filename;
 			volume_asset_panel->AddAsset(&temp_asset);
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
@@ -2773,5 +2810,6 @@ wxThread::ExitCode ImposeAlignmentAndSymmetryThread::Entry()
 	// send event to say we are done..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_IMPOSESYMMETRY_DONE);
+	my_thread_event->SetInt(thread_id);
 	wxQueueEvent(parent_window, my_thread_event);
 }

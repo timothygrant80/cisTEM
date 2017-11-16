@@ -64,6 +64,9 @@ AutoRefine3DPanelParent( parent )
 
 	long time_of_last_result_update;
 
+	active_orth_thread_id = -1;
+	active_mask_thread_id = -1;
+	next_thread_id = 1;
 
 }
 
@@ -576,6 +579,9 @@ void AutoRefine3DPanel::OnInputParametersComboBox( wxCommandEvent& event )
 void AutoRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
+
+	active_mask_thread_id = -1;
+	active_orth_thread_id = -1;
 
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
@@ -1275,7 +1281,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
@@ -1576,7 +1582,7 @@ void AutoRefinementManager::SetupRefinementJob()
 			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
@@ -2016,7 +2022,10 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		// launch drawer thread..
 
 		main_frame->ClearAutoRefine3DScratch();
-		OrthDrawerThread *result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
+
+		my_parent->active_orth_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+		OrthDrawerThread *result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2170,7 +2179,9 @@ void AutoRefinementManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius);
+	my_parent->active_mask_thread_id = my_parent->next_thread_id;
+	my_parent->next_thread_id++;
+	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id );
 
 	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -2362,7 +2373,7 @@ void AutoRefinementManager::CycleRefinement()
 
 void AutoRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 {
-	my_refinement_manager.OnMaskerThreadComplete();
+	if (my_event.GetInt() == active_mask_thread_id) my_refinement_manager.OnMaskerThreadComplete();
 }
 
 
@@ -2378,16 +2389,25 @@ void AutoRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event
 
 	Image *new_image = my_event.GetImage();
 
-	if (new_image != NULL)
+	if (my_event.GetInt() == active_orth_thread_id)
 	{
-		ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
-
-		if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+		if (new_image != NULL)
 		{
-			ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
-			Layout();
+			ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
+
+			if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+			{
+				ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
+				Layout();
+			}
 		}
 	}
+	else
+	{
+		delete new_image;
+	}
+
 }
+
 
 

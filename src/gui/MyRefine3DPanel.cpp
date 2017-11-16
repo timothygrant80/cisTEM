@@ -65,6 +65,10 @@ Refine3DPanel( parent )
 
 	long time_of_last_result_update;
 
+	active_orth_thread_id = -1;
+	active_mask_thread_id = -1;
+	next_thread_id = 1;
+
 
 }
 
@@ -939,6 +943,9 @@ void MyRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
 
+	active_mask_thread_id = -1;
+	active_orth_thread_id = -1;
+
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
@@ -1621,7 +1628,7 @@ void RefinementManager::SetupReconstructionJob()
 			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
@@ -1849,7 +1856,7 @@ void RefinementManager::SetupRefinementJob()
 			long	 first_particle							= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle							= myroundint(current_particle_counter);
 			current_particle_counter++;
@@ -2369,9 +2376,11 @@ void RefinementManager::ProcessAllJobsFinished()
 		long current_reconstruction_id;
 
 		OrthDrawerThread *result_thread;
+		my_parent->active_orth_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
 
-		if (start_with_reconstruction == true) result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
-		else result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size);
+		if (start_with_reconstruction == true) result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
+		else result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2598,7 +2607,10 @@ void RefinementManager::DoMasking()
 			wanted_low_pass_filter_radius = 0.0;
 		}
 
-		Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size);
+		my_parent->active_mask_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+
+		Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2613,7 +2625,10 @@ void RefinementManager::DoMasking()
 	}
 	else
 	{
-		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75);
+		my_parent->active_mask_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id);
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2689,7 +2704,7 @@ void RefinementManager::CycleRefinement()
 
 void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 {
-	my_refinement_manager.OnMaskerThreadComplete();
+	if (my_event.GetInt() == active_mask_thread_id)	my_refinement_manager.OnMaskerThreadComplete();
 }
 
 
@@ -2698,16 +2713,24 @@ void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 
 	Image *new_image = my_event.GetImage();
 
-	if (new_image != NULL)
+	if (my_event.GetInt() == active_orth_thread_id)
 	{
-		ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
-
-		if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+		if (new_image != NULL)
 		{
-			ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
-			Layout();
+			ShowRefinementResultsPanel->ShowOrthDisplayPanel->OpenImage(new_image, my_event.GetString(), true);
+
+			if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == false)
+			{
+				ShowRefinementResultsPanel->LeftRightSplitter->SplitVertically(ShowRefinementResultsPanel->LeftPanel, ShowRefinementResultsPanel->RightPanel, 600);
+				Layout();
+			}
 		}
 	}
+	else
+	{
+		delete new_image;
+	}
+
 }
 
 
@@ -2753,6 +2776,7 @@ wxThread::ExitCode Refine3DMaskerThread::Entry()
 	// send finished event..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
 

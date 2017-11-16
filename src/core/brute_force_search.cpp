@@ -62,7 +62,6 @@ void BruteForceSearch::Init(float (*function_to_minimize)(void* parameters, floa
 
 	//
 	minimise_at_every_step = should_minimise_at_every_step;
-	MyDebugAssertFalse(minimise_at_every_step,"Minimisation at every step not yet implemented. Sorry.");
 
 
 	// Work out how many iterations the exhaustive search will take
@@ -157,6 +156,8 @@ void BruteForceSearch::Run()
 
 	// Private variables
 	float current_values[number_of_dimensions];
+	float accuracy_for_local_minimization[number_of_dimensions];
+	float current_values_for_local_minimization[number_of_dimensions];
 	int i;
 	int num_iterations_completed;
 	int current_iteration;
@@ -175,6 +176,9 @@ void BruteForceSearch::Run()
 		dimension_at_max[i] = false;
 	}
 
+	// The accuracy for the local minimization
+	if (minimise_at_every_step) for (i=0;i<number_of_dimensions; i++) { accuracy_for_local_minimization[i] = step_size[i] * 0.5; }
+
 	if ( print_progress_bar ) { my_progress_bar = new ProgressBar(num_iterations); }
 
 	// How many iterations have we completed?
@@ -188,8 +192,19 @@ void BruteForceSearch::Run()
 		MyDebugAssertFalse(search_completed,"Failed sanity check");
 
 		// Try the current parameters by calling the scoring function
-		// ADD HERE: minimization if minimise_at_every_step
-		current_score = target_function(parameters,current_values);
+		if (minimise_at_every_step)
+		{
+			ConjugateGradient local_minimizer;
+			for (i=0; i<number_of_dimensions;i++) { current_values_for_local_minimization[i] = current_values[i]; }
+			local_minimizer.Init(target_function, parameters, number_of_dimensions, current_values_for_local_minimization, accuracy_for_local_minimization);
+			local_minimizer.Run();
+			current_score = local_minimizer.GetBestScore();
+			for (i=0; i<number_of_dimensions;i++) { current_values_for_local_minimization[i] = local_minimizer.GetBestValue(i); }
+		}
+		else
+		{
+			current_score = target_function(parameters,current_values);
+		}
 
 		// Print debug
 		/*wxPrintf("(BF dbg, it %04i) Values: ",current_iteration);
@@ -204,10 +219,19 @@ void BruteForceSearch::Run()
 		{
 			best_score = current_score;
 			//wxPrintf("new best values: ");
-			for (i=0;i<number_of_dimensions;i++)
+			if (minimise_at_every_step)
 			{
-				best_value[i] = current_values[i];
-				//wxPrintf("%g ",best_value[i]);
+				for (i=0;i<number_of_dimensions;i++) {
+					best_value[i] = current_values_for_local_minimization[i];
+					//wxPrintf("%g ",best_value[i]);
+				}
+			}
+			else
+			{
+				for (i=0;i<number_of_dimensions;i++) {
+					best_value[i] = current_values[i];
+					//wxPrintf("%g ",best_value[i]);
+				}
 			}
 			//wxPrintf("\n");*/
 		}

@@ -1420,6 +1420,13 @@ void MyApp::SendError(wxString error_to_send)
 	}
 }
 
+void MyApp::SendErrorAndCrash(wxString error_to_send)
+{
+	SendError(error_to_send);
+	if (!is_running_locally) wxSleep(2); // wait for the main thread to actually send the error
+	abort();
+}
+
 void MyApp::SendInfo(wxString info_to_send)
 {
 	if (is_running_locally == true)

@@ -102,6 +102,7 @@ MyApp : public wxAppConsole
 		virtual void AddCommandLineOptions();
 
 		void SendError(wxString error_message);
+		void SendErrorAndCrash(wxString error_message);
 		void SendInfo(wxString error_message);
 		void SendIntermediateResultQueue(ArrayofJobResults &queue_to_send);
 

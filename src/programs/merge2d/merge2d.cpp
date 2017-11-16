@@ -88,8 +88,7 @@ bool Merge2DApp::DoCalculation()
 	}
 	else
 	{
-		SendError(wxString::Format("Error: Dump file %s not found\n", dump_file));
-		exit(-1);
+		SendErrorAndCrash(wxString::Format("Error: Dump file %s not found\n", dump_file));
 	}
 
 	list_of_nozero_classes = new int [number_of_classes];
@@ -129,8 +128,7 @@ bool Merge2DApp::DoCalculation()
 		}
 		else
 		{
-			SendError(wxString::Format("Error: Dump file not found: %s\n",dump_file));
-			exit(-1);
+			SendErrorAndCrash(wxString::Format("Error: Dump file not found: %s\n",dump_file));
 		}
 	}
 

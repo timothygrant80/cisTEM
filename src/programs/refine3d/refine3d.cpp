@@ -383,20 +383,17 @@ bool Refine3DApp::DoCalculation()
 	ZeroFloatArray(cg_starting_point, refine_particle.number_of_parameters);
 	ZeroFloatArray(cg_accuracy, refine_particle.number_of_parameters);
 
-	if (! DoesFileExist(input_parameter_file))
+	if ((is_running_locally && !DoesFileExist(input_parameter_file)) || (!is_running_locally && !DoesFileExistWithWait(input_parameter_file, 90)))
 	{
-		SendError(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
-		exit(-1);
+		SendErrorAndCrash(wxString::Format("Error: Input parameter file %s not found\n", input_parameter_file));
 	}
-	if (! DoesFileExist(input_particle_images))
+	if ((is_running_locally && !DoesFileExist(input_particle_images)) || (!is_running_locally && !DoesFileExistWithWait(input_particle_images, 90)))
 	{
-		SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
-		exit(-1);
+		SendErrorAndCrash(wxString::Format("Error: Input particle stack %s not found\n", input_particle_images));
 	}
-	if (! DoesFileExist(input_reconstruction))
+	if ((is_running_locally && !DoesFileExist(input_reconstruction)) || (!is_running_locally && !DoesFileExistWithWait(input_reconstruction, 90)))
 	{
-		SendError(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
-		exit(-1);
+		SendErrorAndCrash(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
 	}
 	//	wxPrintf("\nOpening input file %s.\n", input_parameter_file);
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
@@ -418,27 +415,23 @@ bool Refine3DApp::DoCalculation()
 
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
-		SendError("Error: Particles are not square\n");
 		input_stack.PrintInfo();
-		exit(-1);
+		SendErrorAndCrash("Error: Particles are not square\n");
 	}
 	if ((input_file.ReturnXSize() != input_file.ReturnYSize()) || (input_file.ReturnXSize() != input_file.ReturnZSize()))
 	{
-		SendError("Error: Input reconstruction is not cubic\n");
 		input_file.PrintInfo();
-		exit(-1);
+		SendErrorAndCrash("Error: Input reconstruction is not cubic\n");
 	}
 	if (input_file.ReturnXSize() != input_stack.ReturnXSize())
 	{
-		SendError("Error: Dimension of particles and input reconstruction differ\n");
 		input_file.PrintInfo();
 		input_stack.PrintInfo();
-		exit(-1);
+		SendErrorAndCrash("Error: Dimension of particles and input reconstruction differ\n");
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
-		SendError("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-		exit(-1);
+		SendErrorAndCrash("Error: Number of last particle to refine smaller than number of first particle to refine\n");
 	}
 
 	if (last_particle == 0) last_particle = input_stack.ReturnZSize();

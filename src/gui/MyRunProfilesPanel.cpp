@@ -728,6 +728,8 @@ void MyRunProfilesPanel::RemoveCommandButtonClick( wxCommandEvent& event )
 		{
 			selected_command = -1;
 		}
+
+		command_panel_has_changed = true;
 	}
 }
 

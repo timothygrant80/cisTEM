@@ -23,7 +23,7 @@ Refine2DPanel( parent )
 
 	my_classification_manager.SetParent(this);
 
-	ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING);
+	ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING | KEEP_TABS_LINKED_IF_POSSIBLE);
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
 	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);
@@ -2257,7 +2257,7 @@ void ClassificationManager::CycleRefinement()
 	{
 		number_of_rounds_run++;
 
-		my_parent->ResultDisplayPanel->OpenFile(output_classification->class_average_file, wxString::Format("Class. #%li (Round %i)", output_classification->classification_id, number_of_rounds_run));
+		my_parent->ResultDisplayPanel->OpenFile(output_classification->class_average_file, wxString::Format("Class. #%li (Round %i)", output_classification->classification_id, number_of_rounds_run), NULL, true);
 
 
 		// statistics..

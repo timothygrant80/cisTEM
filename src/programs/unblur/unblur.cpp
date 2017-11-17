@@ -650,9 +650,13 @@ bool UnBlurApp::DoCalculation()
 
 	// now we just need to write out the final sum..
 
-	sum_image.QuickAndDirtyWriteSlice(output_filename, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
-	//sum_image.WriteSlice(&output_file, 1);
-
+	MRCFile output_file(output_filename, true);
+	sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
+	output_file.SetPixelSize(output_pixel_size);
+	EmpiricalDistribution density_distribution;
+	sum_image.UpdateDistributionOfRealValues(&density_distribution);
+	output_file.SetDensityStatistics(density_distribution.GetMinimum(), density_distribution.GetMaximum(), density_distribution.GetSampleMean(), sqrtf(density_distribution.GetSampleVariance()));
+	output_file.CloseFile();
 
 
 	// fill the result..

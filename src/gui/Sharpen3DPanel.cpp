@@ -316,6 +316,7 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 void Sharpen3DPanel::FillVolumePanels()
 {
 	VolumeComboBox->FillComboBox(false, true);
+	MaskSelectPanel->FillComboBox();
 }
 
 void Sharpen3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )

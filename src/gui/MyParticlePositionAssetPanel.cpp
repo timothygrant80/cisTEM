@@ -466,10 +466,13 @@ void MyParticlePositionAssetPanel::ImportAssetClick( wxCommandEvent& event )
 					 // get the first token
 
 					 current_token = current_tokenizer.GetNextToken();
+
 					 if (current_token.ToLong(&image_asset_id) == false)
 					 {
 						 // it wasn't a number, so is it a valid filename?
-						 image_asset_id = reinterpret_cast <ImageAssetList*>  (image_asset_panel->all_assets_list)->FindFile(current_token, true);
+						 long array_position = reinterpret_cast <ImageAssetList*>  (image_asset_panel->all_assets_list)->FindFile(current_token, true);
+						 if (array_position != -1) image_asset_id = image_asset_panel->ReturnAssetID(array_position);
+						 else image_asset_id = -1;
 					 }
 
 					 if (image_asset_id == -1)

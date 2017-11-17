@@ -2713,13 +2713,23 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 	// in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..
 
 	Image *new_image = my_event.GetImage();
+	MRCFile output_file;
 	number_of_resampled_volumes_recieved++;
 	wxString current_output_filename;
 
 	if (new_image != NULL)
 	{
 		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, my_event.GetInt());
+		output_file.OpenFile(current_output_filename.ToStdString(), true);
+
 		new_image->QuickAndDirtyWriteSlices(current_output_filename.ToStdString(), 1, new_image->logical_z_dimension);
+		new_image->WriteSlices(&output_file,1,new_image->logical_z_dimension);
+		output_file.SetPixelSize(my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size);
+
+		EmpiricalDistribution density_distribution;
+		new_image->UpdateDistributionOfRealValues(&density_distribution);
+		output_file.SetDensityStatistics(density_distribution.GetMinimum(), density_distribution.GetMaximum(), density_distribution.GetSampleMean(), sqrtf(density_distribution.GetSampleVariance()));
+		output_file.CloseFile();
 	}
 
 	if (number_of_resampled_volumes_recieved == my_abinitio_manager.input_refinement->number_of_classes)

@@ -216,9 +216,34 @@ void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event))
     	if (set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount())
     	{
     		current_panel->current_location = set_location;
-    		UpdateToolbar();
+
     		current_panel->panel_image_has_correct_greys = false;
     		current_panel->ReDrawPanel();
+
+    		if ((style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE)
+    		{
+    			// set all tabs to this scaling
+    			long global_location = current_panel->current_location;
+
+    			if (my_notebook != NULL)
+    			{
+    				for (int page_counter = 0; page_counter < my_notebook->GetPageCount(); page_counter++)
+    				{
+    					current_panel = reinterpret_cast < DisplayNotebookPanel *> (my_notebook->GetPage(page_counter));
+    					if (current_panel->current_location != global_location)
+    					{
+    						if (global_location > 0 && global_location <= current_panel->included_image_numbers.GetCount())
+    						{
+    							current_panel->current_location = global_location;
+    							current_panel->panel_image_has_correct_greys = false;
+    							current_panel->ReDrawPanel();
+    						}
+    					}
+    				}
+    			}
+    		}
+
+    		UpdateToolbar();
     	}
     	else has_worked = false;
     }
@@ -283,9 +308,29 @@ void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event))
 	{
 		current_panel->desired_scale_factor = double(new_value) / 100.;
 		current_panel->panel_image_has_correct_scale = false;
-		UpdateToolbar();
 		current_panel->ReDrawPanel();
 
+		if ((style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE)
+		{
+			// set all tabs to this scaling
+			double global_scale_factor = current_panel->desired_scale_factor;
+
+			if (my_notebook != NULL)
+			{
+				for (int page_counter = 0; page_counter < my_notebook->GetPageCount(); page_counter++)
+				{
+					current_panel = reinterpret_cast < DisplayNotebookPanel *> (my_notebook->GetPage(page_counter));
+					if (current_panel->desired_scale_factor != global_scale_factor)
+					{
+						current_panel->desired_scale_factor = global_scale_factor;
+						current_panel->panel_image_has_correct_scale = false;
+						current_panel->ReDrawPanel();
+					}
+				}
+			}
+		}
+
+		UpdateToolbar();
 	}
 	else
 	{
@@ -395,9 +440,36 @@ void DisplayPanel::OnPrevious( wxCommandEvent& WXUNUSED(event) )
 	current_panel->current_location -= current_panel->images_in_current_view;
 	if (current_panel->current_location < 1) current_panel->current_location = 1;
 
-	UpdateToolbar();
 	current_panel->panel_image_has_correct_greys = false;
 	current_panel->ReDrawPanel();
+
+	if ((style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE)
+	{
+		// set all tabs to this scaling
+		long global_location = current_panel->current_location;
+
+
+		if (my_notebook != NULL)
+		{
+			for (int page_counter = 0; page_counter < my_notebook->GetPageCount(); page_counter++)
+			{
+				current_panel = reinterpret_cast < DisplayNotebookPanel *> (my_notebook->GetPage(page_counter));
+				if (current_panel->current_location != global_location)
+				{
+					if (global_location > 0 && global_location <= current_panel->included_image_numbers.GetCount())
+					{
+						current_panel->current_location = global_location;
+						current_panel->panel_image_has_correct_greys = false;
+						current_panel->ReDrawPanel();
+					}
+				}
+			}
+		}
+	}
+
+
+	UpdateToolbar();
+
 }
 
 DisplayNotebookPanel* DisplayPanel::ReturnCurrentPanel()
@@ -434,9 +506,35 @@ void DisplayPanel::OnNext( wxCommandEvent& WXUNUSED(event) )
 	current_panel->current_location += current_panel->images_in_current_view;
 	if (current_panel->current_location > current_panel->included_image_numbers.GetCount()) current_panel->current_location = current_panel->included_image_numbers.GetCount();
 
-	UpdateToolbar();
 	current_panel->panel_image_has_correct_greys = false;
 	current_panel->ReDrawPanel();
+
+	if ((style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE)
+	{
+		// set all tabs to this scaling
+		long global_location = current_panel->current_location;
+
+
+		if (my_notebook != NULL)
+		{
+			for (int page_counter = 0; page_counter < my_notebook->GetPageCount(); page_counter++)
+			{
+				current_panel = reinterpret_cast < DisplayNotebookPanel *> (my_notebook->GetPage(page_counter));
+				if (current_panel->current_location != global_location)
+				{
+					if (global_location > 0 && global_location <= current_panel->included_image_numbers.GetCount())
+					{
+						current_panel->current_location = global_location;
+						current_panel->panel_image_has_correct_greys = false;
+						current_panel->ReDrawPanel();
+					}
+				}
+			}
+		}
+	}
+
+	UpdateToolbar();
+
 }
 
 void DisplayPanel::OnAuto( wxCommandEvent& WXUNUSED(event) )
@@ -731,8 +829,33 @@ void DisplayPanel::ClearSelection(bool refresh)
 	current_panel->ClearSelection(refresh);
 }
 
-void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
+void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers, bool keep_scale_and_location_if_possible)
 {
+
+	double current_scale_factor;
+	long current_image_location;
+
+	if (keep_scale_and_location_if_possible == true)
+	{
+		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+		if (current_panel != NULL)
+		{
+			current_scale_factor = current_panel->desired_scale_factor;
+			current_image_location = current_panel->current_location;
+		}
+		else
+		{
+			current_scale_factor = 1.0;
+			current_image_location = 1;
+		}
+	}
+	else
+	{
+		current_scale_factor = 1.0;
+		current_image_location = 1;
+	}
+
 	if (DoesFileExist(wanted_filename) == false)
 	{
 		wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_filename), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
@@ -822,6 +945,12 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 	if (my_panel->panel_image != NULL) delete my_panel->panel_image;
 	my_panel->panel_image = new wxImage(int(my_panel->my_file.ReturnXSize()), int(my_panel->my_file.ReturnYSize()));
 	my_panel->tab_title = wanted_tab_title;
+
+	my_panel->desired_scale_factor = current_scale_factor;
+	if (my_panel->included_image_numbers.GetCount() > current_image_location)
+	{
+		my_panel->current_location = current_image_location;
+	}
 
 	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
 	{
@@ -2712,46 +2841,71 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 
 							for (i = 0; i < scaled_image_memory_buffer[image_counter].logical_x_dimension; i++)
 							{
-								if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+								if ((parent_display_panel->style_flags & DRAW_IMAGE_SEPARATOR) == DRAW_IMAGE_SEPARATOR && (j == 0 || j == scaled_image_memory_buffer[image_counter].logical_y_dimension - 1 || i == 0 || i == scaled_image_memory_buffer[image_counter].logical_x_dimension -1))
+								{
+									image_data[red_counter] = 0;
+									image_data[green_counter] = 0;
+									image_data[blue_counter] = 0;
+								}
 								else
-								current_value = int(myround((scaled_image_memory_buffer[image_counter].real_values[address] - current_low_grey_value) / range));
+								{
+									if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+									else
+									current_value = int(myround((scaled_image_memory_buffer[image_counter].real_values[address] - current_low_grey_value) / range));
 
-								if (current_value > 255) current_value = 255;
-								else
-								if (current_value < 0) current_value = 0;
+									if (current_value > 255) current_value = 255;
+									else
+									if (current_value < 0) current_value = 0;
 
-								image_data[red_counter] = (unsigned char)(current_value);
-								image_data[green_counter] = (unsigned char)(current_value);
-								image_data[blue_counter] = (unsigned char)(current_value);
+									image_data[red_counter] = (unsigned char)(current_value);
+									image_data[green_counter] = (unsigned char)(current_value);
+									image_data[blue_counter] = (unsigned char)(current_value);
+
+
+								}
+
 
 								red_counter+=3;
 								green_counter+=3;
 								blue_counter+=3;
 
 								address++;
-							}
 
+							}
 						}
+
 					}
 					else
 					{
+
+
 						for (j = 0; j < image_memory_buffer[image_counter].logical_y_dimension; j++)
 						{
 							address = (image_memory_buffer[image_counter].logical_y_dimension - 1 - j) * (image_memory_buffer[image_counter].logical_x_dimension + image_memory_buffer[image_counter].padding_jump_value);
 
 							for (i = 0; i < image_memory_buffer[image_counter].logical_x_dimension; i++)
 							{
-								if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+								if ((parent_display_panel->style_flags & DRAW_IMAGE_SEPARATOR) == DRAW_IMAGE_SEPARATOR && (float(j) <= 1.0f / desired_scale_factor || float(j) >= image_memory_buffer[image_counter].logical_y_dimension - 1.0f / desired_scale_factor || float(i) <= 1.0f / desired_scale_factor || float(i)  >= image_memory_buffer[image_counter].logical_x_dimension - 1.0f / desired_scale_factor))
+								{
+									image_data[red_counter] = 0;
+									image_data[green_counter] = 0;
+									image_data[blue_counter] = 0;
+								}
 								else
-								current_value = int(myround((image_memory_buffer[image_counter].real_values[address] - current_low_grey_value) / range));
+								{
+									if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+									else
+									current_value = int(myround((image_memory_buffer[image_counter].real_values[address] - current_low_grey_value) / range));
 
-								if (current_value > 255) current_value = 255;
-								else
-								if (current_value < 0) current_value = 0;
+									if (current_value > 255) current_value = 255;
+									else
+									if (current_value < 0) current_value = 0;
 
-								image_data[red_counter] = (unsigned char)(current_value);
-								image_data[green_counter] = (unsigned char)(current_value);
-								image_data[blue_counter] = (unsigned char)(current_value);
+									image_data[red_counter] = (unsigned char)(current_value);
+									image_data[green_counter] = (unsigned char)(current_value);
+									image_data[blue_counter] = (unsigned char)(current_value);
+								}
+
 
 								red_counter+=3;
 								green_counter+=3;
@@ -2759,8 +2913,6 @@ void DisplayNotebookPanel::ReDrawPanel(void)
 
 								address++;
 							}
-
-
 						}
 
 

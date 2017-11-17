@@ -17,6 +17,8 @@
 #define START_WITH_NO_LABEL          4096
 #define SKIP_LEFTCLICK_TO_PARENT     8192
 #define CAN_MOVE_TABS				 16384
+#define DRAW_IMAGE_SEPARATOR		 32768
+#define KEEP_TABS_LINKED_IF_POSSIBLE 65536
 
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1
@@ -55,7 +57,7 @@ public:
 
 	void Initialise(int style_flags = 0);
 
-	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
+	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false);
 	void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
 
 	void OpenImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong *wanted_included_image_numbers = NULL);

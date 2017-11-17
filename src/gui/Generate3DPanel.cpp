@@ -918,7 +918,7 @@ void Generate3DPanel::SetupMerge3dJob()
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs, input_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
 
-		my_job_package.AddJob("ttttfffttibti",	output_reconstruction_1.ToUTF8().data(),
+		my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
 															output_reconstruction_filtered.ToUTF8().data(),
 															output_resolution_statistics.ToUTF8().data(),
@@ -1107,8 +1107,10 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		active_orth_thread_id = next_thread_id;
 		next_thread_id++;
 
-		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
-		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
+//		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
+//		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction", active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
+		if (input_refinement->number_of_classes > 1) result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstructions", 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
+		else result_thread = new OrthDrawerThread(this, output_filenames, "Output Reconstruction", 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, active_orth_thread_id);
 
 		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
 		{

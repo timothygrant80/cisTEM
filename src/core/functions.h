@@ -320,3 +320,6 @@ inline float ConvertXYToPhiInDegrees(float x, float y)
 	else return rad_2_deg(atan2f(y, x));
 }
 
+std::vector<size_t> rankSort(const float* v_temp, const size_t size);
+std::vector<size_t> rankSort(const std::vector<float>& v_temp);
+

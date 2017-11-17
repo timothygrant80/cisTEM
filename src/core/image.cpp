@@ -7558,12 +7558,12 @@ void Image::CalculateCrossCorrelationImageWith(Image *other_image)
 
 
 #ifdef MKL
-	// Use the MKL - not sure whether this can work in place
+	// Use the MKL
 	vmcMulByConj(real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (complex_values),reinterpret_cast <MKL_Complex8 *> (other_image->complex_values),reinterpret_cast <MKL_Complex8 *> (complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
 #else
 	for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
 	{
-		complex_values[pixel_counter] *= conj(other_image.complex_values[pixel_counter]);
+		complex_values[pixel_counter] *= conj(other_image->complex_values[pixel_counter]);
 	}
 #endif
 

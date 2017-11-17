@@ -236,7 +236,7 @@ void MyFindCTFPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Use Slower, More Exhaustive Search? "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Select this option if CTF determination fails on images that show clear Thon rings and should therefore yield good CTF parameters."));
+	InfoText->WriteText(wxT("Select this option if CTF determination fails on images that show clear Thon rings and should therefore yield good CTF parameters, or if you expect noticably elliptical Thon rings and high noise."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Restrain Astigmatism? "));

@@ -258,7 +258,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 				pixel_size_guess = first_particle_image->pixel_size;
 				current_largest_dimension /= pixel_size_guess;
 
-				box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(ReturnClosestFactorizedUpper(int(current_largest_dimension * 2), 3, true));
+				box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(ReturnClosestFactorizedUpper(int(current_largest_dimension * 2.2), 3, true));
 			}
 			else // from class selection
 			{				// take the stack size of the refinement package of the first selected class selection

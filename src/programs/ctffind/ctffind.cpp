@@ -10,6 +10,7 @@ const std::string ctffind_version = "4.1.9";
  * -- tweaked criteria for "fit resolution"
  * -- tweaked FRC computation
  * -- astigmatism restraint is off by default
+ * -- fixed bug affecting astigmatism 
  */
 
 class
@@ -132,7 +133,7 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f D2 = %6.2f, PhaseShift = %6.3f, Ast = %5.2f, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),- - comparison_object->img[0].GetCorrelationWithCTF(my_ctf));
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),- - comparison_object->img[0].GetCorrelationWithCTF(my_ctf));
 
 	// Evaluate the function
 	return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
@@ -1102,7 +1103,7 @@ bool CtffindApp::DoCalculation()
 			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/maximum_resolution);
 		}
 
-		//MyDebugPrint ("Estimated astigmatism angle = %f\n", estimated_astigmatism_angle);
+		//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
 
 
 
@@ -1176,7 +1177,7 @@ bool CtffindApp::DoCalculation()
 			{
 				cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
 			}
-			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0],estimated_astigmatism_angle);
+			current_ctf.SetDefocus(cg_starting_point[0], cg_starting_point[0],estimated_astigmatism_angle / 180.0 * PI);
 			if (find_additional_phase_shift)
 			{
 				if (fixed_additional_phase_shift)
@@ -1405,7 +1406,7 @@ bool CtffindApp::DoCalculation()
 			cg_accuracy[3] = 0.05;
 			cg_starting_point[0] = current_ctf.GetDefocus1();
 			cg_starting_point[1] = current_ctf.GetDefocus2();
-			cg_starting_point[2] = estimated_astigmatism_angle; // We could run the mirror trick to get a better starting point - just not sure whether worth it
+			cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PI;
 			if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
 			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 			{
@@ -1842,7 +1843,6 @@ void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double f
 			{
 				if ((bin_of_current_extremum - bin_of_previous_extremum >= 4 && false) || (number_of_extrema_profile[bin_counter] < 7))
 				{
-					wxPrintf("Got here\n");
 					// Loop from the previous extremum to the one we just found
 					// (there is a zero in between, let's find it)
 					// TODO: redefine the zero as the lowest point between the two extrema?

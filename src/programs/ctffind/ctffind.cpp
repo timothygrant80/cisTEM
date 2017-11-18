@@ -1036,7 +1036,7 @@ bool CtffindApp::DoCalculation()
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
-			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
 			if (IsEven(convolution_box_size)) convolution_box_size++;
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.

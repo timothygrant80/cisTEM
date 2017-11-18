@@ -719,6 +719,7 @@ bool CtffindApp::DoCalculation()
 	int         		number_of_micrographs;
 	ImageFile			input_file(input_filename,false);
 	Image				*average_spectrum = new Image();
+	Image				*average_spectrum2 = new Image();
 	wxString			output_text_fn;
 	ProgressBar			*my_progress_bar;
 	NumericTextFile		*output_text;
@@ -892,6 +893,7 @@ bool CtffindApp::DoCalculation()
 							my_result.SetResult(7,results_array);
 
 							delete average_spectrum;
+							delete average_spectrum2;
 							delete current_power_spectrum;
 							delete current_input_image;
 							delete current_input_image_square;
@@ -1033,11 +1035,12 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
 			average_spectrum->DivideByConstant(sigma);
 			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
+			average_spectrum2->CopyFrom(average_spectrum);
 
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
-			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution );// /sqrt(2.0)
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
 			if (IsEven(convolution_box_size)) convolution_box_size++;
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
@@ -1052,6 +1055,13 @@ bool CtffindApp::DoCalculation()
 
 			// Threshold high values
 			average_spectrum->SetMaximumValue(average_spectrum->ReturnMaximumValue(3,3));
+
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
+			if (IsEven(convolution_box_size)) convolution_box_size++;
+			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
+			average_spectrum2->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum2->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
+			average_spectrum2->SubtractImage(current_power_spectrum);
+			average_spectrum2->SetMaximumValue(average_spectrum2->ReturnMaximumValue(3,3));
 		}
 
 		/*
@@ -1083,7 +1093,7 @@ bool CtffindApp::DoCalculation()
 
 		// Set up the comparison object
 		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
-		comparison_object_2D->SetImage(0,average_spectrum);
+		comparison_object_2D->SetImage(0,average_spectrum2);
 
 		if (is_running_locally && old_school_input)
 		{
@@ -1115,10 +1125,10 @@ bool CtffindApp::DoCalculation()
 		{
 
 			// 1D rotational average
-			number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
-			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
+			number_of_bins_in_1d_spectra = int(ceil(average_spectrum2->ReturnMaximumDiagonalRadius()));
+			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum2->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
 			number_of_averaged_pixels = rotational_average;
-			average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+			average_spectrum2->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 
 
@@ -1130,7 +1140,7 @@ bool CtffindApp::DoCalculation()
 			}
 			comparison_object_1D.find_phase_shift = find_additional_phase_shift;
 			comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
-			comparison_object_1D.reciprocal_pixel_size = average_spectrum->fourier_voxel_size_x;
+			comparison_object_1D.reciprocal_pixel_size = average_spectrum2->fourier_voxel_size_x;
 
 			// We can now look for the defocus value
 			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size_for_fitting;
@@ -1472,7 +1482,7 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Generate diagnostic image
-		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
+		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
 		current_output_location = current_micrograph_number;
 		average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
 
@@ -1518,7 +1528,6 @@ bool CtffindApp::DoCalculation()
 		//number_of_averaged_pixels.ZeroYData();
 		number_of_averaged_pixels = rotational_average;
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
-		average_spectrum->QuickAndDirtyWriteSlice("dbg_av_final.mrc", 1);
 
 		// Rotational average, taking astigmatism into account
 		if (compute_extra_stats)
@@ -1782,6 +1791,7 @@ bool CtffindApp::DoCalculation()
 
 	// Cleanup
 	delete average_spectrum;
+	delete average_spectrum2;
 	delete current_power_spectrum;
 	delete current_input_image;
 	delete current_input_image_square;

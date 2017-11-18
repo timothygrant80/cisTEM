@@ -508,7 +508,7 @@ void CtffindApp::DoInteractiveUserInput()
 		maximum_resolution 				= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
 		minimum_defocus 				= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
 		maximum_defocus 				= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
-		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","500.0",1.0);
+		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","50.0",1.0);
 		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{
@@ -1433,7 +1433,7 @@ bool CtffindApp::DoCalculation()
 		comparison_object_2D->SetCTF(current_ctf);
 		conjugate_gradient_minimizer = new ConjugateGradient();
 		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_defocus,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 		conjugate_gradient_minimizer->Run();
 
 		// Remember the results of the refinement

@@ -774,6 +774,7 @@ bool CtffindApp::DoCalculation()
 	int					last_bin_without_aliasing;
 	ImageFile			gain_file;
 	Image				*gain = new Image();
+	float				intermediate_resolution = 5.0;
 
 
 
@@ -1086,7 +1087,7 @@ bool CtffindApp::DoCalculation()
 #endif
 
 		// Set up the CTF object
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,intermediate_resolution),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 		current_ctf.SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
@@ -1111,7 +1112,7 @@ bool CtffindApp::DoCalculation()
 			temp_image->CopyFrom(average_spectrum);
 			temp_image->ApplyMirrorAlongY();
 			//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/maximum_resolution);
+			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
 		}
 
 		//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
@@ -1432,6 +1433,7 @@ bool CtffindApp::DoCalculation()
 		comparison_object_2D->SetCTF(current_ctf);
 		conjugate_gradient_minimizer = new ConjugateGradient();
 		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_defocus,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 		conjugate_gradient_minimizer->Run();
 
 		// Remember the results of the refinement

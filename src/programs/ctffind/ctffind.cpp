@@ -11,6 +11,7 @@ const std::string ctffind_version = "4.1.9";
  * -- tweaked FRC computation
  * -- astigmatism restraint is off by default
  * -- fixed bug affecting astigmatism 
+ * -- tweaked background subtraction (thanks Niko!) - helps with noisy VPP spectra
  */
 
 class
@@ -1036,7 +1037,7 @@ bool CtffindApp::DoCalculation()
 			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
-			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution );// /sqrt(2.0)
 			if (IsEven(convolution_box_size)) convolution_box_size++;
 			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
@@ -1471,7 +1472,7 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Generate diagnostic image
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
 		current_output_location = current_micrograph_number;
 		average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
 
@@ -1517,6 +1518,7 @@ bool CtffindApp::DoCalculation()
 		//number_of_averaged_pixels.ZeroYData();
 		number_of_averaged_pixels = rotational_average;
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_av_final.mrc", 1);
 
 		// Rotational average, taking astigmatism into account
 		if (compute_extra_stats)
@@ -1951,55 +1953,61 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 	// Now compute the FRC for each bin
 	for (bin_counter=0; bin_counter < number_of_bins; bin_counter++)
 	{
-		spectrum_mean = 0.0;
-		fit_mean = 0.0;
-		spectrum_sigma = 0.0;
-		fit_sigma = 0.0;
-		cross_product = 0.0;
-		// Work out the boundaries
-		first_bin = bin_counter - half_window_width[bin_counter];
-		last_bin = bin_counter + half_window_width[bin_counter];
-		if (first_bin < first_fit_bin)
+		if (bin_counter < first_fit_bin)
 		{
-			first_bin = first_fit_bin;
-			last_bin = first_bin + 2 * half_window_width[bin_counter] + 1;
-		}
-		if (last_bin >= number_of_bins)
-		{
-			last_bin = number_of_bins - 1;
-			first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
-		}
-		MyDebugAssertTrue(first_bin >=0 && first_bin < number_of_bins,"Bad first_bin: %i",first_bin);
-		MyDebugAssertTrue(last_bin >=0 && last_bin < number_of_bins,"Bad last_bin: %i",last_bin);
-		// First pass
-		for (i=first_bin;i<=last_bin;i++)
-		{
-			spectrum_mean += average[i];
-			fit_mean += fit[i];
-		}
-		number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
-		//wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window);
-		spectrum_mean /= number_of_bins_in_window;
-		fit_mean      /= number_of_bins_in_window;
-		// Second pass
-		for (i=first_bin;i<=last_bin;i++)
-		{
-			cross_product += (average[i] - spectrum_mean) * (fit[i] - fit_mean);
-			spectrum_sigma += pow(average[i] - spectrum_mean,2);
-			fit_sigma += pow(fit[i] - fit_mean,2);
-		}
-		MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0,"Bad spectrum_sigma: %f\n",spectrum_sigma);
-		MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0,"Bad fit sigma: %f\n",fit_sigma);
-		if (spectrum_sigma > 0.0 && fit_sigma > 0.0)
-		{
-			frc[bin_counter] = cross_product / (sqrtf(spectrum_sigma/number_of_bins_in_window) * sqrtf(fit_sigma/number_of_bins_in_window)) / number_of_bins_in_window;
+			frc[bin_counter] = 1.0;
 		}
 		else
 		{
-			frc[bin_counter] = 0.0;
+			spectrum_mean = 0.0;
+			fit_mean = 0.0;
+			spectrum_sigma = 0.0;
+			fit_sigma = 0.0;
+			cross_product = 0.0;
+			// Work out the boundaries
+			first_bin = bin_counter - half_window_width[bin_counter];
+			last_bin = bin_counter + half_window_width[bin_counter];
+			if (first_bin < first_fit_bin)
+			{
+				first_bin = first_fit_bin;
+				last_bin = first_bin + 2 * half_window_width[bin_counter] + 1;
+			}
+			if (last_bin >= number_of_bins)
+			{
+				last_bin = number_of_bins - 1;
+				first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
+			}
+			MyDebugAssertTrue(first_bin >=0 && first_bin < number_of_bins,"Bad first_bin: %i",first_bin);
+			MyDebugAssertTrue(last_bin >=0 && last_bin < number_of_bins,"Bad last_bin: %i",last_bin);
+			// First pass
+			for (i=first_bin;i<=last_bin;i++)
+			{
+				spectrum_mean += average[i];
+				fit_mean += fit[i];
+			}
+			number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
+			//wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window);
+			spectrum_mean /= number_of_bins_in_window;
+			fit_mean      /= number_of_bins_in_window;
+			// Second pass
+			for (i=first_bin;i<=last_bin;i++)
+			{
+				cross_product += (average[i] - spectrum_mean) * (fit[i] - fit_mean);
+				spectrum_sigma += pow(average[i] - spectrum_mean,2);
+				fit_sigma += pow(fit[i] - fit_mean,2);
+			}
+			MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0,"Bad spectrum_sigma: %f\n",spectrum_sigma);
+			MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0,"Bad fit sigma: %f\n",fit_sigma);
+			if (spectrum_sigma > 0.0 && fit_sigma > 0.0)
+			{
+				frc[bin_counter] = cross_product / (sqrtf(spectrum_sigma/number_of_bins_in_window) * sqrtf(fit_sigma/number_of_bins_in_window)) / number_of_bins_in_window;
+			}
+			else
+			{
+				frc[bin_counter] = 0.0;
+			}
+			frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
 		}
-		frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
-		if (bin_counter < first_fit_bin) frc[bin_counter] = 1.0;
 		//wxPrintf("First fit bin: %i\n", first_fit_bin);
 		MyDebugAssertTrue(frc[bin_counter] > -1.01 && frc[bin_counter] < 1.01, "Bad FRC value: %f", frc[bin_counter]);
 	}

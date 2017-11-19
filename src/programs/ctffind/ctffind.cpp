@@ -508,7 +508,7 @@ void CtffindApp::DoInteractiveUserInput()
 		maximum_resolution 				= my_input->GetFloatFromUser("Maximum resolution","Highest resolution used for fitting CTF (Angstroms)","5.0",0.0,minimum_resolution);
 		minimum_defocus 				= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
 		maximum_defocus 				= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
-		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","50.0",1.0);
+		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","100.0",1.0);
 		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{

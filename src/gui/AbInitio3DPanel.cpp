@@ -1688,6 +1688,20 @@ void AbInitioManager::SetupRefinementJob()
 		}
 
 		if (number_of_rounds_run < 3) input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
+		else
+		{
+			ResolutionStatistics temp;
+			temp.Init(input_refinement->resolution_statistics_box_size, input_refinement->resolution_statistics_box_size);
+			temp.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
+
+			for (counter = 0; counter < input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.number_of_points; counter++)
+			{
+				if (input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] > temp.part_SSNR.data_y[counter])
+				{
+					input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] = temp.part_SSNR.data_y[counter];
+				}
+			}
+		}
 	}
 
 
@@ -2722,7 +2736,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 		current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, my_event.GetInt());
 		output_file.OpenFile(current_output_filename.ToStdString(), true);
 
-		new_image->QuickAndDirtyWriteSlices(current_output_filename.ToStdString(), 1, new_image->logical_z_dimension);
+		//new_image->QuickAndDirtyWriteSlices(current_output_filename.ToStdString(), 1, new_image->logical_z_dimension);
 		new_image->WriteSlices(&output_file,1,new_image->logical_z_dimension);
 		output_file.SetPixelSize(my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size);
 

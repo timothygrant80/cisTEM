@@ -718,8 +718,8 @@ bool CtffindApp::DoCalculation()
 	int					number_of_movie_frames;
 	int         		number_of_micrographs;
 	ImageFile			input_file(input_filename,false);
-	Image				*average_spectrum_large_box = new Image();
-	Image				*average_spectrum_small_box = new Image();
+	Image				*average_spectrum = new Image();
+	Image				*average_spectrum_masked = new Image();
 	wxString			output_text_fn;
 	ProgressBar			*my_progress_bar;
 	NumericTextFile		*output_text;
@@ -844,7 +844,7 @@ bool CtffindApp::DoCalculation()
 	}
 
 	// Prepare the average spectrum image
-	average_spectrum_large_box->Allocate(box_size,box_size,true);
+	average_spectrum->Allocate(box_size,box_size,true);
 
 	// Loop over micrographs
 	for (current_micrograph_number=1; current_micrograph_number <= number_of_micrographs; current_micrograph_number++)
@@ -852,16 +852,16 @@ bool CtffindApp::DoCalculation()
 		if (is_running_locally && (old_school_input || number_of_micrographs == 1)) wxPrintf("Working on micrograph %i of %i\n", current_micrograph_number, number_of_micrographs);
 
 		number_of_tiles_used = 0;
-		average_spectrum_large_box->SetToConstant(0.0);
-		average_spectrum_large_box->is_in_real_space = true;
+		average_spectrum->SetToConstant(0.0);
+		average_spectrum->is_in_real_space = true;
 
 		if (amplitude_spectrum_input || filtered_amplitude_spectrum_input)
 		{
 			current_power_spectrum->ReadSlice(&input_file,current_micrograph_number);
 			current_power_spectrum->ForwardFFT();
-			average_spectrum_large_box->Allocate(box_size,box_size,1,false);
-			current_power_spectrum->ClipInto(average_spectrum_large_box);
-			average_spectrum_large_box->BackwardFFT();
+			average_spectrum->Allocate(box_size,box_size,1,false);
+			current_power_spectrum->ClipInto(average_spectrum);
+			average_spectrum->BackwardFFT();
 		}
 		else
 		{
@@ -893,8 +893,8 @@ bool CtffindApp::DoCalculation()
 
 							my_result.SetResult(7,results_array);
 
-							delete average_spectrum_large_box;
-							delete average_spectrum_small_box;
+							delete average_spectrum;
+							delete average_spectrum_masked;
 							delete current_power_spectrum;
 							delete current_input_image;
 							delete current_input_image_square;
@@ -1010,59 +1010,65 @@ bool CtffindApp::DoCalculation()
 					}
 				}
 
-				average_spectrum_large_box->AddImage(resampled_power_spectrum);
+				average_spectrum->AddImage(resampled_power_spectrum);
 			} // end of loop over movie frames
 
 			// We need to take care of the scaling of the FFTs, as well as the averaging of tiles
 			if (resampling_is_necessary)
 			{
-				average_spectrum_large_box->MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image->logical_x_dimension * current_input_image->logical_y_dimension * current_power_spectrum->logical_x_dimension * current_power_spectrum->logical_y_dimension ) );
+				average_spectrum->MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image->logical_x_dimension * current_input_image->logical_y_dimension * current_power_spectrum->logical_x_dimension * current_power_spectrum->logical_y_dimension ) );
 			}
 			else
 			{
-				average_spectrum_large_box->MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image->logical_x_dimension * current_input_image->logical_y_dimension ) );
+				average_spectrum->MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image->logical_x_dimension * current_input_image->logical_y_dimension ) );
 			}
 
 		} // end of test of whether we were given amplitude spectra on input
 
 
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_bg_sub.mrc",1);
 
 
 		// Filter the amplitude spectrum, remove background
 		if (! filtered_amplitude_spectrum_input)
 		{
 			// Try to weaken cross artefacts
-			average_spectrum_large_box->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum_large_box->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum_large_box->logical_x_dimension),average,sigma,12);
-			average_spectrum_large_box->DivideByConstant(sigma);
-			average_spectrum_large_box->SetMaximumValueOnCentralCross(average/sigma+10.0);
-			average_spectrum_small_box->CopyFrom(average_spectrum_large_box);
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(average_spectrum->logical_x_dimension),average,sigma,12);
+			average_spectrum->DivideByConstant(sigma);
+			average_spectrum->SetMaximumValueOnCentralCross(average/sigma+10.0);
+//			average_spectrum_masked->CopyFrom(average_spectrum);
 
-			//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+			//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 
 			// Compute low-pass filtered version of the spectrum
-			convolution_box_size = int( float(average_spectrum_large_box->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
+			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
 			if (IsEven(convolution_box_size)) convolution_box_size++;
-			current_power_spectrum->Allocate(average_spectrum_large_box->logical_x_dimension,average_spectrum_large_box->logical_y_dimension,true);
+			current_power_spectrum->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
-			average_spectrum_large_box->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum_large_box->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
+			average_spectrum->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
 
 			//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
 
 			// Subtract low-pass-filtered spectrum from the spectrum. This should remove the background slope.
-			average_spectrum_large_box->SubtractImage(current_power_spectrum);
+			average_spectrum->SubtractImage(current_power_spectrum);
 
-			//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
+//			average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
 
 			// Threshold high values
-			average_spectrum_large_box->SetMaximumValue(average_spectrum_large_box->ReturnMaximumValue(3,3));
+			average_spectrum->SetMaximumValue(average_spectrum->ReturnMaximumValue(3,3));
 
-			convolution_box_size = int( float(average_spectrum_large_box->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
-			if (IsEven(convolution_box_size)) convolution_box_size++;
-			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
-			average_spectrum_small_box->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum_small_box->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
-			average_spectrum_small_box->SubtractImage(current_power_spectrum);
-			average_spectrum_small_box->SetMaximumValue(average_spectrum_small_box->ReturnMaximumValue(3,3));
+//			convolution_box_size = int( float(average_spectrum->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
+//			if (IsEven(convolution_box_size)) convolution_box_size++;
+//			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
+//			average_spectrum_masked->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
+//			average_spectrum_masked->SubtractImage(current_power_spectrum);
+//			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
+
+			average_spectrum_masked->CopyFrom(average_spectrum);
+			average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f),float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 4.0f), true);
+//			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
+//			average_spectrum_masked->CorrectSinc();
+//			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);
 		}
 
 		/*
@@ -1073,17 +1079,17 @@ bool CtffindApp::DoCalculation()
 		 *
 		 */
 
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
 
 
 #ifdef threshold_spectrum
 		wxPrintf("DEBUG: thresholding spectrum\n");
-		for (counter = 0; counter < average_spectrum_large_box->real_memory_allocated; counter ++ )
+		for (counter = 0; counter < average_spectrum->real_memory_allocated; counter ++ )
 		{
-			average_spectrum_large_box->real_values[counter] = std::max(average_spectrum_large_box->real_values[counter], -0.0f);
-			average_spectrum_large_box->real_values[counter] = std::min(average_spectrum_large_box->real_values[counter], 1.0f);
+			average_spectrum->real_values[counter] = std::max(average_spectrum->real_values[counter], -0.0f);
+			average_spectrum->real_values[counter] = std::min(average_spectrum->real_values[counter], 1.0f);
 		}
-		average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_thr.mrc",1);
+		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_thr.mrc",1);
 #endif
 
 		// Set up the CTF object
@@ -1094,7 +1100,7 @@ bool CtffindApp::DoCalculation()
 
 		// Set up the comparison object
 		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
-		comparison_object_2D->SetImage(0,average_spectrum_small_box);
+		comparison_object_2D->SetImage(0,average_spectrum_masked);
 
 		if (is_running_locally && old_school_input)
 		{
@@ -1109,10 +1115,10 @@ bool CtffindApp::DoCalculation()
 		}
 		else
 		{
-			temp_image->CopyFrom(average_spectrum_large_box);
+			temp_image->CopyFrom(average_spectrum);
 			temp_image->ApplyMirrorAlongY();
 			//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum_large_box,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
+			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
 		}
 
 		//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
@@ -1126,10 +1132,10 @@ bool CtffindApp::DoCalculation()
 		{
 
 			// 1D rotational average
-			number_of_bins_in_1d_spectra = int(ceil(average_spectrum_small_box->ReturnMaximumDiagonalRadius()));
-			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_small_box->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
+			number_of_bins_in_1d_spectra = int(ceil(average_spectrum_masked->ReturnMaximumDiagonalRadius()));
+			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_masked->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
 			number_of_averaged_pixels = rotational_average;
-			average_spectrum_small_box->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+			average_spectrum_masked->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 
 
@@ -1141,7 +1147,7 @@ bool CtffindApp::DoCalculation()
 			}
 			comparison_object_1D.find_phase_shift = find_additional_phase_shift;
 			comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
-			comparison_object_1D.reciprocal_pixel_size = average_spectrum_small_box->fourier_voxel_size_x;
+			comparison_object_1D.reciprocal_pixel_size = average_spectrum_masked->fourier_voxel_size_x;
 
 			// We can now look for the defocus value
 			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size_for_fitting;
@@ -1484,9 +1490,9 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Generate diagnostic image
-		//average_spectrum_large_box.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
+		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
 		current_output_location = current_micrograph_number;
-		average_spectrum_large_box->AddConstant(-1.0 * average_spectrum_large_box->ReturnAverageOfRealValuesOnEdges());
+		average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
 
 		/*
 		 *  Attempt some renormalisations - we want to do this over a range not affected by the central peak or strong Thon rings,
@@ -1494,48 +1500,48 @@ bool CtffindApp::DoCalculation()
 		 */
 		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0));
 		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,0.0));
-		float normalization_radius_min = start_zero * average_spectrum_large_box->logical_x_dimension;
-		float normalization_radius_max = finish_zero * average_spectrum_large_box->logical_x_dimension;
+		float normalization_radius_min = start_zero * average_spectrum->logical_x_dimension;
+		float normalization_radius_max = finish_zero * average_spectrum->logical_x_dimension;
 
 		if (start_zero > current_ctf.GetHighestFrequencyForFitting() || start_zero < current_ctf.GetLowestFrequencyForFitting() || finish_zero > current_ctf.GetHighestFrequencyForFitting() || finish_zero < current_ctf.GetLowestFrequencyForFitting())
 		{
-			normalization_radius_max = current_ctf.GetHighestFrequencyForFitting() * average_spectrum_large_box->logical_x_dimension;
-			normalization_radius_min = std::max(0.5f * normalization_radius_max, current_ctf.GetLowestFrequencyForFitting() * average_spectrum_large_box->logical_x_dimension);
+			normalization_radius_max = current_ctf.GetHighestFrequencyForFitting() * average_spectrum->logical_x_dimension;
+			normalization_radius_min = std::max(0.5f * normalization_radius_max, current_ctf.GetLowestFrequencyForFitting() * average_spectrum->logical_x_dimension);
 		}
 
 		MyDebugAssertTrue(normalization_radius_max > normalization_radius_min,"Bad values for min (%f) and max (%f) normalization radii\n");
 
 		if (normalization_radius_max - normalization_radius_min > 2.0)
 		{
-			average_spectrum_large_box->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
 																		normalization_radius_max,
 																		average,sigma);
-			average_spectrum_large_box->CircleMask(5.0,true);
-			average_spectrum_large_box->SetMaximumValueOnCentralCross(average);
-			average_spectrum_large_box->SetMinimumAndMaximumValues(average - 4.0 * sigma, average + 4.0 * sigma);
-			average_spectrum_large_box->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+			average_spectrum->CircleMask(5.0,true);
+			average_spectrum->SetMaximumValueOnCentralCross(average);
+			average_spectrum->SetMinimumAndMaximumValues(average - 4.0 * sigma, average + 4.0 * sigma);
+			average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
 																		normalization_radius_max,
 																		average,sigma);
-			average_spectrum_large_box->AddConstant(-1.0 * average);
-			average_spectrum_large_box->MultiplyByConstant(1.0 / sigma);
-			average_spectrum_large_box->AddConstant(average);
+			average_spectrum->AddConstant(-1.0 * average);
+			average_spectrum->MultiplyByConstant(1.0 / sigma);
+			average_spectrum->AddConstant(average);
 		}
 
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
 
 		// 1D rotational average
-		number_of_bins_in_1d_spectra = int(ceil(average_spectrum_large_box->ReturnMaximumDiagonalRadius()));
-		rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_large_box->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
+		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
+		rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
 		rotational_average.ZeroYData();
 		//number_of_averaged_pixels.ZeroYData();
 		number_of_averaged_pixels = rotational_average;
-		average_spectrum_large_box->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
 		if (compute_extra_stats)
 		{
-			number_of_extrema_image->Allocate(average_spectrum_large_box->logical_x_dimension,average_spectrum_large_box->logical_y_dimension,true);
-			ctf_values_image->Allocate(average_spectrum_large_box->logical_x_dimension,average_spectrum_large_box->logical_y_dimension,true);
+			number_of_extrema_image->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
+			ctf_values_image->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
 			spatial_frequency 						= new double[number_of_bins_in_1d_spectra];
 			rotational_average_astig 				= new double[number_of_bins_in_1d_spectra];
 			rotational_average_astig_renormalized	= new double[number_of_bins_in_1d_spectra];
@@ -1547,7 +1553,7 @@ bool CtffindApp::DoCalculation()
 			ComputeImagesWithNumberOfExtremaAndCTFValues(&current_ctf, number_of_extrema_image, ctf_values_image);
 			//number_of_extrema_image.QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
 			//ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
-			ComputeRotationalAverageOfPowerSpectrum(average_spectrum_large_box, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
+			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 
 			// Here, do FRC
 			int first_fit_bin = 0;
@@ -1579,7 +1585,7 @@ bool CtffindApp::DoCalculation()
 			}
 		}
 
-		//average_spectrum_large_box.QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc",1);
+		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc",1);
 
 		// Until what frequency were CTF rings detected?
 		if (compute_extra_stats)
@@ -1591,7 +1597,7 @@ bool CtffindApp::DoCalculation()
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
 			int number_of_bins_above_high_threshold = 0;
-			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,0.0))*average_spectrum_large_box->logical_x_dimension);
+			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,0.0))*average_spectrum->logical_x_dimension);
 			//wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
 			last_bin_with_good_fit = -1;
 			for (counter=first_bin_to_check;counter<number_of_bins_in_1d_spectra;counter++)
@@ -1633,23 +1639,23 @@ bool CtffindApp::DoCalculation()
 		#endif
 
 		// Prepare output diagnostic image
-		//average_spectrum_large_box->AddConstant(- average_spectrum_large_box->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
-		//average_spectrum_large_box.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
+		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
+		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
 		if (compute_extra_stats) {
-			RescaleSpectrumAndRotationalAverage(average_spectrum_large_box,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
+			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
 
-		average_spectrum_large_box->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
+		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
 																	normalization_radius_max,
 																	average,sigma);
 
-		average_spectrum_large_box->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
+		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
 
-		//average_spectrum_large_box->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-		OverlayCTF(average_spectrum_large_box, &current_ctf);
-		average_spectrum_large_box->WriteSlice(&output_diagnostic_file,current_output_location);
+		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
+		OverlayCTF(average_spectrum, &current_ctf);
+		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 
 
 		// Print more detailed results to terminal
@@ -1792,8 +1798,8 @@ bool CtffindApp::DoCalculation()
 
 
 	// Cleanup
-	delete average_spectrum_large_box;
-	delete average_spectrum_small_box;
+	delete average_spectrum;
+	delete average_spectrum_masked;
 	delete current_power_spectrum;
 	delete current_input_image;
 	delete current_input_image_square;

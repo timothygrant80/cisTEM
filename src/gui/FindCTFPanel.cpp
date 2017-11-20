@@ -1065,6 +1065,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	float phase_shift_step;
 	float tolerated_astigmatism;
 	wxString current_table_name;
+	int counter_aliasing_within_fit_range;
 
 
 	// find the current highest alignment number in the database, then increment by one
@@ -1116,7 +1117,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 
 	wxDateTime now = wxDateTime::Now();
-
+	counter_aliasing_within_fit_range = 0;
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
 		image_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->asset_id;
@@ -1182,9 +1183,16 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		ctf_estimation_id++;
 		my_progress_dialog->Update(counter + 1);
 
+		if (buffered_results[counter].result_data[6] > MaxResNumericCtrl->ReturnValue()) counter_aliasing_within_fit_range ++;
+
 	}
 
 	main_frame->current_project.database.EndBatchInsert();
+
+	if (counter_aliasing_within_fit_range > 0)
+	{
+		WriteInfoText(wxString::Format("For %i of %i micrographs, CTF aliasing was detected within the fit range. Aliasing may affect the detected fit resolution and/or the quality of the defocus estimates. To reduce aliasing, use a larger box size (current box size: %i)\n", counter_aliasing_within_fit_range, my_job_tracker.total_number_of_jobs,BoxSizeSpinCtrl->GetValue()));
+	}
 
 	// we need to update the image assets with the correct CTF estimation number..
 

@@ -75,6 +75,7 @@ public:
 
 	void SetParent(AutoRefine3DPanel *wanted_parent);
 
+	AutoRefinementManager();
 	void BeginRefinementCycle();
 	void CycleRefinement();
 
@@ -152,6 +153,7 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 		AutoRefine3DPanel( wxWindow* parent );
 
+		void Reset();
 		void SetDefaults();
 		void SetInfo();
 

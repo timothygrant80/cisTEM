@@ -70,6 +70,48 @@ AutoRefine3DPanelParent( parent )
 
 }
 
+void AutoRefine3DPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	InputParamsPanel->Show(true);
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	ShowRefinementResultsPanel->Show(false);
+	ShowRefinementResultsPanel->Clear();
+	InfoPanel->Show(true);
+
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	RefinementPackageSelectPanel->Clear();
+	ReferenceSelectPanel->Clear();
+	RefinementRunProfileComboBox->Clear();
+	ReconstructionRunProfileComboBox->Clear();
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		active_mask_thread_id = -1;
+		active_orth_thread_id = -1;
+
+		running_job = false;
+	}
+
+	Layout();
+
+	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+
+	SetDefaults();
+	global_delete_autorefine3d_scratch();
+}
+
 void AutoRefine3DPanel::SetInfo()
 {
 
@@ -830,7 +872,11 @@ void AutoRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	}
 
 }
-
+AutoRefinementManager::AutoRefinementManager()
+{
+	input_refinement = NULL;
+	output_refinement = NULL;
+}
 
 void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 {

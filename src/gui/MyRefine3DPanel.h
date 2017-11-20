@@ -84,6 +84,7 @@ public:
 	wxArrayString current_reference_filenames;
 	wxArrayLong current_reference_asset_ids;
 
+	RefinementManager();
 	void SetParent(MyRefine3DPanel *wanted_parent);
 
 	void BeginRefinementCycle();
@@ -170,6 +171,7 @@ class MyRefine3DPanel : public Refine3DPanel
 		bool running_job;
 
 		void SetDefaults();
+		void Reset();
 
 
 		MyRefine3DPanel( wxWindow* parent );

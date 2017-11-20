@@ -36,6 +36,8 @@ class MyRefinementResultsPanel : public RefinementResultsPanel
 	void WriteJobInfo(int wanted_class);
 	void ClearJobInfo();
 
+	void Clear();
+
 
 
 

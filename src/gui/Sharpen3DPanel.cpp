@@ -19,6 +19,9 @@ Sharpen3DPanelParent( parent )
 
 	guage_timer = NULL;
 
+	active_thread_id = -1;
+	next_thread_id = 1;
+
 	VolumeComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &Sharpen3DPanel::OnVolumeComboBox, this);
 	Bind(RETURN_SHARPENING_RESULTS_EVT, &Sharpen3DPanel::OnSharpenThreadComplete, this);
 	Bind(wxEVT_TIMER, &Sharpen3DPanel::OnGuageTimer, this);
@@ -27,6 +30,34 @@ Sharpen3DPanelParent( parent )
 void Sharpen3DPanel::OnGuageTimer(wxTimerEvent& event)
 {
 	ProgressGuage->Pulse();
+}
+
+void Sharpen3DPanel::ResetDefaults()
+{
+	FlattenFromTextCtrl->ChangeValueFloat(8.0f);
+	CutOffResTextCtrl->ChangeValueFloat(0.0f);
+	AdditionalLowBFactorTextCtrl->ChangeValueFloat(-90.0f);
+	AdditionalHighBFactorTextCtrl->ChangeValueFloat(0.0f);
+	FilterEdgeWidthTextCtrl->ChangeValueFloat(20.0f);
+	UseFSCWeightingYesButton->SetValue(true);
+	SSNRScaleFactorTextCtrl->ChangeValueFloat(1.0f);
+	InnerMaskRadiusTextCtrl->ChangeValueFloat(0.0f);
+	OuterMaskRadiusTextCtrl->ChangeValueFloat(100.0f);
+	InvertHandednessNoButton->SetValue(true);
+	CorrectGriddingYesButton->SetValue(true);
+	UseMaskCheckBox->SetValue(false);
+}
+
+void Sharpen3DPanel::Reset()
+{
+	active_thread_id = -1;
+	GuinierPlot->Clear(true);
+	ResultDisplayPanel->Clear();
+	if (active_result != NULL) delete active_result;
+
+	VolumeComboBox->Clear();
+
+	ResetDefaults();
 }
 
 void Sharpen3DPanel::SetInfo()
@@ -532,7 +563,10 @@ void Sharpen3DPanel::OnRunButtonClick( wxCommandEvent& event )
 
 	float statistics_scale_factor = SSNRScaleFactorTextCtrl->ReturnValue();
 
-	sharpen_thread = new SharpenMapThread(this, map_filename, pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, input_mask_filename, input_resolution_statistics, statistics_scale_factor, should_correct_sinc);
+	active_thread_id = next_thread_id;
+	next_thread_id++;
+
+	sharpen_thread = new SharpenMapThread(this, map_filename, pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, input_mask_filename, input_resolution_statistics, statistics_scale_factor, should_correct_sinc, active_thread_id);
 
 	if ( sharpen_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -565,100 +599,106 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
 	Curve *original_curve = my_event.GetOriginalCurve();
 	Curve *sharpened_curve = my_event.GetSharpenedCurve();
 
-	GuinierPlot->Clear();
-
-	VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(VolumeComboBox->GetSelection());
-
-	// convert curves to spatial frequency
-	for (int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++)
+	if (active_thread_id == my_event.GetInt())
 	{
-		original_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / original_curve->data_x[point_counter]);
-		sharpened_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / sharpened_curve->data_x[point_counter]);
-	}
+		GuinierPlot->Clear();
+		VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(VolumeComboBox->GetSelection());
 
-
-	if (original_curve != NULL && sharpened_curve != NULL)
-	{
-
-		float min_y = FLT_MAX;
-		float max_y = -FLT_MAX;
-		float scale_factor = original_curve->data_y[1] / sharpened_curve->data_y[1];
-
-
-
-		// scale the curves
-
-		sharpened_curve->MultiplyByConstant(scale_factor);
-
+		// convert curves to spatial frequency
 		for (int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++)
 		{
-			if (original_curve->data_x[point_counter] <= 1.0f / (selected_volume->pixel_size / 0.5f))
-			{
-				min_y = std::min(min_y, original_curve->data_y[point_counter]);
-				min_y = std::min(min_y, sharpened_curve->data_y[point_counter]);
-
-				max_y = std::max(max_y, original_curve->data_y[point_counter]);
-				max_y = std::max(max_y, sharpened_curve->data_y[point_counter]);
-			}
+			original_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / original_curve->data_x[point_counter]);
+			sharpened_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / sharpened_curve->data_x[point_counter]);
 		}
 
-		GuinierPlot->AddCurve(*original_curve, wxColour(0, 0, 255), "Original");
-		GuinierPlot->AddCurve(*sharpened_curve, wxColour(255, 0, 0), "Sharpened");
-		GuinierPlot->Draw(0.0f, 1.0f / (selected_volume->pixel_size / 0.5f), max_y-10, max_y);
-	}
+		if (original_curve != NULL && sharpened_curve != NULL)
+		{
 
-	if (original_curve != NULL) delete original_curve;
-	if (sharpened_curve != NULL) delete sharpened_curve;
+			float min_y = FLT_MAX;
+			float max_y = -FLT_MAX;
+			float scale_factor = original_curve->data_y[1] / sharpened_curve->data_y[1];
 
-	if (original_orth_image == NULL)
-	{
-		if (sharpened_orth_image != NULL) delete sharpened_orth_image;
+			// scale the curves
+
+			sharpened_curve->MultiplyByConstant(scale_factor);
+
+			for (int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++)
+			{
+				if (original_curve->data_x[point_counter] <= 1.0f / (selected_volume->pixel_size / 0.5f))
+				{
+					min_y = std::min(min_y, original_curve->data_y[point_counter]);
+					min_y = std::min(min_y, sharpened_curve->data_y[point_counter]);
+
+					max_y = std::max(max_y, original_curve->data_y[point_counter]);
+					max_y = std::max(max_y, sharpened_curve->data_y[point_counter]);
+				}
+			}
+
+			GuinierPlot->AddCurve(*original_curve, wxColour(0, 0, 255), "Original");
+			GuinierPlot->AddCurve(*sharpened_curve, wxColour(255, 0, 0), "Sharpened");
+			GuinierPlot->Draw(0.0f, 1.0f / (selected_volume->pixel_size / 0.5f), max_y-10, max_y);
+		}
+
+		if (original_curve != NULL) delete original_curve;
+		if (sharpened_curve != NULL) delete sharpened_curve;
+
+		if (original_orth_image == NULL)
+		{
+			if (sharpened_orth_image != NULL) delete sharpened_orth_image;
+		}
+		else
+		if (sharpened_orth_image == NULL) delete original_orth_image;
+		else // display them
+		{
+			Freeze();
+			if (ResultDisplayPanel->my_notebook->GetPageCount() != 2)
+			{
+				ResultDisplayPanel->Clear();
+				ResultDisplayPanel->OpenImage(original_orth_image, "Original 3D", true);
+				ResultDisplayPanel->OpenImage(sharpened_orth_image, "Sharpened 3D", true);
+			}
+			else // already have 2 pages..
+			{
+				ResultDisplayPanel->my_notebook->ChangeSelection(0);
+				ResultDisplayPanel->ChangeImage(original_orth_image, "Original 3D", true);
+				ResultDisplayPanel->my_notebook->ChangeSelection(1);
+				ResultDisplayPanel->ChangeImage(sharpened_orth_image, "Sharpened 3D", true);
+			}
+
+			if (ResultDisplayPanel->IsShown() == false)
+			{
+				ResultDisplayPanel->Show(true);
+				InfoPanel->Show(false);
+				Layout();
+			}
+
+			Thaw();
+		}
+
+		if (guage_timer != NULL)
+		{
+			guage_timer->Stop();
+			delete guage_timer;
+			guage_timer = NULL;
+		}
+
+		ProgressGuage->SetValue(0);
+		running_a_job = false;
+
 	}
 	else
-	if (sharpened_orth_image == NULL) delete original_orth_image;
-	else // display them
 	{
-		Freeze();
-		if (ResultDisplayPanel->my_notebook->GetPageCount() != 2)
-		{
-			ResultDisplayPanel->Clear();
-			ResultDisplayPanel->OpenImage(original_orth_image, "Original 3D", true);
-			ResultDisplayPanel->OpenImage(sharpened_orth_image, "Sharpened 3D", true);
-		}
-		else // already have 2 pages..
-		{
-			ResultDisplayPanel->my_notebook->ChangeSelection(0);
-			ResultDisplayPanel->ChangeImage(original_orth_image, "Original 3D", true);
-			ResultDisplayPanel->my_notebook->ChangeSelection(1);
-			ResultDisplayPanel->ChangeImage(sharpened_orth_image, "Sharpened 3D", true);
-
-		}
-
-		if (ResultDisplayPanel->IsShown() == false)
-		{
-			ResultDisplayPanel->Show(true);
-			InfoPanel->Show(false);
-			Layout();
-		}
-
-		Thaw();
-
+		if (original_curve != NULL) delete original_curve;
+		if (sharpened_curve != NULL) delete sharpened_curve;
+		if (sharpened_orth_image != NULL) delete sharpened_orth_image;
+		if (original_orth_image != NULL) delete original_orth_image;
 	}
-
-	if (guage_timer != NULL)
-	{
-		guage_timer->Stop();
-		delete guage_timer;
-		guage_timer = NULL;
-	}
-	ProgressGuage->SetValue(0);
-	running_a_job = false;
-
 }
 
 wxThread::ExitCode SharpenMapThread::Entry()
 {
 	ReturnSharpeningResultsEvent *finished_event = new ReturnSharpeningResultsEvent(RETURN_SHARPENING_RESULTS_EVT); // for sending back the panel
+	finished_event->SetInt(thread_id);
 
 	if (DoesFileExist(map_filename) == true)
 	{

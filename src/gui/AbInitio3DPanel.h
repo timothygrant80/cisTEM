@@ -181,6 +181,7 @@ public:
 
 public:
 
+	void Reset();
 	void SetDefaults();
 	void SetInfo();
 	void FillRefinementPackagesComboBox();

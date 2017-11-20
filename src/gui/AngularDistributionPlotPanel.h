@@ -17,7 +17,7 @@ public :
 	void OnSize( wxSizeEvent & event );
 	void OnPaint(wxPaintEvent & evt);
 	void OnEraseBackground(wxEraseEvent& event);
-	void Clear();
+	virtual void Clear();
 
 	virtual void UpdateScalingAndDimensions();
 	void UpdateProjCircleRadius();
@@ -83,6 +83,7 @@ public :
 	void SetupBitmap();
 	void DrawPlot(int min_value, int max_value);
 	void UpdateScalingAndDimensions();
+	void Clear();
 
 };
 

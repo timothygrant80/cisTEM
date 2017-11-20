@@ -21,6 +21,9 @@ public:
 	void GetDistributionStatistics(float &min_value, float &max_value, float &average_value, float &std_dev);
 	void PrintToTerminal();
 
+	void Clear();
+
+
 	inline int ReturnThetaBin(float theta)
 	{
 		//MyDebugAssertTrue(theta >= 0.0f && theta <= 90.0f, "Theta out of range here")

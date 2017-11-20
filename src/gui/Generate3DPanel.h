@@ -70,6 +70,7 @@ class Generate3DPanel : public Generate3DPanelParent
 
 		//
 
+		void Reset();
 		void SetDefaults();
 		Generate3DPanel( wxWindow* parent );
 		void SetInfo();

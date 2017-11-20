@@ -37,12 +37,50 @@ Generate3DPanelParent( parent )
 	ShowRefinementResultsPanel->AngularPlotPanel->Show(false);
 	ShowRefinementResultsPanel->FSCResultsPanel->Show(true);
 
+	input_refinement = NULL;
+
 	FillRefinementPackagesComboBox();
 
 	active_orth_thread_id = -1;
 	next_thread_id = 1;
 }
 
+void Generate3DPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	InputParamsPanel->Show(true);
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	ShowRefinementResultsPanel->Show(false);
+	ShowRefinementResultsPanel->Clear();
+	InfoPanel->Show(true);
+
+	RefinementPackageComboBox->Clear();
+	InputParametersComboBox->Clear();
+	ReconstructionRunProfileComboBox->Clear();
+
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+		active_orth_thread_id = -1;
+		running_job = false;
+	}
+
+	if (input_refinement != NULL) delete input_refinement;
+	SetDefaults();
+	global_delete_generate3d_scratch();
+	Layout();
+
+}
 void Generate3DPanel::SetInfo()
 {
 

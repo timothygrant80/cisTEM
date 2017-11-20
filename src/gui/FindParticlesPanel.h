@@ -29,6 +29,9 @@ public:
 
 
 		// methods
+		void Reset();
+		void ResetDefaults();
+
 		void OnGroupComboBox( wxCommandEvent& event );
 		void OnImageComboBox( wxCommandEvent& event );
 		void WriteResultToDataBase();

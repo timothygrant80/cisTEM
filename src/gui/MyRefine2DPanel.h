@@ -97,6 +97,8 @@ public:
 
 	long selected_refinement_package;
 
+	void Reset();
+
 	MyRefine2DPanel( wxWindow* parent );
 
 	void WriteInfoText(wxString text_to_write);

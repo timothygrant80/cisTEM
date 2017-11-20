@@ -176,6 +176,8 @@ void Refine2DResultsPanel::Clear()
 	ParticleDisplayPanel->Clear();
 	ClassNumberStaticText->SetLabel("Class Members");
 	ClearJobInfo();
+	JobDetailsToggleButton->SetValue(false);
+	JobDetailsPanel->Show(false);
 	SelectionManagerListCtrl->ClearAll();
 	Layout();
 

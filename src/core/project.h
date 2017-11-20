@@ -25,6 +25,8 @@ public :
 	double total_cpu_hours;
 	int total_jobs_run;
 
+	int integer_database_version;
+
 	Project();
 	~Project();
 

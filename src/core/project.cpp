@@ -226,11 +226,12 @@ bool Project::ReadMasterSettings()
 
 	//MyDebugAssertTrue(is_open == true, "Project not open!");
 
-	success = database.GetMasterSettings(project_directory, project_name, imported_integer_version, total_cpu_hours, total_jobs_run);
+	success = database.GetMasterSettings(project_directory, project_name, integer_database_version, total_cpu_hours, total_jobs_run);
 
 	if (success == true)
 	{
-		MyDebugAssertTrue(imported_integer_version == INTEGER_DATABASE_VERSION, "Database version numbers are different!");
+		//MyDebugAssertTrue(imported_integer_version == INTEGER_DATABASE_VERSION, "Database version numbers are different!");
+
 	}
 
 	return success;

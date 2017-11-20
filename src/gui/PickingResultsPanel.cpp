@@ -678,6 +678,9 @@ void MyPickingResultsPanel::Clear()
 
 	ResultDataView->Clear();
 	ResultDisplayPanel->Clear();
+	JobDetailsToggleButton->SetValue(false);
+	JobDetailsPanel->Show(false);
+	Layout();
 	//PickingResultsImagePanel->Clear();
 }
 

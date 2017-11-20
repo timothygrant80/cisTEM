@@ -45,6 +45,8 @@ FindParticlesPanel( parent )
 	time_of_last_result_update = time(NULL);
 	FindParticlesSplitterWindow->Unsplit(LeftPanel);
 
+	ResetDefaults();
+
 	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnGroupComboBox, this);
 	ImageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnImageComboBox, this);
 
@@ -69,6 +71,58 @@ void MyFindParticlesPanel::OnInfoURL(wxTextUrlEvent& event)
 	 wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
+void MyFindParticlesPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+	CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	PickingResultsPanel->Show(false);
+	PickingResultsPanel->Clear();
+	//graph_is_hidden = true;
+	InfoPanel->Show(true);
+
+	ExpertToggleButton->Enable(false);
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		if (buffered_results != NULL)
+		{
+			delete [] buffered_results;
+			buffered_results = NULL;
+		}
+
+		running_job = false;
+	}
+
+	Layout();
+	LeftPanel->Layout();
+	RightPanel->Layout();
+
+}
+
+void MyFindParticlesPanel::ResetDefaults()
+{
+
+	MaximumParticleRadiusNumericCtrl->ChangeValueFloat(120.0f);
+	CharacteristicParticleRadiusNumericCtrl->ChangeValueFloat(80.0f);
+	ThresholdPeakHeightNumericCtrl->ChangeValueFloat(6.0f);
+	AutoPickRefreshCheckBox->SetValue(false);
+	AvoidHighVarianceAreasCheckBox->SetValue(false);
+	HighestResolutionNumericCtrl->ChangeValueFloat(30.0f);
+	SetMinimumDistanceFromEdgesCheckBox->SetValue(false);
+	MinimumDistanceFromEdgesSpinCtrl->SetValue(128);
+	AvoidAbnormalLocalMeanAreasCheckBox->SetValue(true);
+	NumberOfBackgroundBoxesSpinCtrl->SetValue(50);
+	AlgorithmToFindBackgroundChoice->SetSelection(0);
+}
 
 void MyFindParticlesPanel::SetInfo()
 {
@@ -1161,6 +1215,8 @@ void MyFindParticlesPanel::FinishButtonClick( wxCommandEvent& event )
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
 	PickingResultsPanel->Show(false);
+	PickingResultsPanel->Clear();
+	AutoPickRefreshCheckBox->SetValue(false);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 

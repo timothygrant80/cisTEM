@@ -124,6 +124,19 @@ void MyRefinementResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 	Thaw();
 }
 
+void MyRefinementResultsPanel::Clear()
+{
+	JobDetailsToggleButton->SetValue(false);
+	JobDetailsPanel->Show(false);
+	RefinementPackageComboBox->Clear();
+	InputParametersComboBox->Clear();
+	AngularPlotPanel->Clear();
+	AngularPlotPanel->Refresh();
+	OrthPanel->Clear();
+	Layout();
+
+}
+
 void MyRefinementResultsPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	if (main_frame->current_project.is_open == false)

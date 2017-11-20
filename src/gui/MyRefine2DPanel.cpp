@@ -119,6 +119,44 @@ void MyRefine2DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	}
 }
 
+void MyRefine2DPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	PlotPanel->Show(false);
+	output_textctrl->Clear();
+	ResultDisplayPanel->Show(false);
+	InfoPanel->Show(true);
+	InputParamsPanel->Show(true);
+
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	RefinementPackageComboBox->Clear();
+	InputParametersComboBox->Clear();
+	RefinementRunProfileComboBox->Clear();
+
+
+	ResultDisplayPanel->Clear();
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+		global_delete_refine2d_scratch();
+
+		running_job = false;
+	}
+
+	SetDefaults();
+	Layout();
+}
+
 void MyRefine2DPanel::FillRefinementPackagesComboBox()
 {
 	if (RefinementPackageComboBox->FillComboBox() == false) NewRefinementPackageSelected();

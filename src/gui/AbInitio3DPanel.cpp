@@ -52,6 +52,50 @@ AbInitio3DPanelParent( parent )
 	next_thread_id = 1;
 }
 
+void AbInitio3DPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	CurrentLineOne->Show(true);
+	CurrentLineTwo->Show(true);
+	TakeCurrentResultButton->Show(true);
+	TakeLastStartResultButton->Show(true);
+	FinishButton->Show(false);
+	InputParamsPanel->Show(true);
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	PlotPanel->Show(false);
+	PlotPanel->Clear();
+	OrthResultsPanel->Show(false);
+	ShowOrthDisplayPanel->Clear();
+	InfoPanel->Show(true);
+
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	RefinementPackageComboBox->Clear();
+	RefinementRunProfileComboBox->Clear();
+	ReconstructionRunProfileComboBox->Clear();
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		active_mask_thread_id = -1;
+		active_sym_thread_id = -1;
+		active_orth_thread_id = -1;
+
+		running_job = false;
+	}
+
+	Layout();
+	SetDefaults();
+	global_delete_startup_scratch();
+}
+
 void AbInitio3DPanel::SetInfo()
 {
 	wxLogNull *suppress_png_warnings = new wxLogNull;
@@ -1271,7 +1315,9 @@ void AbInitioManager::CycleRefinement()
 				my_parent->CurrentLineTwo->Show(false);
 				my_parent->TakeCurrentResultButton->Show(false);
 				my_parent->TakeLastStartResultButton->Show(false);
+				my_parent->ProgressBar->SetValue(100);
 				my_parent->FinishButton->Show(true);
+				my_parent->FinishButton->Enable(false);
 				my_parent->ProgressPanel->Layout();
 				my_parent->Thaw();
 

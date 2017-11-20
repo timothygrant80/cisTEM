@@ -44,6 +44,8 @@ FindCTFPanel( parent )
 	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-190, 190);
 	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 190);
 
+	ResetDefaults();
+
 	EnableMovieProcessingIfAppropriate();
 
 	result_bitmap.Create(1,1, 24);
@@ -89,6 +91,63 @@ void MyFindCTFPanel::OnInfoURL(wxTextUrlEvent& event)
 	 wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
+void MyFindCTFPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	CTFResultsPanel->Show(false);
+	//graph_is_hidden = true;
+	InfoPanel->Show(true);
+
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		if (buffered_results != NULL)
+		{
+			delete [] buffered_results;
+			buffered_results = NULL;
+		}
+
+		running_job = false;
+	}
+
+	CTFResultsPanel->CTF2DResultsPanel->should_show = false;
+	CTFResultsPanel->CTF2DResultsPanel->Refresh();
+
+	ResetDefaults();
+	Layout();
+}
+
+void MyFindCTFPanel::ResetDefaults()
+{
+	MovieRadioButton->SetValue(true);
+	NoFramesToAverageSpinCtrl->SetValue(3);
+	BoxSizeSpinCtrl->SetValue(512);
+	AmplitudeContrastNumericCtrl->ChangeValueFloat(0.07f);
+	MinResNumericCtrl->ChangeValueFloat(30.0f);
+	MaxResNumericCtrl->ChangeValueFloat(5.0f);
+	LowDefocusNumericCtrl->ChangeValueFloat(5000.0f);
+	HighDefocusNumericCtrl->ChangeValueFloat(50000.0f);
+	DefocusStepNumericCtrl->ChangeValueFloat(100.0f);
+	LargeAstigmatismExpectedCheckBox->SetValue(false);
+	RestrainAstigmatismCheckBox->SetValue(false);
+	ToleratedAstigmatismNumericCtrl->ChangeValueFloat(500.0f);
+	AdditionalPhaseShiftCheckBox->SetValue(false);
+	MinPhaseShiftNumericCtrl->ChangeValueFloat(0.0f);
+	MaxPhaseShiftNumericCtrl->ChangeValueFloat(180.0f);
+	PhaseShiftStepNumericCtrl->ChangeValueFloat(10.0f);
+}
 
 void MyFindCTFPanel::SetInfo()
 {

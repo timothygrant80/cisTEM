@@ -13,6 +13,13 @@ AngularDistributionHistogram::~AngularDistributionHistogram()
 
 }
 
+void AngularDistributionHistogram::Clear()
+{
+	histogram_data.Clear();
+	phi_boundaries.Clear();
+	theta_boundaries.Clear();
+}
+
 void AngularDistributionHistogram::Init(int wanted_number_of_theta_steps, int wanted_number_of_phi_steps)
 {
 	float theta_step;

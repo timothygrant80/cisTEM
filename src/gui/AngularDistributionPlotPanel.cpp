@@ -49,6 +49,7 @@ void AngularDistributionPlotPanel::Clear()
 
 	GetClientSize(&client_x, &client_y);
 	buffer_bitmap.Create(wxSize(client_x, client_y));
+
 	UpdateScalingAndDimensions();
 	SetupBitmap();
 	Refresh();
@@ -787,14 +788,19 @@ void AngularDistributionPlotPanelHistogram::SetupBitmap()
 		memDC->SelectObject(wxNullBitmap);
 		delete memDC;
 
-		distribution_histogram.GetDistributionStatistics(min_value, max_value, average_value, std_dev);
+		if (distribution_histogram.histogram_data.GetCount() > 0)
+		{
+			distribution_histogram.GetDistributionStatistics(min_value, max_value, average_value, std_dev);
 
-		//UpdateProjCircleRadius();
-		DrawPlot(0, myroundint(average_value * 4.5f));
+			//UpdateProjCircleRadius();
+			DrawPlot(0, myroundint(average_value * 4.5f));
 
-		// Draw Axis
+			// Draw Axis
 
-		DrawAxisOverlay(0, myroundint(average_value * 4.5f));
+			DrawAxisOverlay(0, myroundint(average_value * 4.5f));
+
+
+		}
 	}
 }
 
@@ -890,5 +896,11 @@ void AngularDistributionPlotPanelHistogram::UpdateScalingAndDimensions()
 	UpdateProjCircleRadius();
 	if (panel_dim_x > 0 && panel_dim_y > 0) SetupBitmap();
 
+}
+
+void AngularDistributionPlotPanelHistogram::Clear()
+{
+	distribution_histogram.Clear();
+	AngularDistributionPlotPanel::Clear();
 }
 

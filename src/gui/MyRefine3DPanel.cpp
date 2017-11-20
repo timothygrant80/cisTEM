@@ -72,6 +72,54 @@ Refine3DPanel( parent )
 
 }
 
+void MyRefine3DPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	InputParamsPanel->Show(true);
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	ShowRefinementResultsPanel->Show(false);
+	ShowRefinementResultsPanel->Clear();
+
+	UseMaskCheckBox->SetValue(false);
+	LocalRefinementRadio->SetValue(true);
+	NumberRoundsSpinCtrl->SetValue(1);
+	HighResolutionLimitTextCtrl->ChangeValueFloat(30.0f);
+
+	//CTFResultsPanel->Show(false);
+	//graph_is_hidden = true;
+	InfoPanel->Show(true);
+
+	RefinementPackageComboBox->Clear();
+	InputParametersComboBox->Clear();
+	RefinementRunProfileComboBox->Clear();
+	ReconstructionRunProfileComboBox->Clear();
+
+	UseMaskCheckBox->SetValue(false);
+	ExpertToggleButton->SetValue(false);
+	ExpertPanel->Show(false);
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		active_mask_thread_id = -1;
+		active_orth_thread_id = -1;
+		running_job = false;
+	}
+
+	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+	SetDefaults();
+	global_delete_refine3d_scratch();
+	Layout();
+}
+
 void MyRefine3DPanel::SetInfo()
 {
 
@@ -538,6 +586,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		NumberRoundsSpinCtrl->Enable(false);
 		UseMaskCheckBox->Enable(false);
 		MaskSelectPanel->Enable(false);
+		HighResolutionLimitTextCtrl->Enable(false);
 
 
 		if (ExpertPanel->IsShown() == true)
@@ -584,6 +633,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 	{
 		RefinementRunProfileComboBox->Enable(true);
 		ReconstructionRunProfileComboBox->Enable(true);
+		HighResolutionLimitTextCtrl->Enable(true);
 
 		if (running_job == false)
 		{
@@ -1215,6 +1265,12 @@ void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 }
 
+RefinementManager::RefinementManager()
+{
+	input_refinement = NULL;
+	output_refinement = NULL;
+
+}
 
 void RefinementManager::SetParent(MyRefine3DPanel *wanted_parent)
 {

@@ -53,6 +53,9 @@ public:
 		void ProcessAllJobsFinished();
 		void UpdateProgressBar();
 
+		void Reset();
+		void ResetDefaults();
+
 		virtual void OnJobSocketEvent(wxSocketEvent& event);
 
 

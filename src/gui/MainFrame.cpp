@@ -234,6 +234,34 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 
 }
 
+void MyMainFrame::ResetAllPanels()
+{
+	movie_asset_panel->Reset();
+	image_asset_panel->Reset();
+	volume_asset_panel->Reset();
+	particle_position_asset_panel->Reset();
+	refinement_package_asset_panel->Reset();
+
+	run_profiles_panel->Reset();
+	movie_results_panel->Clear();
+	ctf_results_panel->Clear();
+	picking_results_panel->Clear();
+	refine2d_results_panel->Clear();
+	refinement_results_panel->Clear();
+
+	align_movies_panel->Reset();
+	findctf_panel->Reset();
+	findparticles_panel->Reset();
+	classification_panel->Reset();
+	ab_initio_3d_panel->Reset();
+	auto_refine_3d_panel->Reset();
+	refine_3d_panel->Reset();
+	generate_3d_panel->Reset();
+	sharpen_3d_panel->Reset();
+
+	DirtyEverything();
+}
+
 void MyMainFrame::DirtyEverything()
 {
 	DirtyMovieGroups();
@@ -523,6 +551,17 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		// DO DATABASE VERSION CHECK HERE!
 
 
+		if (current_project.integer_database_version > INTEGER_DATABASE_VERSION)
+		{
+			wxMessageDialog *my_dialog = new wxMessageDialog(this, "This database was created in a newer version of cisTEM, and cannot be opened.", "Database from newer version", wxICON_ERROR);
+			my_dialog->Destroy();
+			current_project.Close(false);
+			return;
+		}
+		else
+		{
+			// need to upgrade the database here.
+		}
 
 
 
@@ -645,16 +684,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 
 	current_project.Close();
 
-	movie_asset_panel->Reset();
-	image_asset_panel->Reset();
-	volume_asset_panel->Reset();
-	particle_position_asset_panel->Reset();
-	refinement_package_asset_panel->Reset();
-	run_profiles_panel->Reset();
-	movie_results_panel->Clear();
-	ctf_results_panel->Clear();
-	refine2d_results_panel->Clear();
-
+	ResetAllPanels();
 
 	SetTitle("cisTEM");
 	MenuBook->SetSelection(0);

@@ -378,6 +378,9 @@ void MyMovieAlignResultsPanel::Clear()
 
 	ResultDataView->Clear();
 	ResultPanel->Clear();
+	JobDetailsToggleButton->SetValue(false);
+	JobDetailsPanel->Show(false);
+	Layout();
 }
 
 /*

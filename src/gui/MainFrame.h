@@ -61,6 +61,8 @@ class MyMainFrame : public MainFrame
 		void DirtyClassificationSelections();
 		void DirtyClassifications();
 
+		void ResetAllPanels();
+
 		void ClearScratchDirectory();
 		void ClearStartupScratch();
 		void ClearRefine2DScratch();

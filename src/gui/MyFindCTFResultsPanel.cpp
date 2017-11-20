@@ -580,6 +580,10 @@ void MyFindCTFResultsPanel::Clear()
 	ResultPanel->CTF2DResultsPanel->Clear();
 	ResultPanel->CTFPlotPanel->Clear();
 	ResultPanel->ImageDisplayPanel->Clear();
+
+	JobDetailsToggleButton->SetValue(false);
+	JobDetailsPanel->Show(false);
+	Layout();
 }
 
 void MyFindCTFResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )

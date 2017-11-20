@@ -35,9 +35,65 @@ AlignMoviesPanel( parent )
 	ExpertPanel->SetMinSize(input_size);
 	ExpertPanel->SetSize(input_size);
 
+	ResetDefaults();
 
 	SetInfo();
 
+}
+
+void MyAlignMoviesPanel::Reset()
+{
+	ProgressBar->SetValue(0);
+	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+    CancelAlignmentButton->Show(true);
+	FinishButton->Show(false);
+
+	ProgressPanel->Show(false);
+	StartPanel->Show(true);
+	OutputTextPanel->Show(false);
+	output_textctrl->Clear();
+	GraphPanel->Show(false);
+	graph_is_hidden = true;
+	InfoPanel->Show(true);
+
+	ExpertToggleButton->SetValue(false);
+	show_expert_options = false;
+	ExpertPanel->Show(false);
+
+	if (running_job == true)
+	{
+		main_frame->job_controller.KillJob(my_job_id);
+
+		if (buffered_results != NULL)
+		{
+			delete [] buffered_results;
+			buffered_results = NULL;
+		}
+
+		running_job = false;
+	}
+
+	ResetDefaults();
+	Layout();
+
+}
+
+void MyAlignMoviesPanel::ResetDefaults()
+{
+	minimum_shift_text->ChangeValue("2");
+	maximum_shift_text->ChangeValue("40");
+	dose_filter_checkbox->SetValue(true);
+	restore_power_checkbox->SetValue(true);
+	termination_threshold_text->ChangeValue("1");
+	max_iterations_spinctrl->SetValue(20);
+	bfactor_spinctrl->SetValue(1500);
+	mask_central_cross_checkbox->SetValue(true);
+	horizontal_mask_spinctrl->SetValue(1);
+	vertical_mask_spinctrl->SetValue(1);
+	include_all_frames_checkbox->SetValue(true);
+	first_frame_spin_ctrl->SetValue(1);
+	last_frame_spin_ctrl->SetValue(1);
+	SaveScaledSumCheckbox->SetValue(true);
 }
 
 void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event)
@@ -554,6 +610,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	buffered_results = new JobResult[number_of_jobs];
 
 	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
+
 
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);

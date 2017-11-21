@@ -166,7 +166,7 @@ void Generate3DPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Score Threshold : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage."));
+	InfoText->WriteText(wxT("Particles with a score lower than the threshold will be excluded from the reconstruction. This provides a way to exclude particles that may score low because of misalignment or damage. A value = 0 will select all particles; 0 < value <= 1 will be interpreted as a percentage; value > 1 will be interpreted as a fixed score threshold."));
 	InfoText->Newline();
 
 	InfoText->BeginBold();

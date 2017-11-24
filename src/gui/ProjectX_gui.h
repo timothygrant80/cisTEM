@@ -87,6 +87,7 @@ WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 #include <wx/toolbar.h>
 #include <wx/aui/auibook.h>
 #include <wx/statbmp.h>
+#include <wx/hyperlink.h>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -101,6 +102,7 @@ class MainFrame : public wxFrame
 		wxPanel* LeftPanel;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
+		wxMenu* HelpMenu;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
@@ -109,6 +111,8 @@ class MainFrame : public wxFrame
 		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHelpLaunch( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAboutLaunch( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
@@ -3151,6 +3155,42 @@ class RefinementParametersDialogParent : public wxDialog
 		
 		RefinementParametersDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
 		~RefinementParametersDialogParent();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class AboutDialog
+///////////////////////////////////////////////////////////////////////////////
+class AboutDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline131;
+		wxStaticLine* m_staticline130;
+		wxStaticText* m_staticText611;
+		wxStaticText* m_staticText605;
+		wxStaticText* m_staticText606;
+		wxStaticText* m_staticText607;
+		wxStaticText* m_staticText608;
+		wxStaticText* m_staticText609;
+		wxStaticText* m_staticText610;
+		wxStaticText* m_staticText613;
+		wxStaticText* m_staticText614;
+		wxStaticText* m_staticText615;
+		wxHyperlinkCtrl* m_hyperlink1;
+		wxStaticText* m_staticText617;
+		wxHyperlinkCtrl* m_hyperlink2;
+		wxStaticLine* m_staticline129;
+		wxButton* m_button141;
+	
+	public:
+		wxStaticBitmap* LogoBitmap;
+		wxStaticText* VersionStaticText;
+		wxStaticText* BuildDateText;
+		
+		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+		~AboutDialog();
 	
 };
 

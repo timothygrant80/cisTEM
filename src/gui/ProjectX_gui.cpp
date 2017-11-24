@@ -82,6 +82,17 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	
 	m_menubar1->Append( FileMenu, wxT("Project") ); 
 	
+	HelpMenu = new wxMenu();
+	wxMenuItem* OnlineHelpLaunch;
+	OnlineHelpLaunch = new wxMenuItem( HelpMenu, wxID_ANY, wxString( wxT("Online Help") ) , wxEmptyString, wxITEM_NORMAL );
+	HelpMenu->Append( OnlineHelpLaunch );
+	
+	wxMenuItem* AboutLaunch;
+	AboutLaunch = new wxMenuItem( HelpMenu, wxID_ANY, wxString( wxT("About") ) , wxEmptyString, wxITEM_NORMAL );
+	HelpMenu->Append( AboutLaunch );
+	
+	m_menubar1->Append( HelpMenu, wxT("Help") ); 
+	
 	this->SetMenuBar( m_menubar1 );
 	
 	
@@ -94,6 +105,8 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Connect( FileOpenProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Connect( FileCloseProject->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Connect( FileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
+	this->Connect( OnlineHelpLaunch->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnHelpLaunch ) );
+	this->Connect( AboutLaunch->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnAboutLaunch ) );
 }
 
 MainFrame::~MainFrame()
@@ -105,6 +118,8 @@ MainFrame::~MainFrame()
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ) );
 	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ) );
+	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnHelpLaunch ) );
+	this->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnAboutLaunch ) );
 	
 }
 
@@ -10845,4 +10860,104 @@ RefinementParametersDialogParent::~RefinementParametersDialogParent()
 	CloseButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementParametersDialogParent::OnCloseButtonClick ), NULL, this );
 	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementParametersDialogParent::OnSaveButtonClick ), NULL, this );
 	
+}
+
+AboutDialog::AboutDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxSize( 350,-1 ), wxDefaultSize );
+	
+	wxBoxSizer* bSizer445;
+	bSizer445 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline131 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer445->Add( m_staticline131, 0, wxEXPAND | wxALL, 5 );
+	
+	LogoBitmap = new wxStaticBitmap( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer445->Add( LogoBitmap, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+	
+	m_staticline130 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer445->Add( m_staticline130, 0, wxEXPAND | wxALL, 5 );
+	
+	VersionStaticText = new wxStaticText( this, wxID_ANY, wxT("cisTEM version 1.0beta-RC1"), wxDefaultPosition, wxDefaultSize, 0 );
+	VersionStaticText->Wrap( -1 );
+	bSizer445->Add( VersionStaticText, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+	
+	BuildDateText = new wxStaticText( this, wxID_ANY, wxT("Built : Nov 20 2017"), wxDefaultPosition, wxDefaultSize, 0 );
+	BuildDateText->Wrap( -1 );
+	bSizer445->Add( BuildDateText, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+	
+	m_staticText611 = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText611->Wrap( -1 );
+	bSizer445->Add( m_staticText611, 0, wxALL, 5 );
+	
+	wxFlexGridSizer* fgSizer30;
+	fgSizer30 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer30->SetFlexibleDirection( wxBOTH );
+	fgSizer30->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText605 = new wxStaticText( this, wxID_ANY, wxT("Developed By :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText605->Wrap( -1 );
+	fgSizer30->Add( m_staticText605, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	m_staticText606 = new wxStaticText( this, wxID_ANY, wxT("Tim Grant"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText606->Wrap( -1 );
+	fgSizer30->Add( m_staticText606, 0, wxALL, 5 );
+	
+	m_staticText607 = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText607->Wrap( -1 );
+	fgSizer30->Add( m_staticText607, 0, wxALL, 5 );
+	
+	m_staticText608 = new wxStaticText( this, wxID_ANY, wxT("Alexis Rohou"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText608->Wrap( -1 );
+	fgSizer30->Add( m_staticText608, 0, wxALL, 5 );
+	
+	m_staticText609 = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText609->Wrap( -1 );
+	fgSizer30->Add( m_staticText609, 0, wxALL, 5 );
+	
+	m_staticText610 = new wxStaticText( this, wxID_ANY, wxT("Nikolaus Grigorieff"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText610->Wrap( -1 );
+	fgSizer30->Add( m_staticText610, 0, wxALL, 5 );
+	
+	m_staticText613 = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText613->Wrap( -1 );
+	fgSizer30->Add( m_staticText613, 0, wxALL, 5 );
+	
+	m_staticText614 = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText614->Wrap( -1 );
+	fgSizer30->Add( m_staticText614, 0, wxALL, 5 );
+	
+	m_staticText615 = new wxStaticText( this, wxID_ANY, wxT("Web Page :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText615->Wrap( -1 );
+	fgSizer30->Add( m_staticText615, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	m_hyperlink1 = new wxHyperlinkCtrl( this, wxID_ANY, wxT("cistem.org"), wxT("http://www.cistem.org"), wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE );
+	fgSizer30->Add( m_hyperlink1, 0, wxALL, 5 );
+	
+	m_staticText617 = new wxStaticText( this, wxID_ANY, wxT("License :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText617->Wrap( -1 );
+	fgSizer30->Add( m_staticText617, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	m_hyperlink2 = new wxHyperlinkCtrl( this, wxID_ANY, wxT("Janelia License"), wxT("http://license.janelia.org/license/"), wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE );
+	fgSizer30->Add( m_hyperlink2, 0, wxALL, 5 );
+	
+	
+	bSizer445->Add( fgSizer30, 5, wxALIGN_CENTER_HORIZONTAL, 20 );
+	
+	m_staticline129 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer445->Add( m_staticline129, 0, wxEXPAND | wxALL, 5 );
+	
+	m_button141 = new wxButton( this, wxID_CANCEL, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer445->Add( m_button141, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+	
+	
+	this->SetSizer( bSizer445 );
+	this->Layout();
+	bSizer445->Fit( this );
+	
+	this->Centre( wxBOTH );
+}
+
+AboutDialog::~AboutDialog()
+{
 }

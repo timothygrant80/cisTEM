@@ -429,6 +429,28 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	  //}
 }
 
+void MyMainFrame::OnHelpLaunch( wxCommandEvent& event )
+{
+	 wxLaunchDefaultBrowser("http://www.cistem.org/documentation");
+}
+
+void MyMainFrame::OnAboutLaunch( wxCommandEvent& event )
+{
+	#include "icons/cisTEM_beta_logo_300.cpp"
+
+	wxLogNull *suppress_png_warnings = new wxLogNull;
+	wxBitmap logo_bmp = wxBITMAP_PNG_FROM_DATA(cisTEM_beta_logo_300);
+	delete suppress_png_warnings;
+
+	AboutDialog about_dialog(this);
+	about_dialog.LogoBitmap->SetBitmap(logo_bmp);
+	about_dialog.VersionStaticText->SetLabel(wxString::Format("cisTEM version %s", CISTEM_VERSION_TEXT));
+	about_dialog.BuildDateText->SetLabel(wxString::Format("Built : %s", __DATE__));
+	about_dialog.Fit();
+	about_dialog.ShowModal();
+
+}
+
 void MyMainFrame::OnFileNewProject( wxCommandEvent& event )
 {
 	StartNewProject();

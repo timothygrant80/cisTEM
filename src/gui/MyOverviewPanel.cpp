@@ -124,7 +124,7 @@ void MyOverviewPanel::SetWelcomeInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
-	InfoText->WriteText(wxString::Format("Version : 0.9-beta-RC1 (Compiled : %s )",  __DATE__));
+	InfoText->WriteText(wxString::Format("Version : %s (Compiled : %s )", CISTEM_VERSION_TEXT, __DATE__));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndFontSize();

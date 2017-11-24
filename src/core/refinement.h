@@ -111,6 +111,8 @@ public :
 	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
 	wxArrayString WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor = 1.0f);
 
+	long ReturnNumberOfActiveParticlesInFirstClass();
+
 	int ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle);
 	ArrayofAngularDistributionHistograms ReturnAngularDistributions(wxString desired_symmetry);
 	void FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram &histogram_to_fill);

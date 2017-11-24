@@ -530,6 +530,12 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	float current_dose_per_frame;
 	float current_pre_exposure;
 
+	float max_movie_size = 0.0f;
+	float current_movie_size;
+	float max_movie_size_in_gb;
+	float min_memory_in_gb_if_run_on_one_machine;
+
+
 	time_of_last_graph_update = 0;
 
 	std::string current_filename;
@@ -637,6 +643,11 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		//output_filename.Replace(".mrc", "_ali.mrc", false);
 
+		current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
+		current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
+
+		max_movie_size = std::max(max_movie_size, current_movie_size);
+
 		current_asset_id = movie_asset_panel->ReturnAssetID(active_group.members[counter]);//movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
 		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(active_group.members[counter]);
 		number_of_previous_alignments =  main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
@@ -708,6 +719,27 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	}
 
 	my_progress_dialog->Destroy();
+
+	// write out details about the max movies size
+
+	max_movie_size_in_gb = float(max_movie_size) /1073741824.0f;
+	max_movie_size_in_gb *= 4;
+
+	min_memory_in_gb_if_run_on_one_machine = max_movie_size_in_gb * run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].ReturnTotalJobs();
+
+	output_textctrl->AppendText("Approx. memory for each process is ");
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+	output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+	output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+	output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+	output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
+
+/*	WriteInfoText(wxString::Format("Approx. memory needed per process is %.2f GB", max_movie_size_in_gb));
+	WriteInfoText(wxString::Format("If running on a single machine, that machine will need at least %.2f GB of memory.", min_memory_in_gb_if_run_on_one_machine));
+	WriteInfoText("");*/
 
 	// launch a controller
 

@@ -53,6 +53,8 @@ public:
 	bool active_exclude_blank_edges;
 	bool active_auto_percent_used;
 
+	float min_percent_used;
+
 	void SetParent(MyRefine2DPanel *wanted_parent);
 
 	void BeginRefinementCycle();

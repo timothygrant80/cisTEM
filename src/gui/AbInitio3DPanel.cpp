@@ -1027,8 +1027,8 @@ void AbInitioManager::BeginRefinementCycle()
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
 			//input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].psi = global_random_number_generator.GetUniformRandom() * 180.0;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = global_random_number_generator.GetUniformRandom() * 25.0f;
-			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = global_random_number_generator.GetUniformRandom() * 25.0f;;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].xshift = global_random_number_generator.GetUniformRandom() * 5.0f;
+			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].yshift = global_random_number_generator.GetUniformRandom() * 5.0f;;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 			input_refinement->class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
@@ -1511,6 +1511,7 @@ void AbInitioManager::RunReconstructionJob()
 {
 	running_job_type = RECONSTRUCTION;
 	number_of_received_particle_results = 0;
+	number_of_expected_results = output_refinement->ReturnNumberOfActiveParticlesInFirstClass() * output_refinement->number_of_classes;
 
 	// in the future store the reconstruction parameters..
 
@@ -1615,14 +1616,14 @@ void AbInitioManager::SetupMerge3dJob()
 		else iner_nominator = 1.0f;
 
 		*/
-		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 200.0f;
+		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 500.0f;
 		else
 		if (number_of_starts_run == 0)
 		{
-			weiner_nominator = 100 + (1 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run / 2));
-			if (weiner_nominator < 1.0f) weiner_nominator = 1.0f;
+			weiner_nominator = 200 + (10 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
+			if (weiner_nominator < 10.0f) weiner_nominator = 10.0f;
 		}
-		else weiner_nominator = 1.0f;
+		else weiner_nominator = 10.0f;
 
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", weiner_nominator));
 
@@ -2409,12 +2410,12 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 		if (current_time - time_of_last_update >= 1)
 		{
 			time_of_last_update = current_time;
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * input_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;

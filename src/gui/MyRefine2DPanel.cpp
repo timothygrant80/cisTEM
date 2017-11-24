@@ -984,6 +984,7 @@ void ClassificationManager::BeginRefinementCycle()
 		current_input_classification_id = -1;
 		input_classification = NULL;
 		output_classification = new Classification;
+		min_percent_used = 0.0f;
 
 		RunInitialStartJob();
 	}
@@ -996,6 +997,7 @@ void ClassificationManager::BeginRefinementCycle()
 		input_classification = main_frame->current_project.database.GetClassificationByID(current_input_classification_id);
 		output_classification = new Classification;
 		my_parent->ResultDisplayPanel->OpenFile(input_classification->class_average_file, wxString::Format("Class #%li (Start Ref.)", input_classification->classification_id));
+		min_percent_used = input_classification->percent_used;
 		RunRefinementJob();
 	}
 
@@ -1276,6 +1278,8 @@ void ClassificationManager::RunRefinementJob()
 	{
 		output_classification->percent_used = active_percent_used;
 	}
+
+	if (output_classification->percent_used < min_percent_used) output_classification->percent_used = min_percent_used;
 
 	output_classification->SizeAndFillWithEmpty(output_classification->number_of_particles);
 

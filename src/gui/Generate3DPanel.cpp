@@ -858,6 +858,7 @@ void Generate3DPanel::RunReconstructionJob()
 {
 	running_job_type = RECONSTRUCTION;
 	number_of_received_particle_results = 0;
+	number_of_expected_results = input_refinement->ReturnNumberOfActiveParticlesInFirstClass() * input_refinement->number_of_classes;
 
 	// in the future store the reconstruction parameters..
 
@@ -1057,12 +1058,12 @@ void Generate3DPanel::ProcessJobResult(JobResult *result_to_process)
 		if (current_time - time_of_last_update >= 1)
 		{
 			time_of_last_update = current_time;
-			int current_percentage = float(number_of_received_particle_results) / float(input_refinement->number_of_particles * input_refinement->number_of_classes) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			if (current_percentage > 100) current_percentage = 100;
 			ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * input_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;

@@ -73,6 +73,7 @@ public:
 	long current_output_refinement_id;
 
 	long number_of_received_particle_results;
+	long number_of_expected_results;
 
 	RefinementPackage *active_refinement_package;
 	Refinement *input_refinement;

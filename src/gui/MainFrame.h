@@ -37,6 +37,9 @@ class MyMainFrame : public MainFrame
 		void OnFileCloseProject( wxCommandEvent& event );
 		void OnFileMenuUpdate( wxUpdateUIEvent& event );
 
+		void OnHelpLaunch( wxCommandEvent& event );
+		void OnAboutLaunch( wxCommandEvent& event );
+
 		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
 		void OnExportToFrealign( wxCommandEvent & event );
 		void OnExportToRelion( wxCommandEvent & event );

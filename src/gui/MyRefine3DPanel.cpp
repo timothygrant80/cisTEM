@@ -1398,6 +1398,14 @@ void RefinementManager::BeginRefinementCycle()
 
 		for (class_counter = 0; class_counter < number_of_classes; class_counter++)
 		{
+			if (volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->x_size != active_refinement_package->stack_box_size ||
+				volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->y_size != active_refinement_package->stack_box_size ||
+				volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->z_size != active_refinement_package->stack_box_size ||
+				fabsf(volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
+			{
+				my_parent->WriteErrorText("Error: Reference volume has different dimensions / pixel size from the input stack.  This will currently not work.");
+			}
+
 			current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 			current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
@@ -1419,6 +1427,7 @@ void RefinementManager::RunRefinementJob()
 {
 	running_job_type = REFINEMENT;
 	number_of_received_particle_results = 0;
+	number_of_expected_results = input_refinement->number_of_particles * input_refinement->number_of_classes;
 
 	output_refinement->SizeAndFillWithEmpty(input_refinement->number_of_particles, input_refinement->number_of_classes);
 	//wxPrintf("Output refinement has %li particles and %i classes\n", output_refinement->number_of_particles, input_refinement->number_of_classes);
@@ -1645,6 +1654,7 @@ void RefinementManager::SetupReconstructionJob()
 	else
 	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par");
 
+
 	int class_counter;
 	long counter;
 	int job_counter;
@@ -1794,6 +1804,7 @@ void RefinementManager::RunReconstructionJob()
 {
 	running_job_type = RECONSTRUCTION;
 	number_of_received_particle_results = 0;
+	number_of_expected_results = output_refinement->ReturnNumberOfActiveParticlesInFirstClass() * output_refinement->number_of_classes;
 
 	// in the future store the reconstruction parameters..
 
@@ -2271,13 +2282,13 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		else
 		if (current_time != time_of_last_update)
 		{
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			time_of_last_update = current_time;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * output_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 
@@ -2293,7 +2304,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 
 
         // Add this result to the list of results to be plotted onto the angular plot
-		if (current_class == 0)
+		if (current_class == 0 && output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active >= 0)
 		{
 			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->AddRefinementResult( &output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
 	         // Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
@@ -2324,12 +2335,12 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		if (current_time - time_of_last_update >= 1)
 		{
 			time_of_last_update = current_time;
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * input_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;

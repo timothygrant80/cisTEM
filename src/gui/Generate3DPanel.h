@@ -26,6 +26,7 @@ class Generate3DPanel : public Generate3DPanelParent
 
 		long time_of_last_result_update;
 		long number_of_received_particle_results;
+		long number_of_expected_results;
 		bool refinement_package_combo_is_dirty;
 		bool run_profiles_are_dirty;
 		bool input_params_combo_is_dirty;

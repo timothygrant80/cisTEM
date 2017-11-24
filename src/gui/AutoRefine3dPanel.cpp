@@ -995,8 +995,17 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	// we need to set the currently selected reference filenames..
 
+	if (volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->x_size != active_refinement_package->stack_box_size ||
+		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->y_size != active_refinement_package->stack_box_size ||
+		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size != active_refinement_package->stack_box_size ||
+		fabsf(volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
+	{
+		my_parent->WriteErrorText("Error: The reference volume has different dimensions / pixel size from the input stack.  This will currently not work.");
+	}
+
 	for (class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
+
 		current_reference_filenames.Item(class_counter) = volume_asset_panel->ReturnAssetLongFilename(my_parent->ReferenceSelectPanel->ReturnSelection());
 		current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(my_parent->ReferenceSelectPanel->ReturnSelection());
 	}
@@ -1037,6 +1046,7 @@ void AutoRefinementManager::RunRefinementJob()
 {
 	running_job_type = REFINEMENT;
 	number_of_received_particle_results = 0;
+	//expected_number_of_results = input_refinement->number_of_particles * input_refinement->number_of_classes;
 
 	output_refinement->SizeAndFillWithEmpty(input_refinement->number_of_particles, input_refinement->number_of_classes);
 	//wxPrintf("Output refinement has %li particles and %i classes\n", output_refinement->number_of_particles, input_refinement->number_of_classes);
@@ -1453,9 +1463,9 @@ void AutoRefinementManager::RunReconstructionJob()
 {
 	running_job_type = RECONSTRUCTION;
 	number_of_received_particle_results = 0;
+	expected_number_of_results = output_refinement->ReturnNumberOfActiveParticlesInFirstClass() * output_refinement->number_of_classes;
 
 	// in the future store the reconstruction parameters..
-
 	// empty scratch directory..
 
 //	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/", wxPATH_RMDIR_RECURSIVE);
@@ -1871,7 +1881,7 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 
 
         // Add this result to the list of results to be plotted onto the angular plot
-		if (current_class == 0)
+		if (current_class == 0  && output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active >= 0)
 		{
 			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->AddRefinementResult( &output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
 	         // Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
@@ -1903,12 +1913,12 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 		if (current_time - time_of_last_update >= 1)
 		{
 			time_of_last_update = current_time;
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(expected_number_of_results) * 100.0;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * input_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float(expected_number_of_results - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;

@@ -567,6 +567,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float       movie_mag_distortion_major_scale = 1.0;
 	float       movie_mag_distortion_minor_scale = 1.0;
 
+	float max_movie_size = 0.0f;
+	float current_movie_size;
+	float max_movie_size_in_gb;
+	float min_memory_in_gb_if_run_on_one_machine;
+
 
 	// allocate space for the buffered results..
 
@@ -643,6 +648,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 			parent_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
 			input_filename = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->filename.GetFullPath().ToStdString();
 			pixel_size = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->pixel_size;
+
+			current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
+			current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
+			max_movie_size = std::max(max_movie_size, current_movie_size);
+
 		}
 		else
 		{
@@ -739,6 +749,28 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	}
 
 	my_progress_dialog->Destroy();
+
+	if (input_is_a_movie == true)
+	{
+		max_movie_size_in_gb = float(max_movie_size) /1073741824.0f;
+		max_movie_size_in_gb *= 4;
+
+		min_memory_in_gb_if_run_on_one_machine = max_movie_size_in_gb * run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].ReturnTotalJobs();
+
+		output_textctrl->AppendText("Approx. memory for each process is ");
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+		output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+		output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+		output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+		output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
+
+	/*	WriteInfoText(wxString::Format("Approx. memory needed per process is %.2f GB", max_movie_size_in_gb));
+		WriteInfoText(wxString::Format("If running on a single machine, that machine will need at least %.2f GB of memory.", min_memory_in_gb_if_run_on_one_machine));
+		WriteInfoText("");*/
+	}
 
 	// launch a controller
 

@@ -131,6 +131,20 @@ Refinement::~Refinement()
 
 }
 
+
+long Refinement::ReturnNumberOfActiveParticlesInFirstClass()
+{
+	long particle_counter;
+	long number_active = 0;
+
+	for (particle_counter = 0; particle_counter < number_of_particles; particle_counter ++ )
+	{
+		if (class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active >= 0) number_active++;
+	}
+
+	return number_active;
+}
+
 void Refinement::FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram &histogram_to_fill)
 {
 	long particle_counter;

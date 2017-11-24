@@ -45,6 +45,7 @@ public:
 	long current_output_refinement_id;
 
 	long number_of_received_particle_results;
+	long expected_number_of_results;
 
 	wxArrayFloat percent_used_per_round;
 	wxArrayFloat resolution_per_round;

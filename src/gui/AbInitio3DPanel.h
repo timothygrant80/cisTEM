@@ -26,8 +26,8 @@ public:
 	long current_output_refinement_id;
 
 	long number_of_received_particle_results;
+	long number_of_expected_results;
 
-	int number_of_expected_results;
 	wxArrayFloat align_sym_best_correlations;
 	wxArrayFloat align_sym_best_x_rots;
 	wxArrayFloat align_sym_best_y_rots;

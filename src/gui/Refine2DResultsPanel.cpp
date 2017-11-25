@@ -375,7 +375,7 @@ void Refine2DResultsPanel::OnDeselected( wxListEvent& event )
 	// if we are editing, this is called before endedit.. which leads to a crash as endedit wants to know the selected one.
 	// so just end enditing here if we are editing..
 
-	if ( SelectionManagerListCtrl->GetEditControl() != NULL) SelectionManagerListCtrl->EndEditLabel(true);
+	if ( SelectionManagerListCtrl->GetEditControl() != NULL) SelectionManagerListCtrl->EndEditLabel(false);
 	SelectionManagerListCtrl->current_selection = -1;
 	SelectionManagerListCtrl->current_selection_id = -10;
 	ClassumDisplayPanel->ClearSelection(true);

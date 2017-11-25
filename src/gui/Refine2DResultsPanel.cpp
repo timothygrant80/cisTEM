@@ -63,7 +63,7 @@ void Refine2DResultsPanel::OnClassumLeftClick( wxMouseEvent& event )
 {
 	// work out which has been clicked on..
 
-	if (SelectionManagerListCtrl->ReturnCurrentSelection() != -1 && event.GetId() != -1)
+	if (SelectionManagerListCtrl->current_selection != -1 && event.GetId() != -1)
 	{
 		// ok so we have a selection.. which one is it..
 
@@ -375,7 +375,7 @@ void Refine2DResultsPanel::OnDeselected( wxListEvent& event )
 	// if we are editing, this is called before endedit.. which leads to a crash as endedit wants to know the selected one.
 	// so just end enditing here if we are editing..
 
-	if ( SelectionManagerListCtrl->GetEditControl() != NULL)
+	if ( SelectionManagerListCtrl->GetEditControl() != NULL) SelectionManagerListCtrl->EndEditLabel(true);
 	SelectionManagerListCtrl->current_selection = -1;
 	SelectionManagerListCtrl->current_selection_id = -10;
 	ClassumDisplayPanel->ClearSelection(true);

@@ -547,7 +547,22 @@ bool Reconstruct3DApp::DoCalculation()
 	for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
 	{
 		input_par_file.ReadLine(input_parameters);
-		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle || input_parameters[12] == 0.0 || input_parameters[15] < score_threshold || input_parameters[7] < 0.0) continue;
+		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
+
+		if (input_parameters[12] == 0.0 || input_parameters[15] < score_threshold || input_parameters[7] < 0.0)
+		{
+			if (is_running_locally == false)
+			{
+				temp_float = input_parameters[0];
+				JobResult *temp_result = new JobResult;
+				temp_result->SetResult(1, &temp_float);
+				AddJobToResultQueue(temp_result);
+				//wxPrintf("Refine3D : Adding job to job queue..\n");
+			}
+
+			continue;
+		}
+
 		image_counter++;
 		input_particle.location_in_stack = int(input_parameters[0] + 0.5);
 		input_particle.pixel_size = pixel_size;

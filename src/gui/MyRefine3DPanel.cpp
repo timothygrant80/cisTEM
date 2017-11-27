@@ -147,7 +147,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("The goal of refinement and reconstruction is to obtain 3D maps of the imaged particle at the highest possible resolution. Refinement typically starts with a preexisting structure that serves as a reference to determine initial particle alignment parameters using a global parameter search. In subsequent iterations, these parameters are refined and (optionally) the dataset can be classified into several classes with distinct structural features.\nThis panel allows the user to define a refinement job that includes a set number of iterations (refinement cycles) and number of desired classes to be generated (Lyumkis et al. 2013). The general refinement strategies and options are similar to those available with Frealign and are described in Grigorieff, 2016:"));
+	InfoText->WriteText(wxT("The goal of refinement and reconstruction is to obtain 3D maps of the imaged particle at the highest possible resolution. Refinement typically starts with a preexisting structure that serves as a reference to determine initial particle alignment parameters using a global parameter search. In subsequent iterations, these parameters are refined and (optionally) the dataset can be classified into several classes with distinct structural features. This panel allows the user to define a refinement job that includes a set number of iterations (refinement cycles) and number of desired classes to be generated (Lyumkis et al. 2013). The general refinement strategies and options are similar to those available with Frealign and are described in Grigorieff, 2016:"));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -158,12 +158,12 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();*/
 
-
+/*
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("In each refinement cycle, the particle parameters are aligned in a local search (searching only parameters close to those found in the previous cycle) against the reconstruction (or reconstructions if more than one class is refined) obtained in the previous cycle. The final result includes refined alignment parameters, class memberships (occupancies) and filtered 3D reconstructions (Sindelar and Grigorieff, 2012) for all classes. Further refinement can be performed with different numbers of classes by setting up a new refinement package and selecting reconstructions and particles of classes from a previous package as input for the new package. To bring out high-resolution features in the maps, the user should sharpen the reconstructions by using the Sharpen 3D panel. The following shows a typical workflow :"));
+	InfoText->WriteText(wxT(""));
 	InfoText->Newline();
 	InfoText->Newline();
-	InfoText->EndAlignment();
+	InfoText->EndAlignment();*/
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->WriteImage(niko_picture2_bmp);

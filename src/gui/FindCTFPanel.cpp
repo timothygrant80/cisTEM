@@ -189,7 +189,7 @@ void MyFindCTFPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("To estimate the values of these three defocus parameters for a micrograph, CTFfind computes a filtered version of the amplitude spectrum of the micrograph and then fits a model of the CTF (Equation X of Rohou & Grigorieff) to this filtered amplitude spectrum. It then returns the values of the defocus parameters which maximize the quality of the fit, as well as an image of the filtered amplitude spectrum, with the CTF model overlayed onto the lower-left quadrant. Dashed lines are also overlayed onto Fourier components where the CTF is 0. "));
+	InfoText->WriteText(wxT("To estimate the values of these three defocus parameters for a micrograph, CTFfind computes a filtered version of the amplitude spectrum of the micrograph and then fits a model of the CTF (Equation 1 of Rohou & Grigorieff) to this filtered amplitude spectrum. It then returns the values of the defocus parameters which maximize the quality of the fit, as well as an image of the filtered amplitude spectrum, with the CTF model overlayed onto the lower-left quadrant."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -201,7 +201,7 @@ void MyFindCTFPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT(" Another diagnostic output is a 1D plot of the experimental amplitude spectrum (green), the CTF fit (orange) and the quality of fit (blue). More details on how these plots are computed is given below."));
+	InfoText->WriteText(wxT(" Another diagnostic output is a 1D plot of the experimental amplitude spectrum (green), the CTF fit (orange) and the quality of fit (blue). More details on how these plots are computed is given in Rohou & Grigorieff (2015)."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -338,6 +338,25 @@ void MyFindCTFPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
+
+
+
+	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+	InfoText->BeginBold();
+	InfoText->WriteText(wxT("Mindell J.A., Grigorieff N.,"));
+	InfoText->EndBold();
+	InfoText->WriteText(wxT(" 2003. Accurate determination of local defocus and specimen tilt in electron microscopy. J. Struct. Biol. 142, 334–347. "));
+	InfoText->BeginURL("http://doi.org/10.1016/S1047-8477(03)00069-8");
+	InfoText->BeginUnderline();
+	InfoText->BeginTextColour(*wxBLUE);
+	InfoText->WriteText(wxT("doi:10.1016/S1047-8477(03)00069-8"));
+	InfoText->EndURL();
+	InfoText->EndTextColour();
+	InfoText->EndUnderline();
+	InfoText->Newline();
+	InfoText->Newline();
+
+
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->BeginBold();

@@ -124,8 +124,8 @@ void MyRefine3DPanel::SetInfo()
 {
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-	#include "icons/niko_picture1.cpp"
-	wxBitmap niko_picture1_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture1);
+//	#include "icons/niko_picture1.cpp"
+//	wxBitmap niko_picture1_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture1);
 
 	#include "icons/niko_picture2.cpp"
 	wxBitmap niko_picture2_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture2);
@@ -152,11 +152,11 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+/*	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->WriteImage(niko_picture1_bmp);
 	InfoText->Newline();
 	InfoText->Newline();
-	InfoText->EndAlignment();
+	InfoText->EndAlignment();*/
 
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);

@@ -146,7 +146,7 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->WriteText(wxT("Individual particles need to be located in each micrograph so that they may be used to compute a 3D reconstruction later. Ideally one would find all the particles and not make any erroneous selections."));
 	InfoText->Newline();
 	InfoText->Newline();
-	InfoText->WriteText(wxT("In the absence of a pre-existing 3D model, one can either select (click on) each particle manually, or use the 'ab-initio' mode. In this mode, a template is genated internally, which consists of a cosine-shaped blob and then matched against each micrographs. This works reasonably well to find globular protein complexes, even though it is less accurate and more error-prone than template-based search strategy."));
+	InfoText->WriteText(wxT("One can either select (click on) each particle manually, or use the 'ab-initio' mode. In this mode, a circular blob template is generated internally, and then matched against each micrograph, using a matched filter based on the approach described in Sigworth (2004).  This blob approach is very fast, and enables real-time optimization of the picking parameters. Users are encouraged to spend some time finding the parameters that best pick their particles on a number of different images."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->WriteText(wxT(""));

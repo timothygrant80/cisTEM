@@ -1694,7 +1694,7 @@ void RefinementManager::SetupReconstructionJob()
 			long	 first_particle						= myroundint(current_particle_counter);
 
 			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
+			if (current_particle_counter > number_of_particles  || job_counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;

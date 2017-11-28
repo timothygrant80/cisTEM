@@ -109,6 +109,8 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
 	output_filename = base_filename + wxString::Format("_%li.par", classification_id);
 	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(output_filename, OPEN_TO_WRITE);
 
+	my_output_par_file->WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  FILM      DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE");
+
 	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 	{
 

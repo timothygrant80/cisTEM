@@ -564,8 +564,8 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		long milliseconds_spent_on_slave_thread;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
-		socket->Destroy();
-		socket = NULL;
+		//socket->Destroy();
+		//socket = NULL;
 
 	}
 }
@@ -624,7 +624,12 @@ void MyApp::SendAllJobsFinished()
 {
 	MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
 
-	 // we will send all jobs finished - but first we need to ensure we have sent any results in the result queue
+	// we will send all jobs finished - but first we need to ensure we have sent any results in the result queue
+
+	// wait for 5 seconds to give slaves times to send in their last jobs..
+
+	wxSleep(1);
+	Yield();
 
 	if (job_queue.GetCount() != 0) MasterSendIntenalQueue();
 

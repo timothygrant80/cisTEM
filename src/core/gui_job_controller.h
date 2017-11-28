@@ -48,6 +48,7 @@ public:
 	long ReturnJobNumberFromJobCode(unsigned char *job_code);
 	void GenerateJobCode(unsigned char *job_code);
 	void KillJob(int job_to_kill);
+	void KillJobIfSocketExists(wxSocketBase *socket);
 
 
 

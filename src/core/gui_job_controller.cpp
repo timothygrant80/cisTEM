@@ -192,3 +192,20 @@ void GuiJobController::KillJob(int job_to_kill)
 		job_list[job_to_kill].is_active = false;
 	}
 }
+
+void GuiJobController::KillJobIfSocketExists(wxSocketBase *socket)
+{
+	SETUP_SOCKET_CODES
+
+	if (socket == NULL) return;
+
+	for (int counter = 0; counter < MAX_GUI_JOBS; counter++)
+	{
+		if (job_list[counter].socket == socket)
+		{
+			KillJob(counter);
+			break;
+
+		}
+	}
+}

@@ -1489,7 +1489,7 @@ void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 
 		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJob(my_job_id);
+		main_frame->job_controller.KillJobIfSocketExists(sock);
 		break;
 	}
 	default: ;

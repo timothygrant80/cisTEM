@@ -1612,7 +1612,7 @@ void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
 	{
 
 		//MyDebugPrint("Socket Disconnected!!\n");
-		sock->Destroy();
+		main_frame->job_controller.KillJob(my_job_id);
 		break;
 	}
 	default: ;

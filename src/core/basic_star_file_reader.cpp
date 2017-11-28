@@ -237,7 +237,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	bool found_valid_data_block = false;
 	bool found_valid_loop_block = false;
 
-
+	input_file->GoToLine(-1);
 	// find a data block
 
 	//while (input_file_stream->Eof() == false)

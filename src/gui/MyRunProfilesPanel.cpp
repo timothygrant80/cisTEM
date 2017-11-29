@@ -572,7 +572,7 @@ void MyRunProfilesPanel::GuiAddressSpecifyClick( wxCommandEvent& event )
 	if (temp_dialog.ShowModal() == wxID_OK)
 	{
 		buffer_profile.gui_address = temp_dialog.GetValue();
-		command_panel_has_changed = true
+		command_panel_has_changed = true;
 		FillCommandsBox();
 	}
 

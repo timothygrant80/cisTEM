@@ -560,6 +560,7 @@ void MyRunProfilesPanel::OnRemoveProfileClick( wxCommandEvent& event )
 void MyRunProfilesPanel::GuiAddressAutoClick( wxCommandEvent& event )
 {
 	buffer_profile.gui_address = "";
+	command_panel_has_changed = true;
 	FillCommandsBox();
 
 }
@@ -571,6 +572,7 @@ void MyRunProfilesPanel::GuiAddressSpecifyClick( wxCommandEvent& event )
 	if (temp_dialog.ShowModal() == wxID_OK)
 	{
 		buffer_profile.gui_address = temp_dialog.GetValue();
+		command_panel_has_changed = true
 		FillCommandsBox();
 	}
 
@@ -581,6 +583,7 @@ void MyRunProfilesPanel::GuiAddressSpecifyClick( wxCommandEvent& event )
 void MyRunProfilesPanel::ControllerAddressAutoClick( wxCommandEvent& event )
 {
 	buffer_profile.controller_address = "";
+	command_panel_has_changed = true;
 	FillCommandsBox();
 
 }
@@ -592,6 +595,7 @@ void MyRunProfilesPanel::ControllerAddressSpecifyClick( wxCommandEvent& event )
 	if (temp_dialog.ShowModal() == wxID_OK)
 	{
 		buffer_profile.controller_address = temp_dialog.GetValue();
+		command_panel_has_changed = true;
 		FillCommandsBox();
 	}
 

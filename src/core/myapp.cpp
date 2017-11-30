@@ -485,6 +485,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    			  slave_sockets[counter]->SetNotify(false);
 	    			  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    			  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    			  MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 	    			  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    			  slave_sockets[counter]->Destroy();
@@ -525,6 +526,7 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    		  slave_sockets[counter]->SetNotify(false);
 	    		  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    		  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    		  MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 	    		  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    		  slave_sockets[counter]->Destroy();
@@ -563,6 +565,7 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		// Receive timing for that slave before its thread dies
 		long milliseconds_spent_on_slave_thread;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
+		MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 		socket->Destroy();
 		socket = NULL;

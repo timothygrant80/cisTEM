@@ -1173,6 +1173,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 				 // Timing stuff here
 				long milliseconds_spent_by_thread = stopwatch.Time();
+				MyDebugAssertTrue(milliseconds_spent_by_thread >= 0,"Oops. Looks like the stopwatch overflowed");
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 				WriteToSocket(controller_socket, &milliseconds_spent_by_thread, sizeof(long));
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);

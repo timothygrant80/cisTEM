@@ -802,7 +802,9 @@ void AbInitio3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			// send timing info - we need to remember this
 			long timing_from_controller;
 			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
+			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project.");
 			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
+			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour");
 			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
 
 			// Update project statistics in the database

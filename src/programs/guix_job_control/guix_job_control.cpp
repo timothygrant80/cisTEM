@@ -548,7 +548,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	  sock->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 	  //sock->SetFlags(wxSOCKET_WAITALL);
 
-	  MyDebugAssertTrue(sock == master_socket, "Master Socket event from Non Master socket??");
+
 
 	  // First, print a message
 //	  switch(event.GetSocketEvent())
@@ -567,6 +567,8 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	  {
 	    case wxSOCKET_INPUT:
 	    {
+	  	  MyDebugAssertTrue(sock == master_socket, "Master Socket event from Non Master socket??");
+
 	      // We disable input events, so that the test doesn't trigger
 	      // wxSocketEvent again.
 
@@ -662,16 +664,26 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	    case wxSOCKET_LOST:
 	    {
 
-	        wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
-	        sock->Destroy();
-	        ExitMainLoop();
-	        abort();
+	        if (sock == master_socket)
+	        {
+	        	wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
+	        	sock->Destroy();
+	            ExitMainLoop();
+	            abort();
+	        }
 
 	        break;
 	    }
+
 	    default:
-	    	wxPrintf("weird socket communication\n");
+	    {
+
+	       	wxPrintf("weird socket communication\n");
 	    	abort();
+
+	    	break;
+	    }
+
 	  }
 
 

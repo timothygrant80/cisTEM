@@ -7,6 +7,7 @@ PrepareStackApp : public MyApp
 
 	bool DoCalculation();
 	void DoInteractiveUserInput();
+	float GetMaxJobWaitTimeInSeconds() {return 180.0f;}
 
 	private:
 };

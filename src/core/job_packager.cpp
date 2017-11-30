@@ -309,7 +309,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 
 	 // now we should everything encoded, so send the information to the socket..
 	 // disable events on the socket..
-	 socket->SetNotify(wxSOCKET_LOST_FLAG);
+	 //socket->SetNotify(wxSOCKET_LOST_FLAG);
 	 // inform what we want to do..
 	 WriteToSocket(socket, socket_ready_to_send_job_package, SOCKET_CODE_SIZE);
 
@@ -338,7 +338,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
      }
          // restore socket events..
 
-     socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+     //socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 	 delete [] transfer_buffer;
 
 }
@@ -379,7 +379,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 
 	// disable events on the socket..
-	socket->SetNotify(wxSOCKET_LOST_FLAG);
+//	socket->SetNotify(wxSOCKET_LOST_FLAG);
 //	socket->SetFlags(wxSOCKET_BLOCK);
 	// Send a message saying we are ready to receive the package
 
@@ -405,7 +405,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 	//MyDebugPrint("Received package, decoding job...");
 
     // restore socket events..
-    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+//    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 
 	// now we need to decode the buffer
@@ -978,36 +978,36 @@ void RunJob::SendJob(wxSocketBase *socket)
 	 // now we should everything encoded, so send the information to the socket..
 	 // disable events on the socket..
 
-	 socket->SetNotify(wxSOCKET_LOST_FLAG);
+//	 socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	 // inform what we want to do..
 	 WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE);
 	 // we should get a message saying the socket is ready to receive the data..
-	 ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
+	// ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
 
 	 // check it is ok..
 
-	 if (memcmp(socket_input_buffer, socket_send_single_job, SOCKET_CODE_SIZE) == 0) // send it..
-	 {
+	 //if (memcmp(socket_input_buffer, socket_send_single_job, SOCKET_CODE_SIZE) == 0) // send it..
+	 //{
     		// first - send how many bytes it is..
 
-    		char_pointer = (unsigned char*)&transfer_size;
-    		WriteToSocket(socket, char_pointer, 8);
+    char_pointer = (unsigned char*)&transfer_size;
+    WriteToSocket(socket, char_pointer, 8);
 
-    		// now send the whole buffer..
+    // now send the whole buffer..
 
-    		WriteToSocket(socket, transfer_buffer, transfer_size);
+    WriteToSocket(socket, transfer_buffer, transfer_size);
 
-	 }
-	 else
-	 {
-		 MyPrintWithDetails("Oops, didn't understand the reply!");
-		 abort();
-	 }
+//	 }
+//	 else
+//	 {
+//		 MyPrintWithDetails("Oops, didn't understand the reply!");
+//		 abort();
+//	 }
 
 	// restore socket events..
 
-    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+//    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 	delete [] transfer_buffer;
 
 
@@ -1034,11 +1034,11 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 	unsigned char* char_pointer;
 
 	// disable events on the socket..
-	socket->SetNotify(wxSOCKET_LOST_FLAG);
+//	socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	// Send a message saying we are ready to receive the package
 
-	WriteToSocket(socket, socket_send_single_job, SOCKET_CODE_SIZE);
+	//WriteToSocket(socket, socket_send_single_job, SOCKET_CODE_SIZE);
 
 	char_pointer = (unsigned char*)&transfer_size;
 
@@ -1055,7 +1055,7 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 	ReadFromSocket(socket, transfer_buffer, transfer_size);
 
     // restore socket events..
-    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+//    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 	// now we need to decode the buffer
 

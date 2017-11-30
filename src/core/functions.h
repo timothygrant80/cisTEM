@@ -43,7 +43,7 @@ float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float maj
 
 wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
 
-inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes)
+inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes, bool die_on_error = false)
 {
 
 	bool should_abort = false;
@@ -90,10 +90,14 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 #endif
 			}
 		}
+		else
+		{
+			if (die_on_error == true) abort();
+		}
 	}
 }
 
-inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes)
+inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes, bool die_on_error = false)
 {
 	bool should_abort = false;
 	if (socket != NULL)
@@ -137,6 +141,10 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 #endif
 
 			}
+		}
+		else
+		{
+			if (die_on_error == true) abort();
 		}
 	}
 }

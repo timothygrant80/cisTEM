@@ -151,8 +151,8 @@ void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	// send the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	WriteToSocket(socket, char_pointer, 4);
-	WriteToSocket(socket, buffer.data(), length_of_string);
+	WriteToSocket(socket, char_pointer, 4, true);
+	WriteToSocket(socket, buffer.data(), length_of_string, true);
 }
 
 // This is here as when the binned resolution is too close to the refinement resolution or reconstruction
@@ -177,13 +177,13 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 	// receive the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	ReadFromSocket(socket, char_pointer, 4);
+	ReadFromSocket(socket, char_pointer, 4, true);
 
 	// setup a temp array to receive the string into.
 
 	unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
 
-	ReadFromSocket(socket, transfer_buffer, length_of_string);
+	ReadFromSocket(socket, transfer_buffer, length_of_string, true);
 
 	// add the null
 

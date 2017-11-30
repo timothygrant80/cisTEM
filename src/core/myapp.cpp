@@ -485,7 +485,6 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    			  slave_sockets[counter]->SetNotify(false);
 	    			  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    			  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
-	    			  MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 	    			  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    			  slave_sockets[counter]->Destroy();
@@ -526,7 +525,6 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    		  slave_sockets[counter]->SetNotify(false);
 	    		  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    		  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
-	    		  MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 	    		  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    		  slave_sockets[counter]->Destroy();
@@ -556,7 +554,6 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	{
 		my_job_package.jobs[number_of_dispatched_jobs].SendJob(socket);
 		number_of_dispatched_jobs++;
-
 	}
 	else
 	{
@@ -565,12 +562,13 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		// Receive timing for that slave before its thread dies
 		long milliseconds_spent_on_slave_thread;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
-		MyDebugAssertTrue(total_milliseconds_spent_on_threads + milliseconds_spent_on_slave_thread >= total_milliseconds_spent_on_threads,"Oops. Long overflow when summing milliseconds spent on threads.");
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 		socket->Destroy();
 		socket = NULL;
 
 	}
+
+
 }
 
 void MyApp::SendJobFinished(int job_number)
@@ -984,6 +982,7 @@ void MyApp::CheckForConnections()
 
 
 		 sock->SetFlags( wxSOCKET_WAITALL | wxSOCKET_BLOCK );
+		 sock->SetNotify(wxSOCKET_LOST_FLAG);
 		 WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
 
 //		 sock->WaitForRead(5);
@@ -1173,7 +1172,6 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 
 				 // Timing stuff here
 				long milliseconds_spent_by_thread = stopwatch.Time();
-				MyDebugAssertTrue(milliseconds_spent_by_thread >= 0,"Oops. Looks like the stopwatch overflowed");
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 				WriteToSocket(controller_socket, &milliseconds_spent_by_thread, sizeof(long));
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -1559,11 +1557,11 @@ wxThread::ExitCode CalculateThread::Entry()
 			wxMilliSleep(100);
 			millis_sleeping += 100;
 
-			if (millis_sleeping > 10000)
+			if (millis_sleeping > 30000)
 			{
 				// we have been waiting for 10 seconds, something probably went wrong - so die.
-				wxPrintf("Calculation thread has been waiting for something to do for 10 seconds - going to finish\n");
-				QueueError("Calculation thread has been waiting for something to do for 10 seconds - going to finish");
+				wxPrintf("Calculation thread has been waiting for something to do for 30 seconds - going to finish\n");
+				QueueError("Calculation thread has been waiting for something to do for 30 seconds - going to finish");
 				break;
 			}
 		}

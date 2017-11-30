@@ -176,6 +176,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/show_angles.cpp \
                  gui/icons/small_save_icon.cpp \
                  gui/icons/cisTEM_beta_logo_800.cpp \
+                 gui/icons/cisTEM_beta_logo_300.cpp \
                  gui/icons/up_arrow.cpp \
                  gui/icons/down_arrow.cpp \
                  gui/icons/VSV_startup_800.cpp \

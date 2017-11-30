@@ -311,11 +311,11 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 // disable events on the socket..
 	 //socket->SetNotify(wxSOCKET_LOST_FLAG);
 	 // inform what we want to do..
-	 WriteToSocket(socket, socket_ready_to_send_job_package, SOCKET_CODE_SIZE);
+	 WriteToSocket(socket, socket_ready_to_send_job_package, SOCKET_CODE_SIZE, true);
 
 	 // we should get a message saying the socket is ready to receive the data..
 
-     ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
+     ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE, true);
 
      // check it is ok..
 
@@ -324,12 +324,12 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
     	 // first - send how many bytes it is..
 
     	 char_pointer = (unsigned char*)&transfer_size;
-    	 WriteToSocket(socket, char_pointer, 8);
+    	 WriteToSocket(socket, char_pointer, 8, true);
 
     	 // now send the whole buffer..
 
     	 MyDebugPrint("doing socket write");
-    	 WriteToSocket(socket, transfer_buffer, transfer_size);
+    	 WriteToSocket(socket, transfer_buffer, transfer_size, true);
      }
      else
      {
@@ -383,13 +383,13 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 //	socket->SetFlags(wxSOCKET_BLOCK);
 	// Send a message saying we are ready to receive the package
 
-	WriteToSocket(socket, socket_send_job_package, SOCKET_CODE_SIZE);
+	WriteToSocket(socket, socket_send_job_package, SOCKET_CODE_SIZE, true);
 
 	char_pointer = (unsigned char*)&transfer_size;
 
 	// receive how many bytes we need for the buffer..
 
-	ReadFromSocket(socket, char_pointer, 8);
+	ReadFromSocket(socket, char_pointer, 8, true);
 
 	MyDebugPrint("Package is %li bytes long", transfer_size);
 
@@ -399,7 +399,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
 	// now receive the package..
 
-	ReadFromSocket(socket, transfer_buffer, transfer_size);
+	ReadFromSocket(socket, transfer_buffer, transfer_size, true);
 	wxPrintf("We read %u bytes\n", socket->LastReadCount());
 
 	//MyDebugPrint("Received package, decoding job...");
@@ -981,7 +981,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 //	 socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 	 // inform what we want to do..
-	 WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE);
+	 WriteToSocket(socket, socket_ready_to_send_single_job, SOCKET_CODE_SIZE, true);
 	 // we should get a message saying the socket is ready to receive the data..
 	// ReadFromSocket(socket, &socket_input_buffer, SOCKET_CODE_SIZE);
 
@@ -992,11 +992,11 @@ void RunJob::SendJob(wxSocketBase *socket)
     		// first - send how many bytes it is..
 
     char_pointer = (unsigned char*)&transfer_size;
-    WriteToSocket(socket, char_pointer, 8);
+    WriteToSocket(socket, char_pointer, 8, true);
 
     // now send the whole buffer..
 
-    WriteToSocket(socket, transfer_buffer, transfer_size);
+    WriteToSocket(socket, transfer_buffer, transfer_size, true);
 
 //	 }
 //	 else
@@ -1044,7 +1044,7 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 
 	// receive how many bytes we need for the buffer..
 
-	ReadFromSocket(socket, char_pointer, 8);
+	ReadFromSocket(socket, char_pointer, 8, true);
 
 	// allocate an array..
 
@@ -1052,7 +1052,7 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 
 	// now receive the package..
 
-	ReadFromSocket(socket, transfer_buffer, transfer_size);
+	ReadFromSocket(socket, transfer_buffer, transfer_size, true);
 
     // restore socket events..
 //    socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -1498,11 +1498,11 @@ void JobResult::SendToSocket(wxSocketBase *wanted_socket)
 	job_number_and_result_size[6] = byte_pointer[2];
 	job_number_and_result_size[7] = byte_pointer[3];
 
-	WriteToSocket(wanted_socket, &job_number_and_result_size, 8);
+	WriteToSocket(wanted_socket, &job_number_and_result_size, 8, true);
 
 	if (result_size > 0)
 	{
-		WriteToSocket(wanted_socket, result_data, result_size * 4);
+		WriteToSocket(wanted_socket, result_data, result_size * 4, true);
 	}
 }
 
@@ -1513,7 +1513,7 @@ void JobResult::ReceiveFromSocket(wxSocketBase *wanted_socket)
 	 int new_result_size;
 	 unsigned char *byte_pointer;
 
-	 ReadFromSocket(wanted_socket, job_number_and_result_size, 8);
+	 ReadFromSocket(wanted_socket, job_number_and_result_size, 8, true);
 
 	 byte_pointer = (unsigned char*) &job_number;
 	 byte_pointer[0] = job_number_and_result_size[0];
@@ -1547,7 +1547,7 @@ void JobResult::ReceiveFromSocket(wxSocketBase *wanted_socket)
 
 	 if (result_size > 0)
 	 {
-		 ReadFromSocket(wanted_socket, result_data, result_size*4);
+		 ReadFromSocket(wanted_socket, result_data, result_size*4, true);
 	 }
 
 
@@ -1571,7 +1571,7 @@ void ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_ar
 
 	// recieve the total number of bytes..
 
-	ReadFromSocket(socket, &total_number_of_bytes, 4);
+	ReadFromSocket(socket, &total_number_of_bytes, 4, true);
 	//wxPrintf("(Recieve) Total Size is %i bytes\n", total_number_of_bytes);
 	// make the array..
 
@@ -1579,7 +1579,7 @@ void ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_ar
 
 	// receieve
 
-	ReadFromSocket(socket, buffer_array, total_number_of_bytes);
+	ReadFromSocket(socket, buffer_array, total_number_of_bytes, true);
 	byte_pointer = (unsigned char*) &number_of_jobs;
 
 	byte_pointer[0] = buffer_array[0];
@@ -1726,9 +1726,9 @@ void SendResultQueueToSocket(wxSocketBase *socket, ArrayofJobResults &my_array)
 
 
 	// send the number of bytes
-	WriteToSocket(socket, &total_number_of_bytes, 4);
+	WriteToSocket(socket, &total_number_of_bytes, 4, true);
 	// send the array..
-	WriteToSocket(socket, buffer_array, total_number_of_bytes);
+	WriteToSocket(socket, buffer_array, total_number_of_bytes, true);
 	delete [] buffer_array;
 }
 

@@ -10,10 +10,11 @@ class MyApp; // So CalculateThread class knows about it
 class CalculateThread : public wxThread
 {
 	public:
-    	CalculateThread(MyApp *handler) : wxThread(wxTHREAD_DETACHED) { main_thread_pointer = handler; }
+    	CalculateThread(MyApp *handler, float wanted_job_wait_time) : wxThread(wxTHREAD_DETACHED) { main_thread_pointer = handler; job_wait_time = wanted_job_wait_time;}
     	~CalculateThread();
 
     	MyApp *main_thread_pointer;
+    	float job_wait_time;
     	void QueueError(wxString error_to_queue);
     	void QueueInfo(wxString info_to_queue);
     	void MarkIntermediateResultAvailable();
@@ -27,8 +28,6 @@ class CalculateThread : public wxThread
 
 };
 
-
-
 // The console APP class.. should just deal with events..
 
 class
@@ -41,12 +40,15 @@ MyApp : public wxAppConsole
 
 		bool i_am_a_zombie;
 		bool queue_timer_set;
+		bool running_image_writer_thread;
 
 		int number_of_failed_connections;
 		void CheckForConnections();
 		void OnConnectionTimer(wxTimerEvent& event);
 		void OnZombieTimer(wxTimerEvent& event);
 		void OnQueueTimer(wxTimerEvent& event);
+
+		virtual float GetMaxJobWaitTimeInSeconds() {return 30.0f;}
 
 		wxStopWatch stopwatch;
 		long total_milliseconds_spent_on_threads;

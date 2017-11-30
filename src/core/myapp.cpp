@@ -383,7 +383,7 @@ void MyApp::OnOriginalSocketEvent(wxSocketEvent &event)
 
                   // Start the worker thread..
 				  stopwatch.Start();
-				  work_thread = new CalculateThread(this);
+				  work_thread = new CalculateThread(this, GetMaxJobWaitTimeInSeconds());
 
 				  if ( work_thread->Run() != wxTHREAD_NO_ERROR )
 				  {
@@ -1090,13 +1090,13 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			 // We disable input events, so that the test doesn't trigger
 			 // wxSocketEvent again.
 			 sock->SetNotify(wxSOCKET_LOST_FLAG);
-			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+			 ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE, true);
 
 			 if (memcmp(socket_input_buffer, socket_please_identify, SOCKET_CODE_SIZE) == 0) // identification
 			 {
 		    	  // send the job identification to complete the connection
 				 //MyDebugPrint("JOB SLAVE : Sending Identification")
-				 WriteToSocket(sock, job_code, SOCKET_CODE_SIZE);
+				 WriteToSocket(sock, job_code, SOCKET_CODE_SIZE, true);
 			 }
 			 else
 			 if (memcmp(socket_input_buffer, socket_you_are_connected, SOCKET_CODE_SIZE) == 0) // identification
@@ -1104,7 +1104,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 			   	  // we are connected, request the first job..
 				 is_connected = true;
 				 //MyDebugPrint("JOB SLAVE : Requesting job");
-				 WriteToSocket(sock, socket_send_next_job, SOCKET_CODE_SIZE);
+				 WriteToSocket(sock, socket_send_next_job, SOCKET_CODE_SIZE, true);
 
 				 JobResult temp_result; // dummy result for the initial request - not reallt very nice
 				 temp_result.job_number = -1;
@@ -1173,7 +1173,7 @@ void MyApp::OnMasterSocketEvent(wxSocketEvent& event)
 				 // Timing stuff here
 				long milliseconds_spent_by_thread = stopwatch.Time();
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-				WriteToSocket(controller_socket, &milliseconds_spent_by_thread, sizeof(long));
+				WriteToSocket(controller_socket, &milliseconds_spent_by_thread, sizeof(long), true);
 				controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 
 			   	  // time to die!
@@ -1261,7 +1261,7 @@ void MyApp::OnThreadComplete(wxThreadEvent& my_event)
 
 	// get the next job..
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
-	WriteToSocket(controller_socket, socket_send_next_job, SOCKET_CODE_SIZE);
+	WriteToSocket(controller_socket, socket_send_next_job, SOCKET_CODE_SIZE, true);
 
 	// if there is a result - send it to the gui..
 	my_result.job_number = my_current_job.job_number;
@@ -1313,9 +1313,9 @@ void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
-	WriteToSocket(controller_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE);
-	WriteToSocket(controller_socket, details, sizeof(int) * 3);
-	WriteToSocket(controller_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float));
+	WriteToSocket(controller_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE, true);
+	WriteToSocket(controller_socket, details, sizeof(int) * 3, true);
+	WriteToSocket(controller_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float), true);
 	SendwxStringToSocket(&filename_to_write, controller_socket);
 
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -1370,7 +1370,7 @@ void MyApp::SendIntermediateResultQueue(ArrayofJobResults &queue_to_send)
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
 
 
-		WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE);
+		WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true);
 		SendResultQueueToSocket(controller_socket, queue_to_send);
 
 		controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
@@ -1557,11 +1557,11 @@ wxThread::ExitCode CalculateThread::Entry()
 			wxMilliSleep(100);
 			millis_sleeping += 100;
 
-			if (millis_sleeping > 30000)
+			if (millis_sleeping > job_wait_time * 1000)
 			{
 				// we have been waiting for 10 seconds, something probably went wrong - so die.
-				wxPrintf("Calculation thread has been waiting for something to do for 30 seconds - going to finish\n");
-				QueueError("Calculation thread has been waiting for something to do for 30 seconds - going to finish");
+				wxPrintf("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish\n", job_wait_time);
+				QueueError(wxString::Format("Calculation thread has been waiting for something to do for %f.2 seconds - going to finish", job_wait_time));
 				break;
 			}
 		}

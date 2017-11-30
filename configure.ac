@@ -1,4 +1,4 @@
-AC_INIT(cisTEM, 1.0.0)
+AC_INIT(cisTEM, [1.0.0-beta])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 

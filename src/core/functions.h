@@ -47,92 +47,98 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 {
 
 	bool should_abort = false;
+	if (socket != NULL)
+	{
+		if (socket->IsOk() == true && socket->IsConnected() == true)
+		{
 
 #ifdef DEBUG
-	//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
-	//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
-	if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+			//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+			//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
+			if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
 #endif
 
-	//socket->SetTimeout(60);
-	socket->WaitForWrite();
-	socket->Write(buffer, nbytes);
+			//socket->SetTimeout(60);
+			socket->WaitForWrite();
+			socket->Write(buffer, nbytes);
 
-	int number_of_retries = 0;
-	while (socket->LastWriteCount() == 0 && number_of_retries < 10)
-	{
-		wxMilliSleep(100);
-		socket->WaitForWrite();
-		socket->Write(buffer, nbytes);
-		number_of_retries++;
-	}
+			int number_of_retries = 0;
+			while (socket->LastWriteCount() == 0 && number_of_retries < 10)
+			{
+				wxMilliSleep(100);
+				socket->WaitForWrite();
+				socket->Write(buffer, nbytes);
+				number_of_retries++;
+			}
 
-	if (socket->LastWriteCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't write all bytes! (%u / %u) with %i retries ", socket->LastWriteCount(), nbytes, number_of_retries); should_abort = true;}
-	if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+			if (socket->LastWriteCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't write all bytes! (%u / %u) with %i retries ", socket->LastWriteCount(), nbytes, number_of_retries); should_abort = true;}
+			if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
 
-	if (should_abort == true)
-	{
+			if (should_abort == true)
+			{
 #ifdef DEBUG
-		wxIPV4address peer_address;
-		socket->GetPeer(peer_address);
+				wxIPV4address peer_address;
+				socket->GetPeer(peer_address);
 
-		wxPrintf("Failed socket is connected to : %s, (%s)\n", peer_address.Hostname(), peer_address.IPAddress());
-		socket->Destroy();
-		socket = NULL;
-		wxFAIL;
-		abort();
+				wxPrintf("Failed socket is connected to : %s, (%s)\n", peer_address.Hostname(), peer_address.IPAddress());
+				socket->Destroy();
+				socket = NULL;
+				wxFAIL;
+				abort();
 #else
-		exit(-1);
+				exit(-1);
 #endif
+			}
+		}
 	}
-
-
-
 }
 
 inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes)
 {
 	bool should_abort = false;
-
+	if (socket != NULL)
+	{
+		if (socket->IsOk() == true && socket->IsConnected() == true)
+		{
 #ifdef DEBUG
-	//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
-	//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
-	if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+			//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
+			//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
+			if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
 #endif
 
-	//socket->SetTimeout(60);
-	socket->WaitForRead();
-	socket->Read(buffer, nbytes);
+			//socket->SetTimeout(60);
+			socket->WaitForRead();
+			socket->Read(buffer, nbytes);
 
-	int number_of_retries = 0;
-	while (socket->LastReadCount() == 0 && number_of_retries < 10)
-	{
-		wxMilliSleep(100);
-		socket->WaitForRead();
-		socket->Read(buffer, nbytes);
-		number_of_retries++;
-	}
+			int number_of_retries = 0;
+			while (socket->LastReadCount() == 0 && number_of_retries < 10)
+			{
+				wxMilliSleep(100);
+				socket->WaitForRead();
+				socket->Read(buffer, nbytes);
+				number_of_retries++;
+			}
 
-	if (socket->LastReadCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't read all bytes! (%u / %u) with %i retries ", socket->LastReadCount(), nbytes, number_of_retries); should_abort = true;}
-	if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
-	if (should_abort == true)
-	{
+			if (socket->LastReadCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't read all bytes! (%u / %u) with %i retries ", socket->LastReadCount(), nbytes, number_of_retries); should_abort = true;}
+			if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); should_abort = true;}
+			if (should_abort == true)
+			{
 #ifdef DEBUG
-		wxIPV4address peer_address;
-		socket->GetPeer(peer_address);
+				wxIPV4address peer_address;
+				socket->GetPeer(peer_address);
 
-		wxPrintf("Failed socket is connected to : %s, (%s)\n", peer_address.Hostname(), peer_address.IPAddress());
-		socket->Destroy();
-		socket = NULL;
-		wxFAIL;
-		abort();
+				wxPrintf("Failed socket is connected to : %s, (%s)\n", peer_address.Hostname(), peer_address.IPAddress());
+				socket->Destroy();
+				socket = NULL;
+				wxFAIL;
+				abort();
 #else
-		exit(-1);
+				exit(-1);
 #endif
 
+			}
+		}
 	}
-
-
 }
 
 

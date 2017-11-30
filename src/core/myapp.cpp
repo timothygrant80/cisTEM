@@ -564,8 +564,8 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		long milliseconds_spent_on_slave_thread;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
-		//socket->Destroy();
-		//socket = NULL;
+		socket->Destroy();
+		socket = NULL;
 
 	}
 }
@@ -845,7 +845,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 		//wxPrintf("JOB Master : a slave socket Disconnected!!\n");
 
-		sock->Destroy();
+		if (sock != NULL) sock->Destroy();
 		//ExitMainLoop();
 		//abort();
 

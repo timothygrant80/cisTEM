@@ -236,7 +236,8 @@ void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event))
     						{
     							current_panel->current_location = global_location;
     							current_panel->panel_image_has_correct_greys = false;
-    							current_panel->ReDrawPanel();
+    							//current_panel->ReDrawPanel();
+    							current_panel->Refresh();
     						}
     					}
     				}
@@ -324,7 +325,8 @@ void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event))
 					{
 						current_panel->desired_scale_factor = global_scale_factor;
 						current_panel->panel_image_has_correct_scale = false;
-						current_panel->ReDrawPanel();
+						//current_panel->ReDrawPanel();
+						current_panel->Refresh();
 					}
 				}
 			}
@@ -460,7 +462,8 @@ void DisplayPanel::OnPrevious( wxCommandEvent& WXUNUSED(event) )
 					{
 						current_panel->current_location = global_location;
 						current_panel->panel_image_has_correct_greys = false;
-						current_panel->ReDrawPanel();
+						//current_panel->ReDrawPanel();
+						current_panel->Refresh();
 					}
 				}
 			}
@@ -526,7 +529,8 @@ void DisplayPanel::OnNext( wxCommandEvent& WXUNUSED(event) )
 					{
 						current_panel->current_location = global_location;
 						current_panel->panel_image_has_correct_greys = false;
-						current_panel->ReDrawPanel();
+						//current_panel->ReDrawPanel();
+						current_panel->Refresh();
 					}
 				}
 			}
@@ -3076,7 +3080,15 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 
 	// is our stored bitmap the correct size? if not redraw
 
-	if (window_x_size != panel_bitmap.GetWidth() || window_y_size != panel_bitmap.GetHeight()) ReDrawPanel();
+	if (window_x_size != panel_bitmap.GetWidth() || window_y_size != panel_bitmap.GetHeight())
+	{
+		ReDrawPanel();
+	}
+	else
+	if (panel_image_has_correct_greys == false || panel_image_has_correct_scale == false)
+	{
+		ReDrawPanel();
+	}
 	//else
 	{
 		//just redraw the areas that have changed..

@@ -1610,24 +1610,24 @@ void AbInitioManager::SetupMerge3dJob()
 
 		bool save_orthogonal_views_image = false;
 		wxString orthogonal_views_filename = "";
-		float weiner_nominator;
+		float wiener_nominator;
 
-		/*if (start_with_reconstruction == true) weiner_nominator = 100.0f;
+		/*if (start_with_reconstruction == true) wiener_nominator = 100.0f;
 		else
-		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 50.0f;
+		if (number_of_rounds_run == 0 && number_of_starts_run == 0) wiener_nominator = 50.0f;
 		else iner_nominator = 1.0f;
 
 		*/
-		if (number_of_rounds_run == 0 && number_of_starts_run == 0) weiner_nominator = 500.0f;
+		if (number_of_rounds_run == 0 && number_of_starts_run == 0) wiener_nominator = 500.0f;
 		else
 		if (number_of_starts_run == 0)
 		{
-			weiner_nominator = 200 + (10 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
-			if (weiner_nominator < 10.0f) weiner_nominator = 10.0f;
+			wiener_nominator = 200 + (10 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
+			if (wiener_nominator < 10.0f) wiener_nominator = 10.0f;
 		}
-		else weiner_nominator = 10.0f;
+		else wiener_nominator = 10.0f;
 
-		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", weiner_nominator));
+		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
 		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
@@ -1640,7 +1640,7 @@ void AbInitioManager::SetupMerge3dJob()
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
 														number_of_reconstruction_jobs,
-														weiner_nominator);
+														wiener_nominator);
 	}
 }
 

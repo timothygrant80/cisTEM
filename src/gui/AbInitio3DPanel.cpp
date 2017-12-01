@@ -2035,8 +2035,26 @@ void AbInitioManager::SetupPrepareStackJob()
 	int	number_of_particles = active_refinement_package->contained_particles.GetCount();
 //	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1.0f;
 //	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+	//if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
+	//else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+	particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+
+	// we don't want less than 100 particles per job..
+
+	if (particles_per_job < 100)
+	{
+		if (number_of_particles < 100)
+		{
+			particles_per_job = number_of_particles;
+			number_of_refinement_jobs = 1;
+		}
+		else
+		{
+			particles_per_job = 100.0f;
+			number_of_refinement_jobs = number_of_particles / 100.0f;
+		}
+
+	}
 
 	my_parent->my_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
 
@@ -2061,7 +2079,7 @@ void AbInitioManager::SetupPrepareStackJob()
 		int	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
 
-		wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
+		//wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
 
 		my_parent->my_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
 													output_particle_images.ToUTF8().data(),

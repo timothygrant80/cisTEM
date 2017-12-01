@@ -106,7 +106,12 @@ void AutoRefine3DPanel::Reset()
 
 	Layout();
 
-	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+	if (my_refinement_manager.output_refinement != NULL)
+	{
+		delete my_refinement_manager.output_refinement;
+		my_refinement_manager.output_refinement = NULL;
+
+	}
 
 	SetDefaults();
 	global_delete_autorefine3d_scratch();
@@ -654,7 +659,12 @@ void AutoRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 	ShowRefinementResultsPanel->Clear();
 	InfoPanel->Show(true);
 
-	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+	if (my_refinement_manager.output_refinement != NULL)
+	{
+		delete my_refinement_manager.output_refinement;
+		my_refinement_manager.output_refinement = NULL;
+
+	}
 
 	if (ExpertToggleButton->GetValue() == true) ExpertPanel->Show(true);
 	else ExpertPanel->Show(false);
@@ -2394,6 +2404,7 @@ void AutoRefinementManager::CycleRefinement()
 	if (this_is_the_final_round == true)
 	{
 		delete input_refinement;
+		input_refinement = NULL;
 		//delete output_refinement;
 		my_parent->WriteBlueText("Resolution is stable - Auto refine is stopping.");
 		my_parent->CancelAlignmentButton->Show(false);

@@ -1622,10 +1622,10 @@ void AbInitioManager::SetupMerge3dJob()
 		else
 		if (number_of_starts_run == 0)
 		{
-			wiener_nominator = 200 + (10 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
-			if (wiener_nominator < 10.0f) wiener_nominator = 10.0f;
+			wiener_nominator = 200 + (1 - 200) * (float(number_of_rounds_run) / float(number_of_rounds_to_run / 2.0f));
+			if (wiener_nominator < 1.0f) wiener_nominator = 1.0f;
 		}
-		else wiener_nominator = 10.0f;
+		else wiener_nominator = 1.0f;
 
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 

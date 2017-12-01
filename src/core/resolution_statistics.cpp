@@ -165,69 +165,99 @@ void ResolutionStatistics::ResampleParticleSSNR(ResolutionStatistics &other_stat
 
 float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc)
 {
+	float estimated_resolution = 0.0f;
+
 	if (use_part_fsc == true)
 	{
 		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
 		{
-			if (part_FSC.data_y[counter] < 0.143) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+			if (part_FSC.data_y[counter] < 0.143)
+			{
+				estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
 	else
 	{
 		for (int counter = 1; counter < FSC.number_of_points; counter++)
 		{
-			if (FSC.data_y[counter] < 0.143) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+			if (FSC.data_y[counter] < 0.143)
+			{
+				estimated_resolution = (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
+
+	if (estimated_resolution < 2.0f * pixel_size) estimated_resolution = 2.0f * pixel_size;
+
+	return estimated_resolution;
 }
 
 float ResolutionStatistics::Return0p8Resolution(bool use_part_fsc)
 {
+	float estimated_resolution = 0.0f;
+
 	if (use_part_fsc == true)
 	{
 		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
 		{
-			if (part_FSC.data_y[counter] < 0.8) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+			if (part_FSC.data_y[counter] < 0.8)
+			{
+				estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
 	else
 	{
 		for (int counter = 1; counter < FSC.number_of_points; counter++)
 		{
-			if (FSC.data_y[counter] < 0.8) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+			if (FSC.data_y[counter] < 0.8)
+			{
+				estimated_resolution = (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
+
+	if (estimated_resolution < 2.0f * pixel_size) estimated_resolution = 2.0f * pixel_size;
+
+	return estimated_resolution;
 }
 
 
 float ResolutionStatistics::Return0p5Resolution(bool use_part_fsc)
 {
+	float estimated_resolution = 0.0f;
+
 	if (use_part_fsc == true)
 	{
 		for (int counter = 1; counter < part_FSC.number_of_points; counter++)
 		{
-			if (part_FSC.data_y[counter] < 0.5) return (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+			if (part_FSC.data_y[counter] < 0.5)
+			{
+				estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
 	else
 	{
 		for (int counter = 1; counter < FSC.number_of_points; counter++)
 		{
-			if (FSC.data_y[counter] < 0.5) return (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+			if (FSC.data_y[counter] < 0.5)
+			{
+				estimated_resolution = (FSC.data_x[counter - 1] +  FSC.data_x[counter]) / 2.0;
+				break;
+			}
 		}
-
-		return pixel_size * 2.0;
 	}
+
+	if (estimated_resolution < 2.0f * pixel_size) estimated_resolution = 2.0f * pixel_size;
+
+	return estimated_resolution;
 }
 
 float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells)

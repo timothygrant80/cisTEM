@@ -295,14 +295,18 @@ void MyImageAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 
 void MyImageAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
-	wxString sql_command = wxString::Format("UPDATE IMAGE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
+	wxString name = wanted_name;
+	name.Replace("'", "''");
+	wxString sql_command = wxString::Format("UPDATE IMAGE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 }
 
 void MyImageAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
 {
+	wxString name = wanted_name;
+	name.Replace("'", "''");
 	all_assets_list->ReturnImageAssetPointer(wanted_asset)->asset_name = wanted_name;
-	wxString sql_command = wxString::Format("UPDATE IMAGE_ASSETS SET NAME='%s' WHERE IMAGE_ASSET_ID=%i", wanted_name, all_assets_list->ReturnImageAssetPointer(wanted_asset)->asset_id);
+	wxString sql_command = wxString::Format("UPDATE IMAGE_ASSETS SET NAME='%s' WHERE IMAGE_ASSET_ID=%i", name, all_assets_list->ReturnImageAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }

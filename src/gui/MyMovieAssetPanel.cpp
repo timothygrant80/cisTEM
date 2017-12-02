@@ -224,17 +224,20 @@ void MyMovieAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 
 void MyMovieAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
-	wxString sql_command = wxString::Format("UPDATE MOVIE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
+	wxString name = wanted_name;
+	name.Replace("'", "''");
+	wxString sql_command = wxString::Format("UPDATE MOVIE_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }
 
 void MyMovieAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
 {
+	wxString name = wanted_name;
+	name.Replace("'", "''");
 	all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_name = wanted_name;
-	wxString sql_command = wxString::Format("UPDATE MOVIE_ASSETS SET NAME='%s' WHERE MOVIE_ASSET_ID=%i", wanted_name, all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_id);
+	wxString sql_command = wxString::Format("UPDATE MOVIE_ASSETS SET NAME='%s' WHERE MOVIE_ASSET_ID=%i", name, all_assets_list->ReturnMovieAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
-
 }
 
 void MyMovieAssetPanel::ImportAllFromDatabase()

@@ -92,7 +92,7 @@ int MyVolumeAssetPanel::ShowDeleteAllMessageDialog()
 void MyVolumeAssetPanel::CompletelyRemoveAsset(long wanted_asset)
 {
 	long wanted_asset_id = all_assets_list->ReturnAssetID(wanted_asset);
-	if (wanted_asset >= 0 && wanted_asset_id < all_assets_list->ReturnNumberOfAssets())	CompletelyRemoveAssetByID(wanted_asset_id);
+	if (wanted_asset_id >= 0) CompletelyRemoveAssetByID(wanted_asset_id);
 }
 
 void MyVolumeAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
@@ -139,6 +139,7 @@ void MyVolumeAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
 	// now delete from volume_assets
 
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM VOLUME_ASSETS WHERE VOLUME_ASSET_ID=%li", wanted_asset_id).ToUTF8().data());
+
 
 	asset_array_position = all_assets_list->ReturnArrayPositionFromID(wanted_asset_id);
 	all_assets_list->RemoveAsset(asset_array_position);
@@ -223,16 +224,21 @@ void MyVolumeAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 
 void MyVolumeAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
-	wxString sql_command = wxString::Format("UPDATE VOLUME_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
+	wxString name = wanted_name;
+	name.Replace("'", "''");
+	wxString sql_command = wxString::Format("UPDATE VOLUME_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }
 
 void MyVolumeAssetPanel::RenameAsset(long wanted_asset, wxString wanted_name)
 {
+	wxString name = wanted_name;
+	name.Replace("'", "''");
 	all_assets_list->ReturnVolumeAssetPointer(wanted_asset)->asset_name = wanted_name;
-	wxString sql_command = wxString::Format("UPDATE VOLUME_ASSETS SET NAME='%s' WHERE VOLUME_ASSET_ID=%i", wanted_name, all_assets_list->ReturnVolumeAssetPointer(wanted_asset)->asset_id);
+	wxString sql_command = wxString::Format("UPDATE VOLUME_ASSETS SET NAME='%s' WHERE VOLUME_ASSET_ID=%i", name, all_assets_list->ReturnVolumeAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
+	main_frame->DirtyVolumes();
 
 }
 

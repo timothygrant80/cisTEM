@@ -193,7 +193,9 @@ void MyParticlePositionAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 
 void MyParticlePositionAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
-	wxString sql_command = wxString::Format("UPDATE PARTICLE_POSITION_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", wanted_name, wanted_group_id);
+	wxString name = wanted_name;
+	name.Replace("'", "''");
+	wxString sql_command = wxString::Format("UPDATE PARTICLE_POSITION_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }

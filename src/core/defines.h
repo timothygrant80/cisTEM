@@ -1,5 +1,5 @@
 #define INTEGER_DATABASE_VERSION 1
-#define CISTEM_VERSION_TEXT "1.0.0-beta"
+#define CISTEM_VERSION_TEXT "1.0.1-beta"
 #define START_PORT 3000
 #define END_PORT 5000
 #define PI 3.14159265359

@@ -71,7 +71,7 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 			if (my_file.is_open() == false)
 			{
 				MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
-				abort();
+				DEBUG_ABORT;
 			}
 		}
 
@@ -87,7 +87,7 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 		if (my_file.is_open() == false)
 		{
 			MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
-			abort();
+			DEBUG_ABORT;
 		}
 
 		// Blank the header, it'll have to be written with the correct values later..
@@ -194,7 +194,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		default:
 		{
 			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.Mode());
-			abort();
+			DEBUG_ABORT;
 		}
 		break;
 	}
@@ -259,7 +259,7 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 		default:
 		{
 			MyPrintfRed("Error: mode %i MRC files not currently supported\n",my_header.Mode());
-			abort();
+			DEBUG_ABORT;
 		}
 		break;
 	}

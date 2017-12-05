@@ -50,7 +50,7 @@ Curve::Curve( const Curve &other_curve) // copy constructor
 	savitzky_golay_window_size = 0;
 
 	*this = other_curve;
-	 //abort();
+	 //DEBUG_ABORT;
 }
 
 Curve::~Curve()

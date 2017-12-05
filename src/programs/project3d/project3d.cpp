@@ -116,12 +116,12 @@ bool Project3DApp::DoCalculation()
 	if ((input_file.ReturnXSize() != input_file.ReturnYSize()) || (input_file.ReturnXSize() != input_file.ReturnZSize()))
 	{
 		MyPrintWithDetails("Error: Input reconstruction is not cubic\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	if (last_particle < first_particle && last_particle != 0)
 	{
 		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, my_symmetry);

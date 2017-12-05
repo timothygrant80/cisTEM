@@ -3,7 +3,7 @@
 NumericTextFile::NumericTextFile()
 {
 	MyPrintWithDetails("NumericTextfile has been declared with no filename.\n");
-	abort();
+	DEBUG_ABORT;
 }
 
 NumericTextFile::NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line)
@@ -34,7 +34,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 			if (input_file_stream->GetFile()->IsOpened() == true)
 			{
 				MyPrintWithDetails("File already Open\n");
-				abort();
+				DEBUG_ABORT;
 			}
 
 		}
@@ -47,7 +47,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 		if (records_per_line <= 0)
 		{
 			MyPrintWithDetails("NumericTextFile asked to OPEN_TO_WRITE, but with erroneous records per line\n");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		if (output_file_stream != NULL)
@@ -55,7 +55,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 			if (output_file_stream->GetFile()->IsOpened() == true)
 			{
 				MyPrintWithDetails("File already Open\n");
-				abort();
+				DEBUG_ABORT;
 			}
 
 		}
@@ -65,7 +65,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
 	else
 	{
 		MyPrintWithDetails("Unknown access type!\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 
@@ -112,7 +112,7 @@ void NumericTextFile::Init()
 		if (input_file_stream->IsOk() == false)
 		{
 			MyPrintWithDetails("Attempt to access %s for reading failed\n",text_filename);
-			abort();
+			DEBUG_ABORT;
 		}
 
 		// work out the records per line and how many lines
@@ -139,7 +139,7 @@ void NumericTextFile::Init()
 				    if (token.ToDouble(&temp_double) == false)
 				    {
 				    	MyPrintWithDetails("Failed on the following record : %s\n", token);
-				    	abort();
+				    	DEBUG_ABORT;
 				    }
 				    else
 				    {
@@ -154,7 +154,7 @@ void NumericTextFile::Init()
 					if (old_records_per_line != current_records_per_line)
 					{
 						MyPrintWithDetails("Different records per line found");
-						abort();
+						DEBUG_ABORT;
 					}
 				}
 
@@ -219,7 +219,7 @@ void NumericTextFile::ReadLine(float *data_array)
 	if (access_type != OPEN_TO_READ)
 	{
 		MyPrintWithDetails("Attempt to read from %s however access type is not READ\n",text_filename);
-		abort();
+		DEBUG_ABORT;
 	}
 
 	wxString current_line;
@@ -243,7 +243,7 @@ void NumericTextFile::ReadLine(float *data_array)
 		if (token.ToDouble(&temp_double) == false)
 		{
 			MyPrintWithDetails("Failed on the following record : %s\nFrom Line  : %s\n", token.ToUTF8().data(), current_line.ToUTF8().data());
-	    	abort();
+	    	DEBUG_ABORT;
 		}
 		else
 		{
@@ -258,7 +258,7 @@ void NumericTextFile::WriteLine(float *data_array)
 	if (access_type != OPEN_TO_WRITE)
 	{
 		MyPrintWithDetails("Attempt to read from %s however access type is not WRITE\n",text_filename);
-		abort();
+		DEBUG_ABORT;
 	}
 
 	for (int counter = 0; counter < records_per_line; counter++ )
@@ -276,7 +276,7 @@ void NumericTextFile::WriteLine(double *data_array)
 	if (access_type != OPEN_TO_WRITE)
 	{
 		MyPrintWithDetails("Attempt to read from %s however access type is not WRITE\n",text_filename);
-		abort();
+		DEBUG_ABORT;
 	}
 
 	for (int counter = 0; counter < records_per_line; counter++ )

@@ -257,7 +257,7 @@ void MyPickingResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 			if (!should_continue)
 			{
 				MyPrintWithDetails("Error getting alignment jobs..");
-				abort();
+				DEBUG_ABORT;
 			}
 
 			start_from_row = 0;
@@ -503,7 +503,7 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	if (!keep_going)
 	{
 		MyPrintWithDetails("Error dealing with picking_list table");
-		abort();
+		DEBUG_ABORT;
 	}
 	main_frame->current_project.database.GetFromBatchSelect("iliiirrrriiiii",&picking_id, &datetime_of_run, &picking_job_id_check, &parent_image_id_check, &picking_algorithm, &characteristic_radius, &maximum_radius, &threshold_peak_height, &highest_resolution_used, &minimum_distance_from_edges, &avoid_high_variance, &avoid_high_low_mean, &number_of_background_boxes, &manual_edit);
 
@@ -559,7 +559,7 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	if (!keep_going)
 	{
 		MyPrintWithDetails("Error dealing with assets table");
-		abort();
+		DEBUG_ABORT;
 	}
 	main_frame->current_project.database.GetFromBatchSelect("t",&parent_image_filename);
 	main_frame->current_project.database.EndBatchSelect();

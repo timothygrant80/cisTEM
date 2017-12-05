@@ -287,7 +287,7 @@ double *DownhillSimplex::dvector(long nl,long nh)
 	v=(double *)malloc((unsigned) (nh-nl+1)*sizeof(double));
 	if (!v) {
 		MyPrintWithDetails("Allocation failure in dvector()\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	return v-nl;
 }
@@ -300,7 +300,7 @@ double **DownhillSimplex::dmatrix(long nrl, long nrh, long ncl, long nch)
 	m=(double **) malloc((unsigned) (nrh-nrl+1)*sizeof(double*));
 	if (!m) {
 		MyPrintWithDetails("Allocation failure in dmatrix()\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	m -= nrl;
 
@@ -308,7 +308,7 @@ double **DownhillSimplex::dmatrix(long nrl, long nrh, long ncl, long nch)
 		m[i]=(double *) malloc((unsigned) (nch-ncl+1)*sizeof(double));
 		if (!m[i]) {
 			MyPrintWithDetails("Allocation failure in dmatrix()\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		m[i] -= ncl;
 	}

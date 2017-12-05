@@ -669,7 +669,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	        	wxPrintf("JOB CONTROL : Master Socket Disconnected!!\n");
 	        	sock->Destroy();
 	            ExitMainLoop();
-	            abort();
+	            DEBUG_ABORT;
 	        }
 
 	        break;
@@ -679,7 +679,7 @@ void JobControlApp::OnMasterSocketEvent(wxSocketEvent& event)
 	    {
 
 	       	wxPrintf("weird socket communication\n");
-	    	abort();
+	    	DEBUG_ABORT;
 
 	    	break;
 	    }

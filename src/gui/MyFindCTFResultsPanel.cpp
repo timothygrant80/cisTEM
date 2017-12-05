@@ -243,7 +243,7 @@ void MyFindCTFResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 			if (should_continue == false)
 			{
 				MyPrintWithDetails("Error getting alignment jobs..");
-				abort();
+				DEBUG_ABORT;
 			}
 
 			start_from_row = 0;
@@ -273,7 +273,7 @@ void MyFindCTFResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 		if (should_continue == false)
 		{
 			MyPrintWithDetails("Error getting selected alignments..");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		start_from_row = 0;
@@ -396,7 +396,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	if (should_continue == false)
 	{
 		MyPrintWithDetails("Error getting information about alignment!")
-		abort();
+		DEBUG_ABORT;
 	}
 
 	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtii", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected);
@@ -541,7 +541,7 @@ void MyFindCTFResultsPanel::OnValueChanged(wxDataViewEvent &event)
 				//if (should_continue == false)
 				//{
 				//	MyPrintWithDetails("Error getting information about alignment!")
-				//	abort();
+				//	DEBUG_ABORT;
 				//}
 
 				//main_frame->current_project.database.GetFromBatchSelect("it", &alignment_id, &output_file);

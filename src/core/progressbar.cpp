@@ -3,7 +3,7 @@
 ProgressBar::ProgressBar(void)
 {
 	MyPrintWithDetails("An instance of progress bar has been created with no constructor. This is not allowed.\n");
-	abort();
+	DEBUG_ABORT;
 }
 
 ProgressBar::~ProgressBar(void)
@@ -81,7 +81,7 @@ void ProgressBar::Update(long current_tick)
 	if (current_tick < 1)
 	{
 		MyPrintWithDetails("Called with a tick value less than 1\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 

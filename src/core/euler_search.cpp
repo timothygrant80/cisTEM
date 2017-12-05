@@ -289,7 +289,7 @@ void EulerSearch::SetSymmetryLimits()
 	if (symmetry_symbol.Length() < 1)
 	{
 		MyPrintWithDetails("Error: Must specify symmetry symbol\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	symmetry_type = symmetry_symbol.Capitalize()[0];
 	if (symmetry_symbol.Length() == 1)
@@ -301,7 +301,7 @@ void EulerSearch::SetSymmetryLimits()
 		if (! symmetry_symbol.Mid(1).ToLong(&symmetry_number))
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
-			abort();
+			DEBUG_ABORT;
 		}
 	}
 
@@ -310,7 +310,7 @@ void EulerSearch::SetSymmetryLimits()
 		if (symmetry_number == 0)
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		phi_max = 360.0 / symmetry_number;
@@ -325,7 +325,7 @@ void EulerSearch::SetSymmetryLimits()
 		if (symmetry_number == 0)
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		phi_max = 360.0 / symmetry_number;
@@ -363,7 +363,7 @@ void EulerSearch::SetSymmetryLimits()
 	}
 
 	MyPrintWithDetails("Error: Invalid symmetry symbol\n");
-	abort();
+	DEBUG_ABORT;
 }
 
 // Run the search

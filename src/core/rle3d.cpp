@@ -13,7 +13,7 @@ rle3d_coord::rle3d_coord()
 rle3d::rle3d()
 {
 	wxPrintf("\n\nError: rle3d constructed without argument - this is not allowed!!\n\n");
-	abort();
+	DEBUG_ABORT;
 }
 
 rle3d::rle3d(Image &input3d)
@@ -285,7 +285,7 @@ void rle3d::Write(const char *filename)
     if (output_file == 0)
     {
       MyPrintWithDetails("error opening file");
-      abort();
+      DEBUG_ABORT;
     }
 
     for (long counter = 0; counter < number_of_coordinates; counter ++)

@@ -100,7 +100,7 @@ void MyMovieAlignResultsPanel::OnValueChanged(wxDataViewEvent &event)
 				if (should_continue == false)
 				{
 					MyPrintWithDetails("Error getting information about alignment!")
-					abort();
+					DEBUG_ABORT;
 				}
 
 				main_frame->current_project.database.GetFromBatchSelect("it", &alignment_id, &output_file);
@@ -249,7 +249,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	if (should_continue == false)
 	{
 		MyPrintWithDetails("Error getting information about alignment!")
-		abort();
+		DEBUG_ABORT;
 	}
 
 	main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiii", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame);
@@ -302,7 +302,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column)
 	if (should_continue == false)
 	{
 		MyPrintWithDetails("Error getting alignment result!")
-		abort();
+		DEBUG_ABORT;
 	}
 
 	while (should_continue == true)
@@ -566,7 +566,7 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 			if (should_continue == false)
 			{
 				MyPrintWithDetails("Error getting alignment jobs..");
-				abort();
+				DEBUG_ABORT;
 			}
 
 			start_from_row = 0;
@@ -598,7 +598,7 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 		if (should_continue == false)
 		{
 			MyPrintWithDetails("Error getting selected alignments..");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		start_from_row = 0;

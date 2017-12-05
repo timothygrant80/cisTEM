@@ -848,7 +848,7 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 
 		if (sock != NULL) sock->Destroy();
 		//ExitMainLoop();
-		//abort();
+		//DEBUG_ABORT;
 
 		break;
 	}
@@ -1431,7 +1431,7 @@ void MyApp::SendErrorAndCrash(wxString error_to_send)
 {
 	SendError(error_to_send);
 	if (!is_running_locally) wxSleep(2); // wait for the main thread to actually send the error
-	abort();
+	DEBUG_ABORT;
 }
 
 void MyApp::SendInfo(wxString info_to_send)

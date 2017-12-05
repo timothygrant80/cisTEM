@@ -1060,7 +1060,7 @@ void AbInitioManager::BeginRefinementCycle()
 		if (! current_symmetry_string.Mid(1).ToLong(&symmetry_number))
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", current_symmetry_string.Mid(1));
-			abort();
+			DEBUG_ABORT;
 		}
 	}
 

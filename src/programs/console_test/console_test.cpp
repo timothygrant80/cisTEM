@@ -1004,7 +1004,7 @@ void MyTestApp::WriteEmbeddedArray(const char *filename, const unsigned char *ar
 	{
 		wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
 		wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
-		abort();
+		DEBUG_ABORT;
 
 	}
 
@@ -1023,7 +1023,7 @@ void MyTestApp::WriteNumericTextFile(const char *filename)
 	{
 		wxPrintf(ANSI_COLOR_RED "\n\nError: Can't open output file %s.\n", filename);
 		wxPrintf(ANSI_COLOR_RESET "\n\nError: Can't open output file %s.\n", filename);
-		abort();
+		DEBUG_ABORT;
 
 	}
 

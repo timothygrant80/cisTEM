@@ -26,7 +26,7 @@ ReconstructedVolume::ReconstructedVolume(float wanted_molecular_mass_in_kDa)
 	whitened_projection = false;
 
 //	MyPrintWithDetails("Error: Constructor must be called with volume dimensions and pixel size");
-//	abort();
+//	DEBUG_ABORT;
 }
 
 ReconstructedVolume::~ReconstructedVolume()

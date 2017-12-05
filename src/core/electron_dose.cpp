@@ -45,7 +45,7 @@ void ElectronDose::Init(float wanted_acceleration_voltage, float wanted_pixel_si
 	else
 	{
 		wxPrintf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
-		abort();
+		DEBUG_ABORT;
 	}
 
 	pixel_size = wanted_pixel_size;

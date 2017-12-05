@@ -35,7 +35,7 @@ long GuiJobController::AddJob(JobPanel *wanted_parent_panel, wxString wanted_lau
 	if (new_index == -1)
 	{
 		wxPrintf("\n\nTerminal Error: No free job slots\n\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	// set the job_info

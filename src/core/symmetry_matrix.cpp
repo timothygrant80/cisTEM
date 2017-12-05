@@ -5,7 +5,7 @@ SymmetryMatrix::SymmetryMatrix()
 	rot_mat = NULL;
 	number_of_matrices = 0;
 //	MyPrintWithDetails("Error: Constructor must be called with symmetry symbol\n");
-//	abort();
+//	DEBUG_ABORT;
 }
 
 SymmetryMatrix::SymmetryMatrix(wxString wanted_symmetry_symbol)
@@ -24,7 +24,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 	if (wanted_symmetry_symbol.Length() < 1)
 	{
 		MyPrintWithDetails("Error: Must specify symmetry symbol\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	symmetry_type = wanted_symmetry_symbol.Capitalize()[0];
 	if (wanted_symmetry_symbol.Length() == 1)
@@ -36,7 +36,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 		if (! wanted_symmetry_symbol.Mid(1).ToLong(&symmetry_number))
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", wanted_symmetry_symbol.Mid(1));
-			abort();
+			DEBUG_ABORT;
 		}
 	}
 
@@ -51,7 +51,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 		if (symmetry_number == 0)
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		number_of_matrices = symmetry_number;
 		if (rot_mat != NULL)
@@ -81,7 +81,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 		if (symmetry_number == 0)
 		{
 			MyPrintWithDetails("Error: Invalid n after symmetry symbol\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		number_of_matrices = symmetry_number;
 		if (rot_mat != NULL)
@@ -499,7 +499,7 @@ void SymmetryMatrix::Init(wxString wanted_symmetry_symbol)
 	}
 
 	MyPrintWithDetails("Error: Invalid symmetry symbol\n");
-	abort();
+	DEBUG_ABORT;
 }
 
 SymmetryMatrix::~SymmetryMatrix()

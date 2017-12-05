@@ -6231,12 +6231,12 @@ void Image::TaperEdges()
 	if (logical_x_dimension < 2 * tapering_strip_width_x || logical_y_dimension < 2 * tapering_strip_width_y)
 	{
 		MyPrintWithDetails("X,Y dimensions of input image are too small: %i %i\n", logical_x_dimension,logical_y_dimension);
-		abort();
+		DEBUG_ABORT;
 	}
 	if (logical_z_dimension > 1 && logical_z_dimension < 2 * tapering_strip_width_z)
 	{
 		MyPrintWithDetails("Z dimension is too small: %i\n",logical_z_dimension);
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if ( logical_z_dimension > 1 )

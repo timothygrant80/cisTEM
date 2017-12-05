@@ -399,25 +399,25 @@ void VolumeAsset::CopyFrom(Asset *other_asset)
 MovieAsset * AssetList::ReturnMovieAssetPointer(long wanted_asset)
 {
 	MyPrintWithDetails("This should never be called!!");
-	abort();
+	DEBUG_ABORT;
 }
 
 ImageAsset * AssetList::ReturnImageAssetPointer(long wanted_asset)
 {
 	MyPrintWithDetails("This should never be called!!");
-	abort();
+	DEBUG_ABORT;
 }
 
 ParticlePositionAsset * AssetList::ReturnParticlePositionAssetPointer(long wanted_asset)
 {
 	MyPrintWithDetails("This should never be called!!");
-	abort();
+	DEBUG_ABORT;
 }
 
 VolumeAsset* AssetList::ReturnVolumeAssetPointer(long wanted_asset)
 {
 	MyPrintWithDetails("This should never be called!!");
-	abort();
+	DEBUG_ABORT;
 }
 
 

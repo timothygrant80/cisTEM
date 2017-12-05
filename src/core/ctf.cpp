@@ -134,7 +134,7 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 		if (det < 0.0)
 		{
 			//MyPrintWithDetails("Ooops, negative determinant\n");
-			//abort();
+			//DEBUG_ABORT;
 			return 0.0;
 		}
 		else
@@ -157,7 +157,7 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 			{
 #ifdef DEBUG
 				MyPrintWithDetails("Ooops, did not find solutions to the phase aberration equation\n");
-				abort();
+				DEBUG_ABORT;
 #else
 				return 0.0;
 #endif

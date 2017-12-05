@@ -14,7 +14,7 @@ BitmapPanel::BitmapPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, co
 
 	if ( !pixel_data )		{
 	   MyPrintWithDetails("Can't access bitmap data");
-	   abort();
+	   DEBUG_ABORT;
 	}
 
 	wxNativePixelData::Iterator p(pixel_data);

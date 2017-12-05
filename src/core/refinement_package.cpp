@@ -73,5 +73,5 @@ RefinementPackageParticleInfo RefinementPackage::ReturnParticleInfoByPositionInS
 	}
 
 	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle");
-	abort();
+	DEBUG_ABORT;
 }

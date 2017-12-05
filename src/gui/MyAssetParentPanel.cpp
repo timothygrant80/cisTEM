@@ -871,7 +871,7 @@ bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
 	else return true;
 
 	MyPrintWithDetails("This should never be called!!");
-	abort();
+	DEBUG_ABORT;
 }*/
 
 int MyAssetParentPanel::ReturnArrayPositionFromParentID(int wanted_id)

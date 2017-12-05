@@ -300,7 +300,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 			 else
 			 {
 				 MyPrintWithDetails("Unknown Argument Type!");
-				 abort();
+				 DEBUG_ABORT;
 			 }
 
 		 }
@@ -334,7 +334,7 @@ void JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
      else
      {
     	MyPrintWithDetails("Oops, didn't understand the reply!");
-    	abort();
+    	DEBUG_ABORT;
      }
          // restore socket events..
 
@@ -677,7 +677,7 @@ void JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 			 else
 			 {
 				 MyPrintWithDetails("Unknown Argument Type!");
-				 abort();
+				 DEBUG_ABORT;
 			 }
 
 			}
@@ -970,7 +970,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 		 else
 		 {
 			 MyPrintWithDetails("Unrecognized argument!");
-			 abort();
+			 DEBUG_ABORT;
 		 }
 
 	 }
@@ -1002,7 +1002,7 @@ void RunJob::SendJob(wxSocketBase *socket)
 //	 else
 //	 {
 //		 MyPrintWithDetails("Oops, didn't understand the reply!");
-//		 abort();
+//		 DEBUG_ABORT;
 //	 }
 
 	// restore socket events..
@@ -1183,7 +1183,7 @@ void RunJob::RecieveJob(wxSocketBase *socket)
 		 else
 		 {
 			 MyDebugPrint("Unknown Argument!!");
-			 abort();
+			 DEBUG_ABORT;
 		 }
 	}
 

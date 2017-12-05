@@ -2220,7 +2220,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 			if (at_a_maximum && at_a_minimum)
 			{
 				MyPrintfRed("Rescale spectrum: Error. At a minimum and a maximum simultaneously.");
-				abort();
+				DEBUG_ABORT;
 			}
 		}
 
@@ -2471,7 +2471,7 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
 	if (chosen_bin == -1)
 	{
 		MyPrintfRed("Could not find bin\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	else
 	{

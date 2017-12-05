@@ -84,7 +84,7 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 				socket->Destroy();
 				socket = NULL;
 				wxFAIL;
-				abort();
+				DEBUG_ABORT;
 #else
 				exit(-1);
 #endif
@@ -92,7 +92,7 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 		}
 		else
 		{
-			if (die_on_error == true) abort();
+			if (die_on_error == true) DEBUG_ABORT;
 		}
 	}
 }
@@ -135,7 +135,7 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 				socket->Destroy();
 				socket = NULL;
 				wxFAIL;
-				abort();
+				DEBUG_ABORT;
 #else
 				exit(-1);
 #endif
@@ -144,7 +144,7 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 		}
 		else
 		{
-			if (die_on_error == true) abort();
+			if (die_on_error == true) DEBUG_ABORT;
 		}
 	}
 }

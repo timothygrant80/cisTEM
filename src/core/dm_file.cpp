@@ -427,7 +427,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 	if ( len > 128 ) {
 		std::cout << "\tlen=" << len << endl;
 		std::cerr << "Error: tag length too long!" << endl;
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if ( len ) {

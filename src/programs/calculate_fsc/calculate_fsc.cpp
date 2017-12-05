@@ -69,19 +69,19 @@ bool CalculateFSC::DoCalculation()
 	if (reconstruction_1.ReturnZSize() <= 1)
 	{
 		MyPrintWithDetails("Error: Input reconstruction 1 is not a volume\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if (reconstruction_1.ReturnXSize() != reconstruction_1.ReturnYSize() && reconstruction_1.ReturnXSize() != reconstruction_1.ReturnZSize() && reconstruction_1.ReturnYSize() != reconstruction_1.ReturnZSize())
 	{
 		MyPrintWithDetails("Error: Input reconstruction 1 is not a cube\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if (reconstruction_1.ReturnXSize() != reconstruction_2.ReturnXSize() || reconstruction_1.ReturnYSize() != reconstruction_2.ReturnYSize() || reconstruction_1.ReturnZSize() != reconstruction_2.ReturnZSize())
 	{
 		wxPrintf("\nInput reconstructions have different dimensions\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if (use_mask)
@@ -90,7 +90,7 @@ bool CalculateFSC::DoCalculation()
 		if (reconstruction_1.ReturnXSize() != input_mask_file->ReturnXSize() || reconstruction_1.ReturnYSize() != input_mask_file->ReturnYSize() || reconstruction_1.ReturnZSize() != input_mask_file->ReturnZSize())
 		{
 			wxPrintf("\nVolume and mask file have different dimensions\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		else mask_volume.Allocate(reconstruction_1.ReturnXSize(), reconstruction_1.ReturnYSize(), reconstruction_1.ReturnZSize(), true);
 	}

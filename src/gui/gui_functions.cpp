@@ -51,7 +51,7 @@ void ConvertImageToBitmap(Image *input_image, wxBitmap *output_bitmap, bool auto
 	if ( !pixel_data )
 	{
 	   MyPrintWithDetails("Can't access bitmap data");
-	   abort();
+	   DEBUG_ABORT;
 	}
 
 

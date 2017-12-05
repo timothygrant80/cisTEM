@@ -66,7 +66,7 @@ void BasicStarFileReader::Open(wxString wanted_filename)
 	if (input_file->IsOpened() == false)
 	{
 		MyPrintWithDetails("Error: Cannot open star file (%s) for read\n", wanted_filename);
-		abort();
+		DEBUG_ABORT;
 	}
 }
 

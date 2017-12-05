@@ -33,7 +33,7 @@ int Database::ExecuteSQL(const char *command)
 	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", error_message, command);
 	   	sqlite3_free(error_message);
 
-	   	if (return_code != SQLITE_LOCKED) abort();
+	   	if (return_code != SQLITE_LOCKED) DEBUG_ABORT;
 	}
 
 	return return_code;
@@ -47,7 +47,7 @@ int Database::Prepare(wxString sql_command, sqlite3_stmt **current_statement)
 	if( return_code != SQLITE_OK )
 	{
 	   	MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command :-\n\n%s\n", sqlite3_errmsg(sqlite_database), sql_command);
-	   	if (return_code != SQLITE_LOCKED) abort();
+	   	if (return_code != SQLITE_LOCKED) DEBUG_ABORT;
 	}
 
 	return return_code;
@@ -61,7 +61,7 @@ int Database::Step(sqlite3_stmt *current_statement)
 	if( return_code != SQLITE_DONE && return_code != SQLITE_ROW )
 	{
 	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errstr(return_code));
-	   	if (return_code != SQLITE_LOCKED) abort();
+	   	if (return_code != SQLITE_LOCKED) DEBUG_ABORT;
 	}
 
 	return return_code;
@@ -75,7 +75,7 @@ int Database::Finalize(sqlite3_stmt *current_statement)
 	if( return_code != SQLITE_OK )
 	{
 	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errmsg(sqlite_database));
-	   	if (return_code != SQLITE_LOCKED) abort();
+	   	if (return_code != SQLITE_LOCKED) DEBUG_ABORT;
 	}
 
 	return return_code;
@@ -86,7 +86,7 @@ void Database::CheckBindCode(int return_code)
 	if( return_code != SQLITE_OK )
 	{
 	   	MyPrintWithDetails("SQL Error: %s\n\n", sqlite3_errmsg(sqlite_database));
-	   	if (return_code != SQLITE_LOCKED) abort();
+	   	if (return_code != SQLITE_LOCKED) DEBUG_ABORT;
 	}
 }
 
@@ -357,7 +357,7 @@ void Database::GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_align
 		if (more_data == false)
 		{
 			MyPrintWithDetails("Unexpected end of select command");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		more_data = GetFromBatchSelect("i", &alignment_job_ids[counter]);
@@ -381,7 +381,7 @@ void Database::GetUniquePickingJobIDs(int *picking_job_ids, int number_of_pickin
 		if (more_data == false)
 		{
 			MyPrintWithDetails("Unexpected end of select command");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		more_data = GetFromBatchSelect("i", &picking_job_ids[counter]);
@@ -405,7 +405,7 @@ void Database::GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number
 		if (more_data == false)
 		{
 			MyPrintWithDetails("Unexpected end of select command");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		more_data = GetFromBatchSelect("i", &ctf_estimation_job_ids[counter]);
@@ -433,7 +433,7 @@ void Database::GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &numbe
 		if (more_data == false)
 		{
 			MyPrintWithDetails("Unexpected end of select command");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		more_data = GetFromBatchSelect("i", &image_ids[counter]);
@@ -459,7 +459,7 @@ void Database::GetCTFParameters( const int &ctf_estimation_id, double &accelerat
 	else
 	{
 		MyPrintWithDetails("Unexpected end of select command\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	EndBatchSelect();
@@ -641,7 +641,7 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 
     if( return_code != SQLITE_OK )
     {
-        abort();
+        DEBUG_ABORT;
     }
 
     return true;
@@ -766,7 +766,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
-			abort();
+			DEBUG_ABORT;
 		}
 
 		if (current_column < number_of_columns) sql_command += ", ";
@@ -782,7 +782,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 
     if( return_code != SQLITE_OK )
     {
-    	abort();
+    	DEBUG_ABORT;
 
     }
 

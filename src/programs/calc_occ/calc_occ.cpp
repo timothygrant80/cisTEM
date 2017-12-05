@@ -73,7 +73,7 @@ bool CalcOccApp::DoCalculation()
 	if (number_of_files == 0)
 	{
 		MyPrintWithDetails("Error: Parameter file %s not found\n", parameter_file);
-		abort();
+		DEBUG_ABORT;
 	}
 	if (number_of_files > number_of_parameter_files && number_of_parameter_files != 0) number_of_files = number_of_parameter_files;
 
@@ -154,7 +154,7 @@ bool CalcOccApp::DoCalculation()
 			if (particle_position != input_parameter_files[i].ReadParameter(j, 0))
 			{
 				MyPrintWithDetails("Error: Inconsistent particle positions in line %i\n", j + 1);
-				abort();
+				DEBUG_ABORT;
 			}
 			max_logp = std::max(max_logp,input_parameter_files[i].ReadParameter(j, 13));
 		}

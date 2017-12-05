@@ -81,13 +81,13 @@ bool EstimateDataSetSSNR::DoCalculation()
 	if (defocus_text.number_of_lines != number_of_input_images)
 	{
 		SendError("Error: Number of lines in defocus text file != number of images!");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if (defocus_text.records_per_line != 3 && defocus_text.records_per_line != 4)
 	{
 		SendError("Error: Expect 3 or 4 records per line in defocus text file");
-		abort();
+		DEBUG_ABORT;
 	}
 
 	if (defocus_text.records_per_line == 4) wxPrintf("\nIncluding phase plate shifts in fourth column\n");

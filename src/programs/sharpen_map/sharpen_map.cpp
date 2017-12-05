@@ -82,7 +82,7 @@ bool SharpenMap::DoCalculation()
 	if (input_file.ReturnZSize() <= 1)
 	{
 		MyPrintWithDetails("Error: Input map is not a volume\n");
-		abort();
+		DEBUG_ABORT;
 	}
 
 
@@ -93,7 +93,7 @@ bool SharpenMap::DoCalculation()
 		if (input_file.ReturnXSize() != input_mask_file->ReturnXSize() || input_file.ReturnYSize() != input_mask_file->ReturnYSize() || input_file.ReturnZSize() != input_mask_file->ReturnZSize())
 		{
 			wxPrintf("\nVolume and mask file have different dimensions\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		else mask_volume->Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
 	}

@@ -286,7 +286,7 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 		default:
 		{
 			MyPrintfRed("Error: mode %i MRC files not currently supported\n",mode[0]);
-			abort();
+			DEBUG_ABORT;
 		}
 		break;
 	}

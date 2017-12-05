@@ -16,7 +16,7 @@ ResolutionStatistics::ResolutionStatistics( const ResolutionStatistics &other_st
 {
 	MyDebugPrint("Warning: copying a resolution statistics object");
 	*this = other_statistics;
-	//abort();
+	//DEBUG_ABORT;
 }
 
 
@@ -752,7 +752,7 @@ void ResolutionStatistics::ReadStatisticsFromFile(wxString input_file)
 	if (! DoesFileExist(input_file))
 	{
 		MyPrintWithDetails("Error: Statistics file not found\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	NumericTextFile my_statistics(input_file, OPEN_TO_READ);
 
@@ -773,7 +773,7 @@ void ResolutionStatistics::ReadStatisticsFromFile(wxString input_file)
 		if (fabsf(resolution - temp_float[1]) > 0.1)
 		{
 			MyPrintWithDetails("Statistics file not compatible with input reconstruction\n");
-			abort();
+			DEBUG_ABORT;
 		}
 		FSC.AddPoint(temp_float[1], temp_float[3]);
 		part_FSC.AddPoint(temp_float[1], temp_float[4]);

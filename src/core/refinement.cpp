@@ -238,7 +238,7 @@ RefinementResult Refinement::ReturnRefinementResultByClassAndPositionInStack(int
 	}
 
 	MyDebugPrintWithDetails("Shouldn't get here, means i didn't find the particle - Class #%i, Pos = %li", wanted_class, wanted_position_in_stack);
-	abort();
+	DEBUG_ABORT;
 }
 
 int Refinement::ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle) // starts at 0

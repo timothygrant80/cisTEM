@@ -741,7 +741,7 @@ void Reconstruct3D::ReadArrays(wxString filename)
 	if (input_logical_x_dimension != logical_x_dimension || input_logical_y_dimension != logical_y_dimension || input_logical_z_dimension != logical_z_dimension || input_pixel_size != pixel_size)
 	{
 		MyPrintWithDetails("Error: Dump file incompatible with 3D reconstruction\n");
-		abort();
+		DEBUG_ABORT;
 	}
 	char_pointer = (char *) image_reconstruction.real_values;
 	b_stream.read(char_pointer, sizeof(float) * image_reconstruction.real_memory_allocated);

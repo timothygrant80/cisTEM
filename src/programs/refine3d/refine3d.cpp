@@ -197,28 +197,29 @@ void Refine3DApp::DoInteractiveUserInput()
 	bool local_global_refine = false;
 	int current_class = 0;
 	bool ignore_input_angles = false;
-	my_current_job.Reset(54);
-	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",	input_particle_images.ToUTF8().data(),
-																								input_parameter_file.ToUTF8().data(),
-																								input_reconstruction.ToUTF8().data(),
-																								input_reconstruction_statistics.ToUTF8().data(), use_statistics,
-																								ouput_matching_projections.ToUTF8().data(),
-																								ouput_parameter_file.ToUTF8().data(),
-																								ouput_shift_file.ToUTF8().data(),
-																								my_symmetry.ToUTF8().data(),
-																								first_particle, last_particle, percent_used,
-																								pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
-																								molecular_mass_kDa, inner_mask_radius, outer_mask_radius, low_resolution_limit,
-																								high_resolution_limit, signed_CC_limit, classification_resolution_limit,
-																								mask_radius_search, high_resolution_limit_search, angular_step, best_parameters_to_keep,
-																								max_search_x, max_search_y,
-																								mask_center_2d_x, mask_center_2d_y, mask_center_2d_z, mask_radius_2d,
-																								defocus_search_range, defocus_step, padding,
-																								global_search, local_refinement,
-																								refine_psi, refine_theta, refine_phi, refine_x, refine_y,
-																								calculate_matching_projections, apply_2D_masking, ctf_refinement, normalize_particles,
-																								invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d,
-																								local_global_refine, current_class, ignore_input_angles);
+	bool defocus_bias = false;
+	my_current_job.Reset(55);
+	my_current_job.ManualSetArguments("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",	input_particle_images.ToUTF8().data(),
+																									input_parameter_file.ToUTF8().data(),
+																									input_reconstruction.ToUTF8().data(),
+																									input_reconstruction_statistics.ToUTF8().data(), use_statistics,
+																									ouput_matching_projections.ToUTF8().data(),
+																									ouput_parameter_file.ToUTF8().data(),
+																									ouput_shift_file.ToUTF8().data(),
+																									my_symmetry.ToUTF8().data(),
+																									first_particle, last_particle, percent_used,
+																									pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
+																									molecular_mass_kDa, inner_mask_radius, outer_mask_radius, low_resolution_limit,
+																									high_resolution_limit, signed_CC_limit, classification_resolution_limit,
+																									mask_radius_search, high_resolution_limit_search, angular_step, best_parameters_to_keep,
+																									max_search_x, max_search_y,
+																									mask_center_2d_x, mask_center_2d_y, mask_center_2d_z, mask_radius_2d,
+																									defocus_search_range, defocus_step, padding,
+																									global_search, local_refinement,
+																									refine_psi, refine_theta, refine_phi, refine_x, refine_y,
+																									calculate_matching_projections, apply_2D_masking, ctf_refinement, normalize_particles,
+																									invert_contrast, exclude_blank_edges, normalize_input_3d, threshold_input_3d,
+																									local_global_refine, current_class, ignore_input_angles, defocus_bias);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -277,13 +278,14 @@ bool Refine3DApp::DoCalculation()
 	refine_particle.apply_2D_masking			= my_current_job.arguments[44].ReturnBoolArgument(); // global
 	bool	 ctf_refinement						= my_current_job.arguments[45].ReturnBoolArgument(); // global
 	bool	 normalize_particles				= my_current_job.arguments[46].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
+	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore
 	bool	 exclude_blank_edges				= my_current_job.arguments[48].ReturnBoolArgument();
 	bool	 normalize_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
 	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
 	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
+	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore
 	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
+	bool	 defocus_bias						= my_current_job.arguments[54].ReturnBoolArgument(); // during ab-initio 3D, biases random selection of particles towards higher defocus values
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
 	refine_particle.constraints_used[5] = true;		// Constraint for Y shifts
@@ -356,6 +358,14 @@ bool Refine3DApp::DoCalculation()
 	float variance;
 	float average;
 	float average_density_max;
+	float defocus_lower_limit = 15000.0 * sqrtf(voltage_kV / 300.0);
+	float defocus_upper_limit = 25000.0 * sqrtf(voltage_kV / 300.0);
+	float defocus_range_mean2 = defocus_upper_limit + defocus_lower_limit;
+	float defocus_range_std = 0.5 * (defocus_upper_limit - defocus_lower_limit);
+//	float defocus_range_mean2 = 2.0 * 20000.0 * sqrtf(voltage_kV / 300.0);
+//	float defocus_range_std = 5000.0 * sqrtf(voltage_kV / 300.0);
+	float defocus_mean_score = 0.0;
+	float defocus_score;
 	bool skip_local_refinement = false;
 
 	bool take_random_best_parameter;
@@ -401,6 +411,21 @@ bool Refine3DApp::DoCalculation()
 
 	input_par_file.ReadFile(false, input_stack.ReturnZSize());
 	random_particle.SetSeed(int(10000.0 * fabsf(input_par_file.ReturnAverage(14, true)))%10000);
+	if (defocus_bias)
+	{
+		float *buffer_array = new float[input_par_file.number_of_lines];
+		for (current_image = 0; current_image < input_par_file.number_of_lines; current_image++)
+		{
+			buffer_array[current_image] = expf(- powf(0.25 * (fabsf(input_par_file.ReadParameter(current_image, 8)) + fabsf(input_par_file.ReadParameter(current_image, 9)) - defocus_range_mean2) / defocus_range_std, 2.0));
+//			defocus_mean_score += expf(- powf(0.25 * (fabsf(input_par_file.ReadParameter(current_image, 8)) + fabsf(input_par_file.ReadParameter(current_image, 9)) - defocus_range_mean2) / defocus_range_std, 2.0));
+//			wxPrintf("df, score = %i %g %g\n", current_image, input_par_file.ReadParameter(current_image, 8), buffer_array[current_image]);
+		}
+		std::sort(buffer_array, buffer_array + input_par_file.number_of_lines -1);
+		defocus_mean_score = buffer_array[input_par_file.number_of_lines / 2];
+//		wxPrintf("median = %g\n", defocus_mean_score);
+		//		defocus_mean_score /= current_image;
+		delete [] buffer_array;
+	}
 
 	MRCFile input_file(input_reconstruction.ToStdString(), false, true);
 	MRCFile *output_file;
@@ -730,6 +755,12 @@ bool Refine3DApp::DoCalculation()
 	{
 		input_par_file.ReadLine(input_parameters);
 		temp_float = random_particle.GetUniformRandom();
+		if (defocus_bias)
+		{
+			defocus_score = expf(- powf(0.25 * (fabsf(input_parameters[8]) + fabsf(input_parameters[9]) - defocus_range_mean2) / defocus_range_std, 2.0));
+			temp_float *= defocus_score / defocus_mean_score;
+		}
+
 		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 		image_counter++;
 		if (temp_float < 1.0 - 2.0 * percent_used)

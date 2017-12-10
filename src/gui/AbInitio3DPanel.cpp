@@ -1416,7 +1416,7 @@ void AbInitioManager::SetupReconstructionJob()
 			// overwrites above
 			//score_threshold =0.0f;
 
-			bool	 adjust_scores						= true;
+			bool	 adjust_scores						= false;
 			bool	 invert_contrast					= active_refinement_package->stack_has_white_protein;
 			bool	 crop_images						= false;
 			bool	 dump_arrays						= true;
@@ -1897,7 +1897,8 @@ void AbInitioManager::SetupRefinementJob()
 
 			bool threshold_input_3d = false;
 			bool ignore_input_parameters = false;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",
+			bool defocus_bias = true;
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1951,7 +1952,8 @@ void AbInitioManager::SetupRefinementJob()
 																											threshold_input_3d,
 																											local_global_refine,
 																											class_counter,
-																											ignore_input_parameters);
+																											ignore_input_parameters,
+																											defocus_bias);
 		}
 
 	}

@@ -2002,7 +2002,8 @@ void RefinementManager::SetupRefinementJob()
 			else normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbib",
+			bool defocus_bias = false;
+			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -2056,7 +2057,8 @@ void RefinementManager::SetupRefinementJob()
 																											threshold_input_3d,
 																											global_local_refinemnent,
 																											class_counter,
-																											ignore_input_parameters);
+																											ignore_input_parameters,
+																											defocus_bias);
 
 
 		}

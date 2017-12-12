@@ -2255,15 +2255,18 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 				for (i=0;i<spectrum->logical_x_dimension;i++)
 				{
 					chosen_bin = ReturnSpectrumBinNumber(number_of_bins,number_of_extrema_profile,number_of_extrema, address, ctf_values, ctf_values_profile);
-					if (chosen_bin <= last_bin_to_rescale)
+					if (chosen_bin >= 0)
 					{
-						spectrum->real_values[address] -= background[chosen_bin]; // This alone makes the spectrum look very nice already
-						if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[chosen_bin]-background[chosen_bin])) / rescale_peaks_to; // This is supposed to help "boost" weak Thon rings
-					}
-					else
-					{
-						spectrum->real_values[address] -= background[last_bin_to_rescale];
-						if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[last_bin_to_rescale]-background[last_bin_to_rescale])) / rescale_peaks_to;
+						if (chosen_bin <= last_bin_to_rescale)
+						{
+							spectrum->real_values[address] -= background[chosen_bin]; // This alone makes the spectrum look very nice already
+							if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[chosen_bin]-background[chosen_bin])) / rescale_peaks_to; // This is supposed to help "boost" weak Thon rings
+						}
+						else
+						{
+							spectrum->real_values[address] -= background[last_bin_to_rescale];
+							if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[last_bin_to_rescale]-background[last_bin_to_rescale])) / rescale_peaks_to;
+						}
 					}
 					//
 					address++;
@@ -2381,8 +2384,11 @@ void ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 			{
 				ctf_diff_from_current_bin = std::numeric_limits<float>::max();
 				chosen_bin = ReturnSpectrumBinNumber(number_of_bins,number_of_extrema_profile,number_of_extrema, address, ctf_values, ctf_values_profile);
-				average[chosen_bin] += spectrum->real_values[address];
-				number_of_values[chosen_bin]++;
+				if (chosen_bin >= 0)
+				{
+					average[chosen_bin] += spectrum->real_values[address];
+					number_of_values[chosen_bin]++;
+				}
 				//
 				address++;
 			}
@@ -2470,8 +2476,10 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
 	}
 	if (chosen_bin == -1)
 	{
+#ifdef DEBUG
 		MyPrintfRed("Could not find bin\n");
 		DEBUG_ABORT;
+#endif
 	}
 	else
 	{

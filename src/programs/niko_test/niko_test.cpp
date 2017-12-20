@@ -26,7 +26,113 @@ void NikoTestApp::DoInteractiveUserInput()
 
 bool NikoTestApp::DoCalculation()
 {
-	int i, j;
+	int i,j;
+	int count;
+	int padded_dimensions_x;
+	int padded_dimensions_y;
+	int pad_factor = 6;
+	float sigma;
+	float peak;
+	float sum_of_peaks;
+
+	MRCFile input_file_3d("input3d.mrc", false);
+	MRCFile input_file_2d("input2d.mrc", false);
+	MRCFile output_file("output.mrc", true);
+	Image input_volume;
+	Image input_image;
+	Image padded_image;
+	Image output_image;
+	Image temp_image;
+	Image temp_image2;
+
+	padded_dimensions_x = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnXSize(), 3);
+	padded_dimensions_y = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnYSize(), 3);
+	input_volume.Allocate(input_file_3d.ReturnXSize(), input_file_3d.ReturnYSize(), input_file_3d.ReturnZSize(), true);
+	input_image.Allocate(input_file_2d.ReturnXSize(), input_file_2d.ReturnYSize(), true);
+	padded_image.Allocate(padded_dimensions_x, padded_dimensions_y, true);
+
+	input_volume.ReadSlices(&input_file_3d, 1, input_file_3d.ReturnZSize());
+	input_image.ReadSlice(&input_file_2d, 1);
+	sigma = sqrtf(input_image.ReturnVarianceOfRealValues());
+	input_image.ClipIntoLargerRealSpace2D(&padded_image);
+	padded_image.AddGaussianNoise(10.0 * sigma);
+	padded_image.WriteSlice(&output_file, 1);
+	padded_image.ForwardFFT();
+
+	input_image.AddSlices(input_volume);
+//	input_image.QuickAndDirtyWriteSlice("junk.mrc", 1);
+	count = 1;
+	output_image.CopyFrom(&padded_image);
+	temp_image.CopyFrom(&input_image);
+	temp_image.Resize(padded_dimensions_x, padded_dimensions_y, 1);
+//	temp_image2.CopyFrom(&input_image);
+//	temp_image2.Resize(padded_dimensions_x, padded_dimensions_y, 1);
+//	temp_image2.RealSpaceIntegerShift(input_image.logical_x_dimension, input_image.logical_y_dimension, 0);
+//	temp_image.AddImage(&temp_image2);
+//	temp_image.QuickAndDirtyWriteSlice("junk.mrc", 1);
+	temp_image.ForwardFFT();
+	output_image.ConjugateMultiplyPixelWise(temp_image);
+	output_image.SwapRealSpaceQuadrants();
+	output_image.BackwardFFT();
+	peak = output_image.real_values[output_image.logical_x_dimension / 2 + (output_image.logical_x_dimension + output_image.padding_jump_value) * output_image.logical_y_dimension / 2];
+	wxPrintf("\nPeak with whole projection = %g background = %g\n\n", peak, output_image.ReturnVarianceOfRealValues(float(2 * input_image.logical_x_dimension), 0.0, 0.0, 0.0, true));
+//	wxPrintf("\nPeak with whole projection = %g\n\n", output_image.ReturnMaximumValue());
+	output_image.WriteSlice(&output_file, 2);
+	sum_of_peaks = 0.0;
+	for (i = 1; i <= 3; i += 2)
+	{
+		for (j = 1; j <= 3; j += 2)
+		{
+			output_image.CopyFrom(&padded_image);
+			temp_image.CopyFrom(&input_image);
+			temp_image.SquareMaskWithValue(float(input_image.logical_x_dimension) / 2.0, 0.0, false, i * input_image.logical_x_dimension / 4, j * input_image.logical_x_dimension / 4);
+			temp_image.Resize(padded_dimensions_x, padded_dimensions_y, 1);
+			temp_image.ForwardFFT();
+			output_image.ConjugateMultiplyPixelWise(temp_image);
+			output_image.SwapRealSpaceQuadrants();
+			output_image.BackwardFFT();
+			peak = output_image.real_values[output_image.logical_x_dimension / 2 + (output_image.logical_x_dimension + output_image.padding_jump_value) * output_image.logical_y_dimension / 2];
+//			peak = output_image.ReturnMaximumValue();
+			wxPrintf("Quarter peak = %i %i %g\n", i, j, peak);
+			sum_of_peaks += peak;
+			count++;
+			output_image.WriteSlice(&output_file, 1 + count);
+		}
+	}
+	wxPrintf("\nSum of quarter peaks = %g\n\n", sum_of_peaks);
+
+	sum_of_peaks = 0.0;
+	for (i = 0; i < 4; i ++)
+	{
+		output_image.CopyFrom(&padded_image);
+		input_image.AddSlices(input_volume, i * input_volume.logical_z_dimension / 4 + 1, (i + 1) * input_volume.logical_z_dimension / 4);
+//		input_image.QuickAndDirtyWriteSlice("junk.mrc", i + 1);
+		temp_image.CopyFrom(&input_image);
+		temp_image.Resize(padded_dimensions_x, padded_dimensions_y, 1);
+		temp_image.ForwardFFT();
+		output_image.ConjugateMultiplyPixelWise(temp_image);
+		output_image.SwapRealSpaceQuadrants();
+		output_image.BackwardFFT();
+		peak = output_image.real_values[output_image.logical_x_dimension / 2 + (output_image.logical_x_dimension + output_image.padding_jump_value) * output_image.logical_y_dimension / 2];
+//		peak = output_image.ReturnMaximumValue();
+		wxPrintf("Slice peak = %i %g\n", i + 1, peak);
+		sum_of_peaks += peak;
+		count++;
+		output_image.WriteSlice(&output_file, 1 + count);
+	}
+	wxPrintf("\nSum of slice peaks = %g\n", sum_of_peaks);
+
+/*	wxPrintf("\nDoing 1000 FFTs %i x %i\n", output_image.logical_x_dimension, output_image.logical_y_dimension);
+	for (i = 0; i < 1000; i++)
+	{
+		output_image.is_in_real_space = false;
+		output_image.SetToConstant(1.0);
+		output_image.BackwardFFT();
+	}
+	wxPrintf("\nFinished\n");
+*/
+
+/*	int i, j;
 	int slice_thickness;
 	int first_slice, last_slice, middle_slice;
 	long offset;

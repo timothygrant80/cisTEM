@@ -3176,7 +3176,7 @@ void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_valu
 	}
 }
 
-void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert)
+void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert, int wanted_center_x, int wanted_center_y, int wanted_center_z)
 {
 	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
 	MyDebugAssertTrue(object_is_centred_in_box,"Object not centered in box");
@@ -3185,12 +3185,19 @@ void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, 
 	int i,j,k;
 	float x,y,z;
 
-	const int i_min = physical_address_of_box_center_x - wanted_mask_dim/2;
-	const int i_max = physical_address_of_box_center_x + (wanted_mask_dim - wanted_mask_dim/2 - 1);
-	const int j_min = physical_address_of_box_center_y - wanted_mask_dim/2;
-	const int j_max = physical_address_of_box_center_y + (wanted_mask_dim - wanted_mask_dim/2 - 1);
-	const int k_min = physical_address_of_box_center_z - wanted_mask_dim/2;
-	const int k_max = physical_address_of_box_center_z + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+	if (wanted_center_x == 0 && wanted_center_y == 0 && wanted_center_z == 0)
+	{
+		wanted_center_x = physical_address_of_box_center_x;
+		wanted_center_y = physical_address_of_box_center_y;
+		wanted_center_z = physical_address_of_box_center_z;
+	}
+
+	const int i_min = wanted_center_x - wanted_mask_dim/2;
+	const int i_max = wanted_center_x + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+	const int j_min = wanted_center_y - wanted_mask_dim/2;
+	const int j_max = wanted_center_y + (wanted_mask_dim - wanted_mask_dim/2 - 1);
+	const int k_min = wanted_center_z - wanted_mask_dim/2;
+	const int k_max = wanted_center_z + (wanted_mask_dim - wanted_mask_dim/2 - 1);
 
 	// Let's mask
 	pixel_counter = 0;
@@ -8887,6 +8894,50 @@ float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_m
 	delete [] temp_3d;
 
 	return average_density_max;
+}
+
+void Image::AddSlices(Image &input_image, int first_slice, int last_slice, bool calculate_average)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+//	MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
+	MyDebugAssertTrue(input_image.is_in_memory, "input_image memory not allocated");
+	MyDebugAssertTrue(input_image.is_in_real_space, "input_image is in Fourier space");
+	MyDebugAssertTrue(logical_x_dimension == input_image.logical_x_dimension && logical_y_dimension == input_image.logical_y_dimension, "input_image has different x,y dimensions");
+	MyDebugAssertTrue(first_slice >= 0, "Invalid first_slice");
+	MyDebugAssertTrue(last_slice <= input_image.logical_z_dimension, "Invalid last_slice");
+	MyDebugAssertTrue(last_slice >= first_slice, "last_slice not larger or equal first_slice");
+
+	int slice;
+	int pixel_counter_2d;
+	long pixel_counter_3d;
+	float number_of_slices;
+
+	is_in_real_space = true;
+	if (first_slice == 0 && last_slice == 0)
+	{
+		first_slice = 1;
+		last_slice = input_image.logical_z_dimension;
+	}
+	pixel_counter_3d = real_memory_allocated * (first_slice - 1);
+
+	SetToConstant(0.0);
+
+	for (slice = first_slice - 1; slice < last_slice; slice++)
+	{
+		for (pixel_counter_2d = 0; pixel_counter_2d < real_memory_allocated; pixel_counter_2d++)
+		{
+			real_values[pixel_counter_2d] += input_image.real_values[pixel_counter_3d];
+			pixel_counter_3d ++;
+		}
+	}
+	if (calculate_average && last_slice != first_slice)
+	{
+		number_of_slices = last_slice - first_slice + 1.0;
+		for (pixel_counter_2d = 0; pixel_counter_2d < real_memory_allocated; pixel_counter_2d++)
+		{
+			real_values[pixel_counter_2d] /= number_of_slices;
+		}
+	}
 }
 
 

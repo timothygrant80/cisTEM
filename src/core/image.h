@@ -158,7 +158,7 @@ public:
 	void GaussianLowPassFilter(float half_width);
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
-	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false);
+	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
 	void CalculateCTFImage(CTF &ctf_of_image);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
@@ -166,6 +166,7 @@ public:
 	Peak CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
 	Peak StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+	void AddSlices(Image &sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
 	inline long ReturnVolumeInRealSpace()
 	{

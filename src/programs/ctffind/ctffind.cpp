@@ -2,9 +2,11 @@
 
 //#define threshold_spectrum
 
-const std::string ctffind_version = "4.1.9";
+const std::string ctffind_version = "4.1.10";
 /*
  * Changelog
+ * - 4.1.10
+ * -- astimatism-related bug fixes from David Mastronarde
  * - 4.1.9
  * -- FRC is between a re-normalized version of the amplitude spectrum, to emphasize phase of the Thon rings over their relative amplitudes
  * -- tweaked criteria for "fit resolution"
@@ -1315,7 +1317,14 @@ bool CtffindApp::DoCalculation()
 					bf_stepsize[2] = 0.0;
 					bf_stepsize[3] = additional_phase_shift_search_step;
 
-					bf_halfrange[0] = 2.0 * astigmatism_tolerance/pixel_size_for_fitting + 0.1;
+					if (astigmatism_tolerance > 0)
+					{
+						bf_halfrange[0] = 2.0 * astigmatism_tolerance/pixel_size_for_fitting + 0.1;
+					}
+					else
+					{
+						bf_halfrange[0] = 2.0 * defocus_search_step/pixel_size_for_fitting + 0.1;
+					}
 					bf_halfrange[1] = bf_halfrange[0];
 					bf_halfrange[2] = 0.0;
 					bf_halfrange[3] = 2.0 * additional_phase_shift_search_step + 0.01;
@@ -1420,11 +1429,23 @@ bool CtffindApp::DoCalculation()
 		{
 			cg_accuracy[0] = 100.0;
 			cg_accuracy[1] = 100.0;
-			cg_accuracy[2] = 0.5;
+			cg_accuracy[2] = 0.025;
 			cg_accuracy[3] = 0.05;
 			cg_starting_point[0] = current_ctf.GetDefocus1();
 			cg_starting_point[1] = current_ctf.GetDefocus2();
-			cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PI;
+			if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
+			{
+				// we did a search against the 2D power spectrum so we have a better estimate
+				// of the astigmatism angle in the CTF object
+				cg_starting_point[2] = current_ctf.GetAstigmatismAzimuth();
+			}
+			else
+			{
+				// all we have right now is the guessed astigmatism angle from the mirror
+				// trick before any CTF fitting was even tried
+				cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PI;
+			}
+
 			if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
 			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 			{

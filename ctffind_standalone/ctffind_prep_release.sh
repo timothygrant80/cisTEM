@@ -18,7 +18,7 @@
 version=4.1.10
 svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
 svn_rev="HEAD"
-svn_rev="563"
+svn_rev="564"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"

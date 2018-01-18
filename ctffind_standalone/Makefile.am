@@ -48,7 +48,10 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/image_file.h \
                  src/core/classification.h \
                  src/core/classification_selection.h \
-                 src/core/sqlite/sqlite3.h
+                 src/core/sqlite/sqlite3.h \
+                 src/core/basic_star_file_reader.h \
+                 src/core/rle3d.h \
+                 src/core/angular_distribution_histogram.h 
 
 bin_PROGRAMS = ctffind
 

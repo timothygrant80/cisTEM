@@ -15,7 +15,7 @@
 # This script should be run on an older node on the cluster, to ensure compatibility. I think we want glibc <= 2.18
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash
 #
-version=4.1.8
+version=4.1.10
 svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
 svn_rev="HEAD"
 svn_rev="323"

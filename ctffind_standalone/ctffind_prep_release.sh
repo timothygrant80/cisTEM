@@ -18,7 +18,7 @@
 version=4.1.10
 svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
 svn_rev="HEAD"
-svn_rev="323"
+svn_rev="563"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
@@ -72,6 +72,7 @@ rm -f config.guess config.sub depcomp install-sh missing
 cd ctffind_standalone
 
 # If necessary, patch configure.ac
+: <<'COMMENTED_OUT'
 patch <<eof
 Index: configure.ac
 ===================================================================
@@ -87,6 +88,7 @@ Index: configure.ac
 
  # make it so we can turn off gui
 eof
+COMMENTED_OUT
 
 # make sure we are using the latest Intel compiler, wx, etc
 module unload apps/lsf/prod

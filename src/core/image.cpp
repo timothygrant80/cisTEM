@@ -3273,6 +3273,7 @@ void Image::GaussianLowPassFilter(float half_width)
 	}
 }
 
+//BEGIN_FOR_STAND_ALONE_CTFFIND
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
@@ -3541,8 +3542,6 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	
 	return float(mask_volume);
 }
-
-//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 Image & Image::operator = (const Image &other_image)
 {

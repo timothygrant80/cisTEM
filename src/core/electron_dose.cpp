@@ -89,8 +89,9 @@ void ElectronDose::CalculateDoseFilterAs1DArray(Image *ref_image, float *filter_
 
 				// if the starting dose is already above the optimal dose, set to 0, otherwise calculate the filter..
 
-				if (dose_start > current_optimal_dose) filter_array[array_counter] =  0.0;
-				else filter_array[array_counter] = ReturnDoseFilter(dose_finish, current_critical_dose);
+//				if (dose_start > current_optimal_dose) filter_array[array_counter] =  0.0;
+//				else filter_array[array_counter] = ReturnDoseFilter(dose_finish, current_critical_dose);
+				filter_array[array_counter] = ReturnDoseFilter(dose_finish, current_critical_dose);
 
 			}
 

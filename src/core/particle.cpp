@@ -617,7 +617,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
 //	temp_image1->PhaseFlipPixelWise(*ctf_image);
 //	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
-	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45 / 20.0, 0.1);
+	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45, 0.1);
 	temp_image1->ClipInto(&padded_unbinned_image);
 	padded_unbinned_image.BackwardFFT();
 	padded_unbinned_image.ClipInto(projection_image);

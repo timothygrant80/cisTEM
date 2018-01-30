@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -1877,6 +1877,8 @@ class AutoRefine3DPanelParent : public JobPanel
 		RefinementPackagePickerComboPanel* RefinementPackageSelectPanel;
 		wxStaticText* m_staticText478;
 		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
+		wxCheckBox* UseMaskCheckBox;
+		VolumeAssetPickerComboPanel* MaskSelectPanel;
 		wxStaticLine* m_staticline54;
 		wxStaticText* InitialResLimitStaticText;
 		NumericTextCtrl* HighResolutionLimitTextCtrl;
@@ -1911,10 +1913,22 @@ class AutoRefine3DPanelParent : public JobPanel
 		wxRadioButton* ApplyBlurringNoRadioButton;
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* AutoCenterStaticText;
+		wxRadioButton* AutoCenterYesRadioButton;
+		wxRadioButton* AutoCenterNoRadioButton;
 		wxStaticText* m_staticText405;
-		wxStaticText* m_staticText3241;
-		wxRadioButton* AutoMaskYesRadio;
-		wxRadioButton* AutoMaskNoRadio;
+		wxStaticText* AutoMaskStaticText;
+		wxRadioButton* AutoMaskYesRadioButton;
+		wxRadioButton* AutoMaskNoRadioButton;
+		wxStaticText* MaskEdgeStaticText;
+		NumericTextCtrl* MaskEdgeTextCtrl;
+		wxStaticText* MaskWeightStaticText;
+		NumericTextCtrl* MaskWeightTextCtrl;
+		wxStaticText* LowPassYesNoStaticText;
+		wxRadioButton* LowPassMaskYesRadio;
+		wxRadioButton* LowPassMaskNoRadio;
+		wxStaticText* FilterResolutionStaticText;
+		NumericTextCtrl* MaskFilterResolutionText;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -1936,8 +1950,10 @@ class AutoRefine3DPanelParent : public JobPanel
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

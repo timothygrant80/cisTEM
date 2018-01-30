@@ -6,6 +6,8 @@ extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern MyMainFrame *main_frame;
 
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
+
 AutoRefine3DPanel::AutoRefine3DPanel( wxWindow* parent )
 :
 AutoRefine3DPanelParent( parent )
@@ -56,6 +58,7 @@ AutoRefine3DPanelParent( parent )
 
 	RefinementPackageSelectPanel->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AutoRefine3DPanel::OnRefinementPackageComboBox, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
@@ -85,6 +88,8 @@ void AutoRefine3DPanel::Reset()
 	ShowRefinementResultsPanel->Show(false);
 	ShowRefinementResultsPanel->Clear();
 	InfoPanel->Show(true);
+
+	UseMaskCheckBox->SetValue(false);
 
 	ExpertToggleButton->SetValue(false);
 	ExpertPanel->Show(false);
@@ -381,7 +386,17 @@ void AutoRefine3DPanel::SetDefaults()
 		ApplyBlurringYesRadioButton->SetValue(false);
 		SmoothingFactorTextCtrl->SetValue("1.00");
 
-		AutoMaskYesRadio->SetValue(true);
+		AutoCenterYesRadioButton->SetValue(true); // Shouldn't this depend on whether user is supplying a mask file?
+		AutoCenterNoRadioButton->SetValue(false);
+
+		AutoMaskYesRadioButton->SetValue(true); // Shouldn't this depend on whether user is supplying a mask file?
+		AutoMaskNoRadioButton->SetValue(false);
+
+		MaskEdgeTextCtrl->ChangeValueFloat(10.00);
+		MaskWeightTextCtrl->ChangeValueFloat(0.00);
+		LowPassMaskYesRadio->SetValue(false);
+		LowPassMaskNoRadio->SetValue(true);
+		MaskFilterResolutionText->ChangeValueFloat(20.00);
 
 		ExpertPanel->Thaw();
 	}
@@ -403,8 +418,8 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 //		LocalRefinementRadio->Enable(false);
 //		GlobalRefinementRadio->Enable(false);
 //		NumberRoundsSpinCtrl->Enable(false);
-//		UseMaskCheckBox->Enable(false);
-//		MaskSelectPanel->Enable(false);
+		UseMaskCheckBox->Enable(false);
+		MaskSelectPanel->Enable(false);
 
 
 		if (ExpertPanel->IsShown() == true)
@@ -463,16 +478,13 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			ReconstructionRunProfileComboBox->Enable(true);
 			InitialResLimitStaticText->Enable(true);
 			HighResolutionLimitTextCtrl->Enable(true);
-
+			UseMaskCheckBox->Enable(true);
 			ExpertToggleButton->Enable(true);
 
 			if (RefinementPackageSelectPanel->GetCount() > 0)
 			{
 				RefinementPackageSelectPanel->Enable(true);
 //				InputParametersComboBox->Enable(true);
-
-				/*
-				UseMaskCheckBox->Enable(true);
 
 				if (UseMaskCheckBox->GetValue() == true)
 				{
@@ -483,7 +495,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					MaskSelectPanel->Enable(false);
 					MaskSelectPanel->AssetComboBox->ChangeValue("");
 				}
-				*/
+
 
 				if (PleaseCreateRefinementPackageText->IsShown())
 				{
@@ -494,9 +506,9 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			}
 			else
 			{
-//				UseMaskCheckBox->Enable(false);
-	//			MaskSelectPanel->Enable(false);
-	//			MaskSelectPanel->AssetComboBox->ChangeValue("");
+				UseMaskCheckBox->Enable(false);
+				MaskSelectPanel->Enable(false);
+				MaskSelectPanel->AssetComboBox->ChangeValue("");
 				RefinementPackageSelectPanel->ChangeValue("");
 				RefinementPackageSelectPanel->Enable(false);
 //				InputParametersComboBox->ChangeValue("");
@@ -522,6 +534,67 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					SmoothingFactorTextCtrl->Enable(false);
 					SmoothingFactorStaticText->Enable(false);
 				}
+				if (UseMaskCheckBox->GetValue() == false)
+				{
+					MaskEdgeStaticText->Enable(false);
+					MaskEdgeTextCtrl->Enable(false);
+					MaskWeightStaticText->Enable(false);
+					MaskWeightTextCtrl->Enable(false);
+					LowPassYesNoStaticText->Enable(false);
+					LowPassMaskYesRadio->Enable(false);
+					LowPassMaskNoRadio->Enable(false);
+					FilterResolutionStaticText->Enable(false);
+					MaskFilterResolutionText->Enable(false);
+
+					AutoCenterYesRadioButton->Enable(true);
+					AutoCenterNoRadioButton->Enable(false);
+					AutoCenterStaticText->Enable(true);
+
+					AutoMaskStaticText->Enable(true);
+					AutoMaskYesRadioButton->Enable(true);
+					AutoMaskNoRadioButton->Enable(true);
+
+					if (AutoMaskYesRadioButton->GetValue() != auto_mask_value)
+					{
+						if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
+						else AutoMaskNoRadioButton->SetValue(true);
+					}
+				}
+				else
+				{
+
+					AutoCenterYesRadioButton->Enable(false);
+					AutoCenterNoRadioButton->Enable(true);
+					AutoCenterStaticText->Enable(false);
+
+					AutoMaskStaticText->Enable(false);
+					AutoMaskYesRadioButton->Enable(false);
+					AutoMaskNoRadioButton->Enable(false);
+
+					if (AutoMaskYesRadioButton->GetValue() != false)
+					{
+						AutoMaskNoRadioButton->SetValue(true);
+					}
+
+					MaskEdgeStaticText->Enable(true);
+					MaskEdgeTextCtrl->Enable(true);
+					MaskWeightStaticText->Enable(true);
+					MaskWeightTextCtrl->Enable(true);
+					LowPassYesNoStaticText->Enable(true);
+					LowPassMaskYesRadio->Enable(true);
+					LowPassMaskNoRadio->Enable(true);
+
+					if (LowPassMaskYesRadio->GetValue() == true)
+					{
+						FilterResolutionStaticText->Enable(true);
+						MaskFilterResolutionText->Enable(true);
+					}
+					else
+					{
+						FilterResolutionStaticText->Enable(false);
+						MaskFilterResolutionText->Enable(false);
+					}
+				}
 			}
 
 			bool estimation_button_status = false;
@@ -532,7 +605,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				{
 					if (RefinementPackageSelectPanel->GetSelection() != wxNOT_FOUND && ReferenceSelectPanel->GetSelection() != wxNOT_FOUND)
 					{
-						//if (UseMaskCheckBox->GetValue() == false || MaskSelectPanel->AssetComboBox->GetSelection() != wxNOT_FOUND)
+						if (UseMaskCheckBox->GetValue() == false || MaskSelectPanel->AssetComboBox->GetSelection() != wxNOT_FOUND)
 						estimation_button_status = true;
 					}
 
@@ -556,6 +629,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			if (volumes_are_dirty == true)
 			{
 				ReferenceSelectPanel->FillComboBox();
+				MaskSelectPanel->FillComboBox();
 				volumes_are_dirty = false;
 			}
 		}
@@ -566,6 +640,8 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			ExpertToggleButton->Enable(false);
 			InitialResLimitStaticText->Enable(false);
 			HighResolutionLimitTextCtrl->Enable(false);
+			UseMaskCheckBox->Enable(false);
+			MaskSelectPanel->Enable(false);
 
 			if (ExpertPanel->IsShown() == true)
 			{
@@ -579,6 +655,33 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 	}
 
+}
+
+void AutoRefine3DPanel::OnAutoMaskButton( wxCommandEvent& event )
+{
+	auto_mask_value = AutoMaskYesRadioButton->GetValue();
+}
+
+void AutoRefine3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
+{
+	if (UseMaskCheckBox->GetValue() == true)
+	{
+		AutoCenterYesRadioButton->SetValue(false); // should we even disable auto centering?
+		AutoCenterNoRadioButton->SetValue(true);
+		AutoMaskYesRadioButton->SetValue(false);
+		AutoMaskNoRadioButton->SetValue(true);
+		auto_mask_value = false;
+		MaskSelectPanel->FillComboBox();
+
+	}
+	else
+	{
+		AutoMaskYesRadioButton->SetValue(true);
+		AutoMaskNoRadioButton->SetValue(false);
+		auto_mask_value = true;
+		AutoCenterYesRadioButton->SetValue(true);
+		AutoCenterNoRadioButton->SetValue(false);
+	}
 }
 
 void AutoRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
@@ -909,6 +1012,19 @@ void AutoRefinementManager::BeginRefinementCycle()
 	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
 	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();
 	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
+	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
+	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
+
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
+	else active_mask_asset_id = -1;
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
+	else active_mask_filename = "";
+
+	active_should_low_pass_filter_mask = my_parent->LowPassMaskYesRadio->GetValue();
+	active_mask_filter_resolution = my_parent->MaskFilterResolutionText->ReturnValue();
+	active_mask_edge = my_parent->MaskEdgeTextCtrl->ReturnValue();
+	active_mask_weight = my_parent->MaskWeightTextCtrl->ReturnValue();
+
 
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
@@ -928,8 +1044,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	current_reference_asset_ids.Clear();
 	current_reference_asset_ids.Add(-1, number_of_classes);
-
-	active_should_auto_mask = my_parent->AutoMaskYesRadio->GetValue();
 
 	// Clear scratch..
 
@@ -1041,7 +1155,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	//my_parent->Thaw();
 
-	if (active_should_auto_mask == true)
+	if (active_should_auto_mask == true || active_should_mask == true)
 	{
 		DoMasking();
 	}
@@ -1094,7 +1208,7 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].defocus_search_step = 0;
 		output_refinement->class_refinement_results[class_counter].should_auto_mask = active_should_auto_mask;
 		output_refinement->class_refinement_results[class_counter].should_refine_input_params = true;
-		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = false;
+		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = active_should_mask;
 		output_refinement->class_refinement_results[class_counter].mask_asset_id = -1;
 		output_refinement->class_refinement_results[class_counter].mask_edge_width = 0.0f;
 		output_refinement->class_refinement_results[class_counter].outside_mask_weight = 0.0f;
@@ -1420,7 +1534,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 			bool	 normalize_particles				= true;
 			bool	 exclude_blank_edges				= false;
 			bool	 split_even_odd						= false;
-			bool     centre_mass                        = true;
+			bool     centre_mass                        = my_parent->AutoCenterYesRadioButton->GetValue();
 
 			bool threshold_input_3d = true;
 
@@ -2234,11 +2348,13 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 void AutoRefinementManager::DoMasking()
 {
-	MyDebugAssertTrue(active_should_auto_mask == true, "DoMasking called, when masking not ticked!");
+	MyDebugAssertTrue(active_should_auto_mask || active_should_mask, "DoMasking called, when masking not ticked!");
+	MyDebugAssertFalse(active_should_auto_mask && active_should_mask, "Masking should either be from user file, or auto, not both");
 
 	wxArrayString masked_filenames;
 	wxFileName current_ref_filename;
 	wxString current_masked_filename;
+	wxString filename_of_mask = active_mask_filename;
 
 	for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
 	{
@@ -2249,19 +2365,54 @@ void AutoRefinementManager::DoMasking()
 		masked_filenames.Add(current_masked_filename);
 	}
 
-	my_parent->active_mask_thread_id = my_parent->next_thread_id;
-	my_parent->next_thread_id++;
-	AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id );
-
-	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+	if (active_should_mask)
 	{
-		my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-		delete mask_thread;
+		float wanted_cosine_edge_width = active_mask_edge;
+		float wanted_weight_outside_mask = active_mask_weight;
+
+		float wanted_low_pass_filter_radius;
+
+		if (active_should_low_pass_filter_mask == true)
+		{
+			wanted_low_pass_filter_radius = active_mask_filter_resolution;
+		}
+		else
+		{
+			wanted_low_pass_filter_radius = 0.0;
+		}
+
+		my_parent->active_mask_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+
+		AutoRefine3DMaskerThread *mask_thread = new AutoRefine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
+
+		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+			delete mask_thread;
+		}
+		else
+		{
+			current_reference_filenames = masked_filenames;
+			return;
+		}
 	}
 	else
 	{
-		current_reference_filenames = masked_filenames;
-		return; // just return, we will startup again whent he mask thread finishes.
+		my_parent->active_mask_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id );
+
+		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+			delete mask_thread;
+		}
+		else
+		{
+			current_reference_filenames = masked_filenames;
+			return; // just return, we will startup again whent he mask thread finishes.
+		}
 	}
 }
 
@@ -2271,7 +2422,6 @@ void AutoRefinementManager::CycleRefinement()
 
 	int class_counter;
 	long particle_counter;
-
 		// use highest resoluton..
 	float best_res = FLT_MAX;
 	float best_p143_res = FLT_MAX;
@@ -2429,7 +2579,7 @@ void AutoRefinementManager::CycleRefinement()
 		output_refinement = new Refinement;
 		output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
 
-		if (active_should_auto_mask == true)
+		if (active_should_mask == true || active_should_auto_mask == true)
 		{
 			DoMasking();
 		}
@@ -2450,7 +2600,6 @@ void AutoRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 
 void AutoRefinementManager::OnMaskerThreadComplete()
 {
-	//my_parent->WriteInfoText("Masking Finished");
 	SetupRefinementJob();
 	RunRefinementJob();
 }
@@ -2480,5 +2629,44 @@ void AutoRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event
 
 }
 
+wxThread::ExitCode AutoRefine3DMaskerThread::Entry()
+{
+	//  Read in the files and mask, mask, then write out
 
+	Image input_image;
+	Image mask_image;
+
+	ImageFile input_file;
+	MRCFile output_file;
+
+	// read the mask
+	input_file.OpenFile(mask_filename.ToStdString(), false);
+	mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+	input_file.CloseFile();
+
+
+	// loop through and mask
+
+	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
+	{
+		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
+		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+		input_file.CloseFile();
+
+		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 10.0);
+
+		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
+		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
+		output_file.CloseFile();
+	}
+
+
+	// send finished event..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+	return (wxThread::ExitCode)0;     // success
+}
 

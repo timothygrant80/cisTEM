@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Jul 11 2016)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -5948,7 +5948,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, 20 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, -21 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 	
 	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7268,6 +7268,14 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	fgSizer15->Add( ReferenceSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
+	UseMaskCheckBox = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Use a Mask? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer15->Add( UseMaskCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	MaskSelectPanel = new VolumeAssetPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	MaskSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( MaskSelectPanel, 1, wxEXPAND | wxALL, 5 );
+	
 	
 	bSizer200->Add( fgSizer15, 0, wxEXPAND, 5 );
 	
@@ -7407,7 +7415,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, 20 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, 16 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 	
 	SearchRangeXStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Range in X (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7426,7 +7434,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	m_staticText329 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText329->Wrap( -1 );
-	m_staticText329->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	m_staticText329->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText329, 0, wxALL, 5 );
 	
@@ -7472,30 +7480,83 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	AutoCenterStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocenter reconstruction?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoCenterStaticText->Wrap( -1 );
+	fgSizer1->Add( AutoCenterStaticText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer26612;
+	bSizer26612 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoCenterYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26612->Add( AutoCenterYesRadioButton, 0, wxALL, 5 );
+	
+	AutoCenterNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26612->Add( AutoCenterNoRadioButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26612, 1, wxEXPAND, 5 );
+	
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText405->Wrap( -1 );
-	m_staticText405->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	m_staticText405->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText405, 0, wxALL, 5 );
 	
 	
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	m_staticText3241 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Auto-Masking?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText3241->Wrap( -1 );
-	fgSizer1->Add( m_staticText3241, 0, wxALL, 5 );
+	AutoMaskStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Auto-Masking?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoMaskStaticText->Wrap( -1 );
+	fgSizer1->Add( AutoMaskStaticText, 0, wxALL, 5 );
 	
 	wxBoxSizer* bSizer2641;
 	bSizer2641 = new wxBoxSizer( wxHORIZONTAL );
 	
-	AutoMaskYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
-	bSizer2641->Add( AutoMaskYesRadio, 0, wxALL, 5 );
+	AutoMaskYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2641->Add( AutoMaskYesRadioButton, 0, wxALL, 5 );
 	
-	AutoMaskNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer2641->Add( AutoMaskNoRadio, 0, wxALL, 5 );
+	AutoMaskNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2641->Add( AutoMaskNoRadioButton, 0, wxALL, 5 );
 	
 	
 	fgSizer1->Add( bSizer2641, 1, wxEXPAND, 5 );
+	
+	MaskEdgeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Edge Width (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskEdgeStaticText->Wrap( -1 );
+	fgSizer1->Add( MaskEdgeStaticText, 0, wxALL, 5 );
+	
+	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL, 5 );
+	
+	MaskWeightStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outside Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskWeightStaticText->Wrap( -1 );
+	fgSizer1->Add( MaskWeightStaticText, 0, wxALL, 5 );
+	
+	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL, 5 );
+	
+	LowPassYesNoStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Pass Filter Outside Mask?"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowPassYesNoStaticText->Wrap( -1 );
+	fgSizer1->Add( LowPassYesNoStaticText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer26611;
+	bSizer26611 = new wxBoxSizer( wxHORIZONTAL );
+	
+	LowPassMaskYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26611->Add( LowPassMaskYesRadio, 0, wxALL, 5 );
+	
+	LowPassMaskNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26611->Add( LowPassMaskNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26611, 1, wxEXPAND, 5 );
+	
+	FilterResolutionStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tFilter Resolution (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	FilterResolutionStaticText->Wrap( -1 );
+	fgSizer1->Add( FilterResolutionStaticText, 0, wxALL, 5 );
+	
+	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -7676,8 +7737,11 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AutoRefine3DPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnUseMaskCheckBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::TerminateButtonClick ), NULL, this );
@@ -7688,8 +7752,11 @@ AutoRefine3DPanelParent::~AutoRefine3DPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AutoRefine3DPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnUseMaskCheckBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::TerminateButtonClick ), NULL, this );

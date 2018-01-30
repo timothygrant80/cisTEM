@@ -15,7 +15,15 @@ class AutoRefinementManager
 public:
 	AutoRefine3DPanel *my_parent;
 
+	bool active_should_mask;
 	bool active_should_auto_mask;
+	wxString active_mask_filename;
+	bool active_should_low_pass_filter_mask;
+	float active_mask_filter_resolution;
+	float active_mask_edge;
+	float active_mask_weight;
+	long active_mask_asset_id;
+
 	float active_low_resolution_limit;
 	float active_mask_radius;
 	float active_global_mask_radius;
@@ -122,6 +130,9 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		void StartRefinementClick( wxCommandEvent& event );
 		void ResetAllDefaultsClick( wxCommandEvent& event );
 
+		void OnUseMaskCheckBox ( wxCommandEvent& event );
+		void OnAutoMaskButton( wxCommandEvent& event );
+
 		void OnJobSocketEvent(wxSocketEvent& event);
 
 		int length_of_process_number;
@@ -150,6 +161,8 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
+		bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
+
 		bool running_job;
 
 		AutoRefine3DPanel( wxWindow* parent );
@@ -172,6 +185,38 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
+};
+
+class AutoRefine3DMaskerThread : public wxThread
+{
+	public:
+	AutoRefine3DMaskerThread(AutoRefine3DPanel *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
+	{
+		main_thread_pointer = parent;
+		input_files = wanted_input_files;
+		output_files = wanted_output_files;
+		mask_filename = wanted_mask_filename;
+		cosine_edge_width = wanted_cosine_edge_width;
+		weight_outside_mask = wanted_weight_outside_mask;
+		low_pass_filter_radius = wanted_low_pass_filter_radius;
+		pixel_size = wanted_pixel_size;
+		thread_id = wanted_thread_id;
+	}
+
+	protected:
+
+	AutoRefine3DPanel *main_thread_pointer;
+	wxArrayString input_files;
+	wxArrayString output_files;
+	wxString mask_filename;
+	int thread_id;
+
+	float cosine_edge_width;
+	float weight_outside_mask;
+	float low_pass_filter_radius;
+	float pixel_size;
+
+    virtual ExitCode Entry();
 };
 
 #endif

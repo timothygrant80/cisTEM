@@ -2830,7 +2830,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 			temp_asset.z_size = new_image->logical_z_dimension;
 			temp_asset.asset_id = volume_asset_panel->current_asset_number;
 			volume_asset_ids.Add(temp_asset.asset_id);
-			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, my_event.GetInt());
+			temp_asset.asset_name = wxString::Format("Volume From Startup #%li - Class #%i", current_startup_id, class_counter + 1);
 
 			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
 			temp_asset.filename = current_output_filename;

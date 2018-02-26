@@ -992,8 +992,17 @@ bool Refine3DApp::DoCalculation()
 					global_euler_search.Run(search_particle, search_reference_3d.density_map, input_parameters + 1, projection_cache);
 				}
 				else
+				if (search_particle.parameter_map[3])
 				{
-					best_parameters_to_keep = 0;
+					global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, search_reference_3d.pixel_size / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+					if (global_euler_search.best_parameters_to_keep != best_parameters_to_keep) best_parameters_to_keep = global_euler_search.best_parameters_to_keep;
+					global_euler_search.Run(search_particle, search_reference_3d.density_map, input_parameters + 1, projection_cache);
+				}
+				else
+				{
+					global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, search_reference_3d.pixel_size / high_resolution_limit_search, search_particle.parameter_map, best_parameters_to_keep);
+					global_euler_search.psi_start = 360.0 - input_parameters[3];
+					best_parameters_to_keep = 1;
 				}
 
 				// Do local refinement of the top hits to determine the best match

@@ -1211,6 +1211,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		sum_image->ForwardFFT();
 		if (uncrop)
 		{
+//			sum_image->CosineMask(0.5 - pixel_size / 10.0, pixel_size / 5.0);
 			sum_image->CosineMask(0.45, 0.1);
 			sum_image->ClipInto(&cropped_input_image);
 			cropped_input_image.BackwardFFT();

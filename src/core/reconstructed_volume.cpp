@@ -192,6 +192,8 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 	density_map.SetMinimumValue(-0.3 * average_density);
 	density_map.ForwardFFT(); */
 	density_map.SwapRealSpaceQuadrants();
+// The following is important to avoid interpolation artifacts near the Fourier space origin
+	density_map.complex_values[0] = 0.0f + I * 0.0f;
 }
 
 void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection,

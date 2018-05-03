@@ -43,6 +43,7 @@ bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_f
 	}
 
 	filename = wanted_filename;
+	pixel_size = 1.0; //TODO: work out out to grab the pixel size from SerialEM/IMOD-style TIFF files
 	return return_value;
 }
 
@@ -145,7 +146,8 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
 				{
 					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
-					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
+					//wxPrintf("%i %i %i\n",int(number_of_bytes_placed_in_buffer),int(rows_per_strip), int(rows_per_strip * ReturnXSize()));
+					if (strip_counter < TIFFNumberOfStrips(tif) - 1) MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
 
 					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
 					for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)
@@ -179,6 +181,33 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 				break;
 			default:
 				MyPrintfRed("Error. Unsupported uint bit depth: %i. Filename = %s, Directory # %i\n",bits_per_sample,filename.GetFullPath(),directory_counter);
+				break;
+			}
+			break;
+		case SAMPLEFORMAT_INT:
+			switch (bits_per_sample)
+			{
+			case 16:
+			{
+				int16 * buf = new int16[TIFFStripSize(tif)/2];
+
+				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
+				{
+					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
+					MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() * 2,"Unexpected number of bytes in uint16 buffer");
+
+					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
+					for (long counter = 0; counter < number_of_bytes_placed_in_buffer/2; counter ++)
+					{
+						output_array[output_counter] = buf[counter];
+						output_counter++;
+					}
+				}
+				delete [] buf;
+			}
+				break;
+			default:
+				MyPrintfRed("Error. Unsupported int bit depth: %i. Filename = %s, Directory # %i\n",bits_per_sample,filename.GetFullPath(),directory_counter);
 				break;
 			}
 			break;

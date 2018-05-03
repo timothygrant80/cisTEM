@@ -4,6 +4,7 @@ private:
 	int	logical_dimension_x;
 	int logical_dimension_y;
 	int number_of_images;
+	float pixel_size;
 
 	bool ReadLogicalDimensionsFromDisk();
 
@@ -16,6 +17,7 @@ public:
 	inline int ReturnYSize() {return logical_dimension_y;};
 	inline int ReturnZSize() {return number_of_images;};
 	inline int ReturnNumberOfSlices() {return number_of_images;};
+	inline float ReturnPixelSize() {return pixel_size;};
 
 	inline bool IsOpen() {if (tif) {return true;} else { return false;}};
 

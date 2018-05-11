@@ -131,11 +131,11 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 	// calculate and seek to the start byte..
 
-	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
-	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
-	long image_offset = (start_slice - 1) * bytes_per_slice;
+	long records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long((end_slice - start_slice) + 1);
+	long bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
+	long image_offset = long(start_slice - 1) * bytes_per_slice;
 	long current_position = my_file.tellg();
-	long seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
+	long seek_position = 1024 + image_offset + long(my_header.SymmetryDataBytes());
 
 	if (current_position != seek_position) my_file.seekg(seek_position);
 
@@ -210,11 +210,11 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 
 	// calculate and seek to the start byte..
 
-	long records_to_read = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * ((end_slice - start_slice) + 1);
-	long bytes_per_slice = my_header.ReturnDimensionX() * my_header.ReturnDimensionY() * my_header.BytesPerPixel();
-	long image_offset = (start_slice - 1) * bytes_per_slice;
+	long records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long((end_slice - start_slice) + 1);
+	long bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
+	long image_offset = long(start_slice - 1) * bytes_per_slice;
 	long current_position = my_file.tellg();
-	long seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
+	long seek_position = 1024 + image_offset + long(my_header.SymmetryDataBytes());
 
 	if (current_position != seek_position) my_file.seekg(seek_position);
 

@@ -177,7 +177,7 @@ public:
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x < logical_x_dimension && wanted_y >= 0 && wanted_y < logical_y_dimension && wanted_z >= 0 && wanted_z < logical_z_dimension, "Requested pixel (%i, %i, %i) is outside range (%i-%i, %i-%i, %i-%i)", wanted_x, wanted_y, wanted_z,0,logical_x_dimension-1,0,logical_y_dimension-1,0,logical_z_dimension-1);
 
-		return (((logical_x_dimension + padding_jump_value) * logical_y_dimension) * wanted_z) + ((logical_x_dimension + padding_jump_value) * wanted_y) + wanted_x;
+		return ((long(logical_x_dimension + padding_jump_value) * long(logical_y_dimension)) * long(wanted_z)) + (long(logical_x_dimension + padding_jump_value) * long(wanted_y)) + long(wanted_x);
 
 	};
 

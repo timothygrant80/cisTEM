@@ -108,6 +108,7 @@ void Particle::Init()
 	mask_radius_2d = 0.0;
 	apply_2D_masking = false;
 	no_ctf_weighting = false;
+	complex_ctf = false;
 }
 
 void Particle::AllocateImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension)
@@ -241,17 +242,18 @@ void Particle::SetDefocus(float defocus_1, float defocus_2, float astigmatism_an
 	ctf_parameters.SetAdditionalPhaseShift(phase_shift);
 }
 
-void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift)
+void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, bool calculate_complex_ctf)
 {
 	MyDebugAssertTrue(ctf_image->is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(! ctf_image->is_in_real_space, "CTF image not in Fourier space");
 
 	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift);
+	complex_ctf = calculate_complex_ctf;
 	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false || ! ctf_image_calculated)
 	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 	{
 		current_ctf = ctf_parameters;
-		ctf_image->CalculateCTFImage(current_ctf);
+		ctf_image->CalculateCTFImage(current_ctf, complex_ctf);
 	}
 	ctf_image_calculated = true;
 }

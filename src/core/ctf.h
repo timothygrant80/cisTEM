@@ -71,6 +71,7 @@ public:
 	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
 	//
+	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);
 	float PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
 	float DefocusGivenAzimuth(float azimuth);

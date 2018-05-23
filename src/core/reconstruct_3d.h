@@ -14,6 +14,7 @@ public:
 	SymmetryMatrix				symmetry_matrices;
 	bool						edge_terms_were_added;
 	bool						center_mass;
+	int							correct_ewald_sphere;
 
 	Image						image_reconstruction;
 	float						*ctf_reconstruction;
@@ -27,16 +28,16 @@ public:
 
 	int							images_processed;
 
-	Reconstruct3D(float wanted_pixel_size = 0.0, float wanted_average_occupancy = 0.0, float wanted_average_score = 0.0, float wanted_score_weights_conversion = 0.0);
-	Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry);
-	Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry);	// constructor with size
+	Reconstruct3D(float wanted_pixel_size = 0.0, float wanted_average_occupancy = 0.0, float wanted_average_score = 0.0, float wanted_score_weights_conversion = 0.0, int wanted_correct_ewald_sphere = 0);
+	Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere = 0);
+	Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere = 0);	// constructor with size
 	~Reconstruct3D();							// destructor
 
 	void FreeMemory();
-	void Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion);
+	void Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, int wanted_correct_ewald_sphere = 0);
 	void InsertSliceWithCTF(Particle &particle_to_insert, float symmetry_weight = 1.0);
 	void InsertSliceNoCTF(Particle &particle_to_insert, float symmetry_weight = 1.0);
-	void AddByLinearInterpolation(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, std::complex<float> &wanted_value, std::complex<float> &ctf_value, float wanted_weight);
+	void AddByLinearInterpolation(float &wanted_x_coordinate, float &wanted_y_coordinate, float &wanted_z_coordinate, std::complex<float> &wanted_value, std::complex<float> &ctf_value, float wanted_weight, bool complex_ctf = false);
 	void CompleteEdges();
 	float Correct3DCTF(Image &buffer3d);
 	void DumpArrays(wxString filename, bool insert_even);

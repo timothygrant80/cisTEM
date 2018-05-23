@@ -159,7 +159,7 @@ public:
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
-	void CalculateCTFImage(CTF &ctf_of_image);
+	void CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf = false);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
 	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width);

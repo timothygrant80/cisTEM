@@ -174,6 +174,12 @@ bool Project3DApp::DoCalculation()
 
 		input_3d.density_map.ExtractSlice(projection_image, my_parameters);
 
+/*		projection_image.BackwardFFT();
+		variance = projection_image.ReturnVarianceOfRealValues();
+		projection_image.AddGaussianNoise(sqrtf(variance / 0.05));
+		projection_image.ForwardFFT();
+		projection_image.ApplyBFactor(2.0);
+*/
 		if (apply_CTF) projection_image.ApplyCTF(my_ctf);
 		if (apply_shifts) projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
 		projection_image.SwapRealSpaceQuadrants();

@@ -1,6 +1,6 @@
 #include "core_headers.h"
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, int wanted_correct_ewald_sphere)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -16,6 +16,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	average_occupancy = wanted_average_occupancy;
 	average_score = wanted_average_score;
 	score_weights_conversion = wanted_score_weights_conversion;
+	correct_ewald_sphere = wanted_correct_ewald_sphere;
 
 	ctf_reconstruction = NULL;
 
@@ -24,7 +25,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	center_mass = false;
 }
 
-Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere)
 {
 	logical_x_dimension = 0;
 	logical_y_dimension = 0;
@@ -40,6 +41,7 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	average_occupancy = wanted_average_occupancy;
 	average_score = wanted_average_score;
 	score_weights_conversion = wanted_score_weights_conversion;
+	correct_ewald_sphere = wanted_correct_ewald_sphere;
 
 	ctf_reconstruction = NULL;
 
@@ -48,10 +50,10 @@ Reconstruct3D::Reconstruct3D(float wanted_pixel_size, float wanted_average_occup
 	center_mass = false;
 }
 
-Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry)
+Reconstruct3D::Reconstruct3D(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, wxString wanted_symmetry, int wanted_correct_ewald_sphere)
 {
 	ctf_reconstruction = NULL;
-	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_weights_conversion);
+	Init(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, wanted_pixel_size, wanted_average_occupancy, wanted_average_score, wanted_score_weights_conversion, wanted_correct_ewald_sphere);
 
 	symmetry_matrices.Init(wanted_symmetry);
 }
@@ -75,7 +77,7 @@ void Reconstruct3D::FreeMemory()
 	image_reconstruction.Deallocate();
 }
 
-void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion)
+void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, float wanted_average_occupancy, float wanted_average_score, float wanted_score_weights_conversion, int wanted_correct_ewald_sphere)
 {
 	logical_x_dimension = wanted_logical_x_dimension;
 	logical_y_dimension = wanted_logical_y_dimension;
@@ -91,6 +93,7 @@ void Reconstruct3D::Init(int wanted_logical_x_dimension, int wanted_logical_y_di
 	average_occupancy = wanted_average_occupancy;
 	average_score = wanted_average_score;
 	score_weights_conversion = wanted_score_weights_conversion;
+	correct_ewald_sphere = wanted_correct_ewald_sphere;
 
 	image_reconstruction.Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, wanted_logical_z_dimension, false);
 
@@ -146,17 +149,24 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 		float y_coordinate_2d;
 		float z_coordinate_2d = 0.0;
 
+		float x_coordinate_2d_ewald;
+		float y_coordinate_2d_ewald;
+		float z_coordinate_2d_ewald;
+
 		float x_coordinate_3d;
 		float y_coordinate_3d;
 		float z_coordinate_3d;
 
 		float y_coord_sq;
 
+		std::complex<float> conjugate;
+
 		RotationMatrix temp_matrix;
 
 		float frequency_squared;
 		float azimuth;
 		float weight;
+		float theta;
 //		float average_score_1 = std::max(1.0f, average_score);
 		float score_weights_conversion4 = score_weights_conversion / powf(pixel_size,2) * 0.25;
 		float weight_conversion = (particle_to_insert.particle_score - average_score) * score_weights_conversion4;
@@ -186,9 +196,41 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 				weight = particle_weight * expf(weight_conversion * frequency_squared);
 //				if (weight > 0.0)
 //				{
-					particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 					pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+					if (correct_ewald_sphere != 0)
+					{
+						// Frealign
+/*						GPIX=SQRT(REAL(I**2+J**2))             ! length of resol.vector g in pixel
+						THETAH=GPIX*THET/2                     ! THET=(WL/(PSIZE*NSAM))/AMAGP
+						X=I*COS(THETAH)                        ! THETAH=scattering angle/2.
+						Y=J*COS(THETAH)
+						Z=GPIX*SIN(THETAH)
+						XYZ(1)=DM(1)*X+DM(4)*Y+DM(7)*Z
+						XYZ(2)=DM(2)*X+DM(5)*Y+DM(8)*Z
+						XYZ(3)=DM(3)*X+DM(6)*Y+DM(9)*Z
+						XYZ(4)=DM(1)*X+DM(4)*Y-DM(7)*Z
+						XYZ(5)=DM(2)*X+DM(5)*Y-DM(8)*Z
+						XYZ(6)=DM(3)*X+DM(6)*Y-DM(9)*Z
+*/
+//						Wavelength is already divided by pixel size, see ctf.cpp
+						theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength();
+						// Right beam
+						x_coordinate_2d_ewald = x_coordinate_2d * cosf(theta);
+						y_coordinate_2d_ewald = y_coordinate_2d * cosf(theta);
+						z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
+						particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+						conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+						// Left beam
+						z_coordinate_2d_ewald = - z_coordinate_2d_ewald;
+						particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+					}
+					else
+					{
+						particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+					}
 //				}
 			}
 		}
@@ -202,9 +244,27 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 			weight = particle_weight * expf(weight_conversion * frequency_squared);
 //			if (weight > 0.0)
 //			{
-				particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+				if (correct_ewald_sphere != 0)
+				{
+					theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength();
+					// Right beam
+					x_coordinate_2d_ewald = x_coordinate_2d * cosf(theta);
+					y_coordinate_2d_ewald = y_coordinate_2d * cosf(theta);
+					z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
+					particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+					// Left beam
+					z_coordinate_2d_ewald = - z_coordinate_2d_ewald;
+					particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+				}
+				else
+				{
+					particle_to_insert.alignment_parameters.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+				}
 //			}
 		}
 
@@ -225,10 +285,28 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 						weight = particle_weight * expf(weight_conversion * frequency_squared);
 //						if (weight > 0.0)
 //						{
-							temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
-							temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 							pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
-							AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+							temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
+							if (correct_ewald_sphere != 0)
+							{
+								theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength();
+								// Right beam
+								x_coordinate_2d_ewald = x_coordinate_2d * cosf(theta);
+								y_coordinate_2d_ewald = y_coordinate_2d * cosf(theta);
+								z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
+								temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+								conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
+								AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+								// Left beam
+								z_coordinate_2d_ewald = - z_coordinate_2d_ewald;
+								temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+								AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+							}
+							else
+							{
+								temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+								AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+							}
 //						}
 					}
 				}
@@ -242,10 +320,28 @@ void Reconstruct3D::InsertSliceWithCTF(Particle &particle_to_insert, float symme
 					weight = particle_weight * expf(weight_conversion * frequency_squared);
 //					if (weight > 0.0)
 //					{
-						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
-						temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 						pixel_counter = particle_to_insert.particle_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-						AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+						temp_matrix = symmetry_matrices.rot_mat[k] * particle_to_insert.alignment_parameters.euler_matrix;
+						if (correct_ewald_sphere != 0)
+						{
+							theta = 0.5 * sqrtf(frequency_squared) * particle_to_insert.current_ctf.GetWavelength();
+							// Right beam
+							x_coordinate_2d_ewald = x_coordinate_2d * cosf(theta);
+							y_coordinate_2d_ewald = y_coordinate_2d * cosf(theta);
+							z_coordinate_2d_ewald = correct_ewald_sphere * sqrtf(frequency_squared) * logical_x_dimension * sinf(theta);
+							temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+							conjugate = conj(particle_to_insert.ctf_image->complex_values[pixel_counter]);
+							AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], conjugate, weight, particle_to_insert.complex_ctf);
+							// Left beam
+							z_coordinate_2d_ewald = - z_coordinate_2d_ewald;
+							temp_matrix.RotateCoords(x_coordinate_2d_ewald, y_coordinate_2d_ewald, z_coordinate_2d_ewald, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+							AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight, particle_to_insert.complex_ctf);
+						}
+						else
+						{
+							temp_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+							AddByLinearInterpolation(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d, particle_to_insert.particle_image->complex_values[pixel_counter], particle_to_insert.ctf_image->complex_values[pixel_counter], weight);
+						}
 //					}
 				}
 			}
@@ -386,7 +482,7 @@ void Reconstruct3D::InsertSliceNoCTF(Particle &particle_to_insert, float symmetr
 	}
 }
 
-void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, float &wanted_logical_z_coordinate, std::complex<float> &input_value, std::complex<float> &ctf_value, float wanted_weight)
+void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate, float &wanted_logical_y_coordinate, float &wanted_logical_z_coordinate, std::complex<float> &input_value, std::complex<float> &ctf_value, float wanted_weight, bool complex_ctf)
 {
 	int i;
 	int j;
@@ -408,11 +504,20 @@ void Reconstruct3D::AddByLinearInterpolation(float &wanted_logical_x_coordinate,
 	float weight_xy;
 
 	std::complex<float> conjugate;
+	std::complex<float> value_to_insert;
 
 	float ctf_real = real(ctf_value);
 	float ctf_squared = powf(ctf_real,2) * wanted_weight;
-	std::complex<float> value_to_insert = input_value * fabsf(ctf_real) * wanted_weight;
-//	std::complex<float> value_to_insert = input_value * ctf_value * wanted_weight;
+	if (complex_ctf)
+	{
+		if (ctf_real >= 0.0) value_to_insert = input_value * ctf_value * wanted_weight;
+		else value_to_insert = - input_value * ctf_value * wanted_weight;
+	}
+	else
+	{
+		value_to_insert = input_value * fabsf(ctf_real) * wanted_weight;
+//		value_to_insert = input_value * ctf_value * wanted_weight;
+	}
 
 	int_x_coordinate = int(floorf(wanted_logical_x_coordinate));
 	int_y_coordinate = int(floorf(wanted_logical_y_coordinate));

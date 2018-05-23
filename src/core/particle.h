@@ -73,6 +73,7 @@ public:
 	float						mask_radius_2d;
 	bool						apply_2D_masking;
 	bool						no_ctf_weighting;
+	bool						complex_ctf;
 
 	Particle();
 	Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
@@ -93,7 +94,7 @@ public:
 	void CenterInCorner();
 	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
 	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
-	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
+	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, bool calculate_complex_ctf = false);
 	void PhaseFlipImage();
 	void CTFMultiplyImage();
 	void SetIndexForWeightedCorrelation(bool limit_resolution = true);

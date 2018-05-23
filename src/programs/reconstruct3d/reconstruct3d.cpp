@@ -49,11 +49,12 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	bool		center_mass = false;
 	bool		use_input_reconstruction = false;
 	bool		threshold_input_3d = true;
+	int			correct_ewald_sphere = 0;
 	bool		dump_arrays = false;
 	wxString	dump_file_1;
 	wxString	dump_file_2;
 
-	UserInput *my_input = new UserInput("Reconstruct3D", 1.03);
+	UserInput *my_input = new UserInput("Reconstruct3D", 1.04);
 
 	input_particle_stack = my_input->GetFilenameFromUser("Input particle images", "The input particle image stack, containing the 2D images for each particle in the dataset", "my_particle_stack.mrc", true);
 	input_parameter_file = my_input->GetFilenameFromUser("Input Frealign parameter filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.par", true);
@@ -87,6 +88,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	center_mass = my_input->GetYesNoFromUser("Center mass", "Should the calculated map be centered in the box according to the center of mass (only for C symmetry)?", "No");
 	use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No");
 	threshold_input_3d = my_input->GetYesNoFromUser("Threshold input reconstruction", "Should the input reconstruction thresholded to suppress some of the background noise", "No");
+//	correct_ewald_sphere = my_input->GetIntFromUser("Correct for Ewald sphere curvature (0 = no, 1 = correct hand, -1 = wrong hand)", "Should the reconstruction be corrected for the Ewald sphere curvature?", "0", -1, 1);
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the 3D reconstruction arrays be dumped to a file for later merging with other jobs", "No");
 	dump_file_1 = my_input->GetFilenameFromUser("Output dump filename for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_1.dat", false);
 	dump_file_2 = my_input->GetFilenameFromUser("Output dump filename for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_2.dat", false);
@@ -94,6 +96,8 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	delete my_input;
 
 	my_current_job.Reset(35);
+//	my_current_job.Reset(36);
+//	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
 	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
 																				input_parameter_file.ToUTF8().data(),
 																				input_reconstruction.ToUTF8().data(),
@@ -108,6 +112,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 																				resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
 																				smoothing_factor, padding, normalize_particles, adjust_scores,
 																				invert_contrast, exclude_blank_edges, crop_images, split_even_odd, center_mass,
+//																				use_input_reconstruction, threshold_input_3d, correct_ewald_sphere, dump_arrays,
 																				use_input_reconstruction, threshold_input_3d, dump_arrays,
 																				dump_file_1.ToUTF8().data(),
 																				dump_file_2.ToUTF8().data());
@@ -149,6 +154,8 @@ bool Reconstruct3DApp::DoCalculation()
 	bool	 center_mass						= my_current_job.arguments[29].ReturnBoolArgument();
 	bool	 use_input_reconstruction			= my_current_job.arguments[30].ReturnBoolArgument();
 	bool	 threshold_input_3d					= my_current_job.arguments[31].ReturnBoolArgument();
+//	int		 correct_ewald_sphere				= my_current_job.arguments[32].ReturnIntegerArgument();
+	int		 correct_ewald_sphere				= 0;
 	bool	 dump_arrays						= my_current_job.arguments[32].ReturnBoolArgument();
 	wxString dump_file_1 						= my_current_job.arguments[33].ReturnStringArgument();
 	wxString dump_file_2 						= my_current_job.arguments[34].ReturnStringArgument();
@@ -210,6 +217,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float psi_start;
 	float symmetry_weight = 1.0;
 	bool rotational_blurring = true;
+	bool calculate_complex_ctf = false;
 	wxDateTime my_time_in;
 
 	if (! DoesFileExist(input_parameter_file))
@@ -284,6 +292,8 @@ bool Reconstruct3DApp::DoCalculation()
 	if (! split_even_odd) fsc_particle_repeat = myroundint((input_par_file.ReturnMax(0) - input_par_file.ReturnMin(0) + 1.0) / 100.0);
 	if (fsc_particle_repeat % 2 != 0) fsc_particle_repeat++;
 
+	if (correct_ewald_sphere != 0) calculate_complex_ctf = true;
+
 	my_time_in = wxDateTime::Now();
 	output_statistics_file.WriteCommentLine("C Refine3D run date and time:              " + my_time_in.FormatISOCombined(' '));
 	output_statistics_file.WriteCommentLine("C Input particle images:                   " + input_particle_stack);
@@ -317,6 +327,7 @@ bool Reconstruct3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C FSC with even/odd particles:             " + BoolToYesNo(split_even_odd));
 	output_statistics_file.WriteCommentLine("C Apply likelihood blurring:               " + BoolToYesNo(use_input_reconstruction));
 	output_statistics_file.WriteCommentLine("C Threshold input reconstruction:          " + BoolToYesNo(threshold_input_3d));
+	output_statistics_file.WriteCommentLine("C Correct Ewald sphere curvature:          " + wxString::Format("%i", correct_ewald_sphere));
 	output_statistics_file.WriteCommentLine("C Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
 	output_statistics_file.WriteCommentLine("C Output dump filename for odd particles:  " + dump_file_1);
 	output_statistics_file.WriteCommentLine("C Output dump filename for even particles: " + dump_file_2);
@@ -405,8 +416,8 @@ bool Reconstruct3DApp::DoCalculation()
 	input_particle.mask_falloff = mask_falloff;
 	input_par_file.Rewind();
 
-	Reconstruct3D my_reconstruction_1(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry);
-	Reconstruct3D my_reconstruction_2(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry);
+	Reconstruct3D my_reconstruction_1(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry, correct_ewald_sphere);
+	Reconstruct3D my_reconstruction_2(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry, correct_ewald_sphere);
 	my_reconstruction_1.original_x_dimension = original_box_size;
 	my_reconstruction_1.original_y_dimension = original_box_size;
 	my_reconstruction_1.original_z_dimension = original_box_size;
@@ -568,7 +579,7 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.pixel_size = pixel_size;
 		input_particle.is_masked = false;
 
-		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], calculate_complex_ctf);
 
 		if (use_input_reconstruction)
 		{
@@ -600,7 +611,7 @@ bool Reconstruct3DApp::DoCalculation()
 			// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 			{
 				current_ctf = input_ctf;
-				current_ctf_image.CalculateCTFImage(current_ctf);
+				current_ctf_image.CalculateCTFImage(current_ctf, calculate_complex_ctf);
 			}
 		}
 		// Assume square images

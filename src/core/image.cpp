@@ -2702,7 +2702,7 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 	}
 }
 
-void Image::CalculateCTFImage(CTF &ctf_of_image)
+void Image::CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated for CTF image");
 //	MyDebugAssertTrue(is_in_real_space == false, "CTF image not in Fourier space");
@@ -2740,7 +2740,14 @@ void Image::CalculateCTFImage(CTF &ctf_of_image)
 			// Compute the square of the frequency
 			frequency_squared = powf(x_coordinate_2d, 2) + y_coord_sq;
 
-			complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0.0f;
+			if (calculate_complex_ctf)
+			{
+				complex_values[pixel_counter] = ctf_of_image.EvaluateComplex(frequency_squared,azimuth);
+			}
+			else
+			{
+				complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0.0f;
+			}
 			pixel_counter++;
 		}
 	}

@@ -83,8 +83,8 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
 				)
 {
     wavelength = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
-    squared_wavelength = pow(wavelength,2);
-    cubed_wavelength = pow(wavelength,3);
+    squared_wavelength = powf(wavelength,2);
+    cubed_wavelength = powf(wavelength,3);
     spherical_aberration = wanted_spherical_aberration_in_mm * 10000000.0 / pixel_size_in_angstroms;
     amplitude_contrast = wanted_amplitude_contrast;
     defocus_1 = wanted_defocus_1_in_angstroms / pixel_size_in_angstroms;
@@ -94,7 +94,7 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
     lowest_frequency_for_fitting = wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     highest_frequency_for_fitting = wanted_highest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     astigmatism_tolerance = wanted_astigmatism_tolerance_in_angstroms / pixel_size_in_angstroms;
-    precomputed_amplitude_contrast_term = atan(amplitude_contrast/sqrt(1.0 - amplitude_contrast));
+    precomputed_amplitude_contrast_term = atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
 }
 
 // Eq 11 of Rohou & Grigorieff (2015)
@@ -181,13 +181,13 @@ void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixel
 // Set the additional phase shift, given in radians
 void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
 {
-	additional_phase_shift = fmod(wanted_additional_phase_shift_radians,PI);
+	additional_phase_shift = fmodf(wanted_additional_phase_shift_radians,PI);
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 {
-	return -sin( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) );
+	return -sinf( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) );
 }
 
 /* returns the argument (radians) to the sine and cosine terms of the ctf
@@ -206,13 +206,13 @@ float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatia
 // Return the effective defocus at the azimuth of interest
 float CTF::DefocusGivenAzimuth(float azimuth)
 {
-	return 0.5 * ( defocus_1 + defocus_2 + cos( 2.0 * (azimuth - astigmatism_azimuth )) * (defocus_1 - defocus_2));
+	return 0.5 * ( defocus_1 + defocus_2 + cosf( 2.0 * (azimuth - astigmatism_azimuth )) * (defocus_1 - defocus_2));
 }
 
 // Given acceleration voltage in keV, return the electron wavelength in Angstroms
 float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 {
-	return 12.26 / sqrt(1000.0 * acceleration_voltage + 0.9784 * pow(1000.0 * acceleration_voltage,2)/pow(10.0,6));
+	return 12.26 / sqrtf(1000.0 * acceleration_voltage + 0.9784 * powf(1000.0 * acceleration_voltage,2)/powf(10.0,6));
 }
 
 
@@ -221,19 +221,19 @@ bool CTF::IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus)
 {
 	float delta;
 
-	if (fabs(this->spherical_aberration - wanted_ctf->spherical_aberration) > 0.01) return false;
-	if (fabs(this->wavelength - wanted_ctf->wavelength) > 0.0001) return false;
-	if (fabs(this->amplitude_contrast - wanted_ctf->amplitude_contrast) > 0.0001) return false;
-	if (fabs(this->defocus_1 - wanted_ctf->defocus_1) > delta_defocus) return false;
-	if (fabs(this->defocus_2 - wanted_ctf->defocus_2) > delta_defocus) return false;
+	if (fabsf(this->spherical_aberration - wanted_ctf->spherical_aberration) > 0.01) return false;
+	if (fabsf(this->wavelength - wanted_ctf->wavelength) > 0.0001) return false;
+	if (fabsf(this->amplitude_contrast - wanted_ctf->amplitude_contrast) > 0.0001) return false;
+	if (fabsf(this->defocus_1 - wanted_ctf->defocus_1) > delta_defocus) return false;
+	if (fabsf(this->defocus_2 - wanted_ctf->defocus_2) > delta_defocus) return false;
 
-	delta = fabs(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
-	delta = fmod(delta, 2.0 * PI);
+	delta = fabsf(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
+	delta = fmodf(delta, 2.0 * PI);
 // 0.0277 = 5/180 (5 deg tolerance)
 	if (delta > 0.0277) return false;
 
-	delta = fabs(this->astigmatism_azimuth - wanted_ctf->astigmatism_azimuth);
-	delta = fmod(delta, PI);
+	delta = fabsf(this->astigmatism_azimuth - wanted_ctf->astigmatism_azimuth);
+	delta = fmodf(delta, PI);
 // 0.0277 = 5/180 (5 deg tolerance)
 	if (delta > 0.0277) return false;
 
@@ -251,7 +251,7 @@ void CTF::EnforceConvention() {
 		defocus_1 = defocus_tmp;
 		astigmatism_azimuth += PI*0.5;
 	}
-	astigmatism_azimuth -= PI * round(astigmatism_azimuth/PI);
+	astigmatism_azimuth -= PI * roundf(astigmatism_azimuth/PI);
 }
 
 

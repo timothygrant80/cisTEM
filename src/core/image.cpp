@@ -8618,7 +8618,7 @@ void Image::CorrectMagnificationDistortion(float distortion_angle, float distort
 //END_FOR_STAND_ALONE_CTFFIND
 
 
-float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width)
+float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width, float outside_mask_value, bool use_outside_mask_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
@@ -8637,7 +8637,7 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	float edge_squared = powf(cosine_edge_width, 2);
 	float edge;
 	float tiny = 1.0 / 1000.0;
-	double edge_value = 0.0;
+	double edge_value;
 	double cos_volume;
 	double sum = 0.0;
 
@@ -8695,17 +8695,25 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	}
 
-	pixel_counter = 0;
-	for (k = 0; k < logical_z_dimension; k++) {
-		for (j = 0; j < logical_y_dimension; j++) {
-			for (i = 0; i < logical_x_dimension; i++) {
-				if (temp_image->real_values[pixel_counter] > tiny && temp_image->real_values[pixel_counter] < 1.0 - tiny) {edge_value += real_values[pixel_counter]; edge_sum++;}
-				pixel_counter++;
-			}
-			pixel_counter += padding_jump_value;
-		}
+	if (use_outside_mask_value)
+	{
+		edge_value = outside_mask_value;
 	}
-	if (edge_sum != 0) edge_value /= edge_sum;
+	else
+	{
+		edge_value = 0.0;
+		pixel_counter = 0;
+		for (k = 0; k < logical_z_dimension; k++) {
+			for (j = 0; j < logical_y_dimension; j++) {
+				for (i = 0; i < logical_x_dimension; i++) {
+					if (temp_image->real_values[pixel_counter] > tiny && temp_image->real_values[pixel_counter] < 1.0 - tiny) {edge_value += real_values[pixel_counter]; edge_sum++;}
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+		if (edge_sum != 0) edge_value /= edge_sum;
+	}
 
 	if (low_pass_filter_radius > 0.0 && weight_outside_mask > 0.0 && cosine_edge_width > 0.0)
 	{

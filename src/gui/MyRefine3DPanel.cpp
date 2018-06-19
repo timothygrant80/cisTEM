@@ -2836,7 +2836,7 @@ wxThread::ExitCode Refine3DMaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 10.0);
+		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);

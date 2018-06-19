@@ -386,10 +386,10 @@ void AutoRefine3DPanel::SetDefaults()
 		ApplyBlurringYesRadioButton->SetValue(false);
 		SmoothingFactorTextCtrl->SetValue("1.00");
 
-		AutoCenterYesRadioButton->SetValue(true); // Shouldn't this depend on whether user is supplying a mask file?
+		AutoCenterYesRadioButton->SetValue(true);
 		AutoCenterNoRadioButton->SetValue(false);
 
-		AutoMaskYesRadioButton->SetValue(true); // Shouldn't this depend on whether user is supplying a mask file?
+		AutoMaskYesRadioButton->SetValue(true);
 		AutoMaskNoRadioButton->SetValue(false);
 
 		MaskEdgeTextCtrl->ChangeValueFloat(10.00);
@@ -2653,7 +2653,7 @@ wxThread::ExitCode AutoRefine3DMaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 10.0);
+		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);

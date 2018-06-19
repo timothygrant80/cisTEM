@@ -57,7 +57,7 @@ bool ApplyMask::DoCalculation()
 	MRCFile input_mask_file(input_mask.ToStdString(), false);
 	MRCFile output_file(output_volume.ToStdString(), true);
 
-	float filter_edge = 10.0;
+	float filter_edge = 40.0;
 	float mask_volume;
 	Image my_image;
 	Image my_mask;

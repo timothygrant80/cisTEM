@@ -363,7 +363,7 @@ void MyMainFrame::OnServerEvent(wxSocketEvent& event)
 	  SETUP_SOCKET_CODES
 
 	  long current_job;
-	  wxString s = _("OnServerEvent: ");
+	  wxString s = _("OnServerEvent (MyMainFrame): ");
 	  wxSocketBase *sock = NULL;
 
 	  switch(event.GetSocketEvent())

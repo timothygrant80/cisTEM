@@ -54,6 +54,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/basic_star_file_reader.h \
                  core/rle3d.h \
                  core/angular_distribution_histogram.h \
+                 core/local_resolution_estimator.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -192,7 +193,7 @@ noinst_HEADERS = core/asset_group.h \
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry niko_test 
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry niko_test fft local_resolution local_resolution_finalize 
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -241,7 +242,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/particle_finder.cpp \
                        core/classification_selection.cpp \
                        core/rle3d.cpp \
-                       core/angular_distribution_histogram.cpp
+                       core/angular_distribution_histogram.cpp \
+                       core/local_resolution_estimator.cpp
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -434,5 +436,17 @@ niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_LDADD = libcore.a $(WX_LIBS_BASE)
 
+fft_SOURCES = programs/fft/fft.cpp
+fft_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+fft_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+fft_LDADD = libcore.a $(WX_LIBS_BASE)
 
+local_resolution_SOURCES = programs/local_resolution/local_resolution.cpp
+local_resolution_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+local_resolution_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+local_resolution_LDADD = libcore.a $(WX_LIBS_BASE)
 
+local_resolution_finalize_SOURCES = programs/local_resolution/local_resolution_finalize.cpp
+local_resolution_finalize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+local_resolution_finalize_LDADD = libcore.a $(WX_LIBS_BASE)

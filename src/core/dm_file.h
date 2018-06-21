@@ -78,6 +78,7 @@ private:
 	double 			ux, uy, uz;		// Voxel units (angstrom/pixel edge)
 	double 			ss;				// Display scale
 	double 			min, max;		// Limits
+	float			pixel_size;
 
 	int				readFixedDMHeader(std::ifstream* fimg, unsigned char* p, bool readdata = true);
 	int				readTagGroupWithVersion(std::ifstream* fimg, unsigned char* p, bool readdata = true, int img_select = -1);
@@ -169,6 +170,7 @@ public:
 	int ReturnYSize() { return y; };
 	int ReturnZSize() { return z; };
 	int ReturnNumberOfSlices() { return z; };
+	inline float ReturnPixelSize() { return pixel_size; };
 
 	bool IsOpen();
 

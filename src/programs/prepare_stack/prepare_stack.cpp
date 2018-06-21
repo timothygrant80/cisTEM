@@ -182,7 +182,7 @@ bool PrepareStackApp::DoCalculation()
 
 
 	if (is_running_locally == true) wxPrintf("\nPrepareStack: Normal termination\n\n");
-	else wxSleep(10);
+	else wxSleep(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
 
 	return true;
 }

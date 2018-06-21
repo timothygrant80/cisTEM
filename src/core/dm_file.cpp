@@ -56,6 +56,7 @@ bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for
 	unsigned char *fake_pointer;
 	readDM(wxString(wanted_filename), fake_pointer, false);
 	filename = wxString(wanted_filename);
+	pixel_size = 1.0; //TODO: figure out where the pixel size is (if anywhere)
 
 	// TODO: return false if something is fishy about this file
 	return true;

@@ -99,6 +99,7 @@ public:
 	int ReturnLargestLogicalDimension();
 	void SampleFFT(Image &sampled_image, int sample_rate);
 	float ReturnSumOfSquares(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
+	float ReturnSumOfRealValues();
 	float ReturnSigmaNoise();
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
@@ -109,6 +110,8 @@ public:
 	void MultiplyPixelWiseReal(Image &other_image, bool absolute = false);
 	void MultiplyPixelWise(Image &other_image);
 	void ConjugateMultiplyPixelWise(Image &other_image);
+	void ComputeFSCVectorized(Image *other_image, Image *work_this_image_squared, Image *work_other_image_squared, Image *work_cross_product_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products);
+	void ComputeFSC(Image *other_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products);
 	void DividePixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0);
 	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
@@ -159,6 +162,7 @@ public:
 	void CircleMask(float wanted_mask_radius, bool invert = false);
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
+	void TriangleMask(float wanted_triangle_half_base_length);
 	void CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf = false);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
@@ -355,6 +359,7 @@ public:
 	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
 	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
 	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space = false);
+	void ComputeSpatialFrequencyAtEveryVoxel();
 	void AverageRadially();
 	void ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_variance_map, Image *mask, long number_of_pixels_within_mask);
 	void SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius);

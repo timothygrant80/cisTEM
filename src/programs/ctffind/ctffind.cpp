@@ -248,6 +248,9 @@ void CtffindApp::DoInteractiveUserInput()
 	float movie_mag_distortion_angle = 0.0;
 	float movie_mag_distortion_major_scale = 1.0;
 	float movie_mag_distortion_minor_scale = 1.0;
+	bool defocus_is_known;
+	float known_defocus_1;
+	float known_defocus_2;
 
 
 	// Things we need for old school input
@@ -587,6 +590,26 @@ void CtffindApp::DoInteractiveUserInput()
 			{
 				movie_is_gain_corrected 		= true;
 			}
+			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","no");
+			if (defocus_is_known)
+			{
+				/*
+				 * Right now, we don't support phase plate data for this. The proper way to do this would be to also ask whether phase shift is known.
+				 * Another acceptable solution might be to say that if you know the defocus you must also know the phase shift (in other words, this would
+				 * only be used to test the ctffind scoring function / diagnostics using given defocus parameters). Neither are implemented right now,
+				 * because I don't need either.
+				 */
+				if (find_additional_phase_shift) SendError("Sorry. Supplying a known defocus is not yet supported for phase plate data\n");
+				known_defocus_1					= my_input->GetFloatFromUser("Known defocus 1", "In Angstroms, the defocus along the first axis","0.0");
+				known_defocus_2					= my_input->GetFloatFromUser("Known defocus 2", "In Angstroms, the defocus along the second axis","0.0");
+				known_astigmatism_angle 		= my_input->GetFloatFromUser("Known astigmatism angle", "In degrees, the angle of astigmatism","0.0");
+			}
+			else
+			{
+				known_defocus_1 = 0.0;
+				known_defocus_2 = 0.0;
+				known_astigmatism_angle = 0.0;
+			}
 
 
 		}
@@ -594,44 +617,48 @@ void CtffindApp::DoInteractiveUserInput()
 		{
 			resample_if_pixel_too_small			= true;
 			movie_is_gain_corrected				= true;
+			defocus_is_known					= false;
 		}
 
 		delete my_input;
 
 	}
 
-	my_current_job.Reset(30);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfff",	input_filename.c_str(), //1
-																		input_is_a_movie,
-																		number_of_frames_to_average,
-																		output_diagnostic_filename.c_str(),
-																		pixel_size,
-																		acceleration_voltage,
-																		spherical_aberration,
-																		amplitude_contrast,
-																		box_size,
-																		minimum_resolution, //10
-																		maximum_resolution,
-																		minimum_defocus,
-																		maximum_defocus,
-																		defocus_search_step,
-																		slower_search,
-																		astigmatism_tolerance,
-																		find_additional_phase_shift,
-																		minimum_additional_phase_shift,
-																		maximum_additional_phase_shift,
-																		additional_phase_shift_search_step, //20
-																		astigmatism_is_known,
-																		known_astigmatism,
-																		known_astigmatism_angle,
-																		resample_if_pixel_too_small,
-																		movie_is_gain_corrected,
-																		gain_filename.ToStdString().c_str(),
-																		correct_movie_mag_distortion,
-																		movie_mag_distortion_angle,
-																		movie_mag_distortion_major_scale,
-																		movie_mag_distortion_minor_scale);
-}
+	my_current_job.Reset(33);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbff",	input_filename.c_str(), //1
+																			input_is_a_movie,
+																			number_of_frames_to_average,
+																			output_diagnostic_filename.c_str(),
+																			pixel_size,
+																			acceleration_voltage,
+																			spherical_aberration,
+																			amplitude_contrast,
+																			box_size,
+																			minimum_resolution, //10
+																			maximum_resolution,
+																			minimum_defocus,
+																			maximum_defocus,
+																			defocus_search_step,
+																			slower_search,
+																			astigmatism_tolerance,
+																			find_additional_phase_shift,
+																			minimum_additional_phase_shift,
+																			maximum_additional_phase_shift,
+																			additional_phase_shift_search_step, //20
+																			astigmatism_is_known,
+																			known_astigmatism,
+																			known_astigmatism_angle,
+																			resample_if_pixel_too_small,
+																			movie_is_gain_corrected,
+																			gain_filename.ToStdString().c_str(),
+																			correct_movie_mag_distortion,
+																			movie_mag_distortion_angle,
+																			movie_mag_distortion_major_scale,
+																			movie_mag_distortion_minor_scale,
+																			defocus_is_known,
+																			known_defocus_1,
+																			known_defocus_2);
+	}
 
 
 // Optional command-line stuff
@@ -683,6 +710,9 @@ bool CtffindApp::DoCalculation()
 	const float      	movie_mag_distortion_angle          = my_current_job.arguments[27].ReturnFloatArgument();
 	const float         movie_mag_distortion_major_scale    = my_current_job.arguments[28].ReturnFloatArgument();
 	const float         movie_mag_distortion_minor_scale    = my_current_job.arguments[29].ReturnFloatArgument();
+	const bool			defocus_is_known					= my_current_job.arguments[30].ReturnBoolArgument();
+	const float			known_defocus_1						= my_current_job.arguments[31].ReturnFloatArgument();
+	const float			known_defocus_2						= my_current_job.arguments[32].ReturnFloatArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -777,6 +807,7 @@ bool CtffindApp::DoCalculation()
 	ImageFile			gain_file;
 	Image				*gain = new Image();
 	float				intermediate_resolution = 5.0;
+	float				final_score;
 
 
 
@@ -1099,259 +1130,383 @@ bool CtffindApp::DoCalculation()
 		current_ctf.SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
-
 		// Set up the comparison object
 		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
 		comparison_object_2D->SetImage(0,average_spectrum_masked);
 
-		if (is_running_locally && old_school_input)
+		if (defocus_is_known)
 		{
-			wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
-		}
-
-
-		// Let's look for the astigmatism angle first
-		if (astigmatism_is_known)
-		{
-			estimated_astigmatism_angle = known_astigmatism_angle;
+			current_ctf.SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PI);
+			final_score = 0.0;
 		}
 		else
 		{
-			temp_image->CopyFrom(average_spectrum);
-			temp_image->ApplyMirrorAlongY();
-			//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-			estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
-		}
-
-		//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
 
 
-
-		/*
-		 * Initial brute-force search, in 1D (fast, but not as accurate)
-		 */
-		if (!slower_search)
-		{
-
-			// 1D rotational average
-			number_of_bins_in_1d_spectra = int(ceil(average_spectrum_masked->ReturnMaximumDiagonalRadius()));
-			rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_masked->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
-			number_of_averaged_pixels = rotational_average;
-			average_spectrum_masked->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
-
-
-
-			comparison_object_1D.ctf = current_ctf;
-			comparison_object_1D.curve = new float[number_of_bins_in_1d_spectra];
-			for (counter=0; counter < number_of_bins_in_1d_spectra; counter++)
+			if (is_running_locally && old_school_input)
 			{
-				comparison_object_1D.curve[counter] = rotational_average.data_y[counter];
+				wxPrintf("\nSEARCHING CTF PARAMETERS...\n");
 			}
-			comparison_object_1D.find_phase_shift = find_additional_phase_shift;
-			comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
-			comparison_object_1D.reciprocal_pixel_size = average_spectrum_masked->fourier_voxel_size_x;
 
-			// We can now look for the defocus value
-			bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size_for_fitting;
-			bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift - minimum_additional_phase_shift);
 
-			bf_midpoint[0] = minimum_defocus / pixel_size_for_fitting + bf_halfrange[0];
-			bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[1];
-
-			bf_stepsize[0] = defocus_search_step / pixel_size_for_fitting;
-			bf_stepsize[1] = additional_phase_shift_search_step;
-
-			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+			// Let's look for the astigmatism angle first
+			if (astigmatism_is_known)
 			{
-				number_of_search_dimensions = 2;
+				estimated_astigmatism_angle = known_astigmatism_angle;
 			}
 			else
 			{
-				number_of_search_dimensions = 1;
+				temp_image->CopyFrom(average_spectrum);
+				temp_image->ApplyMirrorAlongY();
+				//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
+				estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
 			}
 
-			// Actually run the BF search
-			brute_force_search = new BruteForceSearch();
-			brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
-			brute_force_search->Run();
+			//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
 
-			/*			
-			wxPrintf("After 1D brute\n");
-			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0),brute_force_search->GetBestValue(0),0.0,brute_force_search->GetBestScore());
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
-			*/
 
-			// We can now do a local optimization
-			// The end point of the BF search is the beginning of the CG search
-			for (counter=0;counter<number_of_search_dimensions;counter++)
+
+			/*
+			 * Initial brute-force search, in 1D (fast, but not as accurate)
+			 */
+			if (!slower_search)
 			{
-				cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+
+				// 1D rotational average
+				number_of_bins_in_1d_spectra = int(ceil(average_spectrum_masked->ReturnMaximumDiagonalRadius()));
+				rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_masked->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
+				number_of_averaged_pixels = rotational_average;
+				average_spectrum_masked->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+
+
+
+				comparison_object_1D.ctf = current_ctf;
+				comparison_object_1D.curve = new float[number_of_bins_in_1d_spectra];
+				for (counter=0; counter < number_of_bins_in_1d_spectra; counter++)
+				{
+					comparison_object_1D.curve[counter] = rotational_average.data_y[counter];
+				}
+				comparison_object_1D.find_phase_shift = find_additional_phase_shift;
+				comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
+				comparison_object_1D.reciprocal_pixel_size = average_spectrum_masked->fourier_voxel_size_x;
+
+				// We can now look for the defocus value
+				bf_halfrange[0] = 0.5 * (maximum_defocus - minimum_defocus) / pixel_size_for_fitting;
+				bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift - minimum_additional_phase_shift);
+
+				bf_midpoint[0] = minimum_defocus / pixel_size_for_fitting + bf_halfrange[0];
+				bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[1];
+
+				bf_stepsize[0] = defocus_search_step / pixel_size_for_fitting;
+				bf_stepsize[1] = additional_phase_shift_search_step;
+
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+				{
+					number_of_search_dimensions = 2;
+				}
+				else
+				{
+					number_of_search_dimensions = 1;
+				}
+
+				// Actually run the BF search
+				brute_force_search = new BruteForceSearch();
+				brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
+				brute_force_search->Run();
+
+				/*
+				wxPrintf("After 1D brute\n");
+				wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0),brute_force_search->GetBestValue(0),0.0,brute_force_search->GetBestScore());
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
+				*/
+
+				// We can now do a local optimization
+				// The end point of the BF search is the beginning of the CG search
+				for (counter=0;counter<number_of_search_dimensions;counter++)
+				{
+					cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+				}
+				cg_accuracy[0] = 100.0;
+				cg_accuracy[1] = 0.05;
+				conjugate_gradient_minimizer = new ConjugateGradient();
+				conjugate_gradient_minimizer->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+				conjugate_gradient_minimizer->Run();
+				for (counter=0;counter<number_of_search_dimensions;counter++)
+				{
+					cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
+				}
+				current_ctf.SetDefocus(cg_starting_point[0], cg_starting_point[0],estimated_astigmatism_angle / 180.0 * PI);
+				if (find_additional_phase_shift)
+				{
+					if (fixed_additional_phase_shift)
+					{
+						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+					}
+					else
+					{
+						current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+					}
+				}
+
+				// Remember the best score so far
+				best_score_after_initial_phase = - conjugate_gradient_minimizer->GetBestScore();
+
+
+				// Cleanup
+				delete conjugate_gradient_minimizer;
+				delete brute_force_search;
+				delete [] comparison_object_1D.curve;
+
+			} // end of the fast search over the 1D function
+
+
+			/*
+			 * Brute-force search over the 2D scoring function.
+			 * This is either the first search we are doing, or just a refinement
+			 * starting from the result of the 1D search
+			 */
+			if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
+			{
+				// Setup the parameters for the brute force search
+
+				if (slower_search) // This is the first search we are doing - scan the entire range the user specified
+				{
+					if (astigmatism_is_known)
+					{
+						bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
+						bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
+
+						bf_midpoint[0] = minimum_defocus/pixel_size_for_fitting + bf_halfrange[0];
+						bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[3];
+
+						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
+						bf_stepsize[1] = additional_phase_shift_search_step;
+
+						if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+						{
+							number_of_search_dimensions = 2;
+						}
+						else
+						{
+							number_of_search_dimensions = 1;
+						}
+					}
+					else
+					{
+						bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
+						bf_halfrange[1] = bf_halfrange[0];
+						bf_halfrange[2] = 0.0;
+						bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
+
+						bf_midpoint[0] = minimum_defocus/pixel_size_for_fitting + bf_halfrange[0];
+						bf_midpoint[1] = bf_midpoint[0];
+						bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
+						bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
+
+						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
+						bf_stepsize[1] = bf_stepsize[0];
+						bf_stepsize[2] = 0.0;
+						bf_stepsize[3] = additional_phase_shift_search_step;
+
+						if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+						{
+							number_of_search_dimensions = 4;
+						}
+						else
+						{
+							number_of_search_dimensions = 3;
+						}
+					}
+				}
+				else // we will do a brute-force search near the result of the search over the 1D objective function
+				{
+					if (astigmatism_is_known)
+					{
+
+						bf_midpoint[0] = current_ctf.GetDefocus1();
+						bf_midpoint[1] = current_ctf.GetAdditionalPhaseShift();
+
+						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
+						bf_stepsize[1] = additional_phase_shift_search_step;
+
+						bf_halfrange[0] = 2.0 * defocus_search_step/pixel_size_for_fitting + 0.1;
+						bf_halfrange[1] = 2.0 * additional_phase_shift_search_step + 0.01;
+
+
+						if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+						{
+							number_of_search_dimensions = 2;
+						}
+						else
+						{
+							number_of_search_dimensions = 1;
+						}
+					}
+					else
+					{
+
+						bf_midpoint[0] = current_ctf.GetDefocus1();
+						bf_midpoint[1] = current_ctf.GetDefocus2();
+						bf_midpoint[2] = current_ctf.GetAstigmatismAzimuth();
+						bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
+
+						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
+						bf_stepsize[1] = bf_stepsize[0];
+						bf_stepsize[2] = 0.0;
+						bf_stepsize[3] = additional_phase_shift_search_step;
+
+						if (astigmatism_tolerance > 0)
+						{
+							bf_halfrange[0] = 2.0 * astigmatism_tolerance/pixel_size_for_fitting + 0.1;
+						}
+						else
+						{
+							bf_halfrange[0] = 2.0 * defocus_search_step/pixel_size_for_fitting + 0.1;
+						}
+						bf_halfrange[1] = bf_halfrange[0];
+						bf_halfrange[2] = 0.0;
+						bf_halfrange[3] = 2.0 * additional_phase_shift_search_step + 0.01;
+
+						if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+						{
+							number_of_search_dimensions = 4;
+						}
+						else
+						{
+							number_of_search_dimensions = 3;
+						}
+					}
+				}
+
+				// Actually run the BF search (we run a local minimizer at every grid point only if this is a refinement search following 1D search (otherwise the full brute-force search would get too long)
+				brute_force_search = new BruteForceSearch();
+				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally);
+				brute_force_search->Run();
+
+				// The end point of the BF search is the beginning of the CG search
+				for (counter=0;counter<number_of_search_dimensions;counter++)
+				{
+					cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
+				}
+
+				//
+				if (astigmatism_is_known)
+				{
+					current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI);
+					if (find_additional_phase_shift)
+					{
+						if (fixed_additional_phase_shift)
+						{
+							current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+						}
+						else
+						{
+							current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+						}
+					}
+				}
+				else
+				{
+					current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
+					if (find_additional_phase_shift)
+					{
+						if (fixed_additional_phase_shift)
+						{
+							current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+						}
+						else
+						{
+							current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+						}
+					}
+				}
+				current_ctf.EnforceConvention();
+
+				// Remember the best score so far
+				best_score_after_initial_phase = - brute_force_search->GetBestScore();
+
+				delete brute_force_search;
+
 			}
-			cg_accuracy[0] = 100.0;
-			cg_accuracy[1] = 0.05;
+
+
+			// Print out the results of brute force search
+			if (is_running_locally && old_school_input)
+			{
+				wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,best_score_after_initial_phase);
+			}
+
+			// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
+			if (is_running_locally && old_school_input)
+			{
+				wxPrintf("\nREFINING CTF PARAMETERS...\n");
+				wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
+			}
+
+
+			/*
+			 * Set up the conjugate gradient minimization of the 2D scoring function
+			 */
+			if (astigmatism_is_known)
+			{
+				cg_starting_point[0] = current_ctf.GetDefocus1();
+				if (find_additional_phase_shift) cg_starting_point[1] = current_ctf.GetAdditionalPhaseShift();
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+				{
+					number_of_search_dimensions = 2;
+				}
+				else
+				{
+					number_of_search_dimensions = 1;
+				}
+				cg_accuracy[0] = 100.0;
+				cg_accuracy[1] = 0.05;
+			}
+			else
+			{
+				cg_accuracy[0] = 100.0;
+				cg_accuracy[1] = 100.0;
+				cg_accuracy[2] = 0.025;
+				cg_accuracy[3] = 0.05;
+				cg_starting_point[0] = current_ctf.GetDefocus1();
+				cg_starting_point[1] = current_ctf.GetDefocus2();
+				if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
+				{
+					// we did a search against the 2D power spectrum so we have a better estimate
+					// of the astigmatism angle in the CTF object
+					cg_starting_point[2] = current_ctf.GetAstigmatismAzimuth();
+				}
+				else
+				{
+					// all we have right now is the guessed astigmatism angle from the mirror
+					// trick before any CTF fitting was even tried
+					cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PI;
+				}
+
+				if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
+				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
+				{
+					number_of_search_dimensions = 4;
+				}
+				else
+				{
+					number_of_search_dimensions = 3;
+				}
+			}
+			// CG minimization
+			comparison_object_2D->SetCTF(current_ctf);
 			conjugate_gradient_minimizer = new ConjugateGradient();
-			conjugate_gradient_minimizer->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+			conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
+			current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 			conjugate_gradient_minimizer->Run();
+
+			// Remember the results of the refinement
 			for (counter=0;counter<number_of_search_dimensions;counter++)
 			{
 				cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
 			}
-			current_ctf.SetDefocus(cg_starting_point[0], cg_starting_point[0],estimated_astigmatism_angle / 180.0 * PI);
-			if (find_additional_phase_shift)
-			{
-				if (fixed_additional_phase_shift)
-				{
-					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
-				}
-				else
-				{
-					current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
-				}
-			}
-
-			// Remember the best score so far
-			best_score_after_initial_phase = - conjugate_gradient_minimizer->GetBestScore();
-
-
-			// Cleanup
-			delete conjugate_gradient_minimizer;
-			delete brute_force_search;
-			delete [] comparison_object_1D.curve;
-
-		} // end of the fast search over the 1D function
-
-
-		/*
-		 * Brute-force search over the 2D scoring function.
-		 * This is either the first search we are doing, or just a refinement
-		 * starting from the result of the 1D search
-		 */
-		if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
-		{
-			// Setup the parameters for the brute force search
-
-			if (slower_search) // This is the first search we are doing - scan the entire range the user specified
-			{
-				if (astigmatism_is_known)
-				{
-					bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
-					bf_halfrange[1] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
-
-					bf_midpoint[0] = minimum_defocus/pixel_size_for_fitting + bf_halfrange[0];
-					bf_midpoint[1] = minimum_additional_phase_shift + bf_halfrange[3];
-
-					bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
-					bf_stepsize[1] = additional_phase_shift_search_step;
-
-					if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-					{
-						number_of_search_dimensions = 2;
-					}
-					else
-					{
-						number_of_search_dimensions = 1;
-					}
-				}
-				else
-				{
-					bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
-					bf_halfrange[1] = bf_halfrange[0];
-					bf_halfrange[2] = 0.0;
-					bf_halfrange[3] = 0.5 * (maximum_additional_phase_shift-minimum_additional_phase_shift);
-
-					bf_midpoint[0] = minimum_defocus/pixel_size_for_fitting + bf_halfrange[0];
-					bf_midpoint[1] = bf_midpoint[0];
-					bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PI;
-					bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
-
-					bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
-					bf_stepsize[1] = bf_stepsize[0];
-					bf_stepsize[2] = 0.0;
-					bf_stepsize[3] = additional_phase_shift_search_step;
-
-					if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-					{
-						number_of_search_dimensions = 4;
-					}
-					else
-					{
-						number_of_search_dimensions = 3;
-					}
-				}
-			}
-			else // we will do a brute-force search near the result of the search over the 1D objective function
-			{
-				if (astigmatism_is_known)
-				{
-
-					bf_midpoint[0] = current_ctf.GetDefocus1();
-					bf_midpoint[1] = current_ctf.GetAdditionalPhaseShift();
-
-					bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
-					bf_stepsize[1] = additional_phase_shift_search_step;
-
-					bf_halfrange[0] = 2.0 * defocus_search_step/pixel_size_for_fitting + 0.1;
-					bf_halfrange[1] = 2.0 * additional_phase_shift_search_step + 0.01;
-
-
-					if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-					{
-						number_of_search_dimensions = 2;
-					}
-					else
-					{
-						number_of_search_dimensions = 1;
-					}
-				}
-				else
-				{
-
-					bf_midpoint[0] = current_ctf.GetDefocus1();
-					bf_midpoint[1] = current_ctf.GetDefocus2();
-					bf_midpoint[2] = current_ctf.GetAstigmatismAzimuth();
-					bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
-
-					bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
-					bf_stepsize[1] = bf_stepsize[0];
-					bf_stepsize[2] = 0.0;
-					bf_stepsize[3] = additional_phase_shift_search_step;
-
-					if (astigmatism_tolerance > 0)
-					{
-						bf_halfrange[0] = 2.0 * astigmatism_tolerance/pixel_size_for_fitting + 0.1;
-					}
-					else
-					{
-						bf_halfrange[0] = 2.0 * defocus_search_step/pixel_size_for_fitting + 0.1;
-					}
-					bf_halfrange[1] = bf_halfrange[0];
-					bf_halfrange[2] = 0.0;
-					bf_halfrange[3] = 2.0 * additional_phase_shift_search_step + 0.01;
-
-					if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-					{
-						number_of_search_dimensions = 4;
-					}
-					else
-					{
-						number_of_search_dimensions = 3;
-					}
-				}
-			}
-
-			// Actually run the BF search (we run a local minimizer at every grid point only if this is a refinement search following 1D search (otherwise the full brute-force search would get too long)
-			brute_force_search = new BruteForceSearch();
-			brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally);
-			brute_force_search->Run();
-
-			// The end point of the BF search is the beginning of the CG search
-			for (counter=0;counter<number_of_search_dimensions;counter++)
-			{
-				cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
-			}
-
-			//
 			if (astigmatism_is_known)
 			{
 				current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI);
@@ -1384,131 +1539,23 @@ bool CtffindApp::DoCalculation()
 			}
 			current_ctf.EnforceConvention();
 
-			// Remember the best score so far
-			best_score_after_initial_phase = - brute_force_search->GetBestScore();
+			// Print results to the terminal
+			if (is_running_locally && old_school_input)
+			{
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
+				if (find_additional_phase_shift)
+				{
+					wxPrintf("Final phase shift = %0.3f radians\n",current_ctf.GetAdditionalPhaseShift());
+				}
+			}
 
-			delete brute_force_search;
-
-		}
-
-
-		// Print out the results of brute force search
-		if (is_running_locally && old_school_input)
-		{
-			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,best_score_after_initial_phase);
-		}
-
-		// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
-		if (is_running_locally && old_school_input)
-		{
-			wxPrintf("\nREFINING CTF PARAMETERS...\n");
-			wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-		}
-
+			final_score = -conjugate_gradient_minimizer->GetBestScore();
+		} // End of test for defocus_is_known
 
 		/*
-		 * Set up the conjugate gradient minimization of the 2D scoring function
+		 * We're all done with our search & refinement of defocus and phase shift parameter values.
+		 * Now onto diagnostics.
 		 */
-		if (astigmatism_is_known)
-		{
-			cg_starting_point[0] = current_ctf.GetDefocus1();
-			if (find_additional_phase_shift) cg_starting_point[1] = current_ctf.GetAdditionalPhaseShift();
-			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-			{
-				number_of_search_dimensions = 2;
-			}
-			else
-			{
-				number_of_search_dimensions = 1;
-			}
-			cg_accuracy[0] = 100.0;
-			cg_accuracy[1] = 0.05;
-		}
-		else
-		{
-			cg_accuracy[0] = 100.0;
-			cg_accuracy[1] = 100.0;
-			cg_accuracy[2] = 0.025;
-			cg_accuracy[3] = 0.05;
-			cg_starting_point[0] = current_ctf.GetDefocus1();
-			cg_starting_point[1] = current_ctf.GetDefocus2();
-			if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
-			{
-				// we did a search against the 2D power spectrum so we have a better estimate
-				// of the astigmatism angle in the CTF object
-				cg_starting_point[2] = current_ctf.GetAstigmatismAzimuth();
-			}
-			else
-			{
-				// all we have right now is the guessed astigmatism angle from the mirror
-				// trick before any CTF fitting was even tried
-				cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PI;
-			}
-
-			if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
-			if (find_additional_phase_shift && ! fixed_additional_phase_shift)
-			{
-				number_of_search_dimensions = 4;
-			}
-			else
-			{
-				number_of_search_dimensions = 3;
-			}
-		}
-		// CG minimization
-		comparison_object_2D->SetCTF(current_ctf);
-		conjugate_gradient_minimizer = new ConjugateGradient();
-		conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
-		conjugate_gradient_minimizer->Run();
-
-		// Remember the results of the refinement
-		for (counter=0;counter<number_of_search_dimensions;counter++)
-		{
-			cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
-		}
-		if (astigmatism_is_known)
-		{
-			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI);
-			if (find_additional_phase_shift)
-			{
-				if (fixed_additional_phase_shift)
-				{
-					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
-				}
-				else
-				{
-					current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
-				}
-			}
-		}
-		else
-		{
-			current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
-			if (find_additional_phase_shift)
-			{
-				if (fixed_additional_phase_shift)
-				{
-					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
-				}
-				else
-				{
-					current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
-				}
-			}
-		}
-		current_ctf.EnforceConvention();
-
-		// Print results to the terminal
-		if (is_running_locally && old_school_input)
-		{
-			wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PI,-conjugate_gradient_minimizer->GetBestScore());
-			if (find_additional_phase_shift)
-			{
-				wxPrintf("Final phase shift = %0.3f radians\n",current_ctf.GetAdditionalPhaseShift());
-			}
-		}
 
 		// Generate diagnostic image
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
@@ -1677,6 +1724,7 @@ bool CtffindApp::DoCalculation()
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
 		OverlayCTF(average_spectrum, &current_ctf);
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
+		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
 
 
 		// Print more detailed results to terminal
@@ -1687,7 +1735,7 @@ bool CtffindApp::DoCalculation()
 			{
 				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PI);
 			}
-			wxPrintf("Score                           : %0.5f\n", - conjugate_gradient_minimizer->GetBestScore());
+			wxPrintf("Score                           : %0.5f\n", final_score);
 			wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n",pixel_size_for_fitting);
 			if (compute_extra_stats)
 			{
@@ -1703,7 +1751,7 @@ bool CtffindApp::DoCalculation()
 			}
 		}
 
-		// Warn the user if significant aliasing occured within the fit range
+		// Warn the user if significant aliasing occurred within the fit range
 		if (compute_extra_stats && last_bin_without_aliasing != 0 && spatial_frequency[last_bin_without_aliasing] < current_ctf.GetHighestFrequencyForFitting())
 		{
 			if (is_running_locally && number_of_micrographs == 1)
@@ -1725,7 +1773,7 @@ bool CtffindApp::DoCalculation()
 			values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size_for_fitting;
 			values_to_write_out[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;
 			values_to_write_out[4] = current_ctf.GetAdditionalPhaseShift();
-			values_to_write_out[5] = - conjugate_gradient_minimizer->GetBestScore();
+			values_to_write_out[5] = final_score;
 			if (compute_extra_stats)
 			{
 				values_to_write_out[6] = pixel_size_for_fitting / spatial_frequency[last_bin_with_good_fit];
@@ -1767,7 +1815,7 @@ bool CtffindApp::DoCalculation()
 			delete [] spatial_frequency_in_reciprocal_angstroms;
 		}
 
-		delete comparison_object_2D;
+		if (! defocus_is_known) delete comparison_object_2D;
 
 	} // End of loop over micrographs
 
@@ -1797,7 +1845,7 @@ bool CtffindApp::DoCalculation()
 	results_array[1] = current_ctf.GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
 	results_array[2] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
 	results_array[3] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
-	results_array[4] = - conjugate_gradient_minimizer->GetBestScore();		// CTFFIND score
+	results_array[4] = final_score;		// CTFFIND score
 	if (last_bin_with_good_fit == 0)
 	{
 		results_array[5] = 0.0;															//	A value of 0.0 indicates that the calculation to determine the goodness of fit failed for some reason
@@ -1844,7 +1892,7 @@ bool CtffindApp::DoCalculation()
 		delete [] fit_frc_sigma;
 		delete output_text_avrot;
 	}
-	delete conjugate_gradient_minimizer;
+	if (! defocus_is_known) delete conjugate_gradient_minimizer;
 
 
 
@@ -1995,6 +2043,7 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 		if (bin_counter < first_fit_bin)
 		{
 			frc[bin_counter] = 1.0;
+			frc_sigma[bin_counter] = 0.0;
 		}
 		else
 		{

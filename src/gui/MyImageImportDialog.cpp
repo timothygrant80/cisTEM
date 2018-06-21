@@ -264,5 +264,6 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 	}
 
 	my_error->Destroy();
+	EndModal(0);
 	Destroy();
 }

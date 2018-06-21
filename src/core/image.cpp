@@ -157,6 +157,30 @@ void Image::SampleFFT(Image &sampled_image, int sample_rate)
 	sampled_image.object_is_centred_in_box = object_is_centred_in_box;
 }
 
+float Image::ReturnSumOfRealValues()
+{
+	MyDebugAssertTrue(is_in_memory,"memory not allocated");
+	MyDebugAssertTrue(is_in_real_space,"not in real space");
+	double sum;
+	int i,j,k;
+	long address;
+	sum = 0.0;
+	address = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				sum += real_values[address];
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+	return float(sum);
+}
+
 float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z, bool invert_mask)
 {
 //	result is too big
@@ -674,20 +698,144 @@ void Image::ConjugateMultiplyPixelWise(Image &other_image)
 #endif
 }
 
+void Image::ComputeFSCVectorized(Image *other_image, Image *work_this_image_squared, Image *work_other_image_squared, Image *work_cross_product_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products)
+{
+	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+	MyDebugAssertTrue(other_image->is_in_memory, "Other image memory not allocated");
+	MyDebugAssertFalse(is_in_real_space, "Image must be in Fourier space");
+	MyDebugAssertFalse(other_image->is_in_real_space, "Other image must be in Fourier space");
+	MyDebugAssertTrue(HasSameDimensionsAs(other_image), "Images have different dimensions");
+	MyDebugAssertTrue(HasSameDimensionsAs(work_this_image_squared), "Images have different dimensions");
+	MyDebugAssertTrue(HasSameDimensionsAs(work_other_image_squared), "Images have different dimensions");
+	MyDebugAssertTrue(HasSameDimensionsAs(work_cross_product_image), "Images have different dimensions");
+
+	/*
+	 * Prepare working memory
+	 */
+	for (long pixel_counter = 0; pixel_counter < number_of_real_space_pixels; pixel_counter++)
+	{
+		work_this_image_squared->real_values[pixel_counter] = real_values[pixel_counter];
+	}
+	for (long pixel_counter = 0; pixel_counter < number_of_real_space_pixels; pixel_counter++)
+	{
+		work_cross_product_image->real_values[pixel_counter] = real_values[pixel_counter];
+	}
+	for (long pixel_counter = 0; pixel_counter < number_of_real_space_pixels; pixel_counter++)
+	{
+		work_other_image_squared->real_values[pixel_counter] = other_image->real_values[pixel_counter];
+	}
+	for (int shell_counter = 0; shell_counter < number_of_shells; shell_counter++)
+	{
+		computed_fsc[shell_counter] = 0.0;
+		work_sum_of_squares[shell_counter] = 0.0;
+		work_sum_of_other_squares[shell_counter] = 0.0;
+		work_sum_of_cross_products[shell_counter] = 0.0;
+	}
+	work_this_image_squared->is_in_real_space = false;
+	work_cross_product_image->is_in_real_space = false;
+	work_other_image_squared->is_in_real_space = false;
+
+	/*
+	 * Do the conjugate multiplications
+	 */
+	work_this_image_squared->ConjugateMultiplyPixelWise(*work_this_image_squared);
+	work_cross_product_image->ConjugateMultiplyPixelWise(*work_other_image_squared);
+	work_other_image_squared->ConjugateMultiplyPixelWise(*work_other_image_squared);
+
+	/*
+	 * Accumulate intermediate results
+	 */
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
+	{
+		work_sum_of_other_squares[shell_number[pixel_counter]] 	+= 	real(work_other_image_squared->complex_values[pixel_counter]);
+		work_sum_of_squares[shell_number[pixel_counter]]       	+= 	real(work_this_image_squared->complex_values[pixel_counter]);
+		work_sum_of_cross_products[shell_number[pixel_counter]]	+=	real(work_cross_product_image->complex_values[pixel_counter]);
+	}
+
+	/*
+	 * Compute the FSC
+	 */
+	float denominator;
+	for (int shell_counter = 0; shell_counter < number_of_shells; shell_counter++)
+	{
+		// check whether the product is positive before doing sqrtf?
+		denominator = sqrtf(work_sum_of_squares[shell_counter] * work_sum_of_other_squares[shell_counter]);
+		if (denominator == 0.0)
+		{
+			computed_fsc[shell_counter] = 0.0;
+		}
+		else
+		{
+			computed_fsc[shell_counter] = work_sum_of_cross_products[shell_counter] / denominator;
+		}
+	}
+}
+
+void Image::ComputeFSC(Image *other_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products)
+{
+	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+	MyDebugAssertTrue(other_image->is_in_memory, "Other image memory not allocated");
+	MyDebugAssertFalse(is_in_real_space, "Image must be in Fourier space");
+	MyDebugAssertFalse(other_image->is_in_real_space, "Other image must be in Fourier space");
+	MyDebugAssertTrue(HasSameDimensionsAs(other_image), "Images have different dimensions");
+
+	/*
+	 * Prepare working memory
+	 */
+	for (int shell_counter = 0; shell_counter < number_of_shells; shell_counter++)
+	{
+		computed_fsc[shell_counter] = 0.0;
+		work_sum_of_squares[shell_counter] = 0.0;
+		work_sum_of_other_squares[shell_counter] = 0.0;
+		work_sum_of_cross_products[shell_counter] = 0.0;
+	}
+
+
+	/*
+	 * Accumulate intermediate results
+	 */
+	for (long pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter ++)
+	{
+		work_sum_of_other_squares[shell_number[pixel_counter]] 	+= 	real(other_image->complex_values[pixel_counter] * conj(other_image->complex_values[pixel_counter]));
+		work_sum_of_squares[shell_number[pixel_counter]]       	+= 	real(complex_values[pixel_counter] * conj(complex_values[pixel_counter]));
+		work_sum_of_cross_products[shell_number[pixel_counter]]	+=	real(complex_values[pixel_counter] * conj(other_image->complex_values[pixel_counter]));
+	}
+
+	/*
+	 * Compute the FSC
+	 */
+	float denominator;
+	for (int shell_counter = 0; shell_counter < number_of_shells; shell_counter++)
+	{
+		// check whether the product is positive before doing sqrtf?
+		denominator = sqrtf(work_sum_of_squares[shell_counter] * work_sum_of_other_squares[shell_counter]);
+		if (denominator == 0.0)
+		{
+			computed_fsc[shell_counter] = 0.0;
+		}
+		else
+		{
+			computed_fsc[shell_counter] = work_sum_of_cross_products[shell_counter] / denominator;
+		}
+	}
+}
+
+
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 
 void Image::MultiplyPixelWise(Image &other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
 	MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
-	MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
-	MyDebugAssertTrue(HasSameDimensionsAs(&other_image),"Images do not have same dimensions");
+
 
 	int i;
 	long pixel_counter;
 
 	if (is_in_real_space)
 	{
+		MyDebugAssertTrue(other_image.is_in_real_space,"Other image needs to be in real space");
+		MyDebugAssertTrue(HasSameDimensionsAs(&other_image),"Images do not have same dimensions");
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 		{
 			real_values[pixel_counter] *= other_image.real_values[pixel_counter];
@@ -695,10 +843,46 @@ void Image::MultiplyPixelWise(Image &other_image)
 	}
 	else
 	{
-		// TODO: add MKL implementation (see EulerSearch::Run for a similar example)
-		for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+		if (other_image.is_in_real_space)
 		{
-			complex_values[pixel_counter] *= other_image.complex_values[pixel_counter];
+			/*
+			 * This image is in Fourier space, the other image in is in real space.
+			 * They better be the expected dimensions!
+			 */
+			MyDebugAssertTrue(	other_image.logical_x_dimension == logical_x_dimension/2 + 1 &&
+							  	other_image.logical_y_dimension == logical_y_dimension &&
+								other_image.logical_z_dimension == logical_z_dimension,
+								"This image is in Fourier space (dimensions = %i,%i,%i), the other is in real space (dimensions = %i,%i,%i), but it does not have expected dimensions",
+								logical_x_dimension,logical_y_dimension,logical_z_dimension,other_image.logical_x_dimension,other_image.logical_y_dimension,other_image.logical_z_dimension);
+			long pixel_counter_this, pixel_counter_other;
+			int i_other,j_other,k_other;
+			pixel_counter_this = 0;
+			pixel_counter_other = 0;
+			for (k_other = 0; k_other < other_image.logical_z_dimension; k_other++)
+			{
+				for (j_other = 0; j_other < other_image.logical_y_dimension; j_other++)
+				{
+					for (i_other = 0; i_other < other_image.logical_x_dimension; i_other++)
+					{
+						complex_values[pixel_counter_this] *= other_image.real_values[pixel_counter_other];
+						//complex_values[pixel_counter_this] *= 0.5;
+
+						pixel_counter_other++;
+						pixel_counter_this++;
+					}
+					pixel_counter_other += other_image.padding_jump_value;
+				}
+			}
+		}
+		else
+		{
+			// Both images are in Fourier space
+			MyDebugAssertTrue(HasSameDimensionsAs(&other_image),"Images do not have same dimensions");
+			// TODO: add MKL implementation (see EulerSearch::Run for a similar example)
+			for (pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++)
+			{
+				complex_values[pixel_counter] *= other_image.complex_values[pixel_counter];
+			}
 		}
 	}
 }
@@ -3183,6 +3367,43 @@ void Image::CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_valu
 	}
 }
 
+void Image::TriangleMask(float wanted_triangle_half_base_length)
+{
+	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
+	MyDebugAssertTrue(object_is_centred_in_box,"Object not centered in box");
+
+	long pixel_counter;
+	int i,j,k;
+	float x,y,z;
+	long number_of_pixels = 0;
+
+	// Let's mask
+	pixel_counter = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = 1.0 - (abs(k - physical_address_of_box_center_z) / wanted_triangle_half_base_length);
+		if (z < 0.0) z = 0.0;
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = 1.0 - (abs(j - physical_address_of_box_center_y) / wanted_triangle_half_base_length);
+			if (y < 0.0) y = 0.0;
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = 1.0 - (abs(i - physical_address_of_box_center_x) / wanted_triangle_half_base_length);
+				if (x < 0.0) x = 0.0;
+
+				real_values[pixel_counter] *= x*y*z;
+
+				pixel_counter++;
+
+			}
+			pixel_counter += padding_jump_value;
+		}
+	}
+}
+
 void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert, int wanted_center_x, int wanted_center_y, int wanted_center_z)
 {
 	MyDebugAssertTrue(is_in_real_space,"Image not in real space");
@@ -3281,6 +3502,9 @@ void Image::GaussianLowPassFilter(float half_width)
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND
+/*
+ * Raise cosine-edged mask. The first argument gives the radius of the midpoint of the cosine (where cos = 0.5)
+ */
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
@@ -3674,8 +3898,6 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
     {
     	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
     	MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
-//    	fftw_init_threads();
-//    	fftw_plan_with_nthreads(8);
     	if (logical_z_dimension > 1)
     	{
     		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
@@ -3743,8 +3965,6 @@ void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
     	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
         MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
 
-//    	fftw_init_threads();
-//    	fftw_plan_with_nthreads(8);
     	if (logical_z_dimension > 1)
     	{
     		plan_fwd = fftwf_plan_dft_r2c_3d(logical_z_dimension, logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
@@ -5697,6 +5917,39 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 }
 
 //END_FOR_STAND_ALONE_CTFFIND
+
+/*
+ * Replace every voxel value (in Fourier space) with its spatial frequency (in reciprocal pixels, i.e. where Nyquist = 0.5)
+ */
+void Image::ComputeSpatialFrequencyAtEveryVoxel()
+{
+	int xi,yi,zi;
+	float x,y,z;
+	float frequency;
+	long pixel_counter = 0;
+
+	for (int k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		zi = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k);
+		z = powf(zi * fourier_voxel_size_z, 2);
+
+		for (int j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			yi = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
+			y = powf(yi * fourier_voxel_size_y, 2);
+
+			for (int i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x = powf(i * fourier_voxel_size_x, 2);
+
+				frequency = sqrtf(x + y + z);
+				complex_values[pixel_counter] = frequency;
+
+				pixel_counter++;
+			}
+		}
+	}
+}
 
 // Return a histogram as a curve object.
 void Image::ComputeHistogramOfRealValuesCurve(Curve *histogram_curve)

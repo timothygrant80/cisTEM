@@ -478,7 +478,8 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 	doing_panel_fill = true;
 	current_fill_command = wanted_command;
 
-	ResultDataView->Freeze();
+	//ResultDataView->Freeze();
+	wxWindowUpdateLocker noUpdates(this);
 	ResultDataView->Clear();
 
 	ResultDataView->AppendTextColumn("ID");//, wxDATAVIEW_CELL_INERT,1, wxALIGN_LEFT, 0);
@@ -635,7 +636,7 @@ void MyMovieAlignResultsPanel::FillBasedOnSelectCommand(wxString wanted_command)
 			ResultDataView->EnsureVisible(ResultDataView->RowToItem(-1), ResultDataView->GetColumn(ResultDataView->ReturnCheckedColumn(0)));
 		}
 		ResultDataView->SizeColumns();
-		ResultDataView->Thaw();
+		//ResultDataView->Thaw();
 	}
 	else
 	{

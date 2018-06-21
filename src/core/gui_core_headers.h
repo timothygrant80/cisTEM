@@ -41,6 +41,7 @@
 #include <wx/aui/auibook.h>
 #include <wx/clipbrd.h>
 #include <wx/odcombo.h>
+#include <wx/wupdlock.h>
 
 #include "../core/core_headers.h"
 

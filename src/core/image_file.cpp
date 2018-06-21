@@ -147,6 +147,17 @@ int ImageFile::ReturnNumberOfSlices()
 	}
 }
 
+float ImageFile::ReturnPixelSize()
+{
+	switch(file_type)
+	{
+	case TIFF_FILE: return tiff_file.ReturnPixelSize(); break;
+	case MRC_FILE: return mrc_file.ReturnPixelSize(); break;
+	case DM_FILE: return dm_file.ReturnPixelSize(); break;
+	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
+	}
+}
+
 bool ImageFile::IsOpen()
 {
 	switch(file_type)

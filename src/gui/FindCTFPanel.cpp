@@ -573,8 +573,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float		maximum_additional_phase_shift;
 	float		additional_phase_shift_search_step;
 	bool 		astigmatism_is_known;
+	bool		defocus_is_known;
 	float		known_astigmatism;
 	float		known_astigmatism_angle;
+	float		known_defocus_1;
+	float		known_defocus_2;
 	bool		resample_if_pixel_too_small;
 	bool		large_astigmatism_expected;
 
@@ -697,11 +700,11 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		// These parameters are not presented in the GUI (yet?)
 		astigmatism_is_known = false;
+		defocus_is_known = false;
 		known_astigmatism = 0.0;
 		known_astigmatism_angle = 0.0;
-		//astigmatism_is_known = true;
-		//known_astigmatism = 385.0;
-		//known_astigmatism_angle = 35.0;
+		known_defocus_1 = 0.0;
+		known_defocus_2 = 0.0;
 		resample_if_pixel_too_small = true;
 
 		if (input_is_a_movie)
@@ -733,36 +736,39 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		}
 
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfff",	input_filename.c_str(), // 0
-															input_is_a_movie, // 1
-															number_of_frames_to_average, //2
-															output_diagnostic_filename.c_str(), // 3
-															pixel_size, // 4
-															acceleration_voltage, // 5
-															spherical_aberration, // 6
-															amplitude_contrast, // 7
-															box_size, // 8
-															minimum_resolution, // 9
-															maximum_resolution, // 10
-															minimum_defocus, // 11
-															maximum_defocus, // 12
-															defocus_search_step, // 13
-															large_astigmatism_expected, // 14
-															astigmatism_tolerance, // 15
-															find_additional_phase_shift, // 16
-															minimum_additional_phase_shift, // 17
-															maximum_additional_phase_shift, // 18
-															additional_phase_shift_search_step, // 19
-															astigmatism_is_known, // 20
-															known_astigmatism, // 21
-															known_astigmatism_angle, // 22
-															resample_if_pixel_too_small,// 23
-															movie_is_gain_corrected,
-															current_gain_filename.ToStdString().c_str(),
-															correct_movie_mag_distortion,
-															movie_mag_distortion_angle,
-															movie_mag_distortion_major_scale,
-															movie_mag_distortion_minor_scale);
+		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbff",	input_filename.c_str(), // 0
+																	input_is_a_movie, // 1
+																	number_of_frames_to_average, //2
+																	output_diagnostic_filename.c_str(), // 3
+																	pixel_size, // 4
+																	acceleration_voltage, // 5
+																	spherical_aberration, // 6
+																	amplitude_contrast, // 7
+																	box_size, // 8
+																	minimum_resolution, // 9
+																	maximum_resolution, // 10
+																	minimum_defocus, // 11
+																	maximum_defocus, // 12
+																	defocus_search_step, // 13
+																	large_astigmatism_expected, // 14
+																	astigmatism_tolerance, // 15
+																	find_additional_phase_shift, // 16
+																	minimum_additional_phase_shift, // 17
+																	maximum_additional_phase_shift, // 18
+																	additional_phase_shift_search_step, // 19
+																	astigmatism_is_known, // 20
+																	known_astigmatism, // 21
+																	known_astigmatism_angle, // 22
+																	resample_if_pixel_too_small,// 23
+																	movie_is_gain_corrected,
+																	current_gain_filename.ToStdString().c_str(),
+																	correct_movie_mag_distortion,
+																	movie_mag_distortion_angle,
+																	movie_mag_distortion_major_scale,
+																	movie_mag_distortion_minor_scale,
+																	defocus_is_known,
+																	known_defocus_1,
+																	known_defocus_2);
 
 		my_progress_dialog->Update(counter + 1);
 	}

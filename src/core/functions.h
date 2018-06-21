@@ -337,3 +337,4 @@ inline float ConvertXYToPhiInDegrees(float x, float y)
 std::vector<size_t> rankSort(const float* v_temp, const size_t size);
 std::vector<size_t> rankSort(const std::vector<float>& v_temp);
 
+wxString StringFromSocketCode(unsigned char *socket_input_buffer);

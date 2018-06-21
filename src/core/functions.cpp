@@ -668,4 +668,29 @@ std::vector<size_t> rankSort(const std::vector<float>& v_temp) {
     return result;
 }
 
+wxString StringFromSocketCode(unsigned char *socket_input_buffer)
+{
+	if (memcmp(socket_input_buffer, socket_please_identify, 			SOCKET_CODE_SIZE) == 0) { return "socket_please_identify"; }
+	if (memcmp(socket_input_buffer, socket_identification, 				SOCKET_CODE_SIZE) == 0) { return "socket_identification"; }
+	if (memcmp(socket_input_buffer, socket_you_are_connected, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_connected"; }
+	if (memcmp(socket_input_buffer, socket_send_job_details,			SOCKET_CODE_SIZE) == 0) { return "socket_send_job_details"; }
+	if (memcmp(socket_input_buffer, socket_ready_to_send_job_package, 	SOCKET_CODE_SIZE) == 0) { return "socket_ready_to_send_job_package"; }
+	if (memcmp(socket_input_buffer, socket_send_job_package, 			SOCKET_CODE_SIZE) == 0) { return "socket_send_job_package"; }
+	if (memcmp(socket_input_buffer, socket_you_are_the_master, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_the_master"; }
+	if (memcmp(socket_input_buffer, socket_you_are_a_slave, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_a_slave"; }
+	if (memcmp(socket_input_buffer, socket_send_next_job, 				SOCKET_CODE_SIZE) == 0) { return "socket_send_next_job"; }
+	if (memcmp(socket_input_buffer, socket_time_to_die, 				SOCKET_CODE_SIZE) == 0) { return "socket_time_to_die"; }
+	if (memcmp(socket_input_buffer, socket_ready_to_send_single_job, 	SOCKET_CODE_SIZE) == 0) { return "socket_ready_to_send_single_job"; }
+	if (memcmp(socket_input_buffer, socket_send_single_job, 			SOCKET_CODE_SIZE) == 0) { return "socket_send_single_job"; }
+	if (memcmp(socket_input_buffer, socket_i_have_an_error, 			SOCKET_CODE_SIZE) == 0) { return "socket_i_have_an_error"; }
+	if (memcmp(socket_input_buffer, socket_i_have_info, 				SOCKET_CODE_SIZE) == 0) { return "socket_i_have_info"; }
+	if (memcmp(socket_input_buffer, socket_job_finished, 				SOCKET_CODE_SIZE) == 0) { return "socket_job_finished"; }
+	if (memcmp(socket_input_buffer, socket_number_of_connections,		SOCKET_CODE_SIZE) == 0) { return "socket_number_of_connections"; }
+	if (memcmp(socket_input_buffer, socket_all_jobs_finished, 			SOCKET_CODE_SIZE) == 0) { return "socket_all_jobs_finished"; }
+	if (memcmp(socket_input_buffer, socket_job_result, 					SOCKET_CODE_SIZE) == 0) { return "socket_job_result"; }
+	if (memcmp(socket_input_buffer, socket_job_result_queue, 			SOCKET_CODE_SIZE) == 0) { return "socket_job_result_queue"; }
+	if (memcmp(socket_input_buffer, socket_result_with_image_to_write, 	SOCKET_CODE_SIZE) == 0) { return "socket_result_with_image_to_write"; }
+	return "socket code not recognized";
+}
+
 

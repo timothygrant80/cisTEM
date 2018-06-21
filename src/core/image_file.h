@@ -33,6 +33,7 @@ public:
 	int ReturnYSize();
 	int ReturnZSize();
 	int ReturnNumberOfSlices();
+	float ReturnPixelSize();
 
 	bool IsOpen();
 

@@ -45,6 +45,7 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/tokenzr.h>
 #include <wx/txtstrm.h>
 #include <wx/textfile.h>
+#include <wx/regex.h>
 #include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
@@ -93,6 +94,7 @@ const std::complex<float> I(0.0,1.0);
 #include "particle_finder.h"
 #include "myapp.h"
 #include "rle3d.h"
+#include "local_resolution_estimator.h"
 
 #ifdef MKL
 #include <mkl.h>

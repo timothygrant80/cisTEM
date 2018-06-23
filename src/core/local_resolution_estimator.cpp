@@ -44,7 +44,7 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	threshold_confidence_n_sigma = wanted_threshold_confidence_n_sigma;
 
 	// Update based on user-supplied parameter values
-	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; //40.0;//
+	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; //40.0;// // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
 	resolution_value_where_wont_estimate = resolution_value_before_first_shell;
 }
 
@@ -237,9 +237,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Debug
 #ifdef DEBUG
-	const int dbg_i = 162;
-	const int dbg_j = 122;
-	const int dbg_k = 128;
+	const int dbg_i = 68;
+	const int dbg_j = 68;
+	const int dbg_k = 54;
 #endif
 
 	// Initialisation
@@ -257,6 +257,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	float previous_resolution;
 	ProgressBar *my_progress_bar;
 	my_progress_bar = new ProgressBar(total_number_of_boxes);
+	bool just_a_glitch;
 
 	for (k = 0; k < input_volume_one->logical_z_dimension; k ++ )
 	{
@@ -328,19 +329,33 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 									if (computed_fsc[shell_counter] < fsc_threshold[shell_counter])
 									{
-										// TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
-										if (previous_resolution == 0.0)
+
+										/*
+										 * Maybe it was just a numerical glitch and in fact the FSC curve is staying above threshold.
+										 * This is particularly liable to happen in the very first shells, where N is very low,
+										 * FSC is very high and small numerical errors can have an outsize effect.
+										 * So if we're below threshold now but the next shells are back up above threshold,
+										 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
+										 */
+										just_a_glitch = false;
+										if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter] > 0.9 && computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] && computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2];
+
+										if (!just_a_glitch)
 										{
-											local_resolution_volume->real_values[pixel_counter] = resolution_value_before_first_shell;
-										}
-										else
-										{
-											local_resolution_volume->real_values[pixel_counter] = 1.0 / ( (1.0/previous_resolution) + ((1.0/current_resolution)-(1.0/previous_resolution)) * (fsc_threshold[shell_counter]-computed_fsc[shell_counter-1])/(computed_fsc[shell_counter]-computed_fsc[shell_counter-1])) ;
-										}
+
+											if (previous_resolution == 0.0)
+											{
+												local_resolution_volume->real_values[pixel_counter] = resolution_value_before_first_shell;
+											}
+											else
+											{
+												local_resolution_volume->real_values[pixel_counter] = 1.0 / ( (1.0/previous_resolution) + ((1.0/current_resolution)-(1.0/previous_resolution)) * (fsc_threshold[shell_counter]-computed_fsc[shell_counter-1])/(computed_fsc[shell_counter]-computed_fsc[shell_counter-1])) ;
+											}
 #ifdef DEBUG
-										if (i == dbg_i && j == dbg_j && k == dbg_k) { wxPrintf("Estimated local resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter]); }
+											if (i == dbg_i && j == dbg_j && k == dbg_k) { wxPrintf("Estimated local resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter]); }
 #endif
-										break;
+											break;
+										}
 									}
 									else if (shell_counter == number_of_fsc_shells - 1)
 									{
@@ -391,9 +406,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 		else
 		{
 			// We are not estimating this slice
-			for (int j = 0; j < input_volume_one->logical_y_dimension; j ++ )
+			int ii,jj;
+			for (jj = 0; jj < input_volume_one->logical_y_dimension; jj ++ )
 			{
-				for (int i = 0; i < input_volume_one->logical_x_dimension; i ++ )
+				for (ii = 0; ii < input_volume_one->logical_x_dimension; ii ++ )
 				{
 					// set the local resolution to indicate we didn't measure it
 					local_resolution_volume->real_values[pixel_counter] = resolution_value_between_estimation_points;

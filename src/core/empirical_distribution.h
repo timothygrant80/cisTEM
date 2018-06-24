@@ -16,7 +16,7 @@ public:
 	~EmpiricalDistribution();
 
 	void AddSampleValue(float sample_value);
-	float GetNumberOfSamples();
+	long GetNumberOfSamples();
 	float GetSampleSum();
 	float GetSampleMean();
 	float GetSampleVariance();

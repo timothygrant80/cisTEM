@@ -6023,6 +6023,78 @@ void Image::ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit)
 
 }
 
+void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels)
+{
+	MyDebugAssertTrue(HasSameDimensionsAs(&local_resolution_map),"Local resolution map does not have expected dimensions");
+	MyDebugAssertTrue(wanted_number_of_levels > 2,"Number of levels must be > 2");
+
+	// Get some stats about the local resolution volume
+	EmpiricalDistribution distribution_of_local_resolutions;
+	local_resolution_map.UpdateDistributionOfRealValues(&distribution_of_local_resolutions,float(logical_x_dimension)*0.45);
+	float min_res = distribution_of_local_resolutions.GetMinimum();
+	float max_res = distribution_of_local_resolutions.GetMaximum();
+	MyDebugPrint("Local res min = %f max = %f\n",min_res,max_res);
+
+	// Low-pass filter
+	Image lp_volume;
+	lp_volume = this;
+	float current_filter_freq = pixel_size / min_res;
+	float cosine_falloff_width = 5.0 / float(logical_x_dimension); // 5 Fourier voxels
+	float filter_freq_step_size = cosine_falloff_width;
+	int filter_counter = 0;
+	while (current_filter_freq >= pixel_size / max_res - filter_freq_step_size + 0.01)
+	{
+		filter_counter ++;
+		if (current_filter_freq < pixel_size / max_res) current_filter_freq = pixel_size / max_res;
+
+		// Apply filter
+		lp_volume.ForwardFFT();
+		MyDebugPrint("Filter #%i: resolution = %f\n",filter_counter,pixel_size/current_filter_freq);
+		lp_volume.CosineMask(current_filter_freq, cosine_falloff_width);
+		lp_volume.BackwardFFT();
+#ifdef DEBUG
+		lp_volume.QuickAndDirtyWriteSlices(wxString::Format("dbg_fil_%02i.mrc",filter_counter).ToStdString(), 1, lp_volume.logical_z_dimension);
+#endif
+
+		/*
+		 * Loop over the image and copy relevant voxels over
+		 * (note we are doing dumb "nearest-neighbour" interpolation between resolution levels.
+		 * This makes the end map look a bit funky, with abrupt changes. I think that's OK for
+		 * usage within the refinement loop, but for final map post-processing, we probably
+		 * want a linear interpolation step here to make things look smoother.
+		 *
+		 */
+		{
+			int i,j,k;
+			long pixel_counter;
+			float res_of_interest_min = pixel_size / (current_filter_freq + 0.5 * filter_freq_step_size);
+			float res_of_interest_max = pixel_size / (current_filter_freq - 0.5 * filter_freq_step_size);
+			MyDebugPrint("Looking for areas with resolution between %f and %f\n",res_of_interest_min, res_of_interest_max);
+
+			pixel_counter = 0;
+			for (k=0;k<logical_z_dimension;k++)
+			{
+				for (j=0;j<logical_y_dimension;j++)
+				{
+					for (i=0;i<logical_x_dimension;i++)
+					{
+						if (local_resolution_map.real_values[pixel_counter] >= res_of_interest_min && local_resolution_map.real_values[pixel_counter] < res_of_interest_max)
+						{
+							real_values[pixel_counter] = lp_volume.real_values[pixel_counter];
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+		}
+
+		// Decrement the filter frequency
+		current_filter_freq -= filter_freq_step_size;
+	}
+
+}
+
 // The output image will be allocated to the correct dimensions (half-volume, a la FFTW)
 void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 {

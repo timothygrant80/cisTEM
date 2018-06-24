@@ -51,7 +51,7 @@ float EmpiricalDistribution::GetSampleSumOfSquares()
 	return sum_of_squared_samples;
 }
 
-float EmpiricalDistribution::GetNumberOfSamples()
+long EmpiricalDistribution::GetNumberOfSamples()
 {
 	return number_of_samples;
 }

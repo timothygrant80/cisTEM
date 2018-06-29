@@ -21,9 +21,12 @@ public:
 	RotationMatrix &operator *= (const RotationMatrix &other);
 	RotationMatrix &operator *= (const RotationMatrix *other);
 	RotationMatrix ReturnTransposed();
+
 	void SetToIdentity();
 	void SetToConstant(float constant);
 	void SetToRotation(float input_x, float input_y, float input_z);
+	void SetToEulerRotation(float wanted_euler_phi_in_degrees, float wanted_euler_theta_in_degrees, float wanted_euler_psi_in_degrees);
+	void ConvertToValidEulerAngles(float &output_phi_in_degrees, float &output_theta_in_degrees, float &output_psi_in_degrees);
 
 	void SetToValues(float m00, float m10, float m20, float m01, float m11, float m21, float m02, float m12, float m22);
 	inline void RotateCoords(float &input_x_coord, float &input_y_coord, float &input_z_coord, float &output_x_coord, float &output_y_coord, float &output_z_coord)

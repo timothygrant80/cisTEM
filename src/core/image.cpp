@@ -1143,7 +1143,7 @@ void Image::ApplySqrtNFilter()
 	}
 }
 
-void Image::Whiten(float resolution_limit)
+void Image::Whiten(float resolution_limit, Curve *whitening_filter)
 {
 	MyDebugAssertTrue(is_in_real_space == false, "Image to whiten is not in Fourier space");
 
@@ -1169,6 +1169,11 @@ void Image::Whiten(float resolution_limit)
 	int *non_zero_count = new int[number_of_bins_extended];
 	ZeroDoubleArray(sum, number_of_bins_extended);
 	ZeroIntArray(non_zero_count, number_of_bins_extended);
+
+	if (whitening_filter != NULL) // setup the curve
+	{
+		whitening_filter->ClearData();
+	}
 
 	long pixel_counter = 0;
 
@@ -3501,6 +3506,69 @@ void Image::GaussianLowPassFilter(float half_width)
 	}
 }
 
+void Image::RandomisePhases(float wanted_radius_in_reciprocal_pixels)
+{
+	bool need_to_fft = false;
+
+	int i;
+	int j;
+	int k;
+	float x;
+	float y;
+	float z;
+
+	float pixel_real;
+	float pixel_imag;
+
+	float current_amplitude;
+	float current_phase;
+
+	float frequency_squared;
+	wanted_radius_in_reciprocal_pixels = powf(wanted_radius_in_reciprocal_pixels, 2);
+
+	long pixel_counter = 0;
+
+	if (is_in_real_space == true)
+	{
+		ForwardFFT();
+		need_to_fft = true;
+	}
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x + y + z;
+
+				if (frequency_squared >= wanted_radius_in_reciprocal_pixels)
+				{
+					pixel_real = real(complex_values[pixel_counter]);
+					pixel_imag = imag(complex_values[pixel_counter]);
+
+					current_amplitude = sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+					current_phase = global_random_number_generator.GetUniformRandom() * PI;
+
+					complex_values[pixel_counter] = (current_amplitude * cosf(current_phase)) + I * (current_amplitude * sinf(current_phase));
+				}
+
+				pixel_counter++;
+			}
+		}
+	}
+
+	if (need_to_fft == true) BackwardFFT();
+}
+
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 /*
  * Raise cosine-edged mask. The first argument gives the radius of the midpoint of the cosine (where cos = 0.5)
@@ -5405,14 +5473,14 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
 
 void Image::ZeroCentralPixel()
 {
-	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
-
 	if (is_in_real_space == false)
 	{
 		complex_values[0] = 0.0f * I + 0.0f;
 	}
 	else
 	{
+		MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
 		int i,j;
 		long address = 0;
 
@@ -5567,6 +5635,38 @@ void Image::ApplyMirrorAlongY()
 	for (i=0 ; i < logical_x_dimension; i++) {
 		real_values[i] = temp_value;
 	}
+}
+
+
+void Image::InvertPixelOrder()
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+
+	Image buffer_image;
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, 1);
+	buffer_image.SetToConstant(-1.0f);
+	int i,j;
+	long start_address = 0;
+	long end_address = real_memory_allocated - 1 - padding_jump_value;
+
+
+	for (j = 0; j < logical_y_dimension; j++)
+	{
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			buffer_image.real_values[start_address] = real_values[end_address];
+			start_address++;
+			end_address--;
+		}
+
+		start_address += padding_jump_value;
+		end_address -=padding_jump_value;
+	}
+
+	Consume(&buffer_image);
+
 }
 
 void Image::AddImage(Image *other_image)
@@ -6902,6 +7002,61 @@ void Image::ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_v
 
 }
 
+// NOTE: THIS METHOD ADDS, it does not replace.
+
+void Image::InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Only real space make sense");
+
+	int kk;
+	int k;
+	int kk_logi;
+
+	int jj;
+	int jj_logi;
+	int j;
+
+	int ii;
+	int ii_logi;
+	int i;
+
+	long pixel_counter = 0;
+
+	for (kk = 0; kk < other_image->logical_z_dimension; kk++)
+	{
+		//kk_logi = kk - other_image->physical_address_of_box_center_z;
+		k = physical_address_of_box_center_z + wanted_z_coord - other_image->physical_address_of_box_center_z + kk;
+		k=0;
+
+		for (jj = 0; jj < other_image->logical_y_dimension; jj++)
+		{
+			//jj_logi = jj - other_image->physical_address_of_box_center_y - 1;
+			j = physical_address_of_box_center_y + wanted_y_coord - other_image->physical_address_of_box_center_y + jj;
+
+			for (ii = 0; ii < other_image->logical_x_dimension; ii++)
+			{
+				//ii_logi = ii - other_image->physical_address_of_box_center_x - 1;
+				i = physical_address_of_box_center_x + wanted_x_coord  - other_image->physical_address_of_box_center_x + ii;
+
+				if (k < 0 || k >= logical_z_dimension || j < 0 || j >= logical_y_dimension || i < 0 || i >= logical_x_dimension)
+				{
+
+				}
+				else
+				{
+					if (other_image->real_values[pixel_counter] > threshold_value)	real_values[ReturnReal1DAddressFromPhysicalCoord(i, j, k)] += other_image->real_values[pixel_counter];
+				}
+
+				pixel_counter++;
+			}
+
+			pixel_counter+=other_image->padding_jump_value;
+		}
+	}
+}
+
 // If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
 void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z)
 {
@@ -7497,7 +7652,6 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
 			pixel_counter++;
 		}
 	}
-
 }
 
 void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
@@ -7599,6 +7753,10 @@ void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_ha
 	}
 
 	if (invert_hand == true) InvertHandedness();
+
+	// normalise to 0.03 (this is abritrary), but seems to work better for model building.
+
+	Normalize(0.03);
 }
 
 void Image::InvertHandedness()

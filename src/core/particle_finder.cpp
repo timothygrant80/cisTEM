@@ -1,7 +1,7 @@
 #include "core_headers.h"
 
 // Use this define to dump intermediate files
-//#define dump_intermediate_files
+#define dump_intermediate_files
 
 // We probably don't need to write out PLT files
 //#define write_out_plt_file
@@ -613,8 +613,12 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 	results_height_template.ClearData();
 	results_rotation.ClearData();
 	wxPrintf("\nFinding peaks & extracting particle images...\n");
-	float temp_float[5];
+	float temp_float[6];
 	my_progress_bar = new ProgressBar(100);
+
+	Image junk_image;
+	Image junk_image_rotate;
+	AnglesAndShifts myangle;
 	while (true)
 	{
 		// We allow ourselves to find peaks beyond our boundary (that way, if something is found just beyond the boundary, we will blank that area and we won't end up
@@ -638,12 +642,37 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 				if (write_out_plt)
 				{
 					wxPrintf("about to open numeric text file with filename %s\n",FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"));
-					output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 5);
+					output_coos_file = new NumericTextFile(FilenameReplaceExtension(output_stack_filename.ToStdString(),"plt"), OPEN_TO_WRITE, 6);
 				}
 			}
 			if (output_stack_box_size > 0) micrograph.ClipInto(&box,micrograph_mean,false,1.0,-int(my_peak.x * pixel_size / original_micrograph_pixel_size),-int(my_peak.y * pixel_size / original_micrograph_pixel_size),0); // - in front of coordinates I think is because micrograph was conjugate multiplied, i.e. reversed order in real space
 			if (output_stack_box_size > 0) box.WriteSlice(&output_stack,number_of_candidate_particles);
 			//wxPrintf("Boxed out particle %i at %i, %i, peak height = %f, coo to ignore = %i, %i\n",number_of_candidate_particles,int(my_peak.x),int(my_peak.y),my_peak.value,coo_to_ignore_x,coo_to_ignore_y);
+
+			// Find the matching template
+			index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
+			rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
+
+			junk_image.CopyFrom(&template_image[index_of_matching_template]);
+
+			if (junk_image.is_in_real_space)
+			{
+				junk_image.ForwardFFT(false);
+				junk_image.NormalizeFT();
+
+			}
+
+			if (junk_image.object_is_centred_in_box)
+			{
+				junk_image.SwapRealSpaceQuadrants();
+			}
+
+			junk_image_rotate.CopyFrom(&junk_image);
+			myangle.Init(0.0,0.0,rotation_of_matching_template,0.0,0.0);
+			junk_image.RotateFourier2D(junk_image_rotate,myangle,1.0,false);
+			junk_image_rotate.SwapRealSpaceQuadrants();
+			junk_image_rotate.QuickAndDirtyWriteSlice("/tmp/templates.mrc", number_of_candidate_particles);
+
 			if (write_out_plt)
 			{
 				temp_float[1] =  maximum_score.logical_x_dimension - (maximum_score.physical_address_of_box_center_x + (my_peak.x));
@@ -652,13 +681,11 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 				temp_float[0] =  temp_float[0] * pixel_size / original_micrograph_pixel_size + 1.0;
 				temp_float[2] =  1.0;
 				temp_float[3] =  float(index_of_matching_template);
-				temp_float[4] =  my_peak.value;
+				temp_float[4] =  rotation_of_matching_template;
+				temp_float[5] =  my_peak.value;
 				output_coos_file->WriteLine(temp_float);
 			}
 
-			// Find the matching template
-			index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
-			rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 
 			// Remember results
 			results_x_y.AddPoint(pixel_size * (float(maximum_score_modified.physical_address_of_box_center_x) - my_peak.x), pixel_size * (float(maximum_score_modified.physical_address_of_box_center_y) - my_peak.y));
@@ -799,6 +826,7 @@ void ParticleFinder::DoTemplateMatching()
 	template_rotation_giving_maximum_score = template_giving_maximum_score;
 	for ( int template_counter = 0; template_counter < number_of_templates; template_counter ++ )
 	{
+		wxPrintf("Working on template %i\n", template_counter);
 
 		// Ideally, one would pad the template image to the micrograph dimensions before applying the CTF,
 		// so that one wouldn't have to worry about PSF spread, or at least one would pad them large enough

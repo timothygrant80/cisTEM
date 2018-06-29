@@ -124,7 +124,7 @@ public:
 	EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void UpdateDistributionOfRealValues(EmpiricalDistribution *distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 	void ApplySqrtNFilter();
-	void Whiten(float resolution_limit = 1.0);
+	void Whiten(float resolution_limit = 1.0, Curve *whitening_filter = NULL);
 	void OptimalFilterBySNRImage(Image &SNR_image, int include_reference_weighting = 1);
 	void MultiplyByWeightsCurve(Curve &weights, float scale_factor = 1.0);
 	void WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel_size, Curve &SSNR, Image &projection_image, bool weight_particle_image, bool weight_projection_image);
@@ -333,6 +333,7 @@ public:
 	void SetToConstant(float wanted_value);
 	void ClipIntoLargerRealSpace2D(Image *other_image, float wanted_padding_value = 0);
 	void ClipInto(Image *other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
+	void InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
@@ -381,8 +382,11 @@ public:
 	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);
 	void ApplyMirrorAlongY();
+	void InvertPixelOrder();
 
 	void GetMinMax(float &min_value, float &max_value);
+
+	void RandomisePhases(float wanted_radius_in_reciprocal_pixels);
 
 	float GetCorrelationWithCTF(CTF ctf);
 

@@ -156,6 +156,7 @@ void MyParticlePositionAssetPanel::InsertArrayofGroupMembersToDatabase(long want
 
 void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
 {
+	main_frame->current_project.database.Begin();
 	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
 	{
 		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE PARTICLE_POSITION_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
@@ -166,6 +167,7 @@ void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE PARTICLE_POSITION_ASSETS");
 	main_frame->current_project.database.CreateParticlePositionAssetTable();
+	main_frame->current_project.database.Commit();
 
 
 
@@ -175,20 +177,26 @@ void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
 
 void MyParticlePositionAssetPanel::RemoveAllGroupMembersFromDatabase(int wanted_group_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE PARTICLE_POSITION_GROUP_%i", wanted_group_id).ToUTF8().data());
 	main_frame->current_project.database.CreateTable(wxString::Format("PARTICLE_POSITION_GROUP_%i", wanted_group_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "PARTICLE_POSITION_ASSET_ID");
+	main_frame->current_project.database.Commit();
 }
 
 void MyParticlePositionAssetPanel::AddGroupToDatabase(int wanted_group_id, const char * wanted_group_name, int wanted_list_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.InsertOrReplace("PARTICLE_POSITION_GROUP_LIST", "iti", "GROUP_ID", "GROUP_NAME", "LIST_ID", wanted_group_id, wanted_group_name, wanted_list_id);
 	main_frame->current_project.database.CreateTable(wxString::Format("PARTICLE_POSITION_GROUP_%i", wanted_list_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "PARTICLE_POSITION_ASSET_ID");
+	main_frame->current_project.database.Commit();
 }
 
 void MyParticlePositionAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 {
+	main_frame->current_project.database.Begin();
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE PARTICLE_POSITION_GROUP_%i", wanted_group_id).ToUTF8().data());
 	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM PARTICLE_POSITION_GROUP_LIST WHERE GROUP_ID=%i", wanted_group_id));
+	main_frame->current_project.database.Commit();
 }
 
 void MyParticlePositionAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
@@ -283,9 +291,9 @@ void MyParticlePositionAssetPanel::ImportAllFromDatabase()
 	}
 
 	main_frame->current_project.database.EndAllParticlePositionGroupsSelect();
-	//FillGroupList();
-	//FillContentsList();
-	is_dirty = true;
+	FillGroupList();
+	FillContentsList();
+	//is_dirty = true;
 }
 
 void MyParticlePositionAssetPanel::FillAssetSpecificContentsList()

@@ -19,7 +19,7 @@ void PopupTextDialog::OnCopyToClipboardClick( wxCommandEvent& event )
 void PopupTextDialog::OnSaveButtonClick( wxCommandEvent& event )
 {
 	ProperOverwriteCheckSaveDialog *saveFileDialog;
-	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save txt file"), "PNG files (*.txt)|*.txt", ".txt");
+	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save txt file"), "TXT files (*.txt)|*.txt", ".txt");
 	if (saveFileDialog->ShowModal() == wxID_CANCEL)
 	{
 		saveFileDialog->Destroy();

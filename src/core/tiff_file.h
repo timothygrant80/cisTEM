@@ -4,7 +4,11 @@ private:
 	int	logical_dimension_x;
 	int logical_dimension_y;
 	int number_of_images;
+
+	bool this_is_in_mastronarde_4bit_hack_format;
+
 	float pixel_size;
+
 
 	bool ReadLogicalDimensionsFromDisk();
 

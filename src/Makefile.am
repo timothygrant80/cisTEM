@@ -120,6 +120,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/LargeAngularPlotDialog.h \
                  gui/Sharpen3DPanel.h \
                  gui/PlotCurvePanel.h \
+                 gui/MatchTemplatePanel.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
                  gui/icons/ctf_icon.cpp \
@@ -185,15 +186,23 @@ noinst_HEADERS = core/asset_group.h \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp
-
                  
-
-
+if EXPERIMENTAL_AM
+noinst_HEADERS += 	gui/MatchTemplatePanel.h \
+					gui/icons/experimental_icon.cpp \
+					gui/icons/match_template_icon.cpp 
+endif      
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry niko_test fft local_resolution local_resolution_finalize local_resolution_filter 
+
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter niko_test
+
+if EXPERIMENTAL_AM   
+bin_PROGRAMS += match_template  match_template_nikoml make_template_result
+endif
+
 
 libcore_a_SOURCES =    core/functions.cpp \
 					   core/globals.cpp \
@@ -253,7 +262,12 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
+
 cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp
+
+if EXPERIMENTAL_AM
+cisTEM_SOURCES += gui/MatchTemplatePanel.cpp gui/MatchTemplateMLPanel.cpp
+endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
@@ -431,10 +445,25 @@ prepare_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_LDADD = libcore.a $(WX_LIBS_BASE)
 
-niko_test_SOURCES = programs/niko_test/niko_test.cpp
-niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_LDADD = libcore.a $(WX_LIBS_BASE)
+subtract_from_stack_SOURCES = programs/subtract_from_stack/subtract_from_stack.cpp
+subtract_from_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+subtract_from_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+subtract_from_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+
+binarize_SOURCES = programs/binarize/binarize.cpp
+binarize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+binarize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+binarize_LDADD = libcore.a $(WX_LIBS_BASE)
+
+move_volume_xyz_SOURCES = programs/move_volume_xyz/move_volume_xyz.cpp
+move_volume_xyz_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+move_volume_xyz_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+move_volume_xyz_LDADD = libcore.a $(WX_LIBS_BASE)
+
+symmetry_expand_stack_and_par_SOURCES = programs/symmetry_expand_stack_and_par/symmetry_expand_stack_and_par.cpp
+symmetry_expand_stack_and_par_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+symmetry_expand_stack_and_par_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+symmetry_expand_stack_and_par_LDADD = libcore.a $(WX_LIBS_BASE)
 
 fft_SOURCES = programs/fft/fft.cpp
 fft_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -451,7 +480,31 @@ local_resolution_finalize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_LDADD = libcore.a $(WX_LIBS_BASE)
 
+niko_test_SOURCES = programs/niko_test/niko_test.cpp
+niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+niko_test_LDADD = libcore.a $(WX_LIBS_BASE)
+
 local_resolution_filter_SOURCES = programs/local_resolution_filter/local_resolution_filter.cpp
 local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_LDADD = libcore.a $(WX_LIBS_BASE)
+
+if EXPERIMENTAL_AM
+make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp
+make_template_result_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+make_template_result_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+make_template_result_LDADD = libcore.a $(WX_LIBS_BASE)
+
+match_template_SOURCES = programs/match_template/match_template.cpp
+match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_LDADD = libcore.a $(WX_LIBS_BASE)
+
+match_template_nikoml_SOURCES = programs/match_template_nikoml/match_template_nikoml.cpp
+match_template_nikoml_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_nikoml_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_nikoml_LDADD = libcore.a $(WX_LIBS_BASE)
+
+endif
+

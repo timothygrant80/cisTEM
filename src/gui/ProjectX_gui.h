@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jul 11 2016)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -1034,6 +1034,24 @@ class AssetsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ExperimentalPanel
+///////////////////////////////////////////////////////////////////////////////
+class ExperimentalPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline68;
+	
+	public:
+		wxListbook* ExperimentalBook;
+		
+		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~ExperimentalPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class OverviewPanel
 ///////////////////////////////////////////////////////////////////////////////
 class OverviewPanel : public wxPanel 
@@ -2052,6 +2070,126 @@ class FindCTFPanel : public JobPanel
 		
 		FindCTFPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~FindCTFPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class MatchTemplateParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class MatchTemplateParentPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText262;
+		wxStaticText* m_staticText478;
+		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
+		wxStaticLine* m_staticline155;
+		wxStaticText* m_staticText764;
+		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText201;
+		wxStaticText* m_staticText189;
+		NumericTextCtrl* OutofPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190;
+		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RunProfileComboBox;
+		wxButton* StartEstimationButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		ImageGroupPickerComboPanel* GroupComboBox;
+		ShowCTFResultsPanel* CTFResultsPanel;
+		
+		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+		~MatchTemplateParentPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class MatchTemplateMLParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class MatchTemplateMLParentPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText262;
+		wxStaticText* m_staticText478;
+		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
+		wxStaticLine* m_staticline155;
+		wxStaticText* m_staticText764;
+		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
+		wxStaticText* m_staticText7641;
+		NumericTextCtrl* RandomResTextCtrl;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText201;
+		wxStaticText* m_staticText189;
+		NumericTextCtrl* OutofPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190;
+		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RunProfileComboBox;
+		wxButton* StartEstimationButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		ImageGroupPickerComboPanel* GroupComboBox;
+		ShowCTFResultsPanel* CTFResultsPanel;
+		
+		MatchTemplateMLParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+		~MatchTemplateMLParentPanel();
 	
 };
 

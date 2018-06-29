@@ -31,6 +31,12 @@ AssetsPanel *assets_panel;
 MyResultsPanel *results_panel;
 SettingsPanel *settings_panel;
 
+#ifdef EXPERIMENTAL
+ExperimentalPanel *experimental_panel;
+MatchTemplatePanel *match_template_panel;
+MatchTemplateMLPanel *match_templateml_panel;
+#endif
+
 MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
 MyParticlePositionAssetPanel *particle_position_asset_panel;
@@ -64,6 +70,7 @@ bool MyGuiApp::OnInit()
 	#include "../../gui/icons/action_icon.cpp"
 	#include "../../gui/icons/results_icon.cpp"
 	#include "../../gui/icons/settings_icon.cpp"
+	#include "../../gui/icons/experimental_icon.cpp"
 	//#include "../../gui/icons/settings_icon2.cpp"
 
 	#include "../../gui/icons/movie_icon.cpp"
@@ -85,6 +92,9 @@ bool MyGuiApp::OnInit()
 
 	#include "../../gui/icons/run_profiles_icon.cpp"
 
+#ifdef EXPERIMENTAL
+	#include "../../gui/icons/match_template_icon.cpp"
+#endif
 
 	wxImage::AddHandler(new wxPNGHandler);
 
@@ -92,6 +102,10 @@ bool MyGuiApp::OnInit()
 	wxImageList *ActionsBookIconImages;
 	wxImageList *AssetsBookIconImages;
 	wxImageList *SettingsBookIconImages;
+
+#ifdef EXPERIMENTAL
+	wxImageList *ExperimentalBookIconImages;
+#endif
 
 	main_frame = new MyMainFrame( (wxWindow*)NULL);
 
@@ -110,6 +124,10 @@ bool MyGuiApp::OnInit()
 	assets_panel = new AssetsPanel(main_frame->MenuBook, wxID_ANY);
 	results_panel = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
 	settings_panel = new SettingsPanel(main_frame->MenuBook, wxID_ANY);
+
+#ifdef EXPERIMENTAL
+	experimental_panel = new ExperimentalPanel(main_frame->MenuBook, wxID_ANY);
+#endif
 
 	// Individual Panels
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
@@ -137,6 +155,11 @@ bool MyGuiApp::OnInit()
 	refine2d_results_panel = new Refine2DResultsPanel(results_panel->ResultsBook);
 	refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
 
+#ifdef EXPERIMENTAL
+	match_template_panel = new MatchTemplatePanel(experimental_panel->ExperimentalBook);
+	match_templateml_panel = new MatchTemplateMLPanel(experimental_panel->ExperimentalBook);
+#endif
+
 	// Setup list books
 
 	MenuBookIconImages = new wxImageList();
@@ -145,6 +168,10 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages = new wxImageList();
 	SettingsBookIconImages = new wxImageList();
 
+#ifdef EXPERIMENTAL
+	ExperimentalBookIconImages = new wxImageList();
+#endif
+
 	wxLogNull *suppress_png_warnings = new wxLogNull;
 
 	wxBitmap overview_icon_bmp = wxBITMAP_PNG_FROM_DATA(overview_icon);
@@ -152,6 +179,10 @@ bool MyGuiApp::OnInit()
 	wxBitmap action_icon_bmp = wxBITMAP_PNG_FROM_DATA(action_icon);
 	wxBitmap results_icon_bmp = wxBITMAP_PNG_FROM_DATA(results_icon);
 	wxBitmap settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(settings_icon);
+
+#ifdef EXPERIMENTAL
+	wxBitmap experimental_icon_bmp = wxBITMAP_PNG_FROM_DATA(experimental_icon);
+#endif
 
 	wxBitmap movie_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_icon);
 	wxBitmap image_icon_bmp = wxBITMAP_PNG_FROM_DATA(image_icon);
@@ -172,9 +203,11 @@ bool MyGuiApp::OnInit()
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
+#ifdef EXPERIMENTAL
+	wxBitmap match_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(match_template_icon);
+#endif
+
 	delete suppress_png_warnings;
-
-
 
 	MenuBookIconImages->Add(overview_icon_bmp);
 	MenuBookIconImages->Add(assets_icon_bmp);
@@ -182,6 +215,9 @@ bool MyGuiApp::OnInit()
 	MenuBookIconImages->Add(results_icon_bmp);
 	MenuBookIconImages->Add(settings_icon_bmp);
 
+#ifdef EXPERIMENTAL
+	MenuBookIconImages->Add(experimental_icon_bmp);
+#endif
 
 	ActionsBookIconImages->Add(movie_align_icon_bmp);
 	ActionsBookIconImages->Add(ctf_icon_bmp);
@@ -205,8 +241,11 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages->Add(classification_icon_bmp);
 	ResultsBookIconImages->Add(refine3d_icon_bmp);
 
-		SettingsBookIconImages->Add(run_profiles_icon_bmp);
+	SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
+#ifdef EXPERIMENTAL
+	ExperimentalBookIconImages->Add(match_template_icon_bmp);
+#endif
 
 	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
 	actions_panel->ActionsBook->AssignImageList(ActionsBookIconImages);
@@ -214,11 +253,23 @@ bool MyGuiApp::OnInit()
 	results_panel->ResultsBook->AssignImageList(ResultsBookIconImages);
 	settings_panel->SettingsBook->AssignImageList(SettingsBookIconImages);
 
+#ifdef EXPERIMENTAL
+	experimental_panel->ExperimentalBook->AssignImageList(ExperimentalBookIconImages);
+#endif
+
 	main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
 	main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
 	main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
 	main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
+
+#ifdef EXPERIMENTAL
+	main_frame->MenuBook->AddPage(experimental_panel, "Experimental", false, 5);
+#endif
+
 	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
+
+
+	//main_frame->MenuBook->AppendSeparator();
 
 	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", true, 0);
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
@@ -243,6 +294,11 @@ bool MyGuiApp::OnInit()
 	results_panel->ResultsBook->AddPage(refinement_results_panel, "3D Refinement", false, 4);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
+
+#ifdef EXPERIMENTAL
+	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
+	experimental_panel->ExperimentalBook->AddPage(match_templateml_panel, "Match Templates ML", true, 0);
+#endif
 
 	// Setup Movie Panel
 

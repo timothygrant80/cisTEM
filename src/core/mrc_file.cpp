@@ -131,11 +131,56 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 	// calculate and seek to the start byte..
 
-	long records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long((end_slice - start_slice) + 1);
-	long bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
-	long image_offset = long(start_slice - 1) * bytes_per_slice;
-	long current_position = my_file.tellg();
-	long seek_position = 1024 + image_offset + long(my_header.SymmetryDataBytes());
+	long records_to_read;
+	long bytes_per_slice;
+	long image_offset;
+	long current_position;
+	long seek_position;
+
+	if (my_header.Mode() == 101)
+	{
+		records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * (long(end_slice - start_slice) + 1);
+
+		if (IsOdd(my_header.ReturnDimensionX()) == true)
+		{
+			bytes_per_slice = ((long(my_header.ReturnDimensionX()) - 1) / 2) + 1;
+			bytes_per_slice *= long(my_header.ReturnDimensionY());
+		}
+		else
+		{
+			bytes_per_slice = long(my_header.ReturnDimensionX()) / 2;
+			bytes_per_slice *= long(my_header.ReturnDimensionY());
+		}
+
+		image_offset = (start_slice - 1) * bytes_per_slice;
+		current_position = my_file.tellg();
+		seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
+	}
+	else
+	{
+		// check for mastronarde 4-bit hack.
+
+		if (my_header.ReturnIfThisIsInMastronarde4BitHackFormat() == true)
+		{
+			records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * (long(end_slice - start_slice) + 1);
+			records_to_read /= 2;
+
+			bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
+			image_offset = long(start_slice - 1) * bytes_per_slice;
+
+		}
+		else
+		{
+			records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * (long(end_slice - start_slice) + 1);
+			bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
+			image_offset = long(start_slice - 1) * bytes_per_slice;
+
+
+		}
+
+		current_position = my_file.tellg();
+		seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
+	}
 
 	if (current_position != seek_position) my_file.seekg(seek_position);
 
@@ -146,12 +191,31 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		// 1-byte integer
 		case 0:
 		{
+			long output_counter = 0;
+			uint8 low_4bits;
+			uint8 hi_4bits;
+
 			char *temp_char_array = new char [records_to_read];
 			my_file.read(temp_char_array, records_to_read);
 
 			for (long counter = 0; counter < records_to_read; counter++)
 			{
-				output_array[counter] = float(temp_char_array[counter]);
+				if (my_header.ReturnIfThisIsInMastronarde4BitHackFormat() == true)
+				{
+					low_4bits = temp_char_array[counter] & 0x0F;
+					hi_4bits = (temp_char_array[counter]>>4) & 0x0F;
+
+					output_array[output_counter] = float(low_4bits);
+					output_counter ++;
+					output_array[output_counter] = float(hi_4bits);
+					output_counter ++;
+				}
+				else
+				{
+					output_array[counter] = float(temp_char_array[counter]);
+				}
+
+
 			}
 
 			delete [] temp_char_array;
@@ -188,6 +252,61 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 				output_array[counter] = float(temp_int_array[counter]);
 			}
 			delete [] temp_int_array;
+		}
+		break;
+
+		// 101.. 4-bit integer..
+
+		case 101:
+		{
+			// horrible format.. each byte is two pixels, if x is odd then the last one is padded.
+			// so recalculate the number of bytes to read
+
+			long input_array_position = 0;
+			long output_array_position = 0;
+			int x_pos = 0;
+
+			long actual_bytes_to_read = ((end_slice - start_slice) + 1) * bytes_per_slice;
+
+			uint8 hi_4bits;
+			uint8 low_4bits;
+
+			char *temp_char_array = new char [actual_bytes_to_read];
+			my_file.read(temp_char_array, actual_bytes_to_read);
+
+			// now we have to convert..
+
+
+			for (long counter = 0; counter < actual_bytes_to_read; counter++)
+			{
+
+				low_4bits = temp_char_array[input_array_position] & 0x0F;
+				hi_4bits = (temp_char_array[input_array_position]>>4) & 0x0F;
+
+				//wxPrintf("\n\ninput = %i, low = %i, high = %i\n\n", int(temp_char_array[input_array_position]), int(low_4bits), int(hi_4bits));
+
+				input_array_position++;
+
+				x_pos++;
+
+				if (x_pos == my_header.ReturnDimensionX() && IsOdd(my_header.ReturnDimensionX()) == true)
+				{
+					x_pos = 0;
+					output_array[output_array_position] = float(low_4bits);
+					output_array_position++;
+
+				}
+				else
+				{
+					output_array[output_array_position] = float(low_4bits);
+					output_array_position++;
+					output_array[output_array_position] = float(hi_4bits);
+					output_array_position++;
+				}
+			}
+
+			delete [] temp_char_array;
+
 		}
 		break;
 

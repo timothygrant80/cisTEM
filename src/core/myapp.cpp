@@ -1,3 +1,4 @@
+
 #include "core_headers.h"
 
 SETUP_SOCKET_CODES
@@ -8,6 +9,7 @@ wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDERROR, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SENDINFO, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_SEND_PROGRAM_DEFINED_RESULT, ReturnProgramDefinedResultEvent);
 
 #define THREAD_START_NEXT_JOB 0
 #define THREAD_DIE 1
@@ -40,6 +42,8 @@ bool MyApp::OnInit()
 
 	total_milliseconds_spent_on_threads = 0;
 
+	ProgramSpecificInit();
+
 	wxString current_address;
 	wxArrayString possible_controller_addresses;
 	wxIPV4address junk_address;
@@ -53,6 +57,7 @@ bool MyApp::OnInit()
 	Bind(wxEVT_COMMAND_MYTHREAD_ENDING, &MyApp::OnThreadEnding, this); // When thread is about to die
 	Bind(wxEVT_COMMAND_MYTHREAD_INTERMEDIATE_RESULT_AVAILABLE, &MyApp::OnThreadIntermediateResultAvailable, this);
 	Bind(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT, &MyApp::OnThreadSendImageResult, this);
+	Bind(wxEVT_COMMAND_MYTHREAD_SEND_PROGRAM_DEFINED_RESULT, &MyApp::OnThreadSendProgramDefinedResult, this);
 
 
 	// Connect to the controller program..
@@ -816,6 +821,28 @@ void MyApp::OnSlaveSocketEvent(wxSocketEvent &event)
 				queue_timer->StartOnce(1000);
 			}
 		}
+		else
+		if (memcmp(socket_input_buffer, socket_program_defined_result, SOCKET_CODE_SIZE) == 0) // identification
+		{
+				float *data_array;
+				int details[3];
+
+				ReadFromSocket(sock, details, sizeof(int) * 3);
+
+				data_array = new float[details[0]];
+				int result_number = details[1];
+				int number_of_expected_results = details[2];
+
+				ReadFromSocket(sock, data_array, details[0] * sizeof(float));
+
+				MasterHandleProgramDefinedResult(data_array, details[0], result_number, number_of_expected_results);
+
+				delete [] data_array;
+		}
+
+
+
+
 
 		/*
 		else
@@ -1321,6 +1348,32 @@ void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
 	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
 }
 
+void MyApp::OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my_event)
+{
+	MyDebugAssertTrue(i_am_the_master == false, "OnThreadSendImageResult called by master!");
+
+	float *array_to_send = my_event.GetResultData();
+	long size_of_array = my_event.GetSizeOfResultData();
+	int number_of_expected_results =  my_event.GetNumberOfExpectedResults();
+	int result_number = my_event.GetResultNumber();
+
+	int details[3];
+
+	details[0] = size_of_array;
+	details[1] = result_number;
+	details[2] = number_of_expected_results;
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG);
+
+	WriteToSocket(controller_socket, socket_program_defined_result, SOCKET_CODE_SIZE, true);
+	WriteToSocket(controller_socket, details, sizeof(int) * 3, true);
+	WriteToSocket(controller_socket, array_to_send, size_of_array * sizeof(float), true);
+
+	delete [] array_to_send;
+
+	controller_socket->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
+}
+
 void MyApp::SendAllResultsFromResultQueue()
 {
 	// have we sent results within the last second? if so wait 1s
@@ -1489,6 +1542,17 @@ void MyApp::SendProcessedImageResult(Image *image_to_send, int position_in_stack
 	}
 }
 
+void MyApp::SendProgramDefinedResultToMaster(float *array_to_send, long size_of_array, int result_number, int number_of_expected_results)
+{
+	if (work_thread != NULL)
+	{
+		work_thread->SendProgramDefinedResultToMaster(array_to_send, size_of_array, result_number, number_of_expected_results);
+	}
+	else
+	{
+		wxPrintf("Work thread is NULL!\n");
+	}
+}
 
 
 JobResult * MyApp::PopJobFromResultQueue()
@@ -1604,6 +1668,16 @@ void CalculateThread::SendProcessedImageResult(Image *image_to_send, int positio
 	test_event->SetInt(position_in_stack);
 	test_event->SetString(filename_to_save);
 	test_event->SetPayload(*image_to_send);
+	wxQueueEvent(main_thread_pointer, test_event);
+}
+
+void CalculateThread::SendProgramDefinedResultToMaster(float  *array_to_send, long size_of_array, int result_number, int number_of_expected_results)
+{
+	ReturnProgramDefinedResultEvent *test_event = new ReturnProgramDefinedResultEvent(wxEVT_COMMAND_MYTHREAD_SEND_PROGRAM_DEFINED_RESULT);
+	test_event->SetResultData(array_to_send);
+	test_event->SetSizeOfResultData(size_of_array);
+	test_event->SetResultNumber(result_number);
+	test_event->SetNumberOfExpectedResults(number_of_expected_results);
 	wxQueueEvent(main_thread_pointer, test_event);
 }
 

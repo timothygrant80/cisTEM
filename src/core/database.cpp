@@ -1924,14 +1924,14 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 		temp_refinement->class_refinement_results[class_counter].estimated_resolution = sqlite3_column_double(list_statement, 22);
 		temp_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = sqlite3_column_int64(list_statement, 23);
 		temp_refinement->class_refinement_results[class_counter].reconstruction_id = sqlite3_column_int64(list_statement, 24);
-		temp_refinement->class_refinement_results[class_counter].should_auto_mask = sqlite3_column_int(list_statement, 24);
-		temp_refinement->class_refinement_results[class_counter].should_refine_input_params = sqlite3_column_int(list_statement, 24);
-		temp_refinement->class_refinement_results[class_counter].should_use_supplied_mask = sqlite3_column_int(list_statement, 25);
-		temp_refinement->class_refinement_results[class_counter].mask_asset_id = sqlite3_column_int64(list_statement, 26);
-		temp_refinement->class_refinement_results[class_counter].mask_edge_width = sqlite3_column_double(list_statement, 27);
-		temp_refinement->class_refinement_results[class_counter].outside_mask_weight = sqlite3_column_double(list_statement, 28);
-		temp_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = sqlite3_column_int(list_statement, 29);
-		temp_refinement->class_refinement_results[class_counter].filter_resolution = sqlite3_column_double(list_statement, 30);
+		temp_refinement->class_refinement_results[class_counter].should_auto_mask = sqlite3_column_int(list_statement, 25);
+		temp_refinement->class_refinement_results[class_counter].should_refine_input_params = sqlite3_column_int(list_statement, 26);
+		temp_refinement->class_refinement_results[class_counter].should_use_supplied_mask = sqlite3_column_int(list_statement, 27);
+		temp_refinement->class_refinement_results[class_counter].mask_asset_id = sqlite3_column_int64(list_statement, 28);
+		temp_refinement->class_refinement_results[class_counter].mask_edge_width = sqlite3_column_double(list_statement, 29);
+		temp_refinement->class_refinement_results[class_counter].outside_mask_weight = sqlite3_column_double(list_statement, 30);
+		temp_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = sqlite3_column_int(list_statement, 31);
+		temp_refinement->class_refinement_results[class_counter].filter_resolution = sqlite3_column_double(list_statement, 32);
 	}
 
 	Finalize(list_statement);

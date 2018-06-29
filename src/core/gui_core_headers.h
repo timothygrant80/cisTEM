@@ -113,6 +113,11 @@
 #include "../gui/Sharpen3DPanel.h"
 #include "../gui/PlotCurvePanel.h"
 
+#ifdef EXPERIMENTAL
+#include "../gui/MatchTemplatePanel.h"
+#include "../gui/MatchTemplateMLPanel.h"
+#endif
+
 #define REFINEMENT 0
 #define RECONSTRUCTION 1
 #define MERGE 2

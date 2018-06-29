@@ -360,8 +360,9 @@ bool UnBlurApp::DoCalculation()
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter].MultiplyPixelWise(gain_image);
-			image_stack[image_counter].ReplaceOutliersWithMean(6);
 		}
+
+		image_stack[image_counter].ReplaceOutliersWithMean(6);
 
 		if (correct_mag_distortion == true)
 		{

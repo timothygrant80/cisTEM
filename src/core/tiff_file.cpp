@@ -5,6 +5,7 @@ TiffFile::TiffFile()
 	logical_dimension_x = 0;
 	logical_dimension_y = 0;
 	number_of_images = 0;
+	this_is_in_mastronarde_4bit_hack_format = false;
 }
 
 TiffFile::TiffFile(std::string wanted_filename, bool overwrite)
@@ -66,14 +67,32 @@ bool TiffFile::ReadLogicalDimensionsFromDisk()
 	int set_dir_ret = TIFFSetDirectory(tif,0);
 	bool return_value = (set_dir_ret == 1);
 	int dircount = 1;
+	uint32 original_x = 0;
 	uint32 current_x = 0;
 	uint32 current_y = 0;
 
 	TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
 	TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
 
-	logical_dimension_x = current_x;
-	logical_dimension_y = current_y;
+	// Serial EM has the option to write out 4-bit compressed tif.  They way that this is done is to do it as an 8-bit with
+	// half the x dimension. If the file has specific dimensions, it is assumed to be 4-bit.  I've copied the check directly
+	// from David Mastronarde. - see function comments for sizeCanBe4BitK2SuperRes
+
+	if (sizeCanBe4BitK2SuperRes(current_x, current_y) == 1)
+	{
+		logical_dimension_x = current_x * 2;
+		logical_dimension_y = current_y;
+		this_is_in_mastronarde_4bit_hack_format = true;
+	}
+	else
+	{
+		logical_dimension_x = current_x;
+		logical_dimension_y = current_y;
+		this_is_in_mastronarde_4bit_hack_format = false;
+	}
+
+	original_x = current_x;
+
 
 	while (TIFFReadDirectory(tif))
 	{
@@ -81,9 +100,9 @@ bool TiffFile::ReadLogicalDimensionsFromDisk()
 		TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
 		TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
 
-		if (logical_dimension_x != current_x || logical_dimension_y != current_y)
+		if (current_x != original_x || logical_dimension_y != current_y)
 		{
-			MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,logical_dimension_x,logical_dimension_y);
+			MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,original_x,logical_dimension_y);
 			return_value = false;
 		}
 	}
@@ -143,17 +162,55 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 			{
 				uint8 * buf = new uint8[TIFFStripSize(tif)];
 
-				for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
+				// Serial EM has the option to write out 4-bit compressed tif.  They way that this is done is to do it as an 8-bit with
+				// half the x dimension. If the file has specific dimensions, it is assumed to be 4-bit.  I've copied the check directly
+				// from David Mastronarde. - see function comments for sizeCanBe4BitK2SuperRes
+
+				if (this_is_in_mastronarde_4bit_hack_format == true) // this is 4-bit
 				{
+
+					uint8 hi_4bits;
+					uint8 low_4bits;
+
 					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
 					//wxPrintf("%i %i %i\n",int(number_of_bytes_placed_in_buffer),int(rows_per_strip), int(rows_per_strip * ReturnXSize()));
 					if (strip_counter < TIFFNumberOfStrips(tif) - 1) MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
 
-					output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
-					for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)
+
+					for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
 					{
-						output_array[output_counter] = buf[counter];
-						output_counter ++;
+
+						number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
+						MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() / 2,"Unexpected number of bytes in uint8 buffer");
+
+						output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
+
+						for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)
+						{
+							low_4bits = buf[counter] & 0x0F;
+							hi_4bits = (buf[counter]>>4) & 0x0F;
+
+							output_array[output_counter] = float(low_4bits);
+							output_counter ++;
+							output_array[output_counter] = float(hi_4bits);
+							output_counter ++;
+						}
+					}
+				}
+				else // not 4-bit
+				{
+					for (strip_counter = 0; strip_counter < TIFFNumberOfStrips(tif); strip_counter++)
+					{
+
+						number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
+						MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
+
+						output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
+						for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)
+						{
+							output_array[output_counter] = buf[counter];
+							output_counter ++;
+						}
 					}
 				}
 
@@ -292,3 +349,5 @@ void TiffFile::WriteSlicesToDisk(int start_slice, int end_slice, float * input_a
 {
 	MyDebugAssertTrue(false,"Not implemented yet");
 }
+
+

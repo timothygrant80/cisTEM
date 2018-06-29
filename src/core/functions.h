@@ -12,6 +12,8 @@ inline void ZeroBoolArray(bool *array_to_zero, int size_of_array)
 	}
 }
 
+int sizeCanBe4BitK2SuperRes(int nx, int ny); // provided by David Mastronarde
+
 inline void ZeroIntArray(int *array_to_zero, int size_of_array)
 {
 	for (int counter = 0; counter < size_of_array; counter++)

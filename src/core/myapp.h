@@ -1,6 +1,45 @@
 #define SERVER_ID 100
 #define SOCKET_ID 101
 
+class ReturnProgramDefinedResultEvent;
+wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEvent);
+
+class ReturnProgramDefinedResultEvent: public wxThreadEvent
+{
+public:
+	ReturnProgramDefinedResultEvent(wxEventType commandType = RETURN_PROGRAM_DEFINED_RESULT_EVT, int id = 0)
+        		:  wxThreadEvent(commandType, id) { }
+
+	// You *must* copy here the data to be transported
+	ReturnProgramDefinedResultEvent(const ReturnProgramDefinedResultEvent& event)
+        		:  wxThreadEvent(event)
+	{
+		this->SetResultData(event.GetResultData());
+		this->SetSizeOfResultData(event.GetSizeOfResultData());
+		this->SetResultNumber(event.GetResultNumber());
+		this->SetNumberOfExpectedResults(event.GetNumberOfExpectedResults());
+	}
+
+	// Required for sending with wxPostEvent()
+	wxEvent* Clone() const { return new ReturnProgramDefinedResultEvent(*this); }
+
+	float* GetResultData() const {return m_pointer_to_result_data;}
+	long GetSizeOfResultData() const {return m_size_of_result_data;}
+	int GetResultNumber() const{return m_result_number;}
+	int GetNumberOfExpectedResults() const{return m_number_of_expected_results;}
+
+	void SetResultData(float *result) {m_pointer_to_result_data = result;}
+	void SetSizeOfResultData(long size) {m_size_of_result_data = size;}
+	void SetResultNumber(int result_number) {m_result_number = result_number;}
+	void SetNumberOfExpectedResults(int number_of_expected_results) {m_number_of_expected_results = number_of_expected_results;}
+
+
+private:
+	float *m_pointer_to_result_data;
+	long m_size_of_result_data;
+	int m_result_number;
+	int m_number_of_expected_results;
+};
 
 
 class MyApp; // So CalculateThread class knows about it
@@ -19,7 +58,7 @@ class CalculateThread : public wxThread
     	void QueueInfo(wxString info_to_queue);
     	void MarkIntermediateResultAvailable();
     	void SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save);
-
+    	void SendProgramDefinedResultToMaster(float *result_to_send, long size_of_result, int result_number, int number_of_expected_results);
 
 	protected:
 
@@ -56,7 +95,9 @@ MyApp : public wxAppConsole
 
 
 	public:
-		virtual bool OnInit();
+
+		bool OnInit();
+		virtual void ProgramSpecificInit() {};
 
 		// array for sending back the results - this may be better off being made into an object..
 
@@ -118,6 +159,8 @@ MyApp : public wxAppConsole
 		JobResult * PopJobFromResultQueue();
 		void SendAllResultsFromResultQueue();
 		void SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save);
+		void SendProgramDefinedResultToMaster(float *result_to_send, long size_of_result, int result_number, int number_of_expected_results); // can override MasterHandleSpecialResult to do something with this
+
 		private:
 
 		void SendJobFinished(int job_number);
@@ -126,7 +169,7 @@ MyApp : public wxAppConsole
 		void MasterSendIntenalQueue();
 		void SendAllJobsFinished();
 
-
+		virtual void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results){wxPrintf("warning parent MasterHandleProgramDefinedResult called, you should probably be overriding this!\n");} // can use this for program specific results by overiding in combination with SendSpecialResultForMaster in the program
 
 		void SocketSendError(wxString error_message);
 		void SocketSendInfo(wxString info_message);
@@ -149,5 +192,6 @@ MyApp : public wxAppConsole
 		void OnThreadSendInfo(wxThreadEvent& my_event);
 		void OnThreadIntermediateResultAvailable(wxThreadEvent& my_event);
 		void OnThreadSendImageResult(wxThreadEvent& my_event);
+		void OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my_event);
 };
 

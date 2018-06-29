@@ -655,7 +655,7 @@ void MyCTFFilterDialog::BuildSearchCommand()
 	else
 	if (astigmatism_angle_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DEFOCUS_ANGLE";
 	else
-	if (score_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.CORE";
+	if (score_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.SCORE";
 	else
 	if (ring_resolution_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.DETECTED_RING_RESOLUTION";
 	else

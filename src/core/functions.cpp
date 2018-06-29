@@ -55,7 +55,7 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 
 	long file_byte_size;
 	long number_of_pixels;
-	long bytes_per_pixel;
+	float bytes_per_pixel;
 	long bytes_per_slice;
 
 
@@ -64,6 +64,7 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 
 	int success;
 	int bytes_in_extended_header;
+	float pad_bytes = 0.0f;
 
 	if (input == NULL) return false;
 	else
@@ -91,24 +92,33 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 		success = fread(&temp_int, 4, 1, input);
 		mode = temp_int;
 
-		if (mode == 0) bytes_per_pixel = 1;
+		if (mode == 0) bytes_per_pixel = 1.0f;
 		else
-		if (mode == 1) bytes_per_pixel = 2;
+		if (mode == 1) bytes_per_pixel = 2.0f;
 		else
-		if (mode == 2) bytes_per_pixel = 4;
+		if (mode == 2) bytes_per_pixel = 4.0f;
 		else
-		if (mode == 3) bytes_per_pixel = 4;
+		if (mode == 3) bytes_per_pixel = 4.0f;
 		else
-		if (mode == 4) bytes_per_pixel = 8;
+		if (mode == 4) bytes_per_pixel = 8.0f;
 		else
-		if (mode == 6) bytes_per_pixel = 2;
+		if (mode == 6) bytes_per_pixel = 2.0f;
+		else
+		if (mode == 101)
+		{
+			bytes_per_pixel = 0.5f;
+			if (IsOdd(x_size) == true) pad_bytes = float(y_size) * 0.5;
+		}
 		else
 		{
 			fclose(input);
 			return false;
 		}
 
-		bytes_per_slice = number_of_pixels * bytes_per_pixel;
+
+		bytes_per_slice = long(float(number_of_pixels) * bytes_per_pixel + 0.5f + pad_bytes);
+
+
 
 		// now we need to know the number of bytes in the extended header...
 
@@ -116,9 +126,6 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 
 		success = fread(&temp_int, 4, 1, input);
 		bytes_in_extended_header = temp_int;
-
-	//	cout << "file size = " << file_byte_size << endl;
-	//	cout << "Should be = " << bytes_per_slice * number_of_images + 1024 << endl;
 
 		if (bytes_per_slice * number_of_images + 1024 + bytes_in_extended_header > file_byte_size)
 		{
@@ -693,4 +700,25 @@ wxString StringFromSocketCode(unsigned char *socket_input_buffer)
 	return "socket code not recognized";
 }
 
+
+// this was provided by David Mastronarde
+
+/*!
+ * Returns 1 if the size [nx], [ny] matches a size that the SerialEMCCD plugin to
+ * DigitalMicrograph would save as 4-bit data packed into a byte mode file for
+ * super-resolution frames from a K2 camera.  The sizes tested are 3838x7420, 3710x7676,
+ * 3840x7424, and 3712x7680.
+ */
+int sizeCanBe4BitK2SuperRes(int nx, int ny)
+{
+  int allowedX[2] = {7676, 7680};
+  int allowedY[2] = {7420, 7424};
+  int numTest = sizeof(allowedX) / sizeof(int);
+  int ind;
+  for (ind = 0; ind < numTest; ind++)
+    if ((nx == allowedX[ind] / 2 && ny == allowedY[ind]) ||
+        (nx == allowedY[ind] / 2 && ny == allowedX[ind]))
+      return 1;
+  return 0;
+}
 

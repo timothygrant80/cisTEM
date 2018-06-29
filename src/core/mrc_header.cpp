@@ -7,6 +7,7 @@ MRCHeader::MRCHeader()
 {
 	buffer = new char[1024];
 	InitPointers();
+	this_is_in_mastronarde_4bit_hack_format = false;
 
 }
 
@@ -238,6 +239,20 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 			pixel_data_are_signed = true; // Note that MRC mode 0 is sometimes signed, sometimes not signed. TODO: sort this out by checking the imodStamp header
 			pixel_data_are_of_type = MRCByte;
 			pixel_data_are_complex = false;
+
+			// need to check for 4-bit..
+
+			if (sizeCanBe4BitK2SuperRes(nx[0], ny[0]) == 1) // this is David Mastronarde's 4-bit hack
+			{
+				nx[0] *= 2;
+				this_is_in_mastronarde_4bit_hack_format = true;
+				bytes_per_pixel = 0.5;
+			}
+			else
+			{
+				this_is_in_mastronarde_4bit_hack_format = false;
+			}
+
 		break;
 
 		case 1:
@@ -281,6 +296,14 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 			pixel_data_are_of_type = MRCInteger;
 			pixel_data_are_complex = false;
 		break;
+
+		case 101 :
+			bytes_per_pixel = 0.5;
+			pixel_data_are_signed = false;
+			pixel_data_are_of_type = MRC4Bit;
+			pixel_data_are_complex = false;
+		break;
+
 
 
 		default:

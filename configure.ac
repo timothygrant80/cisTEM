@@ -1,4 +1,4 @@
-AC_INIT(cisTEM, [1.0.0-beta])
+AC_INIT(cisTEM, [1.0.2-beta])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -95,6 +95,8 @@ AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[defa
   CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $INPUT_CXXFLAGS"
   fi
   ])
+  
+  
 
 # fftw
 
@@ -108,6 +110,19 @@ AC_ARG_WITH(fftw-dir,
         LDFLAGS="$LDFLAGS -L$withval/lib"
     fi
 ])
+
+# experimental
+
+AC_ARG_ENABLE(experimental, [  --enable-experimental  Compile with experimental [[default=no]]],[
+  if test "$enableval" = yes; then
+  CPPFLAGS="$CPPFLAGS -DEXPERIMENTAL"
+  CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL"
+  compile_experimental="true"
+  fi
+  ])
+
+
+AM_CONDITIONAL([EXPERIMENTAL_AM],[test x$compile_experimental = xtrue])
 
 #sqlite3-dir
 
@@ -224,7 +239,8 @@ fi
 
 #fi
 
-#AM_CONDITIONAL([WX_AVAILABLE], test "$wx_is_available" != 0)
+
+
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)

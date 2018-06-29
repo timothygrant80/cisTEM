@@ -28,6 +28,11 @@ extern MyPickingResultsPanel *picking_results_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
+#ifdef EXPERIMENTAL
+extern MatchTemplatePanel *match_template_panel;
+extern MatchTemplateMLPanel *match_templateml_panel;
+#endif
+
 extern MyOverviewPanel *overview_panel;
 
 
@@ -282,6 +287,11 @@ void MyMainFrame::DirtyVolumes()
 	auto_refine_3d_panel->volumes_are_dirty = true;
 	sharpen_3d_panel->volumes_are_dirty = true;
 
+#ifdef EXPERIMENTAL
+	match_template_panel->volumes_are_dirty = true;
+	match_templateml_panel->volumes_are_dirty = true;
+#endif
+
 }
 
 void MyMainFrame::DirtyMovieGroups()
@@ -299,6 +309,11 @@ void MyMainFrame::DirtyImageGroups()
 	ctf_results_panel->group_combo_is_dirty = true;
 	findparticles_panel->group_combo_is_dirty = true;
 	picking_results_panel->group_combo_is_dirty = true;
+#ifdef EXPERIMENTAL
+	match_template_panel->group_combo_is_dirty = true;
+	match_templateml_panel->group_combo_is_dirty = true;
+#endif
+
 }
 
 void MyMainFrame::DirtyParticlePositionGroups()
@@ -347,7 +362,10 @@ void MyMainFrame::DirtyRunProfiles()
 	auto_refine_3d_panel->run_profiles_are_dirty = true;
 	ab_initio_3d_panel->run_profiles_are_dirty = true;
 	generate_3d_panel->run_profiles_are_dirty = true;
-
+#ifdef EXPERIMENTAL
+	match_template_panel->run_profiles_are_dirty = true;
+	match_templateml_panel->run_profiles_are_dirty = true;
+#endif
 }
 
 

@@ -1796,7 +1796,12 @@ void AutoRefinementManager::SetupRefinementJob()
 			float    low_resolution_limit					= active_low_resolution_limit;
 			float    high_resolution_limit					= class_high_res_limits[class_counter];
 			float	 signed_CC_limit						= 0;//my_parent->SignedCCResolutionTextCtrl->ReturnValue();
-			float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
+			//float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
+			float    classification_resolution_limit        = 20.0f + (8.0f - 20.0f) * (float(number_of_rounds_run) / 9.0f);
+			if (classification_resolution_limit < lowest_res) classification_resolution_limit = lowest_res;
+
+			wxPrintf("classification res limit %i = %.2f\n", class_counter, classification_resolution_limit);
+
 			float    mask_radius_search						= active_global_mask_radius;
 			float	 high_resolution_limit_search			= class_high_res_limits[class_counter];
 			float	 angular_step							= std::max(CalculateAngularStep(class_high_res_limits.Item(class_counter), active_mask_radius), CalculateAngularStep(8.0, active_mask_radius));
@@ -2540,7 +2545,7 @@ void AutoRefinementManager::CycleRefinement()
 	int min_rounds_to_run;
 
 	if (output_refinement->number_of_classes == 1) min_rounds_to_run = 5;
-	else min_rounds_to_run = 9;
+	else min_rounds_to_run = 10;
 
 	if (resolution_per_round.GetCount() >= min_rounds_to_run && max_percent_used > 99.0 && change_in_occupancies < 1.0)
 	{

@@ -46,7 +46,7 @@
 */
 
 //
-enum MRCDataTypes { MRCByte, MRCInteger, MRCFloat };
+enum MRCDataTypes { MRCByte, MRCInteger, MRCFloat, MRC4Bit };
 
 class MRCHeader {
 
@@ -91,10 +91,12 @@ class MRCHeader {
 
 	// some extra info..
 
-	int bytes_per_pixel;
+	float bytes_per_pixel;
 	bool pixel_data_are_signed;
 	int pixel_data_are_of_type;
 	bool pixel_data_are_complex;
+
+	bool this_is_in_mastronarde_4bit_hack_format;
 
 	public:
 
@@ -119,6 +121,8 @@ class MRCHeader {
 	inline int ReturnDimensionY() {return ny[0];};
 	inline int ReturnDimensionZ() {return nz[0];};
 
+	inline bool ReturnIfThisIsInMastronarde4BitHackFormat() {return this_is_in_mastronarde_4bit_hack_format;}
+
 	float ReturnPixelSize();
 	void SetPixelSize(float wanted_pixel_size);
 
@@ -129,7 +133,7 @@ class MRCHeader {
 	void SetDensityStatistics( float wanted_min, float wanted_max, float wanted_mean, float wanted_rms );
 	void SetOrigin( float wanted_x, float wanted_y, float wanted_z );
 
-	inline int BytesPerPixel() { return bytes_per_pixel; };
+	inline float BytesPerPixel() { return bytes_per_pixel; };
 	inline int Mode() { return mode[0];};
 	inline int SymmetryDataBytes() { return symmetry_data_bytes[0];};
 

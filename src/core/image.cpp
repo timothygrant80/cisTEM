@@ -3576,7 +3576,14 @@ void Image::RandomisePhases(float wanted_radius_in_reciprocal_pixels)
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
-	MyDebugAssertTrue(wanted_mask_edge > 0, "Edge width too small");
+	if (is_in_real_space)
+	{
+		MyDebugAssertTrue(wanted_mask_edge >= 1.0, "Edge width too small");
+	}
+	else
+	{
+		MyDebugAssertTrue(wanted_mask_edge > 0.0, "Edge width too small");
+	}
 
 	int i;
 	int j;
@@ -3606,7 +3613,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 
 	double mask_volume = 0.0;
 
-	mask_radius = wanted_mask_radius - wanted_mask_edge / 2;
+	mask_radius = wanted_mask_radius - wanted_mask_edge * 0.5;
 	if (mask_radius < 0.0) mask_radius = 0.0;
 	mask_radius_plus_edge = mask_radius + wanted_mask_edge;
 
@@ -3647,6 +3654,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 					pixel_counter += padding_jump_value;
 				}
 			}
+			MyDebugAssertTrue(number_of_pixels > 0, "Oops, did not find any pixels to average over");
 			pixel_sum /= number_of_pixels;
 		}
 
@@ -6164,6 +6172,7 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 		 * want a linear interpolation step here to make things look smoother.
 		 *
 		 */
+		if (false) // NEAREST
 		{
 			int i,j,k;
 			long pixel_counter;
@@ -6181,6 +6190,37 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 						if (local_resolution_map.real_values[pixel_counter] >= res_of_interest_min && local_resolution_map.real_values[pixel_counter] < res_of_interest_max)
 						{
 							real_values[pixel_counter] = lp_volume.real_values[pixel_counter];
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+		}
+		else // LINEAR
+		{
+			int i,j,k;
+			long pixel_counter;
+			float freq_of_interest_min = current_filter_freq - filter_freq_step_size;
+			float freq_of_interest_max = current_filter_freq + filter_freq_step_size;
+			float current_res_freq;
+			float weight;
+			float inverse_filter_freq_step_size;
+			MyDebugPrint("Looking for areas with resolution between %f and %f\n",pixel_size/freq_of_interest_min, pixel_size/freq_of_interest_max);
+
+			pixel_counter = 0;
+			for (k=0;k<logical_z_dimension;k++)
+			{
+				for (j=0;j<logical_y_dimension;j++)
+				{
+					for (i=0;i<logical_x_dimension;i++)
+					{
+						current_res_freq = pixel_size / local_resolution_map.real_values[pixel_counter];
+
+						if (current_res_freq >= freq_of_interest_min && current_res_freq < freq_of_interest_max)
+						{
+							weight = 1.0 - abs(current_res_freq - current_filter_freq) * inverse_filter_freq_step_size;
+							real_values[pixel_counter] = lp_volume.real_values[pixel_counter] * weight;
 						}
 						pixel_counter++;
 					}

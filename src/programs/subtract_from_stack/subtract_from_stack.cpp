@@ -184,7 +184,7 @@ bool SubtractFromStackApp::DoCalculation()
 		variance = particle_image.ReturnVarianceOfRealValues(mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
 		if (variance == 0.0) continue;
 		particle_image.MultiplyByConstant(1.0 / sqrtf(variance));
-		particle_image.CosineMask(mask_radius / pixel_size, 0.05 / pixel_size, true);
+		particle_image.CosineMask(mask_radius / pixel_size, 5.0 , true);
 		particle_image.ForwardFFT();
 		temp_image.CopyFrom(&particle_image);
 		temp_image.ConjugateMultiplyPixelWise(particle_image);

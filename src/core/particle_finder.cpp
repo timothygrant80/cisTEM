@@ -618,9 +618,11 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 	float temp_float[6];
 	my_progress_bar = new ProgressBar(100);
 
+#ifdef DEBUG
 	Image junk_image;
 	Image junk_image_rotate;
 	AnglesAndShifts myangle;
+#endif
 	while (true)
 	{
 		// We allow ourselves to find peaks beyond our boundary (that way, if something is found just beyond the boundary, we will blank that area and we won't end up
@@ -655,6 +657,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 			index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 			rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 
+#ifdef DEBUG
 			junk_image.CopyFrom(&template_image[index_of_matching_template]);
 
 			if (junk_image.is_in_real_space)
@@ -674,6 +677,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 			junk_image.RotateFourier2D(junk_image_rotate,myangle,1.0,false);
 			junk_image_rotate.SwapRealSpaceQuadrants();
 			junk_image_rotate.QuickAndDirtyWriteSlice("/tmp/templates.mrc", number_of_candidate_particles);
+#endif DEBUG
 
 			if (write_out_plt)
 			{

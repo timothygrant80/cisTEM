@@ -4606,10 +4606,10 @@ void Image::QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_w
 }
 
 
-void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write)
+void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite)
 {
 	MyDebugAssertTrue(slice_to_write >0, "Slice is less than 1, first slice is 1");
-	MRCFile output_file(filename, false);
+	MRCFile output_file(filename, overwrite);
 	WriteSlice(&output_file, slice_to_write);
 }
 

@@ -93,21 +93,32 @@ bool TiffFile::ReadLogicalDimensionsFromDisk()
 
 	original_x = current_x;
 
+	const bool check_dimensions_of_every_image = true;
 
-	while (TIFFReadDirectory(tif))
+	if (check_dimensions_of_every_image)
 	{
-		dircount++;
-		TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
-		TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
-
-		if (current_x != original_x || logical_dimension_y != current_y)
+		// This takes ages when importing TIFFs
+		// TODO: check e.g. IMOD to see if there's a quicker way to check a TIFF is valid
+		while (TIFFReadDirectory(tif))
 		{
-			MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,original_x,logical_dimension_y);
-			return_value = false;
-		}
-	}
+			dircount++;
+			TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
+			TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
 
-	number_of_images = dircount;
+			if (current_x != original_x || logical_dimension_y != current_y)
+			{
+				MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,original_x,logical_dimension_y);
+				return_value = false;
+			}
+		}
+
+		number_of_images = dircount;
+	}
+	else
+	{
+		// This doesnt' seem to be significantly faster than the other way to do it.
+		number_of_images = TIFFNumberOfDirectories(tif);
+	}
 
 	return return_value;
 }

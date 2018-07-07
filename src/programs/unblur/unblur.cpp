@@ -629,7 +629,7 @@ bool UnBlurApp::DoCalculation()
 		current_power_spectrum.SetMinimumAndMaximumValues(average - 1.0, average + 3.0);
 		//current_power_spectrum.CosineRingMask(0.05,0.45, 0.05);
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
-		current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1);
+		current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1,true);
 	}
 
 	//  Shall we write out a scaled image?
@@ -645,7 +645,7 @@ bool UnBlurApp::DoCalculation()
 			Image buffer_image;
 			buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
 			sum_image.ClipInto(&buffer_image);
-			buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1);
+			buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1,true);
 		}
 	}
 

@@ -9,6 +9,7 @@
 # Use is subject to Janelia Farm Research Campus Software Copyright 1.1
 # license terms ( http://license.janelia.org/license/jfrc_copyright_1_1.html )
 #
+# Last modification: Tapu Shaik, April 2018
 
 
 
@@ -68,6 +69,7 @@ transpose_ignore_comments $input_fn > /tmp/tmp.txt
 # Let's grab useful values
 pixel_size=$(gawk 'match($0,/Pixel size: ([0-9.]*)/,a) {print a[1]}' $input_fn)
 number_of_micrographs=$(gawk 'match($0,/Number of micrographs: ([0-9]*)/,a) {print a[1]}' $input_fn)
+mic_name=$(grep "Input file:" $input_fn | awk 'BEGIN {FS="Input file: "} {print $2}' | cut -d " " -f1  | sed 's/_/\\\_/g')
 lines_per_micrograph=6
 
 if [ -f $input_summary_fn ]; then
@@ -81,7 +83,7 @@ do
 		angast[i]=${myArray[3]}
 		pshift[i]=${myArray[4]}
 		score[i]=${myArray[5]}
-		maxres=[i]=${myArray[6]}
+		maxres[i]=${myArray[6]}
 	fi
 done < $input_summary_fn
 else
@@ -131,7 +133,9 @@ do for [current_micrograph=1:$number_of_micrographs] {
 	angast=sprintf('%.1f °',word(angast_values,current_micrograph)+0)
 	pshift=sprintf('%.2f rad',word(pshift_values,current_micrograph)+0)
 	score=sprintf('%.3f',word(score_values,current_micrograph)+0)
-	set title 'Micrograph '.current_micrograph." of $number_of_micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | Score: '.score.'}'
+	maxres=sprintf('%.2f Å',word(maxres_values,current_micrograph)+0)
+#	set title 'Micrograph '.current_micrograph." of $number_of_micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | Score: '.score.'}'
+	set title '$mic_name, '.current_micrograph." of $number_of_micrographs micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | MaxRes: '.maxres.'}'
 	plot '/tmp/tmp.txt' using (\$1):(column(4+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 3 title 'CTF fit', \
 		 ''             using (\$1):(column(5+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 1 title 'Quality of fit', \
 	 	 ''             using (\$1):(column(3+(current_micrograph-1)*$lines_per_micrograph))  w lines ls 5 title 'Amplitude spectrum'

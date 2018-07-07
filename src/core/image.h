@@ -324,7 +324,7 @@ public:
 	void WriteSlices(MRCFile *input_file, long start_slice, long end_slice);
 
 	void QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write);
-	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write);
+	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite = false);
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
 	bool IsConstant();

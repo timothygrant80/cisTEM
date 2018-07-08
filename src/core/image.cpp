@@ -5204,6 +5204,7 @@ float Image::ReturnMinimumValue(float minimum_distance_from_center, float minimu
 	return minimum_value;
 }
 
+//TODO: consolidate (reduce code duplication) by using an Empirical distribution object
 float Image::ReturnMedianOfRealValues()
 {
 	long number_of_voxels = logical_x_dimension * logical_y_dimension * logical_z_dimension;
@@ -5563,36 +5564,34 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 	// Loop over half of the image (ignore Friedel mates)
 	for (j=0;j<logical_y_dimension;j++)
 	{
-		j_logi = float(j-physical_address_of_box_center_y)*inverse_logical_y_dimension;
-		j_logi_sq = powf(j_logi,2);
-		for (i=0;i<physical_address_of_box_center_x;i++)
+		// DNM: Moved test on j out of inner loop, loop i only as far as needed, use an address computed for each line (speeds up ~13%)
+		if (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width)
 		{
-			i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
-			i_logi_sq = powf(i_logi,2);
-
-			// Where are we?
-			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
-
-			if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
+			address = j * (padding_jump_value + 2 * physical_address_of_box_center_x);
+			j_logi = float(j-physical_address_of_box_center_y)*inverse_logical_y_dimension;
+			j_logi_sq = powf(j_logi,2);
+			for (i=0;i < physical_address_of_box_center_x - central_cross_half_width;i++)
 			{
-				current_azimuth = atan2f(j_logi,i_logi);
-				current_ctf_value = fabsf(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
-				// accumulate results
-				if ( i < physical_address_of_box_center_x - central_cross_half_width && (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width))
+				i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
+				i_logi_sq = powf(i_logi,2);
+				
+				// Where are we?
+				current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+				
+				if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
 				{
+					current_azimuth = atan2f(j_logi,i_logi);
+					current_ctf_value = fabsf(ctf.Evaluate(current_spatial_frequency_squared,current_azimuth));
+					// accumulate results
 					number_of_values++;
-					cross_product += real_values[address] * current_ctf_value;
-					norm_image    += pow(real_values[address],2);
+					cross_product += real_values[address + i] * current_ctf_value;
+					norm_image    += pow(real_values[address + i],2);
 					norm_ctf      += pow(current_ctf_value,2);
-				}
 
-			} // end of test whether within min,max frequency range
-
-			// We're going to the next pixel
-			address++;
+				} // end of test whether within min,max frequency range
+									
+			}
 		}
-		// We're going to the next line
-		address += padding_jump_value + physical_address_of_box_center_x;
 	}
 
 	// Compute the penalty due to astigmatism
@@ -5607,6 +5606,112 @@ float Image::GetCorrelationWithCTF(CTF ctf)
 
 	// The final score
 	return cross_product / sqrt(norm_image * norm_ctf) - astigmatism_penalty;
+}
+
+// DNM: Set up for doing correlations with a CTF by making tables of all the pixels that are included, and their frequencies and azimuths
+// When called with addresses NULL, it simply returns the number of values needed in the arrays
+// When called with proper addresses, it fills the array and computes norm_image and image_mean, which are constant
+void Image::SetupQuickCorrelationWithCTF(CTF ctf, int &number_of_values, double &norm_image, double &image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
+	MyDebugAssertTrue(ctf.GetLowestFrequencyForFitting() > 0, "Will not work with lowest frequency for fitting of 0.");
+
+	// Local variables
+	int				i,j;
+	float			i_logi, j_logi;
+	float			i_logi_sq, j_logi_sq;
+	const float		inverse_logical_x_dimension = 1.0 / float(logical_x_dimension);
+	const float		inverse_logical_y_dimension = 1.0 / float(logical_y_dimension);
+	float			current_spatial_frequency_squared;
+	
+	const float		lowest_freq = powf(ctf.GetLowestFrequencyForFitting(),2);
+	const float		highest_freq = powf(ctf.GetHighestFrequencyForFitting(),2);
+	int				address = 0;
+	float			current_azimuth;
+	const int		central_cross_half_width = 10;
+	double 			image_sum = 0.;
+
+	number_of_values = 0;
+	norm_image = 0;
+	image_mean = 0.;
+		
+	// Loop over half of the image (ignore Friedel mates)
+	for (j=0;j<logical_y_dimension;j++)
+	{
+		if (j < physical_address_of_box_center_y - central_cross_half_width || j > physical_address_of_box_center_y + central_cross_half_width)
+		{
+			address = j * (padding_jump_value + 2 * physical_address_of_box_center_x);
+			j_logi = float(j-physical_address_of_box_center_y)*inverse_logical_y_dimension;
+			j_logi_sq = powf(j_logi,2);
+			for (i=0;i < physical_address_of_box_center_x - central_cross_half_width;i++)
+			{
+				i_logi = float(i-physical_address_of_box_center_x)*inverse_logical_x_dimension;
+				i_logi_sq = powf(i_logi,2);
+					
+				// Where are we?
+				current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+					
+				if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq)
+				{
+					current_azimuth = atan2f(j_logi,i_logi);
+					if (addresses)
+					{
+						addresses[number_of_values] = address + i;
+						spatial_frequency_squared[number_of_values] = current_spatial_frequency_squared;
+						azimuth[number_of_values] = current_azimuth;
+						image_sum += real_values[address + i];
+					}
+					number_of_values++;
+				} // end of test whether within min,max frequency range
+					
+			}
+		}
+	}
+
+	// Now get sum of squared deviations from mean, more accurate than using raw cross-products
+	if (addresses) 
+	{
+		image_mean = image_sum / number_of_values;
+		for (i = 0; i < number_of_values; i++)
+			norm_image += pow(real_values[addresses[i]] - image_mean, 2);
+	}
+}
+
+// DNM: Computes correlation with the current CTF estimate given the pixel indexes, frequency and azimuth values
+// It is about 30% faster than original and now returns true correlation coefficient
+float Image::QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth)
+{
+
+	// Local variables
+	int				i,j;
+	double			cross_product = 0.0;
+	double			norm_ctf = 0.0;
+	double			ctf_sum = 0.;
+	float			current_ctf_value;
+	float			astigmatism_penalty;
+
+	for (i = 0; i < number_of_values; i++) {
+		j 					= addresses[i];
+		current_ctf_value 	= fabsf(-sin(ctf.PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(spatial_frequency_squared[i], azimuth[i])));
+		cross_product 		+= real_values[j] * current_ctf_value;
+		norm_ctf			+= pow(current_ctf_value,2);
+		ctf_sum				+= current_ctf_value;
+	}
+
+	// Compute the penalty due to astigmatism
+	if (ctf.GetAstigmatismTolerance() > 0.0)
+	{
+		astigmatism_penalty = powf(ctf.GetAstigmatism(),2) * 0.5 / powf(ctf.GetAstigmatismTolerance(),2) / float(number_of_values);
+	}
+	else
+	{
+		astigmatism_penalty = 0.0;
+	}
+
+	// The final score: norm_image is already a sum of squared deviations from mean; norm_ctf requires adjustment to give true CC
+	return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
 }
 
 void Image::ApplyMirrorAlongY()
@@ -6431,6 +6536,7 @@ void Image::ComputeLocalMeanAndVarianceMaps(Image *local_mean_map, Image *local_
  *
  * This is adapted from the MSMOOTH subroutine from CTFFIND3, with a different wrap-around behaviour.
  * Also, in this version, we loop over the full 2D, rather than just half - this runs faster because less logic within the loop
+ * DNM rewrote this to be vastly faster
  */
 void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float minimum_radius)
 {
@@ -6461,6 +6567,76 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 	// Addresses
 	long address_within_output = 0;
 	long address_within_input;
+ 
+	// Starting and ending x indexes of one or two loops for each line
+	int *x1start = new int[logical_x_dimension];
+	int *x1end = new int[logical_x_dimension];
+	int *x2start = new int[logical_x_dimension];
+	int *x2end = new int[logical_x_dimension];
+	int *numInLineSum = new int[logical_x_dimension];
+	float *lineSums = new float[logical_x_dimension * logical_y_dimension];
+	float sum;
+	int ybase;
+
+	// Get the limits for one or two loops for making line sums at each X position
+	for (i = 0; i < logical_x_dimension; i++)
+	{
+		x1start[i] = i - half_box_size;
+		x1end[i] = i + half_box_size;
+		x2start[i] = 0;
+		x2end[i] = -1;
+
+		// Wrap around left edge
+		if (x1start[i] < 0)
+		{
+			x2start[i] = x1start[i] + logical_x_dimension;
+			x2end[i] = logical_x_dimension - 1;
+			x1start[i] = 0;
+		}
+
+		// Or wrap around right edge
+		else if (x1end[i] >= logical_x_dimension)
+		{
+			x2end[i] = x1end[i] - logical_x_dimension;
+			x2start[i] = 0;
+			x1end[i] = logical_x_dimension - 1;
+		}
+
+		// Or handle intersection with the central cross by trimming or splitting into two loops
+		else if (x1start[i] <= last_i_to_ignore && x1end[i] >= first_i_to_ignore)
+		{
+			if (x1start[i] >= first_i_to_ignore)
+				x1start[i] = last_i_to_ignore + 1;
+			else if (x1end[i] <= last_i_to_ignore)
+				x1end[i] = first_i_to_ignore - 1;
+			else
+			{
+				x2end[i] = x1end[i];
+				x2start[i] = last_i_to_ignore + 1;
+				x1end[i] = first_i_to_ignore - 1;
+			}
+		}
+		numInLineSum[i] = x1end[i] + 1 - x1start[i];
+		if (x2end[i] >= x2start[i])
+			numInLineSum[i] += x2end[i] + 1 - x2start[i];
+	}
+
+	// Loop over Y positions for line sums
+	for (jj = 0; jj < logical_y_dimension; jj++)
+	{
+		ybase = jj * (logical_x_dimension + padding_jump_value);
+
+		// Form line sums at each X position
+		for (i = 0; i < logical_x_dimension; i++)
+		{
+			sum = 0.;
+			for (ii = x1start[i]; ii <= x1end[i]; ii++)
+				sum += real_values[ii + ybase];
+			for (ii = x2start[i]; ii <= x2end[i]; ii++)
+				sum += real_values[ii + ybase];
+			lineSums[i + jj * logical_x_dimension] = sum;
+		}
+	}
 
 	// Loop over the output image
 	for (j = 0; j < logical_y_dimension; j++)
@@ -6482,6 +6658,7 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 				output_image->real_values[address_within_output] = 0.0e0;
 				num_voxels = 0;
 
+				// Loop over the lines to sum at this pixel to get the box sum
 				for ( m = - half_box_size; m <= half_box_size; m++)
 				{
 					jj = j + m;
@@ -6493,29 +6670,15 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 					//if ( abs(jj - physical_address_of_box_center_y) <= cross_half_width_to_ignore ) { continue; }
 					if ( jj >= first_j_to_ignore && jj <= last_j_to_ignore) { continue; }
 
+					output_image->real_values[address_within_output] += lineSums[i + jj * logical_x_dimension];
+					num_voxels += numInLineSum[i];
 
-					for ( l = - half_box_size; l <= half_box_size; l++)
-					{
-						ii = i + l;
-						// wrap around
-						if (ii < 0) { ii += logical_x_dimension; }
-						if (ii >= logical_x_dimension) { ii -= logical_x_dimension; }
-
-						// In central cross?
-						//if ( abs(ii - physical_address_of_box_center_x) <= cross_half_width_to_ignore ) { continue; }
-						if ( ii >= first_i_to_ignore && ii <= last_i_to_ignore) { continue; }
-
-						address_within_input = ReturnReal1DAddressFromPhysicalCoord(ii,jj,0);
-
-						output_image->real_values[address_within_output] += real_values[address_within_input];
-						num_voxels++;
-
-					}
 				} // end of loop over the box
 
 				if (num_voxels == 0)
 				{
-					output_image->real_values[address_within_output] = real_values[address_within_input];
+					// DNM: if it happens, surely that should be from same address not whatever address_within_input was
+					output_image->real_values[address_within_output] = real_values[address_within_output];
 				}
 				else
 				{
@@ -6528,6 +6691,12 @@ void Image::SpectrumBoxConvolution(Image *output_image, int box_size, float mini
 		address_within_output += output_image->padding_jump_value;
 	}
 
+	delete [] x1start;
+	delete [] x1end;
+	delete [] x2start;
+	delete [] x2end;
+	delete [] lineSums;
+	delete [] numInLineSum;
 }
 
 

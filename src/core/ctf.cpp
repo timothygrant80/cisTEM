@@ -181,7 +181,7 @@ void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixel
 // Set the additional phase shift, given in radians
 void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
 {
-	additional_phase_shift = fmodf(wanted_additional_phase_shift_radians,PI);
+	additional_phase_shift = fmodf(wanted_additional_phase_shift_radians,(float)PI);
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth
@@ -242,12 +242,12 @@ bool CTF::IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus)
 	if (fabsf(this->defocus_2 - wanted_ctf->defocus_2) > delta_defocus) return false;
 
 	delta = fabsf(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
-	delta = fmodf(delta, 2.0 * PI);
+	delta = fmodf(delta, 2.0f * (float)PI);
 // 0.0277 = 5/180 (5 deg tolerance)
 	if (delta > 0.0277) return false;
 
 	delta = fabsf(this->astigmatism_azimuth - wanted_ctf->astigmatism_azimuth);
-	delta = fmodf(delta, PI);
+	delta = fmodf(delta, (float)PI);
 // 0.0277 = 5/180 (5 deg tolerance)
 	if (delta > 0.0277) return false;
 

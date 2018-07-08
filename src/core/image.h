@@ -389,6 +389,8 @@ public:
 	void RandomisePhases(float wanted_radius_in_reciprocal_pixels);
 
 	float GetCorrelationWithCTF(CTF ctf);
+	void SetupQuickCorrelationWithCTF(CTF ctf, int &number_of_values, double &norm_image, double &image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);
+	float QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);
 
 	// Interpolation
 	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value);

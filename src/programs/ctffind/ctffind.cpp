@@ -2,9 +2,12 @@
 
 //#define threshold_spectrum
 
-const std::string ctffind_version = "4.1.10";
+const std::string ctffind_version = "4.1.11";
 /*
  * Changelog
+ * - 4.1.11
+ * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
+ * -- score is now a normalized cross-correlation coefficient (David Mastronarde)
  * - 4.1.10
  * -- astimatism-related bug fixes from David Mastronarde
  * - 4.1.9
@@ -43,9 +46,16 @@ public:
 	float ReturnKnownAstigmatism();
 	float ReturnKnownAstigmatismAngle();
 	bool FindPhaseShift();
+	void SetupQuickCorrelation();
 
 	int 	number_of_images;
 	Image 	*img;		// Usually an amplitude spectrum, or an array of amplitude spectra
+	int number_to_correlate;
+	double norm_image;
+	double image_mean;
+	float *azimuths;
+	float *spatial_frequency_squared;
+	int *addresses;
 
 private:
 	CTF		ctf;
@@ -69,7 +79,7 @@ public:
 
 ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_ctf, float wanted_pixel_size, bool should_find_phase_shift, bool wanted_astigmatism_is_known, float wanted_known_astigmatism, float wanted_known_astigmatism_angle, bool should_fit_defocus_sweep)
 {
-	MyDebugAssertTrue(wanted_number_of_images >= 0, "Bad wanted number of images: %i\n",wanted_number_of_images);
+	MyDebugAssertTrue(wanted_number_of_images > 0, "Bad wanted number of images: %i\n",wanted_number_of_images);
 	number_of_images = wanted_number_of_images;
 	img = new Image [wanted_number_of_images];
 
@@ -80,6 +90,10 @@ ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_c
 	known_astigmatism = wanted_known_astigmatism;
 	known_astigmatism_angle = wanted_known_astigmatism_angle;
 	fit_defocus_sweep = should_fit_defocus_sweep;
+	azimuths = NULL;
+	spatial_frequency_squared = NULL;
+	addresses = NULL;
+	number_to_correlate = 0;
 }
 
 ImageCTFComparison::~ImageCTFComparison()
@@ -89,6 +103,9 @@ ImageCTFComparison::~ImageCTFComparison()
 		img[image_counter].Deallocate();
 	}
 	delete [] img;
+	delete [] azimuths;
+	delete [] spatial_frequency_squared;
+	delete [] addresses;
 }
 
 void ImageCTFComparison::SetImage(int wanted_image_number, Image *new_image)
@@ -100,6 +117,15 @@ void ImageCTFComparison::SetImage(int wanted_image_number, Image *new_image)
 void ImageCTFComparison::SetCTF(CTF new_ctf)
 {
 	ctf = new_ctf;
+}
+
+void ImageCTFComparison::SetupQuickCorrelation()
+{
+  img[0].SetupQuickCorrelationWithCTF(ctf, number_to_correlate, norm_image, image_mean, NULL, NULL, NULL);
+  azimuths = new float[number_to_correlate];
+  spatial_frequency_squared = new float[number_to_correlate];
+  addresses = new int[number_to_correlate];
+  img[0].SetupQuickCorrelationWithCTF(ctf, number_to_correlate, norm_image, image_mean, addresses, spatial_frequency_squared, azimuths);
 }
 
 CTF ImageCTFComparison::ReturnCTF() { return ctf; }
@@ -136,10 +162,17 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Score = %g",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),- - comparison_object->img[0].GetCorrelationWithCTF(my_ctf));
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
 
 	// Evaluate the function
-	return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
+	if (comparison_object->number_to_correlate)
+	{
+		return - comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+	}
+	else
+	{
+		return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
+	}
 }
 
 //#pragma GCC push_options
@@ -185,7 +218,7 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 	MyDebugAssertTrue(norm_ctf > 0.0,"Bad norm_ctf: %f\n", norm_ctf);
 	MyDebugAssertTrue(norm_curve > 0.0,"Bad norm_curve: %f\n", norm_curve);
 
-	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Score = %g",array_of_values[0], array_of_values[1], - cross_product / sqrtf(norm_ctf * norm_curve));
+	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Score = %g\n",array_of_values[0], array_of_values[1], - cross_product / sqrtf(norm_ctf * norm_curve));
 
 	// Note, we are not properly normalizing the cross correlation coefficient. For our
 	// purposes this should be OK, since the average power of the theoretical CTF should not
@@ -200,10 +233,10 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius);
 void ComputeImagesWithNumberOfExtremaAndCTFValues(CTF *ctf, Image *number_of_extrema, Image *ctf_values);
 int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image *number_of_extrema, long address, Image *ctf_values, float ctf_values_profile[]);
-void ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_renormalized[], float number_of_extrema_profile[], float ctf_values_profile[]);
+bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_renormalized[], float number_of_extrema_profile[], float ctf_values_profile[]);
 void OverlayCTF( Image *spectrum, CTF *ctf);
 void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin);
-void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit );
+bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit );
 void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]);
 
 
@@ -1133,11 +1166,15 @@ bool CtffindApp::DoCalculation()
 		// Set up the comparison object
 		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PI, false);
 		comparison_object_2D->SetImage(0,average_spectrum_masked);
+		comparison_object_2D->SetupQuickCorrelation();
 
 		if (defocus_is_known)
 		{
 			current_ctf.SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PI);
 			final_score = 0.0;
+			final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
+					comparison_object_2D->spatial_frequency_squared, comparison_object_2D->azimuths);
+
 		}
 		else
 		{
@@ -2203,7 +2240,7 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 
 // Rescale the spectrum and its 1D rotational avereage so that the peaks and troughs are at 0.0 and 1.0. The location of peaks and troughs are worked out
 // by parsing the suppilied 1D average_fit array
-void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit )
+bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit )
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 	MyDebugAssertTrue(number_of_bins > 1,"Bad number of bins: %i\n",number_of_bins);
@@ -2290,6 +2327,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 			if (at_a_maximum && at_a_minimum)
 			{
 				MyPrintfRed("Rescale spectrum: Error. At a minimum and a maximum simultaneously.");
+				//TODO: return false instead	
 				DEBUG_ABORT;
 			}
 		}
@@ -2338,6 +2376,10 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 							if (rescale_peaks) spectrum->real_values[address] /= std::min(1.0f,std::max(min_scale_factor,peak[last_bin_to_rescale]-background[last_bin_to_rescale])) / rescale_peaks_to;
 						}
 					}
+					else
+					{
+						//TODO: return false
+					}
 					//
 					address++;
 				}
@@ -2378,7 +2420,7 @@ void RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 }
 
 //
-void ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_rank[], float number_of_extrema_profile[], float ctf_values_profile[])
+bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_rank[], float number_of_extrema_profile[], float ctf_values_profile[])
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 	MyDebugAssertTrue(number_of_extrema->is_in_memory,"Number of extrema image not allocated");
@@ -2458,6 +2500,10 @@ void ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 				{
 					average[chosen_bin] += spectrum->real_values[address];
 					number_of_values[chosen_bin]++;
+				}
+				else
+				{
+					//TODO: return false
 				}
 				//
 				address++;
@@ -2546,6 +2592,7 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
 	}
 	if (chosen_bin == -1)
 	{
+		//TODO: return false
 #ifdef DEBUG
 		MyPrintfRed("Could not find bin\n");
 		DEBUG_ABORT;

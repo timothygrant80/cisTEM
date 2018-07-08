@@ -192,7 +192,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 					{
 
 						number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
-						MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() / 2,"Unexpected number of bytes in uint8 buffer");
+						if (strip_counter < TIFFNumberOfStrips(tif) - 1) MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize() / 2,"Unexpected number of bytes in uint8 buffer");
 
 						output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
 
@@ -214,7 +214,7 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 					{
 
 						number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
-						MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
+						if (strip_counter < TIFFNumberOfStrips(tif) - 1) MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");
 
 						output_counter = strip_counter * rows_per_strip * ReturnXSize() + ((directory_counter - start_slice + 1) * ReturnXSize() * ReturnYSize());
 						for (long counter = 0; counter < number_of_bytes_placed_in_buffer; counter ++)

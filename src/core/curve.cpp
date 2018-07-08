@@ -783,12 +783,12 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
 	}
 
 	// now we need to take care of the ends - first the start..
-
+	// DNM: Need to take actual points beyond the end of the fitted points in the middle
 	for (polynomial_counter = 0; polynomial_counter < wanted_window_size; polynomial_counter++)
 	{
 		fit_array_x[polynomial_counter] = data_x[polynomial_counter];
 
-		if (polynomial_counter < half_pixel) fit_array_y[polynomial_counter] = data_y[polynomial_counter];
+		if (polynomial_counter < half_pixel || polynomial_counter >= number_of_points - half_pixel) fit_array_y[polynomial_counter] = data_y[polynomial_counter];
 		else fit_array_y[polynomial_counter] = savitzky_golay_fit[polynomial_counter];
 	}
 

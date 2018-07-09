@@ -34,13 +34,29 @@ void LocalResolution::DoInteractiveUserInput()
 	int	last_slice				= my_input->GetIntFromUser("Last slice", "Last slice within the volume to estimate local resolution (0 = last slice of volume)", "0", 0, input_image_file.ReturnNumberOfSlices());
 	int	sampling_step			= my_input->GetIntFromUser("Sampling step", "Estimate the local resolution every STEP pixels in each direction. Set to 1 to estimate the resolution at every voxel","2",1,16);
 	int box_size				= my_input->GetIntFromUser("Box size","In pixels, the size of the small cubic box used to compute the local FSC","20",8,input_image_file.ReturnNumberOfSlices());
+	bool use_fixed_threshold	= my_input->GetYesNoFromUser("Use a fixed FSC threshold?", "You can specify the value of the FSC threshold in the next question", "no");
+	float fixed_threshold;
+	float threshold_snr;
+	float confidence_level;
+	if (use_fixed_threshold)
+	{
+		fixed_threshold			= my_input->GetFloatFromUser("Fixed FSC threshold", "Commonly used values: 0.143",  "0.5", -1.0, 1.0);
+		threshold_snr			= -1.0;
+		confidence_level		= -1.0;
+	}
+	else
+	{
+		fixed_threshold			= -1.0;
+		threshold_snr			= my_input->GetFloatFromUser("Threshold SNR", "FSC value must correspond to at least this SNR. FSC=0.143 corresponds to SNR=0.334.", "0.334", 0.0);
+		confidence_level		= my_input->GetFloatFromUser("Confidence level", "In numbers of sigma", "5.0", 0.0);
+	}
 
 	input_image_file.CloseFile();
 
 	delete my_input;
 
-	my_current_job.Reset(9);
-	my_current_job.ManualSetArguments("ttttfiiii", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, first_slice,last_slice,sampling_step,box_size);
+	my_current_job.Reset(13);
+	my_current_job.ManualSetArguments("ttttfiiiibfff", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level);
 }
 
 
@@ -55,6 +71,10 @@ bool LocalResolution::DoCalculation()
 	int last_slice					= my_current_job.arguments[6].ReturnIntegerArgument();
 	int sampling_step				= my_current_job.arguments[7].ReturnIntegerArgument();
 	int box_size					= my_current_job.arguments[8].ReturnIntegerArgument();
+	bool use_fixed_threshold		= my_current_job.arguments[9].ReturnBoolArgument();
+	float fixed_threshold			= my_current_job.arguments[10].ReturnFloatArgument();
+	float threshold_snr				= my_current_job.arguments[11].ReturnFloatArgument();
+	float confidence_level			= my_current_job.arguments[12].ReturnFloatArgument();
 
 
 	// Read volumes from disk
@@ -76,9 +96,7 @@ bool LocalResolution::DoCalculation()
 
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	const float threshold_snr = 0.334; // 0.334 corresponds to the 0.143 FSC criterion
-	const float threshold_confidence_n_sigma = 5.0; // how many sigmas' confidence to we want that we're above the threshold?
-	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,threshold_confidence_n_sigma);
+	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold);
 	estimator->EstimateLocalResolution(&local_resolution_volume);
 
 	// Write output volume to disk

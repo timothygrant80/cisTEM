@@ -15,7 +15,9 @@ public:
 								float input_pixel_size_in_Angstroms,
 								int wanted_box_size,
 								float wanted_threshold_snr, // snr treshold. 0.334 gives the 0.143 criterion
-								float wanted_threshold_confidence_n_sigma // confidence - number of sigmas above estimate we want to be
+								float wanted_threshold_confidence_n_sigma, // confidence - number of sigmas above estimate we want to be
+								bool wanted_use_fixed_fsc_threshold,
+								float wanted_fixed_fsc_threshold
 								);
 
 	void EstimateLocalResolution(Image *local_resolution_volume);
@@ -34,6 +36,8 @@ private:
 	int		first_slice; // don't calculate resolution before first slice (xy plane) of the volume
 	int 	last_slice;
 
+	bool use_fixed_fsc_threshold;
+	float fixed_fsc_threshold;
 	float threshold_confidence_n_sigma; // confidence - number of sigmas above estimate we want to be
 	float threshold_snr; // snr treshold. 0.334 gives the 0.143 criterion
 	float resolution_value_before_first_shell; //40.0;//

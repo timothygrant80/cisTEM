@@ -30,7 +30,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator()
 	box_two.Deallocate();
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma)
+void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold)
 {
 	MyDebugAssertTrue(IsEven(box_size),"Box size should be even");
 	SetInputVolumes(wanted_input_volume_one,wanted_input_volume_two,wanted_mask_volume);
@@ -42,6 +42,8 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	number_of_fsc_shells = box_size/2;
 	threshold_snr = wanted_threshold_snr;
 	threshold_confidence_n_sigma = wanted_threshold_confidence_n_sigma;
+	use_fixed_fsc_threshold = wanted_use_fixed_fsc_threshold;
+	fixed_fsc_threshold = wanted_fixed_fsc_threshold;
 
 	// Update based on user-supplied parameter values
 	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; //40.0;// // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
@@ -207,7 +209,11 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
 		{
 			fsc_threshold[shell_counter] = 1.0 - 4.0 / ( (1.0 + threshold_confidence_n_sigma * sqrt(exp(4.0/(number_of_independent_voxels[shell_counter] - 3.0))-1.0) ) * (2.0 * threshold_snr + 1.0) * exp(2.0/(number_of_independent_voxels[shell_counter]-3.0)) + 3.0 );
 		}
-		//fsc_threshold[shell_counter] = 0.5; //fixed (debug)
+		if (use_fixed_fsc_threshold)
+		{
+			// Overwrite
+			fsc_threshold[shell_counter] = fixed_fsc_threshold;
+		}
 		if (fsc_threshold[shell_counter] > nearly_one) fsc_threshold[shell_counter] = nearly_one;
 		wxPrintf("%i %f %f\n",shell_counter,number_of_independent_voxels[shell_counter],fsc_threshold[shell_counter]);
 	}
@@ -237,9 +243,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Debug
 #ifdef DEBUG
-	const int dbg_i = 68;
-	const int dbg_j = 68;
-	const int dbg_k = 54;
+	const int dbg_i = 130;
+	const int dbg_j = 108;
+	const int dbg_k = 110;
 #endif
 
 	// Initialisation
@@ -314,7 +320,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 									for (int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter ++ )
 									{
 										current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells-1) / float(shell_counter);
-										wxPrintf("%i %f %f\n",shell_counter,current_resolution,computed_fsc[shell_counter]);
+										wxPrintf("%i %.2f %.4f %.4f\n",shell_counter,current_resolution,fsc_threshold[shell_counter],computed_fsc[shell_counter]);
 									}
 									wxPrintf("\n\n");
 								}

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 	
 #
 # Parallelize local resolution estimation so it can run in a reasonable time.
 # Make sure the program "local_resolution" is in your PATH before running
@@ -14,17 +14,25 @@ input_volume_fsc_two=$2
 input_volume_mask=$3
 pixel_size=$4
 box_size=$5
-sampling_step=$6
-slices_per_processor=$7
-total_number_of_slices=$8
-output_volume=$9
+use_fixed=$6
+fixed_fsc_thresh=$7
+snr_target=$8
+snr_confidence=$9
+sampling_step=${10}
+slices_per_processor=${11}
+total_number_of_slices=${12}
+output_volume=${13}
 
-if [ "$#" -ne 9 ]; then
+if [ "$#" -ne 13 ]; then
 	echo " "
-	echo "9 arguments are expected, you only supplied $#"
-	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size box_size sampling_step slices_per_processor total_number_of_slices output_volume"
+	echo "13 arguments are expected, you only supplied $#"
+	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices output_volume"
 	echo "Suggested defaults:"
 	echo "box_size = 20"
+	echo "use_fixed = n [alternative:y]"
+	echo "fixed_fsc_thresh = 0.5"
+	echo "snr_target = 0.334"
+	echo "snr_confidence = 5.0"
 	echo "sampling_step = 2 or 4"
 	echo " "
 	exit
@@ -45,6 +53,7 @@ do
 	echo "$first_slice $last_slice $log_fn"
 
 #
+if [ x"$use_fixed" = x"y" ]; then
 local_resolution<<eof > $log_fn 2>&1 &
 $input_volume_fsc_one
 $input_volume_fsc_two
@@ -55,7 +64,25 @@ $first_slice
 $last_slice
 $sampling_step
 $box_size
+$use_fixed
+$fixed_fsc_thresh
 eof
+else
+local_resolution<<eof > $log_fn 2>&1 &
+$input_volume_fsc_one
+$input_volume_fsc_two
+$input_volume_mask
+tmp_${processor_counter}.mrc
+$pixel_size
+$first_slice
+$last_slice
+$sampling_step
+$box_size
+$use_fixed
+$snr_target
+$snr_confidence
+eof
+fi
 	
 	# Remember the PID for this job
 	job_pid+=($!)

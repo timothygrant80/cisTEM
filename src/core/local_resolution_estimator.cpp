@@ -224,6 +224,9 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
 void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_threshold[], Image *local_resolution_volume, Image box_mask)
 {
 
+	MyDebugAssertTrue(input_volume_one->is_in_real_space,"Volume one is not in real space");
+	MyDebugAssertTrue(input_volume_two->is_in_real_space,"Volume two is not in real space");
+
 	// Local vars
 	int i,j,k, shell_counter;
 	int center_of_first_box;
@@ -344,7 +347,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 										 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
 										 */
 										just_a_glitch = false;
-										if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter] > 0.9 && computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] && computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2];
+										if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter] > 0.9 && (computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2]);
 
 										if (!just_a_glitch)
 										{

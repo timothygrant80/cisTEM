@@ -94,6 +94,19 @@ bool LocalResolution::DoCalculation()
 	Image local_resolution_volume(input_volume_one);
 	local_resolution_volume.SetToConstant(-1.0);
 
+
+	// Whiten the input volumes
+	const bool whiten_input_volumes = true;
+	if (whiten_input_volumes)
+	{
+		input_volume_one.ForwardFFT();
+		input_volume_two.ForwardFFT();
+		input_volume_one.Whiten(0.5);
+		input_volume_two.Whiten(0.5);
+		input_volume_one.BackwardFFT();
+		input_volume_two.BackwardFFT();
+	}
+
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
 	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold);

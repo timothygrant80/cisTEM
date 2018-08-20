@@ -257,6 +257,18 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 		computed_fsc[shell_counter] = 0.0;
 	}
 
+	// Whiten the input volumes
+	const bool whiten_input_volumes = true;
+	if (whiten_input_volumes)
+	{
+		input_volume_one->ForwardFFT();
+		input_volume_two->ForwardFFT();
+		input_volume_one->Whiten(0.5);
+		input_volume_two->Whiten(0.5);
+		input_volume_one->BackwardFFT();
+		input_volume_two->BackwardFFT();
+	}
+
 	// Sliding window over the volumes
 	long total_number_of_boxes = std::min(input_volume_one->logical_z_dimension - box_size, last_slice-first_slice+1) * (input_volume_one->logical_y_dimension - box_size) * (input_volume_one->logical_x_dimension - box_size) / pow(sampling_step,3);
 	long pixel_counter = 0;

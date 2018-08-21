@@ -246,9 +246,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Debug
 #ifdef DEBUG
-	const int dbg_i = 130;
-	const int dbg_j = 108;
-	const int dbg_k = 110;
+	const int dbg_i = 140;
+	const int dbg_j = 176;
+	const int dbg_k = 160;
 #endif
 
 	// Initialisation
@@ -259,8 +259,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Whiten the input volumes
 	const bool whiten_input_volumes = true;
+	const bool sharpen_input_volumes = false;
 	if (whiten_input_volumes)
 	{
+
 		input_volume_one->ForwardFFT();
 		input_volume_two->ForwardFFT();
 		input_volume_one->Whiten(0.5);
@@ -268,6 +270,20 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 		input_volume_one->BackwardFFT();
 		input_volume_two->BackwardFFT();
 	}
+	if (sharpen_input_volumes)
+	{
+		bool invert_hand = false;
+		float inner_mask_radius = 0.0;
+		float outer_mask_radius = 0.5 * input_volume_one->logical_x_dimension * pixel_size_in_Angstroms - 1.0;
+		float start_res_for_whitening = 10.0;
+		float resolution_limit = 2.0 * pixel_size_in_Angstroms;
+		float filter_edge = 50.0;
+		input_volume_one->SharpenMap(pixel_size_in_Angstroms, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, 0.0, 0.0, filter_edge);
+		input_volume_two->SharpenMap(pixel_size_in_Angstroms, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, 0.0, 0.0, filter_edge);
+	}
+
+	input_volume_one->QuickAndDirtyWriteSlices("dbg_1.mrc", 1, input_volume_one->logical_z_dimension);
+	input_volume_two->QuickAndDirtyWriteSlices("dbg_2.mrc", 1, input_volume_one->logical_z_dimension);
 
 	// Sliding window over the volumes
 	long total_number_of_boxes = std::min(input_volume_one->logical_z_dimension - box_size, last_slice-first_slice+1) * (input_volume_one->logical_y_dimension - box_size) * (input_volume_one->logical_x_dimension - box_size) / pow(sampling_step,3);
@@ -278,7 +294,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	float previous_resolution;
 	ProgressBar *my_progress_bar;
 	my_progress_bar = new ProgressBar(total_number_of_boxes);
-	bool just_a_glitch;
+	bool below_threshold, just_a_glitch;
+#ifdef DEBUG
+	bool on_dbg_point;
+#endif
 
 	for (k = 0; k < input_volume_one->logical_z_dimension; k ++ )
 	{
@@ -296,7 +315,8 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 							my_progress_bar->Update(counter_number_of_boxes);
 
 #ifdef DEBUG
-							if (i == dbg_i && j == dbg_j && k == dbg_k) wxPrintf("On the debug point\n");
+							on_dbg_point = i == dbg_i && j == dbg_j && k == dbg_k;
+							if (on_dbg_point) wxPrintf("On the debug point\n");
 #endif
 
 							if (input_volume_mask->real_values[pixel_counter] == 0.0 || i < center_of_first_box || i > center_of_last_box || j < center_of_first_box || j > center_of_last_box || k < center_of_first_box || k > center_of_last_box)
@@ -316,7 +336,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 								input_volume_two->ClipInto(&box_two,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
 								box_two.MultiplyPixelWise(box_mask);
 #ifdef DEBUG
-								if (i == dbg_i && j == dbg_j && k == dbg_k)
+								if (on_dbg_point)
 								{
 									box_one.QuickAndDirtyWriteSlices("dbg_vol1.mrc", 1, box_one.logical_z_dimension);
 									box_two.QuickAndDirtyWriteSlices("dbg_vol2.mrc", 1, box_two.logical_z_dimension);
@@ -329,7 +349,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 #ifdef DEBUG
 								// Debug: printout FSC curve
-								if (i == dbg_i && j == dbg_j && k == dbg_k)
+								if (on_dbg_point)
 								{
 									wxPrintf("\n\n");
 									for (int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter ++ )
@@ -348,47 +368,51 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 								{
 									current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells-1) / float(shell_counter);
 
-									if (computed_fsc[shell_counter] < fsc_threshold[shell_counter])
+									// Test: are we below the threshold?
+									below_threshold = computed_fsc[shell_counter] < fsc_threshold[shell_counter];
+
+									/*
+									 * Maybe it was just a numerical glitch and in fact the FSC curve is staying above threshold.
+									 * This is particularly liable to happen in the very first shells, where N is very low,
+									 * FSC is very high and small numerical errors can have an outsize effect.
+									 * So if we're below threshold now but the next shells are back up above threshold,
+									 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
+									 */
+									just_a_glitch = false;
+									if (below_threshold && computed_fsc[shell_counter] > 0.9)
+									{
+										if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
+									}
+
+									if (below_threshold && !just_a_glitch)
 									{
 
-										/*
-										 * Maybe it was just a numerical glitch and in fact the FSC curve is staying above threshold.
-										 * This is particularly liable to happen in the very first shells, where N is very low,
-										 * FSC is very high and small numerical errors can have an outsize effect.
-										 * So if we're below threshold now but the next shells are back up above threshold,
-										 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
-										 */
-										just_a_glitch = false;
-										if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter] > 0.9 && (computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2]);
-
-										if (!just_a_glitch)
+										if (previous_resolution == 0.0)
 										{
-
-											if (previous_resolution == 0.0)
-											{
-												local_resolution_volume->real_values[pixel_counter] = resolution_value_before_first_shell;
-											}
-											else
-											{
-												local_resolution_volume->real_values[pixel_counter] = 1.0 / ( (1.0/previous_resolution) + ((1.0/current_resolution)-(1.0/previous_resolution)) * (fsc_threshold[shell_counter]-computed_fsc[shell_counter-1])/(computed_fsc[shell_counter]-computed_fsc[shell_counter-1])) ;
-											}
-#ifdef DEBUG
-											if (i == dbg_i && j == dbg_j && k == dbg_k) { wxPrintf("Estimated local resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter]); }
-#endif
-											break;
+											local_resolution_volume->real_values[pixel_counter] = resolution_value_before_first_shell;
 										}
+										else
+										{
+											MyDebugAssertTrue(computed_fsc[shell_counter] <= computed_fsc[shell_counter-1],"Oops, FSC is not dropping");
+											local_resolution_volume->real_values[pixel_counter] = 1.0 / ( (1.0/previous_resolution) + ((1.0/current_resolution)-(1.0/previous_resolution)) * (fsc_threshold[shell_counter]-fsc_threshold[shell_counter-1])/(computed_fsc[shell_counter]-computed_fsc[shell_counter-1])) ;
+										}
+#ifdef DEBUG
+										if (on_dbg_point) { wxPrintf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution); }
+#endif
+										break;
+
 									}
 									else if (shell_counter == number_of_fsc_shells - 1)
 									{
 										local_resolution_volume->real_values[pixel_counter] = current_resolution;
 #ifdef DEBUG
-										if (i == dbg_i && j == dbg_j && k == dbg_k) wxPrintf("At debug point, but got to last shell\n");
+										if (on_dbg_point) wxPrintf("At debug point, but got to last shell\n");
 #endif
 									}
 									previous_resolution = current_resolution;
 								}
 #ifdef DEBUG
-								if (i == dbg_i && j == dbg_j && k == dbg_k) { wxPrintf("Estimated local resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter]); }
+								if (on_dbg_point) { wxPrintf("Estimated local resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter]); }
 #endif
 
 							}
@@ -399,7 +423,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 							// set the local resolution to indicate we didn't measure it
 							local_resolution_volume->real_values[pixel_counter] = resolution_value_between_estimation_points;
 #ifdef DEBUG
-							if (i == dbg_i && j == dbg_j && k == dbg_k) wxPrintf("At debug point, but between estimation points\n");
+							if (on_dbg_point) wxPrintf("At debug point, but between estimation points\n");
 #endif
 						}
 
@@ -409,7 +433,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 				else
 				{
 #ifdef DEBUG
-					if (i == dbg_i && j == dbg_j && k == dbg_k) wxPrintf("At debug point, but not estimating this line\n");
+					if (on_dbg_point) wxPrintf("At debug point, but not estimating this line\n");
 #endif
 					// We are not estimating this line
 					for (int i = 0; i < input_volume_one->logical_x_dimension; i ++ )
@@ -440,7 +464,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 				pixel_counter += input_volume_one->padding_jump_value;
 			}
 #ifdef DEBUG
-			if (i == dbg_i && j == dbg_j && k == dbg_k) wxPrintf("At debug point, but not estimating this slice\n");
+			if (on_dbg_point) wxPrintf("At debug point, but not estimating this slice\n");
 #endif
 		}
 	}

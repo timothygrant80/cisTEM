@@ -17,7 +17,8 @@ public:
 								float wanted_threshold_snr, // snr treshold. 0.334 gives the 0.143 criterion
 								float wanted_threshold_confidence_n_sigma, // confidence - number of sigmas above estimate we want to be
 								bool wanted_use_fixed_fsc_threshold,
-								float wanted_fixed_fsc_threshold
+								float wanted_fixed_fsc_threshold,
+								wxString wanted_symmetry_symbol
 								);
 
 	void EstimateLocalResolution(Image *local_resolution_volume);
@@ -36,12 +37,12 @@ private:
 	int		first_slice; // don't calculate resolution before first slice (xy plane) of the volume
 	int 	last_slice;
 
-	bool use_fixed_fsc_threshold;
-	float fixed_fsc_threshold;
-	float threshold_confidence_n_sigma; // confidence - number of sigmas above estimate we want to be
-	float threshold_snr; // snr treshold. 0.334 gives the 0.143 criterion
-	float resolution_value_before_first_shell; //40.0;//
-	float resolution_value_where_wont_estimate;
+	bool 	use_fixed_fsc_threshold;
+	float 	fixed_fsc_threshold;
+	float 	threshold_confidence_n_sigma; // confidence - number of sigmas above estimate we want to be
+	float 	threshold_snr; // snr treshold. 0.334 gives the 0.143 criterion
+	float 	resolution_value_before_first_shell; //40.0;//
+	float 	resolution_value_where_wont_estimate;
 
 	// Internal
 	Image	box_one;
@@ -49,6 +50,7 @@ private:
 	int		*shell_number_lut; // a look-up table: for each voxel in the local_volumes, remember what fsc shell we're in
 	bool	shell_number_lut_is_allocated;
 	int		sampling_step; // we don't necessarily need to estimate the resolution at every voxel
+	int 	symmetry_redundancy;
 
 
 	// Private methods
@@ -63,5 +65,6 @@ private:
 	void 	SetInputVolumes(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume);
 	inline void SetPixelSize(float wanted_pixel_size_in_Angstroms) {pixel_size_in_Angstroms = wanted_pixel_size_in_Angstroms;};
 	inline void SetBoxSize(int wanted_box_size) {box_size = wanted_box_size;};
+	float 	ReturnResolutionOfIntersectionBetweenFSCAndThreshold(float resolution_one, float resolution_two, float fsc_one, float fsc_two, float threshold_one, float threshold_two);
 
 };

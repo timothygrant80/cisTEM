@@ -20,6 +20,7 @@ LocalResolutionEstimator::LocalResolutionEstimator()
 	threshold_confidence_n_sigma				=	0.0;
 	resolution_value_before_first_shell			=	0.0;
 	resolution_value_where_wont_estimate		=	0.0;
+	symmetry_redundancy							=	0;
 
 }
 
@@ -30,7 +31,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator()
 	box_two.Deallocate();
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold)
+void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol)
 {
 	MyDebugAssertTrue(IsEven(box_size),"Box size should be even");
 	SetInputVolumes(wanted_input_volume_one,wanted_input_volume_two,wanted_mask_volume);
@@ -44,9 +45,12 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	threshold_confidence_n_sigma = wanted_threshold_confidence_n_sigma;
 	use_fixed_fsc_threshold = wanted_use_fixed_fsc_threshold;
 	fixed_fsc_threshold = wanted_fixed_fsc_threshold;
+	SymmetryMatrix sym_matrix;
+	sym_matrix.Init(wanted_symmetry_symbol);
+	symmetry_redundancy = sym_matrix.number_of_matrices;
 
 	// Update based on user-supplied parameter values
-	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; //40.0;// // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
+	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
 	resolution_value_where_wont_estimate = resolution_value_before_first_shell;
 }
 
@@ -57,8 +61,6 @@ void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_v
 
 
 	AllocateLocalVolumes();
-
-	//int number_of_fsc_shells = box_size / 2;
 
 	/*
 	 * Setup a couple of arrays on the stack.
@@ -78,13 +80,17 @@ void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_v
 	box_mask.CosineMask(box_size / 4, box_size / 2, false, true, 0.0);
 
 
-
     // Precompute, for each Fourier voxel, the shell it will contribute to.
 	AllocateShellNumberLUT();
 	PopulateShellNumberLUT();
 
 	// Estimate the number of independent voxels per shell, taking into account real-space apodization
-	CountIndependentVoxelsPerShell(number_of_independent_voxels,box_mask.ReturnAverageOfRealValues(0.0,false));
+	float symmetry_factor;
+	float mask_factor;
+	mask_factor = 1.0/PI;
+	symmetry_factor = 1.0 / float(symmetry_redundancy);
+	MyDebugPrint("Scaling factor from mask = %f\nScaling factor from symmetry = %f\n",mask_factor,symmetry_factor);
+	CountIndependentVoxelsPerShell(number_of_independent_voxels,mask_factor * symmetry_factor);
 
 
 	// Compute the FSC threshold
@@ -259,7 +265,6 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Whiten the input volumes
 	const bool whiten_input_volumes = true;
-	const bool sharpen_input_volumes = false;
 	if (whiten_input_volumes)
 	{
 
@@ -270,20 +275,11 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 		input_volume_one->BackwardFFT();
 		input_volume_two->BackwardFFT();
 	}
-	if (sharpen_input_volumes)
-	{
-		bool invert_hand = false;
-		float inner_mask_radius = 0.0;
-		float outer_mask_radius = 0.5 * input_volume_one->logical_x_dimension * pixel_size_in_Angstroms - 1.0;
-		float start_res_for_whitening = 10.0;
-		float resolution_limit = 2.0 * pixel_size_in_Angstroms;
-		float filter_edge = 50.0;
-		input_volume_one->SharpenMap(pixel_size_in_Angstroms, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, 0.0, 0.0, filter_edge);
-		input_volume_two->SharpenMap(pixel_size_in_Angstroms, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, 0.0, 0.0, filter_edge);
-	}
 
+#ifdef DEBUG
 	input_volume_one->QuickAndDirtyWriteSlices("dbg_1.mrc", 1, input_volume_one->logical_z_dimension);
 	input_volume_two->QuickAndDirtyWriteSlices("dbg_2.mrc", 1, input_volume_one->logical_z_dimension);
+#endif
 
 	// Sliding window over the volumes
 	long total_number_of_boxes = std::min(input_volume_one->logical_z_dimension - box_size, last_slice-first_slice+1) * (input_volume_one->logical_y_dimension - box_size) * (input_volume_one->logical_x_dimension - box_size) / pow(sampling_step,3);
@@ -295,6 +291,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	ProgressBar *my_progress_bar;
 	my_progress_bar = new ProgressBar(total_number_of_boxes);
 	bool below_threshold, just_a_glitch;
+	const bool stringent_mode = true;
 #ifdef DEBUG
 	bool on_dbg_point;
 #endif
@@ -381,7 +378,14 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 									just_a_glitch = false;
 									if (below_threshold && computed_fsc[shell_counter] > 0.9)
 									{
-										if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
+										if (stringent_mode)
+										{
+											if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1];
+										}
+										else
+										{
+											if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
+										}
 									}
 
 									if (below_threshold && !just_a_glitch)
@@ -394,7 +398,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 										else
 										{
 											MyDebugAssertTrue(computed_fsc[shell_counter] <= computed_fsc[shell_counter-1],"Oops, FSC is not dropping");
-											local_resolution_volume->real_values[pixel_counter] = 1.0 / ( (1.0/previous_resolution) + ((1.0/current_resolution)-(1.0/previous_resolution)) * (fsc_threshold[shell_counter]-fsc_threshold[shell_counter-1])/(computed_fsc[shell_counter]-computed_fsc[shell_counter-1])) ;
+											local_resolution_volume->real_values[pixel_counter] = ReturnResolutionOfIntersectionBetweenFSCAndThreshold(previous_resolution, current_resolution, computed_fsc[shell_counter-1], computed_fsc[shell_counter], fsc_threshold[shell_counter-1], fsc_threshold[shell_counter]);
 										}
 #ifdef DEBUG
 										if (on_dbg_point) { wxPrintf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution); }
@@ -470,3 +474,25 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	}
 	delete my_progress_bar;
 }
+
+float LocalResolutionEstimator::ReturnResolutionOfIntersectionBetweenFSCAndThreshold(float resolution_one, float resolution_two, float fsc_one, float fsc_two, float threshold_one, float threshold_two)
+{
+	MyDebugAssertTrue(resolution_one > 0.0, "Resolution one must be greater than zero");
+	MyDebugAssertTrue(resolution_two > 0.0, "Resolution two must be greater than zero");
+	MyDebugAssertTrue(resolution_one > resolution_two,"Resolution one should be larger than resolution two");
+	MyDebugAssertTrue(fsc_one >= fsc_two, "FSC curve should not be rising in the interval");
+	MyDebugAssertTrue(threshold_one >= threshold_two, "Threshold curve should not be rising in the interval");
+
+	float sf_one, sf_two;
+	float sf_of_intersection;
+	sf_one = 1.0 / resolution_one;
+	sf_two = 1.0 / resolution_two;
+
+	sf_of_intersection = sf_one + (sf_two - sf_one) * (threshold_one - fsc_one) / ((fsc_two-fsc_one)-(threshold_two-threshold_one));
+
+	MyDebugAssertTrue(sf_of_intersection >= sf_one && sf_of_intersection <= sf_two,"Sanity check failed. Spatial frequency of interesection should be between two input points");
+
+	return 1.0 / sf_of_intersection;
+
+}
+

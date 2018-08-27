@@ -322,6 +322,7 @@ public:
 
 	inline void WriteSlice(MRCFile *input_file, long slice_to_write) {  MyDebugAssertTrue(slice_to_write > 0, "Start slice is 0, the first slice is 1!"); WriteSlices(input_file, slice_to_write, slice_to_write);}
 	void WriteSlices(MRCFile *input_file, long start_slice, long end_slice);
+	void WriteSlicesAndFillHeader(std::string wanted_filename, float wanted_pixel_size);
 
 	void QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write);
 	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite = false);

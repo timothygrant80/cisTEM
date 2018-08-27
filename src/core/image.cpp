@@ -4598,6 +4598,18 @@ void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 	}
 }
 
+void Image::WriteSlicesAndFillHeader(std::string wanted_filename, float wanted_pixel_size)
+{
+	MRCFile output_file;
+	output_file.OpenFile(wanted_filename, true);
+	WriteSlices(&output_file,1,logical_z_dimension);
+	output_file.SetPixelSize(wanted_pixel_size);
+	EmpiricalDistribution density_distribution;
+	UpdateDistributionOfRealValues(&density_distribution);
+	output_file.SetDensityStatistics(density_distribution.GetMinimum(), density_distribution.GetMaximum(), density_distribution.GetSampleMean(), sqrtf(density_distribution.GetSampleVariance()));
+	output_file.CloseFile();
+}
+
 void Image::QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write)
 {
 	MyDebugAssertTrue(first_slice_to_write >0, "Slice is less than 1, first slice is 1");

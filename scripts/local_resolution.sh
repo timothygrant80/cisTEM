@@ -5,6 +5,8 @@
 #
 # Alexis Rohou, May-June 2018
 #
+# Last modification: 27-Aug-2018
+#
 
 #
 # User-supplied parameters
@@ -13,20 +15,21 @@ input_volume_fsc_one=$1
 input_volume_fsc_two=$2
 input_volume_mask=$3
 pixel_size=$4
-box_size=$5
-use_fixed=$6
-fixed_fsc_thresh=$7
-snr_target=$8
-snr_confidence=$9
-sampling_step=${10}
-slices_per_processor=${11}
-total_number_of_slices=${12}
-output_volume=${13}
+symmetry=$5
+box_size=$6
+use_fixed=$7
+fixed_fsc_thresh=$8
+snr_target=$9
+snr_confidence=${10}
+sampling_step=${11}
+slices_per_processor=${12}
+total_number_of_slices=${13}
+output_volume=${14}
 
-if [ "$#" -ne 13 ]; then
+if [ "$#" -ne 14 ]; then
 	echo " "
-	echo "13 arguments are expected, you only supplied $#"
-	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices output_volume"
+	echo "14 arguments are expected, you only supplied $#"
+	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size symmetry box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices output_volume"
 	echo "Suggested defaults:"
 	echo "box_size = 20"
 	echo "use_fixed = n [alternative:y]"
@@ -60,6 +63,7 @@ $input_volume_fsc_two
 $input_volume_mask
 tmp_${processor_counter}.mrc
 $pixel_size
+$symmetry
 $first_slice
 $last_slice
 $sampling_step
@@ -74,6 +78,7 @@ $input_volume_fsc_two
 $input_volume_mask
 tmp_${processor_counter}.mrc
 $pixel_size
+$symmetry
 $first_slice
 $last_slice
 $sampling_step

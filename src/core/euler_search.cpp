@@ -57,8 +57,6 @@ void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map
 
 void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
 {
-	int number_of_psi_positions;
-
 	if (number_of_search_positions == 0) Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
 	angular_step_size = wanted_angular_step_size;
@@ -72,21 +70,12 @@ void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular
 	SetSymmetryLimits();
 	CalculateGridSearchPositions();
 
-	if (parameter_map[2])
-	{
-		number_of_psi_positions = myroundint(psi_max / psi_step);
-		if (number_of_psi_positions < 1) number_of_psi_positions = 1;
-	}
-	else
-	{
-		number_of_psi_positions = 1;
-	}
 
 	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
 
-	if (number_of_search_positions * number_of_psi_positions < best_parameters_to_keep)
+	if (number_of_search_positions < best_parameters_to_keep)
 	{
-		best_parameters_to_keep = number_of_search_positions * number_of_psi_positions;
+		best_parameters_to_keep = number_of_search_positions;
 	}
 	
 	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
@@ -96,7 +85,6 @@ void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular
 void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
 {
 	int i;
-	int number_of_psi_positions;
 
 	if (number_of_search_positions == 0) Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
@@ -108,27 +96,17 @@ void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_s
 	SetSymmetryLimits();
 	CalculateRandomSearchPositions();
 
-	if (parameter_map[2])
-	{
-		number_of_psi_positions = myroundint(psi_max / psi_step);
-		if (number_of_psi_positions < 1) number_of_psi_positions = 1;
-	}
-	else
-	{
-		number_of_psi_positions = 1;
-	}
-
 	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
 
-	if (number_of_search_positions * number_of_psi_positions < best_parameters_to_keep)
+	if (number_of_search_positions < best_parameters_to_keep)
 	{
-		best_parameters_to_keep = number_of_search_positions * number_of_psi_positions;
+		best_parameters_to_keep = number_of_search_positions;
 	}
 
 	Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
-void EulerSearch::CalculateGridSearchPositions()
+void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 {
 	int i;
 	float phi_step = 360.0;
@@ -148,7 +126,8 @@ void EulerSearch::CalculateGridSearchPositions()
 //		theta_max_local = 90.0;
 		// make sure that theta_step produces an integer number of steps
 		theta_step = theta_max_local / int(theta_max_local / angular_step_size + 0.5);
-		theta_start_local = fabsf(theta_step / 2.0 * global_random_number_generator.GetUniformRandom());
+		if (random_start_angle == true) theta_start_local = fabsf(theta_step / 2.0 * global_random_number_generator.GetUniformRandom());
+		else theta_start_local = 0.0f;
 	}
 	else
 	{
@@ -211,7 +190,9 @@ void EulerSearch::CalculateGridSearchPositions()
 	        	phi_step = fabsf(angular_step_size / sinf(deg_2_rad(theta)));
 	        	if (phi_step > phi_max) phi_step = phi_max;
 	    		phi_step = phi_max / int(phi_max / phi_step + 0.5);
-	    		phi_start_local = phi_step / 2.0 * global_random_number_generator.GetUniformRandom();
+	    		if (random_start_angle == true) phi_start_local = phi_step / 2.0 * global_random_number_generator.GetUniformRandom();
+				else phi_start_local = 0.0f;
+
 	        }
 		}
         for (phi = 0.0; phi < phi_max; phi += phi_step)

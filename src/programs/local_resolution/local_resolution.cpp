@@ -29,6 +29,7 @@ void LocalResolution::DoInteractiveUserInput()
 	wxString input_volume_mask	= my_input->GetFilenameFromUser("Input mask", "Positions where this mask volume has value 0.00 will be skipped during local resolution estimation", "my_mask.mrc", true);
 	wxString output_volume		= my_input->GetFilenameFromUser("Output local resolution volume", "This volume will be a local resolution estimate map","local_resolution.mrc",false);
 	float pixel_size			= my_input->GetFloatFromUser("Pixel size (A)", "Pixel size of the map in Angstroms", "1.0", 0.000001);
+	wxString my_symmetry 		= my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
 	input_image_file.OpenFile(input_volume_one.ToStdString(), false, false);
 	int	first_slice				= my_input->GetIntFromUser("First slice", "First slice within the volume to estimate local resolution", "1", 1, input_image_file.ReturnNumberOfSlices());
 	int	last_slice				= my_input->GetIntFromUser("Last slice", "Last slice within the volume to estimate local resolution (0 = last slice of volume)", "0", 0, input_image_file.ReturnNumberOfSlices());
@@ -55,8 +56,8 @@ void LocalResolution::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(13);
-	my_current_job.ManualSetArguments("ttttfiiiibfff", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level);
+	my_current_job.Reset(14);
+	my_current_job.ManualSetArguments("ttttftiiiibfff", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level);
 }
 
 
@@ -67,14 +68,16 @@ bool LocalResolution::DoCalculation()
 	wxString input_volume_mask_fn	= my_current_job.arguments[2].ReturnStringArgument();
 	wxString output_volume_fn		= my_current_job.arguments[3].ReturnStringArgument();
 	float pixel_size				= my_current_job.arguments[4].ReturnFloatArgument();
-	int first_slice					= my_current_job.arguments[5].ReturnIntegerArgument();
-	int last_slice					= my_current_job.arguments[6].ReturnIntegerArgument();
-	int sampling_step				= my_current_job.arguments[7].ReturnIntegerArgument();
-	int box_size					= my_current_job.arguments[8].ReturnIntegerArgument();
-	bool use_fixed_threshold		= my_current_job.arguments[9].ReturnBoolArgument();
-	float fixed_threshold			= my_current_job.arguments[10].ReturnFloatArgument();
-	float threshold_snr				= my_current_job.arguments[11].ReturnFloatArgument();
-	float confidence_level			= my_current_job.arguments[12].ReturnFloatArgument();
+	wxString my_symmetry			= my_current_job.arguments[5].ReturnStringArgument();
+	int first_slice					= my_current_job.arguments[6].ReturnIntegerArgument();
+	int last_slice					= my_current_job.arguments[7].ReturnIntegerArgument();
+	int sampling_step				= my_current_job.arguments[8].ReturnIntegerArgument();
+	int box_size					= my_current_job.arguments[9].ReturnIntegerArgument();
+	bool use_fixed_threshold		= my_current_job.arguments[10].ReturnBoolArgument();
+	float fixed_threshold			= my_current_job.arguments[11].ReturnFloatArgument();
+	float threshold_snr				= my_current_job.arguments[12].ReturnFloatArgument();
+	float confidence_level			= my_current_job.arguments[13].ReturnFloatArgument();
+
 
 
 	// Read volumes from disk
@@ -97,14 +100,11 @@ bool LocalResolution::DoCalculation()
 
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold);
+	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry);
 	estimator->EstimateLocalResolution(&local_resolution_volume);
 
 	// Write output volume to disk
-	MRCFile output_file(output_volume_fn.ToStdString(),true);
-	output_file.SetPixelSize(pixel_size);
-	local_resolution_volume.WriteSlices(&output_file, 1, local_resolution_volume.logical_z_dimension);
-
+	local_resolution_volume.WriteSlicesAndFillHeader(output_volume_fn.ToStdString(), pixel_size);
 
 
 	// Cleanup

@@ -171,72 +171,8 @@ bool LocalResolutionFinalize::DoCalculation()
 
 	}
 
-	/*
-	 * High-pass filter the resolution map.
-	 * This is to compensate for the fact that a local resolution estimate is computed from
-	 * a local volume, which may be on the order of 20 Angstroms dimension and we want
-	 * better locality than that for our estimate.
-	 * Not working (yet?) - deconvolution is not easy... ;)
-	 */
-	/*
-	final_resolution_map.ForwardFFT();
-	final_resolution_map.ApplyBFactor(-100.0);
-	final_resolution_map.CosineMask(0.25, 0.1);
-	final_resolution_map.BackwardFFT();
-	*/
-	/*
-	{
-		const int box_size = 20;
-		// Generate the real-space mask that was used
-		Image box_mask(final_resolution_map);
-		box_mask.SetToConstant(1.0);
-		//box_mask.CosineMask(box_size / 4, box_size / 2, false, true, 0.0);
-		box_mask.TriangleMask(float(box_size/2));
-		//box_mask.MultiplyByConstant(box_mask.number_of_real_space_pixels);
-		//box_mask.SetToConstant(0.0);
-		//box_mask.real_values[box_mask.ReturnReal1DAddressFromPhysicalCoord(box_mask.physical_address_of_box_center_x, box_mask.physical_address_of_box_center_y, box_mask.physical_address_of_box_center_z)] = float(box_mask.number_of_real_space_pixels);
-		//box_mask.real_values[box_mask.ReturnReal1DAddressFromPhysicalCoord(box_mask.physical_address_of_box_center_x, box_mask.physical_address_of_box_center_y, box_mask.physical_address_of_box_center_z)] = 1.0;
-		box_mask.MultiplyByConstant(float(box_mask.number_of_real_space_pixels)/box_mask.ReturnSumOfRealValues());
-		box_mask.QuickAndDirtyWriteSlices("dbg_mask.mrc", 1, box_mask.logical_z_dimension);
-		//
-		//Image box_mask_amplitudes;
-		box_mask.ForwardFFT(false);
-		box_mask.SwapRealSpaceQuadrants();
-		box_mask.DivideByConstant(sqrt(float(box_mask.number_of_real_space_pixels))); // proper scaling to satisfy Parseval's theorem
-		//box_mask.AddConstant(0.01);
-		Image box_mask_amplitudes;
-		box_mask.ComputeAmplitudeSpectrum(&box_mask_amplitudes);
-		box_mask_amplitudes.QuickAndDirtyWriteSlices("dbg_mask_amp.mrc", 1, box_mask_amplitudes.logical_z_dimension);
-
-
-		// Apply this as a filter
-		final_resolution_map.QuickAndDirtyWriteSlices("dbg_res_beforefilter.mrc", 1, final_resolution_map.logical_z_dimension);
-		final_resolution_map.ForwardFFT();
-		final_resolution_map.SwapRealSpaceQuadrants();
-		final_resolution_map.DivideByConstant(sqrt(float(final_resolution_map.number_of_real_space_pixels)));
-		//final_resolution_map.DividePixelWise(box_mask);
-		//final_resolution_map.MultiplyPixelWise(box_mask);
-
-		std::complex<float> cvalue;
-		for (long pixel_counter = 0; pixel_counter < box_mask.real_memory_allocated / 2; pixel_counter++)
-		{
-			cvalue = box_mask.complex_values[pixel_counter];
-			if (abs(cvalue) < 0.001) cvalue = 0.001;
-			final_resolution_map.complex_values[pixel_counter] /= cvalue;
-		}
-		//final_resolution_map.DivideByConstant(sqrt(float(final_resolution_map.number_of_real_space_pixels)));
-		//final_resolution_map.MultiplyByConstant(float(final_resolution_map.number_of_real_space_pixels));
-		final_resolution_map.SwapRealSpaceQuadrants();
-		final_resolution_map.BackwardFFT();
-	}
-	*/
-
 	// Write out the volume
-	MRCFile output_file(output_volume_fn.ToStdString(),true);
-	output_file.SetPixelSize(current_input_imagefile.ReturnPixelSize());
-	// TODO: avoid calling 4 different metods to set the density statistics - don't we have a method to do this all in one go?
-	output_file.SetDensityStatistics(final_resolution_map.ReturnMinimumValue(), final_resolution_map.ReturnMaximumValue(), final_resolution_map.ReturnAverageOfRealValues(), sqrt(final_resolution_map.ReturnVarianceOfRealValues()));
-	final_resolution_map.WriteSlices(&output_file, 1, number_of_slices);
+	final_resolution_map.WriteSlicesAndFillHeader(output_volume_fn.ToStdString(), current_input_imagefile.ReturnPixelSize());
 
 
 	return true;

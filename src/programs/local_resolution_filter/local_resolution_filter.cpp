@@ -59,9 +59,7 @@ bool LocalResolutionFilter::DoCalculation()
 	input_volume.ApplyLocalResolutionFilter(local_resolution_map, pixel_size, number_of_levels);
 
 	// Write the result to disk
-	MRCFile output_file(output_volume_fn.ToStdString(),true);
-	output_file.SetPixelSize(pixel_size);
-	input_volume.WriteSlices(&output_file, 1, input_volume.logical_z_dimension);
+	input_volume.WriteSlicesAndFillHeader(output_volume_fn.ToStdString(), pixel_size);
 
 	return true;
 }

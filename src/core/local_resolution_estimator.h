@@ -67,4 +67,9 @@ private:
 	inline void SetBoxSize(int wanted_box_size) {box_size = wanted_box_size;};
 	float 	ReturnResolutionOfIntersectionBetweenFSCAndThreshold(float resolution_one, float resolution_two, float fsc_one, float fsc_two, float threshold_one, float threshold_two);
 
+	// The key equations
+	float 	SigmaZSquaredAuto(float number_of_independent_voxels);
+	float 	SigmaZSquared(float rho, float number_of_independent_voxels);
+	float	RhoThreshold(float snr_threshold_halfmaps, float number_of_sigmas, float number_of_independent_voxels, int number_of_iterations = 2);
+
 };

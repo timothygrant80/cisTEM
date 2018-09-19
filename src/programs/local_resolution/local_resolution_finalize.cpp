@@ -110,6 +110,101 @@ bool LocalResolutionFinalize::DoCalculation()
 
 	/*
 	 * Now we have a full volume, but unless the local resolution was estimated at every
+	 * single voxel, we have gaps between the estimates. Before we interpolate in
+	 * between them, let's remove "hot spots": voxels where the local resolution estimate
+	 * is much worse than the neighbors. This is usually a symptom of a numerical glitch
+	 * in the very low-radius shells.
+	 */
+	// TODO: make this part faster by using address counters rather than the addressing methods
+	const bool remove_hotspots = true;
+	if (remove_hotspots)
+	{
+		int k_out_min, k_out_max, k_out;
+		int j_out_min, j_out_max, j_out;
+		int i_out_min, i_out_max, i_out;
+		float weight_k, weight_j, weight_i;
+		float inverse_sampling_step = 1.0 / float(sampling_step);
+		long address_in;
+		long address_neighbor;
+
+		Image temp_combined_map;
+		temp_combined_map = combined_resolution_map;
+		bool is_an_outlier_hotspot;
+		EmpiricalDistribution neighborhood;
+		Curve neighborhood_histogram;
+		float neighborhood_worst_res;
+		float neighborhood_second_worst_res;
+		for (int k_in = sampling_step; k_in < combined_resolution_map.logical_z_dimension-sampling_step; k_in ++)
+		{
+			k_out_min = k_in-sampling_step;
+			k_out_max = k_in+sampling_step;
+			for (int j_in = sampling_step; j_in < combined_resolution_map.logical_y_dimension-sampling_step; j_in ++)
+			{
+				j_out_min = j_in-sampling_step;
+				j_out_max = j_in+sampling_step;
+				for (int i_in = sampling_step; i_in < combined_resolution_map.logical_x_dimension-sampling_step; i_in ++)
+				{
+					address_in = combined_resolution_map.ReturnReal1DAddressFromPhysicalCoord(i_in, j_in, k_in);
+					if (combined_resolution_map.real_values[address_in] > 0.0)
+					{
+						i_out_min = i_in-sampling_step;
+						i_out_max = i_in+sampling_step;
+
+						// Let's accumulate the local resolution values for all our neighbors
+						neighborhood.Reset();
+						neighborhood_worst_res = 0.0;
+						neighborhood_second_worst_res = 0.0;
+						MyDebugAssertTrue(k_out_min + 2*sampling_step == k_out_max,"Oops. bad k_out_min and k_out_max");
+						for (k_out = k_out_min; k_out <= k_out_max; k_out += sampling_step)
+						{
+							for (j_out = j_out_min; j_out <= j_out_max; j_out += sampling_step)
+							{
+								for (i_out = i_out_min; i_out <= i_out_max; i_out += sampling_step)
+								{
+									if (i_out == i_in && j_out == j_in && k_out == k_in)
+									{
+										continue;
+									}
+									else
+									{
+										address_neighbor = combined_resolution_map.ReturnReal1DAddressFromPhysicalCoord(i_out, j_out, k_out);
+										neighborhood.AddSampleValue(combined_resolution_map.real_values[address_neighbor]);
+										if (combined_resolution_map.real_values[address_neighbor] > neighborhood_worst_res)
+										{
+											neighborhood_second_worst_res = neighborhood_worst_res;
+											neighborhood_worst_res = combined_resolution_map.real_values[address_neighbor];
+										}
+										else if (combined_resolution_map.real_values[address_neighbor] > neighborhood_second_worst_res)
+										{
+											neighborhood_second_worst_res = combined_resolution_map.real_values[address_neighbor];
+										}
+									}
+								}
+							}
+						}
+						MyDebugAssertTrue(neighborhood.GetNumberOfSamples() == 26, "Unexpected number of neighbors: %i",int(neighborhood.GetNumberOfSamples()));
+
+						/*
+						 * If the current voxel is a clear outlier (its resolution is much worse
+						 * than the neighborhood), we will replace it
+						 */
+						is_an_outlier_hotspot = temp_combined_map.real_values[address_in] > neighborhood_second_worst_res * 3.0;
+						if (is_an_outlier_hotspot)
+						{
+							wxPrintf("Found an outlier hotspot: %i %i %i used to be %f, will be replaced by %f\n",i_in,j_in,k_in,temp_combined_map.real_values[address_in],neighborhood_second_worst_res);
+							temp_combined_map.real_values[address_in] = neighborhood_second_worst_res;
+						}
+
+					}
+
+				}
+			}
+		}
+		combined_resolution_map = temp_combined_map;
+	}
+
+	/*
+	 * Now we have a full volume, but unless the local resolution was estimated at every
 	 * single voxel, we have to interpolate between estimates
 	 */
 	final_resolution_map = combined_resolution_map;

@@ -195,7 +195,7 @@ void LocalResolutionEstimator::CountIndependentVoxelsPerShell(float number_of_in
 void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(float number_of_independent_voxels[], float fsc_threshold[])
 {
 
-	const float nearly_one = 0.995;
+	const float nearly_one = 0.998; //0.995
 
 	// Initialize
 	for (int shell_counter = 0; shell_counter < number_of_fsc_shells; shell_counter ++)
@@ -207,18 +207,13 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
 
 	for (int shell_counter = 0; shell_counter < number_of_fsc_shells; shell_counter ++ )
 	{
-		if (number_of_independent_voxels[shell_counter] <= 3.0)
+		if (use_fixed_fsc_threshold)
 		{
-			fsc_threshold[shell_counter] = 1.0;
+			fsc_threshold[shell_counter] = fixed_fsc_threshold;
 		}
 		else
 		{
-			fsc_threshold[shell_counter] = 1.0 - 4.0 / ( (1.0 + threshold_confidence_n_sigma * sqrt(exp(4.0/(number_of_independent_voxels[shell_counter] - 3.0))-1.0) ) * (2.0 * threshold_snr + 1.0) * exp(2.0/(number_of_independent_voxels[shell_counter]-3.0)) + 3.0 );
-		}
-		if (use_fixed_fsc_threshold)
-		{
-			// Overwrite
-			fsc_threshold[shell_counter] = fixed_fsc_threshold;
+			fsc_threshold[shell_counter] = RhoThreshold(threshold_snr, threshold_confidence_n_sigma, number_of_independent_voxels[shell_counter]);
 		}
 		if (fsc_threshold[shell_counter] > nearly_one) fsc_threshold[shell_counter] = nearly_one;
 		wxPrintf("%i %f %f\n",shell_counter,number_of_independent_voxels[shell_counter],fsc_threshold[shell_counter]);
@@ -252,9 +247,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Debug
 #ifdef DEBUG
-	const int dbg_i = 140;
-	const int dbg_j = 176;
-	const int dbg_k = 160;
+	const int dbg_i = 166;
+	const int dbg_j = 132;
+	const int dbg_k = 128;
 #endif
 
 	// Initialisation
@@ -292,6 +287,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	my_progress_bar = new ProgressBar(total_number_of_boxes);
 	bool below_threshold, just_a_glitch;
 	const bool stringent_mode = true;
+	const bool allow_glitches = true;
 #ifdef DEBUG
 	bool on_dbg_point;
 #endif
@@ -306,15 +302,15 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 				{
 					for (i = 0; i < input_volume_one->logical_x_dimension; i ++ )
 					{
+#ifdef DEBUG
+						on_dbg_point = i == dbg_i && j == dbg_j && k == dbg_k;
+						if (on_dbg_point) wxPrintf("On the debug point\n");
+#endif
+
 						if (i%sampling_step == 0)
 						{
 							counter_number_of_boxes++;
 							my_progress_bar->Update(counter_number_of_boxes);
-
-#ifdef DEBUG
-							on_dbg_point = i == dbg_i && j == dbg_j && k == dbg_k;
-							if (on_dbg_point) wxPrintf("On the debug point\n");
-#endif
 
 							if (input_volume_mask->real_values[pixel_counter] == 0.0 || i < center_of_first_box || i > center_of_last_box || j < center_of_first_box || j > center_of_last_box || k < center_of_first_box || k > center_of_last_box)
 							{
@@ -329,16 +325,17 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 								box_two.is_in_real_space = true;
 								input_volume_one->ClipInto(&box_one,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
 								box_one.MultiplyPixelWise(box_mask);
-								box_one.ForwardFFT(false);
 								input_volume_two->ClipInto(&box_two,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
 								box_two.MultiplyPixelWise(box_mask);
 #ifdef DEBUG
 								if (on_dbg_point)
 								{
-									box_one.QuickAndDirtyWriteSlices("dbg_vol1.mrc", 1, box_one.logical_z_dimension);
-									box_two.QuickAndDirtyWriteSlices("dbg_vol2.mrc", 1, box_two.logical_z_dimension);
+									box_one.WriteSlicesAndFillHeader("dbg_vol1.mrc", pixel_size_in_Angstroms);
+									box_two.WriteSlicesAndFillHeader("dbg_vol2.mrc", pixel_size_in_Angstroms);
 								}
 #endif
+
+								box_one.ForwardFFT(false);
 								box_two.ForwardFFT(false);
 
 								box_one.ComputeFSCVectorized(&box_two, &work_box_one, &work_box_two, &work_box_cross, number_of_fsc_shells, shell_number_lut, computed_fsc, work_sum_of_squares, work_sum_of_other_squares, work_sum_of_cross_products);
@@ -380,13 +377,15 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 									{
 										if (stringent_mode)
 										{
-											if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1];
+											if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] && computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2];
 										}
 										else
 										{
 											if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
 										}
 									}
+
+									if (! allow_glitches) just_a_glitch = false;
 
 									if (below_threshold && !just_a_glitch)
 									{
@@ -494,5 +493,71 @@ float LocalResolutionEstimator::ReturnResolutionOfIntersectionBetweenFSCAndThres
 
 	return 1.0 / sf_of_intersection;
 
+}
+
+float 	LocalResolutionEstimator::SigmaZSquaredAuto(float n)
+{
+	float r; // correlation
+	float s; // sigma_z_squared
+	if (n < 10.0)
+	{
+	    r = 0.9;
+	    s = (1/(n-1))*(1+(4-powf(r,2))/(2*(n-1))+(176-21*powf(r,2)-21*r)/(48*powf((n-1),2)));
+	}
+	else
+	{
+	    s = 1/(n-3);
+	}
+	return s;
+
+	MyDebugAssertTrue(s > 0.0, "Oops. Sigma Z squared (auto) should be positive: %f",s);
+}
+
+// Equation 8 in Bershad & Rockmore
+float 	LocalResolutionEstimator::SigmaZSquared(float r, float n)
+{
+
+	MyDebugAssertTrue(n > 1.0,"n must be greater than 1.0: %f",n);
+
+	float s; //sigma_z_squared
+
+	s = (1.0/(n-1.0))*(1+(4.0-powf(r,2))/(2.0*(n-1.0))+(176.0-21.0*powf(r,2)-21.0*r)/(48.0*powf((n-1.0),2)));
+
+	MyDebugAssertTrue(s > 0.0, "Oops. Sigma Z squared should be positive: n = %f, r = %f, s = %f",n,r,s);
+
+	return s;
+}
+
+float	LocalResolutionEstimator::RhoThreshold(float alpha_t, float n_sigmas, float n_voxels, int n_iterations)
+{
+	MyDebugAssertTrue(alpha_t > 0.0,"Threshold SNR must be positive: %f", alpha_t);
+	MyDebugAssertTrue(n_sigmas > 0.0, "Confidence level must be positive: %f", n_sigmas);
+	MyDebugAssertTrue(n_voxels >= 0.0, "Number of voxels must be positive: %f",n_voxels);
+	MyDebugAssertTrue(n_iterations >= 0, "Number of iterations can't be negative");
+
+	float rho_t;
+
+	if (n_voxels < 3.0)
+	{
+	    rho_t = 1.0;
+	}
+	else
+	{
+	    // we don't yet know what rho_t will be, even approximately, so let's use
+	    // an inaccurate approximation to sigma_z
+	    rho_t = 1.0 - 2.0/( (2.0*alpha_t+1.0+2.0*n_sigmas*sqrt(exp(4*SigmaZSquaredAuto(n_voxels))-1)*(alpha_t+0.5) ) *exp(2*SigmaZSquaredAuto(n_voxels)) + 1.0);
+
+	    for (int foo = 0; foo < n_iterations; foo++)
+		{
+	        // now that we have a good guess, let's use the more accurate sigma_z
+	        rho_t = 1.0 - 2.0/( (2.0*alpha_t+1.0+2.0*n_sigmas*sqrt(exp(4*SigmaZSquared(rho_t,n_voxels))-1)*(alpha_t+0.5) ) *exp(2*SigmaZSquared(rho_t,n_voxels)) + 1.0);
+		}
+	}
+
+	MyDebugAssertFalse(std::isnan(rho_t),"Oops. rho_t NaN\n");
+	MyDebugAssertTrue(rho_t >= 0.0,"Oops. negative rho_t: %f\n",rho_t);
+	MyDebugAssertTrue(rho_t <= 1.0,"Oops. rho_t too big: %f\n",rho_t);
+
+	return rho_t;
 }
 

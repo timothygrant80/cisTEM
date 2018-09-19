@@ -48,8 +48,8 @@ void LocalResolution::DoInteractiveUserInput()
 	else
 	{
 		fixed_threshold			= -1.0;
-		threshold_snr			= my_input->GetFloatFromUser("Threshold SNR", "FSC value must correspond to at least this SNR. FSC=0.143 corresponds to SNR=0.334.", "0.334", 0.0);
-		confidence_level		= my_input->GetFloatFromUser("Confidence level", "In numbers of sigma", "5.0", 0.0);
+		threshold_snr			= my_input->GetFloatFromUser("Threshold half-map SNR", "FSC value must correspond to at least this SNR. FSC=0.143 corresponds to SNR=0.167.", "0.167", 0.0);
+		confidence_level		= my_input->GetFloatFromUser("Confidence level", "In numbers of standard deviations of the SNR estimator", "3.0", 0.0);
 	}
 
 	input_image_file.CloseFile();
@@ -92,6 +92,32 @@ bool LocalResolution::DoCalculation()
 	input_volume_mask.ReadSlices(&input_file_mask, 1, input_file_mask.ReturnNumberOfSlices());
 	MyDebugAssertTrue(input_volume_one.HasSameDimensionsAs(&input_volume_two),"The two input volumes do not have the same dimensions");
 	MyDebugAssertTrue(input_volume_one.HasSameDimensionsAs(&input_volume_mask),"The mask does not have same dimensions as input volumes");
+
+	/*
+	// Print out spectral properties of input volumes
+	Curve average_power_one;
+	Curve average_power_two;
+	Curve number_of_values_one;
+	Curve number_of_values_two;
+	input_volume_one.ForwardFFT();
+	input_volume_two.ForwardFFT();
+	average_power_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	average_power_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	number_of_values_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	number_of_values_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+	input_volume_one.Compute1DPowerSpectrumCurve(&average_power_one, &number_of_values_one);
+	input_volume_two.Compute1DPowerSpectrumCurve(&average_power_two, &number_of_values_two);
+	input_volume_one.BackwardFFT();
+	input_volume_two.BackwardFFT();
+	wxPrintf("\n\nAverage power (vol 1):\n");
+	average_power_one.Logarithm();
+	average_power_one.PrintToStandardOut();
+	wxPrintf("\n\nNumber of values (vol 1):\n");
+	number_of_values_one.PrintToStandardOut();
+	wxPrintf("\n\nAverage power (vol 2):\n");
+	average_power_two.Logarithm();
+	average_power_two.PrintToStandardOut();
+	*/
 
 	// Prepare output volume
 	Image local_resolution_volume(input_volume_one);

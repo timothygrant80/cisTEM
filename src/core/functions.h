@@ -344,3 +344,6 @@ wxString StringFromSocketCode(unsigned char *socket_input_buffer);
 // From David Mastronarde
 int ReturnAppropriateNumberOfThreads(int optimalThreads);
 int ReturnThreadNumberOfCurrentThread();
+
+double cisTEM_erfinv(double x);
+double cisTEM_erfcinv(double x);

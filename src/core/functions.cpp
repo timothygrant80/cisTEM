@@ -1008,3 +1008,25 @@ int ReturnThreadNumberOfCurrentThread()
   return 0;
 #endif
 }
+
+// Inverse error function and complementary inverse error function
+// https://stackoverflow.com/questions/27229371/inverse-error-function-in-c
+
+double cisTEM_erfinv(double x)
+{
+	double tt1, tt2, lnx, sgn;
+	sgn = (x < 0) ? -1.0 : 1.0;
+
+	x = (1 - x)*(1 + x);        // x = 1 - x*x;
+	lnx = log(x);
+
+	tt1 = 2/(PI*0.147) + 0.5 * lnx;
+	tt2 = 1/(0.147) * lnx;
+
+	return(sgn*sqrt(-tt1 + sqrt(tt1*tt1 - tt2)));
+}
+
+double cisTEM_erfcinv(double x)
+{
+	return cisTEM_erfinv(1.0 - x);
+}

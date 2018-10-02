@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Mar 17 2018)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO "NOT" EDIT THIS FILE!
+// PLEASE DO *NOT* EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #ifndef __PROJECTX_GUI_H__
@@ -26,7 +26,6 @@ class DisplayPanel;
 class DisplayRefinementResultsPanel;
 class ImageGroupPickerComboPanel;
 class ImagesPickerComboPanel;
-class JobPanel;
 class MemoryComboBox;
 class MovieGroupPickerComboPanel;
 class MyFSCPanel;
@@ -1673,6 +1672,9 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* ApplyBlurringNoRadioButton;
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* AutoCenterStaticText;
+		wxRadioButton* AutoCenterYesRadioButton;
+		wxRadioButton* AutoCenterNoRadioButton;
 		wxStaticText* m_staticText405;
 		wxStaticText* AutoMaskStaticText;
 		wxRadioButton* AutoMaskYesRadioButton;

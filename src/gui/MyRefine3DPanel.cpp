@@ -552,6 +552,9 @@ void MyRefine3DPanel::SetDefaults()
 		ApplyBlurringYesRadioButton->SetValue(false);
 		SmoothingFactorTextCtrl->SetValue("1.00");
 
+		AutoCenterYesRadioButton->SetValue(false);
+		AutoCenterNoRadioButton->SetValue(true);
+
 		MaskEdgeTextCtrl->ChangeValueFloat(10.00);
 		MaskWeightTextCtrl->ChangeValueFloat(0.00);
 		LowPassMaskYesRadio->SetValue(false);
@@ -792,6 +795,10 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					FilterResolutionStaticText->Enable(false);
 					MaskFilterResolutionText->Enable(false);
 
+					AutoCenterYesRadioButton->Enable(true);
+					AutoCenterNoRadioButton->Enable(true);
+					AutoCenterStaticText->Enable(true);
+
 					AutoMaskStaticText->Enable(true);
 					AutoMaskYesRadioButton->Enable(true);
 					AutoMaskNoRadioButton->Enable(true);
@@ -804,6 +811,9 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				}
 				else
 				{
+					AutoCenterYesRadioButton->Enable(false);
+					AutoCenterNoRadioButton->Enable(false);
+					AutoCenterStaticText->Enable(false);
 
 					AutoMaskStaticText->Enable(false);
 					AutoMaskYesRadioButton->Enable(false);
@@ -919,6 +929,8 @@ void MyRefine3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
 		if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
 		else AutoMaskNoRadioButton->SetValue(true);
 	}
+	AutoCenterYesRadioButton->SetValue(false);
+	AutoCenterNoRadioButton->SetValue(true);
 }
 
 void MyRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
@@ -1319,6 +1331,7 @@ void RefinementManager::BeginRefinementCycle()
 	active_should_refine_y_shift = my_parent->RefineYShiftCheckBox->GetValue();
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
+	active_centre_mass = my_parent->AutoCenterYesRadioButton->GetValue();
 
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_asset_id = -1;
@@ -1751,7 +1764,7 @@ void RefinementManager::SetupReconstructionJob()
 			bool	 normalize_particles				= true;
 			bool	 exclude_blank_edges				= false;
 			bool	 split_even_odd						= false;
-			bool     centre_mass                        = false;
+			bool     centre_mass                        = active_centre_mass;
 
 			bool threshold_input_3d = true;
 

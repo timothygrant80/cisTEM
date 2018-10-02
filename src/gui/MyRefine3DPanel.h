@@ -52,6 +52,7 @@ public:
 	bool active_should_refine_y_shift;
 	bool active_should_mask;
 	bool active_should_auto_mask;
+	bool active_centre_mass;
 	wxString active_mask_filename;
 	bool active_should_low_pass_filter_mask;
 	float active_mask_filter_resolution;

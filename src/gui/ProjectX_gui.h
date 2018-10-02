@@ -1672,6 +1672,9 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* ApplyBlurringNoRadioButton;
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* AutoCenterStaticText;
+		wxRadioButton* AutoCenterYesRadioButton;
+		wxRadioButton* AutoCenterNoRadioButton;
 		wxStaticText* m_staticText405;
 		wxStaticText* AutoMaskStaticText;
 		wxRadioButton* AutoMaskYesRadioButton;

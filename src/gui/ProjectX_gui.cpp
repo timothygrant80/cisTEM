@@ -6233,6 +6233,22 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	AutoCenterStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocenter reconstruction?"), wxDefaultPosition, wxDefaultSize, 0 );
+	AutoCenterStaticText->Wrap( -1 );
+	fgSizer1->Add( AutoCenterStaticText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer266121;
+	bSizer266121 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoCenterYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266121->Add( AutoCenterYesRadioButton, 0, wxALL, 5 );
+	
+	AutoCenterNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266121->Add( AutoCenterNoRadioButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer266121, 1, wxEXPAND, 5 );
+	
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText405->Wrap( -1 );
 	m_staticText405->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );

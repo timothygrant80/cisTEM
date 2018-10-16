@@ -1193,7 +1193,7 @@ bool Refine3DApp::DoCalculation()
 		temp_float = output_parameters[1]; output_parameters[1] = output_parameters[3]; output_parameters[3] = temp_float;
 		for (i = 1; i < refine_particle.number_of_parameters; i++)
 		{
-			if (isnanf(output_parameters[i]) != 0)
+			if (std::isnan(output_parameters[i]) != 0)
 			{
 //				MyDebugAssertTrue(false, "NaN value for output parameter encountered");
 				output_parameters[i] = input_parameters[i];

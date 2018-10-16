@@ -629,8 +629,12 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
+	// TESTING OF LOCAL FILTERING
+	/*
 	density_map_1.Deallocate();
 	density_map_2.Deallocate();
+	*/
+
 	InitWithReconstruct3D(reconstruction, pixel_size);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);

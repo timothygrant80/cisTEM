@@ -308,7 +308,7 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 			else if (should_low_pass && ! should_high_pass)
 			{
 		//		wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
-				image_in_bitmap.GaussianLowPassFilter(low_pass_radius);
+				image_in_bitmap.GaussianLowPassFilter(low_pass_radius * sqrt(2.0)); // sqrt(2.0) is to preserve behavior after I changed the GaussianLowPassFilter to take sigma as argument
 				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
 				//image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
 			}
@@ -316,7 +316,7 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 			{
 			//	wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
 				image_in_bitmap.CosineMask(high_pass_radius,image_in_bitmap_pixel_size / 600.0,true);
-				image_in_bitmap.GaussianLowPassFilter(low_pass_radius);
+				image_in_bitmap.GaussianLowPassFilter(low_pass_radius * sqrt(2.0)); // sqrt(2.0) is to preserve behavior after I changed the GaussianLowPassFilter to take sigma as argument
 				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
 				//image_in_bitmap.CosineRingMask(high_pass_radius,low_pass_radius,filter_edge_width);
 				//image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);

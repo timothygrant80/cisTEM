@@ -255,6 +255,15 @@ void Curve::ZeroYData()
 	}
 }
 
+void Curve::SetYToConstant(float wanted_constant)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to set");
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		data_y[counter] = wanted_constant;
+	}
+}
+
 void Curve::AddWith(Curve *other_curve)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
@@ -431,6 +440,23 @@ void Curve::NormalizeMaximumValue()
 		{
 			data_y[counter] *= factor;
 		}
+	}
+}
+
+// Replace Y values with their log, base 10
+void Curve::Logarithm()
+{
+#ifdef DEBUG
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (data_y[counter] < 0.0) MyDebugAssertTrue(false,"This routine assumes all Y values are positive, but value %i is %f\n",counter,data_y[counter]);
+	}
+#endif
+
+
+	for ( int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_y[counter] = log10(data_y[counter]);
 	}
 }
 
@@ -646,6 +672,39 @@ void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians)
 		data_y[counter] *= ctf_to_apply.Evaluate(powf(data_x[counter],2),azimuth_in_radians);
 	}
 }
+
+void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+	float current_x;
+	float edge;
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+
+		current_x = data_x[counter];
+		if (current_x >= wanted_x_of_cosine_start && current_x <= wanted_x_of_cosine_start + wanted_cosine_width_in_x)
+		{
+			edge = (1.0 + cosf(PI * (current_x - wanted_x_of_cosine_start) / wanted_cosine_width_in_x)) / 2.0;
+			if (undo)
+			{
+				MyDebugAssertFalse(edge == 0.0,"Raised cosine should not be 0.0");
+				data_y[counter] /= edge;
+			}
+			else
+			{
+				data_y[counter] *= edge;
+			}
+		}
+		else if (current_x > wanted_x_of_cosine_start + wanted_cosine_width_in_x)
+		{
+			data_y[counter] = 0.0;
+		}
+
+	}
+}
+
 
 float Curve::ReturnSavitzkyGolayInterpolationFromX( float wanted_x )
 {

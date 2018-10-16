@@ -60,6 +60,7 @@ public:
 	void ComputeMaximumValueAndMode(float &maximum_value, float &mode);
 	float ReturnFullWidthAtGivenValue(const float &wanted_value);
 	void NormalizeMaximumValue();
+	void Logarithm();
 	void ZeroYData();
 	void ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians =  0.0);
 	void SquareRoot();
@@ -67,9 +68,12 @@ public:
 	void ZeroAfterIndex(int index);
 	void FlattenBeforeIndex(int index);
 	float ReturnAverageValue();
+	void ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo = false);
 
 	void GetXMinMax(float &min_value, float &max_value);
 	void GetYMinMax(float &min_value, float &max_value);
+
+	void SetYToConstant(float wanted_constant);
 };
 
 WX_DECLARE_OBJARRAY(Curve, ArrayofCurves);

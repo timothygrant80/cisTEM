@@ -6327,29 +6327,75 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 	MyDebugAssertTrue(HasSameDimensionsAs(&local_resolution_map),"Local resolution map does not have expected dimensions");
 	MyDebugAssertTrue(wanted_number_of_levels > 2,"Number of levels must be > 2");
 
+	// Algorithm parameters
+	const bool small_step_size = true;
+
 	// Get some stats about the local resolution volume
 	EmpiricalDistribution distribution_of_local_resolutions;
 	local_resolution_map.UpdateDistributionOfRealValues(&distribution_of_local_resolutions,float(logical_x_dimension)*0.45);
-	float min_res = distribution_of_local_resolutions.GetMinimum();
-	float max_res = distribution_of_local_resolutions.GetMaximum();
-	MyDebugPrint("Local res min = %f max = %f\n",min_res,max_res);
+	float min_res_Angstroms = distribution_of_local_resolutions.GetMinimum();
+	float max_res_Angstroms = distribution_of_local_resolutions.GetMaximum();
+	MyDebugPrint("Local res min = %f max = %f\n",min_res_Angstroms,max_res_Angstroms);
 
-	// Low-pass filter
+	// Prepare a copy of the input volume
 	Image lp_volume;
 	lp_volume = this;
-	float current_filter_freq = pixel_size / min_res;
-	float cosine_falloff_width = 5.0 / float(logical_x_dimension); // 5 Fourier voxels
-	float filter_freq_step_size = cosine_falloff_width;
+
+	/*
+	 *  Filter parameters
+	 */
+	float cosine_falloff_width = 10.0 / float(logical_x_dimension); // 5 Fourier voxels
+	float filter_freq_step_size;
+	if (small_step_size)
+	{
+		filter_freq_step_size = 1.0 / float(logical_x_dimension);
+	}
+	else
+	{
+		filter_freq_step_size = cosine_falloff_width;
+	}
+
+	/*
+	 * Setup a curve object to act as filter
+	 */
+	Curve current_filter;
+	current_filter.SetupXAxis(0.0, 1.0, logical_x_dimension);
+	current_filter.SetYToConstant(1.0);
+
+	/*
+	 * Loop over spatial frequencies, starting at high resolution
+	 */
 	int filter_counter = 0;
-	while (current_filter_freq >= pixel_size / max_res - filter_freq_step_size + 0.01)
+	bool on_lowest_resolution = false;
+	float current_filter_freq = pixel_size / min_res_Angstroms;
+	float previous_filter_freq = -1.0;
+	while (current_filter_freq >= pixel_size / max_res_Angstroms - filter_freq_step_size - 0.01)
 	{
 		filter_counter ++;
-		if (current_filter_freq < pixel_size / max_res) current_filter_freq = pixel_size / max_res;
+		if (current_filter_freq < pixel_size / max_res_Angstroms) current_filter_freq = pixel_size / max_res_Angstroms;
+		on_lowest_resolution = current_filter_freq <= pixel_size / max_res_Angstroms;
+		wxPrintf("current filter freq = %f; pixel_size/max_res_Angstroms = %f; filter_freq_step_size = %f\n", current_filter_freq,pixel_size/max_res_Angstroms,filter_freq_step_size);
+		if (on_lowest_resolution) wxPrintf("On lowest resolution\n");
+
 
 		// Apply filter
 		lp_volume.ForwardFFT();
 		MyDebugPrint("Filter #%i: resolution = %f\n",filter_counter,pixel_size/current_filter_freq);
-		lp_volume.CosineMask(current_filter_freq, cosine_falloff_width);
+		if (small_step_size)
+		{
+			// let's build the filter again
+			current_filter.SetYToConstant(1.0);
+			// undo effect of filter from previous iteration
+			if (filter_counter > 1) current_filter.ApplyCosineMask(previous_filter_freq - 0.75*cosine_falloff_width, cosine_falloff_width, true);
+			// apply this iteration's filter
+			current_filter.ApplyCosineMask(current_filter_freq - 0.75*cosine_falloff_width, cosine_falloff_width);
+			// Now apply this filter to the image
+			lp_volume.ApplyCurveFilter(&current_filter);
+		}
+		else
+		{
+			lp_volume.CosineMask(current_filter_freq, cosine_falloff_width);
+		}
 		lp_volume.BackwardFFT();
 #ifdef DEBUG
 		lp_volume.QuickAndDirtyWriteSlices(wxString::Format("dbg_fil_%02i.mrc",filter_counter).ToStdString(), 1, lp_volume.logical_z_dimension);
@@ -6369,6 +6415,7 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 			long pixel_counter;
 			float res_of_interest_min = pixel_size / (current_filter_freq + 0.5 * filter_freq_step_size);
 			float res_of_interest_max = pixel_size / (current_filter_freq - 0.5 * filter_freq_step_size);
+			if (on_lowest_resolution) res_of_interest_max = 99999.9;
 			MyDebugPrint("Looking for areas with resolution between %f and %f\n",res_of_interest_min, res_of_interest_max);
 
 			pixel_counter = 0;
@@ -6394,6 +6441,7 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 			long pixel_counter;
 			float freq_of_interest_min = current_filter_freq - filter_freq_step_size;
 			float freq_of_interest_max = current_filter_freq + filter_freq_step_size;
+			if (on_lowest_resolution) freq_of_interest_min = 0.00001;
 			float current_res_freq;
 			float weight;
 			float inverse_filter_freq_step_size;
@@ -6420,7 +6468,10 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 			}
 		}
 
+		if (on_lowest_resolution) break;
+
 		// Decrement the filter frequency
+		previous_filter_freq = current_filter_freq;
 		current_filter_freq -= filter_freq_step_size;
 	}
 

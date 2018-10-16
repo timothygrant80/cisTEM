@@ -396,7 +396,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	for (int image_counter = 0; image_counter < active_group.number_of_members; image_counter++)
 	{
-		image_number_for_gui = image_counter;
+		image_number_for_gui = image_counter + 1;
 
 		// current image asset
 
@@ -413,8 +413,9 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 		{
 			current_image_euler_search->theta_max = 180.0f;
-			current_image_euler_search->CalculateGridSearchPositions(false);
 		}
+
+		current_image_euler_search->CalculateGridSearchPositions(false);
 
 
 		wxPrintf("There are %i search positions\n", current_image_euler_search->number_of_search_positions);
@@ -464,11 +465,13 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			int last_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter++;
 
+			wxString directory_for_results = main_frame->ReturnScratchDirectory();
+
 
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			my_job_package.AddJob("ttffffffffffifffbfftttttttftiiiit",	input_search_images.ToUTF8().data(),
+			my_job_package.AddJob("ttffffffffffifffbfftttttttftiiiitt",	input_search_images.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -500,7 +503,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	last_search_position,
 																	image_number_for_gui,
 																	number_of_jobs_per_image_in_gui,
-																	correlation_variance_output_file.ToUTF8().data());
+																	correlation_variance_output_file.ToUTF8().data(),
+																	directory_for_results.ToUTF8().data());
 		}
 
 		delete current_image_euler_search;

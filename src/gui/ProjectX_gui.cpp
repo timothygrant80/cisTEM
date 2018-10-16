@@ -3827,7 +3827,8 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	bSizer44->Add( PickingAlgorithStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	PickingAlgorithmComboBox->Append( wxT("default") );
 	PickingAlgorithmComboBox->SetSelection( 0 );
 	PickingAlgorithmComboBox->Enable( false );
 	PickingAlgorithmComboBox->SetMinSize( wxSize( 150,-1 ) );

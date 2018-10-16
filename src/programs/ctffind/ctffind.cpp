@@ -284,6 +284,7 @@ void CtffindApp::DoInteractiveUserInput()
 	bool defocus_is_known;
 	float known_defocus_1;
 	float known_defocus_2;
+	float known_phase_shift;
 
 
 	// Things we need for old school input
@@ -632,16 +633,20 @@ void CtffindApp::DoInteractiveUserInput()
 				 * only be used to test the ctffind scoring function / diagnostics using given defocus parameters). Neither are implemented right now,
 				 * because I don't need either.
 				 */
-				if (find_additional_phase_shift) SendError("Sorry. Supplying a known defocus is not yet supported for phase plate data\n");
 				known_defocus_1					= my_input->GetFloatFromUser("Known defocus 1", "In Angstroms, the defocus along the first axis","0.0");
 				known_defocus_2					= my_input->GetFloatFromUser("Known defocus 2", "In Angstroms, the defocus along the second axis","0.0");
 				known_astigmatism_angle 		= my_input->GetFloatFromUser("Known astigmatism angle", "In degrees, the angle of astigmatism","0.0");
+				if (find_additional_phase_shift)
+				{
+					known_phase_shift			= my_input->GetFloatFromUser("Known phase shift (radians)", "In radians, the phase shift (from a phase plate presumably)","0.0");
+				}
 			}
 			else
 			{
 				known_defocus_1 = 0.0;
 				known_defocus_2 = 0.0;
 				known_astigmatism_angle = 0.0;
+				known_phase_shift = 0.0;
 			}
 
 
@@ -657,8 +662,8 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(33);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbff",	input_filename.c_str(), //1
+	my_current_job.Reset(34);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfff",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -690,7 +695,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			movie_mag_distortion_minor_scale,
 																			defocus_is_known,
 																			known_defocus_1,
-																			known_defocus_2);
+																			known_defocus_2,
+																			known_phase_shift);
 	}
 
 
@@ -746,6 +752,7 @@ bool CtffindApp::DoCalculation()
 	const bool			defocus_is_known					= my_current_job.arguments[30].ReturnBoolArgument();
 	const float			known_defocus_1						= my_current_job.arguments[31].ReturnFloatArgument();
 	const float			known_defocus_2						= my_current_job.arguments[32].ReturnFloatArgument();
+	const float			known_phase_shift					= my_current_job.arguments[33].ReturnFloatArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -1171,6 +1178,7 @@ bool CtffindApp::DoCalculation()
 		if (defocus_is_known)
 		{
 			current_ctf.SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PI);
+			current_ctf.SetAdditionalPhaseShift(known_phase_shift);
 			final_score = 0.0;
 			final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
 					comparison_object_2D->spatial_frequency_squared, comparison_object_2D->azimuths);

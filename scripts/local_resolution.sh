@@ -24,12 +24,14 @@ snr_confidence=${10}
 sampling_step=${11}
 slices_per_processor=${12}
 total_number_of_slices=${13}
-output_volume=${14}
+phase_randomize=${14}
+randomization_resolution=${15}
+output_volume=${16}
 
-if [ "$#" -ne 14 ]; then
+if [ "$#" -ne 16 ]; then
 	echo " "
-	echo "14 arguments are expected, you only supplied $#"
-	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size symmetry box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices output_volume"
+	echo "16 arguments are expected, you only supplied $#"
+	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size symmetry box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices phase_randomize randomization_resolution output_volume"
 	echo "Suggested defaults:"
 	echo "box_size = 20"
 	echo "use_fixed = n [alternative:y]"
@@ -37,6 +39,8 @@ if [ "$#" -ne 14 ]; then
 	echo "snr_target = 0.334"
 	echo "snr_confidence = 5.0"
 	echo "sampling_step = 2 or 4"
+	echo "phase_randomize = n [alternative:y]"
+	echo "randomization_resolution = 20.0"
 	echo " "
 	exit
 fi
@@ -70,6 +74,9 @@ $sampling_step
 $box_size
 $use_fixed
 $fixed_fsc_thresh
+y
+$phase_randomize
+$randomization_resolution
 eof
 else
 local_resolution<<eof > $log_fn 2>&1 &
@@ -86,6 +93,9 @@ $box_size
 $use_fixed
 $snr_target
 $snr_confidence
+y
+$phase_randomize
+$randomization_resolution
 eof
 fi
 	

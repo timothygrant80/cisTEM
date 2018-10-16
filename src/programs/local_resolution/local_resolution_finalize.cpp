@@ -269,6 +269,16 @@ bool LocalResolutionFinalize::DoCalculation()
 	// Write out the volume
 	final_resolution_map.WriteSlicesAndFillHeader(output_volume_fn.ToStdString(), current_input_imagefile.ReturnPixelSize());
 
+	/*
+	 * Compute a histogram and print it out
+	 */
+	{
+		wxPrintf("\nHistogram of local resolution values\n");
+		Curve hist;
+		final_resolution_map.ComputeHistogramOfRealValuesCurve(&hist);
+		hist.PrintToStandardOut();
+		wxPrintf("\n\n");
+	}
 
 	return true;
 }

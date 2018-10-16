@@ -265,6 +265,31 @@ bool LocalResolutionFinalize::DoCalculation()
 		}
 
 	}
+	/*
+	 * Compensate for convolution of estimate by apodization function.
+	 * The easiest is to use a Gaussian, but what's the correct argument?
+	 * If we used a Hann window that gets to zero at edge of box, this is akin
+	 * to a Gaussian with 3sigma = half_box_width
+	 */
+	const bool deconvolute_from_apodization = false;
+	const int locres_boxsize_in_pixels = 20;
+	if (deconvolute_from_apodization)
+	{
+		final_resolution_map.WriteSlicesAndFillHeader("dbg_before_high_pass.mrc",current_input_imagefile.ReturnPixelSize());
+
+		// Work out Gaussian parameter in real space
+		float sigma = 0.5 * float(locres_boxsize_in_pixels) / 3.0;
+
+		// Compute high-pass filter image
+		Image high_pass_map;
+		high_pass_map = final_resolution_map;
+		high_pass_map.ForwardFFT();
+		high_pass_map.GaussianHighPassFilter(1.0 / sigma);
+		high_pass_map.BackwardFFT();
+
+		// Add the high-pass image back to the original
+		final_resolution_map.AddImage(&high_pass_map);
+	}
 
 	// Write out the volume
 	final_resolution_map.WriteSlicesAndFillHeader(output_volume_fn.ToStdString(), current_input_imagefile.ReturnPixelSize());

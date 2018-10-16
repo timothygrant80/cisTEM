@@ -142,7 +142,7 @@ bool MakeTemplateResult::DoCalculation()
 		current_peak.x = current_peak.x + mip_image.physical_address_of_box_center_x;
 		current_peak.y = current_peak.y + mip_image.physical_address_of_box_center_y;
 
-		wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
+//		wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
 		for ( j = 0; j < mip_image.logical_y_dimension; j ++ )
 		{
@@ -169,6 +169,7 @@ bool MakeTemplateResult::DoCalculation()
 			address += mip_image.padding_jump_value;
 		}
 
+		wxPrintf("Peak at x, y, psi, theta, phi = %f, %f, %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_peak.value);
 
 			// ok get a projection
 

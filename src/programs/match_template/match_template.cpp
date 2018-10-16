@@ -489,6 +489,7 @@ bool MatchTemplateApp::DoCalculation()
 	Image padded_reference;
 	Image input_reconstruction;
 	Image current_projection;
+	Image padded_projection;
 
 	Image projection_filter;
 
@@ -519,7 +520,12 @@ bool MatchTemplateApp::DoCalculation()
 	correlation_pixel_sum.SetToConstant(0.0f);
 	correlation_pixel_sum_of_squares.SetToConstant(0.0f);
 
+	padding = 1.0f;
 	input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices());
+	if (padding != 1.0f)
+	{
+		input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges());
+	}
 	input_reconstruction.ForwardFFT();
 	//input_reconstruction.CosineMask(0.1, 0.01, true);
 	//input_reconstruction.Whiten();
@@ -545,8 +551,9 @@ bool MatchTemplateApp::DoCalculation()
 
 	// assume cube
 
-	current_projection.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_x_dimension, false);
-	projection_filter.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_x_dimension, false);
+	current_projection.Allocate(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnXSize(), false);
+	projection_filter.Allocate(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnXSize(), false);
+	if (padding != 1.0f) padded_projection.Allocate(input_reconstruction_file.ReturnXSize() * padding, input_reconstruction_file.ReturnXSize() * padding, false);
 
 
 	// angular step
@@ -577,7 +584,7 @@ bool MatchTemplateApp::DoCalculation()
 	if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 	{
 		global_euler_search.theta_max = 180.0f;
-		global_euler_search.CalculateGridSearchPositions();
+		global_euler_search.CalculateGridSearchPositions(false);
 	}
 
 
@@ -694,8 +701,19 @@ bool MatchTemplateApp::DoCalculation()
 			angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
 			//angles.Init(-105.27, 73.04, 134.84, 0.0, 0.0);
 
-			input_reconstruction.ExtractSlice(current_projection, angles, 1.0, false);
-			current_projection.SwapRealSpaceQuadrants();
+			if (padding != 1.0f)
+			{
+				input_reconstruction.ExtractSlice(padded_projection, angles, 1.0f, false);
+				padded_projection.SwapRealSpaceQuadrants();
+				padded_projection.BackwardFFT();
+				padded_projection.ClipInto(&current_projection);
+				current_projection.ForwardFFT();
+			}
+			else
+			{
+				input_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
+				current_projection.SwapRealSpaceQuadrants();
+			}
 			//if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_nofilter.mrc", 1);
 
 
@@ -876,7 +894,7 @@ bool MatchTemplateApp::DoCalculation()
 
 		// calculate the expected threshold (from peter's paper)
 
-		expected_threshold = sqrtf(2.0f)*erfcinv((2.0f*(1))/((input_image.logical_x_dimension * input_image.logical_y_dimension * double(total_correlation_positions))));
+		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((input_image.logical_x_dimension * input_image.logical_y_dimension * double(total_correlation_positions))));
 
 		// write out images..
 
@@ -1248,7 +1266,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-		expected_threshold = sqrtf(2.0f)*erfcinv((2.0f*(1))/(((collated_data_array[0] * collated_data_array[1] * total_number_of_ccs))));
+		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((collated_data_array[0] * collated_data_array[1] * total_number_of_ccs))));
 
 		histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
 		histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");

@@ -413,7 +413,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 		{
 			current_image_euler_search->theta_max = 180.0f;
-			current_image_euler_search->CalculateGridSearchPositions();
+			current_image_euler_search->CalculateGridSearchPositions(false);
 		}
 
 

@@ -3464,7 +3464,83 @@ void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, 
 	}
 }
 
-void Image::GaussianLowPassFilter(float half_width)
+void Image::GaussianLowPassFilter(float sigma)
+{
+
+	int i;
+	int j;
+	int k;
+
+	float x;
+	float y;
+	float z;
+
+	long pixel_counter;
+	float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+	if (is_in_real_space)
+	{
+		/*
+		 * Real space (masking)
+		 */
+		float distance_from_center_squared;
+
+		pixel_counter = 0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = powf(k - physical_address_of_box_center_z, 2);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = powf(j - physical_address_of_box_center_y, 2);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = powf(i - physical_address_of_box_center_x, 2);
+
+					distance_from_center_squared = x + y + z;
+
+					real_values[pixel_counter] *= exp(-distance_from_center_squared * one_over_two_sigma_squared);
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+
+	else
+	{
+		/*
+		 * Fourier space (filtering)
+		 */
+		float frequency_squared;
+
+		pixel_counter = 0;
+		for (k = 0; k <= physical_upper_bound_complex_z; k++)
+		{
+			z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+			for (j = 0; j <= physical_upper_bound_complex_y; j++)
+			{
+				y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+				for (i = 0; i <= physical_upper_bound_complex_x; i++)
+				{
+					x = powf(i * fourier_voxel_size_x, 2);
+
+					// compute squared radius, in units of reciprocal pixels
+					frequency_squared = x + y + z;
+					complex_values[pixel_counter] *= exp(-frequency_squared * one_over_two_sigma_squared);
+					pixel_counter++;
+
+				}
+			}
+		}
+	}
+}
+
+void Image::GaussianHighPassFilter(float sigma)
 {
 	MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
 
@@ -3480,6 +3556,7 @@ void Image::GaussianLowPassFilter(float half_width)
 
 	float frequency_squared;
 	float frequency;
+	float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
 
 
 	for (k = 0; k <= physical_upper_bound_complex_z; k++)
@@ -3495,17 +3572,14 @@ void Image::GaussianLowPassFilter(float half_width)
 				x = powf(i * fourier_voxel_size_x, 2);
 
 				// compute squared radius, in units of reciprocal pixels
-
 				frequency_squared = x + y + z;
-				frequency = sqrtf(frequency_squared);
-				complex_values[pixel_counter] *= exp(-(frequency_squared) / pow(half_width, 2));
+				complex_values[pixel_counter] *= 1.0 - exp(-frequency_squared * one_over_two_sigma_squared);
 				pixel_counter++;
 
 			}
 		}
 	}
 }
-
 void Image::RandomisePhases(float wanted_radius_in_reciprocal_pixels)
 {
 	bool need_to_fft = false;

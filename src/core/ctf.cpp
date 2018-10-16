@@ -97,23 +97,53 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
     precomputed_amplitude_contrast_term = atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
 }
 
-// Eq 11 of Rohou & Grigorieff (2015)
+/*
+ * Eqn 11 of Rohou & Grigorieff, modified by corrigendum of October 2018
+ */
 int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth)
 {
-	int number_of_extrema = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
-	//MyDebugAssertTrue(number_of_extrema >= 0,"Bad number of extrema: %i (rounded from %f, phase shift = %f)\n",number_of_extrema, 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5,PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth));
-	return fabsf(number_of_extrema);
+
+	int number_of_extrema = 0;
+	int number_of_extrema_before_chi_extremum = 0;
+	float sq_sf_of_chi_extremum = ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(azimuth);
+
+	if (squared_spatial_frequency <= sq_sf_of_chi_extremum)
+	{
+		number_of_extrema = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
+	}
+	else
+	{
+		number_of_extrema_before_chi_extremum = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(sq_sf_of_chi_extremum,azimuth) + 0.5);
+		number_of_extrema = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
+		number_of_extrema = number_of_extrema_before_chi_extremum + abs(number_of_extrema - number_of_extrema_before_chi_extremum);
+	}
+	MyDebugAssertTrue(number_of_extrema >= 0,"Bad number of extrema: %i (rounded from %f, phase shift = %f)\n",number_of_extrema, 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5,PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth));
+	return number_of_extrema;
 }
 
-// Compute the frequency of the Nth zero of the CTF
+/*
+ * Compute the frequency of the Nth zero of the CTF.
+ */
 float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
 {
 	float phase_shift = which_zero * PI;
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
+/*
+ * Return the squared spatial frequency at which the phase aberration function reaches its extremum
+ */
+float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth)
+{
+	return DefocusGivenAzimuth(azimuth) / (squared_wavelength * spherical_aberration) ;
+}
+
+/*
+ * Return the squared spatial frequency at which a given phase aberration is obtained. Note that this will return only one of the
+ * spatial frequencies...
+ *
+ * TODO: take into account multiple solutions
+ */
 float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth)
 {
 	const float a = -0.5 * PI * cubed_wavelength * spherical_aberration;

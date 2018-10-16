@@ -2,9 +2,11 @@
 
 //#define threshold_spectrum
 
-const std::string ctffind_version = "4.1.11";
+const std::string ctffind_version = "4.1.12";
 /*
  * Changelog
+ * - 4.1.12
+ * -- bug fix: at very high resolution, Cs dominates and the phase aberration decreases
  * - 4.1.11
  * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
  * -- score is now a normalized cross-correlation coefficient (David Mastronarde)
@@ -780,6 +782,9 @@ bool CtffindApp::DoCalculation()
 
 	// This could become a user-supplied parameter later - for now only for developers / expert users
 	const bool			follow_1d_search_with_local_2D_brute_force = false;
+
+	// Debugging
+	const bool			dump_debug_files = false;
 
 	/*
 	 *  Scoring function
@@ -1603,7 +1608,7 @@ bool CtffindApp::DoCalculation()
 		 */
 
 		// Generate diagnostic image
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
+		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
 		current_output_location = current_micrograph_number;
 		average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges());
 
@@ -1640,7 +1645,7 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->AddConstant(average);
 		}
 
-		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
+		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc",1);
 
 		// 1D rotational average
 		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
@@ -1664,8 +1669,12 @@ bool CtffindApp::DoCalculation()
 			fit_frc									= new double[number_of_bins_in_1d_spectra];
 			fit_frc_sigma							= new double[number_of_bins_in_1d_spectra];
 			ComputeImagesWithNumberOfExtremaAndCTFValues(&current_ctf, number_of_extrema_image, ctf_values_image);
-			//number_of_extrema_image.QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
 			//ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
+			if (dump_debug_files)
+			{
+				average_spectrum->QuickAndDirtyWriteSlice("dbg_spectrum_before_1dave.mrc",1);
+				number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
+			}
 			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 
 			// Here, do FRC
@@ -1698,7 +1707,7 @@ bool CtffindApp::DoCalculation()
 			}
 		}
 
-		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc",1);
+		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc",1);
 
 		// Until what frequency were CTF rings detected?
 		if (compute_extra_stats)
@@ -1754,7 +1763,7 @@ bool CtffindApp::DoCalculation()
 		// Prepare output diagnostic image
 		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
-		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
+		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
 		if (compute_extra_stats) {
 			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
@@ -2015,7 +2024,7 @@ void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double f
 					temp_ranks = rankSort(temp_vector);
 					for (i=bin_of_zero+1; i<bin_of_current_extremum;i++)
 					{
-						//wxPrintf("replaced %f",average[i]);
+						//wxPrintf("[rank]bin %i: replaced %f",i,average[i]);
 						average[i] = double(float(temp_ranks.at(i-bin_of_zero-1)+1)/float(temp_vector.size()+1));
 						average[i] = sin(average[i] * PI * 0.5);
 						//wxPrintf(" with %f\n",average[i]);
@@ -2036,13 +2045,16 @@ void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double f
 					}
 					for (i=bin_of_previous_extremum;i<bin_of_current_extremum;i++)
 					{
+						//wxPrintf("bin %i: replaced %f",i,average[i]);
 						average[i] -= min_value;
 						if (max_value - min_value > 0.0001) average[i] /= (max_value - min_value);
+						//wxPrintf(" with %f\n",average[i]);
 					}
 				}
 			}
 			bin_of_previous_extremum = bin_of_current_extremum;
 		}
+		MyDebugAssertFalse(std::isnan(average[bin_counter]),"Average is NaN for bin %i\n",bin_counter);
 	}
 }
 
@@ -2119,7 +2131,7 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 				fit_mean += fit[i];
 			}
 			number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
-			//wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window);
+			//wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
 			spectrum_mean /= number_of_bins_in_window;
 			fit_mean      /= number_of_bins_in_window;
 			// Second pass
@@ -2494,6 +2506,7 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 			spatial_frequency[counter] = sqrt(current_spatial_frequency_squared);
 			ctf_values_profile[counter] = ctf->Evaluate(current_spatial_frequency_squared,azimuth_of_mid_defocus);
 			number_of_extrema_profile[counter] = ctf->ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(current_spatial_frequency_squared,azimuth_of_mid_defocus);
+			//wxPrintf("bin %i: phase shift= %f, number of extrema = %f\n",counter,ctf->PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(current_spatial_frequency_squared,azimuth_of_mid_defocus),number_of_extrema_profile[counter]);
 		}
 
 		// Now we can loop over the spectrum again and decide to which bin to add each component
@@ -2525,6 +2538,7 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 			if (number_of_values[counter] > 0)
 			{
 				average[counter] = average[counter] / float(number_of_values[counter]);
+				MyDebugAssertFalse(std::isnan(average[counter]),"Average is NaN for bin %i\n",counter);
 			}
 			else
 			{
@@ -2538,6 +2552,10 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 	// Compute the rank version of the rotational average
 	for (counter = 0; counter < number_of_bins; counter ++ ) { average_rank[counter] = average[counter]; }
 	Renormalize1DSpectrumForFRC(number_of_bins,average_rank,average_fit,number_of_extrema_profile);
+	for (counter = 0; counter < number_of_bins; counter ++ ) {
+		MyDebugAssertFalse(std::isnan(average[counter]),"Average is NaN for bin %i\n",counter);
+		MyDebugAssertFalse(std::isnan(average_rank[counter]),"AverageRank is NaN for bin %i\n",counter);
+	}
 }
 
 

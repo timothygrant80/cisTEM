@@ -90,4 +90,5 @@ public:
 	int ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
 	float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);
 	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth);
+	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth);
 };

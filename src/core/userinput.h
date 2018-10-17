@@ -36,6 +36,7 @@ class UserInput {
                 float GetFloatFromUser(const char * my_text, const char * help_text, const char * wanted_default_value = 0, float min_value = -FLT_MAX, float max_value = FLT_MAX);
                 int GetIntFromUser(const char * my_text, const char * help_text, const char * wanted_default_value = 0, int min_value = INT_MIN, int max_value = INT_MAX);
                 std::string GetFilenameFromUser(const char * my_question_text, const char * help_text, const char * wanted_default_value = 0, bool must_exist = false);
+                std::string GetDirnameFromUser(const char * my_question_text, const char * help_text, const char * wanted_default_value = 0, bool must_exist = false);
                 std::string GetStringFromUser(const char * my_question_text, const char * help_text, const char * wanted_default_value = 0);
                 std::string GetSymmetryFromUser(const char * my_question_text, const char * help_text, const char * wanted_default_value = 0);
                 bool GetYesNoFromUser(const char * my_test, const char * help_text, const char * wanted_default_value = 0);

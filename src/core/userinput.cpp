@@ -541,6 +541,62 @@ std::string UserInput::GetFilenameFromUser(const char * my_text, const char * he
 	}
 }
 
+std::string UserInput::GetDirnameFromUser(const char * my_text, const char * help_text, const char * wanted_default_value, bool must_exist)
+{
+
+	char input[1000];
+	char default_value[1000];
+	for (int i=0; i<1000;i++)
+	{
+		input[i] = 0;
+		default_value[i] = 0;
+	}
+
+
+	GetDefault(my_text, wanted_default_value, default_value);
+
+	while (1==1)
+	{
+		AskQuestion(my_text, help_text, default_value, input);
+
+		if (input[0] != 0 && input[0] != '?')
+		{
+
+			if (must_exist == false)
+			{
+				DoGotValidAnswer(my_text, input);
+				std::string my_string(input);
+				return my_string;
+			}
+			else
+			{
+				// check the directory exits..
+
+				if (wxDirExists(input) == true)
+				{
+					DoGotValidAnswer(my_text, input);
+					std::string my_string(input);
+					return my_string;
+				}
+				else
+				{
+					if (output_is_a_tty == true)
+					{
+						MyPrintfRed("\nError: Directory does not exist, please provide an existing directory!\n\n");
+					}
+					else
+					{
+						wxPrintf("\nError: Directory does not exist, please provide an existing directory!\n\n");
+					}
+				}
+			}
+		}
+
+		DoGotInvalidAnswer();
+
+	}
+}
+
 void UserInput::GetDefault(const char *my_text, const char *default_default_value, char *default_value)
 {
 	default_value[0] = 0;

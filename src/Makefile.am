@@ -197,7 +197,7 @@ noinst_LIBRARIES = libcore.a libguicore.a
 
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter niko_test phenix_fmodel
 
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += match_template  match_template_nikoml make_template_result
@@ -489,6 +489,11 @@ local_resolution_filter_SOURCES = programs/local_resolution_filter/local_resolut
 local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_LDADD = libcore.a $(WX_LIBS_BASE)
+
+phenix_fmodel_SOURCES = programs/phenix_fmodel/phenix_fmodel.cpp
+phenix_fmodel_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+phenix_fmodel_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+phenix_fmodel_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
 make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp

@@ -6,7 +6,8 @@ const std::string ctffind_version = "4.1.12";
 /*
  * Changelog
  * - 4.1.12
- * -- bug fix: at very high resolution, Cs dominates and the phase aberration decreases
+ * -- bug fix (affected all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
+ * -- bug fix (affected 4.1.10 and 4.1.11): fitting was only done up to 5Å
  * - 4.1.11
  * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
  * -- score is now a normalized cross-correlation coefficient (David Mastronarde)

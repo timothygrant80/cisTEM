@@ -164,7 +164,7 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
 
 	// Evaluate the function
 	if (comparison_object->number_to_correlate)
@@ -220,7 +220,7 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 	MyDebugAssertTrue(norm_ctf > 0.0,"Bad norm_ctf: %f\n", norm_ctf);
 	MyDebugAssertTrue(norm_curve > 0.0,"Bad norm_curve: %f\n", norm_curve);
 
-	MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Low freq = %f /pxl, High freq = %f/pxl Score = %g\n",array_of_values[0], array_of_values[1], my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(), - cross_product / sqrtf(norm_ctf * norm_curve));
+	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Low freq = %f /pxl, High freq = %f/pxl Score = %g\n",array_of_values[0], array_of_values[1], my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(), - cross_product / sqrtf(norm_ctf * norm_curve));
 
 	// Note, we are not properly normalizing the cross correlation coefficient. For our
 	// purposes this should be OK, since the average power of the theoretical CTF should not
@@ -784,7 +784,7 @@ bool CtffindApp::DoCalculation()
 	const bool			follow_1d_search_with_local_2D_brute_force = false;
 
 	// Initial search should be done only using up to that resolution, to improve radius of convergence
-	const float			intermediate_resolution = 5.0;
+	const float			maximum_resolution_for_initial_search = 5.0;
 
 	// Debugging
 	const bool			dump_debug_files = true;
@@ -1173,7 +1173,7 @@ bool CtffindApp::DoCalculation()
 #endif
 
 		// Set up the CTF object
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,intermediate_resolution),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
+		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,maximum_resolution_for_initial_search),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 		current_ctf.SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
 		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
@@ -1186,6 +1186,9 @@ bool CtffindApp::DoCalculation()
 		{
 			current_ctf.SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PI);
 			current_ctf.SetAdditionalPhaseShift(known_phase_shift);
+			current_ctf.SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
+			comparison_object_2D->SetCTF(current_ctf);
+			comparison_object_2D->SetupQuickCorrelation();
 			final_score = 0.0;
 			final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
 					comparison_object_2D->spatial_frequency_squared, comparison_object_2D->azimuths);
@@ -1211,7 +1214,7 @@ bool CtffindApp::DoCalculation()
 				temp_image->CopyFrom(average_spectrum);
 				temp_image->ApplyMirrorAlongY();
 				//temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-				estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,intermediate_resolution));
+				estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum,temp_image,1,90.0,5.0,pixel_size_for_fitting/minimum_resolution,pixel_size_for_fitting/std::max(maximum_resolution,maximum_resolution_for_initial_search));
 			}
 
 			//MyDebugPrint ("Estimated astigmatism angle = %f degrees\n", estimated_astigmatism_angle);
@@ -1273,8 +1276,13 @@ bool CtffindApp::DoCalculation()
 				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",brute_force_search->GetBestValue(0)*pixel_size_for_fitting,brute_force_search->GetBestValue(0)*pixel_size_for_fitting,0.0,brute_force_search->GetBestScore());
 				*/
 
-				// We can now do a local optimization
-				// The end point of the BF search is the beginning of the CG search
+				/*
+				 * We can now do a local optimization.
+				 * The end point of the BF search is the beginning of the CG search, but we will want to use
+				 * the full resolution range
+				 */
+				current_ctf.SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
+				comparison_object_1D.ctf = current_ctf;
 				for (counter=0;counter<number_of_search_dimensions;counter++)
 				{
 					cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
@@ -1548,10 +1556,11 @@ bool CtffindApp::DoCalculation()
 				}
 			}
 			// CG minimization
+			current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 			comparison_object_2D->SetCTF(current_ctf);
+			comparison_object_2D->SetupQuickCorrelation();
 			conjugate_gradient_minimizer = new ConjugateGradient();
 			conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
-			current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 			conjugate_gradient_minimizer->Run();
 
 			// Remember the results of the refinement

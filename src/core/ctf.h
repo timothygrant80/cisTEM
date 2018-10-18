@@ -70,6 +70,7 @@ public:
 
 	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
+	void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
 	//
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);

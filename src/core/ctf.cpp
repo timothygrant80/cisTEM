@@ -229,6 +229,12 @@ void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
 	additional_phase_shift = fmodf(wanted_additional_phase_shift_radians,(float)PI);
 }
 
+// Set the highest frequency used for fitting
+void CTF::SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels)
+{
+	highest_frequency_for_fitting = wanted_highest_frequency_in_reciprocal_pixels;
+}
+
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 std::complex<float> CTF::EvaluateComplex(float squared_spatial_frequency, float azimuth)
 {

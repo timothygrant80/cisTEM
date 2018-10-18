@@ -126,6 +126,12 @@ int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatia
  */
 float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
 {
+	/*
+	 * The method used below (ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth) makes assumptions which mean it will
+	 * only return the correct spatial frequency for the CTF zeroes between the origin and the frequency at which
+	 * the phase aberration peaks.
+	 */
+	MyDebugAssertTrue(which_zero < ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(azimuth),azimuth),"Oops, this method only works for the first few zeroes");
 	float phase_shift = which_zero * PI;
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
@@ -140,7 +146,10 @@ float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth)
 
 /*
  * Return the squared spatial frequency at which a given phase aberration is obtained. Note that this will return only one of the
- * spatial frequencies...
+ * spatial frequencies, whereas the phase aberration function is a quadratic polynomial function of the squared
+ * spatial frequency, which means that a given phase shift can be achieved at two spatial frequencies.
+ *
+ * Also, this function is written assuming underfocus and positive spherical aberration
  *
  * TODO: take into account multiple solutions
  */
@@ -174,8 +183,14 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 
 			if ( solution_one > 0 && solution_two > 0 )
 			{
-				//MyDebugPrintWithDetails("Oops, I don't know which solution to select: %f %f",solution_one, solution_two);
-				return solution_one;
+				if (solution_one <= solution_two)
+				{
+					return solution_one;
+				}
+				else
+				{
+					return solution_two;
+				}
 			}
 			else if ( solution_one > 0 )
 			{

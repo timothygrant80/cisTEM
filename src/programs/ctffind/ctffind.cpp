@@ -164,7 +164,7 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
+	MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
 
 	// Evaluate the function
 	if (comparison_object->number_to_correlate)
@@ -220,7 +220,7 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 	MyDebugAssertTrue(norm_ctf > 0.0,"Bad norm_ctf: %f\n", norm_ctf);
 	MyDebugAssertTrue(norm_curve > 0.0,"Bad norm_curve: %f\n", norm_curve);
 
-	//MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Score = %g\n",array_of_values[0], array_of_values[1], - cross_product / sqrtf(norm_ctf * norm_curve));
+	MyDebugPrint("(CtffindCurveObjectiveFunction) D1 = %6.2f , PhaseShift = %6.3f , Low freq = %f /pxl, High freq = %f/pxl Score = %g\n",array_of_values[0], array_of_values[1], my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(), - cross_product / sqrtf(norm_ctf * norm_curve));
 
 	// Note, we are not properly normalizing the cross correlation coefficient. For our
 	// purposes this should be OK, since the average power of the theoretical CTF should not
@@ -783,8 +783,11 @@ bool CtffindApp::DoCalculation()
 	// This could become a user-supplied parameter later - for now only for developers / expert users
 	const bool			follow_1d_search_with_local_2D_brute_force = false;
 
+	// Initial search should be done only using up to that resolution, to improve radius of convergence
+	const float			intermediate_resolution = 5.0;
+
 	// Debugging
-	const bool			dump_debug_files = false;
+	const bool			dump_debug_files = true;
 
 	/*
 	 *  Scoring function
@@ -851,7 +854,6 @@ bool CtffindApp::DoCalculation()
 	int					last_bin_without_aliasing;
 	ImageFile			gain_file;
 	Image				*gain = new Image();
-	float				intermediate_resolution = 5.0;
 	float				final_score;
 
 

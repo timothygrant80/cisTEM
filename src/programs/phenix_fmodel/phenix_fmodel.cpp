@@ -63,7 +63,6 @@ bool PhenixFmodelApp::DoCalculation()
 	wxString		sym_match;
 	std::string		record_tmp;
 	std::string		intermed_basename;
-	std::string		intermed_pdb;
 	std::string		intermed_mtz;
 	std::string		fmodel_args;
 	std::string		fmodel_main;
@@ -76,31 +75,12 @@ bool PhenixFmodelApp::DoCalculation()
 
 	current_dir = wxGetCwd();
 	wxFileName::SplitPath(output_path, &working_dir, &output_basename, &output_ext, wxPATH_NATIVE);
-	intermed_basename = output_basename.ToStdString() + "_nosym";
-	intermed_pdb = intermed_basename + ".pdb";
+	intermed_basename = output_basename.ToStdString();
 	intermed_mtz = intermed_basename + ".mtz";
-	wxFileName::SetCwd(wxString(working_dir));
-
-	// generate a map without symmetry by resetting the crystal record to P1 in a copy of the pdb
-	// write each line of pdb_file to intermed_file, modifying only the CRYST1 record
-
-	wxRegEx sym_locate("^CRYST1");
-	wxRegEx sym_regex("(P[[:space:]][[:alnum:]]*[[:space:]][[:alnum:]]*[[:space:]][[:alnum:]]*[[:space:]]*[[:alnum:]]*[[:space:]]*)");
-	pdb_file.Open(pdb_path);
-	intermed_file.Create(intermed_pdb);
-	for ( record = pdb_file.GetFirstLine(); !pdb_file.Eof(); record = pdb_file.GetNextLine() )
+	if (working_dir != "")
 	{
-		if ( sym_locate.Matches(record)==true )
-		{
-			sym_regex.Replace(&record, wxString("P 1           1  "), 1);
-		}
-		intermed_file.AddLine(record, wxTextBuffer::typeDefault);
-	}
-	pdb_file.Close();
-	intermed_file.Write();
-	intermed_file.Close();
-
-
+		wxFileName::SetCwd(wxString(working_dir));
+	};
 
 	// construct the command to run phenix.fmodel and execute with wxwidgets
 
@@ -109,7 +89,7 @@ bool PhenixFmodelApp::DoCalculation()
 	{
 		wxRemoveFile(intermed_mtz);
 	}
-	fmodel_args = intermed_pdb + " scattering_table=electron high_resolution=" + std::to_string(resolution) + " output.file_name=" + intermed_mtz;
+	fmodel_args = pdb_path + " scattering_table=electron generate_fake_p1_symmetry=True high_resolution=" + std::to_string(resolution) + " output.file_name=" + intermed_mtz;
 	wxPrintf("\nLaunching phenix.fmodel calculation...\n");
 	fmodel_main = phenix_installation + "/build/bin/phenix.fmodel " + fmodel_args;
 	fmodel_echo = "\nExecuting command \"" + fmodel_main + "\"\n";
@@ -122,7 +102,7 @@ bool PhenixFmodelApp::DoCalculation()
 	}
 
 	// convert to a ccp4 map with phenix.mtz2map
-	mtz2map_main = phenix_installation + "/build/bin/phenix.mtz2map " + intermed_mtz + " pdb_file=" + intermed_pdb + " include_fmodel=True output.prefix=" + intermed_basename + " extension=ccp4";
+	mtz2map_main = phenix_installation + "/build/bin/phenix.mtz2map " + intermed_mtz + " pdb_file=" + pdb_path + " include_fmodel=True output.prefix=" + intermed_basename + " extension=ccp4";
 	mtz2map_echo = "\nExecuting command \"" + mtz2map_main + "\"\n";
 	wxPrintf(wxString(mtz2map_echo));
 	mtz2map_code = wxExecute(wxString(mtz2map_main), wxEXEC_SYNC, NULL);

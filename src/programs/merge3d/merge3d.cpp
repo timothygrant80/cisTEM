@@ -216,72 +216,96 @@ bool Merge3DApp::DoCalculation()
 	if (true == true)
 	{
 
-	float original_average_value = output_3d.density_map.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
+		/*
+		 * Parameters for local resolution estimation & filtering
+		 */
 
-	// remove disconnected density
 
-	Image buffer_image;
-	Image size_image;
-	Image local_resolution_volume;
+		/*
+		 * Compute a mask
+		 */
+		Image size_image;
+		{
+			float original_average_value = output_3d.density_map.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
 
-	buffer_image.Allocate(output_3d.density_map.logical_x_dimension, output_3d.density_map.logical_y_dimension, output_3d.density_map.logical_z_dimension);
-	local_resolution_volume.Allocate(output_3d.density_map.logical_x_dimension, output_3d.density_map.logical_y_dimension, output_3d.density_map.logical_z_dimension);
+			// remove disconnected density
 
-	buffer_image.CopyFrom(&output_3d.density_map);
-	buffer_image.SetMinimumValue(original_average_value);
-	buffer_image.ForwardFFT();
-	buffer_image.CosineMask(original_pixel_size / 50.0f, original_pixel_size / 10.0f);
-	buffer_image.BackwardFFT();
+			Image buffer_image;
 
-	float average_value = buffer_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
-	float average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, outer_mask_radius / original_pixel_size);
-	float threshold_value = average_value + ((average_of_100_max - average_value) * 0.03);
+			buffer_image.Allocate(output_3d.density_map.logical_x_dimension, output_3d.density_map.logical_y_dimension, output_3d.density_map.logical_z_dimension);
 
-	buffer_image.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
-	buffer_image.Binarise(threshold_value);
+			buffer_image.CopyFrom(&output_3d.density_map);
+			buffer_image.SetMinimumValue(original_average_value);
+			buffer_image.ForwardFFT();
+			buffer_image.CosineMask(original_pixel_size / 50.0f, original_pixel_size / 10.0f);
+			buffer_image.BackwardFFT();
 
-	MyDebugPrint("About to compute size image\n");
+			float average_value = buffer_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
+			float average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, outer_mask_radius / original_pixel_size);
+			float threshold_value = average_value + ((average_of_100_max - average_value) * 0.03);
 
-	rle3d my_rle3d(buffer_image);
-	size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-	my_rle3d.ConnectedSizeDecodeTo(size_image);
+			buffer_image.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+			buffer_image.Binarise(threshold_value);
 
-	MyDebugPrint("About to compute mask\n");
+			MyDebugPrint("About to compute size image\n");
 
-	size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
+			rle3d my_rle3d(buffer_image);
+			size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+			my_rle3d.ConnectedSizeDecodeTo(size_image);
+
+			MyDebugPrint("About to compute mask\n");
+
+			size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
+		#ifdef DEBUG
+			size_image.QuickAndDirtyWriteSlices("locres_mask.mrc", 1, size_image.logical_z_dimension);
+		#endif
+
+			for (long address = 0; address < output_3d.density_map.real_memory_allocated; address++)
+			{
+				if (size_image.real_values[address] == 0.0f) output_3d.density_map.real_values[address] = original_average_value;
+			}
+
+			output_3d.density_map.SetMinimumValue(original_average_value);
+			output_3d.density_map.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+		}
+
+		/*
+		 * Apply a local resolution filter to the reconstruction
+		 */
+		{
+			Image local_resolution_volume;
+			const float krr = 5.0;
+			int box_size;
+			box_size = int(krr * gui_statistics->ReturnEstimatedResolution() / original_pixel_size);
+			wxPrintf("Will estimate local resolution using a box size of %i\n",box_size);
+			const float threshold_snr = 0.5;
+			const float threshold_confidence = 3.0;
+			const bool use_fixed_threshold = false;
+			const float fixed_fsc_threshold = 0.5;
+
+			MyDebugPrint("About to estimate loc res\n");
+			if (! output_3d1.density_map.is_in_real_space) output_3d1.density_map.BackwardFFT();
+			if (! output_3d2.density_map.is_in_real_space) output_3d2.density_map.BackwardFFT();
+
+			local_resolution_volume.Allocate(output_3d.density_map.logical_x_dimension, output_3d.density_map.logical_y_dimension, output_3d.density_map.logical_z_dimension);
+
+			LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
+			estimator->SetAllUserParameters(&output_3d1.density_map, &output_3d2.density_map, &size_image, 1, size_image.logical_z_dimension, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold,my_reconstruction_1.symmetry_matrices.symmetry_symbol);
+			estimator->EstimateLocalResolution(&local_resolution_volume);
+			delete estimator;
+
 #ifdef DEBUG
-	size_image.QuickAndDirtyWriteSlices("locres_mask.mrc", 1, size_image.logical_z_dimension);
+			local_resolution_volume.QuickAndDirtyWriteSlices("locres.mrc", 1, size_image.logical_z_dimension);
+			output_3d.density_map.QuickAndDirtyWriteSlices("before_locres_filter.mrc",1,output_3d.density_map.logical_z_dimension);
 #endif
 
-	for (long address = 0; address < output_3d.density_map.real_memory_allocated; address++)
-	{
-		if (size_image.real_values[address] == 0.0f) output_3d.density_map.real_values[address] = original_average_value;
-	}
+			MyDebugPrint("About to apply locres filter\n");
 
-	output_3d.density_map.SetMinimumValue(original_average_value);
-	output_3d.density_map.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+			int number_of_levels = box_size;
+			output_3d.density_map.ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels);
+		}
 
-	MyDebugPrint("About to estimate loc res\n");
-	if (! output_3d1.density_map.is_in_real_space) output_3d1.density_map.BackwardFFT();
-	if (! output_3d2.density_map.is_in_real_space) output_3d2.density_map.BackwardFFT();
-
-	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	estimator->SetAllUserParameters(&output_3d1.density_map, &output_3d2.density_map, &size_image, 1, size_image.logical_z_dimension, 1, original_pixel_size, 20, 3.0, 3.0, false, 0.5,my_reconstruction_1.symmetry_matrices.symmetry_symbol);
-	estimator->EstimateLocalResolution(&local_resolution_volume);
-	delete estimator;
-
-#ifdef DEBUG
-	local_resolution_volume.QuickAndDirtyWriteSlices("locres.mrc", 1, size_image.logical_z_dimension);
-	output_3d.density_map.QuickAndDirtyWriteSlices("before_locres_filter.mrc",1,output_3d.density_map.logical_z_dimension);
-#endif
-
-	MyDebugPrint("About to apply locres filter\n");
-
-	const int number_of_levels = 20;
-	output_3d.density_map.ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels);
-
-
-	output_3d.density_map.WriteSlicesAndFillHeader(output_reconstruction_filtered.ToStdString(), original_pixel_size);
+		output_3d.density_map.WriteSlicesAndFillHeader(output_reconstruction_filtered.ToStdString(), original_pixel_size);
 	}
 	/////////////////////// END HACK..
 

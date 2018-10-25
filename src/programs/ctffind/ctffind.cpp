@@ -1781,7 +1781,7 @@ bool CtffindApp::DoCalculation()
 		}
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
 
-		normalization_radius_max = average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit];
+		normalization_radius_max = std::max(normalization_radius_max,float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
 		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
 																	normalization_radius_max,
 																	average,sigma);

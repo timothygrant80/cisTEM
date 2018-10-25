@@ -578,6 +578,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float		known_astigmatism_angle;
 	float		known_defocus_1;
 	float		known_defocus_2;
+	float 		known_phase_shift;
 	bool		resample_if_pixel_too_small;
 	bool		large_astigmatism_expected;
 
@@ -705,6 +706,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		known_astigmatism_angle = 0.0;
 		known_defocus_1 = 0.0;
 		known_defocus_2 = 0.0;
+		known_phase_shift = 0.0;
 		resample_if_pixel_too_small = true;
 
 		if (input_is_a_movie)
@@ -736,7 +738,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		}
 
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbff",	input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbfff",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -768,7 +770,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	movie_mag_distortion_minor_scale,
 																	defocus_is_known,
 																	known_defocus_1,
-																	known_defocus_2);
+																	known_defocus_2,
+																	known_phase_shift);
 
 		my_progress_dialog->Update(counter + 1);
 	}

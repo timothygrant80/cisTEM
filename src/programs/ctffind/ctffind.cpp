@@ -6,8 +6,10 @@ const std::string ctffind_version = "4.1.12";
 /*
  * Changelog
  * - 4.1.12
- * -- bug fix (affected all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
+ * -- bug fix (affected diagnostics for all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
  * -- bug fix (affected 4.1.11): fitting was only done up to 5Å
+ * -- slow, exhaustive search is no longer the default (since astigmatism-related bugs appear fixed)
+ * -- OpenMP threading on by default
  * - 4.1.11
  * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
  * -- score is now a normalized cross-correlation coefficient (David Mastronarde)
@@ -554,7 +556,7 @@ void CtffindApp::DoInteractiveUserInput()
 		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","yes");;
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","no");;
 			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
 			known_astigmatism			= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
@@ -562,7 +564,7 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 		else
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","yes");
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","no");
 			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","no");
 			if (should_restrain_astigmatism)
 			{
@@ -720,6 +722,8 @@ void CtffindApp::AddCommandLineOptions()
 bool CtffindApp::DoCalculation()
 {
 
+	wxDateTime time_start = wxDateTime::Now();
+
 	// Arguments for this job
 
 	const std::string 	input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
@@ -788,7 +792,7 @@ bool CtffindApp::DoCalculation()
 	const float			maximum_resolution_for_initial_search = 5.0;
 
 	// Debugging
-	const bool			dump_debug_files = true;
+	const bool			dump_debug_files = false;
 
 	/*
 	 *  Scoring function
@@ -857,6 +861,12 @@ bool CtffindApp::DoCalculation()
 	Image				*gain = new Image();
 	float				final_score;
 
+	// Timings variables
+	wxDateTime time_before_spectrum_computation;
+	wxDateTime time_after_spectrum_computation;
+	wxDateTime time_before_diagnostics;
+	wxDateTime time_finish;
+
 
 
 	// Some argument checking
@@ -915,6 +925,9 @@ bool CtffindApp::DoCalculation()
 		wxPrintf("\nEstimating CTF parameters...\n\n");
 		my_progress_bar = new ProgressBar(number_of_micrographs);
 	}
+
+	//
+	time_before_spectrum_computation = wxDateTime::Now();
 
 
 	// Prepare the gain_reference
@@ -1159,6 +1172,7 @@ bool CtffindApp::DoCalculation()
 		 *
 		 *
 		 */
+		time_after_spectrum_computation = wxDateTime::Now();
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
 
@@ -1618,6 +1632,7 @@ bool CtffindApp::DoCalculation()
 		 * We're all done with our search & refinement of defocus and phase shift parameter values.
 		 * Now onto diagnostics.
 		 */
+		time_before_diagnostics = wxDateTime::Now();
 
 		// Generate diagnostic image
 		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
@@ -1891,11 +1906,26 @@ bool CtffindApp::DoCalculation()
 		wxPrintf("\n");
 	}
 
+	// Keep track of time
+	time_finish = wxDateTime::Now();
+
 	// Tell the user where the outputs are
 	if (is_running_locally)
 	{
-		wxPrintf("\nSummary of results                          : %s\n", output_text->ReturnFilename());
-		wxPrintf("Diagnostic images                           : %s\n", output_diagnostic_filename);
+		wxPrintf("\nTimings\n");
+		wxTimeSpan time_to_initialize = time_before_spectrum_computation.Subtract(time_start);
+		wxTimeSpan time_to_compute_spectrum = time_after_spectrum_computation.Subtract(time_before_spectrum_computation);
+		wxTimeSpan time_to_fit = time_before_diagnostics.Subtract(time_after_spectrum_computation);
+		wxTimeSpan time_to_diagnose = time_finish.Subtract(time_before_diagnostics);
+		wxTimeSpan time_total = time_finish.Subtract(time_start);
+		wxPrintf(" Initialization       : %s\n",time_to_initialize.Format());
+		wxPrintf(" Spectrum computation : %s\n",time_to_compute_spectrum.Format());
+		wxPrintf(" Parameter search     : %s\n",time_to_fit.Format());
+		wxPrintf(" Diagnosis            : %s\n",time_to_diagnose.Format());
+		wxPrintf(" Total                : %s\n",time_total.Format());
+
+		wxPrintf("\n\nSummary of results                          : %s\n", output_text->ReturnFilename());
+		wxPrintf(    "Diagnostic images                           : %s\n", output_diagnostic_filename);
 		if (compute_extra_stats)
 		{
 			wxPrintf("Detailed results, including 1D fit profiles : %s\n",output_text_avrot->ReturnFilename());

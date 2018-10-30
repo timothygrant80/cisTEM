@@ -4,7 +4,7 @@
 #
 # Alexis Rohou, 2016
 #
-# Last modified 6 Jun 2017 (adapt to Genentech)
+# Last modified Oct 2018
 #
 # Before running this script:
 # - update version in this script
@@ -17,10 +17,10 @@
 #
 version=4.1.12
 svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
+svn_loc="https://github.com/ngrigorieff/cisTEM/ctffind_4.1.12_prep"
 svn_rev="HEAD"
-svn_rev="565"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
-configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
+configure_flags="--disable-debugmode --enable-staticmode --enable-openmp --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
 number_of_cores=8
 installation_username="rohoua"
@@ -38,14 +38,6 @@ else
   echo "OK. Current system has libc $libc_version, which is not greater than 2.18"
 fi
 
-
-# Override for tests on laptop
-if [[ $(hostname) == "uroy" ]]; then
-  installation_username="rohoua"
-  installation_prefix="$HOME/work/software/ctffind_${version}"
-  configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=gcc CXX=g++ "
-  configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
-fi
 
 if [ "${USER}" != "${installation_username}" ]; then
   echo "This script must be run as user ${installation_username}"

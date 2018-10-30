@@ -26,7 +26,7 @@ number_of_cores=8
 installation_username="rohoua"
 installation_prefix="$HOME/software/ctffind/${version}"
 temp_dir="$(mktemp -d)"
-temp_dir="$HOME/scratch"
+#temp_dir="$HOME/scratch"
 
 # Check system's libc version
 function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
@@ -154,6 +154,8 @@ cd ${installation_prefix}
 tar -czf ctffind-${version}-linux64-compat-dbg.tar.gz bin_compat_dbg/ctffind*
 cd ${remember_dir}
 
+# Cleanup 
+rm -fr ${temp_dir}
 
 # All done
 echo "All done. Check ${installation_prefix}"

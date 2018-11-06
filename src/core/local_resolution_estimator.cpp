@@ -6,6 +6,9 @@
 
 LocalResolutionEstimator::LocalResolutionEstimator()
 {
+	input_volume_one							=	NULL;
+	input_volume_two							=	NULL;
+	input_volume_mask							=	NULL;
 	box_size									=	0;
 	number_of_fsc_shells						=	0;
 	first_slice									=	0;
@@ -16,12 +19,14 @@ LocalResolutionEstimator::LocalResolutionEstimator()
 	highest_resolution_expected_in_Angstroms	=	0.0;
 	maximum_radius_in_Angstroms					=	0.0;
 	shell_number_lut_is_allocated				=	false;
+	fixed_fsc_threshold							=	0.0;
+	use_fixed_fsc_threshold						=	false;
 	threshold_snr								=	0.0;
 	threshold_confidence_n_sigma				=	0.0;
 	resolution_value_before_first_shell			=	0.0;
 	resolution_value_where_wont_estimate		=	0.0;
 	symmetry_redundancy							=	0;
-
+	shell_number_lut							=	NULL;
 }
 
 LocalResolutionEstimator::~LocalResolutionEstimator()

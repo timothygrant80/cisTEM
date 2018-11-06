@@ -57,8 +57,10 @@ void LocalResolution::DoInteractiveUserInput()
 	bool experimental_options	= my_input->GetYesNoFromUser("Set experimental options?", "Several experimental options are available", "no");
 	bool randomize_phases;
 	float resolution_for_phase_randomization;
+	bool whiten_half_maps;
 	randomize_phases = false;
 	resolution_for_phase_randomization = -1.0;
+	whiten_half_maps = true;
 	if (experimental_options)
 	{
 		randomize_phases 		= my_input->GetYesNoFromUser("Randomize input phases?", "The phases of the input halfmaps can be randomized beyond a chosen resolution before local volumes are extracted for FSC calculation", "no");
@@ -66,12 +68,13 @@ void LocalResolution::DoInteractiveUserInput()
 		{
 			resolution_for_phase_randomization = my_input->GetFloatFromUser("Resolution for phase randomization", "Phases of the input half maps will be randomized at resolutions higher than the given resolution", "20.0", 0.0);
 		}
+		whiten_half_maps		= my_input->GetYesNoFromUser("Whiten half-maps on input","Whitening the half-maps helps obtain more localized resolution estimates","yes");
 	}
 
 	delete my_input;
 
-	my_current_job.Reset(16);
-	my_current_job.ManualSetArguments("ttttftiiiibfffbf", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level,randomize_phases,resolution_for_phase_randomization);
+	my_current_job.Reset(17);
+	my_current_job.ManualSetArguments("ttttftiiiibfffbfb", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level,randomize_phases,resolution_for_phase_randomization,whiten_half_maps);
 }
 
 
@@ -93,7 +96,7 @@ bool LocalResolution::DoCalculation()
 	float confidence_level						= my_current_job.arguments[13].ReturnFloatArgument();
 	bool randomize_phases						= my_current_job.arguments[14].ReturnBoolArgument();
 	float resolution_for_phase_randomization	= my_current_job.arguments[15].ReturnFloatArgument();
-
+	bool whiten_half_maps						= my_current_job.arguments[16].ReturnBoolArgument();
 
 
 	// Read volumes from disk
@@ -125,32 +128,6 @@ bool LocalResolution::DoCalculation()
 		input_volume_two.BackwardFFT();
 	}
 
-	/*
-	// Print out spectral properties of input volumes
-	Curve average_power_one;
-	Curve average_power_two;
-	Curve number_of_values_one;
-	Curve number_of_values_two;
-	input_volume_one.ForwardFFT();
-	input_volume_two.ForwardFFT();
-	average_power_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	average_power_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_values_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_values_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	input_volume_one.Compute1DPowerSpectrumCurve(&average_power_one, &number_of_values_one);
-	input_volume_two.Compute1DPowerSpectrumCurve(&average_power_two, &number_of_values_two);
-	input_volume_one.BackwardFFT();
-	input_volume_two.BackwardFFT();
-	wxPrintf("\n\nAverage power (vol 1):\n");
-	average_power_one.Logarithm();
-	average_power_one.PrintToStandardOut();
-	wxPrintf("\n\nNumber of values (vol 1):\n");
-	number_of_values_one.PrintToStandardOut();
-	wxPrintf("\n\nAverage power (vol 2):\n");
-	average_power_two.Logarithm();
-	average_power_two.PrintToStandardOut();
-	*/
-
 	// Prepare output volume
 	Image local_resolution_volume(input_volume_one);
 	local_resolution_volume.SetToConstant(-1.0);
@@ -158,7 +135,7 @@ bool LocalResolution::DoCalculation()
 
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry);
+	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry,whiten_half_maps);
 	estimator->EstimateLocalResolution(&local_resolution_volume);
 
 	// Write output volume to disk

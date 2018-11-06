@@ -290,7 +290,7 @@ bool Merge3DApp::DoCalculation()
 			local_resolution_volume.Allocate(output_3d.density_map.logical_x_dimension, output_3d.density_map.logical_y_dimension, output_3d.density_map.logical_z_dimension);
 
 			LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-			estimator->SetAllUserParameters(&output_3d1.density_map, &output_3d2.density_map, &size_image, 1, size_image.logical_z_dimension, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold,my_reconstruction_1.symmetry_matrices.symmetry_symbol);
+			estimator->SetAllUserParameters(&output_3d1.density_map, &output_3d2.density_map, &size_image, 1, size_image.logical_z_dimension, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold,my_reconstruction_1.symmetry_matrices.symmetry_symbol,true);
 			estimator->EstimateLocalResolution(&local_resolution_volume);
 			delete estimator;
 

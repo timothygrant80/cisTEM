@@ -18,7 +18,8 @@ public:
 								float wanted_threshold_confidence_n_sigma, // confidence - number of sigmas above estimate we want to be
 								bool wanted_use_fixed_fsc_threshold,
 								float wanted_fixed_fsc_threshold,
-								wxString wanted_symmetry_symbol
+								wxString wanted_symmetry_symbol,
+								bool wanted_whiten_half_maps
 								);
 
 	void EstimateLocalResolution(Image *local_resolution_volume);
@@ -43,6 +44,8 @@ private:
 	float 	threshold_snr; // snr treshold. 0.334 gives the 0.143 criterion
 	float 	resolution_value_before_first_shell; //40.0;//
 	float 	resolution_value_where_wont_estimate;
+
+	bool	whiten_half_maps;
 
 	// Internal
 	Image	box_one;

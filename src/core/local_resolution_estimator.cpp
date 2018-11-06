@@ -26,6 +26,7 @@ LocalResolutionEstimator::LocalResolutionEstimator()
 	resolution_value_before_first_shell			=	0.0;
 	resolution_value_where_wont_estimate		=	0.0;
 	symmetry_redundancy							=	0;
+	whiten_half_maps							=	true;
 	shell_number_lut							=	NULL;
 }
 
@@ -36,7 +37,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator()
 	box_two.Deallocate();
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol)
+void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps)
 {
 	MyDebugAssertTrue(IsEven(box_size),"Box size should be even");
 	SetInputVolumes(wanted_input_volume_one,wanted_input_volume_two,wanted_mask_volume);
@@ -53,6 +54,7 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	SymmetryMatrix sym_matrix;
 	sym_matrix.Init(wanted_symmetry_symbol);
 	symmetry_redundancy = sym_matrix.number_of_matrices;
+	whiten_half_maps = wanted_whiten_half_maps;
 
 	// Update based on user-supplied parameter values
 	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
@@ -264,8 +266,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	}
 
 	// Whiten the input volumes
-	const bool whiten_input_volumes = true;
-	if (whiten_input_volumes)
+	if (whiten_half_maps)
 	{
 
 		input_volume_one->ForwardFFT();

@@ -213,7 +213,8 @@ bool Merge3DApp::DoCalculation()
 
 	// MASKING
 
-	if (true == true)
+	const bool test_locres_filtering = false;
+	if (test_locres_filtering)
 	{
 
 		/*

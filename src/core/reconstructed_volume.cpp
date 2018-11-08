@@ -630,10 +630,12 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
 	// TESTING OF LOCAL FILTERING
-	/*
-	density_map_1.Deallocate();
-	density_map_2.Deallocate();
-	*/
+	const bool test_locres_filtering = false;
+	if (!test_locres_filtering)
+	{
+		density_map_1.Deallocate();
+		density_map_2.Deallocate();
+	}
 
 	InitWithReconstruct3D(reconstruction, pixel_size);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);

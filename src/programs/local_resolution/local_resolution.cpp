@@ -58,23 +58,23 @@ void LocalResolution::DoInteractiveUserInput()
 	bool randomize_phases;
 	float resolution_for_phase_randomization;
 	bool whiten_half_maps;
+	int padding_factor;
 	randomize_phases = false;
 	resolution_for_phase_randomization = -1.0;
 	whiten_half_maps = true;
+	padding_factor = 2;
 	if (experimental_options)
 	{
 		randomize_phases 		= my_input->GetYesNoFromUser("Randomize input phases?", "The phases of the input halfmaps can be randomized beyond a chosen resolution before local volumes are extracted for FSC calculation", "no");
-		if (randomize_phases)
-		{
-			resolution_for_phase_randomization = my_input->GetFloatFromUser("Resolution for phase randomization", "Phases of the input half maps will be randomized at resolutions higher than the given resolution", "20.0", 0.0);
-		}
+		resolution_for_phase_randomization = my_input->GetFloatFromUser("Resolution for phase randomization", "Phases of the input half maps will be randomized at resolutions higher than the given resolution", "20.0", 0.0);
 		whiten_half_maps		= my_input->GetYesNoFromUser("Whiten half-maps on input","Whitening the half-maps helps obtain more localized resolution estimates","yes");
+		padding_factor			= my_input->GetIntFromUser("Padding factor","Give 1 if you don't want any padding","2",1);
 	}
 
 	delete my_input;
 
-	my_current_job.Reset(17);
-	my_current_job.ManualSetArguments("ttttftiiiibfffbfb", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level,randomize_phases,resolution_for_phase_randomization,whiten_half_maps);
+	my_current_job.Reset(18);
+	my_current_job.ManualSetArguments("ttttftiiiibfffbfbi", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level,randomize_phases,resolution_for_phase_randomization,whiten_half_maps,padding_factor);
 }
 
 
@@ -97,6 +97,7 @@ bool LocalResolution::DoCalculation()
 	bool randomize_phases						= my_current_job.arguments[14].ReturnBoolArgument();
 	float resolution_for_phase_randomization	= my_current_job.arguments[15].ReturnFloatArgument();
 	bool whiten_half_maps						= my_current_job.arguments[16].ReturnBoolArgument();
+	int padding_factor							= my_current_job.arguments[17].ReturnIntegerArgument();
 
 
 	// Read volumes from disk
@@ -135,7 +136,7 @@ bool LocalResolution::DoCalculation()
 
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry,whiten_half_maps);
+	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry,whiten_half_maps,padding_factor);
 	estimator->EstimateLocalResolution(&local_resolution_volume);
 
 	// Write output volume to disk

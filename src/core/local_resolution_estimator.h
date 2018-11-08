@@ -18,7 +18,9 @@ public:
 								float wanted_threshold_confidence_n_sigma, // confidence - number of sigmas above estimate we want to be
 								bool wanted_use_fixed_fsc_threshold,
 								float wanted_fixed_fsc_threshold,
-								wxString wanted_symmetry_symbol
+								wxString wanted_symmetry_symbol,
+								bool wanted_whiten_half_maps,
+								int wanted_padding_factor
 								);
 
 	void EstimateLocalResolution(Image *local_resolution_volume);
@@ -44,7 +46,12 @@ private:
 	float 	resolution_value_before_first_shell; //40.0;//
 	float 	resolution_value_where_wont_estimate;
 
+	bool	whiten_half_maps;
+	int		padding_factor;
+
 	// Internal
+	Image	box_one_no_padding;
+	Image	box_two_no_padding;
 	Image	box_one;
 	Image	box_two;
 	int		*shell_number_lut; // a look-up table: for each voxel in the local_volumes, remember what fsc shell we're in

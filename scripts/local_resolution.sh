@@ -17,26 +17,34 @@ input_volume_mask=$3
 pixel_size=$4
 symmetry=$5
 box_size=$6
-use_fixed=$7
-fixed_fsc_thresh=$8
-snr_target=$9
-snr_confidence=${10}
-sampling_step=${11}
-slices_per_processor=${12}
-total_number_of_slices=${13}
-output_volume=${14}
+padding_factor=$7
+whiten_maps=$8
+use_fixed=$9
+fixed_fsc_thresh=${10}
+snr_target=${11}
+snr_confidence=${12}
+sampling_step=${13}
+slices_per_processor=${14}
+total_number_of_slices=${15}
+phase_randomize=${16}
+randomization_resolution=${17}
+output_volume=${18}
 
-if [ "$#" -ne 14 ]; then
+if [ "$#" -ne 18 ]; then
 	echo " "
-	echo "14 arguments are expected, you only supplied $#"
-	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size symmetry box_size use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices output_volume"
+	echo "18 arguments are expected, you supplied $#"
+	echo "Usage: $0 input_fsc_vol_one input_fsc_vol_two input_mask_vol pixel_size symmetry box_size padding_factor whiten_maps use_fixed fixed_fsc_thresh snr_target snr_confidence sampling_step slices_per_processor total_number_of_slices phase_randomize randomization_resolution output_volume"
 	echo "Suggested defaults:"
 	echo "box_size = 20"
+	echo "padding_factor = 2"
+	echo "whiten_maps = y"
 	echo "use_fixed = n [alternative:y]"
 	echo "fixed_fsc_thresh = 0.5"
 	echo "snr_target = 0.334"
 	echo "snr_confidence = 5.0"
 	echo "sampling_step = 2 or 4"
+	echo "phase_randomize = n [alternative:y]"
+	echo "randomization_resolution = 20.0"
 	echo " "
 	exit
 fi
@@ -70,6 +78,11 @@ $sampling_step
 $box_size
 $use_fixed
 $fixed_fsc_thresh
+y
+$phase_randomize
+$randomization_resolution
+$whiten_maps
+$padding_factor
 eof
 else
 local_resolution<<eof > $log_fn 2>&1 &
@@ -86,6 +99,11 @@ $box_size
 $use_fixed
 $snr_target
 $snr_confidence
+y
+$phase_randomize
+$randomization_resolution
+$whiten_maps
+$padding_factor
 eof
 fi
 	

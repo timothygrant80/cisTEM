@@ -429,6 +429,130 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 	delete [] wiener_constant;
 }
 
+/*
+ * Compute the efficiency of the orientation distribution, following
+ * Naydenova & Russo (2017)
+ *
+ * The final result is between 0.0 and 1.0, where 1.0 is a perfectly isotropic
+ * orientation distribution, and >0.5 is desirable.
+ *
+ * The algorithm described in the paper was modified to use the CTF^2 volume directly.
+ * This may be slightly problematic because:
+ * - the CTF^2 volume may have been computed with per-particle attenuations as a function of the particle score
+ * - (...?)
+ *
+ * Alexis Rohou, September 2017
+ */
+float ReconstructedVolume::ComputeOrientationDistributionEfficiency(Reconstruct3D &reconstruction)
+{
+	float efficiency;
+	float radius_mean;
+	float radius_sigma;
+	float radius_0pc;
+	float radius_25pc;
+	float radius_50pc;
+	float radius_75pc;
+	float radius_100pc;
+	float psf_radial_average_max;
+
+	Image psf;
+	Curve psf_radial_average;
+	Curve psf_radial_count;
+
+	long pixel_counter = 0;
+
+	float threshold;
+
+	// Turn the ctf_reconstruction into a "proper" image object so we can easily FT it
+	psf.Allocate(reconstruction.logical_x_dimension,reconstruction.logical_y_dimension,reconstruction.logical_z_dimension,false);
+	for (pixel_counter = 0; pixel_counter <= reconstruction.image_reconstruction.physical_upper_bound_complex_z * reconstruction.image_reconstruction.physical_upper_bound_complex_y * reconstruction.image_reconstruction.physical_upper_bound_complex_x; pixel_counter ++)
+	{
+		psf.complex_values[pixel_counter] = reconstruction.ctf_reconstruction[pixel_counter];
+	}
+
+	// Apply the desired B factor (presumed to reflect the quality of the images, i.e. the rate of loss of contrast as a function of frequency)
+	psf.ApplyBFactor(200.0 / reconstruction.pixel_size / reconstruction.pixel_size);
+
+	// Inverse FT of the CTF^2 volume. We now have a point spread function (PSF)
+	psf.SwapRealSpaceQuadrants();
+	psf.BackwardFFT();
+	psf.DivideByConstant(reconstruction.images_processed * reconstruction.symmetry_matrices.number_of_matrices);
+	//psf.QuickAndDirtyWriteSlices("psf.mrc",1,psf.logical_z_dimension);
+
+	// Binarize with a threshold
+	// In the paper, the threshold would be: number of slices inserted (number of particles * symmetry) / e^2
+	// (they actually binarize at 1/e^2, but they first normalize by the number of images)
+	// I also add a factor of * 0.5, since we are dealing with squared CTF rather than unity
+	threshold = exp(-2.0) * 0.5 * psf.ReturnMaximumValue();
+	wxPrintf("threshold = %f\n", threshold);
+	MyDebugAssertTrue(threshold > psf.ReturnMinimumValue() && threshold < psf.ReturnMaximumValue(),"Bad threshold value: %f. Min, max of image: %f - %f\n",threshold,psf.ReturnMinimumValue(),psf.ReturnMaximumValue());
+	psf.Binarise(threshold);
+	//psf.QuickAndDirtyWriteSlices("psf_bin.mrc",1,psf.logical_z_dimension);
+
+	// Measure the radius of the blob, we need to accumulate the average radius and its sigma
+	// This is probably complicated to do properly. Let's just take the radial average and assume that the mean
+	// radius is the radius at which the radial average gets to half max.
+	//psf_radial_average.SetupXAxis(0.0, 0.5*sqrt(2.0)*float(psf.logical_x_dimension), 0.5*sqrt(2.0)*float(psf.logical_x_dimension));
+	//psf_radial_count.SetupXAxis(0.0, 0.5*sqrt(2.0)*float(psf.logical_x_dimension), 0.5*sqrt(2.0)*float(psf.logical_x_dimension));
+	psf_radial_average.SetupXAxis(0.0, psf.ReturnMaximumDiagonalRadius(), psf.ReturnMaximumDiagonalRadius()*0.5);
+	psf_radial_count.SetupXAxis(0.0, psf.ReturnMaximumDiagonalRadius(), psf.ReturnMaximumDiagonalRadius()*0.5);
+	wxPrintf("psf dim = %i, x axis from 0.0 to %0.3f\n", psf.logical_x_dimension, psf.ReturnMaximumDiagonalRadius());
+	psf.Compute1DRotationalAverage(psf_radial_average, psf_radial_count, false);
+	psf_radial_average.PrintToStandardOut();
+	psf_radial_average_max = psf_radial_average.ReturnMaximumValue();
+	wxPrintf("PSF radial average: max value = %0.3f at %0.3f\n",psf_radial_average_max,psf_radial_average.ReturnMode());
+
+	// Now let's walk through the radial average and make a note of the slope from max to 0.0 and how steep it is
+	radius_0pc = -1.0;
+	radius_25pc = -1.0;
+	radius_50pc = -1.0;
+	radius_75pc = -1.0;
+	radius_100pc = -1.0;
+	//
+	for (pixel_counter = psf_radial_average.number_of_points - 2; pixel_counter >= 0; pixel_counter -- )
+	{
+		if (psf_radial_average.data_y[pixel_counter] > 0.0 && radius_0pc < 0.0)
+		{
+			radius_0pc = psf_radial_average.data_x[pixel_counter + 1];
+		}
+		if (psf_radial_average.data_y[pixel_counter] > 0.1 * psf_radial_average_max && radius_25pc < 0.0)
+		{
+			radius_25pc = psf_radial_average.data_x[pixel_counter + 1];
+		}
+		if (psf_radial_average.data_y[pixel_counter] > 0.5 * psf_radial_average_max && radius_50pc < 0.0)
+		{
+			radius_50pc = psf_radial_average.data_x[pixel_counter + 1];
+		}
+		if (psf_radial_average.data_y[pixel_counter] > 0.9 * psf_radial_average_max && radius_75pc < 0.0)
+		{
+			radius_75pc = psf_radial_average.data_x[pixel_counter + 1];
+		}
+		if (psf_radial_average.data_y[pixel_counter] > 0.99 * psf_radial_average_max && radius_100pc < 0.0)
+		{
+			radius_100pc = psf_radial_average.data_x[pixel_counter];
+		}
+	}
+
+	wxPrintf("Radius 0: %0.3f; 25: %0.3f; 50: %0.3f; 75: %0.3f; 100: %0.3f\n",radius_0pc,radius_25pc,radius_50pc,radius_75pc,radius_100pc);
+
+	// We cheat and come up with pretend values for the radius mean and sigma
+	radius_mean = radius_50pc;
+	radius_sigma = 0.5 * (radius_25pc - radius_75pc);
+
+
+	// Eqn 1 in Naydenova & Russo (2017)
+	efficiency = 1.0 - (2.0 * radius_sigma) / radius_mean;
+
+	// Sanity check: the number should be between 0.0 and 1.0
+	MyDebugAssertTrue(efficiency > -0.01 && efficiency < 1.01, "Efficiency out of range: %0.3f\n",efficiency);
+
+	psf.Deallocate();
+	psf_radial_average.ClearData();
+	psf_radial_count.ClearData();
+
+	return efficiency;
+}
+
 void ReconstructedVolume::CosineRingMask(float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_mask_edge)
 {
 	mask_volume_in_voxels = density_map.CosineRingMask(wanted_inner_mask_radius, wanted_outer_mask_radius, wanted_mask_edge);
@@ -505,8 +629,12 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D &reconstruction, Image &
 	if (pixel_size != original_pixel_size) resolution_limit = 2.0 * pixel_size;
 
 	statistics.CalculateFSC(density_map_1, density_map_2, true);
+	// TESTING OF LOCAL FILTERING
+	/*
 	density_map_1.Deallocate();
 	density_map_2.Deallocate();
+	*/
+
 	InitWithReconstruct3D(reconstruction, pixel_size);
 	statistics.CalculateParticleFSCandSSNR(mask_volume_in_voxels, molecular_mass_in_kDa);
 	particle_area_in_pixels = statistics.kDa_to_area_in_pixel(molecular_mass_in_kDa);

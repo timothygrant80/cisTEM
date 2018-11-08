@@ -54,30 +54,50 @@ void LocalResolution::DoInteractiveUserInput()
 
 	input_image_file.CloseFile();
 
+	bool experimental_options	= my_input->GetYesNoFromUser("Set experimental options?", "Several experimental options are available", "no");
+	bool randomize_phases;
+	float resolution_for_phase_randomization;
+	bool whiten_half_maps;
+	int padding_factor;
+	randomize_phases = false;
+	resolution_for_phase_randomization = -1.0;
+	whiten_half_maps = true;
+	padding_factor = 2;
+	if (experimental_options)
+	{
+		randomize_phases 		= my_input->GetYesNoFromUser("Randomize input phases?", "The phases of the input halfmaps can be randomized beyond a chosen resolution before local volumes are extracted for FSC calculation", "no");
+		resolution_for_phase_randomization = my_input->GetFloatFromUser("Resolution for phase randomization", "Phases of the input half maps will be randomized at resolutions higher than the given resolution", "20.0", 0.0);
+		whiten_half_maps		= my_input->GetYesNoFromUser("Whiten half-maps on input","Whitening the half-maps helps obtain more localized resolution estimates","yes");
+		padding_factor			= my_input->GetIntFromUser("Padding factor","Give 1 if you don't want any padding","2",1);
+	}
+
 	delete my_input;
 
-	my_current_job.Reset(14);
-	my_current_job.ManualSetArguments("ttttftiiiibfff", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level);
+	my_current_job.Reset(18);
+	my_current_job.ManualSetArguments("ttttftiiiibfffbfbi", input_volume_one.ToUTF8().data(), input_volume_two.ToUTF8().data(), input_volume_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, my_symmetry.ToUTF8().data(), first_slice,last_slice,sampling_step,box_size,use_fixed_threshold,fixed_threshold,threshold_snr,confidence_level,randomize_phases,resolution_for_phase_randomization,whiten_half_maps,padding_factor);
 }
 
 
 bool LocalResolution::DoCalculation()
 {
-	wxString input_volume_one_fn	= my_current_job.arguments[0].ReturnStringArgument();
-	wxString input_volume_two_fn	= my_current_job.arguments[1].ReturnStringArgument();
-	wxString input_volume_mask_fn	= my_current_job.arguments[2].ReturnStringArgument();
-	wxString output_volume_fn		= my_current_job.arguments[3].ReturnStringArgument();
-	float pixel_size				= my_current_job.arguments[4].ReturnFloatArgument();
-	wxString my_symmetry			= my_current_job.arguments[5].ReturnStringArgument();
-	int first_slice					= my_current_job.arguments[6].ReturnIntegerArgument();
-	int last_slice					= my_current_job.arguments[7].ReturnIntegerArgument();
-	int sampling_step				= my_current_job.arguments[8].ReturnIntegerArgument();
-	int box_size					= my_current_job.arguments[9].ReturnIntegerArgument();
-	bool use_fixed_threshold		= my_current_job.arguments[10].ReturnBoolArgument();
-	float fixed_threshold			= my_current_job.arguments[11].ReturnFloatArgument();
-	float threshold_snr				= my_current_job.arguments[12].ReturnFloatArgument();
-	float confidence_level			= my_current_job.arguments[13].ReturnFloatArgument();
-
+	wxString input_volume_one_fn				= my_current_job.arguments[0].ReturnStringArgument();
+	wxString input_volume_two_fn				= my_current_job.arguments[1].ReturnStringArgument();
+	wxString input_volume_mask_fn				= my_current_job.arguments[2].ReturnStringArgument();
+	wxString output_volume_fn					= my_current_job.arguments[3].ReturnStringArgument();
+	float pixel_size							= my_current_job.arguments[4].ReturnFloatArgument();
+	wxString my_symmetry						= my_current_job.arguments[5].ReturnStringArgument();
+	int first_slice								= my_current_job.arguments[6].ReturnIntegerArgument();
+	int last_slice								= my_current_job.arguments[7].ReturnIntegerArgument();
+	int sampling_step							= my_current_job.arguments[8].ReturnIntegerArgument();
+	int box_size								= my_current_job.arguments[9].ReturnIntegerArgument();
+	bool use_fixed_threshold					= my_current_job.arguments[10].ReturnBoolArgument();
+	float fixed_threshold						= my_current_job.arguments[11].ReturnFloatArgument();
+	float threshold_snr							= my_current_job.arguments[12].ReturnFloatArgument();
+	float confidence_level						= my_current_job.arguments[13].ReturnFloatArgument();
+	bool randomize_phases						= my_current_job.arguments[14].ReturnBoolArgument();
+	float resolution_for_phase_randomization	= my_current_job.arguments[15].ReturnFloatArgument();
+	bool whiten_half_maps						= my_current_job.arguments[16].ReturnBoolArgument();
+	int padding_factor							= my_current_job.arguments[17].ReturnIntegerArgument();
 
 
 	// Read volumes from disk
@@ -93,31 +113,21 @@ bool LocalResolution::DoCalculation()
 	MyDebugAssertTrue(input_volume_one.HasSameDimensionsAs(&input_volume_two),"The two input volumes do not have the same dimensions");
 	MyDebugAssertTrue(input_volume_one.HasSameDimensionsAs(&input_volume_mask),"The mask does not have same dimensions as input volumes");
 
+
 	/*
-	// Print out spectral properties of input volumes
-	Curve average_power_one;
-	Curve average_power_two;
-	Curve number_of_values_one;
-	Curve number_of_values_two;
-	input_volume_one.ForwardFFT();
-	input_volume_two.ForwardFFT();
-	average_power_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	average_power_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_values_one.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	number_of_values_two.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((input_volume_one.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
-	input_volume_one.Compute1DPowerSpectrumCurve(&average_power_one, &number_of_values_one);
-	input_volume_two.Compute1DPowerSpectrumCurve(&average_power_two, &number_of_values_two);
-	input_volume_one.BackwardFFT();
-	input_volume_two.BackwardFFT();
-	wxPrintf("\n\nAverage power (vol 1):\n");
-	average_power_one.Logarithm();
-	average_power_one.PrintToStandardOut();
-	wxPrintf("\n\nNumber of values (vol 1):\n");
-	number_of_values_one.PrintToStandardOut();
-	wxPrintf("\n\nAverage power (vol 2):\n");
-	average_power_two.Logarithm();
-	average_power_two.PrintToStandardOut();
-	*/
+	 * Randomize phases beyond a given resolution. This can be useful
+	 * when testing resolution criteria
+	 */
+	if (randomize_phases && resolution_for_phase_randomization > 0.0)
+	{
+		wxPrintf("Randomizing phases beyond %0.2f A\n",resolution_for_phase_randomization);
+		input_volume_one.ForwardFFT();
+		input_volume_two.ForwardFFT();
+		input_volume_one.RandomisePhases(pixel_size/resolution_for_phase_randomization);
+		input_volume_two.RandomisePhases(pixel_size/resolution_for_phase_randomization);
+		input_volume_one.BackwardFFT();
+		input_volume_two.BackwardFFT();
+	}
 
 	// Prepare output volume
 	Image local_resolution_volume(input_volume_one);
@@ -126,7 +136,7 @@ bool LocalResolution::DoCalculation()
 
 	//
 	LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry);
+	estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size,box_size,threshold_snr,confidence_level,use_fixed_threshold,fixed_threshold,my_symmetry,whiten_half_maps,padding_factor);
 	estimator->EstimateLocalResolution(&local_resolution_volume);
 
 	// Write output volume to disk

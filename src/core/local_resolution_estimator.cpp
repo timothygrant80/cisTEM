@@ -6,6 +6,9 @@
 
 LocalResolutionEstimator::LocalResolutionEstimator()
 {
+	input_volume_one							=	NULL;
+	input_volume_two							=	NULL;
+	input_volume_mask							=	NULL;
 	box_size									=	0;
 	number_of_fsc_shells						=	0;
 	first_slice									=	0;
@@ -16,12 +19,16 @@ LocalResolutionEstimator::LocalResolutionEstimator()
 	highest_resolution_expected_in_Angstroms	=	0.0;
 	maximum_radius_in_Angstroms					=	0.0;
 	shell_number_lut_is_allocated				=	false;
+	fixed_fsc_threshold							=	0.0;
+	use_fixed_fsc_threshold						=	false;
 	threshold_snr								=	0.0;
 	threshold_confidence_n_sigma				=	0.0;
 	resolution_value_before_first_shell			=	0.0;
 	resolution_value_where_wont_estimate		=	0.0;
 	symmetry_redundancy							=	0;
-
+	whiten_half_maps							=	true;
+	shell_number_lut							=	NULL;
+	padding_factor								=	1;
 }
 
 LocalResolutionEstimator::~LocalResolutionEstimator()
@@ -31,7 +38,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator()
 	box_two.Deallocate();
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol)
+void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor)
 {
 	MyDebugAssertTrue(IsEven(box_size),"Box size should be even");
 	SetInputVolumes(wanted_input_volume_one,wanted_input_volume_two,wanted_mask_volume);
@@ -40,7 +47,6 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	sampling_step = wanted_sampling_step;
 	SetPixelSize(input_pixel_size_in_Angstroms);
 	box_size = wanted_box_size;
-	number_of_fsc_shells = box_size/2;
 	threshold_snr = wanted_threshold_snr;
 	threshold_confidence_n_sigma = wanted_threshold_confidence_n_sigma;
 	use_fixed_fsc_threshold = wanted_use_fixed_fsc_threshold;
@@ -48,9 +54,12 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 	SymmetryMatrix sym_matrix;
 	sym_matrix.Init(wanted_symmetry_symbol);
 	symmetry_redundancy = sym_matrix.number_of_matrices;
+	whiten_half_maps = wanted_whiten_half_maps;
+	padding_factor = wanted_padding_factor;
+	number_of_fsc_shells = box_size*padding_factor/2;
 
 	// Update based on user-supplied parameter values
-	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size ; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
+	resolution_value_before_first_shell = pixel_size_in_Angstroms * box_size * padding_factor ; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
 	resolution_value_where_wont_estimate = resolution_value_before_first_shell;
 }
 
@@ -75,7 +84,7 @@ void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_v
 	}
 
 	// Precompute a mask for the small boxes
-	Image box_mask(box_one);
+	Image box_mask(box_one_no_padding);
 	box_mask.SetToConstant(1.0);
 	box_mask.CosineMask(box_size / 4, box_size / 2, false, true, 0.0);
 
@@ -84,10 +93,21 @@ void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_v
 	AllocateShellNumberLUT();
 	PopulateShellNumberLUT();
 
-	// Estimate the number of independent voxels per shell, taking into account real-space apodization
+	/*
+	 * Estimate the number of independent voxels per shell, taking into account real-space apodization.
+	 *
+	 * Mask factor:
+	 * We are imposing an apodization envelope (a raised cosine, aka Hann window). The main lobe
+	 * of the Fourier transform of this envelope has a width of 2 voxels (assuming the apodization is over
+	 * the full width of the box) (according to Cardone et al), and therefore
+	 * neighboring voxels will be convoluted with each other.
+	 * The intersection of this convolution sphere with each Fourier shell can be approximated
+	 * as a disc of radius 1 voxels and surface area $\pi$.
+	 *
+	 */
 	float symmetry_factor;
 	float mask_factor;
-	mask_factor = 1.0/PI;
+	mask_factor = 1.0/(PI * float(padding_factor*padding_factor));
 	symmetry_factor = 1.0 / float(symmetry_redundancy);
 	MyDebugPrint("Scaling factor from mask = %f\nScaling factor from symmetry = %f\n",mask_factor,symmetry_factor);
 	CountIndependentVoxelsPerShell(number_of_independent_voxels,mask_factor * symmetry_factor);
@@ -111,11 +131,15 @@ void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_v
 void LocalResolutionEstimator::AllocateLocalVolumes()
 {
 	MyDebugAssertTrue(box_size > 0,"Box size was not set");
-	box_one.Allocate(box_size,box_size,box_size);
-	box_two.Allocate(box_size,box_size,box_size);
+	box_one_no_padding.Allocate(box_size,box_size,box_size);
+	box_two_no_padding.Allocate(box_size,box_size,box_size);
+	box_one.Allocate(box_size*padding_factor,box_size*padding_factor,box_size*padding_factor);
+	box_two.Allocate(box_size*padding_factor,box_size*padding_factor,box_size*padding_factor);
 	// This below to calm valgrind down
 	box_one.SetToConstant(0.0);
 	box_two.SetToConstant(0.0);
+	box_one_no_padding.SetToConstant(0.0);
+	box_two_no_padding.SetToConstant(0.0);
 }
 
 void LocalResolutionEstimator::SetInputVolumes(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume)
@@ -259,8 +283,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	}
 
 	// Whiten the input volumes
-	const bool whiten_input_volumes = true;
-	if (whiten_input_volumes)
+	if (whiten_half_maps)
 	{
 
 		input_volume_one->ForwardFFT();
@@ -321,12 +344,22 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 							}
 							else
 							{
+								//TODO: if performance is an issue, write a dedicated method to copy voxels over from large volume into small one, but with padding already done (i.e. not to the edges of small volume)
+
+								// Get voxels from input volumes into smaller boxes, mask them
+								box_one_no_padding.is_in_real_space = true;
+								box_two_no_padding.is_in_real_space = true;
+								input_volume_one->ClipInto(&box_one_no_padding,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
+								box_one_no_padding.MultiplyPixelWise(box_mask);
+								input_volume_two->ClipInto(&box_two_no_padding,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
+								box_two_no_padding.MultiplyPixelWise(box_mask);
+
+								// Pad the small boxes in real space
 								box_one.is_in_real_space = true;
 								box_two.is_in_real_space = true;
-								input_volume_one->ClipInto(&box_one,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
-								box_one.MultiplyPixelWise(box_mask);
-								input_volume_two->ClipInto(&box_two,0.0,false,0.0,i - input_volume_one->physical_address_of_box_center_x,j - input_volume_one->physical_address_of_box_center_y,k - input_volume_one->physical_address_of_box_center_z);
-								box_two.MultiplyPixelWise(box_mask);
+								box_one_no_padding.ClipInto(&box_one,0.0);
+								box_two_no_padding.ClipInto(&box_two,0.0);
+
 #ifdef DEBUG
 								if (on_dbg_point)
 								{
@@ -338,6 +371,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 								box_one.ForwardFFT(false);
 								box_two.ForwardFFT(false);
 
+								// FSC
 								box_one.ComputeFSCVectorized(&box_two, &work_box_one, &work_box_two, &work_box_cross, number_of_fsc_shells, shell_number_lut, computed_fsc, work_sum_of_squares, work_sum_of_other_squares, work_sum_of_cross_products);
 								//box_one.ComputeFSC(&box_two, number_of_fsc_shells, shell_number_lut, computed_fsc, work_sum_of_squares, work_sum_of_other_squares, work_sum_of_cross_products);
 

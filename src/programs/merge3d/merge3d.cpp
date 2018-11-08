@@ -279,7 +279,7 @@ bool Merge3DApp::DoCalculation()
 			box_size = int(krr * gui_statistics->ReturnEstimatedResolution() / original_pixel_size);
 			wxPrintf("Will estimate local resolution using a box size of %i\n",box_size);
 			const float threshold_snr = 0.5;
-			const float threshold_confidence = 3.0;
+			const float threshold_confidence = 2.0;
 			const bool use_fixed_threshold = false;
 			const float fixed_fsc_threshold = 0.5;
 

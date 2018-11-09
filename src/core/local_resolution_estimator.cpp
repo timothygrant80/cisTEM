@@ -36,6 +36,9 @@ LocalResolutionEstimator::~LocalResolutionEstimator()
 	DeallocateShellNumberLUT();
 	box_one.Deallocate();
 	box_two.Deallocate();
+	box_one_no_padding.Deallocate();
+	box_two_no_padding.Deallocate();
+
 }
 
 void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_one, Image *wanted_input_volume_two, Image *wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor)

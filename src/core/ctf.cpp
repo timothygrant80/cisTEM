@@ -141,7 +141,14 @@ float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
  */
 float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth)
 {
-	return DefocusGivenAzimuth(azimuth) / (squared_wavelength * spherical_aberration) ;
+	if (spherical_aberration == 0.0)
+	{
+		return 9999.999;
+	}
+	else
+	{
+		return DefocusGivenAzimuth(azimuth) / (squared_wavelength * spherical_aberration) ;
+	}
 }
 
 /*

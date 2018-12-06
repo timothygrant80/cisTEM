@@ -799,14 +799,16 @@ void ParticlePositionAssetList::CheckMemory()
 {
 	ParticlePositionAsset *buffer;
 
+	const int chunk_size = 2500000;
+
 	// check we have enough memory
 
 	if (number_of_assets >= number_allocated)
 	{
 		// reallocate..
 
-		if (number_of_assets < 10000) number_allocated *= 2;
-		else number_allocated += 10000;
+		if (number_of_assets < chunk_size) number_allocated *= 2;
+		else number_allocated += chunk_size;
 
 		buffer = new ParticlePositionAsset[number_allocated];
 

@@ -1,12 +1,12 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-extern MyMovieAssetPanel *movie_asset_panel;
+// extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
-extern MyFindCTFResultsPanel *ctf_results_panel;
+// extern MyFindCTFResultsPanel *ctf_results_panel;
 
 MatchTemplatePanel::MatchTemplatePanel( wxWindow* parent )
 :
@@ -351,6 +351,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	int job_counter;
 	int number_of_rotations = 0;
+	int number_of_defocus_positions;
 
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
@@ -367,24 +368,50 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	bool parameter_map[5]; // needed for euler search init
 	for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
 
-	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
-
-	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs() - 1;
-	int number_of_jobs = number_of_processes * active_group.number_of_members;
-
-
-	// how many jobs are there going to be..
-
 	float wanted_out_of_plane_angular_step = OutofPlaneStepNumericCtrl->ReturnValue();
 	float wanted_in_plane_angular_step = InPlaneStepNumericCtrl->ReturnValue();
 
+	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
+
+	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs() - 1;
+
+	// how many jobs are there going to be..
+
+	// get first image to make decisions about how many jobs.. .we assume this is representative.
+
+
+	current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
+	current_image_euler_search = new EulerSearch;
+	current_image_euler_search->InitGrid("C1", wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+
+	if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+	{
+		current_image_euler_search->theta_max = 180.0f;
+	}
+
+	current_image_euler_search->CalculateGridSearchPositions(false);
+
+
+	if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
+	else
+	if (current_image_euler_search->number_of_search_positions > number_of_processes * 250) number_of_jobs_per_image_in_gui = number_of_processes * 10;
+	else number_of_jobs_per_image_in_gui = number_of_processes * 5;
+
+	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
+
+	delete current_image_euler_search;
+
+// Some settings for testing
+	float defocus_search_range = 1200.0f;
+	float defocus_step = 200.0f;
+
+	// number of rotations
 
 	for (float current_psi = 0.0f; current_psi <= 360.0f; current_psi += wanted_in_plane_angular_step)
 	{
 		number_of_rotations++;
 	}
 
-	number_of_jobs_per_image_in_gui = number_of_processes;
 	my_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
 
 	expected_number_of_results = 0;
@@ -417,14 +444,17 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 		current_image_euler_search->CalculateGridSearchPositions(false);
 
+		number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
 
-		wxPrintf("There are %i search positions\n", current_image_euler_search->number_of_search_positions);
+		wxPrintf("There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions);
 		// how many orientations will each process do for this image..
-		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations;
-		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_processes) / float(number_of_processes);
+		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions;
+		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_jobs_per_image_in_gui) / float(number_of_jobs_per_image_in_gui);
+
 		current_orientation_counter = 0;
 
-		for (job_counter = 0; job_counter < number_of_processes; job_counter++)
+		for (job_counter = 0; job_counter < number_of_jobs_per_image_in_gui; job_counter++)
 		{
 			wxString 	input_search_images = current_image->filename.GetFullPath();
 			wxString 	input_reconstruction = current_volume->filename.GetFullPath();
@@ -444,8 +474,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			float high_resolution_limit = resolution_limit;
 			float angular_step = wanted_out_of_plane_angular_step;
 			int best_parameters_to_keep = 1;
-			float defocus_search_range = 0.0f;
-			float defocus_step = 0.0f;
+//			float defocus_search_range = 0.0f;
+//			float defocus_step = 0.0f;
 			float padding = 1;
 			bool ctf_refinement = false;
 			float mask_radius_search = EstimatedParticleSizeTextCtrl->ReturnValue();
@@ -453,15 +483,17 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			wxString best_psi_output_file = "/dev/null";
 			wxString best_theta_output_file = "/dev/null";
 			wxString best_phi_output_file = "/dev/null";
+			wxString best_defocus_output_file = "/dev/null";
 			wxString scaled_mip_output_file ="/dev/null";
 			wxString correlation_variance_output_file = "/dev/null";
 			wxString my_symmetry = "C1";
 			float in_plane_angular_step = wanted_in_plane_angular_step;
 			wxString output_histogram_file = "/dev/null";
 
+			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int first_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter += orientations_per_process;
-			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions || job_counter == number_of_processes - 1) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
+			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions || job_counter == number_of_jobs_per_image_in_gui - 1) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int last_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter++;
 
@@ -471,7 +503,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			my_job_package.AddJob("ttffffffffffifffbfftttttttftiiiitt",	input_search_images.ToUTF8().data(),
+			my_job_package.AddJob("ttffffffffffifffbffttttttttftiiiitt",	input_search_images.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -494,6 +526,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_psi_output_file.ToUTF8().data(),
 																	best_theta_output_file.ToUTF8().data(),
 																	best_phi_output_file.ToUTF8().data(),
+																	best_defocus_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
 																	correlation_variance_output_file.ToUTF8().data(),
 																	my_symmetry.ToUTF8().data(),

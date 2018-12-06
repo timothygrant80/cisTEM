@@ -677,7 +677,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 			junk_image.RotateFourier2D(junk_image_rotate,myangle,1.0,false);
 			junk_image_rotate.SwapRealSpaceQuadrants();
 			junk_image_rotate.QuickAndDirtyWriteSlice("/tmp/templates.mrc", number_of_candidate_particles);
-#endif DEBUG
+#endif
 
 			if (write_out_plt)
 			{

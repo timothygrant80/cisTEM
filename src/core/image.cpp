@@ -4684,19 +4684,25 @@ void Image::WriteSlicesAndFillHeader(std::string wanted_filename, float wanted_p
 	output_file.CloseFile();
 }
 
-void Image::QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write)
+void Image::QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write, bool overwrite, float pixel_size)
 {
 	MyDebugAssertTrue(first_slice_to_write >0, "Slice is less than 1, first slice is 1");
-	MRCFile output_file(filename, false);
+	MRCFile output_file(filename, overwrite);
 	WriteSlices(&output_file,first_slice_to_write,last_slice_to_write);
+	if (pixel_size <= 0.0f) pixel_size = 1.0;
+	output_file.SetPixelSize(pixel_size);
+	output_file.WriteHeader();
 }
 
 
-void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite)
+void Image::QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite, float pixel_size)
 {
 	MyDebugAssertTrue(slice_to_write >0, "Slice is less than 1, first slice is 1");
 	MRCFile output_file(filename, overwrite);
 	WriteSlice(&output_file, slice_to_write);
+	if (pixel_size <= 0.0f) pixel_size = 1.0;
+	output_file.SetPixelSize(pixel_size);
+	output_file.WriteHeader();
 }
 
 void Image::QuickAndDirtyReadSlice(std::string filename, long slice_to_read)
@@ -7374,7 +7380,7 @@ void Image::InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x
 	{
 		//kk_logi = kk - other_image->physical_address_of_box_center_z;
 		k = physical_address_of_box_center_z + wanted_z_coord - other_image->physical_address_of_box_center_z + kk;
-		k=0;
+//		k=0;
 
 		for (jj = 0; jj < other_image->logical_y_dimension; jj++)
 		{
@@ -9062,8 +9068,8 @@ void Image::Rotate3DByRotationMatrixAndOrApplySymmetryThenShift(RotationMatrix &
 	buffer_image.SetToConstant(0.0f);
 
 	float max_radius_squared;
-	if(wanted_max_radius_in_pixels == 0.0f) logical_x_dimension / 2.0f - 1.0f;
-	else max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
+	if(wanted_max_radius_in_pixels == 0.0f) wanted_max_radius_in_pixels = ReturnSmallestLogicalDimension() / 2.0f - 1.0f;
+	max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
 
 	for (k = 0; k < logical_z_dimension; k++)
 	{
@@ -9130,8 +9136,8 @@ void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, fl
 	buffer_image.SetToConstant(0.0f);
 
 	float max_radius_squared;
-	if(wanted_max_radius_in_pixels == 0.0f) logical_x_dimension / 2.0f - 1.0f;
-	else max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
+	if(wanted_max_radius_in_pixels == 0.0f) wanted_max_radius_in_pixels = ReturnSmallestLogicalDimension() / 2.0f - 1.0f;
+	max_radius_squared = powf(wanted_max_radius_in_pixels, 2);
 
 	for (k = 0; k < logical_z_dimension; k++)
 	{

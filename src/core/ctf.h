@@ -75,6 +75,7 @@ public:
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);
 	float PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
+	float PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(float squared_spatial_frequency, float defocus);
 	float DefocusGivenAzimuth(float azimuth);
 	float WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 	inline float GetLowestFrequencyForFitting() { return lowest_frequency_for_fitting; };
@@ -83,13 +84,17 @@ public:
 	inline float GetAstigmatism(){ return defocus_1 - defocus_2; };
 	bool IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus = 100.0);
 	void EnforceConvention();
+	void PrintInfo();
 	inline float GetDefocus1() { return defocus_1; };
 	inline float GetDefocus2() { return defocus_2; };
+	inline float GetSphericalAberration(){return spherical_aberration;};
 	inline float GetAstigmatismAzimuth() { return astigmatism_azimuth; };
 	inline float GetAdditionalPhaseShift() { return additional_phase_shift; };
 	inline float GetWavelength() { return wavelength; };
 	int ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
 	float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);
 	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth);
-	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth);
+	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(float azimuth);
+	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus);
+	float ReturnPhaseAberrationMaximum();
 };

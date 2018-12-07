@@ -54,6 +54,7 @@ public:
 	void AllocateSavitzkyGolayCoefficients();
 	void CheckMemory();
 	void AddWith(Curve *other_curve);
+	void DivideBy(Curve *other_curve);
 	void SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points);
 	float ReturnMaximumValue();
 	float ReturnMode();

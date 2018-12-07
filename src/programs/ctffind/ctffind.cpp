@@ -1,11 +1,14 @@
 #include "../../core/core_headers.h"
 
 //#define threshold_spectrum
+#define use_epa_rather_than_zero_counting
 
 const std::string ctffind_version = "4.1.12";
 /*
  * Changelog
  * - 4.1.12
+ * -- diagnostic image includes radial "equi-phase" average of experimental spectrum in bottom right quadrant
+ * -- new "equi-phase averaging" code will probably replace zero-counting eventually
  * -- bug fix (affected diagnostics for all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
  * -- bug fix (affected 4.1.11): fitting was only done up to 5Å
  * -- slow, exhaustive search is no longer the default (since astigmatism-related bugs appear fixed)
@@ -239,11 +242,12 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 void ComputeImagesWithNumberOfExtremaAndCTFValues(CTF *ctf, Image *number_of_extrema, Image *ctf_values);
 int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image *number_of_extrema, long address, Image *ctf_values, float ctf_values_profile[]);
 bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_renormalized[], float number_of_extrema_profile[], float ctf_values_profile[]);
-void OverlayCTF( Image *spectrum, CTF *ctf);
+void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *epa_pre_max, Curve *epa_post_max);
+void OverlayCTF( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve *equiphase_average_pre_max, Curve *equiphase_average_post_max);
 void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin);
 bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit );
 void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]);
-
+float ReturnAzimuthToUseFor1DPlots(CTF *ctf);
 
 IMPLEMENT_APP(CtffindApp)
 
@@ -792,7 +796,7 @@ bool CtffindApp::DoCalculation()
 	const float			maximum_resolution_for_initial_search = 5.0;
 
 	// Debugging
-	const bool			dump_debug_files = false;
+	const bool			dump_debug_files = true;
 
 	/*
 	 *  Scoring function
@@ -1683,6 +1687,8 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
+		Curve equiphase_average_pre_max;
+		Curve equiphase_average_post_max;
 		if (compute_extra_stats)
 		{
 			number_of_extrema_image->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
@@ -1703,7 +1709,30 @@ bool CtffindApp::DoCalculation()
 				number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
 			}
 			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
-
+#ifdef use_epa_rather_than_zero_counting
+			ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, &current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+			// Replace the old curve with EPA values
+			{
+				float current_sq_sf;
+				float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(&current_ctf);
+				float defocus_for_1d_plots = current_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots);
+				float sq_sf_of_phase_shift_maximum = current_ctf.ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
+				for (counter=1;counter<number_of_bins_in_1d_spectra;counter++)
+				{
+					current_sq_sf = powf(spatial_frequency[counter],2);
+					if (current_sq_sf <= sq_sf_of_phase_shift_maximum)
+					{
+						rotational_average_astig[counter] = equiphase_average_pre_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+					}
+					else
+					{
+						rotational_average_astig[counter] = equiphase_average_post_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+					}
+					rotational_average_astig_renormalized[counter] = rotational_average_astig[counter];
+				}
+				Renormalize1DSpectrumForFRC(number_of_bins_in_1d_spectra,rotational_average_astig_renormalized,rotational_average_astig_fit,number_of_extrema_profile);
+			}
+#endif
 			// Here, do FRC
 			int first_fit_bin = 0;
 			for (int bin_counter = number_of_bins_in_1d_spectra - 1; bin_counter >= 0; bin_counter -- )
@@ -1804,7 +1833,8 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-		OverlayCTF(average_spectrum, &current_ctf);
+		OverlayCTF(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,number_of_extrema_profile,ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
 
@@ -2205,7 +2235,7 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 
 
 //
-void OverlayCTF( Image *spectrum, CTF *ctf)
+void OverlayCTF( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve *epa_pre_max, Curve *epa_post_max)
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 
@@ -2219,10 +2249,14 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 	float j_logi, j_logi_sq;
 	float current_spatial_frequency_squared;
 	float current_azimuth;
+	float current_defocus;
+	float current_phase_aberration;
+	float sq_sf_of_phase_aberration_maximum;
 	const float lowest_freq  = pow(ctf->GetLowestFrequencyForFitting(),2);
 	const float highest_freq = pow(ctf->GetHighestFrequencyForFitting(),2);
 	float current_ctf_value;
 	float target_sigma;
+	int chosen_bin;
 
 	//spectrum->QuickAndDirtyWriteSlice("dbg_spec_overlay_entry.mrc",1);
 
@@ -2238,6 +2272,30 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 			i_logi_sq = powf(i_logi,2);
 			//
 			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+			current_azimuth = atan2(j_logi,i_logi);
+			current_defocus = ctf->DefocusGivenAzimuth(current_azimuth);
+			current_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_spatial_frequency_squared,current_defocus);
+			//
+			sq_sf_of_phase_aberration_maximum = ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(current_defocus);
+
+			if (j < spectrum->physical_address_of_box_center_y && i >= spectrum->physical_address_of_box_center_x)
+			{
+				// Experimental 1D average
+#ifdef use_epa_rather_than_zero_counting
+				if (current_spatial_frequency_squared <= sq_sf_of_phase_aberration_maximum)
+				{
+					spectrum->real_values[address] = epa_pre_max->ReturnLinearInterpolationFromX(current_phase_aberration);
+				}
+				else
+				{
+					spectrum->real_values[address] = epa_post_max->ReturnLinearInterpolationFromX(current_phase_aberration);
+				}
+#else
+				// Work out which bin in the astig rot average this pixel corresponds to
+				chosen_bin = ReturnSpectrumBinNumber(number_of_bins_in_1d_spectra,number_of_extrema_profile,number_of_extrema, address, ctf_values, ctf_values_profile);
+				spectrum->real_values[address] = rotational_average_astig[chosen_bin];
+#endif
+			}
 			//
 			if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared <= highest_freq)
 			{
@@ -2482,6 +2540,151 @@ bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 
 }
 
+
+/*
+ * Compute average value in power spectrum as a function of wave function aberration. This allows for averaging even when
+ * there is significant astigmatism.
+ * This should be nicer than counting zeros and looking for nearest CTF value as described in the original ctffind4 manuscript.
+ * Inspired by gctf and others, but I think more robust because it takes into account that the aberration decreases again at
+ * very high spatial frequencies, when Cs takes over from defocus.
+ */
+void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *epa_pre_max, Curve *epa_post_max)
+{
+	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
+
+	const bool spectrum_is_blank = spectrum->IsConstant();
+
+	const int curve_oversampling_factor = 1;
+	const bool curve_x_is_linear = true;
+
+	/*
+	 * Initialize the curve objects. One keeps track of EPA pre phase aberration maximum (before Cs term takes over), the other post.
+	 */
+	if (curve_x_is_linear)
+	{
+		float epa_max_phase_aberration;
+		if (ctf->GetSphericalAberration() == 0.0)
+		{
+			epa_max_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(0.5,std::max(ctf->GetDefocus1(),ctf->GetDefocus2()));
+		}
+		else
+		{
+			epa_max_phase_aberration = ctf->ReturnPhaseAberrationMaximum();
+		}
+
+		// we setup a curve with negative phase aberrations too, in case of overfocus
+		epa_pre_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
+		epa_post_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
+	}
+	else
+	{
+		MyDebugAssertTrue(false,"Not implemented");
+	}
+	epa_pre_max->SetYToConstant(0.0);
+	epa_post_max->SetYToConstant(0.0);
+
+	/*
+	 * We'll also need to keep track of the number of values
+	 */
+	Curve count_pre_max;
+	Curve count_post_max;
+	count_pre_max.CopyFrom(epa_pre_max);
+	count_post_max.CopyFrom(epa_post_max);
+
+	if (!spectrum_is_blank)
+	{
+		long address = 0;
+		int i,j;
+		float i_logi,j_logi;
+		float i_logi_sq,j_logi_sq;
+		float current_spatial_frequency_squared;
+		float current_azimuth;
+		float current_phase_aberration;
+		float sq_sf_of_phase_aberration_maximum;
+		float current_defocus;
+		for (j=0;j < spectrum->logical_y_dimension;j++)
+		{
+			j_logi = float(j-spectrum->physical_address_of_box_center_y) * spectrum->fourier_voxel_size_y;
+			j_logi_sq = powf(j_logi,2);
+			for (i=0 ;i < spectrum->logical_x_dimension; i++)
+			{
+				i_logi = float(i-spectrum->physical_address_of_box_center_x) * spectrum->fourier_voxel_size_x;
+				i_logi_sq = powf(i_logi,2);
+				//
+				current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+				current_azimuth = atan2(j_logi,i_logi);
+				current_defocus = ctf->DefocusGivenAzimuth(current_azimuth);
+				current_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_spatial_frequency_squared,current_defocus);
+				//
+				sq_sf_of_phase_aberration_maximum = ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(current_defocus);
+				//
+				if (current_spatial_frequency_squared <= sq_sf_of_phase_aberration_maximum)
+				{
+					// Add to pre-max
+					epa_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
+					count_pre_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+				}
+				else
+				{
+					/*
+					 * We are after the maximum phase aberration (i.e. the Cs term has taken over, phase aberration is decreasing as a function of sf)
+					 */
+					// Add to post-max
+					epa_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
+					count_post_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+				}
+				//
+				address++;
+			}
+			address += spectrum->padding_jump_value;
+		}
+
+		/*
+		 * Do the averaging
+		 */
+		epa_pre_max->DivideBy(&count_pre_max);
+		epa_post_max->DivideBy(&count_post_max);
+		epa_pre_max->PrintToStandardOut();
+	}
+
+}
+
+float ReturnAzimuthToUseFor1DPlots(CTF *ctf)
+{
+	const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PI;
+	float azimuth_of_mid_defocus;
+	float angular_distance_from_axes;
+
+	// We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
+	azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth() + PI * 0.25;
+	// We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
+	angular_distance_from_axes = fmod(azimuth_of_mid_defocus,PI * 0.5);
+	if(fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians)
+	{
+		if (angular_distance_from_axes > 0.0)
+		{
+			azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
+		}
+		else
+		{
+			azimuth_of_mid_defocus = - min_angular_distances_from_axes_radians;
+		}
+	}
+	if (fabs(angular_distance_from_axes) > 0.5 * PI - min_angular_distances_from_axes_radians)
+	{
+		if (angular_distance_from_axes > 0.0)
+		{
+			azimuth_of_mid_defocus = PI * 0.5 - min_angular_distances_from_axes_radians;
+		}
+		else
+		{
+			azimuth_of_mid_defocus = - PI * 0.5 + min_angular_distances_from_axes_radians;
+		}
+	}
+
+	return azimuth_of_mid_defocus;
+}
+
 //
 bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_rank[], float number_of_extrema_profile[], float ctf_values_profile[])
 {
@@ -2492,10 +2695,8 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 	MyDebugAssertTrue(spectrum->HasSameDimensionsAs(ctf_values),"Spectrum and CTF values images do not have same dimensions");
 	//
 	const bool spectrum_is_blank = spectrum->IsConstant();
-	const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PI;
 	int counter;
 	float azimuth_of_mid_defocus;
-	float angular_distance_from_axes;
 	float current_spatial_frequency_squared;
 	int number_of_values[number_of_bins];
 	int i, j;
@@ -2516,32 +2717,9 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 	//
 	if (! spectrum_is_blank)
 	{
-		// For each bin of our 1D profile we compute the CTF. We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
-		azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth() + PI * 0.25;
-		// We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
-		angular_distance_from_axes = fmod(azimuth_of_mid_defocus,PI * 0.5);
-		if(fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians)
-		{
-			if (angular_distance_from_axes > 0.0)
-			{
-				azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
-			}
-			else
-			{
-				azimuth_of_mid_defocus = - min_angular_distances_from_axes_radians;
-			}
-		}
-		if (fabs(angular_distance_from_axes) > 0.5 * PI - min_angular_distances_from_axes_radians)
-		{
-			if (angular_distance_from_axes > 0.0)
-			{
-				azimuth_of_mid_defocus = PI * 0.5 - min_angular_distances_from_axes_radians;
-			}
-			else
-			{
-				azimuth_of_mid_defocus = - PI * 0.5 + min_angular_distances_from_axes_radians;
-			}
-		}
+		// For each bin of our 1D profile we compute the CTF at a chosen defocus
+		azimuth_of_mid_defocus = ReturnAzimuthToUseFor1DPlots(ctf);
+
 		// Now that we've chosen an azimuth, we can compute the CTF for each bin of our 1D profile
 		for (counter=0;counter < number_of_bins; counter++)
 		{
@@ -2732,6 +2910,7 @@ integer function ComputePowerSpectrumBinNumber(number_of_bins,number_of_extrema_
     endif
 end function ComputePowerSpectrumBinNumber
 */
+
 
 
 // Compute an image where each pixel stores the number of preceding CTF extrema. This is described as image "E" in Rohou & Grigorieff 2015 (see Fig 3)

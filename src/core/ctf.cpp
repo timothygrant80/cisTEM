@@ -105,7 +105,7 @@ int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatia
 
 	int number_of_extrema = 0;
 	int number_of_extrema_before_chi_extremum = 0;
-	float sq_sf_of_chi_extremum = ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(azimuth);
+	float sq_sf_of_chi_extremum = ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(azimuth);
 
 	if (squared_spatial_frequency <= sq_sf_of_chi_extremum)
 	{
@@ -131,15 +131,42 @@ float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
 	 * only return the correct spatial frequency for the CTF zeroes between the origin and the frequency at which
 	 * the phase aberration peaks.
 	 */
-	MyDebugAssertTrue(which_zero < ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(azimuth),azimuth),"Oops, this method only works for the first few zeroes");
+	MyDebugAssertTrue(which_zero < ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(azimuth),azimuth),"Oops, this method only works for the first few zeroes");
 	float phase_shift = which_zero * PI;
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
 
 /*
+ * Return the maximum phase aberration
+ */
+float CTF::ReturnPhaseAberrationMaximum()
+{
+	// We use the maximum defocus
+	float defocus_max = std::max(fabs(defocus_1),fabs(defocus_2));
+	float sq_sf_of_phase_aberration_max;
+	if (spherical_aberration == 0.0)
+	{
+		sq_sf_of_phase_aberration_max = 99999.99;
+	}
+	else
+	{
+		sq_sf_of_phase_aberration_max= defocus_max / (squared_wavelength * spherical_aberration);
+	}
+	return PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(sq_sf_of_phase_aberration_max,defocus_max);
+}
+
+/*
  * Return the squared spatial frequency at which the phase aberration function reaches its extremum
  */
-float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth)
+float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(float azimuth)
+{
+	return ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(DefocusGivenAzimuth(azimuth));
+}
+
+/*
+ * Return the squared spatial frequency at which the phase aberration function reaches its extremum
+ */
+float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus)
 {
 	if (spherical_aberration == 0.0)
 	{
@@ -147,9 +174,10 @@ float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremum(float azimuth)
 	}
 	else
 	{
-		return DefocusGivenAzimuth(azimuth) / (squared_wavelength * spherical_aberration) ;
+		return defocus / (squared_wavelength * spherical_aberration) ;
 	}
 }
+
 
 /*
  * Return the squared spatial frequency at which a given phase aberration is obtained. Note that this will return only one of the
@@ -269,10 +297,14 @@ negative phase shift of scattered electrons.
 Note that there is an additional (precomputed) term so that the CTF can then be computed by simply
 taking the sine of the returned phase shift.
 */
+float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(float squared_spatial_frequency, float defocus)
+{
+	return PI * wavelength * squared_spatial_frequency * ( defocus - 0.5 * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+}
+
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth)
 {
-	MyDebugAssertTrue(squared_spatial_frequency >= 0.0,"Bad squared spatial frequency: %f", squared_spatial_frequency);
-	return PI * wavelength * squared_spatial_frequency * ( DefocusGivenAzimuth(azimuth) - 0.5 * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+	return PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(squared_spatial_frequency,DefocusGivenAzimuth(azimuth));
 }
 
 // Return the effective defocus at the azimuth of interest
@@ -326,4 +358,13 @@ void CTF::EnforceConvention() {
 	astigmatism_azimuth -= PI * roundf(astigmatism_azimuth/PI);
 }
 
+void CTF::PrintInfo()
+{
+	wxPrintf("\nCTF info\n");
+	wxPrintf("Defocus 1 = %f\n",defocus_1);
+	wxPrintf("Defocus 2 = %f\n",defocus_2);
+	wxPrintf("Cs = %f\n",spherical_aberration);
+	wxPrintf("AmpCont = %f\n",amplitude_contrast);
+	wxPrintf("\n");
+}
 

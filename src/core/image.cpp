@@ -4474,21 +4474,30 @@ bool Image::IsBinary()
 bool Image::HasNan()
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	long pixel_counter = 0;
-	for ( int k = 0; k < logical_z_dimension; k ++ )
+	if (is_in_real_space == true) 
 	{
-		for ( int j = 0; j < logical_y_dimension; j ++ )
+		long pixel_counter = 0;
+		for ( int k = 0; k < logical_z_dimension; k ++ )
 		{
-			for ( int i = 0; i < logical_x_dimension; i ++ )
+			for ( int j = 0; j < logical_y_dimension; j ++ )
 			{
-				//if (isnan(real_values[pixel_counter])) return true; // isnan() is part of C++11
-				if (std::isnan(real_values[pixel_counter])) return true; // std::isnan() is part of C++14
-				pixel_counter ++;
+				for ( int i = 0; i < logical_x_dimension; i ++ )
+				{
+					if (std::isnan(real_values[pixel_counter])) return true;
+					pixel_counter ++;
+				}
+				pixel_counter += padding_jump_value;
 			}
-			pixel_counter += padding_jump_value;
+
+
 		}
-
-
+	}
+	else
+	{
+		for (long pixel_counter = 0; pixel_counter < real_memory_allocated/2 ; pixel_counter ++)
+		{
+			if (std::isnan(abs(complex_values[pixel_counter]))) return true; 
+		}
 	}
 	return false;
 }
@@ -5877,7 +5886,10 @@ void Image::InvertPixelOrder()
 void Image::AddImage(Image *other_image)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-
+	MyDebugAssertTrue(logical_x_dimension == other_image->logical_x_dimension && logical_y_dimension == other_image->logical_y_dimension && logical_z_dimension == other_image->logical_z_dimension,
+					  "Image dimensions do not match, Image  %d, %d, %d \nImage to be added %d, %d, %d",
+					  logical_x_dimension,logical_y_dimension,logical_z_dimension,
+					  other_image->logical_x_dimension,other_image->logical_y_dimension,other_image->logical_z_dimension) ;
 	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 	{
 		real_values[pixel_counter] += other_image->real_values[pixel_counter];

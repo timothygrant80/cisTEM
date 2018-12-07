@@ -94,7 +94,11 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
     lowest_frequency_for_fitting = wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     highest_frequency_for_fitting = wanted_highest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     astigmatism_tolerance = wanted_astigmatism_tolerance_in_angstroms / pixel_size_in_angstroms;
-    precomputed_amplitude_contrast_term = atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
+
+    // gcc catches the zero division somehow, but intel returns a nan. Needed for handling the real and complex terms of the CTF separately.
+    if (fabs(amplitude_contrast - 1.0) < 1e-3) precomputed_amplitude_contrast_term = PI / 2.0f;
+    else precomputed_amplitude_contrast_term = atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
+
 }
 
 /*
@@ -325,5 +329,3 @@ void CTF::EnforceConvention() {
 	}
 	astigmatism_azimuth -= PI * roundf(astigmatism_azimuth/PI);
 }
-
-

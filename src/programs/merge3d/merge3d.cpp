@@ -295,10 +295,12 @@ bool Merge3DApp::DoCalculation()
 			estimator->EstimateLocalResolution(&local_resolution_volume);
 			delete estimator;
 
+			/*
 #ifdef DEBUG
 			local_resolution_volume.QuickAndDirtyWriteSlices("locres.mrc", 1, size_image.logical_z_dimension);
 			output_3d.density_map.QuickAndDirtyWriteSlices("before_locres_filter.mrc",1,output_3d.density_map.logical_z_dimension);
 #endif
+			*/
 
 			MyDebugPrint("About to apply locres filter\n");
 

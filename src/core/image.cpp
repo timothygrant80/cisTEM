@@ -6403,9 +6403,11 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 			lp_volume.CosineMask(current_filter_freq, cosine_falloff_width);
 		}
 		lp_volume.BackwardFFT();
+		/*
 #ifdef DEBUG
 		lp_volume.QuickAndDirtyWriteSlices(wxString::Format("dbg_fil_%02i.mrc",filter_counter).ToStdString(), 1, lp_volume.logical_z_dimension);
 #endif
+		*/
 
 		/*
 		 * Loop over the image and copy relevant voxels over

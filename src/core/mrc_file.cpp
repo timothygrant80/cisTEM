@@ -317,6 +317,65 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		}
 		break;
 	}
+
+	{
+		/*
+		 * Deal with the cases where the data are not indexed like this:
+		 * - fastest = column (map_c = 1)
+		 * - medium = row (map_r = 2)
+		 * - slow = section (map_s = 3)
+		 */
+
+		long counter;
+		long counter_in_file;
+		long number_of_voxels = my_header.ReturnDimensionX()*my_header.ReturnDimensionY()*my_header.ReturnDimensionZ();
+
+		// Allocate a temp array and copy data over
+		float * temp_array;
+		temp_array = new float[number_of_voxels];
+		for (counter = 0; counter < number_of_voxels; counter ++ ) {temp_array[counter] = output_array[counter];}
+
+		//
+		int col_index;
+		int row_index;
+		int sec_index;
+
+		if (my_header.ReturnMapC() == 1 && my_header.ReturnMapR() == 2 && my_header.ReturnMapS() == 3)
+		{
+			// Nothing to do, this is how cisTEM expects the data to be laid out
+		}
+		else if (my_header.ReturnMapS() == 1 && my_header.ReturnMapC() ==3)
+		{
+			// Loop over output array and copy voxel values over one by one
+			counter = 0;
+			for (sec_index=0; sec_index < my_header.ReturnDimensionZ(); sec_index++) //z
+			{
+				for (row_index=0; row_index < my_header.ReturnDimensionY(); row_index++) //y
+				{
+					for (col_index=0; col_index < my_header.ReturnDimensionX(); col_index++) //x
+						{
+						// compute address of voxel in the file
+						counter_in_file = sec_index + my_header.ReturnDimensionZ() * row_index + my_header.ReturnDimensionZ()*my_header.ReturnDimensionY() * col_index;
+
+						MyDebugAssertTrue(counter_in_file >= 0 && counter_in_file < number_of_voxels,"Oops bad counter_in_file = %li\n",counter_in_file);
+						MyDebugAssertTrue(counter >= 0 && counter < number_of_voxels,"Oops bad counter = %li\n",counter);
+
+						output_array[counter] = temp_array[counter_in_file];
+						counter++;
+					}
+				}
+			}
+		}
+		else
+		{
+			wxPrintf("Ooops, strange ordering of data in MRC file not yet supported");
+			abort();
+		}
+
+		// Deallocate temp array
+		delete [] temp_array;
+	}
+
 }
 
 void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_array)

@@ -330,11 +330,6 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		long counter_in_file;
 		long number_of_voxels = my_header.ReturnDimensionX()*my_header.ReturnDimensionY()*my_header.ReturnDimensionZ();
 
-		// Allocate a temp array and copy data over
-		float * temp_array;
-		temp_array = new float[number_of_voxels];
-		for (counter = 0; counter < number_of_voxels; counter ++ ) {temp_array[counter] = output_array[counter];}
-
 		//
 		int col_index;
 		int row_index;
@@ -346,6 +341,12 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		}
 		else if (my_header.ReturnMapS() == 1 && my_header.ReturnMapC() ==3)
 		{
+
+			// Allocate a temp array and copy data over
+			float * temp_array;
+			temp_array = new float[number_of_voxels];
+			for (counter = 0; counter < number_of_voxels; counter ++ ) {temp_array[counter] = output_array[counter];}
+
 			// Loop over output array and copy voxel values over one by one
 			counter = 0;
 			for (sec_index=0; sec_index < my_header.ReturnDimensionZ(); sec_index++) //z
@@ -365,15 +366,15 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 					}
 				}
 			}
+
+			// Deallocate temp array
+			delete [] temp_array;
 		}
 		else
 		{
 			wxPrintf("Ooops, strange ordering of data in MRC file not yet supported");
 			abort();
 		}
-
-		// Deallocate temp array
-		delete [] temp_array;
 	}
 
 }

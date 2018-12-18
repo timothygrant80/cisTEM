@@ -271,7 +271,6 @@ taking the sine of the returned phase shift.
 */
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth)
 {
-	MyDebugAssertTrue(squared_spatial_frequency >= 0.0,"Bad squared spatial frequency: %f", squared_spatial_frequency);
 	return PI * wavelength * squared_spatial_frequency * ( DefocusGivenAzimuth(azimuth) - 0.5 * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
 }
 

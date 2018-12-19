@@ -74,6 +74,9 @@ public:
 	void GetYMinMax(float &min_value, float &max_value);
 
 	void SetYToConstant(float wanted_constant);
+
+private:
+	int index_of_last_point_used;
 };
 
 WX_DECLARE_OBJARRAY(Curve, ArrayofCurves);

@@ -24,6 +24,8 @@ Curve::Curve()
 
 	savitzky_golay_polynomial_order = 0;
 	savitzky_golay_window_size = 0;
+
+	index_of_last_point_used = 0;
 }
 
 Curve::Curve( const Curve &other_curve) // copy constructor
@@ -48,6 +50,8 @@ Curve::Curve( const Curve &other_curve) // copy constructor
 
 	savitzky_golay_polynomial_order = 0;
 	savitzky_golay_window_size = 0;
+
+	index_of_last_point_used = 0;
 
 	*this = other_curve;
 	 //DEBUG_ABORT;
@@ -194,6 +198,8 @@ Curve & Curve::operator = (const Curve *other_curve)
 		have_savitzky_golay = other_curve->have_savitzky_golay;
 		savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
 		savitzky_golay_window_size = other_curve->savitzky_golay_window_size;
+
+		index_of_last_point_used = other_curve->index_of_last_point_used;
 
 		for (counter = 0; counter < number_of_points; counter++)
 		{
@@ -689,8 +695,8 @@ void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_
 			edge = (1.0 + cosf(PI * (current_x - wanted_x_of_cosine_start) / wanted_cosine_width_in_x)) / 2.0;
 			if (undo)
 			{
-				MyDebugAssertFalse(edge == 0.0,"Raised cosine should not be 0.0");
-				data_y[counter] /= edge;
+				//MyDebugAssertFalse(edge == 0.0,"Raised cosine should not be 0.0");
+				if (edge > 0.0) data_y[counter] /= edge;
 			}
 			else
 			{
@@ -755,24 +761,36 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
 	MyDebugAssertTrue(wanted_x >= data_x[0]  - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1]  + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
+
+	for (int counter = index_of_last_point_used; counter < number_of_points; counter++)
+	{
+		if (wanted_x >=data_x[counter] && wanted_x < data_x[counter+1])
+		{
+			index_of_last_point_used = counter;
+			return counter;
+		}
+	}
+	for (int counter = index_of_last_point_used-1; counter >=0; counter--)
+	{
+		if (wanted_x >=data_x[counter] && wanted_x < data_x[counter+1])
+		{
+			index_of_last_point_used = counter;
+			return counter;
+		}
+	}
+
 	if (wanted_x < data_x[0])
 	{
+		index_of_last_point_used = 0;
 		return 0;
 	}
 	else if (wanted_x >= data_x[number_of_points-1])
 	{
+		index_of_last_point_used = number_of_points - 1;
 		return number_of_points - 1;
 	}
-	else
-	{
-		for (int counter = 0; counter < number_of_points - 1; counter++)
-		{
-			if (wanted_x >=data_x[counter] && wanted_x < data_x[counter+1])
-			{
-				return counter;
-			}
-		}
-	}
+
+
 	// Should never get here
 	MyDebugAssertTrue(false,"Oops, programming error\n");
 	return 0;

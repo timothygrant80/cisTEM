@@ -5419,7 +5419,6 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
 	return float(sum / (long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
 }
 
-//END_FOR_STAND_ALONE_CTFFIND
 
 void Image::UpdateDistributionOfRealValues(EmpiricalDistribution *my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z )
 {
@@ -5527,7 +5526,6 @@ EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_ra
 
 }
 
-//BEGIN_FOR_STAND_ALONE_CTFFIND
 
 void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width)
 {

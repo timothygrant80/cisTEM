@@ -943,7 +943,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads)
         processorCoreCount > 0 && logicalProcessorCount == numProcs)
       physicalProcs = processorCoreCount;
     if (getenv("IMOD_REPORT_CORES"))
-      printf("core count = %d  logical processors = %d  OMP num = %d => physical "
+      wxPrintf("core count = %d  logical processors = %d  OMP num = %d => physical "
              "processors = %d\n", processorCoreCount, logicalProcessorCount, numProcs,
              physicalProcs); fflush(stdout);
 
@@ -989,7 +989,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads)
     numThreads = forceThreads;
 
   if (getenv("IMOD_REPORT_CORES"))
-      printf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
+      wxPrintf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
              limThreads, numThreads); fflush(stdout);
 #else
   numThreads = 1;

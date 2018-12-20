@@ -197,12 +197,12 @@ void BruteForceSearch::Run()
 	// The accuracy for the local minimization
 	if (minimise_at_every_step) for (i=0;i<number_of_dimensions; i++) { accuracy_for_local_minimization[i] = step_size[i] * 0.5; }
 
-	if ( print_progress_bar ) { my_progress_bar = new ProgressBar(num_iterations); }
-
 	// How many iterations have we completed?
 	num_iterations_completed = 0;
 
 	numThreads = ReturnAppropriateNumberOfThreads(maxThreads);
+
+	if ( print_progress_bar && numThreads == 1 ) { my_progress_bar = new ProgressBar(num_iterations); }
 
 	// start the brute-force search iterations
 	// DNM the minimizer did not work right with threads, so just run it normally
@@ -228,7 +228,7 @@ void BruteForceSearch::Run()
 	}
 	else
 	{
-		if (numThreads >=0) { wxPrintf("Running brute-force search with %i OpenMP threads\n",numThreads); }
+		if (numThreads > 1) { wxPrintf("\nRunning brute-force search with %i OpenMP threads\n",numThreads); }
 
 #pragma omp parallel for default(none) num_threads(numThreads) shared( all_values, all_local_best_values, all_scores) private(current_iteration, current_values, current_values_for_local_minimization, i, accuracy_for_local_minimization)
 		for (current_iteration=0; current_iteration < num_iterations; current_iteration++)
@@ -278,11 +278,11 @@ void BruteForceSearch::Run()
 
 		// Progress
 		num_iterations_completed++;
-		if (print_progress_bar) { my_progress_bar->Update(num_iterations_completed); }
+		if (print_progress_bar && numThreads == 1) { my_progress_bar->Update(num_iterations_completed); }
 
 	} // End of loop over exhaustive search operation
 
-	if (print_progress_bar) { delete my_progress_bar; }
+	if (print_progress_bar && numThreads == 1) { delete my_progress_bar; }
 	delete [] accuracy_for_local_minimization;
 	delete [] current_values_for_local_minimization;
 	delete [] all_values;

@@ -11,6 +11,7 @@
 # - update version in AC_INIT at beginning of configure.ac
 # - update version in ctffind.cpp, near line 4 (const std::string ctffind_version = "4.1.3";)
 # - update NEWS, ChangeLog
+# - commit & push to repository
 #
 # This script should be run on an older node on the cluster, to ensure compatibility. I think we want glibc <= 2.18
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash

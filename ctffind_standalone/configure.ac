@@ -3,7 +3,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_FILES([Makefile])
 AM_INIT_AUTOMAKE([subdir-objects])
 
-INPUT_CPPFLAGS="$CXXFLAGS"
+INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
 AC_PROG_CC([icc gcc])
@@ -92,15 +92,15 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
-  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $INPUT_CPPFLAGS"
+  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $INPUT_CXXFLAGS"
   fi
   ])
 
 # fftw
 
 AC_ARG_WITH(fftw-dir,
-[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its
+[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its 
                           current location is not system accessible ]],
 [
     if test "$withval" != "yes" -a "$withval" != ""; then
@@ -213,8 +213,8 @@ fi
 #
 AC_CHECK_LIB([wxtiff-3.0],[TIFFOpen],[WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"],[wxtiff=0],`$WXCONFIG --libs base`)
 if test "x$wxtiff" = "x0"; then
-  AC_SEARCH_LIBS([inflate],[z],[],[AC_MSG_ERROR(Could not find your installation of the LIBZ library)])
-  AC_SEARCH_LIBS([jpeg_read_header],[jpeg],[],[AC_MSG_ERROR(Could not find your installation of the JPEG libray)])
+#  AC_SEARCH_LIBS([inflate],[z],[],[AC_MSG_ERROR(Could not find your installation of the LIBZ library)])
+#  AC_SEARCH_LIBS([jpeg_read_header],[jpeg],[],[AC_MSG_ERROR(Could not find your installation of the JPEG libray)])
   AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])
 fi
 

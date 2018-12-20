@@ -203,7 +203,7 @@ fi
 # It's importnat that -static-intel be specified after -mkl, otherwise mkl will be linked dynamically
 if test "x$static_link" = "xtrue"; then
  if test "x$CXX" = "xicpc"; then
- 	LDFLAGS="$LDFLAGS -static-intel -static -all-static"
+ 	LDFLAGS="$LDFLAGS -static-intel"
  else
 	LDFLAGS="$LDFLAGS -static"
  fi
@@ -213,8 +213,6 @@ fi
 #
 AC_CHECK_LIB([wxtiff-3.0],[TIFFOpen],[WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"],[wxtiff=0],`$WXCONFIG --libs base`)
 if test "x$wxtiff" = "x0"; then
-#  AC_SEARCH_LIBS([inflate],[z],[],[AC_MSG_ERROR(Could not find your installation of the LIBZ library)])
-#  AC_SEARCH_LIBS([jpeg_read_header],[jpeg],[],[AC_MSG_ERROR(Could not find your installation of the JPEG libray)])
   AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])
 fi
 

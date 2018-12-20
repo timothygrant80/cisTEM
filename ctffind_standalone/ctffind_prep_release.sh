@@ -55,6 +55,7 @@ cd $version
 unset SHELL
 
 # Check out ctffind from github
+module purge
 module load apps/git
 echo "Cloning from git..."
 echo -n Github password: 

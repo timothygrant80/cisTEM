@@ -17,9 +17,7 @@
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash
 #
 version=4.1.12
-svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
-svn_loc="https://github.com/ngrigorieff/cisTEM/ctffind_4.1.12_prep"
-svn_rev="HEAD"
+branch_name="ctffind_${version}_prep"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags="--disable-debugmode --enable-staticmode --enable-openmp --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
@@ -56,11 +54,16 @@ cd $version
 # The line below is needed for su to work
 unset SHELL
 
-# Check out ctffind from SVN
-echo "Checking out from SVN..."
-svn co -r ${svn_rev} ${svn_loc} . > checkout.log 2>&1
+# Check out ctffind from github
+module load apps/git
+echo "Cloning from git..."
+echo -n Github password: 
+read -s password
+echo
+git clone --single-branch --branch "${branch_name}" "https://arohou:${password}@github.com/ngrigorieff/cisTEM.git" > clone.log 2>&1
+module unload apps/git
 
-
+cd cisTEM
 rm -f config.guess config.sub depcomp install-sh missing
 cd ctffind_standalone
 

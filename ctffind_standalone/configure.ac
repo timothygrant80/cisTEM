@@ -110,6 +110,14 @@ AC_ARG_WITH(fftw-dir,
     fi
 ])
 
+# OpenMP
+AC_ARG_ENABLE(openmp, [  --enable-openmp  Compile with OpenMP threading [[default=no]]],[
+  if test "$enableval" = yes; then
+  AC_OPENMP([],AC_MSG_ERROR("You asked for OpenMP, but I was not able to figure out how to compile programs that use OpenMP"))
+  CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
+  fi
+  ])
+
 #sqlite3-dir
 
 #AC_ARG_WITH(sqlite3-dir,

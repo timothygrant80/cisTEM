@@ -51,7 +51,8 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/sqlite/sqlite3.h \
                  src/core/basic_star_file_reader.h \
                  src/core/rle3d.h \
-                 src/core/angular_distribution_histogram.h 
+                 src/core/angular_distribution_histogram.h \
+                 src/core/local_resolution_estimator.h
 
 bin_PROGRAMS = ctffind
 

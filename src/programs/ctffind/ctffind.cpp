@@ -12,7 +12,10 @@ const std::string ctffind_version = "4.1.12";
  * -- bug fix (affected diagnostics for all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
  * -- bug fix (affected 4.1.11): fitting was only done up to 5Å
  * -- slow, exhaustive search is no longer the default (since astigmatism-related bugs appear fixed)
- * -- OpenMP threading on by default
+ * -- Number of OpenMP threads defaults to 1 and can be set by:
+ * --- using interactive user input (under expert options)
+ * --- using the -j command-line option (overrides interactive user input)
+ * -- printout timing information
  * - 4.1.11
  * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
  * -- score is now a normalized cross-correlation coefficient (David Mastronarde)
@@ -294,6 +297,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float known_defocus_1;
 	float known_defocus_2;
 	float known_phase_shift;
+	int desired_number_of_threads;
 
 
 	// Things we need for old school input
@@ -517,6 +521,7 @@ void CtffindApp::DoInteractiveUserInput()
 			}
 		}
 
+		desired_number_of_threads = 1;
 
 
 	} // end of test for old-school-input or old-school-input-ctffind4
@@ -657,22 +662,24 @@ void CtffindApp::DoInteractiveUserInput()
 				known_astigmatism_angle = 0.0;
 				known_phase_shift = 0.0;
 			}
+			desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads","The command-line option -j will override this","1",1);
 
 
 		}
-		else
+		else // expert options not supplied by user
 		{
 			resample_if_pixel_too_small			= true;
 			movie_is_gain_corrected				= true;
 			defocus_is_known					= false;
+			desired_number_of_threads			= 1;
 		}
 
 		delete my_input;
 
 	}
 
-	my_current_job.Reset(34);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfff",	input_filename.c_str(), //1
+	my_current_job.Reset(35);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfffi",input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -705,7 +712,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			defocus_is_known,
 																			known_defocus_1,
 																			known_defocus_2,
-																			known_phase_shift);
+																			known_phase_shift,
+																			desired_number_of_threads);
 	}
 
 
@@ -717,6 +725,7 @@ void CtffindApp::AddCommandLineOptions()
 	command_line_parser.AddLongSwitch("amplitude-spectrum-input","The input image is an amplitude spectrum, not a real-space image");
 	command_line_parser.AddLongSwitch("filtered-amplitude-spectrum-input","The input image is filtered (background-subtracted) amplitude spectrum");
 	command_line_parser.AddLongSwitch("fast","Skip computation of fit statistics as well as spectrum contrast enhancement");
+	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
 
 
@@ -764,6 +773,7 @@ bool CtffindApp::DoCalculation()
 	const float			known_defocus_1						= my_current_job.arguments[31].ReturnFloatArgument();
 	const float			known_defocus_2						= my_current_job.arguments[32].ReturnFloatArgument();
 	const float			known_phase_shift					= my_current_job.arguments[33].ReturnFloatArgument();
+	int					desired_number_of_threads			= my_current_job.arguments[34].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -778,6 +788,13 @@ bool CtffindApp::DoCalculation()
 	const bool			filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
 	const bool 			compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
 	const bool			boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
+	long command_line_desired_number_of_threads;
+	if (command_line_parser.Found("j", &command_line_desired_number_of_threads))
+	{
+		// Command-line argument overrides
+		desired_number_of_threads = command_line_desired_number_of_threads;
+	}
+
 
 	// Resampling of input images to ensure that the pixel size isn't too small
 	const float			target_nyquist_after_resampling = 2.8; // Angstroms
@@ -1285,7 +1302,7 @@ bool CtffindApp::DoCalculation()
 
 				// Actually run the BF search
 				brute_force_search = new BruteForceSearch();
-				brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
+				brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false,desired_number_of_threads);
 				brute_force_search->Run();
 
 				/*
@@ -1460,7 +1477,7 @@ bool CtffindApp::DoCalculation()
 
 				// Actually run the BF search (we run a local minimizer at every grid point only if this is a refinement search following 1D search (otherwise the full brute-force search would get too long)
 				brute_force_search = new BruteForceSearch();
-				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally);
+				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally,desired_number_of_threads);
 				brute_force_search->Run();
 
 				// The end point of the BF search is the beginning of the CG search
@@ -1838,11 +1855,25 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
 
+		// Keep track of time
+		time_finish = wxDateTime::Now();
 
 		// Print more detailed results to terminal
 		if (is_running_locally && number_of_micrographs == 1)
 		{
-			wxPrintf("Estimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
+			wxPrintf("\nTimings\n");
+			wxTimeSpan time_to_initialize = time_before_spectrum_computation.Subtract(time_start);
+			wxTimeSpan time_to_compute_spectrum = time_after_spectrum_computation.Subtract(time_before_spectrum_computation);
+			wxTimeSpan time_to_fit = time_before_diagnostics.Subtract(time_after_spectrum_computation);
+			wxTimeSpan time_to_diagnose = time_finish.Subtract(time_before_diagnostics);
+			wxTimeSpan time_total = time_finish.Subtract(time_start);
+			wxPrintf(" Initialization       : %s\n",time_to_initialize.Format());
+			wxPrintf(" Spectrum computation : %s\n",time_to_compute_spectrum.Format());
+			wxPrintf(" Parameter search     : %s\n",time_to_fit.Format());
+			wxPrintf(" Diagnosis            : %s\n",time_to_diagnose.Format());
+			wxPrintf(" Total                : %s\n",time_total.Format());
+
+			wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
 			if (find_additional_phase_shift)
 			{
 				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PI);
@@ -1936,23 +1967,9 @@ bool CtffindApp::DoCalculation()
 		wxPrintf("\n");
 	}
 
-	// Keep track of time
-	time_finish = wxDateTime::Now();
-
 	// Tell the user where the outputs are
 	if (is_running_locally)
 	{
-		wxPrintf("\nTimings\n");
-		wxTimeSpan time_to_initialize = time_before_spectrum_computation.Subtract(time_start);
-		wxTimeSpan time_to_compute_spectrum = time_after_spectrum_computation.Subtract(time_before_spectrum_computation);
-		wxTimeSpan time_to_fit = time_before_diagnostics.Subtract(time_after_spectrum_computation);
-		wxTimeSpan time_to_diagnose = time_finish.Subtract(time_before_diagnostics);
-		wxTimeSpan time_total = time_finish.Subtract(time_start);
-		wxPrintf(" Initialization       : %s\n",time_to_initialize.Format());
-		wxPrintf(" Spectrum computation : %s\n",time_to_compute_spectrum.Format());
-		wxPrintf(" Parameter search     : %s\n",time_to_fit.Format());
-		wxPrintf(" Diagnosis            : %s\n",time_to_diagnose.Format());
-		wxPrintf(" Total                : %s\n",time_total.Format());
 
 		wxPrintf("\n\nSummary of results                          : %s\n", output_text->ReturnFilename());
 		wxPrintf(    "Diagnostic images                           : %s\n", output_diagnostic_filename);
@@ -2644,7 +2661,6 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 		 */
 		epa_pre_max->DivideBy(&count_pre_max);
 		epa_post_max->DivideBy(&count_post_max);
-		epa_pre_max->PrintToStandardOut();
 	}
 
 }

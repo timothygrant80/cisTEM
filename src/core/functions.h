@@ -341,6 +341,8 @@ std::vector<size_t> rankSort(const std::vector<float>& v_temp);
 
 wxString StringFromSocketCode(unsigned char *socket_input_buffer);
 
+int CheckNumberOfThreads(int number_of_threads);
+
 // From David Mastronarde
 int ReturnAppropriateNumberOfThreads(int optimalThreads);
 int ReturnThreadNumberOfCurrentThread();

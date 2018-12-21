@@ -120,6 +120,9 @@ class MRCHeader {
 	inline int ReturnDimensionX() {return nx[0];};
 	inline int ReturnDimensionY() {return ny[0];};
 	inline int ReturnDimensionZ() {return nz[0];};
+	inline int ReturnMapC() {return map_c[0];};
+	inline int ReturnMapR() {return map_r[0];};
+	inline int ReturnMapS() {return map_s[0];};
 
 	inline bool ReturnIfThisIsInMastronarde4BitHackFormat() {return this_is_in_mastronarde_4bit_hack_format;}
 

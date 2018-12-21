@@ -56,8 +56,9 @@ void MRCHeader::PrintInfo()
 	// Start printing
 	wxPrintf("Number of columns, rows, sections: %i, %i, %i\n",nx[0],ny[0],nz[0]);
 	wxPrintf("MRC data mode: %i\n",mode[0]);
-	wxPrintf("Bit depth: %i\n",bytes_per_pixel * 8);
+	wxPrintf("Bit depth: %i\n",int(bytes_per_pixel * 8));
 	wxPrintf("Pixel size: %0.3f %0.3f %0.3f\n",pixel_size[0],pixel_size[1],pixel_size[2]);
+	wxPrintf("Column index: %i; Row index: %i; Section index: %i\n",map_c[0],map_r[0],map_s[0]);
 	wxPrintf("Bytes in symmetry header: %i\n",symmetry_data_bytes[0]);
 	for (int label_counter=0; label_counter < number_of_labels_used[0]; label_counter++)
 	{

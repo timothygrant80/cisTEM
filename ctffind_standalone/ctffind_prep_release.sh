@@ -12,6 +12,8 @@
 # - update version in ctffind.cpp, near line 4 (const std::string ctffind_version = "4.1.3";)
 # - update NEWS, ChangeLog
 # - commit & push to repository
+# - copy the script to machine used to build
+# - run the script
 #
 # This script should be run on an older node on the cluster, to ensure compatibility. I think we want glibc <= 2.18
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash
@@ -29,7 +31,7 @@ temp_dir="$(mktemp -d)"
 
 # Check system's libc version
 function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
-libc_version="$(ldd --version | awk '/libc/ {print $NF}')"
+libc_version="$(ldd --version | awk '/libc/||/LIBC/ {print $NF}')"
 if version_gt $libc_version "2.18"; then
   echo "Oops. Current system has libc $libc_version, but we need 2.18 or below"
   exit
@@ -87,16 +89,18 @@ Index: configure.ac
 eof
 COMMENTED_OUT
 
+# Prepare for building
+module purge
+source ../regenerate_project.b
+
 # make sure we are using the latest Intel compiler, wx, etc
-module unload apps/lsf/prod
+module purge
 module load apps/intel
 module load apps/wxwidgets
 module load apps/tiff
 module load apps/jpeg
 module load apps/zlib
 
-# Prepare for building
-source ../regenerate_project.b
 
 # Configure
 echo "Configuring..."
@@ -131,7 +135,7 @@ cd ${remember_dir}
 
 # Now let's do another build without the latest instruction set. Should be more compatible
 echo "Preparing a build for older processors..."
-cd $temp_dir/ctffind_rel_prep/${version}/ctffind_standalone
+cd $temp_dir/ctffind_rel_prep/${version}/cisTEM/ctffind_standalone
 make distclean
 echo "Configuring..."
 ./configure $configure_flags_no_latest  --prefix ${installation_prefix} --bindir ${installation_prefix}/bin_compat > configure.log 2>&1
@@ -146,7 +150,7 @@ cd ${remember_dir}
 
 # Now let's do another build without the latest instruction set and with debug. Should be more compatible but slower.
 echo "Preparing a build for older processors with debug..."
-cd $temp_dir/ctffind_rel_prep/${version}/ctffind_standalone
+cd $temp_dir/ctffind_rel_prep/${version}/cisTEM/ctffind_standalone
 make distclean
 echo "Configuring..."
 ./configure $configure_flags_no_latest  --prefix ${installation_prefix} --enable-debugmode --bindir ${installation_prefix}/bin_compat_dbg > configure.log 2>&1

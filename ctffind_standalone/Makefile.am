@@ -56,12 +56,7 @@ noinst_HEADERS = 	src/core/asset_group.h \
 
 bin_PROGRAMS = ctffind
 
-dist_bin_SCRIPTS = 	scripts/ctffind_plot_results.sh \
-                        install-sh \
-                        config.sub \
-                        config.guess \
-                        ltmain.sh \
-                        depcomp
+dist_bin_SCRIPTS = 	scripts/ctffind_plot_results.sh 
 
 image_trim.cpp:
 	if [ -e $(top_srcdir)/src/core/image.cpp ]; then \

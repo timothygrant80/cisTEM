@@ -203,7 +203,7 @@ fi
 # It's importnat that -static-intel be specified after -mkl, otherwise mkl will be linked dynamically
 if test "x$static_link" = "xtrue"; then
  if test "x$CXX" = "xicpc"; then
- 	LDFLAGS="$LDFLAGS -static-intel"
+ 	LDFLAGS="$LDFLAGS -static-intel -static -all-static"
  else
 	LDFLAGS="$LDFLAGS -static"
  fi

@@ -239,7 +239,7 @@ void BruteForceSearch::Run()
 	else
 	{
 
-#pragma omp parallel for default(none) num_threads(numThreads) shared( all_values, all_local_best_values, all_scores,print_progress_bar,numThreads,num_iterations_completed,my_progress_bar) private(current_iteration, current_values, current_values_for_local_minimization, i, accuracy_for_local_minimization)
+#pragma omp parallel for default(none) num_threads(numThreads) shared( all_values, all_local_best_values, all_scores,numThreads,num_iterations_completed,my_progress_bar) private(current_iteration, current_values, current_values_for_local_minimization, i, accuracy_for_local_minimization)
 		for (current_iteration=0; current_iteration < num_iterations; current_iteration++)
 		{
 			// Grab the next values to be tried

@@ -281,6 +281,18 @@ void Curve::AddWith(Curve *other_curve)
 	}
 }
 
+void Curve::DivideBy(Curve *other_curve)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
+	MyDebugAssertTrue(number_of_points == other_curve->number_of_points, "Different number of points");
+
+	for (int counter = 0; counter < number_of_points; counter++)
+	{
+		if (other_curve->data_y[counter] != 0.0)
+		data_y[counter] /= other_curve->data_y[counter];
+	}
+}
+
 float Curve::ReturnAverageValue()
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points to average");

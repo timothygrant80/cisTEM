@@ -4,33 +4,34 @@
 #
 # Alexis Rohou, 2016
 #
-# Last modified 6 Jun 2017 (adapt to Genentech)
+# Last modified Oct 2018
 #
 # Before running this script:
 # - update version in this script
 # - update version in AC_INIT at beginning of configure.ac
 # - update version in ctffind.cpp, near line 4 (const std::string ctffind_version = "4.1.3";)
 # - update NEWS, ChangeLog
+# - commit & push to repository
+# - copy the script to machine used to build
+# - run the script
 #
 # This script should be run on an older node on the cluster, to ensure compatibility. I think we want glibc <= 2.18
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash
 #
 version=4.1.12
-svn_loc="https://github.com/ngrigorieff/cisTEM/trunk"
-svn_rev="HEAD"
-svn_rev="565"
+branch_name="ctffind_${version}_prep"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
-configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
+configure_flags="--disable-debugmode --enable-staticmode --enable-openmp --enable-mkl CC=icc CXX=icpc "
 configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
 number_of_cores=8
 installation_username="rohoua"
 installation_prefix="$HOME/software/ctffind/${version}"
 temp_dir="$(mktemp -d)"
-temp_dir="$HOME/scratch"
+#temp_dir="$HOME/scratch"
 
 # Check system's libc version
 function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
-libc_version="$(ldd --version | awk '/libc/ {print $NF}')"
+libc_version="$(ldd --version | awk '/libc/||/LIBC/ {print $NF}')"
 if version_gt $libc_version "2.18"; then
   echo "Oops. Current system has libc $libc_version, but we need 2.18 or below"
   exit
@@ -38,14 +39,6 @@ else
   echo "OK. Current system has libc $libc_version, which is not greater than 2.18"
 fi
 
-
-# Override for tests on laptop
-if [[ $(hostname) == "uroy" ]]; then
-  installation_username="rohoua"
-  installation_prefix="$HOME/work/software/ctffind_${version}"
-  configure_flags="--disable-debugmode --enable-staticmode --enable-mkl CC=gcc CXX=g++ "
-  configure_flags_no_latest=" --disable-latest-instruction-set ${configure_flags}"
-fi
 
 if [ "${USER}" != "${installation_username}" ]; then
   echo "This script must be run as user ${installation_username}"
@@ -63,11 +56,17 @@ cd $version
 # The line below is needed for su to work
 unset SHELL
 
-# Check out ctffind from SVN
-echo "Checking out from SVN..."
-svn co -r ${svn_rev} ${svn_loc} . > checkout.log 2>&1
+# Check out ctffind from github
+module purge
+module load apps/git
+echo "Cloning from git..."
+echo -n Github password: 
+read -s password
+echo
+git clone --single-branch --branch "${branch_name}" "https://arohou:${password}@github.com/ngrigorieff/cisTEM.git" > clone.log 2>&1
+module unload apps/git
 
-
+cd cisTEM
 rm -f config.guess config.sub depcomp install-sh missing
 cd ctffind_standalone
 
@@ -90,16 +89,18 @@ Index: configure.ac
 eof
 COMMENTED_OUT
 
+# Prepare for building
+module purge
+source ../regenerate_project.b
+
 # make sure we are using the latest Intel compiler, wx, etc
-module unload apps/lsf/prod
+module purge
 module load apps/intel
 module load apps/wxwidgets
 module load apps/tiff
 module load apps/jpeg
 module load apps/zlib
 
-# Prepare for building
-source ../regenerate_project.b
 
 # Configure
 echo "Configuring..."
@@ -134,7 +135,7 @@ cd ${remember_dir}
 
 # Now let's do another build without the latest instruction set. Should be more compatible
 echo "Preparing a build for older processors..."
-cd $temp_dir/ctffind_rel_prep/${version}/ctffind_standalone
+cd $temp_dir/ctffind_rel_prep/${version}/cisTEM/ctffind_standalone
 make distclean
 echo "Configuring..."
 ./configure $configure_flags_no_latest  --prefix ${installation_prefix} --bindir ${installation_prefix}/bin_compat > configure.log 2>&1
@@ -149,7 +150,7 @@ cd ${remember_dir}
 
 # Now let's do another build without the latest instruction set and with debug. Should be more compatible but slower.
 echo "Preparing a build for older processors with debug..."
-cd $temp_dir/ctffind_rel_prep/${version}/ctffind_standalone
+cd $temp_dir/ctffind_rel_prep/${version}/cisTEM/ctffind_standalone
 make distclean
 echo "Configuring..."
 ./configure $configure_flags_no_latest  --prefix ${installation_prefix} --enable-debugmode --bindir ${installation_prefix}/bin_compat_dbg > configure.log 2>&1
@@ -162,6 +163,8 @@ cd ${installation_prefix}
 tar -czf ctffind-${version}-linux64-compat-dbg.tar.gz bin_compat_dbg/ctffind*
 cd ${remember_dir}
 
+# Cleanup 
+rm -fr ${temp_dir}
 
 # All done
 echo "All done. Check ${installation_prefix}"

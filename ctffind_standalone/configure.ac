@@ -3,7 +3,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_FILES([Makefile])
 AM_INIT_AUTOMAKE([subdir-objects])
 
-INPUT_CPPFLAGS="$CXXFLAGS"
+INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
 AC_PROG_CC([icc gcc])
@@ -92,15 +92,15 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
-  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $INPUT_CPPFLAGS"
+  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $INPUT_CXXFLAGS"
   fi
   ])
 
 # fftw
 
 AC_ARG_WITH(fftw-dir,
-[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its
+[[  --with-fftw-dir=DIR     Declare the root directory of fftw3, if its 
                           current location is not system accessible ]],
 [
     if test "$withval" != "yes" -a "$withval" != ""; then
@@ -109,6 +109,14 @@ AC_ARG_WITH(fftw-dir,
         LDFLAGS="$LDFLAGS -L$withval/lib"
     fi
 ])
+
+# OpenMP
+AC_ARG_ENABLE(openmp, [  --enable-openmp  Compile with OpenMP threading [[default=no]]],[
+  if test "$enableval" = yes; then
+  AC_OPENMP([],AC_MSG_ERROR("You asked for OpenMP, but I was not able to figure out how to compile programs that use OpenMP"))
+  CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
+  fi
+  ])
 
 #sqlite3-dir
 

@@ -32,7 +32,7 @@ BruteForceSearch::~BruteForceSearch()
 	}
 }
 
-void BruteForceSearch::Init(float (*function_to_minimize)(void* parameters, float []), void *wanted_parameters, int num_dim, float wanted_starting_value[], float wanted_half_range[], float wanted_step_size[], bool should_minimise_at_every_step, bool should_print_progress_bar )
+void BruteForceSearch::Init(float (*function_to_minimize)(void* parameters, float []), void *wanted_parameters, int num_dim, float wanted_starting_value[], float wanted_half_range[], float wanted_step_size[], bool should_minimise_at_every_step, bool should_print_progress_bar, int wanted_desired_num_threads )
 {
 	MyDebugAssertFalse(is_in_memory,"Brute force search object is already setup");
 	MyDebugAssertTrue(num_dim > 0,"Bad number of dimensions: %i",num_dim);
@@ -80,6 +80,7 @@ void BruteForceSearch::Init(float (*function_to_minimize)(void* parameters, floa
 	target_function = function_to_minimize;
 	parameters = wanted_parameters;
 	print_progress_bar = should_print_progress_bar;
+	desired_num_threads = wanted_desired_num_threads;
 	delete [] current_values;
 }
 
@@ -158,7 +159,7 @@ void BruteForceSearch::Run()
 	MyDebugAssertTrue(is_in_memory,"BruteForceSearch object not allocated");
 
 	// Private variables
-	// DNM: Switch to a fixed dimenensioned array so that OpenMP will make copies automatically
+	// DNM: Switch to a fixed dimensioned array so that OpenMP will make copies automatically
 	float current_values[16];
 	float *accuracy_for_local_minimization = new float[number_of_dimensions];
 	float *current_values_for_local_minimization = new float[number_of_dimensions];
@@ -197,12 +198,15 @@ void BruteForceSearch::Run()
 	// The accuracy for the local minimization
 	if (minimise_at_every_step) for (i=0;i<number_of_dimensions; i++) { accuracy_for_local_minimization[i] = step_size[i] * 0.5; }
 
-	if ( print_progress_bar ) { my_progress_bar = new ProgressBar(num_iterations); }
-
 	// How many iterations have we completed?
 	num_iterations_completed = 0;
 
-	numThreads = ReturnAppropriateNumberOfThreads(maxThreads);
+	//numThreads = ReturnAppropriateNumberOfThreads(desired_num_threads);
+	numThreads = CheckNumberOfThreads(desired_num_threads);
+
+	if (numThreads > 1 && ! minimise_at_every_step) { wxPrintf("\nRunning brute-force search with %i OpenMP threads\n",numThreads); }
+
+	if ( print_progress_bar ) { my_progress_bar = new ProgressBar(num_iterations); }
 
 	// start the brute-force search iterations
 	// DNM the minimizer did not work right with threads, so just run it normally
@@ -224,13 +228,18 @@ void BruteForceSearch::Run()
 			all_scores[current_iteration] = local_minimizer.GetBestScore();
 			for (i=0; i<number_of_dimensions;i++) 
 				all_local_best_values[number_of_dimensions * current_iteration + i] = local_minimizer.GetBestValue(i);
+
+			// Progress
+			if (print_progress_bar) {
+				num_iterations_completed++;
+				my_progress_bar->Update(num_iterations_completed);
+			}
 		}
 	}
 	else
 	{
-		if (numThreads >=0) { wxPrintf("Running brute-force search with %i OpenMP threads\n",numThreads); }
 
-#pragma omp parallel for default(none) num_threads(numThreads) shared( all_values, all_local_best_values, all_scores) private(current_iteration, current_values, current_values_for_local_minimization, i, accuracy_for_local_minimization)
+#pragma omp parallel for default(none) num_threads(numThreads) shared( all_values, all_local_best_values, all_scores,numThreads,num_iterations_completed,my_progress_bar) private(current_iteration, current_values, current_values_for_local_minimization, i, accuracy_for_local_minimization)
 		for (current_iteration=0; current_iteration < num_iterations; current_iteration++)
 		{
 			// Grab the next values to be tried
@@ -238,8 +247,17 @@ void BruteForceSearch::Run()
 
 			// Try the current parameters by calling the scoring function
 			all_scores[current_iteration] = target_function(parameters,current_values);
+
+			// Progress
+			if (print_progress_bar) {
+#pragma omp atomic
+				num_iterations_completed++;
+				my_progress_bar->Update(num_iterations_completed);
+			}
 		}
 	}
+
+	if (print_progress_bar) { delete my_progress_bar; }
 
 	// DNM: Loop through the iterations again and look for the best result
 	for (current_iteration=0; current_iteration < num_iterations; current_iteration++)
@@ -276,13 +294,9 @@ void BruteForceSearch::Run()
 			//wxPrintf("\n");
 		}
 
-		// Progress
-		num_iterations_completed++;
-		if (print_progress_bar) { my_progress_bar->Update(num_iterations_completed); }
 
 	} // End of loop over exhaustive search operation
 
-	if (print_progress_bar) { delete my_progress_bar; }
 	delete [] accuracy_for_local_minimization;
 	delete [] current_values_for_local_minimization;
 	delete [] all_values;

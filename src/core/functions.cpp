@@ -919,13 +919,49 @@ static int numCoresAndLogicalProcs(int *physical, int *logical)
   return (processorCoreCount <= 0 || logicalProcessorCount < 0) ? 1 : 0;
 }
 
-// Get an appropriately limited number of threads
+
+/*
+ * Warn the user if the number of threads they are asking for seems
+ * excessive.
+ * If OpenMP is not available, reset the number of threads to 1.
+ */
+int CheckNumberOfThreads(int number_of_threads)
+{
+#ifdef _OPENMP
+	int number_logical_cores;
+	int number_physical_cores;
+	int num_threads_from_environment;
+
+	// Work out number of cores
+	numCoresAndLogicalProcs(&number_physical_cores,&number_logical_cores);
+	if (number_of_threads > number_logical_cores && number_logical_cores > 0)
+	{
+		wxPrintf("\nWarning: you are using %i threads, which is more than %i, the number of logical cores. This could be inefficient.\n\n",number_of_threads,number_logical_cores);
+	}
+	else if (number_of_threads > number_physical_cores && number_physical_cores > 0)
+	{
+		wxPrintf("\nWarning: you are using %i threads, which is more than %i, the number of phyiscal cores. This could be inefficient.\n\n",number_of_threads,number_physical_cores);
+	}
+	return number_of_threads;
+#else
+	wxPrintf("OpenMP is not available - will not use parallel threads.\n\n");
+	return 1;
+#endif
+}
+
+/*
+ * Get an appropriately limited number of threads
+ * This routine was written by David Mastronarde for IMOD, with the logic being
+ * that the user would suggest a number of threads, but that suggestion would
+ * be curtailed by actual core numbers and OpenMP environment variables.
+ */
 int ReturnAppropriateNumberOfThreads(int optimalThreads)
 {
   int numThreads = optimalThreads;
   int physicalProcs = 0;
   int logicalProcessorCount = 0;
   int processorCoreCount = 0;
+
 #ifdef _OPENMP
   static int limThreads = -1;
   static int numProcs = -1;
@@ -943,7 +979,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads)
         processorCoreCount > 0 && logicalProcessorCount == numProcs)
       physicalProcs = processorCoreCount;
     if (getenv("IMOD_REPORT_CORES"))
-      printf("core count = %d  logical processors = %d  OMP num = %d => physical "
+      wxPrintf("core count = %d  logical processors = %d  OMP num = %d => physical "
              "processors = %d\n", processorCoreCount, logicalProcessorCount, numProcs,
              physicalProcs); fflush(stdout);
 
@@ -989,7 +1025,7 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads)
     numThreads = forceThreads;
 
   if (getenv("IMOD_REPORT_CORES"))
-      printf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
+      wxPrintf("numProcs %d  limThreads %d  numThreads %d\n", numProcs,
              limThreads, numThreads); fflush(stdout);
 #else
   numThreads = 1;

@@ -1,13 +1,21 @@
 #include "../../core/core_headers.h"
 
 //#define threshold_spectrum
+#define use_epa_rather_than_zero_counting
 
 const std::string ctffind_version = "4.1.12";
 /*
  * Changelog
  * - 4.1.12
- * -- bug fix (affected all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
+ * -- diagnostic image includes radial "equi-phase" average of experimental spectrum in bottom right quadrant
+ * -- new "equi-phase averaging" code will probably replace zero-counting eventually
+ * -- bug fix (affected diagnostics for all 4.x): at very high resolution, Cs dominates and the phase aberration decreases
  * -- bug fix (affected 4.1.11): fitting was only done up to 5Å
+ * -- slow, exhaustive search is no longer the default (since astigmatism-related bugs appear fixed)
+ * -- Number of OpenMP threads defaults to 1 and can be set by:
+ * --- using interactive user input (under expert options)
+ * --- using the -j command-line option (overrides interactive user input)
+ * -- printout timing information
  * - 4.1.11
  * -- speed-ups from David Mastronarde, including OpenMP threading of the exhaustive search
  * -- score is now a normalized cross-correlation coefficient (David Mastronarde)
@@ -237,11 +245,12 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image *self, Image *other_
 void ComputeImagesWithNumberOfExtremaAndCTFValues(CTF *ctf, Image *number_of_extrema, Image *ctf_values);
 int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image *number_of_extrema, long address, Image *ctf_values, float ctf_values_profile[]);
 bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_renormalized[], float number_of_extrema_profile[], float ctf_values_profile[]);
-void OverlayCTF( Image *spectrum, CTF *ctf);
+void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *epa_pre_max, Curve *epa_post_max);
+void OverlayCTF( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve *equiphase_average_pre_max, Curve *equiphase_average_post_max);
 void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin);
 bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit );
 void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]);
-
+float ReturnAzimuthToUseFor1DPlots(CTF *ctf);
 
 IMPLEMENT_APP(CtffindApp)
 
@@ -288,6 +297,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float known_defocus_1;
 	float known_defocus_2;
 	float known_phase_shift;
+	int desired_number_of_threads;
 
 
 	// Things we need for old school input
@@ -511,6 +521,7 @@ void CtffindApp::DoInteractiveUserInput()
 			}
 		}
 
+		desired_number_of_threads = 1;
 
 
 	} // end of test for old-school-input or old-school-input-ctffind4
@@ -554,7 +565,7 @@ void CtffindApp::DoInteractiveUserInput()
 		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
 		if (astigmatism_is_known)
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","yes");;
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","no");;
 			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
 			known_astigmatism			= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
@@ -562,7 +573,7 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 		else
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","yes");
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","no");
 			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","no");
 			if (should_restrain_astigmatism)
 			{
@@ -651,22 +662,24 @@ void CtffindApp::DoInteractiveUserInput()
 				known_astigmatism_angle = 0.0;
 				known_phase_shift = 0.0;
 			}
+			desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads","The command-line option -j will override this","1",1);
 
 
 		}
-		else
+		else // expert options not supplied by user
 		{
 			resample_if_pixel_too_small			= true;
 			movie_is_gain_corrected				= true;
 			defocus_is_known					= false;
+			desired_number_of_threads			= 1;
 		}
 
 		delete my_input;
 
 	}
 
-	my_current_job.Reset(34);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfff",	input_filename.c_str(), //1
+	my_current_job.Reset(35);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfffi",input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -699,7 +712,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			defocus_is_known,
 																			known_defocus_1,
 																			known_defocus_2,
-																			known_phase_shift);
+																			known_phase_shift,
+																			desired_number_of_threads);
 	}
 
 
@@ -711,6 +725,7 @@ void CtffindApp::AddCommandLineOptions()
 	command_line_parser.AddLongSwitch("amplitude-spectrum-input","The input image is an amplitude spectrum, not a real-space image");
 	command_line_parser.AddLongSwitch("filtered-amplitude-spectrum-input","The input image is filtered (background-subtracted) amplitude spectrum");
 	command_line_parser.AddLongSwitch("fast","Skip computation of fit statistics as well as spectrum contrast enhancement");
+	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
 
 
@@ -719,6 +734,8 @@ void CtffindApp::AddCommandLineOptions()
 
 bool CtffindApp::DoCalculation()
 {
+
+	wxDateTime time_start = wxDateTime::Now();
 
 	// Arguments for this job
 
@@ -756,6 +773,7 @@ bool CtffindApp::DoCalculation()
 	const float			known_defocus_1						= my_current_job.arguments[31].ReturnFloatArgument();
 	const float			known_defocus_2						= my_current_job.arguments[32].ReturnFloatArgument();
 	const float			known_phase_shift					= my_current_job.arguments[33].ReturnFloatArgument();
+	int					desired_number_of_threads			= my_current_job.arguments[34].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -770,6 +788,13 @@ bool CtffindApp::DoCalculation()
 	const bool			filtered_amplitude_spectrum_input = command_line_parser.FoundSwitch("filtered-amplitude-spectrum-input");
 	const bool 			compute_extra_stats = ! command_line_parser.FoundSwitch("fast");
 	const bool			boost_ring_contrast = ! command_line_parser.FoundSwitch("fast");
+	long command_line_desired_number_of_threads;
+	if (command_line_parser.Found("j", &command_line_desired_number_of_threads))
+	{
+		// Command-line argument overrides
+		desired_number_of_threads = command_line_desired_number_of_threads;
+	}
+
 
 	// Resampling of input images to ensure that the pixel size isn't too small
 	const float			target_nyquist_after_resampling = 2.8; // Angstroms
@@ -857,6 +882,12 @@ bool CtffindApp::DoCalculation()
 	Image				*gain = new Image();
 	float				final_score;
 
+	// Timings variables
+	wxDateTime time_before_spectrum_computation;
+	wxDateTime time_after_spectrum_computation;
+	wxDateTime time_before_diagnostics;
+	wxDateTime time_finish;
+
 
 
 	// Some argument checking
@@ -915,6 +946,9 @@ bool CtffindApp::DoCalculation()
 		wxPrintf("\nEstimating CTF parameters...\n\n");
 		my_progress_bar = new ProgressBar(number_of_micrographs);
 	}
+
+	//
+	time_before_spectrum_computation = wxDateTime::Now();
 
 
 	// Prepare the gain_reference
@@ -1159,6 +1193,7 @@ bool CtffindApp::DoCalculation()
 		 *
 		 *
 		 */
+		time_after_spectrum_computation = wxDateTime::Now();
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec.mrc",1);
 
@@ -1267,7 +1302,7 @@ bool CtffindApp::DoCalculation()
 
 				// Actually run the BF search
 				brute_force_search = new BruteForceSearch();
-				brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false);
+				brute_force_search->Init(&CtffindCurveObjectiveFunction,&comparison_object_1D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,false,false,desired_number_of_threads);
 				brute_force_search->Run();
 
 				/*
@@ -1442,7 +1477,7 @@ bool CtffindApp::DoCalculation()
 
 				// Actually run the BF search (we run a local minimizer at every grid point only if this is a refinement search following 1D search (otherwise the full brute-force search would get too long)
 				brute_force_search = new BruteForceSearch();
-				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally);
+				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally,desired_number_of_threads);
 				brute_force_search->Run();
 
 				// The end point of the BF search is the beginning of the CG search
@@ -1618,6 +1653,7 @@ bool CtffindApp::DoCalculation()
 		 * We're all done with our search & refinement of defocus and phase shift parameter values.
 		 * Now onto diagnostics.
 		 */
+		time_before_diagnostics = wxDateTime::Now();
 
 		// Generate diagnostic image
 		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc",1);
@@ -1668,6 +1704,8 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
+		Curve equiphase_average_pre_max;
+		Curve equiphase_average_post_max;
 		if (compute_extra_stats)
 		{
 			number_of_extrema_image->Allocate(average_spectrum->logical_x_dimension,average_spectrum->logical_y_dimension,true);
@@ -1688,7 +1726,30 @@ bool CtffindApp::DoCalculation()
 				number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
 			}
 			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
-
+#ifdef use_epa_rather_than_zero_counting
+			ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, &current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+			// Replace the old curve with EPA values
+			{
+				float current_sq_sf;
+				float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(&current_ctf);
+				float defocus_for_1d_plots = current_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots);
+				float sq_sf_of_phase_shift_maximum = current_ctf.ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
+				for (counter=1;counter<number_of_bins_in_1d_spectra;counter++)
+				{
+					current_sq_sf = powf(spatial_frequency[counter],2);
+					if (current_sq_sf <= sq_sf_of_phase_shift_maximum)
+					{
+						rotational_average_astig[counter] = equiphase_average_pre_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+					}
+					else
+					{
+						rotational_average_astig[counter] = equiphase_average_post_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+					}
+					rotational_average_astig_renormalized[counter] = rotational_average_astig[counter];
+				}
+				Renormalize1DSpectrumForFRC(number_of_bins_in_1d_spectra,rotational_average_astig_renormalized,rotational_average_astig_fit,number_of_extrema_profile);
+			}
+#endif
 			// Here, do FRC
 			int first_fit_bin = 0;
 			for (int bin_counter = number_of_bins_in_1d_spectra - 1; bin_counter >= 0; bin_counter -- )
@@ -1789,15 +1850,30 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-		OverlayCTF(average_spectrum, &current_ctf);
+		OverlayCTF(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,number_of_extrema_profile,ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
 
+		// Keep track of time
+		time_finish = wxDateTime::Now();
 
 		// Print more detailed results to terminal
 		if (is_running_locally && number_of_micrographs == 1)
 		{
-			wxPrintf("Estimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
+			wxPrintf("\nTimings\n");
+			wxTimeSpan time_to_initialize = time_before_spectrum_computation.Subtract(time_start);
+			wxTimeSpan time_to_compute_spectrum = time_after_spectrum_computation.Subtract(time_before_spectrum_computation);
+			wxTimeSpan time_to_fit = time_before_diagnostics.Subtract(time_after_spectrum_computation);
+			wxTimeSpan time_to_diagnose = time_finish.Subtract(time_before_diagnostics);
+			wxTimeSpan time_total = time_finish.Subtract(time_start);
+			wxPrintf(" Initialization       : %s\n",time_to_initialize.Format());
+			wxPrintf(" Spectrum computation : %s\n",time_to_compute_spectrum.Format());
+			wxPrintf(" Parameter search     : %s\n",time_to_fit.Format());
+			wxPrintf(" Diagnosis            : %s\n",time_to_diagnose.Format());
+			wxPrintf(" Total                : %s\n",time_total.Format());
+
+			wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PI * 180.0);
 			if (find_additional_phase_shift)
 			{
 				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi)\n",current_ctf.GetAdditionalPhaseShift() / PI * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PI);
@@ -1894,8 +1970,9 @@ bool CtffindApp::DoCalculation()
 	// Tell the user where the outputs are
 	if (is_running_locally)
 	{
-		wxPrintf("\nSummary of results                          : %s\n", output_text->ReturnFilename());
-		wxPrintf("Diagnostic images                           : %s\n", output_diagnostic_filename);
+
+		wxPrintf("\n\nSummary of results                          : %s\n", output_text->ReturnFilename());
+		wxPrintf(    "Diagnostic images                           : %s\n", output_diagnostic_filename);
 		if (compute_extra_stats)
 		{
 			wxPrintf("Detailed results, including 1D fit profiles : %s\n",output_text_avrot->ReturnFilename());
@@ -2175,7 +2252,7 @@ void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], do
 
 
 //
-void OverlayCTF( Image *spectrum, CTF *ctf)
+void OverlayCTF( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve *epa_pre_max, Curve *epa_post_max)
 {
 	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
 
@@ -2189,10 +2266,14 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 	float j_logi, j_logi_sq;
 	float current_spatial_frequency_squared;
 	float current_azimuth;
+	float current_defocus;
+	float current_phase_aberration;
+	float sq_sf_of_phase_aberration_maximum;
 	const float lowest_freq  = pow(ctf->GetLowestFrequencyForFitting(),2);
 	const float highest_freq = pow(ctf->GetHighestFrequencyForFitting(),2);
 	float current_ctf_value;
 	float target_sigma;
+	int chosen_bin;
 
 	//spectrum->QuickAndDirtyWriteSlice("dbg_spec_overlay_entry.mrc",1);
 
@@ -2208,6 +2289,30 @@ void OverlayCTF( Image *spectrum, CTF *ctf)
 			i_logi_sq = powf(i_logi,2);
 			//
 			current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+			current_azimuth = atan2(j_logi,i_logi);
+			current_defocus = ctf->DefocusGivenAzimuth(current_azimuth);
+			current_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_spatial_frequency_squared,current_defocus);
+			//
+			sq_sf_of_phase_aberration_maximum = ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(current_defocus);
+
+			if (j < spectrum->physical_address_of_box_center_y && i >= spectrum->physical_address_of_box_center_x)
+			{
+				// Experimental 1D average
+#ifdef use_epa_rather_than_zero_counting
+				if (current_spatial_frequency_squared <= sq_sf_of_phase_aberration_maximum)
+				{
+					spectrum->real_values[address] = epa_pre_max->ReturnLinearInterpolationFromX(current_phase_aberration);
+				}
+				else
+				{
+					spectrum->real_values[address] = epa_post_max->ReturnLinearInterpolationFromX(current_phase_aberration);
+				}
+#else
+				// Work out which bin in the astig rot average this pixel corresponds to
+				chosen_bin = ReturnSpectrumBinNumber(number_of_bins_in_1d_spectra,number_of_extrema_profile,number_of_extrema, address, ctf_values, ctf_values_profile);
+				spectrum->real_values[address] = rotational_average_astig[chosen_bin];
+#endif
+			}
 			//
 			if (current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared <= highest_freq)
 			{
@@ -2452,6 +2557,150 @@ bool RescaleSpectrumAndRotationalAverage( Image *spectrum, Image *number_of_extr
 
 }
 
+
+/*
+ * Compute average value in power spectrum as a function of wave function aberration. This allows for averaging even when
+ * there is significant astigmatism.
+ * This should be nicer than counting zeros and looking for nearest CTF value as described in the original ctffind4 manuscript.
+ * Inspired by gctf and others, but I think more robust because it takes into account that the aberration decreases again at
+ * very high spatial frequencies, when Cs takes over from defocus.
+ */
+void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *epa_pre_max, Curve *epa_post_max)
+{
+	MyDebugAssertTrue(spectrum->is_in_memory, "Spectrum memory not allocated");
+
+	const bool spectrum_is_blank = spectrum->IsConstant();
+
+	const int curve_oversampling_factor = 1;
+	const bool curve_x_is_linear = true;
+
+	/*
+	 * Initialize the curve objects. One keeps track of EPA pre phase aberration maximum (before Cs term takes over), the other post.
+	 */
+	if (curve_x_is_linear)
+	{
+		float epa_max_phase_aberration;
+		if (ctf->GetSphericalAberration() == 0.0)
+		{
+			epa_max_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(0.5,std::max(ctf->GetDefocus1(),ctf->GetDefocus2()));
+		}
+		else
+		{
+			epa_max_phase_aberration = ctf->ReturnPhaseAberrationMaximum();
+		}
+
+		// we setup a curve with negative phase aberrations too, in case of overfocus
+		epa_pre_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
+		epa_post_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
+	}
+	else
+	{
+		MyDebugAssertTrue(false,"Not implemented");
+	}
+	epa_pre_max->SetYToConstant(0.0);
+	epa_post_max->SetYToConstant(0.0);
+
+	/*
+	 * We'll also need to keep track of the number of values
+	 */
+	Curve count_pre_max;
+	Curve count_post_max;
+	count_pre_max.CopyFrom(epa_pre_max);
+	count_post_max.CopyFrom(epa_post_max);
+
+	if (!spectrum_is_blank)
+	{
+		long address = 0;
+		int i,j;
+		float i_logi,j_logi;
+		float i_logi_sq,j_logi_sq;
+		float current_spatial_frequency_squared;
+		float current_azimuth;
+		float current_phase_aberration;
+		float sq_sf_of_phase_aberration_maximum;
+		float current_defocus;
+		for (j=0;j < spectrum->logical_y_dimension;j++)
+		{
+			j_logi = float(j-spectrum->physical_address_of_box_center_y) * spectrum->fourier_voxel_size_y;
+			j_logi_sq = powf(j_logi,2);
+			for (i=0 ;i < spectrum->logical_x_dimension; i++)
+			{
+				i_logi = float(i-spectrum->physical_address_of_box_center_x) * spectrum->fourier_voxel_size_x;
+				i_logi_sq = powf(i_logi,2);
+				//
+				current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+				current_azimuth = atan2(j_logi,i_logi);
+				current_defocus = ctf->DefocusGivenAzimuth(current_azimuth);
+				current_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_spatial_frequency_squared,current_defocus);
+				//
+				sq_sf_of_phase_aberration_maximum = ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(current_defocus);
+				//
+				if (current_spatial_frequency_squared <= sq_sf_of_phase_aberration_maximum)
+				{
+					// Add to pre-max
+					epa_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
+					count_pre_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+				}
+				else
+				{
+					/*
+					 * We are after the maximum phase aberration (i.e. the Cs term has taken over, phase aberration is decreasing as a function of sf)
+					 */
+					// Add to post-max
+					epa_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
+					count_post_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+				}
+				//
+				address++;
+			}
+			address += spectrum->padding_jump_value;
+		}
+
+		/*
+		 * Do the averaging
+		 */
+		epa_pre_max->DivideBy(&count_pre_max);
+		epa_post_max->DivideBy(&count_post_max);
+	}
+
+}
+
+float ReturnAzimuthToUseFor1DPlots(CTF *ctf)
+{
+	const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PI;
+	float azimuth_of_mid_defocus;
+	float angular_distance_from_axes;
+
+	// We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
+	azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth() + PI * 0.25;
+	// We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
+	angular_distance_from_axes = fmod(azimuth_of_mid_defocus,PI * 0.5);
+	if(fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians)
+	{
+		if (angular_distance_from_axes > 0.0)
+		{
+			azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
+		}
+		else
+		{
+			azimuth_of_mid_defocus = - min_angular_distances_from_axes_radians;
+		}
+	}
+	if (fabs(angular_distance_from_axes) > 0.5 * PI - min_angular_distances_from_axes_radians)
+	{
+		if (angular_distance_from_axes > 0.0)
+		{
+			azimuth_of_mid_defocus = PI * 0.5 - min_angular_distances_from_axes_radians;
+		}
+		else
+		{
+			azimuth_of_mid_defocus = - PI * 0.5 + min_angular_distances_from_axes_radians;
+		}
+	}
+
+	return azimuth_of_mid_defocus;
+}
+
 //
 bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *number_of_extrema, Image *ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_rank[], float number_of_extrema_profile[], float ctf_values_profile[])
 {
@@ -2462,10 +2711,8 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 	MyDebugAssertTrue(spectrum->HasSameDimensionsAs(ctf_values),"Spectrum and CTF values images do not have same dimensions");
 	//
 	const bool spectrum_is_blank = spectrum->IsConstant();
-	const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PI;
 	int counter;
 	float azimuth_of_mid_defocus;
-	float angular_distance_from_axes;
 	float current_spatial_frequency_squared;
 	int number_of_values[number_of_bins];
 	int i, j;
@@ -2486,32 +2733,9 @@ bool ComputeRotationalAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Image *
 	//
 	if (! spectrum_is_blank)
 	{
-		// For each bin of our 1D profile we compute the CTF. We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
-		azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth() + PI * 0.25;
-		// We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
-		angular_distance_from_axes = fmod(azimuth_of_mid_defocus,PI * 0.5);
-		if(fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians)
-		{
-			if (angular_distance_from_axes > 0.0)
-			{
-				azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
-			}
-			else
-			{
-				azimuth_of_mid_defocus = - min_angular_distances_from_axes_radians;
-			}
-		}
-		if (fabs(angular_distance_from_axes) > 0.5 * PI - min_angular_distances_from_axes_radians)
-		{
-			if (angular_distance_from_axes > 0.0)
-			{
-				azimuth_of_mid_defocus = PI * 0.5 - min_angular_distances_from_axes_radians;
-			}
-			else
-			{
-				azimuth_of_mid_defocus = - PI * 0.5 + min_angular_distances_from_axes_radians;
-			}
-		}
+		// For each bin of our 1D profile we compute the CTF at a chosen defocus
+		azimuth_of_mid_defocus = ReturnAzimuthToUseFor1DPlots(ctf);
+
 		// Now that we've chosen an azimuth, we can compute the CTF for each bin of our 1D profile
 		for (counter=0;counter < number_of_bins; counter++)
 		{
@@ -2702,6 +2926,7 @@ integer function ComputePowerSpectrumBinNumber(number_of_bins,number_of_extrema_
     endif
 end function ComputePowerSpectrumBinNumber
 */
+
 
 
 // Compute an image where each pixel stores the number of preceding CTF extrema. This is described as image "E" in Rohou & Grigorieff 2015 (see Fig 3)

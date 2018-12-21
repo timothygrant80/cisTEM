@@ -15,6 +15,7 @@ private:
 	int num_iterations;
 	bool minimise_at_every_step;
 	bool print_progress_bar;
+	int desired_num_threads;
 
 public:
 	// Constructors & destructors
@@ -22,7 +23,7 @@ public:
 	~BruteForceSearch();
 
 	// Methods
-	void Init(float (*function_to_minimize)(void* parameters, float []), void *parameters, int num_dim, float starting_value[], float half_range[], float step_size[], bool minimise_at_every_step, bool print_progress_bar );
+	void Init(float (*function_to_minimize)(void* parameters, float []), void *parameters, int num_dim, float starting_value[], float half_range[], float step_size[], bool minimise_at_every_step, bool print_progress_bar, int wanted_desired_num_threads = 12 );
 	void Run();
 	void IncrementCurrentValues(float *current_values, bool &search_is_now_completed);
 	float GetBestValue(int index);

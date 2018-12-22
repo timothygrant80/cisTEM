@@ -1390,6 +1390,101 @@ void Image::WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel
 	delete snr_image;
 }
 
+/*
+ * A Wiener-like filter proposed by Tegunov & Cramer
+ * ("Real-time cryo-EM data pre-processing with Warp" 2018)
+ *
+ * The SSNR is modeled as an exponential falloff parametrised by two
+ * parameters, modulated by the CTF. Fudge factors default to 1.0 and
+ * are probably not needed.
+ *
+ */
+void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor, float ssnr_scale_fudge_factor)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "Volumes not supported");
+
+	int j;
+	int i;
+
+	long pixel_counter = 0;
+
+	float y_coord_sq;
+	float x_coord_sq;
+
+	float y_coord;
+	float x_coord;
+
+	float frequency_squared;
+	float frequency;
+	float azimuth;
+	float ctf_value;
+	float hp_value;
+	float ssnr_value_pre_ctf;
+	float filter_value;
+
+	const float ssnr_falloff_characteristic_spacing = 100.0 / pixel_size_in_angstroms * ssnr_falloff_fudge_factor; // 100A was suggested by Tegunov, seems to work well
+	const float ssnr_peak_scale_factor = powf(10.0,3.0*ssnr_scale_fudge_factor);
+	const float hp_radius = 1.0/200.0*pixel_size_in_angstroms;
+	const float hp_width = 1.0 * hp_radius;
+	const float hp_radius_start_squared = powf(hp_radius - 0.5*hp_width,2);
+	const float hp_radius_finish_squared = powf(hp_radius + 0.5*hp_width,2);
+	wxPrintf("hp rad = %f; width = %f; start = %f; finish = %f\n", hp_radius, hp_width, sqrtf(hp_radius_start_squared),sqrtf(hp_radius_finish_squared));
+
+	for (j = 0; j <= physical_upper_bound_complex_y; j++)
+	{
+		y_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y;
+		y_coord_sq = powf(y_coord, 2.0);
+
+		for (i = 0; i <= physical_upper_bound_complex_x; i++)
+		{
+			x_coord = i * fourier_voxel_size_x;
+			x_coord_sq = powf(x_coord, 2);
+
+			// Compute the azimuth
+			if ( i == 0 && j == 0 ) {
+				azimuth = 0.0;
+			} else {
+				azimuth = atan2f(y_coord,x_coord);
+			}
+
+			// Compute the square of the frequency
+			frequency_squared = x_coord_sq + y_coord_sq;
+			frequency = sqrtf(frequency_squared);
+
+			ctf_value = ctf.Evaluate(frequency_squared,azimuth);
+			if (frequency_squared >= hp_radius_start_squared && frequency_squared <= hp_radius_finish_squared)
+			{
+				hp_value = 1.0 - ((1.0 + cosf(PI * (frequency - hp_radius) / hp_width)) / 2.0);
+			}
+			else if (frequency_squared < hp_radius_start_squared)
+			{
+				hp_value = 0.0;
+			}
+			{
+				hp_value = 1.0;
+			}
+			ssnr_value_pre_ctf = exp(-frequency * ssnr_falloff_characteristic_spacing) * ssnr_peak_scale_factor;
+
+			// Wiener filter
+			filter_value = -ctf_value / (powf(ctf_value,2)+1.0/(ssnr_value_pre_ctf * hp_value));
+
+			/*
+			if (j==0 && i < 300 && i > 0)
+			{
+				wxPrintf("sp = %f; ssnr = %f; hp = %f; ctf_value = %f; filter = %f\n",1.5/frequency,ssnr_value_pre_ctf,hp_value,ctf_value,filter_value);
+			}
+			*/
+
+			complex_values[pixel_counter] *= filter_value;
+			pixel_counter++;
+		}
+	}
+
+}
+
+
 void Image::OptimalFilterSSNR(Curve &SSNR)
 {
 	MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");

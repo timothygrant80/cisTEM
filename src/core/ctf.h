@@ -85,6 +85,8 @@ public:
 	bool IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus = 100.0);
 	void EnforceConvention();
 	void PrintInfo();
+	void CopyFrom(CTF other_ctf);
+	void ChangePixelSize(float old_pixel_size, float new_pixel_size);
 	inline float GetDefocus1() { return defocus_1; };
 	inline float GetDefocus2() { return defocus_2; };
 	inline float GetSphericalAberration(){return spherical_aberration;};

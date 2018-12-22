@@ -30,14 +30,14 @@ void PickingResultsDisplayPanel::Clear()
 	Refresh();
 }
 
-void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms)
+void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf)
 {
 
 
 	// Don't do this - it deallocates the images
 	//PickingResultsImagePanel->Clear();
 
-	PickingResultsImagePanel->SetImageFilename(image_filename,pixel_size_in_angstroms);
+	PickingResultsImagePanel->SetImageFilename(image_filename,pixel_size_in_angstroms,micrograph_ctf);
 	PickingResultsImagePanel->SetParticleCoordinatesAndRadius(array_of_assets, particle_radius_in_angstroms);
 	PickingResultsImagePanel->UpdateScalingAndDimensions();
 	PickingResultsImagePanel->UpdateImageInBitmap();
@@ -129,6 +129,28 @@ void PickingResultsDisplayPanel::OnHighPassFilterCheckBox(wxCommandEvent & event
 		if (PickingResultsImagePanel->should_high_pass)
 		{
 			PickingResultsImagePanel->should_high_pass = false;
+			PickingResultsImagePanel->UpdateImageInBitmap(true);
+			PickingResultsImagePanel->Refresh();
+		}
+	}
+}
+
+void PickingResultsDisplayPanel::OnWienerFilterCheckBox(wxCommandEvent & event)
+{
+	if (WienerFilterCheckBox->IsChecked())
+	{
+		if (! PickingResultsImagePanel->should_wiener_filter)
+		{
+			PickingResultsImagePanel->should_wiener_filter = true;
+			PickingResultsImagePanel->UpdateImageInBitmap(true);
+			PickingResultsImagePanel->Refresh();
+		}
+	}
+	else
+	{
+		if (PickingResultsImagePanel->should_wiener_filter)
+		{
+			PickingResultsImagePanel->should_wiener_filter = false;
 			PickingResultsImagePanel->UpdateImageInBitmap(true);
 			PickingResultsImagePanel->Refresh();
 		}

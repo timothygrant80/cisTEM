@@ -15,11 +15,12 @@ public :
 
 	//void OnFitTypeRadioButton(wxCommandEvent& event);
 	void Clear();
-	void Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms);
+	void Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf);
 
 	void OnCirclesAroundParticlesCheckBox(wxCommandEvent& event);
 	void OnHighPassFilterCheckBox(wxCommandEvent& event);
 	void OnLowPassFilterCheckBox(wxCommandEvent& event);
+	void OnWienerFilterCheckBox(wxCommandEvent& event);
 	void OnScaleBarCheckBox(wxCommandEvent& event);
 	void OnUndoButtonClick(wxCommandEvent& event);
 	void OnRedoButtonClick(wxCommandEvent& event);

@@ -61,9 +61,11 @@ public :
 	void ResetHistory();
 
 
-	void SetImageFilename(wxString wanted_filename, const float &pixel_size);
+	void SetImageFilename(wxString wanted_filename, const float &pixel_size, CTF ctf_of_image);
 	void UpdateScalingAndDimensions();
 	void UpdateImageInBitmap( bool force_reload = false );
+	void SetCTFOfImageInMemory(CTF ctf_to_copy);
+	void SetCTFOfImageInBitmap(CTF ctf_to_copy);
 
 	// Mouse event handles
 	void OnLeftDown(wxMouseEvent & event);
@@ -79,6 +81,7 @@ public :
 	bool 		draw_circles_around_particles;
 	bool		should_high_pass;
 	bool 		should_low_pass;
+	bool		should_wiener_filter;
 	bool 		draw_scale_bar;
 	bool		allow_editing_of_coordinates;
 
@@ -90,10 +93,12 @@ private:
 	Image		image_in_bitmap;
 	float		image_in_bitmap_pixel_size;
 	float		image_in_bitmap_scaling_factor;
+	CTF			image_in_bitmap_ctf;
 
 	wxString	image_in_memory_filename;
 	Image		image_in_memory;
 	float		image_in_memory_pixel_size;
+	CTF			image_in_memory_ctf;
 
 	float 										radius_of_circles_around_particles_in_angstroms;
 	float 										squared_radius_of_circles_around_particles_in_angstroms;

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Mar 17 2018)
+// C++ code generated with wxFormBuilder (version Oct 19 2018)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -2414,6 +2414,15 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline83 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer94->Add( m_staticline83, 0, wxEXPAND | wxALL, 5 );
 	
+	WienerFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Wiener filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	WienerFilterCheckBox->SetValue(true); 
+	WienerFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
+	
+	bSizer94->Add( WienerFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer94->Add( m_staticline831, 0, wxEXPAND | wxALL, 5 );
+	
 	UndoButton = new wxButton( this, wxID_ANY, wxT("Undo"), wxDefaultPosition, wxDefaultSize, 0 );
 	UndoButton->Enable( false );
 	UndoButton->SetToolTip( wxT("Undo manual change of particle coordinates") );
@@ -2449,6 +2458,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	LowPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
 	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
 	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
 	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
 	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
 }
@@ -2462,6 +2472,7 @@ PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
 	LowPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
 	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
 	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
 	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
 	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
 	
@@ -3701,99 +3712,6 @@ OverviewPanel::~OverviewPanel()
 	
 }
 
-VolumeImportDialog::VolumeImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
-{
-	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
-	
-	wxBoxSizer* bSizer26;
-	bSizer26 = new wxBoxSizer( wxVERTICAL );
-	
-	PathListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_LIST|wxLC_NO_HEADER|wxLC_REPORT|wxVSCROLL );
-	bSizer26->Add( PathListCtrl, 100, wxALL|wxEXPAND, 5 );
-	
-	wxBoxSizer* bSizer27;
-	bSizer27 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_button10 = new wxButton( this, wxID_ANY, wxT("Add Files"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer27->Add( m_button10, 33, wxALL, 5 );
-	
-	m_button11 = new wxButton( this, wxID_ANY, wxT("Add Directory"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer27->Add( m_button11, 33, wxALL, 5 );
-	
-	ClearButton = new wxButton( this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer27->Add( ClearButton, 33, wxALL, 5 );
-	
-	
-	bSizer26->Add( bSizer27, 0, wxEXPAND, 5 );
-	
-	m_staticline7 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer26->Add( m_staticline7, 0, wxEXPAND | wxALL, 5 );
-	
-	wxBoxSizer* bSizer29;
-	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText20->Wrap( -1 );
-	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	
-	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
-	
-	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
-	
-	wxBoxSizer* bSizer33;
-	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_button13 = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer33->Add( m_button13, 0, wxALL, 5 );
-	
-	
-	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	
-	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	ImportButton = new wxButton( this, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
-	ImportButton->Enable( false );
-	
-	bSizer33->Add( ImportButton, 0, wxALL, 5 );
-	
-	
-	bSizer26->Add( bSizer33, 1, wxEXPAND, 5 );
-	
-	
-	this->SetSizer( bSizer26 );
-	this->Layout();
-	
-	this->Centre( wxBOTH );
-	
-	// Connect Events
-	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
-	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
-	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
-	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( VolumeImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
-	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
-	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
-}
-
-VolumeImportDialog::~VolumeImportDialog()
-{
-	// Disconnect Events
-	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
-	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
-	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( VolumeImportDialog::OnTextKeyPress ), NULL, this );
-	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
-	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
-	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
-	
-}
-
 FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : JobPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer43;
@@ -4255,6 +4173,99 @@ FindParticlesPanel::~FindParticlesPanel()
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::TerminateButtonClick ), NULL, this );
 	StartPickingButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::StartPickingClick ), NULL, this );
+	
+}
+
+VolumeImportDialog::VolumeImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer26;
+	bSizer26 = new wxBoxSizer( wxVERTICAL );
+	
+	PathListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_LIST|wxLC_NO_HEADER|wxLC_REPORT|wxVSCROLL );
+	bSizer26->Add( PathListCtrl, 100, wxALL|wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer27;
+	bSizer27 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_button10 = new wxButton( this, wxID_ANY, wxT("Add Files"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button10, 33, wxALL, 5 );
+	
+	m_button11 = new wxButton( this, wxID_ANY, wxT("Add Directory"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button11, 33, wxALL, 5 );
+	
+	ClearButton = new wxButton( this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( ClearButton, 33, wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer27, 0, wxEXPAND, 5 );
+	
+	m_staticline7 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline7, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText20->Wrap( -1 );
+	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
+	
+	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_button13 = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer33->Add( m_button13, 0, wxALL, 5 );
+	
+	
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	ImportButton = new wxButton( this, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImportButton->Enable( false );
+	
+	bSizer33->Add( ImportButton, 0, wxALL, 5 );
+	
+	
+	bSizer26->Add( bSizer33, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer26 );
+	this->Layout();
+	
+	this->Centre( wxBOTH );
+	
+	// Connect Events
+	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
+	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
+	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
+	PixelSizeText->Connect( wxEVT_CHAR, wxKeyEventHandler( VolumeImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
+	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
+	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
+}
+
+VolumeImportDialog::~VolumeImportDialog()
+{
+	// Disconnect Events
+	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
+	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
+	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( VolumeImportDialog::OnTextKeyPress ), NULL, this );
+	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
+	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
+	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
 	
 }
 

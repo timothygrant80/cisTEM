@@ -18,6 +18,7 @@ public:
 	void							RedoWithNewNumberOfBackgroundBoxes();
 	void							RedoWithNewAlgorithmToFindBackground();
 	wxString						ReturnMicrographFilename() 					{ return micrograph_filename; };
+	CTF								ReturnMicrographCTF()						{ return micrograph_ctf; };
 	float							ReturnOriginalMicrographPixelSize()			{ return original_micrograph_pixel_size; };
 	void							SetAllUserParameters(	wxString			wanted_micrograph_filename,
 															float				wanted_original_micrograph_pixel_size,

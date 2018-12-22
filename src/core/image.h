@@ -130,6 +130,7 @@ public:
 	void WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel_size, Curve &SSNR, Image &projection_image, bool weight_particle_image, bool weight_projection_image);
 	void OptimalFilterSSNR(Curve &SSNR);
 	void OptimalFilterFSC(Curve &FSC);
+	void OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor = 1.0, float ssnr_scale_fudge_factor = 1.0);
 	//float Correct3D(float wanted_mask_radius = 0.0);
 	float CorrectSinc(float wanted_mask_radius = 0.0, float padding_factor = 1.0, bool force_background_value = false, float wanted_mask_value = 0.0);
 	void MirrorXFourier2D(Image &mirrored_image);

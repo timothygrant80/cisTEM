@@ -657,6 +657,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 			index_of_matching_template = template_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 			rotation_of_matching_template = template_rotation_giving_maximum_score.real_values[my_peak.physical_address_within_image];
 
+			/*
 #ifdef DEBUG
 			junk_image.CopyFrom(&template_image[index_of_matching_template]);
 
@@ -678,6 +679,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 			junk_image_rotate.SwapRealSpaceQuadrants();
 			junk_image_rotate.QuickAndDirtyWriteSlice("/tmp/templates.mrc", number_of_candidate_particles);
 #endif
+			 */
 
 			if (write_out_plt)
 			{

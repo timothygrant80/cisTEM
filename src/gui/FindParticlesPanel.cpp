@@ -975,7 +975,7 @@ void MyFindParticlesPanel::DrawResultsFromParticleFinder()
 
 
 	PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
-	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, MaximumParticleRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize());
+	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, MaximumParticleRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize(), particle_finder.ReturnMicrographCTF());
 
 }
 
@@ -1520,7 +1520,16 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
 			float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
 			PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
-			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms);
+			CTF ctf_of_current_result;
+			ctf_of_current_result.Init( my_job_package.jobs[job_number].arguments[2].ReturnFloatArgument(), //akv
+										my_job_package.jobs[job_number].arguments[3].ReturnFloatArgument(), //cs
+										my_job_package.jobs[job_number].arguments[4].ReturnFloatArgument(), //amp cont
+										my_job_package.jobs[job_number].arguments[6].ReturnFloatArgument(), //def1
+										my_job_package.jobs[job_number].arguments[7].ReturnFloatArgument(), //def2
+										my_job_package.jobs[job_number].arguments[8].ReturnFloatArgument(), //ang ast
+										pixel_size_in_angstroms,
+										my_job_package.jobs[job_number].arguments[5].ReturnFloatArgument()); //phase shift
+			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms,ctf_of_current_result);
 
 			time_of_last_result_update = time(NULL);
 		}

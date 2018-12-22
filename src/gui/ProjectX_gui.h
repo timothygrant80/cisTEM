@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Mar 17 2018)
+// C++ code generated with wxFormBuilder (version Oct 19 2018)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -76,8 +76,8 @@ class VolumeAssetPickerComboPanel;
 #include <wx/splitter.h>
 #include <wx/checkbox.h>
 #include <wx/dataview.h>
-#include <wx/dialog.h>
 #include <wx/choice.h>
+#include <wx/dialog.h>
 #include <wx/filepicker.h>
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
@@ -662,6 +662,8 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		NumericTextCtrl* LowResFilterTextCtrl;
 		wxStaticText* LowAngstromStatic;
 		wxStaticLine* m_staticline83;
+		wxCheckBox* WienerFilterCheckBox;
+		wxStaticLine* m_staticline831;
 		wxStaticLine* m_staticline26;
 		
 		// Virtual event handlers, overide them in your derived class
@@ -671,6 +673,7 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		virtual void OnLowPassFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnLowPassKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnLowPassEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnWienerFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnUndoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRedoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
@@ -1074,42 +1077,6 @@ class OverviewPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class VolumeImportDialog
-///////////////////////////////////////////////////////////////////////////////
-class VolumeImportDialog : public wxDialog 
-{
-	private:
-	
-	protected:
-		wxListCtrl* PathListCtrl;
-		wxButton* m_button10;
-		wxButton* m_button11;
-		wxButton* ClearButton;
-		wxStaticLine* m_staticline7;
-		wxStaticText* m_staticText20;
-		wxTextCtrl* PixelSizeText;
-		wxStaticLine* m_staticline8;
-		wxButton* m_button13;
-		wxButton* ImportButton;
-		
-		// Virtual event handlers, overide them in your derived class
-		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
-		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
-		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
-	public:
-		
-		VolumeImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
-		~VolumeImportDialog();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class FindParticlesPanel
 ///////////////////////////////////////////////////////////////////////////////
 class FindParticlesPanel : public JobPanel
@@ -1218,6 +1185,42 @@ class FindParticlesPanel : public JobPanel
 			FindParticlesSplitterWindow->SetSashPosition( 350 );
 			FindParticlesSplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
 		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class VolumeImportDialog
+///////////////////////////////////////////////////////////////////////////////
+class VolumeImportDialog : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxListCtrl* PathListCtrl;
+		wxButton* m_button10;
+		wxButton* m_button11;
+		wxButton* ClearButton;
+		wxStaticLine* m_staticline7;
+		wxStaticText* m_staticText20;
+		wxTextCtrl* PixelSizeText;
+		wxStaticLine* m_staticline8;
+		wxButton* m_button13;
+		wxButton* ImportButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
+		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		VolumeImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+		~VolumeImportDialog();
 	
 };
 

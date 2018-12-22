@@ -348,6 +348,26 @@ bool CTF::IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus)
 	return true;
 }
 
+void CTF::CopyFrom(CTF other_ctf)
+{
+	spherical_aberration = other_ctf.spherical_aberration;
+	wavelength = other_ctf.wavelength;
+	amplitude_contrast = other_ctf.amplitude_contrast;
+	defocus_1 = other_ctf.defocus_1;
+	defocus_2 = other_ctf.defocus_2;
+	defocus_half_range = other_ctf.defocus_half_range;
+	astigmatism_azimuth = other_ctf.astigmatism_azimuth;
+	additional_phase_shift = other_ctf.additional_phase_shift;
+	// Fitting parameters
+	lowest_frequency_for_fitting = other_ctf.lowest_frequency_for_fitting;
+	highest_frequency_for_fitting = other_ctf.highest_frequency_for_fitting;
+	astigmatism_tolerance = other_ctf.astigmatism_tolerance;
+	//
+	precomputed_amplitude_contrast_term = other_ctf.precomputed_amplitude_contrast_term;
+	squared_wavelength = other_ctf.squared_wavelength;
+	cubed_wavelength = other_ctf.cubed_wavelength;
+}
+
 // Enforce the convention that df1 > df2 and -90 < angast < 90
 void CTF::EnforceConvention() {
 	float defocus_tmp;
@@ -360,4 +380,24 @@ void CTF::EnforceConvention() {
 		astigmatism_azimuth += PI*0.5;
 	}
 	astigmatism_azimuth -= PI * roundf(astigmatism_azimuth/PI);
+}
+
+void CTF::ChangePixelSize(float old_pixel_size, float new_pixel_size)
+{
+	float scale = old_pixel_size/new_pixel_size;
+
+	spherical_aberration *= scale;
+	wavelength *= scale;
+	amplitude_contrast *= scale;
+	defocus_1 *= scale;
+	defocus_2 *= scale;
+	defocus_half_range *= scale;
+
+	// Fitting parameters
+	lowest_frequency_for_fitting /= scale;
+	highest_frequency_for_fitting /= scale;
+	astigmatism_tolerance *= scale;
+	//
+	squared_wavelength = powf(wavelength,2);
+	cubed_wavelength = powf(wavelength,3);
 }

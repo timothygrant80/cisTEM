@@ -52,9 +52,15 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 	radius_of_circles_around_particles_in_angstroms = 0.0;
 	squared_radius_of_circles_around_particles_in_angstroms = 0.0;
 
+	bitmap_height = 0;
+	bitmap_width = 0;
+	bitmap_x_offset = 0;
+	bitmap_y_offset = 0;
+
 	draw_scale_bar = true;
 	should_high_pass = true;
 	should_low_pass = false;
+	should_wiener_filter = true;
 
 	allow_editing_of_coordinates = true;
 
@@ -241,14 +247,25 @@ void PickingBitmapPanel::StepBackwardInHistoryOfParticleCoordinates()
 }
 
 
-void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, const float &pixel_size)
+void PickingBitmapPanel::SetImageFilename(wxString wanted_filename, const float &pixel_size, CTF ctf_of_image)
 {
 	if (!wanted_filename.IsSameAs(image_in_memory_filename))
 	{
 		image_in_memory.QuickAndDirtyReadSlice(wanted_filename.ToStdString(),1);
 		image_in_memory_pixel_size = pixel_size;
 		image_in_memory_filename = wanted_filename;
+		SetCTFOfImageInMemory(ctf_of_image);
 	}
+}
+
+void PickingBitmapPanel::SetCTFOfImageInMemory(CTF ctf_to_copy)
+{
+	image_in_memory_ctf.CopyFrom(ctf_to_copy);
+}
+
+void PickingBitmapPanel::SetCTFOfImageInBitmap(CTF ctf_to_copy)
+{
+	image_in_bitmap_ctf.CopyFrom(ctf_to_copy);
 }
 
 void PickingBitmapPanel::UpdateScalingAndDimensions()
@@ -272,7 +289,8 @@ void PickingBitmapPanel::UpdateScalingAndDimensions()
 			image_in_bitmap.Allocate(new_x_dimension,new_y_dimension,true);
 			image_in_bitmap_scaling_factor = scaling_factor;
 			image_in_bitmap_pixel_size = image_in_memory_pixel_size / scaling_factor;
-
+			image_in_bitmap_ctf.CopyFrom(image_in_memory_ctf);
+			image_in_bitmap_ctf.ChangePixelSize(image_in_memory_pixel_size,image_in_bitmap_pixel_size);
 		}
 	}
 }
@@ -292,36 +310,30 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload)
 			float high_pass_radius;
 			float low_pass_radius;
 
-			if (high_res_filter_value < 0) high_pass_radius = image_in_bitmap_pixel_size / (4.0 * radius_of_circles_around_particles_in_angstroms);
+			if (high_res_filter_value < 0) high_pass_radius = 8.0 / float(image_in_bitmap.logical_x_dimension);
 			else high_pass_radius = image_in_bitmap_pixel_size / high_res_filter_value;
 
 			if (low_res_filter_value < 0) low_pass_radius = image_in_bitmap_pixel_size / 20;//(0.5 * radius_of_circles_around_particles_in_angstroms);
 			else low_pass_radius = image_in_bitmap_pixel_size / low_res_filter_value;
 
+			if (should_high_pass)
+			{
+				image_in_bitmap.BackwardFFT();
+				image_in_bitmap.TaperEdges();
+				image_in_bitmap.ForwardFFT();
+				image_in_bitmap.CosineMask(high_pass_radius,high_pass_radius*2.0,true);
+			}
 
+			if (should_low_pass)
+			{
+				image_in_bitmap.GaussianLowPassFilter(low_pass_radius * sqrt(2.0));
+			}
 
-			if (should_high_pass && ! should_low_pass)
+			if (should_wiener_filter)
 			{
-		//		wxPrintf("High pass filtering: %f %f\n",high_pass_radius,filter_edge_width);
-				image_in_bitmap.CosineMask(high_pass_radius,image_in_bitmap_pixel_size / 600.0,true);
+				image_in_bitmap.OptimalFilterWarp(image_in_bitmap_ctf,image_in_bitmap_pixel_size);
 			}
-			else if (should_low_pass && ! should_high_pass)
-			{
-		//		wxPrintf("Low pass filtering: %f %f\n",low_pass_radius,filter_edge_width);
-				image_in_bitmap.GaussianLowPassFilter(low_pass_radius * sqrt(2.0)); // sqrt(2.0) is to preserve behavior after I changed the GaussianLowPassFilter to take sigma as argument
-				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
-				//image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
-			}
-			else if (should_low_pass & should_high_pass)
-			{
-			//	wxPrintf("Band pass filtering: %f %f %f\n",high_pass_radius,low_pass_radius,filter_edge_width);
-				image_in_bitmap.CosineMask(high_pass_radius,image_in_bitmap_pixel_size / 600.0,true);
-				image_in_bitmap.GaussianLowPassFilter(low_pass_radius * sqrt(2.0)); // sqrt(2.0) is to preserve behavior after I changed the GaussianLowPassFilter to take sigma as argument
-				//image_in_bitmap.CosineMask(low_pass_radius,low_pass_radius,false);
-				//image_in_bitmap.CosineRingMask(high_pass_radius,low_pass_radius,filter_edge_width);
-				//image_in_bitmap.CosineMask(high_pass_radius,filter_edge_width,true);
-				//image_in_bitmap.ApplyBFactor(1500.0/image_in_bitmap_pixel_size/image_in_bitmap_pixel_size);
-			}
+
 			image_in_bitmap.BackwardFFT();
 			image_in_bitmap_filename = image_in_memory_filename;
 			ConvertImageToBitmap(&image_in_bitmap,&PanelBitmap,true);

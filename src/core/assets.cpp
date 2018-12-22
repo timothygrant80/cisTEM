@@ -175,6 +175,7 @@ ImageAsset::ImageAsset()
 	asset_id = -1;
 	parent_id = -1;
 	alignment_id = -1;
+	ctf_estimation_id = -1;
 	position_in_stack = 1;
 	x_size = 0;
 	y_size = 0;

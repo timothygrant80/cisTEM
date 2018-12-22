@@ -737,8 +737,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 			movie_is_gain_corrected = true;
 		}
 
+		const int number_of_threads = 1;
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbfff",	input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbfffi",input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -771,7 +772,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	defocus_is_known,
 																	known_defocus_1,
 																	known_defocus_2,
-																	known_phase_shift);
+																	known_phase_shift,
+																	number_of_threads);
 
 		my_progress_dialog->Update(counter + 1);
 	}

@@ -2368,7 +2368,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline80 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer94->Add( m_staticline80, 0, wxEXPAND | wxALL, 5 );
 	
-	CirclesAroundParticlesCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Circles around particles"), wxDefaultPosition, wxDefaultSize, 0 );
+	CirclesAroundParticlesCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Circles"), wxDefaultPosition, wxDefaultSize, 0 );
 	CirclesAroundParticlesCheckBox->SetValue(true); 
 	CirclesAroundParticlesCheckBox->SetToolTip( wxT("Draw circles around picked particles") );
 	
@@ -2377,7 +2377,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline87 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer94->Add( m_staticline87, 0, wxEXPAND | wxALL, 5 );
 	
-	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale bar"), wxDefaultPosition, wxDefaultSize, 0 );
+	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale"), wxDefaultPosition, wxDefaultSize, 0 );
 	ScaleBarCheckBox->SetValue(true); 
 	ScaleBarCheckBox->SetToolTip( wxT("Display a scale bar") );
 	
@@ -2386,7 +2386,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline88 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer94->Add( m_staticline88, 0, wxEXPAND | wxALL, 5 );
 	
-	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighPassFilterCheckBox->SetValue(true); 
 	HighPassFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
 	
@@ -2395,12 +2395,12 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline81 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer94->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
 	
-	LowPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Low-pass filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Low-pass"), wxDefaultPosition, wxDefaultSize, 0 );
 	LowPassFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
 	
 	bSizer94->Add( LowPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	LowResFilterTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	LowResFilterTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20"), wxDefaultPosition, wxSize( 40,-1 ), wxTE_PROCESS_ENTER );
 	LowResFilterTextCtrl->Enable( false );
 	
 	bSizer94->Add( LowResFilterTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );

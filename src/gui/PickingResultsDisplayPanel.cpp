@@ -12,6 +12,7 @@ PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindo
 	PickingResultsImagePanel->UnsetToolTip();
 
 	LowResFilterTextCtrl->SetMinMaxValue(0.1, FLT_MAX);
+	LowResFilterTextCtrl->SetPrecision(0);
 
 }
 

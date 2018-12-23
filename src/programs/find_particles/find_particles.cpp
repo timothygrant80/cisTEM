@@ -63,7 +63,10 @@ void FindParticlesApp::DoInteractiveUserInput()
 	int			output_stack_box_size				=	my_input->GetIntFromUser("Box size for output candidate particle images (pixels)","In pixels. Give 0 to skip writing particle images to disk.","256",0);
 	int			minimum_distance_from_edges			=	my_input->GetIntFromUser("Minimum distance from edge (pixels)","In pixels, the minimum distance between the center of a box and the edge of the micrograph","129",0);
 	float		picking_threshold					=	my_input->GetFloatFromUser("Picking threshold","The minimum peak height for candidate particles. In numbers of background noise standard deviations. Typically in the 3.0 to 15.0 range. For micrographs with good contrast, give higher values to avoid spurious peaks.","8.0",0.0);
+	bool		avoid_low_variance_areas			=	my_input->GetYesNoFromUser("Avoid low variance areas?","Areas with low local variance should be avoided. This often works well to avoid false positive picks in empty areas.","yes");
 	bool		avoid_high_variance_areas			=	my_input->GetYesNoFromUser("Avoid high variance areas?","Areas with abnormally high local variance should be avoided. This often works well to avoid the edges of support film, ice crystals etc.","yes");
+	float		low_variance_threshold_in_fwhm		=	my_input->GetFloatFromUser("Low variance threshold","When the local variance is below this threshold, no particles can be found. Expressed in numbers of FWHM above the mode of the local variance in the image. A negative number indicates a local variance below the mode","-1.0");
+	float		high_variance_threshold_in_fwhm		=	my_input->GetFloatFromUser("High variance threshold","When the local variance is above this threshold, no particles can be found. Expressed in numbers of FWHM above the mode of the local variance in the image.","2.0");
 	bool 		avoid_high_low_mean_areas			=	my_input->GetYesNoFromUser("Avoid areas with abnormal local mean?","Areas with abnormal local mean are can be avoided. This often works well to avoid ice crystals, for example.","yes");
 	int			algorithm_to_find_background		=	my_input->GetIntFromUser("Algorithm to find background areas (0 or 1)","0: lowest variance; 1: variance near mode","0",0,1);
 	int			number_of_background_boxes			=	my_input->GetIntFromUser("Number of background boxes","This number of boxes will be extracted from the micrographs in areas devoid of particles or other features, to compute the background amplitude spectrum","50",1);
@@ -73,8 +76,8 @@ void FindParticlesApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(25);
-	my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbiib",	micrograph_filename.ToStdString().c_str(),
+	my_current_job.Reset(28);
+	my_current_job.ManualSetArguments("tffffffffbtbiffftiifbbffbiib",	micrograph_filename.ToStdString().c_str(),
 																	pixel_size,
 																	acceleration_voltage_in_keV,
 																	spherical_aberration_in_mm,
@@ -94,7 +97,10 @@ void FindParticlesApp::DoInteractiveUserInput()
 																	output_stack_box_size,
 																	minimum_distance_from_edges,
 																	picking_threshold,
+																	avoid_low_variance_areas,
 																	avoid_high_variance_areas,
+																	low_variance_threshold_in_fwhm,
+																	high_variance_threshold_in_fwhm,
 																	avoid_high_low_mean_areas,
 																	algorithm_to_find_background,
 																	number_of_background_boxes,
@@ -131,11 +137,14 @@ bool FindParticlesApp::DoCalculation()
 	int			output_stack_box_size						=	my_current_job.arguments[17].ReturnIntegerArgument();
 	int			minimum_distance_from_edges_in_pixels		=	my_current_job.arguments[18].ReturnIntegerArgument();
 	float		minimum_peak_height_for_candidate_particles = 	my_current_job.arguments[19].ReturnFloatArgument();
-	bool		avoid_high_variance_areas					=	my_current_job.arguments[20].ReturnBoolArgument();
-	bool		avoid_high_low_mean_areas					=	my_current_job.arguments[21].ReturnBoolArgument();
-	int			algorithm_to_find_background				=	my_current_job.arguments[22].ReturnIntegerArgument();
-	int			number_of_background_boxes					=	my_current_job.arguments[23].ReturnIntegerArgument();
-	bool		particles_are_white							=	my_current_job.arguments[24].ReturnBoolArgument();
+	bool		avoid_low_variance_areas					=	my_current_job.arguments[20].ReturnBoolArgument();
+	bool		avoid_high_variance_areas					=	my_current_job.arguments[21].ReturnBoolArgument();
+	float		low_variance_threshold_in_fwhm				=	my_current_job.arguments[22].ReturnBoolArgument();
+	float		high_variance_threshold_in_fwhm				=	my_current_job.arguments[23].ReturnBoolArgument();
+	bool		avoid_high_low_mean_areas					=	my_current_job.arguments[24].ReturnBoolArgument();
+	int			algorithm_to_find_background				=	my_current_job.arguments[25].ReturnIntegerArgument();
+	int			number_of_background_boxes					=	my_current_job.arguments[26].ReturnIntegerArgument();
+	bool		particles_are_white							=	my_current_job.arguments[27].ReturnBoolArgument();
 
 
 	particle_finder.SetAllUserParameters(   micrograph_filename,
@@ -158,7 +167,10 @@ bool FindParticlesApp::DoCalculation()
 			                                output_stack_box_size,
 			                                minimum_distance_from_edges_in_pixels,
 			                                minimum_peak_height_for_candidate_particles,
-			                                avoid_high_variance_areas,
+			                                avoid_low_variance_areas,
+											avoid_high_variance_areas,
+											low_variance_threshold_in_fwhm,
+											high_variance_threshold_in_fwhm,
 			                                avoid_high_low_mean_areas,
 			                                algorithm_to_find_background,
 			                                number_of_background_boxes,

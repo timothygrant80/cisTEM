@@ -36,10 +36,26 @@ ParticleFinder::ParticleFinder()
 	algorithm_to_find_background				    = 	0;
 	number_of_background_boxes		                = 	0;
 	number_of_templates								=	0;
+	particles_are_white								=	false;
 
 	// Other
-	number_of_background_boxes_to_skip = 0;
+	number_of_background_boxes_to_skip 				= 	0;
 	write_out_plt                                   =   false;
+	pixel_size										=	0.0;
+	minimum_box_size_for_picking					=	0;
+	minimum_box_size_for_object_with_psf			=	0;
+	maximum_radius_in_pixels						=	0.0;
+	typical_radius_in_pixels						=	0.0;
+	new_template_dimension							=	0;
+	new_micrograph_dimension_x						=	0;
+	new_micrograph_dimension_y						=	0;
+	my_progress_bar									=	NULL;
+	local_sigma_mode								=	0.0;
+	local_sigma_fwhm								=	0.0;
+	local_mean_mode									=	0.0;
+	local_mean_fwhm									=	0.0;
+	micrograph_mean									=	0.0;
+	template_image									=	NULL;
 
 }
 
@@ -112,156 +128,38 @@ void ParticleFinder::RedoWithNewHighestResolution()
 
 void ParticleFinder::RedoWithNewMinimumDistanceFromEdges()
 {
-	/*
-	OpenMicrographAndUpdateDimensions();
-
-	UpdatePixelSizeFromMicrographDimensions();
-
-	OpenTemplatesAndUpdateDimensions();
-
-	UpdateCTF();
-
-	UpdateMinimumBoxSize();
-
-	SetupCurveObjects();
-
-
-	// If the user is supplying templates, read them in. If not, generate a single template image.
-	AllocateTemplateImages();
-	if (already_have_templates)
-	{
-		ReadTemplatesFromDisk();
-	}
-	else // User did not supply a template, we will generate one
-	{
-		GenerateATemplate();
-	}
-
-	// Read in the micrograph and resample it
-	ReadAndResampleMicrograph();
-
-	// Band-pass filter the micrograph to emphasize features similar to the templates
-	BandPassMicrograph();
-
-	// Compute local mean, local sigma and get stats on these local statistics
-	UpdateLocalMeanAndSigma();
-
-	// Whiten the background
-	WhitenMicrographBackground();
-
-	// Compute the target function (i.e. do template matching)
-	DoTemplateMatching();
-
-	*/
-
 	// Look for peaks and extract particles
 	FindPeaksAndExtractParticles();
+}
 
-	// Cleanup
-	//DeallocateTemplateImages();
-	//CloseImageFiles();
+void ParticleFinder::RedoWithNewAvoidLowVarianceAreas()
+{
+	// Look for peaks and extract particles
+	FindPeaksAndExtractParticles();
 }
 
 void ParticleFinder::RedoWithNewAvoidHighVarianceAreas()
 {
-	/*
-	OpenMicrographAndUpdateDimensions();
-
-	UpdatePixelSizeFromMicrographDimensions();
-
-	OpenTemplatesAndUpdateDimensions();
-
-	UpdateCTF();
-
-	UpdateMinimumBoxSize();
-
-	SetupCurveObjects();
-
-
-	// If the user is supplying templates, read them in. If not, generate a single template image.
-	AllocateTemplateImages();
-	if (already_have_templates)
-	{
-		ReadTemplatesFromDisk();
-	}
-	else // User did not supply a template, we will generate one
-	{
-		GenerateATemplate();
-	}
-
-	// Read in the micrograph and resample it
-	ReadAndResampleMicrograph();
-
-	// Band-pass filter the micrograph to emphasize features similar to the templates
-	BandPassMicrograph();
-
-	// Compute local mean, local sigma and get stats on these local statistics
-	UpdateLocalMeanAndSigma();
-
-	// Whiten the background
-	WhitenMicrographBackground();
-
-	// Compute the target function (i.e. do template matching)
-	DoTemplateMatching();
-	*/
-
 	// Look for peaks and extract particles
 	FindPeaksAndExtractParticles();
+}
 
-	// Cleanup
-	//DeallocateTemplateImages();
-	//CloseImageFiles();
+void ParticleFinder::RedoWithNewLowVarianceThreshold()
+{
+	// Look for peaks and extract particles
+	FindPeaksAndExtractParticles();
+}
+
+void ParticleFinder::RedoWithNewHighVarianceThreshold()
+{
+	// Look for peaks and extract particles
+	FindPeaksAndExtractParticles();
 }
 
 void ParticleFinder::RedoWithNewAvoidAbnormalLocalMeanAreas()
 {
-	/*
-	OpenMicrographAndUpdateDimensions();
-
-	UpdatePixelSizeFromMicrographDimensions();
-
-	OpenTemplatesAndUpdateDimensions();
-
-	UpdateCTF();
-
-	UpdateMinimumBoxSize();
-
-	SetupCurveObjects();
-
-
-	// If the user is supplying templates, read them in. If not, generate a single template image.
-	AllocateTemplateImages();
-	if (already_have_templates)
-	{
-		ReadTemplatesFromDisk();
-	}
-	else // User did not supply a template, we will generate one
-	{
-		GenerateATemplate();
-	}
-
-	// Read in the micrograph and resample it
-	ReadAndResampleMicrograph();
-
-	// Band-pass filter the micrograph to emphasize features similar to the templates
-	BandPassMicrograph();
-
-	// Compute local mean, local sigma and get stats on these local statistics
-	UpdateLocalMeanAndSigma();
-
-	// Whiten the background
-	WhitenMicrographBackground();
-
-	// Compute the target function (i.e. do template matching)
-	DoTemplateMatching();
-	*/
-
 	// Look for peaks and extract particles
 	FindPeaksAndExtractParticles();
-
-	// Cleanup
-	//DeallocateTemplateImages();
-	//CloseImageFiles();
 }
 
 void ParticleFinder::RedoWithNewNumberOfBackgroundBoxes()
@@ -551,7 +449,10 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 											int					wanted_output_stack_box_size,
 											int					wanted_minimum_distance_from_edges_in_pixels,
 											float				wanted_minimum_peak_height_for_candidate_particles,
+											bool				wanted_avoid_low_variance_areas,
 											bool				wanted_avoid_high_variance_areas,
+											float				wanted_low_variance_threshold_in_fwhm,
+											float				wanted_high_variance_threshold_in_fwhm,
 											bool				wanted_avoid_high_low_mean_areas,
 											int					wanted_algorithm_to_find_background,
 											int					wanted_number_of_background_boxes,
@@ -577,7 +478,10 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 	output_stack_box_size						    =    wanted_output_stack_box_size;
 	minimum_distance_from_edges_in_pixels		    =    wanted_minimum_distance_from_edges_in_pixels;
 	minimum_peak_height_for_candidate_particles     =    wanted_minimum_peak_height_for_candidate_particles;
+	avoid_low_variance_areas						=	 wanted_avoid_low_variance_areas;
 	avoid_high_variance_areas					    =    wanted_avoid_high_variance_areas;
+	low_variance_threshold_in_fwhm					=	 wanted_low_variance_threshold_in_fwhm;
+	high_variance_threshold_in_fwhm					=	 wanted_high_variance_threshold_in_fwhm;
 	avoid_high_low_mean_areas					    =    wanted_avoid_high_low_mean_areas;
 	algorithm_to_find_background				    =    wanted_algorithm_to_find_background;
 	number_of_background_boxes		                =    wanted_number_of_background_boxes;
@@ -591,7 +495,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 
 	// We may want to avoid some areas
 	RemoveHighLowMeanAreasFromTargetFunction();
-	RemoveHighVarianceAreasFromTargetFunction();
+	RemoveHighLowVarianceAreasFromTargetFunction();
 
 	// Let's find peaks in our scoring function and box candidate particles out
 	int index_of_matching_template;
@@ -757,34 +661,43 @@ void ParticleFinder::RemoveHighLowMeanAreasFromTargetFunction()
 	}
 }
 
-void ParticleFinder::RemoveHighVarianceAreasFromTargetFunction()
+void ParticleFinder::RemoveHighLowVarianceAreasFromTargetFunction()
 {
-	if (avoid_high_variance_areas)
+	if (avoid_high_variance_areas || avoid_low_variance_areas)
 	{
-		// Decide what we call a "high-variance area"
-		// Normally, 2 sigmas over the mode is OK, but when the micrograph
-		// is from a phase plate, the particles are super high-contrast, so we need a larger value
-		// The following may be tweaked heuristically:
-		// - the phase shift range over which high contrast is assumed
-		// - the number of sigmas above the mode for the threshold when in high-contrast mode
-		float threshold;
-		float abs_p_shift = fabs(fmod(micrograph_ctf.GetAdditionalPhaseShift(),PI));
-		if ( (abs_p_shift > PI * 0.1) && (abs_p_shift < PI * 0.9 ))
+		/*
+		 * Decide what we call a "high-variance area"
+		 * Normally, 2 sigmas over the mode is OK, but when the micrograph
+		 * is from a phase plate, the particles are super high-contrast, so we need a larger value
+		 * The following may be tweaked heuristically:
+		 * - the phase shift range over which high contrast is assumed
+		 * - the number of sigmas above the mode for the threshold when in high-contrast mode
+		 *
+		 * Update Dec 2018: we will now let the user/GUI set this
+		 */
+		float threshold_high;
+		float threshold_low;
+
+		if (avoid_high_variance_areas)
 		{
-			// phase shift means very high contrast particles
-			threshold = local_sigma_mode + 8.0 * local_sigma_fwhm;
+			threshold_high = local_sigma_mode + high_variance_threshold_in_fwhm * local_sigma_fwhm;
 		}
 		else
 		{
-			threshold = local_sigma_mode + 2.0 * local_sigma_fwhm;
+			threshold_high = local_sigma_mode + 9999.9 * local_sigma_fwhm;
 		}
-		//wxPrintf("sigma mode = %f fwhm = %f\n",local_sigma_mode,local_sigma_fwhm);
-		//wxPrintf("Threshold on sigma = %f\n",threshold);
+		if (avoid_low_variance_areas)
+		{
+			threshold_low = local_sigma_mode + low_variance_threshold_in_fwhm * local_sigma_fwhm;
+		}
+		else
+		{
+			threshold_low = local_sigma_mode - 9999.9 * local_sigma_fwhm;
+		}
 
 		long address;
 		long address_in_score;
 		// this is slightly complicated because the correlation map and the variance map are in reverse order
-
 
 		address = 0;
 		address_in_score = maximum_score_modified.real_memory_allocated;
@@ -793,7 +706,7 @@ void ParticleFinder::RemoveHighVarianceAreasFromTargetFunction()
 			address_in_score -= maximum_score_modified.padding_jump_value;
 			for ( int i = 0; i < maximum_score_modified.logical_x_dimension; i ++ )
 			{
-				if (local_sigma.real_values[address] > threshold)
+				if (local_sigma.real_values[address] < threshold_low || local_sigma.real_values[address] > threshold_high)
 				{
 					maximum_score_modified.real_values[address_in_score] = 0.0;
 				}

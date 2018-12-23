@@ -49,8 +49,8 @@ public:
 		void OnAutoPickRefreshCheckBox( wxCommandEvent& event );
 		void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent & event );
 		void OnTestOnCurrentMicrographButtonClick( wxCommandEvent & event );
-		void OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event );
-		void OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event );
+		void OnExclusionRadiusNumericTextEnter( wxCommandEvent& event );
+		void OnTemplateRadiusNumericTextEnter( wxCommandEvent& event );
 		void OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event );
 		void CheckWhetherGroupsCanBePicked();
 		void SetAllUserParametersForParticleFinder();
@@ -58,24 +58,33 @@ public:
 		int ReturnDefaultMinimumDistanceFromEdges();
 		void ShowPickingParametersPanel();
 
-		void OnNewCharacteristicParticleRadius();
+		void OnNewTemplateRadius();
 		void OnNewThresholdPeakHeight();
-		void OnNewMaximumParticleRadius();
+		void OnNewExclusionRadius();
 		void OnNewHighestResolution();
+		void OnNewLowVarianceThreshold();
+		void OnNewHighVarianceThreshold();
 
-		void OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event );
-		void OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent & event );
+		void OnTemplateRadiusNumericTextKillFocus( wxFocusEvent & event );
+		void OnTemplateRadiusNumericTextSetFocus( wxFocusEvent & event );
 		void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event );
 		void OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent & event );
-		void OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent& event);
-		void OnMaximumParticleRadiusNumericTextSetFocus( wxFocusEvent& event);
+		void OnExclusionRadiusNumericTextKillFocus( wxFocusEvent& event);
+		void OnExclusionRadiusNumericTextSetFocus( wxFocusEvent& event);
 
 		void OnHighestResolutionNumericTextEnter( wxCommandEvent & event );
 		void OnHighestResolutionNumericKillFocus( wxFocusEvent & event );
 		void OnHighestResolutionNumericSetFocus( wxFocusEvent & event );
 
 		void OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& event );
+		void OnAvoidLowVarianceAreasCheckBox( wxCommandEvent& event );
 		void OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event );
+		void OnLowVarianceThresholdNumericTextEnter( wxCommandEvent & event);
+		void OnLowVarianceThresholdNumericKillFocus( wxFocusEvent & event );
+		void OnLowVarianceThresholdNumericSetFocus( wxFocusEvent & event );
+		void OnHighVarianceThresholdNumericTextEnter( wxCommandEvent & event);
+		void OnHighVarianceThresholdNumericKillFocus( wxFocusEvent & event );
+		void OnHighVarianceThresholdNumericSetFocus( wxFocusEvent & event );
 		void OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event );
 		void OnNumberOfBackgroundBoxesSpinCtrl( wxSpinEvent& event );
 		void OnAlgorithmToFindBackgroundChoice( wxCommandEvent& event );

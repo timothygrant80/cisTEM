@@ -50,6 +50,9 @@ FindParticlesPanel( parent )
 	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnGroupComboBox, this);
 	ImageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnImageComboBox, this);
 
+	ExclusionRadiusNumericCtrl->SetPrecision(0);
+	TemplateRadiusNumericCtrl->SetPrecision(0);
+
 }
 
 
@@ -111,11 +114,14 @@ void MyFindParticlesPanel::Reset()
 void MyFindParticlesPanel::ResetDefaults()
 {
 
-	MaximumParticleRadiusNumericCtrl->ChangeValueFloat(120.0f);
-	CharacteristicParticleRadiusNumericCtrl->ChangeValueFloat(80.0f);
+	ExclusionRadiusNumericCtrl->ChangeValueFloat(120.0f);
+	TemplateRadiusNumericCtrl->ChangeValueFloat(80.0f);
 	ThresholdPeakHeightNumericCtrl->ChangeValueFloat(6.0f);
 	AutoPickRefreshCheckBox->SetValue(false);
+	AvoidLowVarianceAreasCheckBox->SetValue(true);
 	AvoidHighVarianceAreasCheckBox->SetValue(false);
+	LowVarianceThresholdNumericCtrl->ChangeValueFloat(-0.5f);
+	HighVarianceThresholdNumericCtrl->ChangeValueFloat(2.0f);
 	HighestResolutionNumericCtrl->ChangeValueFloat(30.0f);
 	SetMinimumDistanceFromEdgesCheckBox->SetValue(false);
 	MinimumDistanceFromEdgesSpinCtrl->SetValue(128);
@@ -425,14 +431,14 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 int MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()
 {
 	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), 0))->pixel_size;
-	return int(MaximumParticleRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
+	return int(ExclusionRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
 }
 
 
-void MyFindParticlesPanel::OnNewCharacteristicParticleRadius()
+void MyFindParticlesPanel::OnNewTemplateRadius()
 {
 	// Enforce min
-	if (CharacteristicParticleRadiusNumericCtrl->ReturnValue() < 1.0) CharacteristicParticleRadiusNumericCtrl->ChangeValueFloat(1.0);
+	if (TemplateRadiusNumericCtrl->ReturnValue() < 1.0) TemplateRadiusNumericCtrl->ChangeValueFloat(1.0);
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
@@ -477,10 +483,10 @@ void MyFindParticlesPanel::OnNewThresholdPeakHeight()
 }
 
 
-void MyFindParticlesPanel::OnNewMaximumParticleRadius()
+void MyFindParticlesPanel::OnNewExclusionRadius()
 {
 	// Enforce min
-	if (MaximumParticleRadiusNumericCtrl->ReturnValue() < 1.0) MaximumParticleRadiusNumericCtrl->ChangeValueFloat(1.0);
+	if (ExclusionRadiusNumericCtrl->ReturnValue() < 1.0) ExclusionRadiusNumericCtrl->ChangeValueFloat(1.0);
 
 	if (!SetMinimumDistanceFromEdgesCheckBox->IsChecked())
 	{
@@ -531,19 +537,19 @@ void MyFindParticlesPanel::OnNewHighestResolution()
 }
 
 
-void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event )
+void MyFindParticlesPanel::OnExclusionRadiusNumericTextEnter( wxCommandEvent& event )
 {
-	OnNewMaximumParticleRadius();
+	OnNewExclusionRadius();
 }
 
-void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
+void MyFindParticlesPanel::OnExclusionRadiusNumericTextKillFocus( wxFocusEvent & event )
 {
-	OnNewMaximumParticleRadius();
+	OnNewExclusionRadius();
 }
 
-void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent & event )
+void MyFindParticlesPanel::OnTemplateRadiusNumericTextKillFocus( wxFocusEvent & event )
 {
-	OnNewCharacteristicParticleRadius();
+	OnNewTemplateRadius();
 }
 
 void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent & event )
@@ -552,14 +558,14 @@ void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus( wxFocusEve
 }
 
 
-void MyFindParticlesPanel::OnMaximumParticleRadiusNumericTextSetFocus( wxFocusEvent & event )
+void MyFindParticlesPanel::OnExclusionRadiusNumericTextSetFocus( wxFocusEvent & event )
 {
-	value_on_focus_float = MaximumParticleRadiusNumericCtrl->ReturnValue();
+	value_on_focus_float = ExclusionRadiusNumericCtrl->ReturnValue();
 }
 
-void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent & event )
+void MyFindParticlesPanel::OnTemplateRadiusNumericTextSetFocus( wxFocusEvent & event )
 {
-	value_on_focus_float = CharacteristicParticleRadiusNumericCtrl->ReturnValue();
+	value_on_focus_float = TemplateRadiusNumericCtrl->ReturnValue();
 }
 
 void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent & event )
@@ -567,9 +573,9 @@ void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus( wxFocusEven
 	value_on_focus_float = ThresholdPeakHeightNumericCtrl->ReturnValue();
 }
 
-void MyFindParticlesPanel::OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event )
+void MyFindParticlesPanel::OnTemplateRadiusNumericTextEnter( wxCommandEvent& event )
 {
-	OnNewCharacteristicParticleRadius();
+	OnNewTemplateRadius();
 }
 
 void MyFindParticlesPanel::OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event )
@@ -612,8 +618,31 @@ void MyFindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& even
 	}
 }
 
+void MyFindParticlesPanel::OnAvoidLowVarianceAreasCheckBox( wxCommandEvent& event )
+{
+	LowVarianceThresholdNumericCtrl->Enable(AvoidLowVarianceAreasCheckBox->GetValue());
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		wxBusyCursor wait;
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewAvoidLowVarianceAreas();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
 void MyFindParticlesPanel::OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event )
 {
+
+	HighVarianceThresholdNumericCtrl->Enable(AvoidHighVarianceAreasCheckBox->GetValue());
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
 		wxBusyCursor wait;
@@ -631,6 +660,77 @@ void MyFindParticlesPanel::OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& eve
 		ExpertOptionsPanel->Thaw();
 	}
 }
+
+void MyFindParticlesPanel::OnNewLowVarianceThreshold()
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		wxBusyCursor wait;
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewLowVarianceThreshold();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnNewHighVarianceThreshold()
+{
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		wxBusyCursor wait;
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.RedoWithNewHighVarianceThreshold();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnLowVarianceThresholdNumericTextEnter( wxCommandEvent & event )
+{
+	OnNewLowVarianceThreshold();
+}
+
+void MyFindParticlesPanel::OnHighVarianceThresholdNumericTextEnter( wxCommandEvent & event )
+{
+	OnNewHighVarianceThreshold();
+}
+
+void MyFindParticlesPanel::OnLowVarianceThresholdNumericKillFocus( wxFocusEvent & event )
+{
+	OnNewLowVarianceThreshold();
+}
+
+void MyFindParticlesPanel::OnLowVarianceThresholdNumericSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = LowVarianceThresholdNumericCtrl->ReturnValue();
+}
+
+void MyFindParticlesPanel::OnHighVarianceThresholdNumericKillFocus( wxFocusEvent & event )
+{
+	OnNewHighVarianceThreshold();
+}
+
+void MyFindParticlesPanel::OnHighVarianceThresholdNumericSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = HighVarianceThresholdNumericCtrl->ReturnValue();
+}
+
 
 void MyFindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event )
 {
@@ -954,14 +1054,17 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 											"no_templates.mrc",
 											average_templates_radially,
 											number_of_template_rotations,
-											CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
-											MaximumParticleRadiusNumericCtrl->ReturnValue(),
+											TemplateRadiusNumericCtrl->ReturnValue(),
+											ExclusionRadiusNumericCtrl->ReturnValue(),
 											HighestResolutionNumericCtrl->ReturnValue(),
 											"no_output_stack.mrc",
 											output_stack_box_size,
 											minimum_distance_from_edge,
 											ThresholdPeakHeightNumericCtrl->ReturnValue(),
+											AvoidLowVarianceAreasCheckBox->IsChecked(),
 											AvoidHighVarianceAreasCheckBox->IsChecked(),
+											LowVarianceThresholdNumericCtrl->ReturnValue(),
+											HighVarianceThresholdNumericCtrl->ReturnValue(),
 											AvoidAbnormalLocalMeanAreasCheckBox->IsChecked(),
 											AlgorithmToFindBackgroundChoice->GetSelection(),
 											NumberOfBackgroundBoxesSpinCtrl->GetValue(),
@@ -975,7 +1078,7 @@ void MyFindParticlesPanel::DrawResultsFromParticleFinder()
 
 
 	PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
-	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, MaximumParticleRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize(), particle_finder.ReturnMicrographCTF());
+	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, ExclusionRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize(), particle_finder.ReturnMicrographCTF());
 
 }
 
@@ -1043,8 +1146,8 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	std::string	templates_filename = "no_templates.mrcs";
 	bool		average_templates_radially = true;
 	int			number_of_template_rotations = 1;
-	float		typical_radius = CharacteristicParticleRadiusNumericCtrl->ReturnValue();
-	float		maximum_radius = MaximumParticleRadiusNumericCtrl->ReturnValue();
+	float		typical_radius = TemplateRadiusNumericCtrl->ReturnValue();
+	float		maximum_radius = ExclusionRadiusNumericCtrl->ReturnValue();
 	float		highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();
 	std::string	output_stack_filename;
 	int			output_stack_box_size = 0;
@@ -1070,8 +1173,8 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		templates_filename = "no_templates.mrc";
 		average_templates_radially = false;
 		number_of_template_rotations = 1;
-		typical_radius = CharacteristicParticleRadiusNumericCtrl->ReturnValue();
-		maximum_radius = MaximumParticleRadiusNumericCtrl->ReturnValue();
+		typical_radius = TemplateRadiusNumericCtrl->ReturnValue();
+		maximum_radius = ExclusionRadiusNumericCtrl->ReturnValue();
 	break;
 	default :
 		MyDebugAssertTrue(false,"Oops, unknown picking algorithm: %i\n",PickingAlgorithmComboBox->GetSelection());
@@ -1654,8 +1757,8 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 																						(long int) now.GetAsDOS(),
 																						image_asset_panel->ReturnAssetID(active_group.members[counter]),
 																						PickingAlgorithmComboBox->GetSelection(),
-																						CharacteristicParticleRadiusNumericCtrl->ReturnValue(),
-																						MaximumParticleRadiusNumericCtrl->ReturnValue(),
+																						TemplateRadiusNumericCtrl->ReturnValue(),
+																						ExclusionRadiusNumericCtrl->ReturnValue(),
 																						ThresholdPeakHeightNumericCtrl->ReturnValue(),
 																						HighestResolutionNumericCtrl->ReturnValue(),
 																						MinimumDistanceFromEdgesSpinCtrl->GetValue(),

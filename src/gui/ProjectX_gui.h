@@ -483,6 +483,67 @@ class RefinementResultsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ShowCTFResultsParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class ShowCTFResultsParentPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxSplitterWindow* m_splitter16;
+		wxPanel* m_panel87;
+		wxSplitterWindow* m_splitter15;
+		wxPanel* m_panel88;
+		wxStaticText* m_staticText377;
+		wxStaticLine* m_staticline81;
+		wxPanel* m_panel89;
+		wxStaticText* m_staticText378;
+		wxStaticLine* m_staticline82;
+		wxPanel* m_panel86;
+		wxStaticText* m_staticText379;
+		wxStaticLine* m_staticline78;
+		wxStaticText* m_staticText380;
+		wxStaticText* Defocus1Text;
+		wxStaticText* m_staticText389;
+		wxStaticText* ScoreText;
+		wxStaticText* m_staticText382;
+		wxStaticText* Defocus2Text;
+		wxStaticText* m_staticText391;
+		wxStaticText* FitResText;
+		wxStaticText* m_staticText384;
+		wxStaticText* AngleText;
+		wxStaticText* m_staticText393;
+		wxStaticText* AliasResText;
+		wxStaticText* m_staticText386;
+		wxStaticText* PhaseShiftText;
+		wxStaticLine* m_staticline83;
+		wxStaticText* m_staticText394;
+		wxStaticText* ImageFileText;
+		wxStaticLine* m_staticline86;
+	
+	public:
+		BitmapPanel* CTF2DResultsPanel;
+		CTF1DPanel* CTFPlotPanel;
+		DisplayPanel* ImageDisplayPanel;
+		
+		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+		~ShowCTFResultsParentPanel();
+		
+		void m_splitter16OnIdle( wxIdleEvent& )
+		{
+			m_splitter16->SetSashPosition( 700 );
+			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+		}
+		
+		void m_splitter15OnIdle( wxIdleEvent& )
+		{
+			m_splitter15->SetSashPosition( 0 );
+			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class Refine2DResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
 class Refine2DResultsPanelParent : public wxPanel 
@@ -578,67 +639,6 @@ class Refine2DResultsPanelParent : public wxPanel
 		{
 			m_splitter7->SetSashPosition( -800 );
 			m_splitter7->Disconnect( wxEVT_IDLE, wxIdleEventHandler( Refine2DResultsPanelParent::m_splitter7OnIdle ), NULL, this );
-		}
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class ShowCTFResultsParentPanel
-///////////////////////////////////////////////////////////////////////////////
-class ShowCTFResultsParentPanel : public wxPanel 
-{
-	private:
-	
-	protected:
-		wxSplitterWindow* m_splitter16;
-		wxPanel* m_panel87;
-		wxSplitterWindow* m_splitter15;
-		wxPanel* m_panel88;
-		wxStaticText* m_staticText377;
-		wxStaticLine* m_staticline81;
-		wxPanel* m_panel89;
-		wxStaticText* m_staticText378;
-		wxStaticLine* m_staticline82;
-		wxPanel* m_panel86;
-		wxStaticText* m_staticText379;
-		wxStaticLine* m_staticline78;
-		wxStaticText* m_staticText380;
-		wxStaticText* Defocus1Text;
-		wxStaticText* m_staticText389;
-		wxStaticText* ScoreText;
-		wxStaticText* m_staticText382;
-		wxStaticText* Defocus2Text;
-		wxStaticText* m_staticText391;
-		wxStaticText* FitResText;
-		wxStaticText* m_staticText384;
-		wxStaticText* AngleText;
-		wxStaticText* m_staticText393;
-		wxStaticText* AliasResText;
-		wxStaticText* m_staticText386;
-		wxStaticText* PhaseShiftText;
-		wxStaticLine* m_staticline83;
-		wxStaticText* m_staticText394;
-		wxStaticText* ImageFileText;
-		wxStaticLine* m_staticline86;
-	
-	public:
-		BitmapPanel* CTF2DResultsPanel;
-		CTF1DPanel* CTFPlotPanel;
-		DisplayPanel* ImageDisplayPanel;
-		
-		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
-		~ShowCTFResultsParentPanel();
-		
-		void m_splitter16OnIdle( wxIdleEvent& )
-		{
-			m_splitter16->SetSashPosition( 700 );
-			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
-		}
-		
-		void m_splitter15OnIdle( wxIdleEvent& )
-		{
-			m_splitter15->SetSashPosition( 0 );
-			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
 		}
 	
 };
@@ -1096,12 +1096,15 @@ class FindParticlesPanel : public JobPanel
 		wxScrolledWindow* PickingParametersPanel;
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText196;
-		NumericTextCtrl* MaximumParticleRadiusNumericCtrl;
+		NumericTextCtrl* ExclusionRadiusNumericCtrl;
 		wxStaticText* CharacteristicParticleRadiusStaticText;
-		NumericTextCtrl* CharacteristicParticleRadiusNumericCtrl;
+		NumericTextCtrl* TemplateRadiusNumericCtrl;
 		wxStaticText* ThresholdPeakHeightStaticText1;
 		NumericTextCtrl* ThresholdPeakHeightNumericCtrl;
+		wxCheckBox* AvoidLowVarianceAreasCheckBox;
+		NumericTextCtrl* LowVarianceThresholdNumericCtrl;
 		wxCheckBox* AvoidHighVarianceAreasCheckBox;
+		NumericTextCtrl* HighVarianceThresholdNumericCtrl;
 		wxStaticLine* m_staticline106;
 		wxStaticText* m_staticText440;
 		wxButton* TestOnCurrentMicrographButton;
@@ -1146,16 +1149,19 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnPickingAlgorithmComboBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnMaximumParticleRadiusNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnMaximumParticleRadiusNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnMaximumParticleRadiusNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnCharacteristicParticleRadiusNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnCharacteristicParticleRadiusNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnCharacteristicParticleRadiusNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExclusionRadiusNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnExclusionRadiusNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnExclusionRadiusNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnTemplateRadiusNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnTemplateRadiusNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnTemplateRadiusNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAvoidLowVarianceAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowVarianceThresholdNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAvoidHighVarianceAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHighVarianceThresholdNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnTestOnCurrentMicrographButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoPickRefreshCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHighestResolutionNumericKillFocus( wxFocusEvent& event ) { event.Skip(); }

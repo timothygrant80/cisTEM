@@ -1752,6 +1752,211 @@ RefinementResultsPanel::~RefinementResultsPanel()
 	
 }
 
+ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer92;
+	bSizer92 = new wxBoxSizer( wxVERTICAL );
+	
+	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16->SetSashGravity( 0.5 );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	
+	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer301;
+	bSizer301 = new wxBoxSizer( wxVERTICAL );
+	
+	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter15->SetSashGravity( 0.5 );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	
+	m_panel88 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer302;
+	bSizer302 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText377 = new wxStaticText( m_panel88, wxID_ANY, wxT("2D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText377->Wrap( -1 );
+	m_staticText377->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	bSizer302->Add( m_staticText377, 0, wxALL, 5 );
+	
+	m_staticline81 = new wxStaticLine( m_panel88, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer302->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
+	
+	CTF2DResultsPanel = new BitmapPanel( m_panel88, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer302->Add( CTF2DResultsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	m_panel88->SetSizer( bSizer302 );
+	m_panel88->Layout();
+	bSizer302->Fit( m_panel88 );
+	m_panel89 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer303;
+	bSizer303 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText378 = new wxStaticText( m_panel89, wxID_ANY, wxT("1D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText378->Wrap( -1 );
+	m_staticText378->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	bSizer303->Add( m_staticText378, 0, wxALL, 5 );
+	
+	m_staticline82 = new wxStaticLine( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer303->Add( m_staticline82, 0, wxEXPAND | wxALL, 5 );
+	
+	CTFPlotPanel = new CTF1DPanel( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer303->Add( CTFPlotPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	m_panel89->SetSizer( bSizer303 );
+	m_panel89->Layout();
+	bSizer303->Fit( m_panel89 );
+	m_splitter15->SplitHorizontally( m_panel88, m_panel89, 0 );
+	bSizer301->Add( m_splitter15, 1, wxEXPAND, 5 );
+	
+	
+	m_panel87->SetSizer( bSizer301 );
+	m_panel87->Layout();
+	bSizer301->Fit( m_panel87 );
+	m_panel86 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer304;
+	bSizer304 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticText379 = new wxStaticText( m_panel86, wxID_ANY, wxT("Estimated CTF Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText379->Wrap( -1 );
+	m_staticText379->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	bSizer304->Add( m_staticText379, 0, wxALL, 5 );
+	
+	m_staticline78 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline78, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer305;
+	bSizer305 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxGridSizer* gSizer14;
+	gSizer14 = new wxGridSizer( 0, 4, 0, 0 );
+	
+	m_staticText380 = new wxStaticText( m_panel86, wxID_ANY, wxT("\tDefocus 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText380->Wrap( -1 );
+	m_staticText380->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus1Text->Wrap( -1 );
+	gSizer14->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText389 = new wxStaticText( m_panel86, wxID_ANY, wxT("Score :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText389->Wrap( -1 );
+	m_staticText389->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ScoreText->Wrap( -1 );
+	gSizer14->Add( ScoreText, 0, wxALL, 5 );
+	
+	m_staticText382 = new wxStaticText( m_panel86, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText382->Wrap( -1 );
+	m_staticText382->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	Defocus2Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus2Text->Wrap( -1 );
+	gSizer14->Add( Defocus2Text, 0, wxALL, 5 );
+	
+	m_staticText391 = new wxStaticText( m_panel86, wxID_ANY, wxT("Fit Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText391->Wrap( -1 );
+	m_staticText391->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	FitResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	FitResText->Wrap( -1 );
+	gSizer14->Add( FitResText, 0, wxALL, 5 );
+	
+	m_staticText384 = new wxStaticText( m_panel86, wxID_ANY, wxT("Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText384->Wrap( -1 );
+	m_staticText384->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	AngleText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	AngleText->Wrap( -1 );
+	gSizer14->Add( AngleText, 0, wxALL, 5 );
+	
+	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText393->Wrap( -1 );
+	m_staticText393->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	AliasResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	AliasResText->Wrap( -1 );
+	gSizer14->Add( AliasResText, 0, wxALL, 5 );
+	
+	m_staticText386 = new wxStaticText( m_panel86, wxID_ANY, wxT("Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText386->Wrap( -1 );
+	m_staticText386->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	PhaseShiftText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PhaseShiftText->Wrap( -1 );
+	gSizer14->Add( PhaseShiftText, 0, wxALL, 5 );
+	
+	
+	bSizer305->Add( gSizer14, 0, 0, 5 );
+	
+	
+	bSizer305->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	
+	bSizer304->Add( bSizer305, 0, wxEXPAND, 5 );
+	
+	m_staticline83 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline83, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer306;
+	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText394 = new wxStaticText( m_panel86, wxID_ANY, wxT("Image / Aligned Movie Sum"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText394->Wrap( -1 );
+	m_staticText394->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	bSizer306->Add( m_staticText394, 0, wxALL, 5 );
+	
+	ImageFileText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ImageFileText->Wrap( -1 );
+	ImageFileText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	bSizer306->Add( ImageFileText, 0, wxALL, 5 );
+	
+	
+	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
+	
+	m_staticline86 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline86, 0, wxEXPAND | wxALL, 5 );
+	
+	ImageDisplayPanel = new DisplayPanel( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer304->Add( ImageDisplayPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	m_panel86->SetSizer( bSizer304 );
+	m_panel86->Layout();
+	bSizer304->Fit( m_panel86 );
+	m_splitter16->SplitVertically( m_panel87, m_panel86, 700 );
+	bSizer92->Add( m_splitter16, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer92 );
+	this->Layout();
+}
+
+ShowCTFResultsParentPanel::~ShowCTFResultsParentPanel()
+{
+}
+
 Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer202;
@@ -2149,211 +2354,6 @@ Refine2DResultsPanelParent::~Refine2DResultsPanelParent()
 	
 }
 
-ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
-{
-	wxBoxSizer* bSizer92;
-	bSizer92 = new wxBoxSizer( wxVERTICAL );
-	
-	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
-	m_splitter16->SetSashGravity( 0.5 );
-	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
-	
-	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	wxBoxSizer* bSizer301;
-	bSizer301 = new wxBoxSizer( wxVERTICAL );
-	
-	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
-	m_splitter15->SetSashGravity( 0.5 );
-	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
-	
-	m_panel88 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	wxBoxSizer* bSizer302;
-	bSizer302 = new wxBoxSizer( wxVERTICAL );
-	
-	m_staticText377 = new wxStaticText( m_panel88, wxID_ANY, wxT("2D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText377->Wrap( -1 );
-	m_staticText377->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	bSizer302->Add( m_staticText377, 0, wxALL, 5 );
-	
-	m_staticline81 = new wxStaticLine( m_panel88, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer302->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
-	
-	CTF2DResultsPanel = new BitmapPanel( m_panel88, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer302->Add( CTF2DResultsPanel, 1, wxEXPAND | wxALL, 5 );
-	
-	
-	m_panel88->SetSizer( bSizer302 );
-	m_panel88->Layout();
-	bSizer302->Fit( m_panel88 );
-	m_panel89 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	wxBoxSizer* bSizer303;
-	bSizer303 = new wxBoxSizer( wxVERTICAL );
-	
-	m_staticText378 = new wxStaticText( m_panel89, wxID_ANY, wxT("1D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText378->Wrap( -1 );
-	m_staticText378->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	bSizer303->Add( m_staticText378, 0, wxALL, 5 );
-	
-	m_staticline82 = new wxStaticLine( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer303->Add( m_staticline82, 0, wxEXPAND | wxALL, 5 );
-	
-	CTFPlotPanel = new CTF1DPanel( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer303->Add( CTFPlotPanel, 1, wxEXPAND | wxALL, 5 );
-	
-	
-	m_panel89->SetSizer( bSizer303 );
-	m_panel89->Layout();
-	bSizer303->Fit( m_panel89 );
-	m_splitter15->SplitHorizontally( m_panel88, m_panel89, 0 );
-	bSizer301->Add( m_splitter15, 1, wxEXPAND, 5 );
-	
-	
-	m_panel87->SetSizer( bSizer301 );
-	m_panel87->Layout();
-	bSizer301->Fit( m_panel87 );
-	m_panel86 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	wxBoxSizer* bSizer304;
-	bSizer304 = new wxBoxSizer( wxVERTICAL );
-	
-	m_staticText379 = new wxStaticText( m_panel86, wxID_ANY, wxT("Estimated CTF Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText379->Wrap( -1 );
-	m_staticText379->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	bSizer304->Add( m_staticText379, 0, wxALL, 5 );
-	
-	m_staticline78 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer304->Add( m_staticline78, 0, wxEXPAND | wxALL, 5 );
-	
-	wxBoxSizer* bSizer305;
-	bSizer305 = new wxBoxSizer( wxHORIZONTAL );
-	
-	wxGridSizer* gSizer14;
-	gSizer14 = new wxGridSizer( 0, 4, 0, 0 );
-	
-	m_staticText380 = new wxStaticText( m_panel86, wxID_ANY, wxT("\tDefocus 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText380->Wrap( -1 );
-	m_staticText380->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	Defocus1Text->Wrap( -1 );
-	gSizer14->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
-	
-	m_staticText389 = new wxStaticText( m_panel86, wxID_ANY, wxT("Score :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText389->Wrap( -1 );
-	m_staticText389->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	ScoreText->Wrap( -1 );
-	gSizer14->Add( ScoreText, 0, wxALL, 5 );
-	
-	m_staticText382 = new wxStaticText( m_panel86, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText382->Wrap( -1 );
-	m_staticText382->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	Defocus2Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	Defocus2Text->Wrap( -1 );
-	gSizer14->Add( Defocus2Text, 0, wxALL, 5 );
-	
-	m_staticText391 = new wxStaticText( m_panel86, wxID_ANY, wxT("Fit Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText391->Wrap( -1 );
-	m_staticText391->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	FitResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	FitResText->Wrap( -1 );
-	gSizer14->Add( FitResText, 0, wxALL, 5 );
-	
-	m_staticText384 = new wxStaticText( m_panel86, wxID_ANY, wxT("Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText384->Wrap( -1 );
-	m_staticText384->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	AngleText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	AngleText->Wrap( -1 );
-	gSizer14->Add( AngleText, 0, wxALL, 5 );
-	
-	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText393->Wrap( -1 );
-	m_staticText393->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	AliasResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	AliasResText->Wrap( -1 );
-	gSizer14->Add( AliasResText, 0, wxALL, 5 );
-	
-	m_staticText386 = new wxStaticText( m_panel86, wxID_ANY, wxT("Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText386->Wrap( -1 );
-	m_staticText386->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	gSizer14->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
-	
-	PhaseShiftText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	PhaseShiftText->Wrap( -1 );
-	gSizer14->Add( PhaseShiftText, 0, wxALL, 5 );
-	
-	
-	bSizer305->Add( gSizer14, 0, 0, 5 );
-	
-	
-	bSizer305->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	
-	bSizer304->Add( bSizer305, 0, wxEXPAND, 5 );
-	
-	m_staticline83 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer304->Add( m_staticline83, 0, wxEXPAND | wxALL, 5 );
-	
-	wxBoxSizer* bSizer306;
-	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticText394 = new wxStaticText( m_panel86, wxID_ANY, wxT("Image / Aligned Movie Sum"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText394->Wrap( -1 );
-	m_staticText394->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	bSizer306->Add( m_staticText394, 0, wxALL, 5 );
-	
-	ImageFileText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	ImageFileText->Wrap( -1 );
-	ImageFileText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
-	
-	bSizer306->Add( ImageFileText, 0, wxALL, 5 );
-	
-	
-	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
-	
-	m_staticline86 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer304->Add( m_staticline86, 0, wxEXPAND | wxALL, 5 );
-	
-	ImageDisplayPanel = new DisplayPanel( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer304->Add( ImageDisplayPanel, 1, wxEXPAND | wxALL, 5 );
-	
-	
-	m_panel86->SetSizer( bSizer304 );
-	m_panel86->Layout();
-	bSizer304->Fit( m_panel86 );
-	m_splitter16->SplitVertically( m_panel87, m_panel86, 700 );
-	bSizer92->Add( m_splitter16, 1, wxEXPAND, 5 );
-	
-	
-	this->SetSizer( bSizer92 );
-	this->Layout();
-}
-
-ShowCTFResultsParentPanel::~ShowCTFResultsParentPanel()
-{
-}
-
 PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer92;
@@ -2400,7 +2400,7 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	bSizer94->Add( LowPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	LowResFilterTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20"), wxDefaultPosition, wxSize( 40,-1 ), wxTE_PROCESS_ENTER );
+	LowResFilterTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("40"), wxDefaultPosition, wxSize( 40,-1 ), wxTE_PROCESS_ENTER );
 	LowResFilterTextCtrl->Enable( false );
 	
 	bSizer94->Add( LowResFilterTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -3798,19 +3798,19 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	fgSizer1->SetFlexibleDirection( wxBOTH );
 	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText196 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Maximum particle radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText196 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Exclusion radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText196->Wrap( -1 );
 	fgSizer1->Add( m_staticText196, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	MaximumParticleRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("120.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( MaximumParticleRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	ExclusionRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("120"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ExclusionRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	CharacteristicParticleRadiusStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Characteristic particle radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	CharacteristicParticleRadiusStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Template radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	CharacteristicParticleRadiusStaticText->Wrap( -1 );
 	fgSizer1->Add( CharacteristicParticleRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	CharacteristicParticleRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("80.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( CharacteristicParticleRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	TemplateRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("80"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( TemplateRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	ThresholdPeakHeightStaticText1 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Threshold peak height :"), wxDefaultPosition, wxDefaultSize, 0 );
 	ThresholdPeakHeightStaticText1->Wrap( -1 );
@@ -3819,8 +3819,20 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ThresholdPeakHeightNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("6.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ThresholdPeakHeightNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	AvoidLowVarianceAreasCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Avoid low variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
+	AvoidLowVarianceAreasCheckBox->SetValue(true); 
+	fgSizer1->Add( AvoidLowVarianceAreasCheckBox, 0, wxALL, 5 );
+	
+	LowVarianceThresholdNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("-0.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( LowVarianceThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
 	AvoidHighVarianceAreasCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Avoid high variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( AvoidHighVarianceAreasCheckBox, 0, wxALL, 5 );
+	
+	HighVarianceThresholdNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	HighVarianceThresholdNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( HighVarianceThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 0, wxEXPAND, 5 );
@@ -4117,16 +4129,23 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
 	PickingAlgorithmComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextSetFocus ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextKillFocus ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextSetFocus ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextEnter ), NULL, this );
+	ExclusionRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextKillFocus ), NULL, this );
+	ExclusionRadiusNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextSetFocus ), NULL, this );
+	ExclusionRadiusNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextEnter ), NULL, this );
+	TemplateRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextKillFocus ), NULL, this );
+	TemplateRadiusNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextSetFocus ), NULL, this );
+	TemplateRadiusNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextEnter ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
+	AvoidLowVarianceAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidLowVarianceAreasCheckBox ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnLowVarianceThresholdNumericTextEnter ), NULL, this );
 	AvoidHighVarianceAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighVarianceThresholdNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
 	HighestResolutionNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
@@ -4149,16 +4168,23 @@ FindParticlesPanel::~FindParticlesPanel()
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( FindParticlesPanel::OnUpdateUI ) );
 	PickingAlgorithmComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnPickingAlgorithmComboBox ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnExpertOptionsToggle ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextKillFocus ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextSetFocus ), NULL, this );
-	MaximumParticleRadiusNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnMaximumParticleRadiusNumericTextEnter ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextKillFocus ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextSetFocus ), NULL, this );
-	CharacteristicParticleRadiusNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnCharacteristicParticleRadiusNumericTextEnter ), NULL, this );
+	ExclusionRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextKillFocus ), NULL, this );
+	ExclusionRadiusNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextSetFocus ), NULL, this );
+	ExclusionRadiusNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnExclusionRadiusNumericTextEnter ), NULL, this );
+	TemplateRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextKillFocus ), NULL, this );
+	TemplateRadiusNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextSetFocus ), NULL, this );
+	TemplateRadiusNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextEnter ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
+	AvoidLowVarianceAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidLowVarianceAreasCheckBox ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	LowVarianceThresholdNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnLowVarianceThresholdNumericTextEnter ), NULL, this );
 	AvoidHighVarianceAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidHighVarianceAreasCheckBox ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	HighVarianceThresholdNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighVarianceThresholdNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
 	HighestResolutionNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );

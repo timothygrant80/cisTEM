@@ -13,7 +13,10 @@ public:
 	void							RedoWithNewMinimumPeakHeight();
 	void							RedoWithNewHighestResolution();
 	void							RedoWithNewMinimumDistanceFromEdges();
+	void							RedoWithNewAvoidLowVarianceAreas();
 	void							RedoWithNewAvoidHighVarianceAreas();
+	void							RedoWithNewLowVarianceThreshold();
+	void							RedoWithNewHighVarianceThreshold();
 	void							RedoWithNewAvoidAbnormalLocalMeanAreas();
 	void							RedoWithNewNumberOfBackgroundBoxes();
 	void							RedoWithNewAlgorithmToFindBackground();
@@ -40,7 +43,10 @@ public:
 															int					wanted_output_stack_box_size,
 															int					wanted_minimum_distance_from_edges_in_pixels,
 															float				wanted_minimum_peak_height_for_candidate_particles,
+															bool				wanted_avoid_low_variance_areas,
 															bool				wanted_avoid_high_variance_areas,
+															float				wanted_low_variance_threshold_in_fwhm,
+															float				wanted_high_variance_threshold_in_fwhm,
 															bool				wanted_avoid_high_low_mean_areas,
 															int					wanted_algorithm_to_find_background,
 															int					wanted_number_of_background_boxes,
@@ -75,7 +81,10 @@ private:
 	int			number_of_template_rotations;
 	float		minimum_peak_height_for_candidate_particles;
 	int			output_stack_box_size;
+	bool		avoid_low_variance_areas;
 	bool		avoid_high_variance_areas;
+	float		low_variance_threshold_in_fwhm;
+	float 		high_variance_threshold_in_fwhm;
 	bool		avoid_high_low_mean_areas;
 	int			minimum_distance_from_edges_in_pixels;
 	wxString	output_stack_filename;
@@ -137,7 +146,7 @@ private:
 	void		CloseImageFiles();
 	void		FindPeaksAndExtractParticles();
 	void		RemoveHighLowMeanAreasFromTargetFunction();
-	void		RemoveHighVarianceAreasFromTargetFunction();
+	void		RemoveHighLowVarianceAreasFromTargetFunction();
 	void		DoTemplateMatching();
 	void		WhitenMicrographBackground();
 	void		UpdateLocalMeanAndSigma();

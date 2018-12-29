@@ -121,7 +121,11 @@ int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatia
 		number_of_extrema = floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5);
 		number_of_extrema = number_of_extrema_before_chi_extremum + abs(number_of_extrema - number_of_extrema_before_chi_extremum);
 	}
-	MyDebugAssertTrue(number_of_extrema >= 0,"Bad number of extrema: %i (rounded from %f, phase shift = %f)\n",number_of_extrema, 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5,PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth));
+	number_of_extrema = abs(number_of_extrema);
+	MyDebugAssertTrue(number_of_extrema >= 0,"Bad number of extrema: %i (%i rounded from %f, phase shift = %f)\n",number_of_extrema,
+														int(floor( 1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5)),
+														1.0 / PI * PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) + 0.5,
+														PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth));
 	return number_of_extrema;
 }
 
@@ -135,8 +139,8 @@ float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
 	 * only return the correct spatial frequency for the CTF zeroes between the origin and the frequency at which
 	 * the phase aberration peaks.
 	 */
-	MyDebugAssertTrue(which_zero < ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(azimuth),azimuth),"Oops, this method only works for the first few zeroes");
 	float phase_shift = which_zero * PI;
+	MyDebugAssertTrue(phase_shift <= ReturnPhaseAberrationMaximum(),"Oops, this method only works for the first few zeroes");
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
 

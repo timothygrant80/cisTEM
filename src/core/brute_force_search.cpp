@@ -148,7 +148,11 @@ void BruteForceSearch::IncrementCurrentValues(float *current_values, bool &searc
 		{
 			current_values[i] = starting_value[i] - half_range[i];
 		}
+
+		MyDebugAssertFalse(std::isnan(current_values[i]),"Oops. NaN");
 	}
+
+
 
 }
 

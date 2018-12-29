@@ -10,6 +10,7 @@
 # license terms ( http://license.janelia.org/license/jfrc_copyright_1_1.html )
 #
 # Last modification: Tapu Shaik, April 2018
+# Alexis Rohou, Dec 2018 (adding score to plot)
 
 
 
@@ -135,7 +136,7 @@ do for [current_micrograph=1:$number_of_micrographs] {
 	score=sprintf('%.3f',word(score_values,current_micrograph)+0)
 	maxres=sprintf('%.2f Å',word(maxres_values,current_micrograph)+0)
 #	set title 'Micrograph '.current_micrograph." of $number_of_micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | Score: '.score.'}'
-	set title '$mic_name, '.current_micrograph." of $number_of_micrographs micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | MaxRes: '.maxres.'}'
+	set title '$mic_name, '.current_micrograph." of $number_of_micrographs micrographs\n{/*0.5 Defocus 1: ".def_1.' | Defocus 2: '.def_2.' | Azimuth: '.angast.' | Phase shift: '.pshift.' | Score: '.score.' | MaxRes: '.maxres.'}'
 	plot '/tmp/tmp.txt' using (\$1):(column(4+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 3 title 'CTF fit', \
 		 ''             using (\$1):(column(5+(current_micrograph-1)*$lines_per_micrograph)) w lines ls 1 title 'Quality of fit', \
 	 	 ''             using (\$1):(column(3+(current_micrograph-1)*$lines_per_micrograph))  w lines ls 5 title 'Amplitude spectrum'

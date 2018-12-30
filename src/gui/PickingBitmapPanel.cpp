@@ -445,7 +445,15 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				scalebar_pen = wxPen( *wxWHITE );
 				dc.SetPen ( scalebar_pen );
 				dc.SetBrush( *wxWHITE_BRUSH );
-				int scalebar_length = int(float(bitmap_width) * 0.1);
+				int scalebar_length;
+				{
+					const float bar_must_be_multiple_of = 5.0; //nm
+					float ideal_length_in_pixels = float(bitmap_width) * 0.1;
+					float ideal_length_in_nm = ideal_length_in_pixels * image_in_bitmap_pixel_size * 0.1;
+					ideal_length_in_nm = roundf(ideal_length_in_nm / bar_must_be_multiple_of) * bar_must_be_multiple_of;
+					ideal_length_in_pixels = ideal_length_in_nm * 10.0 / image_in_bitmap_pixel_size;
+					scalebar_length = myroundint(ideal_length_in_pixels);
+				}
 				int scalebar_x_start = int(float(bitmap_width) * 0.85);
 				int scalebar_y_pos = int(float(bitmap_height)*0.95);
 				int scalebar_thickness = int(float(bitmap_height) / 50.0);
@@ -454,7 +462,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 				dc.SetTextForeground( *wxWHITE );
 				dc.SetFont( *wxNORMAL_FONT );
 				dc.SetFont(wxFont(std::max(12,int(float(scalebar_thickness)*0.75)),wxFONTFAMILY_DEFAULT,wxFONTSTYLE_NORMAL,wxFONTWEIGHT_BOLD));
-				wxString scalebar_label = wxString::Format("%.1f nm",float(scalebar_length) * image_in_bitmap_pixel_size * 0.1);
+				wxString scalebar_label = wxString::Format("%.0f nm",float(scalebar_length) * image_in_bitmap_pixel_size * 0.1);
 				int scalebar_label_width;
 				int scalebar_label_height;
 				dc.GetTextExtent(scalebar_label,&scalebar_label_width,&scalebar_label_height);

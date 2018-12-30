@@ -31,6 +31,9 @@ ParticleFinder::ParticleFinder()
 	output_stack_box_size						    = 	0;
 	minimum_distance_from_edges_in_pixels		    = 	0;
 	minimum_peak_height_for_candidate_particles     = 	0.0;
+	low_variance_threshold_in_fwhm					=	0.0;
+	high_variance_threshold_in_fwhm					=	0.0;
+	avoid_low_variance_areas						=	false;
 	avoid_high_variance_areas					    = 	false;
 	avoid_high_low_mean_areas					    = 	false;
 	algorithm_to_find_background				    = 	0;

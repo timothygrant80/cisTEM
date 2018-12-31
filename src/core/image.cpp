@@ -5241,6 +5241,63 @@ float Image::ReturnAverageOfRealValuesOnEdges()
 	return sum/float(number_of_pixels);
 }
 
+float Image::ReturnAverageOfRealValuesInRing(float wanted_inner_radius,float wanted_outer_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(wanted_outer_radius > wanted_inner_radius,"Radii don't make sense");
+
+
+	double sum = 0.0;
+	long address = 0;
+	long number_of_pixels = 0;
+	int		i;
+	int		j;
+	int 	k;
+	float	x;
+	float	y;
+	float	z;
+	float   inner_radius_squared;
+	float 	outer_radius_squared;
+	float	distance_from_center_squared;
+
+	inner_radius_squared = powf(wanted_inner_radius, 2);
+	outer_radius_squared = powf(wanted_outer_radius, 2);
+	number_of_pixels = 0;
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		z = powf(k - physical_address_of_box_center_z, 2);
+
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			y = powf(j - physical_address_of_box_center_y, 2);
+
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				x = powf(i - physical_address_of_box_center_x, 2);
+
+				distance_from_center_squared = x + y + z;
+
+				if (distance_from_center_squared >= inner_radius_squared && distance_from_center_squared <= outer_radius_squared)
+				{
+					sum += real_values[address];
+					number_of_pixels++;
+				}
+				address++;
+			}
+			address += padding_jump_value;
+		}
+	}
+	if (number_of_pixels > 0)
+	{
+		return float(sum / number_of_pixels);
+	}
+	else
+	{
+		return 0.0;
+	}
+}
+
 float Image::ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -5726,6 +5783,56 @@ void Image::SetMaximumValueOnCentralCross(float maximum_value)
 		address += padding_jump_value;
 	}
 
+}
+
+/*
+ * The iciness of an amplitude spectrum is defined in the FOCUS package
+ * (Biyani et al ,2018):
+ * "
+ * The introduced measure, iciness, is the ratio of the intensity in the
+ * resolution band between 3.5 and 3.9 Å and the intensity in the
+ * resolution band between 30 and  6  Å,  which  gives  a  good  estimate
+ * of  the  ice  crystal  content  of  the  vitreous  specimen.
+ * Cryo-EM  images  of  correctly  vitrified  specimens  usually
+ * have  an  iciness  value  below 1.0. Iciness values higher than
+ * 1.5 in most cases indicate images that are unusable to pick single
+ * particles.
+ * "
+ */
+float Image::ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms)
+{
+	MyDebugAssertTrue(is_in_real_space,"Not in real space");
+	MyDebugAssertTrue(is_in_memory,"Not in memory");
+	MyDebugAssertTrue(logical_x_dimension == logical_y_dimension,"Not square");
+
+
+	const float control_band_low_in_angstroms = 30.0;
+	const float control_band_high_in_angstroms = 6.0;
+	const float test_band_low_in_angstroms = 3.9;
+	const float test_band_high_in_angstroms = 3.5;
+
+	float control_band_low  = float(logical_x_dimension) * pixel_size_in_Angstroms / control_band_low_in_angstroms;
+	float control_band_high = float(logical_x_dimension) * pixel_size_in_Angstroms / control_band_high_in_angstroms;
+
+	float test_band_low  = float(logical_x_dimension) * pixel_size_in_Angstroms / test_band_low_in_angstroms;
+	float test_band_high = float(logical_x_dimension) * pixel_size_in_Angstroms / test_band_high_in_angstroms;
+
+
+	float intensity_in_control_band = ReturnAverageOfRealValuesInRing(control_band_low,control_band_high);
+	float intensity_in_test_band = ReturnAverageOfRealValuesInRing(test_band_low,test_band_high);
+
+	float iciness;
+
+	if (intensity_in_control_band <= 0.0)
+	{
+		iciness = 0.0;
+	}
+	else
+	{
+		iciness = powf(intensity_in_test_band,2)/powf(intensity_in_control_band,2);
+	}
+
+	return iciness;
 }
 
 // The image is assumed to be an amplitude spectrum, which we want to correlate with a set of CTF parameters

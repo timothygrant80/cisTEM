@@ -120,6 +120,7 @@ void PickingBitmapPanel::EmptyHistoryOfParticleCoordinates()
 	particle_coordinates_in_angstroms_history.Empty();
 	picking_results_panel->ResultDisplayPanel->UndoButton->Enable(false);
 	picking_results_panel->ResultDisplayPanel->RedoButton->Enable(false);
+	picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 }
 
 void PickingBitmapPanel::OnEraseBackground(wxEraseEvent& event)
@@ -137,9 +138,12 @@ void PickingBitmapPanel::ResetHistory()
 
 void PickingBitmapPanel::SetParticleCoordinatesAndRadius(const ArrayOfParticlePositionAssets &array_of_assets, const float wanted_radius_in_angstroms)
 {
+	extern MyPickingResultsPanel *picking_results_panel;
+
 	particle_coordinates_in_angstroms = array_of_assets;
 	radius_of_circles_around_particles_in_angstroms = wanted_radius_in_angstroms;
 	squared_radius_of_circles_around_particles_in_angstroms = powf(wanted_radius_in_angstroms,2);
+	picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 
 	ResetHistory();
 }
@@ -187,6 +191,7 @@ int PickingBitmapPanel::RemoveParticleCoordinatesWithinRectangleOrNearClickedPoi
 		current_step_in_history ++;
 		picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
 	}
+	picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 	Thaw();
 	return number_of_removed_particles;
 
@@ -227,6 +232,7 @@ void PickingBitmapPanel::StepForwardInHistoryOfParticleCoordinates()
 		picking_results_panel->ResultDisplayPanel->RedoButton->Enable(false);
 	}
 	picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
+	picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 	Refresh();
 	Update();
 }
@@ -242,6 +248,7 @@ void PickingBitmapPanel::StepBackwardInHistoryOfParticleCoordinates()
 		picking_results_panel->ResultDisplayPanel->UndoButton->Enable(false);
 	}
 	picking_results_panel->ResultDisplayPanel->RedoButton->Enable(true);
+	picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 	Refresh();
 	Update();
 }
@@ -583,6 +590,7 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent & event)
 					particle_coordinates_in_angstroms_history.Add(particle_coordinates_in_angstroms);
 					current_step_in_history++;
 					picking_results_panel->ResultDisplayPanel->UndoButton->Enable(true);
+					picking_results_panel->ResultDisplayPanel->SetNumberOfPickedCoordinates(particle_coordinates_in_angstroms.Count());
 				}
 			}
 		}

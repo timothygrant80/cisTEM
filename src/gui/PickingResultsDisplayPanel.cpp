@@ -44,6 +44,7 @@ void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfPar
 	PickingResultsImagePanel->UpdateImageInBitmap();
 	PickingResultsImagePanel->should_show = true;
 	PickingResultsImagePanel->SetToolTip(wxString::Format(wxT("%i coordinates picked"),int(array_of_assets.GetCount())));
+	SetNumberOfPickedCoordinates(int(array_of_assets.Count()));
 
 	PickingResultsImagePanel->Refresh();
 
@@ -189,4 +190,9 @@ void PickingResultsDisplayPanel::OnUndoButtonClick(wxCommandEvent& event)
 void PickingResultsDisplayPanel::OnRedoButtonClick(wxCommandEvent& event)
 {
 	PickingResultsImagePanel->StepForwardInHistoryOfParticleCoordinates();
+}
+
+void PickingResultsDisplayPanel::SetNumberOfPickedCoordinates(int number_of_coordinates)
+{
+	NumberOfPicksStaticText->SetLabel(wxString::Format(wxT("%i picked coordinates"),number_of_coordinates));
 }

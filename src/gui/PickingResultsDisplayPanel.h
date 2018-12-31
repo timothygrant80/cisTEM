@@ -28,6 +28,8 @@ public :
 	void OnLowPassEnter(wxCommandEvent& event);
 	void OnLowPassKillFocus(wxFocusEvent& event);
 
+	void SetNumberOfPickedCoordinates(int number_of_coordinates);
+
 
 
 

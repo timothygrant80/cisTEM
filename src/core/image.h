@@ -373,7 +373,7 @@ public:
 	float ReturnMedianOfRealValues();
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius);
-	float ReturnAverageOfRealValuesInRing(float wanted_inner_radius,float wanted_outer_radius)
+	float ReturnAverageOfRealValuesInRing(float wanted_inner_radius,float wanted_outer_radius);
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
 	float ReturnMaximumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);

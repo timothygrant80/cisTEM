@@ -6,6 +6,8 @@
 const std::string ctffind_version = "4.1.13";
 /*
  * Changelog
+ * - 4.1.13
+ * -- EPA bug fixed (affected 4.1.12 only)
  * - 4.1.12
  * -- diagnostic image includes radial "equi-phase" average of experimental spectrum in bottom right quadrant
  * -- new "equi-phase averaging" code will probably replace zero-counting eventually

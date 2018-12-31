@@ -373,9 +373,11 @@ void MyFindParticlesPanel::ShowPickingParametersPanel()
 	PickingParametersPanel->Show(true);
 
 	wxSize ExpertMinSize = ExpertOptionsPanel->GetMinSize();
+	wxSize ParamsMinSize = PickingParametersPanel->GetMinSize();
 	int splitter_panel_size = std::max(400,ExpertMinSize.x);
+	splitter_panel_size = std::max(splitter_panel_size,ParamsMinSize.x) + 10;
 
-	if (FindParticlesSplitterWindow->GetSashPosition() != splitter_panel_size)
+	if (FindParticlesSplitterWindow->GetSashPosition() < 0.2 * splitter_panel_size || FindParticlesSplitterWindow->GetSplitMode() != wxSPLIT_VERTICAL || ! FindParticlesSplitterWindow->IsSplit())
 	{
 		FindParticlesSplitterWindow->SplitVertically(LeftPanel, RightPanel, splitter_panel_size);
 		FindParticlesSplitterWindow->SetSashPosition(splitter_panel_size);
@@ -384,7 +386,6 @@ void MyFindParticlesPanel::ShowPickingParametersPanel()
 		LeftPanel->Layout();
 		RightPanel->Layout();
 	}
-
 
 }
 

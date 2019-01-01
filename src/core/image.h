@@ -373,6 +373,7 @@ public:
 	float ReturnMedianOfRealValues();
 	float ReturnAverageOfRealValuesOnEdges();
 	float ReturnAverageOfRealValuesAtRadius(float wanted_mask_radius);
+	float ReturnAverageOfRealValuesInRing(float wanted_inner_radius,float wanted_outer_radius);
 	float ReturnSigmaOfFourierValuesOnEdges();
 	float ReturnSigmaOfFourierValuesOnEdgesAndCorners();
 	float ReturnMaximumValue(float minimum_distance_from_center = 0.0, float minimum_distance_from_edge = 0.0);
@@ -394,6 +395,7 @@ public:
 	float GetCorrelationWithCTF(CTF ctf);
 	void SetupQuickCorrelationWithCTF(CTF ctf, int &number_of_values, double &norm_image, double &image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);
 	float QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);
+	float ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms);
 
 	// Interpolation
 	void GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value);

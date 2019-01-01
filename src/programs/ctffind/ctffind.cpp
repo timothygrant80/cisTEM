@@ -3,9 +3,11 @@
 //#define threshold_spectrum
 #define use_epa_rather_than_zero_counting
 
-const std::string ctffind_version = "4.1.12";
+const std::string ctffind_version = "4.1.13";
 /*
  * Changelog
+ * - 4.1.13
+ * -- EPA bug fixed (affected 4.1.12 only)
  * - 4.1.12
  * -- diagnostic image includes radial "equi-phase" average of experimental spectrum in bottom right quadrant
  * -- new "equi-phase averaging" code will probably replace zero-counting eventually
@@ -151,6 +153,9 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 {
 	ImageCTFComparison *comparison_object = reinterpret_cast < ImageCTFComparison *> (scoring_parameters);
 
+	MyDebugAssertFalse(std::isnan(array_of_values[0]),"DF1 is NaN!");
+	MyDebugAssertFalse(std::isnan(array_of_values[1]),"DF2 is NaN!");
+
 	CTF my_ctf = comparison_object->ReturnCTF();
 	if (comparison_object->AstigmatismIsKnown())
 	{
@@ -173,17 +178,29 @@ float CtffindObjectiveFunction(void *scoring_parameters, float array_of_values[]
 		}
 	}
 
-	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(),comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths));
 
 	// Evaluate the function
-	if (comparison_object->number_to_correlate)
+	float score;
+	if (my_ctf.GetDefocus1() == 0.0f && my_ctf.GetDefocus2() == 0.0f && my_ctf.GetSphericalAberration() == 0.0f)
 	{
-		return - comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+		// When defocus = 0.0 and cs = 0.0, CTF is constant and the scoring function breaks down
+		score = 0.0;
 	}
 	else
 	{
-		return - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
+		if (comparison_object->number_to_correlate)
+		{
+			score = - comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+		}
+		else
+		{
+			score = - comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
+		}
 	}
+
+	//MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Score = %g\n",my_ctf.GetDefocus1(),my_ctf.GetDefocus2(),my_ctf.GetAdditionalPhaseShift(), my_ctf.GetAstigmatismAzimuth(),my_ctf.GetLowestFrequencyForFitting(),my_ctf.GetHighestFrequencyForFitting(),score);
+	MyDebugAssertFalse(std::isnan(score),"Score is NaN!");
+	return score;
 }
 
 //#pragma GCC push_options
@@ -1664,8 +1681,8 @@ bool CtffindApp::DoCalculation()
 		 *  Attempt some renormalisations - we want to do this over a range not affected by the central peak or strong Thon rings,
 		 *  so as to emphasize the "regular" Thon rings
 		 */
-		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,0.0));
-		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,0.0));
+		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,current_ctf.GetAstigmatismAzimuth()));
+		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,current_ctf.GetAstigmatismAzimuth()));
 		float normalization_radius_min = start_zero * average_spectrum->logical_x_dimension;
 		float normalization_radius_max = finish_zero * average_spectrum->logical_x_dimension;
 
@@ -1792,7 +1809,8 @@ bool CtffindApp::DoCalculation()
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
 			int number_of_bins_above_high_threshold = 0;
-			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,0.0))*average_spectrum->logical_x_dimension);
+			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,current_ctf.GetAstigmatismAzimuth()))*average_spectrum->logical_x_dimension);
+			MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra,"Bad first bin to check\n");
 			//wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
 			last_bin_with_good_fit = -1;
 			for (counter=first_bin_to_check;counter<number_of_bins_in_1d_spectra;counter++)
@@ -2151,6 +2169,9 @@ void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double f
 //
 void ComputeFRCBetween1DSpectrumAndFit( int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin)
 {
+
+	MyDebugAssertTrue(first_fit_bin >= 0,"Bad first fit bin on entry: %i", first_fit_bin);
+
 	int bin_counter;
 	int half_window_width[number_of_bins];
 	int bin_of_previous_extremum;
@@ -2571,7 +2592,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 
 	const bool spectrum_is_blank = spectrum->IsConstant();
 
-	const int curve_oversampling_factor = 1;
+	const int curve_oversampling_factor = 2;
 	const bool curve_x_is_linear = true;
 
 	/*
@@ -2579,19 +2600,29 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 	 */
 	if (curve_x_is_linear)
 	{
-		float epa_max_phase_aberration;
-		if (ctf->GetSphericalAberration() == 0.0)
+		float maximum_aberration_in_ctf = ctf->ReturnPhaseAberrationMaximum();
+		float maximum_sq_freq_in_spectrum= powf(spectrum->fourier_voxel_size_x * spectrum->logical_upper_bound_complex_x,2)+powf(spectrum->fourier_voxel_size_y * spectrum->logical_upper_bound_complex_y,2);
+		float lowest_sq_freq_of_ctf_aberration_max = std::min(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
+																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
+
+		// if we hit the CTF's max phase aberration within the spectrum, let's allocate both pre- and post-max curves properly
+		if (lowest_sq_freq_of_ctf_aberration_max <= maximum_sq_freq_in_spectrum)
 		{
-			epa_max_phase_aberration = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(0.5,std::max(ctf->GetDefocus1(),ctf->GetDefocus2()));
+			int number_of_points = int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
+			epa_pre_max->SetupXAxis(-maximum_aberration_in_ctf,maximum_aberration_in_ctf,number_of_points);
+			epa_post_max->SetupXAxis(-maximum_aberration_in_ctf,maximum_aberration_in_ctf,number_of_points);
+
 		}
 		else
 		{
-			epa_max_phase_aberration = ctf->ReturnPhaseAberrationMaximum();
-		}
+			float maximum_aberration_in_spectrum = std::max(	fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1())),
+																fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2())));
 
-		// we setup a curve with negative phase aberrations too, in case of overfocus
-		epa_pre_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
-		epa_post_max->SetupXAxis(-epa_max_phase_aberration,epa_max_phase_aberration,spectrum->logical_x_dimension*2*curve_oversampling_factor);
+			int number_of_points = 2 * int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
+			epa_pre_max->SetupXAxis(-maximum_aberration_in_spectrum,maximum_aberration_in_spectrum,number_of_points);
+			epa_post_max->SetupXAxis(-maximum_aberration_in_spectrum,maximum_aberration_in_spectrum,number_of_points);
+			// We shouldn't need the post-max curve ever
+		}
 	}
 	else
 	{

@@ -472,11 +472,11 @@ void Database::AddCTFIcinessColumnIfNecessary()
 
 	if (DoesColumnExist("ESTIMATED_CTF_PARAMETERS","ICINESS"))
 	{
-		wxPrintf("Iciness column exists in estimated_ctf_parameters\n");
+		MyDebugPrint("Iciness column exists in estimated_ctf_parameters\n");
 	}
 	else
 	{
-		wxPrintf("Need to create iciness column in estimated_ctf_parameters\n");
+		MyDebugPrint("Need to create iciness column in estimated_ctf_parameters\n");
 		AddColumnToTable("ESTIMATED_CTF_PARAMETERS","ICINESS","r","0.0");
 	}
 }

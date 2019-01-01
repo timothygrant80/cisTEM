@@ -2025,7 +2025,9 @@ bool CtffindApp::DoCalculation()
 		results_array[6] = pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]; 	//	The resolution (Angstroms) at which aliasing was just detected
 	}
 
-	my_result.SetResult(7,results_array);
+	results_array[7] = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
+
+	my_result.SetResult(8,results_array);
 
 
 	// Cleanup

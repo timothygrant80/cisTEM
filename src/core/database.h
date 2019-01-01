@@ -44,6 +44,7 @@ public :
 
 	bool CreateTable(const char *table_name, const char *column_format, ...);
 	bool DeleteTable(const char *table_name);
+	bool AddColumnToTable(wxString table_name, wxString column_name, wxString column_format, wxString default_value);
 	//bool DeleteTable(const char *table_name);
 	bool InsertOrReplace(const char *table_name, const char *column_format, ...);
 	bool GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run);
@@ -72,6 +73,7 @@ public :
 	wxArrayString ReturnStringArrayFromSelectCommand(wxString select_command);
 
 	bool DoesTableExist(wxString table_name);
+	bool DoesColumnExist(wxString table_name, wxString column_name);
 
 	void ReturnProcessLockInfo(long &active_process_id, wxString &active_hostname);
 	void SetProcessLockInfo(long &active_process_id, wxString &active_hostname);
@@ -254,6 +256,8 @@ public :
 
 	// Convenience CTF parameter function
 	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );
+
+	void AddCTFIcinessColumnIfNecessary();
 
 	// Particle position asset management
 	void RemoveParticlePositionsWithGivenParentImageIDFromGroup( const int &group_number_following_gui_convention, const int &parent_image_asset_id);

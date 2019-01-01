@@ -1905,6 +1905,16 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	PhaseShiftText->Wrap( -1 );
 	gSizer14->Add( PhaseShiftText, 0, wxALL, 5 );
 	
+	IcinessLabel = new wxStaticText( m_panel86, wxID_ANY, wxT("Iciness :"), wxDefaultPosition, wxDefaultSize, 0 );
+	IcinessLabel->Wrap( -1 );
+	IcinessLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	
+	gSizer14->Add( IcinessLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	IcinessStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	IcinessStaticText->Wrap( -1 );
+	gSizer14->Add( IcinessStaticText, 0, wxALL, 5 );
+	
 	
 	bSizer305->Add( gSizer14, 0, 0, 5 );
 	
@@ -2357,16 +2367,16 @@ Refine2DResultsPanelParent::~Refine2DResultsPanelParent()
 PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer92;
-	bSizer92 = new wxBoxSizer( wxVERTICAL );
+	bSizer92 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PickingResultsImagePanel = new PickingBitmapPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer92->Add( PickingResultsImagePanel, 5, wxEXPAND | wxALL, 5 );
 	
 	wxBoxSizer* bSizer93;
-	bSizer93 = new wxBoxSizer( wxVERTICAL );
+	bSizer93 = new wxBoxSizer( wxHORIZONTAL );
 	
 	wxBoxSizer* bSizer94;
-	bSizer94 = new wxBoxSizer( wxHORIZONTAL );
-	
-	m_staticline80 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer94->Add( m_staticline80, 0, wxEXPAND | wxALL, 5 );
+	bSizer94 = new wxBoxSizer( wxVERTICAL );
 	
 	CirclesAroundParticlesCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Circles"), wxDefaultPosition, wxDefaultSize, 0 );
 	CirclesAroundParticlesCheckBox->SetValue(true); 
@@ -2374,17 +2384,11 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	bSizer94->Add( CirclesAroundParticlesCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_staticline87 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer94->Add( m_staticline87, 0, wxEXPAND | wxALL, 5 );
-	
 	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale"), wxDefaultPosition, wxDefaultSize, 0 );
 	ScaleBarCheckBox->SetValue(true); 
 	ScaleBarCheckBox->SetToolTip( wxT("Display a scale bar") );
 	
 	bSizer94->Add( ScaleBarCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	m_staticline88 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer94->Add( m_staticline88, 0, wxEXPAND | wxALL, 5 );
 	
 	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighPassFilterCheckBox->SetValue(true); 
@@ -2392,27 +2396,27 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	bSizer94->Add( HighPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_staticline81 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer94->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
+	wxBoxSizer* bSizer487;
+	bSizer487 = new wxBoxSizer( wxHORIZONTAL );
 	
 	LowPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Low-pass"), wxDefaultPosition, wxDefaultSize, 0 );
 	LowPassFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
 	
-	bSizer94->Add( LowPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer487->Add( LowPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	LowResFilterTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("40"), wxDefaultPosition, wxSize( 40,-1 ), wxTE_PROCESS_ENTER );
 	LowResFilterTextCtrl->Enable( false );
 	
-	bSizer94->Add( LowResFilterTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer487->Add( LowResFilterTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	LowAngstromStatic = new wxStaticText( this, wxID_ANY, wxT("Å"), wxDefaultPosition, wxDefaultSize, 0 );
 	LowAngstromStatic->Wrap( -1 );
 	LowAngstromStatic->Enable( false );
 	
-	bSizer94->Add( LowAngstromStatic, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer487->Add( LowAngstromStatic, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_staticline83 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer94->Add( m_staticline83, 0, wxEXPAND | wxALL, 5 );
+	
+	bSizer94->Add( bSizer487, 0, wxEXPAND, 5 );
 	
 	WienerFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Wiener filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	WienerFilterCheckBox->SetValue(true); 
@@ -2420,20 +2424,33 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	bSizer94->Add( WienerFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer94->Add( m_staticline831, 0, wxEXPAND | wxALL, 5 );
+	
+	NumberOfPicksStaticText = new wxStaticText( this, wxID_ANY, wxT("0 picked coordinates"), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberOfPicksStaticText->Wrap( -1 );
+	bSizer94->Add( NumberOfPicksStaticText, 0, wxALL, 5 );
+	
+	m_staticline8311 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer94->Add( m_staticline8311, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer488;
+	bSizer488 = new wxBoxSizer( wxHORIZONTAL );
 	
 	UndoButton = new wxButton( this, wxID_ANY, wxT("Undo"), wxDefaultPosition, wxDefaultSize, 0 );
 	UndoButton->Enable( false );
 	UndoButton->SetToolTip( wxT("Undo manual change of particle coordinates") );
 	
-	bSizer94->Add( UndoButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer488->Add( UndoButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	RedoButton = new wxButton( this, wxID_ANY, wxT("Redo"), wxDefaultPosition, wxDefaultSize, 0 );
 	RedoButton->Enable( false );
 	RedoButton->SetToolTip( wxT("Redo manual change of particle coordinates") );
 	
-	bSizer94->Add( RedoButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer488->Add( RedoButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer94->Add( bSizer488, 0, wxEXPAND, 5 );
 	
 	
 	bSizer93->Add( bSizer94, 1, wxALIGN_CENTER|wxEXPAND, 5 );
@@ -2443,9 +2460,6 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	
 	
 	bSizer92->Add( bSizer93, 1, wxEXPAND, 5 );
-	
-	PickingResultsImagePanel = new PickingBitmapPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer92->Add( PickingResultsImagePanel, 50, wxEXPAND | wxALL, 5 );
 	
 	
 	this->SetSizer( bSizer92 );
@@ -2774,6 +2788,10 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PhaseShiftStepStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PhaseShiftStepStaticText->Wrap( -1 );
 	InfoSizer->Add( PhaseShiftStepStaticText, 0, wxALL, 5 );
+	
+	IcinessStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	IcinessStaticText->Wrap( -1 );
+	InfoSizer->Add( IcinessStaticText, 0, wxALL, 5 );
 	
 	
 	bSizer101->Add( InfoSizer, 1, wxEXPAND, 5 );
@@ -3788,7 +3806,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	wxBoxSizer* bSizer214;
 	bSizer214 = new wxBoxSizer( wxVERTICAL );
 	
-	PickingParametersPanel = new wxScrolledWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxHSCROLL|wxVSCROLL );
+	PickingParametersPanel = new wxScrolledWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	PickingParametersPanel->SetScrollRate( 5, 5 );
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
@@ -3840,7 +3858,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticline106 = new wxStaticLine( PickingParametersPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	InputSizer->Add( m_staticline106, 0, wxEXPAND | wxALL, 5 );
 	
-	m_staticText440 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Select Preview Image :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText440 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Select preview image :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText440->Wrap( -1 );
 	InputSizer->Add( m_staticText440, 0, wxALL, 5 );
 	
@@ -3879,78 +3897,53 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ExpertOptionsStaticText->Wrap( -1 );
 	ExpertOptionsStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
 	
-	ExpertOptionsSizer->Add( ExpertOptionsStaticText, 0, wxALL, 5 );
+	ExpertOptionsSizer->Add( ExpertOptionsStaticText, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	HighestResolutionStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Highest resolution used in picking (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighestResolutionStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Highest resolution used (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighestResolutionStaticText->Wrap( -1 );
-	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	HighestResolutionNumericCtrl = new NumericTextCtrl( ExpertOptionsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	ExpertOptionsSizer->Add( HighestResolutionNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	SetMinimumDistanceFromEdgesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Set minimum distance from edges (pix.) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	ExpertOptionsSizer->Add( SetMinimumDistanceFromEdgesCheckBox, 0, wxALL, 5 );
+	SetMinimumDistanceFromEdgesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Min. edge distance (pix.) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertOptionsSizer->Add( SetMinimumDistanceFromEdgesCheckBox, 0, wxALL|wxEXPAND, 5 );
 	
 	MinimumDistanceFromEdgesSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999999, 128 );
 	MinimumDistanceFromEdgesSpinCtrl->Enable( false );
 	
 	ExpertOptionsSizer->Add( MinimumDistanceFromEdgesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_checkBox8 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Use radial averages of templates"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_checkBox8->SetValue(true); 
-	m_checkBox8->Enable( false );
-	
-	ExpertOptionsSizer->Add( m_checkBox8, 0, wxALL, 5 );
-	
-	
-	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	m_checkBox9 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Rotate each template this many times : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_checkBox9 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Number of template rotations : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_checkBox9->Enable( false );
 	
-	ExpertOptionsSizer->Add( m_checkBox9, 0, wxALL, 5 );
+	ExpertOptionsSizer->Add( m_checkBox9, 0, wxALL|wxEXPAND, 5 );
 	
 	NumberOfTemplateRotationsSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 360, 72 );
 	NumberOfTemplateRotationsSpinCtrl->Enable( false );
 	
 	ExpertOptionsSizer->Add( NumberOfTemplateRotationsSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	AvoidAbnormalLocalMeanAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid areas with abnormal local mean"), wxDefaultPosition, wxDefaultSize, 0 );
+	AvoidAbnormalLocalMeanAreasCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Avoid abnormal local mean"), wxDefaultPosition, wxDefaultSize, 0 );
 	AvoidAbnormalLocalMeanAreasCheckBox->SetValue(true); 
-	ExpertOptionsSizer->Add( AvoidAbnormalLocalMeanAreasCheckBox, 0, wxALL, 5 );
-	
-	
-	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	ShowEstimatedBackgroundSpectrumCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show estimated background spectrum"), wxDefaultPosition, wxDefaultSize, 0 );
-	ShowEstimatedBackgroundSpectrumCheckBox->Enable( false );
-	
-	ExpertOptionsSizer->Add( ShowEstimatedBackgroundSpectrumCheckBox, 0, wxALL, 5 );
-	
-	
-	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
-	
-	ShowPositionsOfBackgroundBoxesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Show positions of background boxes"), wxDefaultPosition, wxDefaultSize, 0 );
-	ShowPositionsOfBackgroundBoxesCheckBox->Enable( false );
-	
-	ExpertOptionsSizer->Add( ShowPositionsOfBackgroundBoxesCheckBox, 0, wxALL, 5 );
+	ExpertOptionsSizer->Add( AvoidAbnormalLocalMeanAreasCheckBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	m_staticText170 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Number of background boxes : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText170->Wrap( -1 );
-	ExpertOptionsSizer->Add( m_staticText170, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ExpertOptionsSizer->Add( m_staticText170, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	NumberOfBackgroundBoxesSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999, 50 );
 	ExpertOptionsSizer->Add( NumberOfBackgroundBoxesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText169 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Algorithm to find background areas : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText169 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Find background areas by : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText169->Wrap( -1 );
-	ExpertOptionsSizer->Add( m_staticText169, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ExpertOptionsSizer->Add( m_staticText169, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	wxString AlgorithmToFindBackgroundChoiceChoices[] = { wxT("Lowest variance"), wxT("Variance near mode") };
 	int AlgorithmToFindBackgroundChoiceNChoices = sizeof( AlgorithmToFindBackgroundChoiceChoices ) / sizeof( wxString );

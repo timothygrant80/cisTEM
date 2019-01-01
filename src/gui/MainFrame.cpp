@@ -669,6 +669,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		my_dialog->Update(6, "Opening project (loading movie alignment results...)");
 		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
 		my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
+		current_project.database.AddCTFIcinessColumnIfNecessary();
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
 		my_dialog->Update(8, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();

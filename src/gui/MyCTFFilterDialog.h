@@ -1,3 +1,11 @@
+/*
+ * Commenting this out as it seems to not be used everywhere
+ * and just confuses things. See MyMovieFilterDialog.h
+ * 190101, Alexis Rohou
+ */
+
+
+/*
 #ifndef __MyMovieFilterDialog__
 #define __MyMovieFilterDialog__
 
@@ -114,3 +122,4 @@ public:
 };
 
 #endif // __MyMovieFilterDialog__
+*/

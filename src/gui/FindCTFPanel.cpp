@@ -1124,7 +1124,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 		wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath();
 
-		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], image_filename);
+		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], image_filename);
 		time_of_last_result_update = time(NULL);
 	}
 
@@ -1204,7 +1204,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	main_frame->current_project.database.Begin();
 
 	// loop over all the jobs, and add them..
-	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 31,
+	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 32,
 			                                                                              "CTF_ESTIMATION_ID",
 																						  "CTF_ESTIMATION_JOB_ID",
 																						  "DATETIME_OF_RUN",
@@ -1235,7 +1235,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																						  "DETECTED_ALIAS_RESOLUTION",
 																						  "OUTPUT_DIAGNOSTIC_FILE",
 																						  "NUMBER_OF_FRAMES_AVERAGED",
-																						  "LARGE_ASTIGMATISM_EXPECTED");
+																						  "LARGE_ASTIGMATISM_EXPECTED",
+																						  "ICINESS");
 
 
 
@@ -1272,7 +1273,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		}
 
 
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtii", ctf_estimation_id,
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiir", ctf_estimation_id,
 																					 ctf_estimation_job_id,
 																					 (long int) now.GetAsDOS(),
 																					 image_asset_id,
@@ -1302,7 +1303,8 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 buffered_results[counter].result_data[6], // detected aliasing resolution
 																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
 																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
-																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument()); // large astigmatism expected
+																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument(),  // large astigmatism expected
+																					 buffered_results[counter].result_data[7]); // iciness
 		ctf_estimation_id++;
 		my_progress_dialog->Update(counter + 1);
 

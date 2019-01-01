@@ -265,27 +265,6 @@ MyFilterDialog( parent )
 
 	// add the filter checkboxes..
 
-	asset_id_filter = new IntegerFilterItem("Asset ID", FilterScrollPanel);
-	FilterBoxSizer->Add(asset_id_filter,  1, wxEXPAND | wxALL, 5 );
-
-	estimation_id_filter = new IntegerFilterItem("Estimation ID", FilterScrollPanel);
-	FilterBoxSizer->Add(estimation_id_filter,  1, wxEXPAND | wxALL, 5 );
-
-	date_of_run_filter = new DateFilterItem("Date of Run", FilterScrollPanel);
-	FilterBoxSizer->Add(date_of_run_filter,  1, wxEXPAND | wxALL, 5 );
-
-	job_id_filter = new IntegerFilterItem("Job ID", FilterScrollPanel);
-	FilterBoxSizer->Add(job_id_filter,  1, wxEXPAND | wxALL, 5 );
-
-	defocus_filter = new FloatFilterItem("Defocus", FilterScrollPanel);
-	FilterBoxSizer->Add(defocus_filter,  1, wxEXPAND | wxALL, 5 );
-
-	astigmatism_filter = new FloatFilterItem("Astigmatism", FilterScrollPanel);
-	FilterBoxSizer->Add(astigmatism_filter,  1, wxEXPAND | wxALL, 5 );
-
-	astigmatism_angle_filter = new FloatFilterItem("Astigmatism Angle", FilterScrollPanel);
-	FilterBoxSizer->Add(astigmatism_angle_filter,  1, wxEXPAND | wxALL, 5 );
-
 	score_filter = new FloatFilterItem("Score", FilterScrollPanel);
 	FilterBoxSizer->Add(score_filter,  1, wxEXPAND | wxALL, 5 );
 
@@ -297,6 +276,30 @@ MyFilterDialog( parent )
 
 	additional_phase_shift_filter = new FloatFilterItem("Phase Shift", FilterScrollPanel);
 	FilterBoxSizer->Add(additional_phase_shift_filter,  1, wxEXPAND | wxALL, 5 );
+
+	iciness_filter = new FloatFilterItem("Iciness", FilterScrollPanel);
+	FilterBoxSizer->Add(iciness_filter,  1, wxEXPAND | wxALL, 5 );
+
+	defocus_filter = new FloatFilterItem("Defocus", FilterScrollPanel);
+	FilterBoxSizer->Add(defocus_filter,  1, wxEXPAND | wxALL, 5 );
+
+	astigmatism_filter = new FloatFilterItem("Astigmatism", FilterScrollPanel);
+	FilterBoxSizer->Add(astigmatism_filter,  1, wxEXPAND | wxALL, 5 );
+
+	astigmatism_angle_filter = new FloatFilterItem("Astigmatism Angle", FilterScrollPanel);
+	FilterBoxSizer->Add(astigmatism_angle_filter,  1, wxEXPAND | wxALL, 5 );
+
+	asset_id_filter = new IntegerFilterItem("Asset ID", FilterScrollPanel);
+	FilterBoxSizer->Add(asset_id_filter,  1, wxEXPAND | wxALL, 5 );
+
+	estimation_id_filter = new IntegerFilterItem("Estimation ID", FilterScrollPanel);
+	FilterBoxSizer->Add(estimation_id_filter,  1, wxEXPAND | wxALL, 5 );
+
+	date_of_run_filter = new DateFilterItem("Date of Run", FilterScrollPanel);
+	FilterBoxSizer->Add(date_of_run_filter,  1, wxEXPAND | wxALL, 5 );
+
+	job_id_filter = new IntegerFilterItem("Job ID", FilterScrollPanel);
+	FilterBoxSizer->Add(job_id_filter,  1, wxEXPAND | wxALL, 5 );
 
 	voltage_filter = new FloatFilterItem("Voltage", FilterScrollPanel);
 	FilterBoxSizer->Add(voltage_filter,  1, wxEXPAND | wxALL, 5 );
@@ -376,6 +379,9 @@ MyFilterDialog( parent )
 
 	additional_phase_shift_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Phase Shift"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( additional_phase_shift_radio, 0, wxALL, 5 );
+
+	iciness_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Iciness"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( iciness_radio, 0, wxALL, 5 );
 
 	voltage_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Voltage"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( voltage_radio, 0, wxALL, 5 );
@@ -519,6 +525,13 @@ void MyCTFFilterDialog::BuildSearchCommand()
 			if (number_accounted_for < number_checked) search_command += " AND";
 		}
 
+		if (iciness_filter->field_checkbox->IsChecked() == true)
+		{
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.ICINESS BETWEEN %f AND %f", iciness_filter->GetLowValue(), iciness_filter->GetHighValue());
+			number_accounted_for++;
+
+			if (number_accounted_for < number_checked) search_command += " AND";
+		}
 
 		if (voltage_filter->field_checkbox->IsChecked() == true)
 		{
@@ -663,6 +676,8 @@ void MyCTFFilterDialog::BuildSearchCommand()
 	else
 	if (additional_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.ADDITIONAL_PHASE_SHIFT";
 	else
+	if (iciness_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.ICINESS";
+	else
 	if (voltage_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.VOLTAGE";
 	else
 	if (spherical_aberration_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.SPHERICAL_ABERRATION";
@@ -708,6 +723,7 @@ int MyCTFFilterDialog::ReturnNumberChecked()
 	if (ring_resolution_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (alias_resolution_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (additional_phase_shift_filter->field_checkbox->IsChecked() == true) number_checked++;
+	if (iciness_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (voltage_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (spherical_aberration_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (pixel_size_filter->field_checkbox->IsChecked() == true) number_checked++;

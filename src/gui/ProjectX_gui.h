@@ -516,6 +516,8 @@ class ShowCTFResultsParentPanel : public wxPanel
 		wxStaticText* AliasResText;
 		wxStaticText* m_staticText386;
 		wxStaticText* PhaseShiftText;
+		wxStaticText* IcinessLabel;
+		wxStaticText* IcinessStaticText;
 		wxStaticLine* m_staticline83;
 		wxStaticText* m_staticText394;
 		wxStaticText* ImageFileText;
@@ -651,19 +653,16 @@ class PickingResultsDisplayParentPanel : public wxPanel
 	private:
 	
 	protected:
-		wxStaticLine* m_staticline80;
 		wxCheckBox* CirclesAroundParticlesCheckBox;
-		wxStaticLine* m_staticline87;
 		wxCheckBox* ScaleBarCheckBox;
-		wxStaticLine* m_staticline88;
 		wxCheckBox* HighPassFilterCheckBox;
-		wxStaticLine* m_staticline81;
 		wxCheckBox* LowPassFilterCheckBox;
 		NumericTextCtrl* LowResFilterTextCtrl;
 		wxStaticText* LowAngstromStatic;
-		wxStaticLine* m_staticline83;
 		wxCheckBox* WienerFilterCheckBox;
 		wxStaticLine* m_staticline831;
+		wxStaticText* NumberOfPicksStaticText;
+		wxStaticLine* m_staticline8311;
 		wxStaticLine* m_staticline26;
 		
 		// Virtual event handlers, overide them in your derived class
@@ -679,9 +678,9 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		
 	
 	public:
+		PickingBitmapPanel* PickingResultsImagePanel;
 		wxButton* UndoButton;
 		wxButton* RedoButton;
-		PickingBitmapPanel* PickingResultsImagePanel;
 		
 		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1123,360 ), long style = wxTAB_TRAVERSAL ); 
 		~PickingResultsDisplayParentPanel();
@@ -753,6 +752,7 @@ class FindCTFResultsPanel : public wxPanel
 		wxStaticText* MaxPhaseshiftStaticText;
 		wxStaticText* PhaseShiftStepLabel;
 		wxStaticText* PhaseShiftStepStaticText;
+		wxStaticText* IcinessStaticText;
 		wxStaticLine* m_staticline30;
 		ShowCTFResultsPanel* ResultPanel;
 		wxButton* DeleteFromGroupButton;
@@ -1117,12 +1117,9 @@ class FindParticlesPanel : public JobPanel
 		NumericTextCtrl* HighestResolutionNumericCtrl;
 		wxCheckBox* SetMinimumDistanceFromEdgesCheckBox;
 		wxSpinCtrl* MinimumDistanceFromEdgesSpinCtrl;
-		wxCheckBox* m_checkBox8;
 		wxCheckBox* m_checkBox9;
 		wxSpinCtrl* NumberOfTemplateRotationsSpinCtrl;
 		wxCheckBox* AvoidAbnormalLocalMeanAreasCheckBox;
-		wxCheckBox* ShowEstimatedBackgroundSpectrumCheckBox;
-		wxCheckBox* ShowPositionsOfBackgroundBoxesCheckBox;
 		wxStaticText* m_staticText170;
 		wxSpinCtrl* NumberOfBackgroundBoxesSpinCtrl;
 		wxStaticText* m_staticText169;

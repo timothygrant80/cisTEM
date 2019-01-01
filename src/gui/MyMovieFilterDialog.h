@@ -62,6 +62,7 @@ public:
 	FloatFilterItem *astigmatism_filter;
 	FloatFilterItem *astigmatism_angle_filter;
 	FloatFilterItem *score_filter;
+	FloatFilterItem *iciness_filter;
 	FloatFilterItem *ring_resolution_filter;
 	FloatFilterItem *alias_resolution_filter;
 	FloatFilterItem *additional_phase_shift_filter;
@@ -88,6 +89,7 @@ public:
 	wxRadioButton *astigmatism_radio;
 	wxRadioButton *astigmatism_angle_radio;
 	wxRadioButton *score_radio;
+	wxRadioButton *iciness_radio;
 	wxRadioButton *ring_resolution_radio;
 	wxRadioButton *alias_resolution_radio;
 	wxRadioButton *additional_phase_shift_radio;

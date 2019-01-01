@@ -466,6 +466,21 @@ void Database::GetCTFParameters( const int &ctf_estimation_id, double &accelerat
 
 }
 
+void Database::AddCTFIcinessColumnIfNecessary()
+{
+	MyDebugAssertTrue(is_open,"Database not open");
+
+	if (DoesColumnExist("ESTIMATED_CTF_PARAMETERS","ICINESS"))
+	{
+		wxPrintf("Iciness column exists in estimated_ctf_parameters\n");
+	}
+	else
+	{
+		wxPrintf("Need to create iciness column in estimated_ctf_parameters\n");
+		AddColumnToTable("ESTIMATED_CTF_PARAMETERS","ICINESS","r","0.0");
+	}
+}
+
 
 bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 {
@@ -571,6 +586,34 @@ bool Database::DeleteTable(const char *table_name)
 	sql_command += table_name;
 
 	return ExecuteSQL(sql_command.ToUTF8().data());
+}
+
+bool Database::AddColumnToTable(wxString table_name, wxString column_name, wxString column_format, wxString default_value)
+{
+	wxString sql_command = "ALTER TABLE " + table_name + " ADD COLUMN " + column_name + " ";
+	if (column_format.IsSameAs("t",false))
+	{
+		sql_command += " TEXT";
+	}
+	else if (column_format.IsSameAs("r",false))
+	{
+		sql_command += " REAL";
+	}
+	else if (column_format.IsSameAs("i",false) || column_format.IsSameAs("l",false))
+	{
+		sql_command += " INTEGER";
+	}
+
+	sql_command += " DEFAULT " + default_value;
+
+	int return_code = ExecuteSQL(sql_command);
+
+	if( return_code != SQLITE_OK )
+	{
+		DEBUG_ABORT;
+	}
+
+	return true;
 }
 
 bool Database::CreateTable(const char *table_name, const char *column_format, ...)
@@ -824,6 +867,19 @@ bool Database::DoesTableExist(wxString table_name)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	return (bool) ReturnSingleIntFromSelectCommand(wxString::Format("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='%s';", table_name));
+}
+
+bool Database::DoesColumnExist(wxString table_name, wxString column_name)
+{
+	MyDebugAssertTrue(is_open, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	wxString sql_command="SELECT "+column_name+" FROM "+table_name+" LIMIT 0";
+
+	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &current_statement, NULL);
+
+	return return_code == SQLITE_OK;
 }
 
 void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white)

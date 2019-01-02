@@ -11,6 +11,7 @@
 # - update version in AC_INIT at beginning of configure.ac
 # - update version in ctffind.cpp, near line 4 (const std::string ctffind_version = "4.1.3";)
 # - update NEWS, ChangeLog
+# - make sure dump_debug_files is set to false (ctffind.cpp, around line 833)
 # - commit & push to repository
 # - copy the script to machine used to build
 # - run the script

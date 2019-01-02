@@ -595,6 +595,7 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	}
 
 	// We need a CTF object
+	double iciness;
 	CTF ctf_of_current_image;
 	{
 		double acceleration_voltage;
@@ -604,12 +605,12 @@ void MyPickingResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		double defocus_2;
 		double astigmatism_angle;
 		double additional_phase_shift;
-		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
+		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
 		ctf_of_current_image.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,pixel_size,additional_phase_shift);
 	}
 
 
-	if (DoesFileExist(image_file) == true) ResultDisplayPanel->Draw(image_file,array_of_particle_positions, maximum_radius_of_particle, pixel_size,ctf_of_current_image);
+	if (DoesFileExist(image_file) == true) ResultDisplayPanel->Draw(image_file,array_of_particle_positions, maximum_radius_of_particle, pixel_size,ctf_of_current_image,current_image_asset->asset_id,iciness);
 	RightPanel->Layout();
 
 }

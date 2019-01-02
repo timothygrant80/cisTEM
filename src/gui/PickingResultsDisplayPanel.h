@@ -15,7 +15,7 @@ public :
 
 	//void OnFitTypeRadioButton(wxCommandEvent& event);
 	void Clear();
-	void Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf);
+	void Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf, int image_asset_id, float iciness);
 
 	void OnCirclesAroundParticlesCheckBox(wxCommandEvent& event);
 	void OnHighPassFilterCheckBox(wxCommandEvent& event);
@@ -29,6 +29,9 @@ public :
 	void OnLowPassKillFocus(wxFocusEvent& event);
 
 	void SetNumberOfPickedCoordinates(int number_of_coordinates);
+	void SetIciness(float iciness);
+	void SetImageAssetID(int image_asset_id);
+	void SetDefocus(float defocus_in_angstroms);
 
 
 

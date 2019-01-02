@@ -139,8 +139,8 @@ bool FindParticlesApp::DoCalculation()
 	float		minimum_peak_height_for_candidate_particles = 	my_current_job.arguments[19].ReturnFloatArgument();
 	bool		avoid_low_variance_areas					=	my_current_job.arguments[20].ReturnBoolArgument();
 	bool		avoid_high_variance_areas					=	my_current_job.arguments[21].ReturnBoolArgument();
-	float		low_variance_threshold_in_fwhm				=	my_current_job.arguments[22].ReturnBoolArgument();
-	float		high_variance_threshold_in_fwhm				=	my_current_job.arguments[23].ReturnBoolArgument();
+	float		low_variance_threshold_in_fwhm				=	my_current_job.arguments[22].ReturnFloatArgument();
+	float		high_variance_threshold_in_fwhm				=	my_current_job.arguments[23].ReturnFloatArgument();
 	bool		avoid_high_low_mean_areas					=	my_current_job.arguments[24].ReturnBoolArgument();
 	int			algorithm_to_find_background				=	my_current_job.arguments[25].ReturnIntegerArgument();
 	int			number_of_background_boxes					=	my_current_job.arguments[26].ReturnIntegerArgument();

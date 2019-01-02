@@ -1005,6 +1005,7 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 	double defocus_2;
 	double astigmatism_angle;
 	double additional_phase_shift;
+	double iciness;
 	const bool already_have_templates = false;
 	const bool average_templates_radially = false;
 	const int number_of_template_rotations = 1;
@@ -1015,7 +1016,7 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 
 	current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), ImageComboBox->GetSelection()));
 
-	main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
+	main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
 
 	// if we have a scaled version of the image, then use that instead..
 
@@ -1078,8 +1079,23 @@ void MyFindParticlesPanel::DrawResultsFromParticleFinder()
 	ArrayOfParticlePositionAssets array_of_assets = particle_finder.ReturnArrayOfParticlePositionAssets();
 
 
+	ImageAsset * current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), ImageComboBox->GetSelection()));
+	int image_asset_id = current_image_asset->asset_id;
+
+	double iciness;
+	{
+		double acceleration_voltage;
+		double spherical_aberration;
+		double amplitude_contrast;
+		double defocus_1;
+		double defocus_2;
+		double astigmatism_angle;
+		double additional_phase_shift;
+		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
+	}
+
 	PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
-	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, ExclusionRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize(), particle_finder.ReturnMicrographCTF());
+	PickingResultsPanel->Draw(particle_finder.ReturnMicrographFilename(), array_of_assets, ExclusionRadiusNumericCtrl->ReturnValue(), particle_finder.ReturnOriginalMicrographPixelSize(), particle_finder.ReturnMicrographCTFWithOriginalPixelSize(),image_asset_id,iciness);
 
 }
 
@@ -1142,6 +1158,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	double		defocus_2;
 	double		astigmatism_angle;
 	double		additional_phase_shift;
+	double		iciness;
 
 	bool		already_have_templates = false;
 	std::string	templates_filename = "no_templates.mrcs";
@@ -1155,7 +1172,10 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	int			minimum_distance_from_edges = 128;
 	float		picking_threshold = ThresholdPeakHeightNumericCtrl->ReturnValue();
 	int			number_of_previous_picks;
+	bool		avoid_low_variance_areas;
 	bool		avoid_high_variance_areas;
+	float 		low_variance_threshold_in_fwhm;
+	float		high_variance_threshold_in_fwhm;
 	bool 		avoid_high_low_mean_areas;
 	int			algorithm_to_find_background;
 	int			number_of_background_boxes;
@@ -1184,7 +1204,10 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();
 	minimum_distance_from_edges = MinimumDistanceFromEdgesSpinCtrl->GetValue();
 	picking_threshold = ThresholdPeakHeightNumericCtrl->ReturnValue();
+	avoid_low_variance_areas = AvoidLowVarianceAreasCheckBox->GetValue();
 	avoid_high_variance_areas = AvoidHighVarianceAreasCheckBox->GetValue();
+	low_variance_threshold_in_fwhm = LowVarianceThresholdNumericCtrl->ReturnValue();
+	high_variance_threshold_in_fwhm = HighVarianceThresholdNumericCtrl->ReturnValue();
 	avoid_high_low_mean_areas = AvoidAbnormalLocalMeanAreasCheckBox->GetValue();
 	algorithm_to_find_background = AlgorithmToFindBackgroundChoice->GetSelection();
 	number_of_background_boxes = NumberOfBackgroundBoxesSpinCtrl->GetValue();
@@ -1206,7 +1229,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		spherical_aberration	=	current_image_asset->spherical_aberration;
 		particles_are_white     = 	current_image_asset->protein_is_white;
 
-		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
+		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
 
 
 		number_of_previous_picks = main_frame->current_project.database.ReturnNumberOfPreviousParticlePicksByAssetID(current_image_asset->asset_id);
@@ -1215,7 +1238,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		output_stack_filename += wxString::Format("/%s_COOS_%i.mrc", wxFileName::StripExtension(current_image_asset->ReturnShortNameString()),number_of_previous_picks);
 
 
-		my_job_package.AddJob("sffffffffbsbifffsiifbbiib",	input_filename.c_str(), // 0
+		my_job_package.AddJob("tffffffffbtbiffftiifbbffbiib",	input_filename.c_str(), // 0
 															pixel_size,
 															acceleration_voltage,
 															spherical_aberration,
@@ -1235,7 +1258,10 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 															output_stack_box_size,
 															minimum_distance_from_edges,
 															picking_threshold,
+															avoid_low_variance_areas,
 															avoid_high_variance_areas,
+															low_variance_threshold_in_fwhm,
+															high_variance_threshold_in_fwhm,
 															avoid_high_low_mean_areas,
 															algorithm_to_find_background,
 															number_of_background_boxes,
@@ -1619,8 +1645,16 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			ArrayOfParticlePositionAssets array_of_assets;
 			//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
 			wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
-
-			if (result_to_process) array_of_assets = ParticlePositionsFromJobResults(result_to_process, image_asset_panel->ReturnAssetID(active_group.members[result_to_process->job_number]),1,1,1);
+			int image_asset_id = -1;
+			double iciness = 0.0;
+			if (result_to_process)
+			{
+				image_asset_id = image_asset_panel->ReturnAssetID(active_group.members[result_to_process->job_number]);
+				array_of_assets = ParticlePositionsFromJobResults(result_to_process,image_asset_id,1,1,1);
+				ImageAsset * current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(image_asset_id));
+				double acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift;
+				main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
+			}
 			float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
 			float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
 			PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
@@ -1633,7 +1667,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 										my_job_package.jobs[job_number].arguments[8].ReturnFloatArgument(), //ang ast
 										pixel_size_in_angstroms,
 										my_job_package.jobs[job_number].arguments[5].ReturnFloatArgument()); //phase shift
-			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms,ctf_of_current_result);
+			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms,ctf_of_current_result,image_asset_id,iciness);
 
 			time_of_last_result_update = time(NULL);
 		}

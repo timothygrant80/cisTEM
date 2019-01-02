@@ -255,7 +255,7 @@ public :
 	void GetReconstructionJob(long wanted_reconstruction_id, long &refinement_package_asset_id, long &refinement_id, wxString &name, float &inner_mask_radius, float &outer_mask_radius, float &resolution_limit, float &score_weight_conversion, bool &should_adjust_score, bool &should_crop_images, bool &should_save_half_maps, bool &should_likelihood_blur, float &smoothing_factor, int &class_number, long &volume_asset_id);
 
 	// Convenience CTF parameter function
-	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift );
+	void GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift, double &iciness );
 
 	void AddCTFIcinessColumnIfNecessary();
 

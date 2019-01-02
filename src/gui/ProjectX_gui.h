@@ -661,6 +661,9 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		wxStaticText* LowAngstromStatic;
 		wxCheckBox* WienerFilterCheckBox;
 		wxStaticLine* m_staticline831;
+		wxStaticText* ImageIDStaticText;
+		wxStaticText* DefocusStaticText;
+		wxStaticText* IcinessStaticText;
 		wxStaticText* NumberOfPicksStaticText;
 		wxStaticLine* m_staticline8311;
 		wxStaticLine* m_staticline26;

@@ -2427,6 +2427,18 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer94->Add( m_staticline831, 0, wxEXPAND | wxALL, 5 );
 	
+	ImageIDStaticText = new wxStaticText( this, wxID_ANY, wxT("Image ID: -1"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImageIDStaticText->Wrap( -1 );
+	bSizer94->Add( ImageIDStaticText, 0, wxALL, 5 );
+	
+	DefocusStaticText = new wxStaticText( this, wxID_ANY, wxT("Defocus: 0.0 μm"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusStaticText->Wrap( -1 );
+	bSizer94->Add( DefocusStaticText, 0, wxALL, 5 );
+	
+	IcinessStaticText = new wxStaticText( this, wxID_ANY, wxT("Iciness: 0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	IcinessStaticText->Wrap( -1 );
+	bSizer94->Add( IcinessStaticText, 0, wxALL, 5 );
+	
 	NumberOfPicksStaticText = new wxStaticText( this, wxID_ANY, wxT("0 picked coordinates"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfPicksStaticText->Wrap( -1 );
 	bSizer94->Add( NumberOfPicksStaticText, 0, wxALL, 5 );

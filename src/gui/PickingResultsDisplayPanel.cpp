@@ -31,7 +31,7 @@ void PickingResultsDisplayPanel::Clear()
 	Refresh();
 }
 
-void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf)
+void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfParticlePositionAssets &array_of_assets, const float particle_radius_in_angstroms, const float pixel_size_in_angstroms, CTF micrograph_ctf, int image_asset_id, float iciness)
 {
 
 
@@ -45,6 +45,9 @@ void PickingResultsDisplayPanel::Draw(const wxString &image_filename, ArrayOfPar
 	PickingResultsImagePanel->should_show = true;
 	PickingResultsImagePanel->SetToolTip(wxString::Format(wxT("%i coordinates picked"),int(array_of_assets.GetCount())));
 	SetNumberOfPickedCoordinates(int(array_of_assets.Count()));
+	SetImageAssetID(image_asset_id);
+	SetDefocus(0.5*(micrograph_ctf.GetDefocus1()+micrograph_ctf.GetDefocus2())*pixel_size_in_angstroms);
+	SetIciness(iciness);
 
 	PickingResultsImagePanel->Refresh();
 
@@ -195,4 +198,19 @@ void PickingResultsDisplayPanel::OnRedoButtonClick(wxCommandEvent& event)
 void PickingResultsDisplayPanel::SetNumberOfPickedCoordinates(int number_of_coordinates)
 {
 	NumberOfPicksStaticText->SetLabel(wxString::Format(wxT("%i picked coordinates"),number_of_coordinates));
+}
+
+void PickingResultsDisplayPanel::SetImageAssetID(int image_asset_id)
+{
+	ImageIDStaticText->SetLabel(wxString::Format(wxT("Image ID: %i"),image_asset_id));
+}
+
+void PickingResultsDisplayPanel::SetIciness(float iciness)
+{
+	IcinessStaticText->SetLabel(wxString::Format(wxT("Iciness: %.2f"),iciness));
+}
+
+void PickingResultsDisplayPanel::SetDefocus(float defocus_in_angstroms)
+{
+	DefocusStaticText->SetLabel(wxString::Format(wxT("Defocus: %.2f μm"),defocus_in_angstroms/10000.0));
 }

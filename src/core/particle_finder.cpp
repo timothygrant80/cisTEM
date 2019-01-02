@@ -1325,6 +1325,14 @@ void ParticleFinder::UpdatePixelSizeFromMicrographDimensions()
 	UpdateTypicalRadiusInPixels();
 }
 
+CTF ParticleFinder::ReturnMicrographCTFWithOriginalPixelSize()
+{
+	CTF ctf_with_original_pixel_size;
+	ctf_with_original_pixel_size.CopyFrom(micrograph_ctf);
+	ctf_with_original_pixel_size.ChangePixelSize(pixel_size,original_micrograph_pixel_size);
+	return ctf_with_original_pixel_size;
+}
+
 /*
  * Call when
  * - new micrograph filename

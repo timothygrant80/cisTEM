@@ -76,6 +76,7 @@ void MyRelionExportDialog::OnExportButtonClick( wxCommandEvent & event )
 	double defocus_2;
 	double astigmatism_angle;
 	double additional_phase_shift;
+	double iciness;
 	float micrograph_mean;
 	int box_at_x;
 	int box_at_y;
@@ -129,7 +130,7 @@ void MyRelionExportDialog::OnExportButtonClick( wxCommandEvent & event )
 
 		current_array_of_assets = main_frame->current_project.database.ReturnArrayOfParticlePositionAssetsFromAssetsTable(current_image_asset->asset_id);
 
-		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift);
+		main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
 
 		temp_float[0] = image_counter + 1;
 		temp_float[1] = defocus_1;

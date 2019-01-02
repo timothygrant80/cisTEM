@@ -443,18 +443,18 @@ void Database::GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &numbe
 	EndBatchSelect();
 }
 
-void Database::GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift )
+void Database::GetCTFParameters( const int &ctf_estimation_id, double &acceleration_voltage, double &spherical_aberration, double &amplitude_constrast, double &defocus_1, double &defocus_2, double &defocus_angle, double &additional_phase_shift, double &iciness )
 {
 	MyDebugAssertTrue(is_open,"Database not open");
 
 
 	bool more_data;
 
-	more_data = BeginBatchSelect(wxString::Format("SELECT VOLTAGE, SPHERICAL_ABERRATION, AMPLITUDE_CONTRAST, DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT FROM ESTIMATED_CTF_PARAMETERS WHERE CTF_ESTIMATION_ID=%i", ctf_estimation_id));
+	more_data = BeginBatchSelect(wxString::Format("SELECT VOLTAGE, SPHERICAL_ABERRATION, AMPLITUDE_CONTRAST, DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, ICINESS FROM ESTIMATED_CTF_PARAMETERS WHERE CTF_ESTIMATION_ID=%i", ctf_estimation_id));
 
 	if (more_data)
 	{
-		GetFromBatchSelect("rrrrrrr",&acceleration_voltage,&spherical_aberration,&amplitude_constrast,&defocus_1,&defocus_2,&defocus_angle,&additional_phase_shift);
+		GetFromBatchSelect("rrrrrrrr",&acceleration_voltage,&spherical_aberration,&amplitude_constrast,&defocus_1,&defocus_2,&defocus_angle,&additional_phase_shift,&iciness);
 	}
 	else
 	{

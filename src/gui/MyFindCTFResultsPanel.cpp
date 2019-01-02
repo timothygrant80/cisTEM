@@ -29,7 +29,18 @@ FindCTFResultsPanel( parent )
 
 	FillGroupComboBox();
 
+	// Draw the button to plot results statistics
+	#include "icons/show_angles.cpp"
+	wxBitmap angles_popup_bmp = wxBITMAP_PNG_FROM_DATA(show_angles);
+	PlotResultsButton->SetBitmap(angles_popup_bmp);
+
 	Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
+}
+
+void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
+{
+	ResultsDistributionPlotDialog *plot_dialog = new ResultsDistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
+
 }
 
 void MyFindCTFResultsPanel::OnCharHook( wxKeyEvent& event )

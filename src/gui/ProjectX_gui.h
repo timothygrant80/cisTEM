@@ -24,6 +24,7 @@ class ContainedParticleListControl;
 class ContentsList;
 class DisplayPanel;
 class DisplayRefinementResultsPanel;
+class DistributionPlotPanel;
 class ImageGroupPickerComboPanel;
 class ImagesPickerComboPanel;
 class MemoryComboBox;
@@ -767,6 +768,7 @@ class FindCTFResultsPanel : public wxPanel
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPlotResultsButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
@@ -776,6 +778,7 @@ class FindCTFResultsPanel : public wxPanel
 		
 	
 	public:
+		NoFocusBitmapButton* PlotResultsButton;
 		
 		FindCTFResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
 		~FindCTFResultsPanel();
@@ -3356,6 +3359,24 @@ class AboutDialog : public wxDialog
 		
 		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
 		~AboutDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ResultsDistributionPlotDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class ResultsDistributionPlotDialogParent : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxChoice* DistributionToPlotChoice;
+	
+	public:
+		DistributionPlotPanel* DistributionPlotPanelInstance;
+		
+		ResultsDistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~ResultsDistributionPlotDialogParent();
 	
 };
 

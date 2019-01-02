@@ -36,6 +36,7 @@ class MyFindCTFResultsPanel : public FindCTFResultsPanel
 		void OnAddToGroupClick( wxCommandEvent& event );
 		void OnRemoveFromGroupClick( wxCommandEvent& event );
 		void OnJobDetailsToggle( wxCommandEvent& event );
+		void OnPlotResultsButtonClick(wxCommandEvent& event);
 		void Clear();
 
 		int GetFilter();

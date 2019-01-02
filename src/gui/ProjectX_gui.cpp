@@ -14,6 +14,7 @@
 #include "ClassificationPlotPanel.h"
 #include "DisplayPanel.h"
 #include "DisplayRefinementResultsPanel.h"
+#include "DistributionPlotPanel.h"
 #include "MyFSCPanel.h"
 #include "PickingResultsDisplayPanel.h"
 #include "PlotCurvePanel.h"
@@ -2540,6 +2541,10 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	m_staticline77 = new wxStaticLine( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer64->Add( m_staticline77, 0, wxEXPAND | wxALL, 5 );
 	
+	PlotResultsButton = new NoFocusBitmapButton( m_panel13, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
+	PlotResultsButton->SetDefault(); 
+	bSizer64->Add( PlotResultsButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2862,6 +2867,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	AllImagesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnAllMoviesSelect ), NULL, this );
 	ByFilterButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnByFilterSelect ), NULL, this );
 	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnDefineFilterClick ), NULL, this );
+	PlotResultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPlotResultsButtonClick ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
@@ -2877,6 +2883,7 @@ FindCTFResultsPanel::~FindCTFResultsPanel()
 	AllImagesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnAllMoviesSelect ), NULL, this );
 	ByFilterButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnByFilterSelect ), NULL, this );
 	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnDefineFilterClick ), NULL, this );
+	PlotResultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPlotResultsButtonClick ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
@@ -11693,5 +11700,43 @@ AboutDialog::AboutDialog( wxWindow* parent, wxWindowID id, const wxString& title
 }
 
 AboutDialog::~AboutDialog()
+{
+}
+
+ResultsDistributionPlotDialogParent::ResultsDistributionPlotDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer489;
+	bSizer489 = new wxBoxSizer( wxVERTICAL );
+	
+	DistributionPlotPanelInstance = new DistributionPlotPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer489->Add( DistributionPlotPanelInstance, 1, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* DistributionPlotButtonsSizer;
+	DistributionPlotButtonsSizer = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	wxArrayString DistributionToPlotChoiceChoices;
+	DistributionToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DistributionToPlotChoiceChoices, 0 );
+	DistributionToPlotChoice->SetSelection( 0 );
+	DistributionPlotButtonsSizer->Add( DistributionToPlotChoice, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	
+	bSizer489->Add( DistributionPlotButtonsSizer, 0, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer489 );
+	this->Layout();
+	
+	this->Centre( wxBOTH );
+}
+
+ResultsDistributionPlotDialogParent::~ResultsDistributionPlotDialogParent()
 {
 }

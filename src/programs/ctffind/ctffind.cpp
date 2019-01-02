@@ -830,7 +830,7 @@ bool CtffindApp::DoCalculation()
 	const float			maximum_resolution_for_initial_search = 5.0;
 
 	// Debugging
-	const bool			dump_debug_files = true;
+	const bool			dump_debug_files = false;
 
 	/*
 	 *  Scoring function
@@ -958,7 +958,7 @@ bool CtffindApp::DoCalculation()
 
 	if (! old_school_input && number_of_micrographs > 1 && is_running_locally)
 	{
-		wxPrintf("Will estimate the CTF parmaeters for %i micrographs.\n",number_of_micrographs);
+		wxPrintf("Will estimate the CTF parameters for %i micrographs.\n",number_of_micrographs);
 		wxPrintf("Results will be written to this file: %s\n",output_text->ReturnFilename());
 		wxPrintf("\nEstimating CTF parameters...\n\n");
 		my_progress_bar = new ProgressBar(number_of_micrographs);

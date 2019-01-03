@@ -11703,7 +11703,7 @@ AboutDialog::~AboutDialog()
 {
 }
 
-ResultsDistributionPlotDialogParent::ResultsDistributionPlotDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 	
@@ -11719,10 +11719,10 @@ ResultsDistributionPlotDialogParent::ResultsDistributionPlotDialogParent( wxWind
 	
 	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	wxArrayString DistributionToPlotChoiceChoices;
-	DistributionToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DistributionToPlotChoiceChoices, 0 );
-	DistributionToPlotChoice->SetSelection( 0 );
-	DistributionPlotButtonsSizer->Add( DistributionToPlotChoice, 0, wxALL|wxEXPAND, 5 );
+	wxArrayString DataSeriesToPlotChoiceChoices;
+	DataSeriesToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DataSeriesToPlotChoiceChoices, 0 );
+	DataSeriesToPlotChoice->SetSelection( 0 );
+	DistributionPlotButtonsSizer->Add( DataSeriesToPlotChoice, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -11730,13 +11730,38 @@ ResultsDistributionPlotDialogParent::ResultsDistributionPlotDialogParent( wxWind
 	
 	bSizer489->Add( DistributionPlotButtonsSizer, 0, wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer491;
+	bSizer491 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer491->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	CopyButton = new wxButton( this, wxID_ANY, wxT("Copy"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( CopyButton, 0, wxALL, 5 );
+	
+	SaveButton = new wxButton( this, wxID_ANY, wxT("Save"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( SaveButton, 0, wxALL, 5 );
+	
+	
+	bSizer489->Add( bSizer491, 0, wxEXPAND, 5 );
+	
 	
 	this->SetSizer( bSizer489 );
 	this->Layout();
 	
 	this->Centre( wxBOTH );
+	
+	// Connect Events
+	DataSeriesToPlotChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
+	CopyButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnCopyButtonClick ), NULL, this );
+	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveButtonClick ), NULL, this );
 }
 
-ResultsDistributionPlotDialogParent::~ResultsDistributionPlotDialogParent()
+DistributionPlotDialogParent::~DistributionPlotDialogParent()
 {
+	// Disconnect Events
+	DataSeriesToPlotChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
+	CopyButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnCopyButtonClick ), NULL, this );
+	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveButtonClick ), NULL, this );
+	
 }

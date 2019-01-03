@@ -3363,20 +3363,28 @@ class AboutDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ResultsDistributionPlotDialogParent
+/// Class DistributionPlotDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class ResultsDistributionPlotDialogParent : public wxDialog 
+class DistributionPlotDialogParent : public wxDialog 
 {
 	private:
 	
 	protected:
-		wxChoice* DistributionToPlotChoice;
+		wxChoice* DataSeriesToPlotChoice;
+		wxButton* CopyButton;
+		wxButton* SaveButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCopyButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
 	
 	public:
 		DistributionPlotPanel* DistributionPlotPanelInstance;
 		
-		ResultsDistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
-		~ResultsDistributionPlotDialogParent();
+		DistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~DistributionPlotDialogParent();
 	
 };
 

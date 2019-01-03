@@ -39,7 +39,58 @@ FindCTFResultsPanel( parent )
 
 void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 {
-	ResultsDistributionPlotDialog *plot_dialog = new ResultsDistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
+
+	// TODO: add spinning wheel to let user know we're working on it
+
+	/*
+	 * Get data to be plotted from the database
+	 */
+	long number_of_image_assets = image_asset_panel->ReturnNumberOfAssets();
+	double * defocus1 		= 	new double[number_of_image_assets];
+	double * defocus2 		= 	new double[number_of_image_assets];
+	double * angle    		=	new double[number_of_image_assets];
+	double * phase_shift	=	new double[number_of_image_assets];
+	double * score			=	new double[number_of_image_assets];
+	double * resolution		=	new double[number_of_image_assets];
+	{
+		wxString select_command = "SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID";
+		long counter;
+		bool should_continue;
+
+		counter = 0;
+		should_continue = main_frame->current_project.database.BeginBatchSelect(select_command);
+
+		if (should_continue)
+		{
+			while(should_continue)
+			{
+				MyDebugAssertTrue(counter < number_of_image_assets,"counter is out of bounds");
+				should_continue = main_frame->current_project.database.GetFromBatchSelect("rrrrrr", &defocus1[counter],&defocus2[counter],&angle[counter],&phase_shift[counter],&score[counter],&resolution[counter]);
+				counter++;
+			}
+			main_frame->current_project.database.EndBatchSelect();
+		}
+	}
+
+	/*
+	 * Setup a distplot panel
+	 */
+	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
+
+	distplot_dialog->SetNumberOfDataSeries(6);
+	distplot_dialog->SetDataSeries(0,resolution,number_of_image_assets,"Fit resolution");
+	distplot_dialog->SetDataSeries(1,score,number_of_image_assets,"Score");
+	distplot_dialog->SetDataSeries(2,defocus1,number_of_image_assets,"Defocus 1");
+	distplot_dialog->SetDataSeries(3,defocus2,number_of_image_assets,"Defocus 2");
+	distplot_dialog->SetDataSeries(4,angle,number_of_image_assets,"Astigmatism azimuth");
+	distplot_dialog->SetDataSeries(5,phase_shift,number_of_image_assets,"Phase shift");
+
+
+	/*
+	 * Show the dialog
+	 */
+	distplot_dialog->ShowModal();
+	distplot_dialog->Destroy();
 
 }
 

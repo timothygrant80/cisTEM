@@ -78,10 +78,10 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
 
 	distplot_dialog->SetNumberOfDataSeries(6);
-	distplot_dialog->SetDataSeries(0,resolution,number_of_image_assets,"Fit resolution");
+	distplot_dialog->SetDataSeries(0,resolution,number_of_image_assets,"Fit resolution (A)");
 	distplot_dialog->SetDataSeries(1,score,number_of_image_assets,"Score");
-	distplot_dialog->SetDataSeries(2,defocus1,number_of_image_assets,"Defocus 1");
-	distplot_dialog->SetDataSeries(3,defocus2,number_of_image_assets,"Defocus 2");
+	distplot_dialog->SetDataSeries(2,defocus1,number_of_image_assets,"Defocus 1 (A)");
+	distplot_dialog->SetDataSeries(3,defocus2,number_of_image_assets,"Defocus 2 (A)");
 	distplot_dialog->SetDataSeries(4,angle,number_of_image_assets,"Astigmatism azimuth");
 	distplot_dialog->SetDataSeries(5,phase_shift,number_of_image_assets,"Phase shift");
 

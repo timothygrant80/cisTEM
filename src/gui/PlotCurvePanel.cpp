@@ -5,6 +5,11 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 : wxPanel(parent, id, pos, size, style, name)
 {
 
+	current_xaxis = NULL;
+	current_yaxis = NULL;
+	title = NULL;
+	legend = NULL;
+
 	GraphSizer = new wxBoxSizer( wxVERTICAL );
 	SetSizer( GraphSizer );
 	Layout();
@@ -21,6 +26,8 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
     stored_y_axis_text = "";
 
     legend_is_visible = false;
+    should_draw_x_axis_ticks = false;
+    should_draw_y_axis_ticks = false;
 }
 
 void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wanted_y_axis_text)
@@ -125,7 +132,7 @@ void PlotCurvePanel::Draw(float wanted_x_min, float wanted_x_max, float wanted_y
 	current_plot_window->SetLayerVisible(0, true);
 	current_plot_window->SetLayerVisible(1, true);
 	current_plot_window->SetLayerVisible(2, true);
-	current_plot_window->SetLayerVisible(3, true);
+	current_plot_window->SetLayerVisible(3, legend_is_visible);
 
 	for (int layer_counter = 4; layer_counter <= 3 + curves_to_plot.GetCount(); layer_counter++)
 	{
@@ -164,5 +171,16 @@ void PlotCurvePanel::Draw()
 
 	Draw(global_x_min, global_x_max, global_y_min, global_y_max);
 }
+
+void PlotCurvePanel::SetXAxisLabel(wxString wanted_label)
+{
+	current_xaxis->SetName(wanted_label);
+}
+
+void PlotCurvePanel::SaveScreenshot(const wxString & filename, int type)
+{
+	current_plot_window->SaveScreenshot(filename,type);
+}
+
 
 

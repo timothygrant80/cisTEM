@@ -9,6 +9,9 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	number_of_points_in_data_series = 0;
 	data_series = NULL;
 	data_series_titles = NULL;
+	value_on_focus_float = 0.0;
+	histogram_upper_bound = 0.0;
+	histogram_lower_bound = 0.0;
 
 	/*
 	 * GUI stuff
@@ -33,7 +36,7 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	/*
 	 * Get ready for plotting
 	 */
-	DistributionPlotPanelInstance->SetupwxMathPlot();
+	PlotCurvePanelInstance->Initialise("Value","Number of images",false);
 }
 
 void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title)
@@ -72,7 +75,8 @@ void DistributionPlotDialog::OnCopyButtonClick( wxCommandEvent& event )
 	if (wxTheClipboard->Open())
 	{
 	  //  wxTheClipboard->SetData( new wxTextDataObject(OutputTextCtrl->GetValue()) );
-		//wxTheClipboard->SetData( new wxBitmapDataObject( DistributionPlotPanelInstance->buffer_bitmap) );
+		//wxTheClipboard->SetData( new wxBitmapDataObject( PlotCurvePanelInstance->) );
+		MyDebugPrint("Copying not yet implemented");
 	    wxTheClipboard->Close();
 	}
 }
@@ -88,8 +92,8 @@ void DistributionPlotDialog::OnSaveButtonClick(wxCommandEvent &event)
 	}
 
 	// save the file then..
+	PlotCurvePanelInstance->SaveScreenshot(saveFileDialog->GetFilename(),wxBITMAP_TYPE_PNG);
 
-	//DistributionPlotPanelInstance->buffer_bitmap.SaveFile(saveFileDialog->ReturnProperPath(), wxBITMAP_TYPE_PNG);
 	saveFileDialog->Destroy();
 }
 
@@ -101,36 +105,88 @@ void DistributionPlotDialog::OnCloseButtonClick(wxCommandEvent &event)
 void DistributionPlotDialog::OnDataSeriesToPlotChoice(wxCommandEvent &event)
 {
 	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
-	const int number_of_bins = 100;
 
 	MyDebugPrint("Will plot "+data_series_titles[data_series_index]);
 
 	/*
+	 * When the user switches data series, we work out the bounds of the histogram for them
+	 */
+	HistogramComputeAutoBounds(data_series[data_series_index],number_of_points_in_data_series[data_series_index],histogram_lower_bound,histogram_upper_bound);
+	LowerBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_lower_bound));
+	UpperBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_upper_bound));
+
+	LowerBoundNumericCtrl->SetMinMaxValue(-FLT_MAX,histogram_upper_bound);
+	UpperBoundNumericCtrl->SetMinMaxValue(histogram_lower_bound,FLT_MAX);
+
+	ComputeHistogramAndPlotIt();
+}
+
+void DistributionPlotDialog::ComputeHistogramAndPlotIt()
+{
+	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
+	const int number_of_bins = 100;
+
+	/*
 	 * Compute a histogram
 	 */
-	HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,distribution_one_x,distribution_one_y);
+	Curve my_curve = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,histogram_lower_bound,histogram_upper_bound);
 
 	/*
 	 * Redo the plotting
 	 */
-	DistributionPlotPanelInstance->PlotUsingwxMathPlot(distribution_one_x,distribution_one_y);
+	PlotCurvePanelInstance->Clear();
+	PlotCurvePanelInstance->AddCurve(my_curve,wxColour(0, 0, 255),"Histogram");
+	PlotCurvePanelInstance->SetXAxisLabel(data_series_titles[data_series_index]);
+	PlotCurvePanelInstance->Draw();
 }
 
-void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> &bin_centers, std::vector<double> &histogram)
+
+void DistributionPlotDialog::OnLowerBoundTextEnter( wxCommandEvent& event )
+{
+	OnNewLowerBound();
+}
+void DistributionPlotDialog::OnLowerBoundKillFocus( wxFocusEvent & event )
+{
+	OnNewLowerBound();
+}
+void DistributionPlotDialog::OnLowerBoundSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = LowerBoundNumericCtrl->ReturnValue();
+}
+
+void DistributionPlotDialog::OnUpperBoundTextEnter( wxCommandEvent& event )
+{
+	OnNewUpperBound();
+}
+void DistributionPlotDialog::OnUpperBoundKillFocus( wxFocusEvent & event )
+{
+	OnNewUpperBound();
+}
+void DistributionPlotDialog::OnUpperBoundSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = UpperBoundNumericCtrl->ReturnValue();
+}
+
+void DistributionPlotDialog::OnNewUpperBound()
+{
+	UpperBoundNumericCtrl->CheckValues();
+	LowerBoundNumericCtrl->SetMinMaxValue(-FLT_MAX,UpperBoundNumericCtrl->ReturnValue());
+	histogram_upper_bound = UpperBoundNumericCtrl->ReturnValue();
+	ComputeHistogramAndPlotIt();
+}
+
+void DistributionPlotDialog::OnNewLowerBound()
+{
+	LowerBoundNumericCtrl->CheckValues();
+	UpperBoundNumericCtrl->SetMinMaxValue(LowerBoundNumericCtrl->ReturnValue(),FLT_MAX);
+	histogram_lower_bound = LowerBoundNumericCtrl->ReturnValue();
+	ComputeHistogramAndPlotIt();
+}
+
+void HistogramFromArray(double *data, int number_of_data, int number_of_bins, double lower_bound, double upper_bound, std::vector<double> &bin_centers, std::vector<double> &histogram)
 {
 
-	/*
-	 * Find min,max
-	 */
-	double min = DBL_MAX;
-	double max = -DBL_MAX;
-	for (int i=0;i<number_of_data;i++)
-	{
-		if (data[i] > max) max = data[i];
-		if (data[i] < min) min = data[i];
-	}
-
-	HistogramComputer hist = HistogramComputer(min,max,number_of_bins);
+	HistogramComputer hist = HistogramComputer(lower_bound,upper_bound,number_of_bins);
 
 	for (int i=0;i<number_of_data;i++) { hist.AddDatum(data[i]); }
 
@@ -144,6 +200,53 @@ void HistogramFromArray(double *data, int number_of_data, int number_of_bins, st
 	}
 
 	MyDebugAssertTrue(bin_centers.size() == number_of_bins,"Bad vector size");
+}
+
+/*
+ * Compute reasonable bounds for a histogram
+ */
+void HistogramComputeAutoBounds(double *data, int &number_of_data, double &min, double &max)
+{
+	/*
+	 * Find min,max
+	 */
+	min = DBL_MAX;
+	max = -DBL_MAX;
+	for (int i=0;i<number_of_data;i++)
+	{
+		if (data[i] > max) max = data[i];
+		if (data[i] < min) min = data[i];
+	}
+
+	/*
+	 * Upper bound is exclusive, so let's bump the max slightly
+	 * so that we don't automatically exclude the highest datum
+	 * from the histogram
+	 */
+	max += (max-min)*0.001;
+}
+
+Curve HistogramFromArray(double *data, int number_of_data, int number_of_bins, double lower_bound, double upper_bound)
+{
+
+	std::vector<double> bin_centers, histogram_values;
+
+	/*
+	 * If the user gave 0.0 for both lower and upper bound,
+	 * we take this as a hint that we should work it out ourselves
+	 */
+	if (lower_bound == 0.0 && upper_bound == 0.0) HistogramComputeAutoBounds(data,number_of_data,lower_bound,upper_bound);
+
+	HistogramFromArray(data,number_of_data,number_of_bins,lower_bound,upper_bound,bin_centers,histogram_values);
+
+	Curve my_curve;
+
+	for (int i=0;i<number_of_bins;i++)
+	{
+		my_curve.AddPoint(float(bin_centers.at(i)),float(histogram_values.at(i)));
+	}
+
+	return my_curve;
 }
 
 HistogramComputer::HistogramComputer(double min, double max, int numberOfBins)

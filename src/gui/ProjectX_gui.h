@@ -24,7 +24,6 @@ class ContainedParticleListControl;
 class ContentsList;
 class DisplayPanel;
 class DisplayRefinementResultsPanel;
-class DistributionPlotPanel;
 class ImageGroupPickerComboPanel;
 class ImagesPickerComboPanel;
 class MemoryComboBox;
@@ -3370,18 +3369,28 @@ class DistributionPlotDialogParent : public wxDialog
 	private:
 	
 	protected:
+		wxStaticText* m_staticText647;
+		NumericTextCtrl* LowerBoundNumericCtrl;
+		wxStaticText* m_staticText6471;
+		NumericTextCtrl* UpperBoundNumericCtrl;
 		wxChoice* DataSeriesToPlotChoice;
 		wxButton* CopyButton;
 		wxButton* SaveButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnLowerBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCopyButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:
-		DistributionPlotPanel* DistributionPlotPanelInstance;
+		PlotCurvePanel* PlotCurvePanelInstance;
 		
 		DistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~DistributionPlotDialogParent();

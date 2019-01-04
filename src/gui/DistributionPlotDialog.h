@@ -15,15 +15,29 @@ public :
 	void SetNumberOfDataSeries(int wanted_number_of_data_series);
 	void SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title);
 
+
+
+	void OnLowerBoundTextEnter( wxCommandEvent& event );
+	void OnLowerBoundKillFocus( wxFocusEvent & event );
+	void OnLowerBoundSetFocus( wxFocusEvent & event );
+
+	void OnUpperBoundTextEnter( wxCommandEvent& event );
+	void OnUpperBoundKillFocus( wxFocusEvent & event );
+	void OnUpperBoundSetFocus( wxFocusEvent & event );
+
 private:
 	int number_of_data_series;
 	int * number_of_points_in_data_series;
 	double ** data_series;
 	wxString * data_series_titles;
 	void ClearDataSeries();
+	void ComputeHistogramAndPlotIt();
+	void OnNewUpperBound();
+	void OnNewLowerBound();
+	float value_on_focus_float;
 
-	std::vector<double> distribution_one_x; // called 'one' because in future, we'll want to do 2D histograms
-	std::vector<double> distribution_one_y;
+	double histogram_lower_bound;
+	double histogram_upper_bound;
 };
 
 /*
@@ -55,7 +69,9 @@ class HistogramComputer {
     int * count_per_bin;
 };
 
-void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> &bin_centers, std::vector<double> &histogram);
+void HistogramFromArray(double *data, int number_of_data, int number_of_bins, double lower_bound, double upper_bound, std::vector<double> &bin_centers, std::vector<double> &histogram, double wanted_lower_bound, double wanted_upper_bound);
+void HistogramComputeAutoBounds(double *data, int &number_of_data, double &min, double &max);
+Curve HistogramFromArray(double *data, int number_of_data, int number_of_bins, double lower_bound = 0.0, double upper_bound = 0.0);
 
 
 #endif

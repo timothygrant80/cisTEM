@@ -105,9 +105,14 @@ void DistributionPlotDialog::OnDataSeriesToPlotChoice(wxCommandEvent &event)
 	 */
 	HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,distribution_one_x,distribution_one_y);
 
+	MyDebugPrint("Histogram ready to be plotted. %d",distribution_one_x[10]);
+
+	/*
+	 * Redo the plotting
+	 */
 }
 
-void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> bin_centers, std::vector<double> histogram)
+void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> &bin_centers, std::vector<double> &histogram)
 {
 
 	/*
@@ -125,11 +130,16 @@ void HistogramFromArray(double *data, int number_of_data, int number_of_bins, st
 
 	for (int i=0;i<number_of_data;i++) { hist.AddDatum(data[i]); }
 
+	bin_centers.clear();
+	histogram.clear();
+
 	for (int i=0;i<number_of_bins;i++)
 	{
-		bin_centers.at(i) = hist.ReturnCenterOfBin(i);
-		histogram.at(i) = double(hist.ReturnCountInBin(i));
+		bin_centers.push_back(hist.ReturnCenterOfBin(i));
+		histogram.push_back(double(hist.ReturnCountInBin(i)));
 	}
+
+	MyDebugAssertTrue(bin_centers.size() == number_of_bins,"Bad vector size");
 }
 
 HistogramComputer::HistogramComputer(double min, double max, int numberOfBins)

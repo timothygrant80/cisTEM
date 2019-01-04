@@ -55,7 +55,7 @@ class HistogramComputer {
     int * count_per_bin;
 };
 
-void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> bin_centers, std::vector<double> histogram);
+void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> &bin_centers, std::vector<double> &histogram);
 
 
 #endif

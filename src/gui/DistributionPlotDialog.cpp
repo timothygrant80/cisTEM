@@ -29,6 +29,11 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	int new_y_pos = (frame_position_y + (frame_height / 2) - myroundint(float(frame_height) * 0.9f / 2.0f));
 
 	Move(new_x_pos, new_y_pos);
+
+	/*
+	 * Get ready for plotting
+	 */
+	DistributionPlotPanelInstance->SetupwxMathPlot();
 }
 
 void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title)
@@ -67,7 +72,7 @@ void DistributionPlotDialog::OnCopyButtonClick( wxCommandEvent& event )
 	if (wxTheClipboard->Open())
 	{
 	  //  wxTheClipboard->SetData( new wxTextDataObject(OutputTextCtrl->GetValue()) );
-		wxTheClipboard->SetData( new wxBitmapDataObject( DistributionPlotPanelInstance->buffer_bitmap) );
+		//wxTheClipboard->SetData( new wxBitmapDataObject( DistributionPlotPanelInstance->buffer_bitmap) );
 	    wxTheClipboard->Close();
 	}
 }
@@ -84,7 +89,7 @@ void DistributionPlotDialog::OnSaveButtonClick(wxCommandEvent &event)
 
 	// save the file then..
 
-	DistributionPlotPanelInstance->buffer_bitmap.SaveFile(saveFileDialog->ReturnProperPath(), wxBITMAP_TYPE_PNG);
+	//DistributionPlotPanelInstance->buffer_bitmap.SaveFile(saveFileDialog->ReturnProperPath(), wxBITMAP_TYPE_PNG);
 	saveFileDialog->Destroy();
 }
 
@@ -105,11 +110,10 @@ void DistributionPlotDialog::OnDataSeriesToPlotChoice(wxCommandEvent &event)
 	 */
 	HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,distribution_one_x,distribution_one_y);
 
-	MyDebugPrint("Histogram ready to be plotted. %d",distribution_one_x[10]);
-
 	/*
 	 * Redo the plotting
 	 */
+	DistributionPlotPanelInstance->PlotUsingwxMathPlot(distribution_one_x,distribution_one_y);
 }
 
 void HistogramFromArray(double *data, int number_of_data, int number_of_bins, std::vector<double> &bin_centers, std::vector<double> &histogram)

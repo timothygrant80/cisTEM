@@ -9,12 +9,13 @@ public :
 	DistributionPlotDialog (wxWindow *parent, wxWindowID id, const wxString &title, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxDEFAULT_DIALOG_STYLE);
 	void OnCopyButtonClick( wxCommandEvent& event );
 	void OnCloseButtonClick(wxCommandEvent &event);
-	void OnSaveButtonClick(wxCommandEvent &event);
+	void OnSavePNGButtonClick(wxCommandEvent &event);
+	void OnSaveTXTButtonClick(wxCommandEvent &event);
 	void OnDataSeriesToPlotChoice(wxCommandEvent &event);
 
 	void SetNumberOfDataSeries(int wanted_number_of_data_series);
 	void SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title);
-
+	void SelectDataSeries(int which_data_series);
 
 
 	void OnLowerBoundTextEnter( wxCommandEvent& event );
@@ -32,10 +33,12 @@ private:
 	wxString * data_series_titles;
 	void ClearDataSeries();
 	void ComputeHistogramAndPlotIt();
+	void ResetHistogramBounds();
 	void OnNewUpperBound();
 	void OnNewLowerBound();
 	float value_on_focus_float;
 
+	Curve curve_to_plot;
 	double histogram_lower_bound;
 	double histogram_upper_bound;
 };

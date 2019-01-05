@@ -36,7 +36,7 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	/*
 	 * Get ready for plotting
 	 */
-	PlotCurvePanelInstance->Initialise("Value","Number of images",false);
+	PlotCurvePanelInstance->Initialise("Value","Number of images",false,false);
 }
 
 void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title)
@@ -70,6 +70,13 @@ void DistributionPlotDialog::ClearDataSeries()
 	}
 }
 
+void DistributionPlotDialog::SelectDataSeries(int which_data_series)
+{
+	DataSeriesToPlotChoice->Select(which_data_series);
+	ResetHistogramBounds();
+	ComputeHistogramAndPlotIt();
+}
+
 void DistributionPlotDialog::OnCopyButtonClick( wxCommandEvent& event )
 {
 	if (wxTheClipboard->Open())
@@ -81,9 +88,10 @@ void DistributionPlotDialog::OnCopyButtonClick( wxCommandEvent& event )
 	}
 }
 
-void DistributionPlotDialog::OnSaveButtonClick(wxCommandEvent &event)
+void DistributionPlotDialog::OnSavePNGButtonClick(wxCommandEvent &event)
 {
 	ProperOverwriteCheckSaveDialog *saveFileDialog;
+	//
 	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save png image"), "PNG files (*.png)|*.png", ".png");
 	if (saveFileDialog->ShowModal() == wxID_CANCEL)
 	{
@@ -91,8 +99,23 @@ void DistributionPlotDialog::OnSaveButtonClick(wxCommandEvent &event)
 		return;
 	}
 
-	// save the file then..
 	PlotCurvePanelInstance->SaveScreenshot(saveFileDialog->GetFilename(),wxBITMAP_TYPE_PNG);
+
+	saveFileDialog->Destroy();
+}
+
+void DistributionPlotDialog::OnSaveTXTButtonClick(wxCommandEvent &event)
+{
+	ProperOverwriteCheckSaveDialog *saveFileDialog;
+	//
+	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save histogram data"), "TXT files (*.txt)|*.txt", ".txt");
+	if (saveFileDialog->ShowModal() == wxID_CANCEL)
+	{
+		saveFileDialog->Destroy();
+		return;
+	}
+
+	curve_to_plot.WriteToFile(saveFileDialog->GetFilename(),"#   Bin_center        Count");
 
 	saveFileDialog->Destroy();
 }
@@ -104,21 +127,25 @@ void DistributionPlotDialog::OnCloseButtonClick(wxCommandEvent &event)
 
 void DistributionPlotDialog::OnDataSeriesToPlotChoice(wxCommandEvent &event)
 {
-	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
-
-	MyDebugPrint("Will plot "+data_series_titles[data_series_index]);
 
 	/*
 	 * When the user switches data series, we work out the bounds of the histogram for them
 	 */
+	ResetHistogramBounds();
+
+	ComputeHistogramAndPlotIt();
+}
+
+void DistributionPlotDialog::ResetHistogramBounds()
+{
+	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
+
 	HistogramComputeAutoBounds(data_series[data_series_index],number_of_points_in_data_series[data_series_index],histogram_lower_bound,histogram_upper_bound);
 	LowerBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_lower_bound));
 	UpperBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_upper_bound));
 
 	LowerBoundNumericCtrl->SetMinMaxValue(-FLT_MAX,histogram_upper_bound);
 	UpperBoundNumericCtrl->SetMinMaxValue(histogram_lower_bound,FLT_MAX);
-
-	ComputeHistogramAndPlotIt();
 }
 
 void DistributionPlotDialog::ComputeHistogramAndPlotIt()
@@ -129,13 +156,13 @@ void DistributionPlotDialog::ComputeHistogramAndPlotIt()
 	/*
 	 * Compute a histogram
 	 */
-	Curve my_curve = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,histogram_lower_bound,histogram_upper_bound);
+	curve_to_plot = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,histogram_lower_bound,histogram_upper_bound);
 
 	/*
 	 * Redo the plotting
 	 */
 	PlotCurvePanelInstance->Clear();
-	PlotCurvePanelInstance->AddCurve(my_curve,wxColour(0, 0, 255),"Histogram");
+	PlotCurvePanelInstance->AddCurve(curve_to_plot,wxColour(0, 0, 255),"Histogram");
 	PlotCurvePanelInstance->SetXAxisLabel(data_series_titles[data_series_index]);
 	PlotCurvePanelInstance->Draw();
 }

@@ -11715,8 +11715,10 @@ DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wx
 	wxBoxSizer* DistributionPlotButtonsSizer;
 	DistributionPlotButtonsSizer = new wxBoxSizer( wxHORIZONTAL );
 	
-	
-	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	wxArrayString DataSeriesToPlotChoiceChoices;
+	DataSeriesToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DataSeriesToPlotChoiceChoices, 0 );
+	DataSeriesToPlotChoice->SetSelection( 0 );
+	DistributionPlotButtonsSizer->Add( DataSeriesToPlotChoice, 0, wxALL|wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer492;
 	bSizer492 = new wxBoxSizer( wxHORIZONTAL );
@@ -11741,11 +11743,6 @@ DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wx
 	
 	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	wxArrayString DataSeriesToPlotChoiceChoices;
-	DataSeriesToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DataSeriesToPlotChoiceChoices, 0 );
-	DataSeriesToPlotChoice->SetSelection( 0 );
-	DistributionPlotButtonsSizer->Add( DataSeriesToPlotChoice, 0, wxALL|wxEXPAND, 5 );
-	
 	
 	bSizer489->Add( DistributionPlotButtonsSizer, 0, wxEXPAND, 5 );
 	
@@ -11755,11 +11752,11 @@ DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wx
 	
 	bSizer491->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	CopyButton = new wxButton( this, wxID_ANY, wxT("Copy"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer491->Add( CopyButton, 0, wxALL, 5 );
+	SaveTXTButton = new wxButton( this, wxID_ANY, wxT("Save TXT"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( SaveTXTButton, 0, wxALL, 5 );
 	
-	SaveButton = new wxButton( this, wxID_ANY, wxT("Save"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer491->Add( SaveButton, 0, wxALL, 5 );
+	SavePNGButton = new wxButton( this, wxID_ANY, wxT("Save PNG"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( SavePNGButton, 0, wxALL, 5 );
 	
 	
 	bSizer489->Add( bSizer491, 0, wxEXPAND, 5 );
@@ -11771,28 +11768,28 @@ DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wx
 	this->Centre( wxBOTH );
 	
 	// Connect Events
+	DataSeriesToPlotChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
 	LowerBoundNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundKillFocus ), NULL, this );
 	LowerBoundNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundSetFocus ), NULL, this );
 	LowerBoundNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundTextEnter ), NULL, this );
 	UpperBoundNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundKillFocus ), NULL, this );
 	UpperBoundNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundSetFocus ), NULL, this );
 	UpperBoundNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundTextEnter ), NULL, this );
-	DataSeriesToPlotChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
-	CopyButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnCopyButtonClick ), NULL, this );
-	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveButtonClick ), NULL, this );
+	SaveTXTButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveTXTButtonClick ), NULL, this );
+	SavePNGButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
 }
 
 DistributionPlotDialogParent::~DistributionPlotDialogParent()
 {
 	// Disconnect Events
+	DataSeriesToPlotChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
 	LowerBoundNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundKillFocus ), NULL, this );
 	LowerBoundNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundSetFocus ), NULL, this );
 	LowerBoundNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundTextEnter ), NULL, this );
 	UpperBoundNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundKillFocus ), NULL, this );
 	UpperBoundNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundSetFocus ), NULL, this );
 	UpperBoundNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundTextEnter ), NULL, this );
-	DataSeriesToPlotChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
-	CopyButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnCopyButtonClick ), NULL, this );
-	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveButtonClick ), NULL, this );
+	SaveTXTButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveTXTButtonClick ), NULL, this );
+	SavePNGButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
 	
 }

@@ -3369,24 +3369,24 @@ class DistributionPlotDialogParent : public wxDialog
 	private:
 	
 	protected:
+		wxChoice* DataSeriesToPlotChoice;
 		wxStaticText* m_staticText647;
 		NumericTextCtrl* LowerBoundNumericCtrl;
 		wxStaticText* m_staticText6471;
 		NumericTextCtrl* UpperBoundNumericCtrl;
-		wxChoice* DataSeriesToPlotChoice;
-		wxButton* CopyButton;
-		wxButton* SaveButton;
+		wxButton* SaveTXTButton;
+		wxButton* SavePNGButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnLowerBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnLowerBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnLowerBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnUpperBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnUpperBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnUpperBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnCopyButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveTXTButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSavePNGButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		
 	
 	public:

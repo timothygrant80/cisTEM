@@ -7,6 +7,7 @@ class DistributionPlotDialog : public DistributionPlotDialogParent
 public :
 
 	DistributionPlotDialog (wxWindow *parent, wxWindowID id, const wxString &title, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxDEFAULT_DIALOG_STYLE);
+	~DistributionPlotDialog();
 	void OnCopyButtonClick( wxCommandEvent& event );
 	void OnCloseButtonClick(wxCommandEvent &event);
 	void OnSavePNGButtonClick(wxCommandEvent &event);
@@ -14,33 +15,49 @@ public :
 	void OnDataSeriesToPlotChoice(wxCommandEvent &event);
 
 	void SetNumberOfDataSeries(int wanted_number_of_data_series);
-	void SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title);
+	void SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label);
 	void SelectDataSeries(int which_data_series);
 
 
-	void OnLowerBoundTextEnter( wxCommandEvent& event );
-	void OnLowerBoundKillFocus( wxFocusEvent & event );
-	void OnLowerBoundSetFocus( wxFocusEvent & event );
+	void OnLowerBoundXTextEnter( wxCommandEvent& event );
+	void OnLowerBoundXKillFocus( wxFocusEvent & event );
+	void OnLowerBoundXSetFocus( wxFocusEvent & event );
 
-	void OnUpperBoundTextEnter( wxCommandEvent& event );
-	void OnUpperBoundKillFocus( wxFocusEvent & event );
-	void OnUpperBoundSetFocus( wxFocusEvent & event );
+	void OnUpperBoundXTextEnter( wxCommandEvent& event );
+	void OnUpperBoundXKillFocus( wxFocusEvent & event );
+	void OnUpperBoundXSetFocus( wxFocusEvent & event );
+
+	void OnLowerBoundYTextEnter( wxCommandEvent& event );
+	void OnLowerBoundYKillFocus( wxFocusEvent & event );
+	void OnLowerBoundYSetFocus( wxFocusEvent & event );
+
+	void OnUpperBoundYTextEnter( wxCommandEvent& event );
+	void OnUpperBoundYKillFocus( wxFocusEvent & event );
+	void OnUpperBoundYSetFocus( wxFocusEvent & event );
 
 private:
 	int number_of_data_series;
 	int * number_of_points_in_data_series;
 	double ** data_series;
 	wxString * data_series_titles;
+	wxString * data_series_x_label;
+	wxString * data_series_y_label;
+	bool * plot_histogram_of_this_series;
 	void ClearDataSeries();
-	void ComputeHistogramAndPlotIt();
-	void ResetHistogramBounds();
-	void OnNewUpperBound();
-	void OnNewLowerBound();
+	void DoThePlotting();
+	void ResetBounds();
+	void UpdateCurveToPlot(bool reset_bounds);
+	void OnNewUpperBoundX();
+	void OnNewLowerBoundX();
+	void OnNewUpperBoundY();
+	void OnNewLowerBoundY();
 	float value_on_focus_float;
 
 	Curve curve_to_plot;
-	double histogram_lower_bound;
-	double histogram_upper_bound;
+	double lower_bound_x;
+	double upper_bound_x;
+	double lower_bound_y;
+	double upper_bound_y;
 };
 
 /*

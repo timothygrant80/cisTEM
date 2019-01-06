@@ -112,7 +112,6 @@
 #include "../gui/RefinementParametersDialog.h"
 #include "../gui/Sharpen3DPanel.h"
 #include "../gui/PlotCurvePanel.h"
-#include "../gui/DistributionPlotPanel.h"
 #include "../gui/DistributionPlotDialog.h"
 
 #ifdef EXPERIMENTAL

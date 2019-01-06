@@ -23,6 +23,7 @@ public:
 	void SaveScreenshot(const wxString &filename, int type=wxBITMAP_TYPE_BMP);
 
 	void SetXAxisLabel(wxString wanted_label);
+	void SetYAxisLabel(wxString wanted_label);
 
 private:
 

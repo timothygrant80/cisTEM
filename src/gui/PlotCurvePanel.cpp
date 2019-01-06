@@ -184,6 +184,11 @@ void PlotCurvePanel::SetXAxisLabel(wxString wanted_label)
 	current_xaxis->SetName(wanted_label);
 }
 
+void PlotCurvePanel::SetYAxisLabel(wxString wanted_label)
+{
+	current_yaxis->SetName(wanted_label);
+}
+
 void PlotCurvePanel::SaveScreenshot(const wxString & filename, int type)
 {
 	current_plot_window->SaveScreenshot(filename,type);

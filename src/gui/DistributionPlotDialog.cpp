@@ -9,9 +9,14 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	number_of_points_in_data_series = 0;
 	data_series = NULL;
 	data_series_titles = NULL;
+	data_series_x_label = NULL;
+	data_series_y_label = NULL;
+	plot_histogram_of_this_series = NULL;
 	value_on_focus_float = 0.0;
-	histogram_upper_bound = 0.0;
-	histogram_lower_bound = 0.0;
+	upper_bound_x = 0.0;
+	lower_bound_x = 0.0;
+	upper_bound_y = 0.0;
+	lower_bound_y = 0.0;
 
 	/*
 	 * GUI stuff
@@ -36,14 +41,19 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	/*
 	 * Get ready for plotting
 	 */
-	PlotCurvePanelInstance->Initialise("Value","Number of images",false,false);
+	PlotCurvePanelInstance->Initialise("Value","Number of images",false,false,20,50,90,20);
 }
 
-void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, wxString wanted_title)
+void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label)
 {
 	MyDebugAssertTrue(which_data_series < number_of_data_series,"Bad number of data series");
 	data_series[which_data_series] = wanted_data_series; // we're just copying a pointer
 	data_series_titles[which_data_series] = wanted_title; // we're copying the title itself
+	data_series_x_label[which_data_series] = wanted_x_label;
+	data_series_y_label[which_data_series] = wanted_y_label;
+
+	plot_histogram_of_this_series[which_data_series] = should_plot_histogram;
+
 	number_of_points_in_data_series[which_data_series] = number_of_points_in_series;
 
 	// GUI
@@ -57,14 +67,26 @@ void DistributionPlotDialog::SetNumberOfDataSeries(int wanted_number_of_data_ser
 	number_of_data_series = wanted_number_of_data_series;
 	data_series = new double*[number_of_data_series];
 	data_series_titles = new wxString[number_of_data_series];
+	data_series_x_label = new wxString[number_of_data_series];
+	data_series_y_label = new wxString[number_of_data_series];
+	plot_histogram_of_this_series = new bool[number_of_data_series];
 	number_of_points_in_data_series = new int[number_of_data_series];
 }
+
+DistributionPlotDialog::~DistributionPlotDialog()
+{
+	ClearDataSeries();
+}
+
 
 void DistributionPlotDialog::ClearDataSeries()
 {
 	if (number_of_data_series > 0)
 	{
 		delete [] data_series_titles;
+		delete [] data_series_x_label;
+		delete [] data_series_y_label;
+		delete [] plot_histogram_of_this_series;
 		delete [] number_of_points_in_data_series;
 		delete [] data_series; // we deallocate the array of pointers to the data, but we're not deallocating the actual data
 	}
@@ -73,8 +95,8 @@ void DistributionPlotDialog::ClearDataSeries()
 void DistributionPlotDialog::SelectDataSeries(int which_data_series)
 {
 	DataSeriesToPlotChoice->Select(which_data_series);
-	ResetHistogramBounds();
-	ComputeHistogramAndPlotIt();
+	UpdateCurveToPlot(true);
+	DoThePlotting();
 }
 
 void DistributionPlotDialog::OnCopyButtonClick( wxCommandEvent& event )
@@ -106,6 +128,8 @@ void DistributionPlotDialog::OnSavePNGButtonClick(wxCommandEvent &event)
 
 void DistributionPlotDialog::OnSaveTXTButtonClick(wxCommandEvent &event)
 {
+	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
+
 	ProperOverwriteCheckSaveDialog *saveFileDialog;
 	//
 	saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save histogram data"), "TXT files (*.txt)|*.txt", ".txt");
@@ -115,7 +139,13 @@ void DistributionPlotDialog::OnSaveTXTButtonClick(wxCommandEvent &event)
 		return;
 	}
 
-	curve_to_plot.WriteToFile(saveFileDialog->GetFilename(),"#   Bin_center        Count");
+	wxString x_title,y_title;
+	x_title = data_series_x_label[data_series_index];
+	y_title = data_series_y_label[data_series_index];
+	x_title.Replace(" ","_",true);
+	y_title.Replace(" ","_",true);
+
+	curve_to_plot.WriteToFile(saveFileDialog->GetFilename(),"#   "+x_title+" "+y_title);
 
 	saveFileDialog->Destroy();
 }
@@ -127,88 +157,175 @@ void DistributionPlotDialog::OnCloseButtonClick(wxCommandEvent &event)
 
 void DistributionPlotDialog::OnDataSeriesToPlotChoice(wxCommandEvent &event)
 {
-
-	/*
-	 * When the user switches data series, we work out the bounds of the histogram for them
-	 */
-	ResetHistogramBounds();
-
-	ComputeHistogramAndPlotIt();
+	UpdateCurveToPlot(true);
+	DoThePlotting();
 }
 
-void DistributionPlotDialog::ResetHistogramBounds()
+void DistributionPlotDialog::ResetBounds()
 {
 	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
 
-	HistogramComputeAutoBounds(data_series[data_series_index],number_of_points_in_data_series[data_series_index],histogram_lower_bound,histogram_upper_bound);
-	LowerBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_lower_bound));
-	UpperBoundNumericCtrl->SetValue(wxString::Format("%f",histogram_upper_bound));
-
-	LowerBoundNumericCtrl->SetMinMaxValue(-FLT_MAX,histogram_upper_bound);
-	UpperBoundNumericCtrl->SetMinMaxValue(histogram_lower_bound,FLT_MAX);
-}
-
-void DistributionPlotDialog::ComputeHistogramAndPlotIt()
-{
-	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
-	const int number_of_bins = 100;
+	/*
+	 * Work out bounds
+	 */
+	{
+		float min_x, min_y, max_x, max_y;
+		if (!plot_histogram_of_this_series[data_series_index])
+		{
+			curve_to_plot.GetXMinMax(min_x,max_x);
+			lower_bound_x = double(min_x);
+			upper_bound_x = double(max_x);
+		}
+		curve_to_plot.GetYMinMax(min_y,max_y);
+		lower_bound_y = double(min_y);
+		upper_bound_y = double(max_y);
+	}
 
 	/*
-	 * Compute a histogram
+	 * Update the GUI
 	 */
-	curve_to_plot = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,histogram_lower_bound,histogram_upper_bound);
+
+	LowerBoundXNumericCtrl->SetValue(wxString::Format("%f",lower_bound_x));
+	UpperBoundXNumericCtrl->SetValue(wxString::Format("%f",upper_bound_x));
+	LowerBoundYNumericCtrl->SetValue(wxString::Format("%f",lower_bound_y));
+	UpperBoundYNumericCtrl->SetValue(wxString::Format("%f",upper_bound_y));
+
+	LowerBoundXNumericCtrl->SetMinMaxValue(-FLT_MAX,upper_bound_x);
+	UpperBoundXNumericCtrl->SetMinMaxValue(lower_bound_x,FLT_MAX);
+	LowerBoundYNumericCtrl->SetMinMaxValue(-FLT_MAX,upper_bound_y);
+	UpperBoundYNumericCtrl->SetMinMaxValue(lower_bound_y,FLT_MAX);
+}
+
+/*
+ * Update the curve object
+ */
+void DistributionPlotDialog::UpdateCurveToPlot(bool reset_bounds)
+{
+	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
+
+	/*
+	 * Compute a histogram if required. If not, just copy
+	 * the data over (the X axis will just be the array index)
+	 */
+	if (plot_histogram_of_this_series[data_series_index])
+	{
+		const int number_of_bins = 100;
+		if (reset_bounds) HistogramComputeAutoBounds(data_series[data_series_index],number_of_points_in_data_series[data_series_index],lower_bound_x,upper_bound_x);
+		curve_to_plot = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,lower_bound_x,upper_bound_x);
+	}
+	else
+	{
+		curve_to_plot.CopyYValuesFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index]);
+	}
+
+	/*
+	 * Now reset the bounds
+	 */
+	if (reset_bounds) ResetBounds();
+}
+
+void DistributionPlotDialog::DoThePlotting()
+{
+	int data_series_index = DataSeriesToPlotChoice->GetCurrentSelection();
+
+	UpdateCurveToPlot(false);
 
 	/*
 	 * Redo the plotting
 	 */
 	PlotCurvePanelInstance->Clear();
-	PlotCurvePanelInstance->AddCurve(curve_to_plot,wxColour(0, 0, 255),"Histogram");
-	PlotCurvePanelInstance->SetXAxisLabel(data_series_titles[data_series_index]);
-	PlotCurvePanelInstance->Draw();
+	PlotCurvePanelInstance->AddCurve(curve_to_plot,wxColour(0, 0, 255),data_series_titles[data_series_index]);
+	PlotCurvePanelInstance->SetXAxisLabel(data_series_x_label[data_series_index]);
+	PlotCurvePanelInstance->SetYAxisLabel(data_series_y_label[data_series_index]);
+	PlotCurvePanelInstance->Draw(lower_bound_x,upper_bound_x,lower_bound_y,upper_bound_y);
 }
 
 
-void DistributionPlotDialog::OnLowerBoundTextEnter( wxCommandEvent& event )
+void DistributionPlotDialog::OnLowerBoundXTextEnter( wxCommandEvent& event )
 {
-	OnNewLowerBound();
+	OnNewLowerBoundX();
 }
-void DistributionPlotDialog::OnLowerBoundKillFocus( wxFocusEvent & event )
+void DistributionPlotDialog::OnLowerBoundXKillFocus( wxFocusEvent & event )
 {
-	OnNewLowerBound();
+	OnNewLowerBoundX();
 }
-void DistributionPlotDialog::OnLowerBoundSetFocus( wxFocusEvent & event )
+void DistributionPlotDialog::OnLowerBoundXSetFocus( wxFocusEvent & event )
 {
-	value_on_focus_float = LowerBoundNumericCtrl->ReturnValue();
-}
-
-void DistributionPlotDialog::OnUpperBoundTextEnter( wxCommandEvent& event )
-{
-	OnNewUpperBound();
-}
-void DistributionPlotDialog::OnUpperBoundKillFocus( wxFocusEvent & event )
-{
-	OnNewUpperBound();
-}
-void DistributionPlotDialog::OnUpperBoundSetFocus( wxFocusEvent & event )
-{
-	value_on_focus_float = UpperBoundNumericCtrl->ReturnValue();
+	value_on_focus_float = LowerBoundXNumericCtrl->ReturnValue();
 }
 
-void DistributionPlotDialog::OnNewUpperBound()
+void DistributionPlotDialog::OnUpperBoundXTextEnter( wxCommandEvent& event )
 {
-	UpperBoundNumericCtrl->CheckValues();
-	LowerBoundNumericCtrl->SetMinMaxValue(-FLT_MAX,UpperBoundNumericCtrl->ReturnValue());
-	histogram_upper_bound = UpperBoundNumericCtrl->ReturnValue();
-	ComputeHistogramAndPlotIt();
+	OnNewUpperBoundX();
+}
+void DistributionPlotDialog::OnUpperBoundXKillFocus( wxFocusEvent & event )
+{
+	OnNewUpperBoundX();
+}
+void DistributionPlotDialog::OnUpperBoundXSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = UpperBoundXNumericCtrl->ReturnValue();
 }
 
-void DistributionPlotDialog::OnNewLowerBound()
+void DistributionPlotDialog::OnNewUpperBoundX()
 {
-	LowerBoundNumericCtrl->CheckValues();
-	UpperBoundNumericCtrl->SetMinMaxValue(LowerBoundNumericCtrl->ReturnValue(),FLT_MAX);
-	histogram_lower_bound = LowerBoundNumericCtrl->ReturnValue();
-	ComputeHistogramAndPlotIt();
+	UpperBoundXNumericCtrl->CheckValues();
+	LowerBoundXNumericCtrl->SetMinMaxValue(-FLT_MAX,UpperBoundXNumericCtrl->ReturnValue());
+	upper_bound_x = UpperBoundXNumericCtrl->ReturnValue();
+	DoThePlotting();
 }
+
+void DistributionPlotDialog::OnNewLowerBoundX()
+{
+	LowerBoundXNumericCtrl->CheckValues();
+	UpperBoundXNumericCtrl->SetMinMaxValue(LowerBoundXNumericCtrl->ReturnValue(),FLT_MAX);
+	lower_bound_x = LowerBoundXNumericCtrl->ReturnValue();
+	DoThePlotting();
+}
+
+void DistributionPlotDialog::OnLowerBoundYTextEnter( wxCommandEvent& event )
+{
+	OnNewLowerBoundY();
+}
+void DistributionPlotDialog::OnLowerBoundYKillFocus( wxFocusEvent & event )
+{
+	OnNewLowerBoundY();
+}
+void DistributionPlotDialog::OnLowerBoundYSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = LowerBoundYNumericCtrl->ReturnValue();
+}
+
+void DistributionPlotDialog::OnUpperBoundYTextEnter( wxCommandEvent& event )
+{
+	OnNewUpperBoundY();
+}
+void DistributionPlotDialog::OnUpperBoundYKillFocus( wxFocusEvent & event )
+{
+	OnNewUpperBoundY();
+}
+void DistributionPlotDialog::OnUpperBoundYSetFocus( wxFocusEvent & event )
+{
+	value_on_focus_float = UpperBoundYNumericCtrl->ReturnValue();
+}
+
+void DistributionPlotDialog::OnNewUpperBoundY()
+{
+	UpperBoundYNumericCtrl->CheckValues();
+	LowerBoundYNumericCtrl->SetMinMaxValue(-FLT_MAX,UpperBoundYNumericCtrl->ReturnValue());
+	upper_bound_y = UpperBoundYNumericCtrl->ReturnValue();
+	DoThePlotting();
+}
+
+void DistributionPlotDialog::OnNewLowerBoundY()
+{
+	LowerBoundYNumericCtrl->CheckValues();
+	UpperBoundYNumericCtrl->SetMinMaxValue(LowerBoundYNumericCtrl->ReturnValue(),FLT_MAX);
+	lower_bound_y = LowerBoundYNumericCtrl->ReturnValue();
+	DoThePlotting();
+}
+
+
 
 void HistogramFromArray(double *data, int number_of_data, int number_of_bins, double lower_bound, double upper_bound, std::vector<double> &bin_centers, std::vector<double> &histogram)
 {

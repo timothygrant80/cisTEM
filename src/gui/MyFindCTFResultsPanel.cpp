@@ -77,13 +77,14 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 	 */
 	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
 
-	distplot_dialog->SetNumberOfDataSeries(6);
-	distplot_dialog->SetDataSeries(0,score,number_of_image_assets,"Score");
-	distplot_dialog->SetDataSeries(1,resolution,number_of_image_assets,"Fit resolution (A)");
-	distplot_dialog->SetDataSeries(2,defocus1,number_of_image_assets,"Defocus 1 (A)");
-	distplot_dialog->SetDataSeries(3,defocus2,number_of_image_assets,"Defocus 2 (A)");
-	distplot_dialog->SetDataSeries(4,angle,number_of_image_assets,"Astigmatism azimuth");
-	distplot_dialog->SetDataSeries(5,phase_shift,number_of_image_assets,"Phase shift");
+	distplot_dialog->SetNumberOfDataSeries(7);
+	distplot_dialog->SetDataSeries(0,score,number_of_image_assets,true,"Score","Score","Number of images");
+	distplot_dialog->SetDataSeries(1,resolution,number_of_image_assets,true,"Fit resolution (Distribution)","Fit resolution (A)","Number of images");
+	distplot_dialog->SetDataSeries(2,resolution,number_of_image_assets,false,"Fit resolution","Image number","Fit resolution (A)");
+	distplot_dialog->SetDataSeries(3,defocus1,number_of_image_assets,true,"Defocus 1","Defocus 1 (A)","Number of images");
+	distplot_dialog->SetDataSeries(4,defocus2,number_of_image_assets,true,"Defocus 2","Defocus 2 (A)","Number of images");
+	distplot_dialog->SetDataSeries(5,angle,number_of_image_assets,true,"Astigmatism azimuth", "Azimuth (deg)","Number of images");
+	distplot_dialog->SetDataSeries(6,phase_shift,number_of_image_assets,true,"Phase shift", "Phase shift","Number of images");
 
 	distplot_dialog->SelectDataSeries(0);
 

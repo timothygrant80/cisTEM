@@ -3369,22 +3369,32 @@ class DistributionPlotDialogParent : public wxDialog
 	private:
 	
 	protected:
+		wxStaticText* m_staticText64711;
+		NumericTextCtrl* UpperBoundYNumericCtrl;
+		wxStaticText* m_staticText6472;
+		NumericTextCtrl* LowerBoundYNumericCtrl;
 		wxChoice* DataSeriesToPlotChoice;
 		wxStaticText* m_staticText647;
-		NumericTextCtrl* LowerBoundNumericCtrl;
+		NumericTextCtrl* LowerBoundXNumericCtrl;
 		wxStaticText* m_staticText6471;
-		NumericTextCtrl* UpperBoundNumericCtrl;
+		NumericTextCtrl* UpperBoundXNumericCtrl;
 		wxButton* SaveTXTButton;
 		wxButton* SavePNGButton;
 		
 		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpperBoundYKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundYSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundYTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnLowerBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnLowerBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnLowerBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnUpperBoundKillFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnUpperBoundSetFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnUpperBoundTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTXTButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSavePNGButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		

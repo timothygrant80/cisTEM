@@ -52,8 +52,9 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 	double * phase_shift	=	new double[number_of_image_assets];
 	double * score			=	new double[number_of_image_assets];
 	double * resolution		=	new double[number_of_image_assets];
+	double * image_ass_id	=	new double[number_of_image_assets];
 	{
-		wxString select_command = "SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID";
+		wxString select_command = "SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION, ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID";
 		long counter;
 		bool should_continue;
 
@@ -62,10 +63,12 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 
 		if (should_continue)
 		{
+			int id;
 			while(should_continue)
 			{
 				MyDebugAssertTrue(counter < number_of_image_assets,"counter is out of bounds");
-				should_continue = main_frame->current_project.database.GetFromBatchSelect("rrrrrr", &defocus1[counter],&defocus2[counter],&angle[counter],&phase_shift[counter],&score[counter],&resolution[counter]);
+				should_continue = main_frame->current_project.database.GetFromBatchSelect("rrrrrri", &defocus1[counter],&defocus2[counter],&angle[counter],&phase_shift[counter],&score[counter],&resolution[counter],&id);
+				image_ass_id[counter] = id;
 				counter++;
 			}
 			main_frame->current_project.database.EndBatchSelect();
@@ -78,13 +81,13 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
 
 	distplot_dialog->SetNumberOfDataSeries(7);
-	distplot_dialog->SetDataSeries(0,score,number_of_image_assets,true,"Score","Score","Number of images");
-	distplot_dialog->SetDataSeries(1,resolution,number_of_image_assets,true,"Fit resolution (Distribution)","Fit resolution (A)","Number of images");
-	distplot_dialog->SetDataSeries(2,resolution,number_of_image_assets,false,"Fit resolution","Image number","Fit resolution (A)");
-	distplot_dialog->SetDataSeries(3,defocus1,number_of_image_assets,true,"Defocus 1","Defocus 1 (A)","Number of images");
-	distplot_dialog->SetDataSeries(4,defocus2,number_of_image_assets,true,"Defocus 2","Defocus 2 (A)","Number of images");
-	distplot_dialog->SetDataSeries(5,angle,number_of_image_assets,true,"Astigmatism azimuth", "Azimuth (deg)","Number of images");
-	distplot_dialog->SetDataSeries(6,phase_shift,number_of_image_assets,true,"Phase shift", "Phase shift","Number of images");
+	distplot_dialog->SetDataSeries(0,image_ass_id,score,number_of_image_assets,true,"Score","Score","Number of images");
+	distplot_dialog->SetDataSeries(1,image_ass_id,resolution,number_of_image_assets,true,"Fit resolution (Distribution)","Fit resolution (A)","Number of images");
+	distplot_dialog->SetDataSeries(2,image_ass_id,resolution,number_of_image_assets,false,"Fit resolution","Image asset ID","Fit resolution (A)");
+	distplot_dialog->SetDataSeries(3,image_ass_id,defocus1,number_of_image_assets,true,"Defocus 1","Defocus 1 (A)","Number of images");
+	distplot_dialog->SetDataSeries(4,image_ass_id,defocus2,number_of_image_assets,true,"Defocus 2","Defocus 2 (A)","Number of images");
+	distplot_dialog->SetDataSeries(5,image_ass_id,angle,number_of_image_assets,true,"Astigmatism azimuth", "Azimuth (deg)","Number of images");
+	distplot_dialog->SetDataSeries(6,image_ass_id,phase_shift,number_of_image_assets,true,"Phase shift", "Phase shift","Number of images");
 
 	distplot_dialog->SelectDataSeries(0);
 

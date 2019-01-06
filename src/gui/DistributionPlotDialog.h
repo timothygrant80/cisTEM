@@ -15,7 +15,7 @@ public :
 	void OnDataSeriesToPlotChoice(wxCommandEvent &event);
 
 	void SetNumberOfDataSeries(int wanted_number_of_data_series);
-	void SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label);
+	void SetDataSeries(int which_data_series, double * wanted_data_series_x, double * wanted_data_series_y, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label);
 	void SelectDataSeries(int which_data_series);
 
 
@@ -38,7 +38,8 @@ public :
 private:
 	int number_of_data_series;
 	int * number_of_points_in_data_series;
-	double ** data_series;
+	double ** data_series_x;
+	double ** data_series_y;
 	wxString * data_series_titles;
 	wxString * data_series_x_label;
 	wxString * data_series_y_label;

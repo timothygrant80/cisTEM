@@ -7,7 +7,8 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 {
 	number_of_data_series = 0;
 	number_of_points_in_data_series = 0;
-	data_series = NULL;
+	data_series_x = NULL;
+	data_series_y = NULL;
 	data_series_titles = NULL;
 	data_series_x_label = NULL;
 	data_series_y_label = NULL;
@@ -44,10 +45,11 @@ DistributionPlotDialogParent( parent, id, title, pos, size, style)
 	PlotCurvePanelInstance->Initialise("Value","Number of images",false,false,20,50,90,20);
 }
 
-void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label)
+void DistributionPlotDialog::SetDataSeries(int which_data_series, double * wanted_data_series_x, double * wanted_data_series_y, int number_of_points_in_series, bool should_plot_histogram, wxString wanted_title, wxString wanted_x_label, wxString wanted_y_label)
 {
 	MyDebugAssertTrue(which_data_series < number_of_data_series,"Bad number of data series");
-	data_series[which_data_series] = wanted_data_series; // we're just copying a pointer
+	data_series_x[which_data_series] = wanted_data_series_x;
+	data_series_y[which_data_series] = wanted_data_series_y; // we're just copying a pointer
 	data_series_titles[which_data_series] = wanted_title; // we're copying the title itself
 	data_series_x_label[which_data_series] = wanted_x_label;
 	data_series_y_label[which_data_series] = wanted_y_label;
@@ -65,7 +67,8 @@ void DistributionPlotDialog::SetNumberOfDataSeries(int wanted_number_of_data_ser
 	ClearDataSeries();
 	//
 	number_of_data_series = wanted_number_of_data_series;
-	data_series = new double*[number_of_data_series];
+	data_series_x = new double*[number_of_data_series];
+	data_series_y = new double*[number_of_data_series];
 	data_series_titles = new wxString[number_of_data_series];
 	data_series_x_label = new wxString[number_of_data_series];
 	data_series_y_label = new wxString[number_of_data_series];
@@ -88,7 +91,8 @@ void DistributionPlotDialog::ClearDataSeries()
 		delete [] data_series_y_label;
 		delete [] plot_histogram_of_this_series;
 		delete [] number_of_points_in_data_series;
-		delete [] data_series; // we deallocate the array of pointers to the data, but we're not deallocating the actual data
+		delete [] data_series_x;
+		delete [] data_series_y; // we deallocate the array of pointers to the data, but we're not deallocating the actual data
 	}
 }
 
@@ -210,12 +214,12 @@ void DistributionPlotDialog::UpdateCurveToPlot(bool reset_bounds)
 	if (plot_histogram_of_this_series[data_series_index])
 	{
 		const int number_of_bins = 100;
-		if (reset_bounds) HistogramComputeAutoBounds(data_series[data_series_index],number_of_points_in_data_series[data_series_index],lower_bound_x,upper_bound_x);
-		curve_to_plot = HistogramFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,lower_bound_x,upper_bound_x);
+		if (reset_bounds) HistogramComputeAutoBounds(data_series_y[data_series_index],number_of_points_in_data_series[data_series_index],lower_bound_x,upper_bound_x);
+		curve_to_plot = HistogramFromArray(data_series_y[data_series_index],number_of_points_in_data_series[data_series_index],number_of_bins,lower_bound_x,upper_bound_x);
 	}
 	else
 	{
-		curve_to_plot.CopyYValuesFromArray(data_series[data_series_index],number_of_points_in_data_series[data_series_index]);
+		curve_to_plot.CopyDataFromArrays(data_series_x[data_series_index],data_series_y[data_series_index],number_of_points_in_data_series[data_series_index]);
 	}
 
 	/*

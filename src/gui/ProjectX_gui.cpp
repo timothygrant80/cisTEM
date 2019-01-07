@@ -2540,6 +2540,10 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	m_staticline77 = new wxStaticLine( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer64->Add( m_staticline77, 0, wxEXPAND | wxALL, 5 );
 	
+	PlotResultsButton = new NoFocusBitmapButton( m_panel13, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
+	PlotResultsButton->SetDefault(); 
+	bSizer64->Add( PlotResultsButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2862,6 +2866,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	AllImagesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnAllMoviesSelect ), NULL, this );
 	ByFilterButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnByFilterSelect ), NULL, this );
 	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnDefineFilterClick ), NULL, this );
+	PlotResultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPlotResultsButtonClick ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
@@ -2877,6 +2882,7 @@ FindCTFResultsPanel::~FindCTFResultsPanel()
 	AllImagesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnAllMoviesSelect ), NULL, this );
 	ByFilterButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFResultsPanel::OnByFilterSelect ), NULL, this );
 	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnDefineFilterClick ), NULL, this );
+	PlotResultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPlotResultsButtonClick ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddAllToGroupClick ), NULL, this );
@@ -11694,4 +11700,137 @@ AboutDialog::AboutDialog( wxWindow* parent, wxWindowID id, const wxString& title
 
 AboutDialog::~AboutDialog()
 {
+}
+
+DistributionPlotDialogParent::DistributionPlotDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+	
+	wxBoxSizer* bSizer489;
+	bSizer489 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer493;
+	bSizer493 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer497;
+	bSizer497 = new wxBoxSizer( wxVERTICAL );
+	
+	
+	bSizer497->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText64711 = new wxStaticText( this, wxID_ANY, wxT("Max"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText64711->Wrap( -1 );
+	bSizer497->Add( m_staticText64711, 0, wxALL, 5 );
+	
+	UpperBoundYNumericCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer497->Add( UpperBoundYNumericCtrl, 0, wxALL, 5 );
+	
+	m_staticText6472 = new wxStaticText( this, wxID_ANY, wxT("Min"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6472->Wrap( -1 );
+	bSizer497->Add( m_staticText6472, 0, wxALL, 5 );
+	
+	LowerBoundYNumericCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer497->Add( LowerBoundYNumericCtrl, 0, wxALL, 5 );
+	
+	
+	bSizer493->Add( bSizer497, 0, wxEXPAND, 5 );
+	
+	PlotCurvePanelInstance = new PlotCurvePanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer493->Add( PlotCurvePanelInstance, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer489->Add( bSizer493, 1, wxEXPAND, 5 );
+	
+	wxBoxSizer* DistributionPlotButtonsSizer;
+	DistributionPlotButtonsSizer = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxArrayString DataSeriesToPlotChoiceChoices;
+	DataSeriesToPlotChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, DataSeriesToPlotChoiceChoices, 0 );
+	DataSeriesToPlotChoice->SetSelection( 0 );
+	DistributionPlotButtonsSizer->Add( DataSeriesToPlotChoice, 0, wxALL|wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer492;
+	bSizer492 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText647 = new wxStaticText( this, wxID_ANY, wxT("Min"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText647->Wrap( -1 );
+	bSizer492->Add( m_staticText647, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	LowerBoundXNumericCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer492->Add( LowerBoundXNumericCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	m_staticText6471 = new wxStaticText( this, wxID_ANY, wxT("Max"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6471->Wrap( -1 );
+	bSizer492->Add( m_staticText6471, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	UpperBoundXNumericCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer492->Add( UpperBoundXNumericCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	DistributionPlotButtonsSizer->Add( bSizer492, 1, wxEXPAND, 5 );
+	
+	
+	DistributionPlotButtonsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	
+	bSizer489->Add( DistributionPlotButtonsSizer, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer491;
+	bSizer491 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer491->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	SaveTXTButton = new wxButton( this, wxID_ANY, wxT("Save TXT"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( SaveTXTButton, 0, wxALL, 5 );
+	
+	SavePNGButton = new wxButton( this, wxID_ANY, wxT("Save PNG"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer491->Add( SavePNGButton, 0, wxALL, 5 );
+	
+	
+	bSizer489->Add( bSizer491, 0, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer489 );
+	this->Layout();
+	
+	this->Centre( wxBOTH );
+	
+	// Connect Events
+	UpperBoundYNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundYKillFocus ), NULL, this );
+	UpperBoundYNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundYSetFocus ), NULL, this );
+	UpperBoundYNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundYTextEnter ), NULL, this );
+	LowerBoundYNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundYKillFocus ), NULL, this );
+	LowerBoundYNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundYSetFocus ), NULL, this );
+	LowerBoundYNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundYTextEnter ), NULL, this );
+	DataSeriesToPlotChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
+	LowerBoundXNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundXKillFocus ), NULL, this );
+	LowerBoundXNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundXSetFocus ), NULL, this );
+	LowerBoundXNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundXTextEnter ), NULL, this );
+	UpperBoundXNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundXKillFocus ), NULL, this );
+	UpperBoundXNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundXSetFocus ), NULL, this );
+	UpperBoundXNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundXTextEnter ), NULL, this );
+	SaveTXTButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveTXTButtonClick ), NULL, this );
+	SavePNGButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
+}
+
+DistributionPlotDialogParent::~DistributionPlotDialogParent()
+{
+	// Disconnect Events
+	UpperBoundYNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundYKillFocus ), NULL, this );
+	UpperBoundYNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundYSetFocus ), NULL, this );
+	UpperBoundYNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundYTextEnter ), NULL, this );
+	LowerBoundYNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundYKillFocus ), NULL, this );
+	LowerBoundYNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundYSetFocus ), NULL, this );
+	LowerBoundYNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundYTextEnter ), NULL, this );
+	DataSeriesToPlotChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( DistributionPlotDialogParent::OnDataSeriesToPlotChoice ), NULL, this );
+	LowerBoundXNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundXKillFocus ), NULL, this );
+	LowerBoundXNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnLowerBoundXSetFocus ), NULL, this );
+	LowerBoundXNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnLowerBoundXTextEnter ), NULL, this );
+	UpperBoundXNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundXKillFocus ), NULL, this );
+	UpperBoundXNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( DistributionPlotDialogParent::OnUpperBoundXSetFocus ), NULL, this );
+	UpperBoundXNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( DistributionPlotDialogParent::OnUpperBoundXTextEnter ), NULL, this );
+	SaveTXTButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSaveTXTButtonClick ), NULL, this );
+	SavePNGButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
+	
 }

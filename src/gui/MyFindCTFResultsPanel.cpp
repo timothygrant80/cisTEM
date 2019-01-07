@@ -29,7 +29,74 @@ FindCTFResultsPanel( parent )
 
 	FillGroupComboBox();
 
+	// Draw the button to plot results statistics
+	#include "icons/show_angles.cpp"
+	wxBitmap angles_popup_bmp = wxBITMAP_PNG_FROM_DATA(show_angles);
+	PlotResultsButton->SetBitmap(angles_popup_bmp);
+
 	Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
+}
+
+void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
+{
+
+	// TODO: add spinning wheel to let user know we're working on it
+
+	/*
+	 * Get data to be plotted from the database
+	 */
+	long number_of_image_assets = image_asset_panel->ReturnNumberOfAssets();
+	double * defocus1 		= 	new double[number_of_image_assets];
+	double * defocus2 		= 	new double[number_of_image_assets];
+	double * angle    		=	new double[number_of_image_assets];
+	double * phase_shift	=	new double[number_of_image_assets];
+	double * score			=	new double[number_of_image_assets];
+	double * resolution		=	new double[number_of_image_assets];
+	double * image_ass_id	=	new double[number_of_image_assets];
+	{
+		wxString select_command = "SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION, ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID";
+		long counter;
+		bool should_continue;
+
+		counter = 0;
+		should_continue = main_frame->current_project.database.BeginBatchSelect(select_command);
+
+		if (should_continue)
+		{
+			int id;
+			while(should_continue)
+			{
+				MyDebugAssertTrue(counter < number_of_image_assets,"counter is out of bounds");
+				should_continue = main_frame->current_project.database.GetFromBatchSelect("rrrrrri", &defocus1[counter],&defocus2[counter],&angle[counter],&phase_shift[counter],&score[counter],&resolution[counter],&id);
+				image_ass_id[counter] = id;
+				counter++;
+			}
+			main_frame->current_project.database.EndBatchSelect();
+		}
+	}
+
+	/*
+	 * Setup a distplot panel
+	 */
+	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
+
+	distplot_dialog->SetNumberOfDataSeries(7);
+	distplot_dialog->SetDataSeries(0,image_ass_id,score,number_of_image_assets,true,"Score","Score","Number of images");
+	distplot_dialog->SetDataSeries(1,image_ass_id,resolution,number_of_image_assets,true,"Fit resolution (Distribution)","Fit resolution (A)","Number of images");
+	distplot_dialog->SetDataSeries(2,image_ass_id,resolution,number_of_image_assets,false,"Fit resolution","Image asset ID","Fit resolution (A)");
+	distplot_dialog->SetDataSeries(3,image_ass_id,defocus1,number_of_image_assets,true,"Defocus 1","Defocus 1 (A)","Number of images");
+	distplot_dialog->SetDataSeries(4,image_ass_id,defocus2,number_of_image_assets,true,"Defocus 2","Defocus 2 (A)","Number of images");
+	distplot_dialog->SetDataSeries(5,image_ass_id,angle,number_of_image_assets,true,"Astigmatism azimuth", "Azimuth (deg)","Number of images");
+	distplot_dialog->SetDataSeries(6,image_ass_id,phase_shift,number_of_image_assets,true,"Phase shift", "Phase shift","Number of images");
+
+	distplot_dialog->SelectDataSeries(0);
+
+	/*
+	 * Show the dialog
+	 */
+	distplot_dialog->ShowModal();
+	distplot_dialog->Destroy();
+
 }
 
 void MyFindCTFResultsPanel::OnCharHook( wxKeyEvent& event )

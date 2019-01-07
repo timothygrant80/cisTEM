@@ -57,6 +57,7 @@ Curve::Curve( const Curve &other_curve) // copy constructor
 	 //DEBUG_ABORT;
 }
 
+
 Curve::~Curve()
 {
 	delete [] data_x;
@@ -560,14 +561,14 @@ void Curve::PrintToStandardOut()
 	}
 }
 
-void Curve::WriteToFile(wxString output_file)
+void Curve::WriteToFile(wxString output_file, wxString header_line)
 {
 	MyDebugAssertTrue(number_of_points > 0, "Curve is empty");
 
 	float temp_float[2];
 
 	NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
-	output_curve_file.WriteCommentLine("C            X              Y");
+	output_curve_file.WriteCommentLine(header_line);
 	for (int i = 0; i < number_of_points; i++)
 	{
 		temp_float[0] = data_x[i];
@@ -577,7 +578,28 @@ void Curve::WriteToFile(wxString output_file)
 	}
 }
 
+void Curve::WriteToFile(wxString output_file)
+{
+	WriteToFile(output_file,"C            X              Y");
+}
 
+void Curve::CopyDataFromArrays(double *x_series, double *y_series, int wanted_number_of_points)
+{
+	ClearData();
+	for (int counter=0; counter < wanted_number_of_points; counter++)
+	{
+		AddPoint(float(x_series[counter]),float(y_series[counter]));
+	}
+}
+
+void Curve::CopyYValuesFromArray(double *y_series, int wanted_number_of_points)
+{
+	ClearData();
+	for (int counter=0; counter < wanted_number_of_points; counter++)
+	{
+		AddPoint(float(counter),float(y_series[counter]));
+	}
+}
 
 void Curve::CopyFrom(Curve *other_curve)
 {

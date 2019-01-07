@@ -5,6 +5,12 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 : wxPanel(parent, id, pos, size, style, name)
 {
 
+	current_xaxis = NULL;
+	current_yaxis = NULL;
+	info_coords = NULL;
+	title = NULL;
+	legend = NULL;
+
 	GraphSizer = new wxBoxSizer( wxVERTICAL );
 	SetSizer( GraphSizer );
 	Layout();
@@ -21,6 +27,9 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
     stored_y_axis_text = "";
 
     legend_is_visible = false;
+    should_draw_x_axis_ticks = false;
+    should_draw_y_axis_ticks = false;
+    should_draw_coords_box = false;
 }
 
 void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wanted_y_axis_text)
@@ -36,6 +45,7 @@ void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wante
 
 	title = new mpTitle("");
 	legend = new mpTopInfoLegend();
+	info_coords = new mpInfoCoords();
 
 	current_xaxis->SetFont(graphFont);
 	current_yaxis->SetFont(graphFont);
@@ -46,11 +56,13 @@ void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wante
     current_plot_window->AddLayer(current_yaxis);
 	current_plot_window->AddLayer(title);
 	current_plot_window->AddLayer(legend);
+	current_plot_window->AddLayer(info_coords);
 
 	current_plot_window->SetLayerVisible(0, false);
 	current_plot_window->SetLayerVisible(1, false);
 	current_plot_window->SetLayerVisible(2, false);
 	current_plot_window->SetLayerVisible(3, legend_is_visible);
+	current_plot_window->SetLayerVisible(4,	should_draw_coords_box);
 
 
 
@@ -61,7 +73,7 @@ PlotCurvePanel::~PlotCurvePanel()
 	delete current_plot_window;
 }
 
-void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_x_axis_ticks, bool wanted_draw_y_axis_ticks)
+void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, bool show_coordinates, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_x_axis_ticks, bool wanted_draw_y_axis_ticks)
 {
 	current_plot_window->SetMargins(20, 20, 50, 60);
 	current_plot_window->SetMargins(wanted_top_margin, wanted_right_margin, wanted_bottom_margin, wanted_left_margin);
@@ -70,6 +82,7 @@ void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_a
 	should_draw_y_axis_ticks = wanted_draw_y_axis_ticks;
 	stored_x_axis_text = wanted_x_axis_text;
 	stored_y_axis_text = wanted_y_axis_text;
+	should_draw_coords_box = show_coordinates;
 
 	Clear();
 
@@ -125,9 +138,10 @@ void PlotCurvePanel::Draw(float wanted_x_min, float wanted_x_max, float wanted_y
 	current_plot_window->SetLayerVisible(0, true);
 	current_plot_window->SetLayerVisible(1, true);
 	current_plot_window->SetLayerVisible(2, true);
-	current_plot_window->SetLayerVisible(3, true);
+	current_plot_window->SetLayerVisible(3, legend_is_visible);
+	current_plot_window->SetLayerVisible(4, should_draw_coords_box);
 
-	for (int layer_counter = 4; layer_counter <= 3 + curves_to_plot.GetCount(); layer_counter++)
+	for (int layer_counter = 5; layer_counter <= 4 + curves_to_plot.GetCount(); layer_counter++)
 	{
 		current_plot_window->SetLayerVisible(layer_counter, true);
 	}
@@ -164,5 +178,21 @@ void PlotCurvePanel::Draw()
 
 	Draw(global_x_min, global_x_max, global_y_min, global_y_max);
 }
+
+void PlotCurvePanel::SetXAxisLabel(wxString wanted_label)
+{
+	current_xaxis->SetName(wanted_label);
+}
+
+void PlotCurvePanel::SetYAxisLabel(wxString wanted_label)
+{
+	current_yaxis->SetName(wanted_label);
+}
+
+void PlotCurvePanel::SaveScreenshot(const wxString & filename, int type)
+{
+	current_plot_window->SaveScreenshot(filename,type);
+}
+
 
 

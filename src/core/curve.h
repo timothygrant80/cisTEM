@@ -40,8 +40,11 @@ public:
 	void AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add);
 	int ReturnIndexOfNearestPreviousBin(float wanted_x);
 	void PrintToStandardOut();
-	void WriteToFile(wxString output_file);
+	void WriteToFile(wxString output_filename);
+	void WriteToFile(wxString output_filename,wxString header_line);
 	void CopyFrom(Curve *other_curve);
+	void CopyDataFromArrays( double *x_series, double *y_series, const int wanted_number_of_points);
+	void CopyYValuesFromArray( double *y_series, const int wanted_number_of_points);
 	void ClearData();
 	void MultiplyByConstant(float constant_to_multiply_by);
 	void MultiplyXByConstant(float constant_to_multiply_by);

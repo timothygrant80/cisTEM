@@ -767,6 +767,7 @@ class FindCTFResultsPanel : public wxPanel
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPlotResultsButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
@@ -776,6 +777,7 @@ class FindCTFResultsPanel : public wxPanel
 		
 	
 	public:
+		NoFocusBitmapButton* PlotResultsButton;
 		
 		FindCTFResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
 		~FindCTFResultsPanel();
@@ -3356,6 +3358,52 @@ class AboutDialog : public wxDialog
 		
 		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
 		~AboutDialog();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class DistributionPlotDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class DistributionPlotDialogParent : public wxDialog 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText64711;
+		NumericTextCtrl* UpperBoundYNumericCtrl;
+		wxStaticText* m_staticText6472;
+		NumericTextCtrl* LowerBoundYNumericCtrl;
+		wxChoice* DataSeriesToPlotChoice;
+		wxStaticText* m_staticText647;
+		NumericTextCtrl* LowerBoundXNumericCtrl;
+		wxStaticText* m_staticText6471;
+		NumericTextCtrl* UpperBoundXNumericCtrl;
+		wxButton* SaveTXTButton;
+		wxButton* SavePNGButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpperBoundYKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundYSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundYTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundYTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDataSeriesToPlotChoice( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnLowerBoundXTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnUpperBoundXTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveTXTButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSavePNGButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		PlotCurvePanel* PlotCurvePanelInstance;
+		
+		DistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		~DistributionPlotDialogParent();
 	
 };
 

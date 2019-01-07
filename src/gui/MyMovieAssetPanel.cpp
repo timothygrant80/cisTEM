@@ -452,3 +452,15 @@ double MyMovieAssetPanel::ReturnAssetPreExposureAmount(long wanted_asset)
 {
 	return 0.0; // FIX THIS!
 }
+
+int MyMovieAssetPanel::ReturnMaximumNumberOfFrames()
+{
+	int max_number_of_frames = 0;
+	int number_of_frames;
+	for (long i=0;i<all_assets_list->number_of_assets;i++)
+	{
+		number_of_frames = all_assets_list->ReturnMovieAssetPointer(i)->number_of_frames;
+		if (number_of_frames > max_number_of_frames) max_number_of_frames = number_of_frames;
+	}
+	return max_number_of_frames;
+}

@@ -40,8 +40,6 @@ FindCTFResultsPanel( parent )
 void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 {
 
-	// TODO: add spinning wheel to let user know we're working on it
-
 	/*
 	 * Get data to be plotted from the database
 	 */
@@ -54,6 +52,8 @@ void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
 	double * resolution		=	new double[number_of_image_assets];
 	double * image_ass_id	=	new double[number_of_image_assets];
 	{
+		wxBusyCursor wait;
+
 		wxString select_command = "SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION, ESTIMATED_CTF_PARAMETERS.IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID";
 		long counter;
 		bool should_continue;

@@ -40,6 +40,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		float ReturnMagDistortionAngle(long wanted_asset);
 		float ReturnMagDistortionMajorScale(long wanted_asset);
 		float ReturnMagDistortionMinorScale(long wanted_asset);
+		int ReturnMaximumNumberOfFrames();
 
 		MovieAsset* ReturnAssetPointer(long wanted_asset);
 		wxString ReturnItemText(long item, long column) const;

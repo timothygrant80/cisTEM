@@ -667,3 +667,67 @@ void MyMovieAlignResultsPanel::OnJobDetailsToggle( wxCommandEvent& event )
 
 }
 
+void MyMovieAlignResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event)
+{
+
+	/*
+	 * Get data to be plotted from the database
+	 */
+	long number_of_aligned_movie_assets = main_frame->current_project.database.ReturnSingleLongFromSelectCommand("COUNT(DISTINCT MOVIE_ASSET_ID) FROM MOVIE_ALIGNMENT_LIST");
+	int max_number_of_frames = movie_asset_panel->ReturnMaximumNumberOfFrames();
+
+	double 	* mean_shift_per_frame			= 	new double[max_number_of_frames];
+	double  * sigma_shift_per_frame			=	new double[max_number_of_frames];
+	int 	* number_of_movies_per_frame 	= 	new int[max_number_of_frames];
+	int 	* movie_ass_id					=	new int[number_of_movie_assets];
+
+
+	{
+		wxBusyCursor wait;
+
+		wxString select_command = "SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST";
+		long counter;
+		bool should_continue_loop_over_movies;
+
+		counter = 0;
+		should_continue_loop_over_movies = main_frame->current_project.database.BeginBatchSelect(select_command);
+
+		if (should_continue_loop_over_movies)
+		{
+			int id;
+			while(should_continue_loop_over_movies)
+			{
+				MyDebugAssertTrue(counter < number_of_image_assets,"counter is out of bounds");
+				should_continue_loop_over_movies = main_frame->current_project.database.GetFromBatchSelect("rrrrrri", &defocus1[counter],&defocus2[counter],&angle[counter],&phase_shift[counter],&score[counter],&resolution[counter],&id);
+				movie_ass_id[counter] = id;
+				counter++;
+			}
+			main_frame->current_project.database.EndBatchSelect();
+		}
+	}
+
+	/*
+	 * Setup a distplot panel
+	 */
+	DistributionPlotDialog *distplot_dialog = new DistributionPlotDialog(this, wxID_ANY, "CTF results plotting");
+
+	distplot_dialog->SetNumberOfDataSeries(7);
+	distplot_dialog->SetDataSeries(0,image_ass_id,score,number_of_image_assets,true,"Score","Score","Number of images");
+	distplot_dialog->SetDataSeries(1,image_ass_id,resolution,number_of_image_assets,true,"Fit resolution (Distribution)","Fit resolution (A)","Number of images");
+	distplot_dialog->SetDataSeries(2,image_ass_id,resolution,number_of_image_assets,false,"Fit resolution","Image asset ID","Fit resolution (A)");
+	distplot_dialog->SetDataSeries(3,image_ass_id,defocus1,number_of_image_assets,true,"Defocus 1","Defocus 1 (A)","Number of images");
+	distplot_dialog->SetDataSeries(4,image_ass_id,defocus2,number_of_image_assets,true,"Defocus 2","Defocus 2 (A)","Number of images");
+	distplot_dialog->SetDataSeries(5,image_ass_id,angle,number_of_image_assets,true,"Astigmatism azimuth", "Azimuth (deg)","Number of images");
+	distplot_dialog->SetDataSeries(6,image_ass_id,phase_shift,number_of_image_assets,true,"Phase shift", "Phase shift","Number of images");
+
+	distplot_dialog->SelectDataSeries(0);
+
+	/*
+	 * Show the dialog
+	 */
+	distplot_dialog->ShowModal();
+	distplot_dialog->Destroy();
+
+}
+
+

@@ -26,6 +26,7 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel
 		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
 		void FillBasedOnSelectCommand(wxString wanted_command);
 		void Clear();
+		void OnPlotResultsButtonClick(wxCommandEvent& event);
 
 		void FillGroupComboBox();
 

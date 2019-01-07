@@ -943,6 +943,7 @@ class MovieAlignResultsPanel : public wxPanel
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPlotResultsButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
@@ -952,6 +953,7 @@ class MovieAlignResultsPanel : public wxPanel
 		
 	
 	public:
+		NoFocusBitmapButton* PlotResultsButton;
 		
 		MovieAlignResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1165,564 ), long style = wxTAB_TRAVERSAL|wxWANTS_CHARS ); 
 		~MovieAlignResultsPanel();

@@ -3,7 +3,7 @@
 //#define threshold_spectrum
 #define use_epa_rather_than_zero_counting
 
-const std::string ctffind_version = "4.1.13";
+const std::string ctffind_version = "4.1.14";
 /*
  * Changelog
  * - 4.1.13
@@ -2002,7 +2002,7 @@ bool CtffindApp::DoCalculation()
 
 
 	// Send results back
-	float results_array[7];
+	float results_array[8];
 	results_array[0] = current_ctf.GetDefocus1() * pixel_size_for_fitting;				// Defocus 1 (Angstroms)
 	results_array[1] = current_ctf.GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
 	results_array[2] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PI;	// Astigmatism angle (degrees)
@@ -2082,12 +2082,14 @@ void Renormalize1DSpectrumForFRC( int number_of_bins, double average[], double f
 	int bin_of_zero;
 	std::vector<float> temp_vector;
 	std::vector<size_t> temp_ranks;
+	float number_of_extrema_delta;
 	//
 	bin_of_previous_extremum = 0;
 	bin_of_current_extremum = 0;
 	for (bin_counter = 1; bin_counter < number_of_bins; bin_counter ++ )
 	{
-		if (number_of_extrema_profile[bin_counter]-number_of_extrema_profile[bin_counter-1] >= 0.9)
+		number_of_extrema_delta = number_of_extrema_profile[bin_counter]-number_of_extrema_profile[bin_counter-1];
+		if (number_of_extrema_delta >= 0.9 && number_of_extrema_delta <= 1.9) // if the CTF is oscillating too quickly, let's not do anything
 		{
 			// We just passed an extremum, at bin_counter-1
 			// (number_of_extrema_profile keeps track of the count of extrema before the spatial frequency corresponding to this bin)

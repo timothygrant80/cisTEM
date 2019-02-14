@@ -54,7 +54,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	wxString	dump_file_1;
 	wxString	dump_file_2;
 
-	UserInput *my_input = new UserInput("Reconstruct3D", 1.04);
+	UserInput *my_input = new UserInput("Reconstruct3D", 1.05);
 
 	input_particle_stack = my_input->GetFilenameFromUser("Input particle images", "The input particle image stack, containing the 2D images for each particle in the dataset", "my_particle_stack.mrc", true);
 	input_parameter_file = my_input->GetFilenameFromUser("Input Frealign parameter filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.par", true);
@@ -168,6 +168,7 @@ bool Reconstruct3DApp::DoCalculation()
 	Image 				temp2_image;
 	Image				temp3_image;
 	Image				current_ctf_image;
+	Image				current_beamtilt_image;
 	Image				projection_image;
 	Image				padded_projection_image;
 	Image				cropped_projection_image;
@@ -215,6 +216,8 @@ bool Reconstruct3DApp::DoCalculation()
 	float psi_step;
 //	float psi_max;
 	float psi_start;
+	float beam_tilt_x = 0.0f;
+	float beam_tilt_y = 0.0f;
 	float symmetry_weight = 1.0;
 	bool rotational_blurring = true;
 	bool calculate_complex_ctf = false;
@@ -383,6 +386,7 @@ bool Reconstruct3DApp::DoCalculation()
 	input_particle.AllocateCTFImage(box_size, box_size);
 	if (use_input_reconstruction) unmasked_image.Allocate(box_size, box_size, true);
 	current_ctf_image.Allocate(original_box_size, original_box_size, false);
+	current_beamtilt_image.Allocate(original_box_size, original_box_size, false);
 	temp_image.Allocate(original_box_size, original_box_size, true);
 	temp3_image.Allocate(original_box_size, original_box_size, false);
 	if (resolution_limit_rec != 0.0 && crop_images) temp2_image.Allocate(intermediate_box_size, intermediate_box_size, true);
@@ -492,7 +496,6 @@ bool Reconstruct3DApp::DoCalculation()
 
 	if (use_input_reconstruction)
 	{
-
 		input_3d.InitWithDimensions(original_box_size, original_box_size, original_box_size, pixel_size, my_symmetry);
 		projection_image.Allocate(original_box_size, original_box_size, false);
 		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
@@ -579,7 +582,7 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.pixel_size = pixel_size;
 		input_particle.is_masked = false;
 
-		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], calculate_complex_ctf);
+		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, calculate_complex_ctf);
 
 		if (use_input_reconstruction)
 		{
@@ -604,14 +607,20 @@ bool Reconstruct3DApp::DoCalculation()
 			input_particle.alignment_parameters.Init(input_parameters[3], input_parameters[2], input_parameters[1], input_parameters[4], input_parameters[5]);
 		}
 
-		if (crop_images || binning_factor != 1.0)
+//		if (crop_images || binning_factor != 1.0)
+		if (use_input_reconstruction)
 		{
-			input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, original_pixel_size, input_parameters[11]);
+			input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, original_pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y);
 			if (input_ctf.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false)
 			// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 			{
 				current_ctf = input_ctf;
 				current_ctf_image.CalculateCTFImage(current_ctf, calculate_complex_ctf);
+			}
+			if (input_ctf.BeamTiltIsAlmostEqualTo(&current_ctf) == false)
+			// Need to calculate current_beamtilt_image to correct input image for beam tilt
+			{
+				current_beamtilt_image.CalculateBeamTiltImage(current_ctf);
 			}
 		}
 		// Assume square images
@@ -627,6 +636,7 @@ bool Reconstruct3DApp::DoCalculation()
 				{
 					temp_image.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
 					temp_image.PhaseFlipPixelWise(current_ctf_image);
+					temp_image.MultiplyPixelWise(current_beamtilt_image);
 				}
 				temp_image.BackwardFFT();
 				// Normalize background variance and average
@@ -640,6 +650,7 @@ bool Reconstruct3DApp::DoCalculation()
 				temp_image.ForwardFFT();
 				temp_image.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
 				temp_image.PhaseFlipPixelWise(current_ctf_image);
+				temp_image.MultiplyPixelWise(current_beamtilt_image);
 				if (binning_factor == 1.0) temp_image.BackwardFFT();
 			}
 			if (binning_factor != 1.0)
@@ -705,6 +716,7 @@ bool Reconstruct3DApp::DoCalculation()
 					temp2_image.ClipInto(input_particle.particle_image);
 					input_particle.ForwardFFT();
 					input_particle.PhaseFlipImage();
+					input_particle.BeamTiltMultiplyImage();
 				}
 			}
 			else
@@ -761,6 +773,7 @@ bool Reconstruct3DApp::DoCalculation()
 					temp_image.ClipInto(input_particle.particle_image);
 					input_particle.ForwardFFT();
 					input_particle.PhaseFlipImage();
+					input_particle.BeamTiltMultiplyImage();
 				}
 			}
 		}
@@ -778,6 +791,7 @@ bool Reconstruct3DApp::DoCalculation()
 					{
 						temp_image.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
 						temp_image.PhaseFlipPixelWise(current_ctf_image);
+						temp_image.MultiplyPixelWise(current_beamtilt_image);
 					}
 					temp_image.BackwardFFT();
 					// Normalize background variance and average
@@ -791,6 +805,7 @@ bool Reconstruct3DApp::DoCalculation()
 					temp_image.ForwardFFT();
 					temp_image.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
 					temp_image.PhaseFlipPixelWise(current_ctf_image);
+					temp_image.MultiplyPixelWise(current_beamtilt_image);
 					temp_image.BackwardFFT();
 				}
 				if (use_input_reconstruction)
@@ -845,6 +860,7 @@ bool Reconstruct3DApp::DoCalculation()
 					temp_image.ForwardFFT();
 					temp_image.ClipInto(input_particle.particle_image);
 					input_particle.PhaseFlipImage();
+					input_particle.BeamTiltMultiplyImage();
 				}
 			}
 			else
@@ -859,6 +875,7 @@ bool Reconstruct3DApp::DoCalculation()
 					{
 						input_particle.particle_image->PhaseShift(- input_parameters[4] / pixel_size, - input_parameters[5] / pixel_size);
 						input_particle.PhaseFlipImage();
+						input_particle.BeamTiltMultiplyImage();
 					}
 					input_particle.BackwardFFT();
 					// Normalize background variance and average
@@ -872,6 +889,7 @@ bool Reconstruct3DApp::DoCalculation()
 					input_particle.ForwardFFT();
 					input_particle.particle_image->PhaseShift(- input_parameters[4] / pixel_size, - input_parameters[5] / pixel_size);
 					input_particle.PhaseFlipImage();
+					input_particle.BeamTiltMultiplyImage();
 					input_particle.BackwardFFT();
 
 				}
@@ -921,6 +939,7 @@ bool Reconstruct3DApp::DoCalculation()
 				{
 					input_particle.ForwardFFT();
 					input_particle.PhaseFlipImage();
+					input_particle.BeamTiltMultiplyImage();
 				}
 			}
 		}
@@ -952,7 +971,13 @@ bool Reconstruct3DApp::DoCalculation()
 		}
 		else
 		{
+//			for (i = 0; i < input_particle.particle_image->real_memory_allocated / 2; i++) input_particle.particle_image->complex_values[i] = 1.0f + I * 0.0f;
+//			for (i = 0; i < input_particle.ctf_image->real_memory_allocated / 2; i++) input_particle.ctf_image->complex_values[i] = 1.0f + I * 0.0f;
+//			wxPrintf("2D central pixel = %g\n", std::abs(input_particle.particle_image->complex_values[0]));
+//			wxPrintf("2D central CTF   = %g\n", std::abs(input_particle.ctf_image->complex_values[0]));
 			my_reconstruction_1.InsertSliceWithCTF(input_particle, symmetry_weight);
+//			wxPrintf("3D central pixel = %g ratio = %g\n", std::abs(my_reconstruction_1.image_reconstruction.complex_values[0]), std::abs(my_reconstruction_1.image_reconstruction.complex_values[0])/std::abs(input_particle.particle_image->complex_values[0]));
+//			wxPrintf("3D central CTF   = %g\n", std::abs(my_reconstruction_1.ctf_reconstruction[0]));
 		}
 
 		if (is_running_locally == false)

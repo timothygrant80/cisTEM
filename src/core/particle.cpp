@@ -31,6 +31,11 @@ Particle::~Particle()
 		delete ctf_image;
 	}
 
+	if (beamtilt_image != NULL)
+	{
+		delete beamtilt_image;
+	}
+
 	if (bin_index != NULL)
 	{
 		delete [] bin_index;
@@ -69,6 +74,8 @@ void Particle::Init()
 	ctf_is_initialized = false;
 	ctf_image = NULL;
 	ctf_image_calculated = false;
+	beamtilt_image = NULL;
+	beamtilt_image_calculated = false;
 	includes_reference_ssnr_weighting = false;
 	is_normalized = false;
 	normalized_sigma = 0.0;
@@ -127,12 +134,25 @@ void Particle::AllocateCTFImage(int wanted_logical_x_dimension, int wanted_logic
 		ctf_image = new Image;
 	}
 	ctf_image->Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
+
+	if (beamtilt_image == NULL)
+	{
+		beamtilt_image = new Image;
+	}
+	beamtilt_image->Allocate(wanted_logical_x_dimension, wanted_logical_y_dimension, 1, false);
 }
 
 void Particle::Allocate(int wanted_logical_x_dimension, int wanted_logical_y_dimension)
 {
 	AllocateImage(wanted_logical_x_dimension, wanted_logical_y_dimension);
 	AllocateCTFImage(wanted_logical_x_dimension, wanted_logical_y_dimension);
+}
+
+void Particle::Deallocate()
+{
+	if (particle_image != NULL) particle_image->Deallocate();
+	if (ctf_image != NULL) ctf_image->Deallocate();
+	if (beamtilt_image != NULL) beamtilt_image->Deallocate();
 }
 
 void Particle::ResetImageFlags()
@@ -226,11 +246,11 @@ void Particle::CenterInCorner()
 	is_centered_in_box = false;
 }
 
-void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift)
+void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y)
 {
 //	MyDebugAssertTrue(! ctf_is_initialized, "CTF already initialized");
 
-	ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, phase_shift);
+	ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, phase_shift, beam_tilt_x, beam_tilt_y);
 	ctf_is_initialized = true;
 }
 
@@ -242,12 +262,21 @@ void Particle::SetDefocus(float defocus_1, float defocus_2, float astigmatism_an
 	ctf_parameters.SetAdditionalPhaseShift(phase_shift);
 }
 
-void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, bool calculate_complex_ctf)
+void Particle::SetBeamTilt(float beam_tilt_x, float beam_tilt_y)
 {
-	MyDebugAssertTrue(ctf_image->is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(! ctf_image->is_in_real_space, "CTF image not in Fourier space");
+	MyDebugAssertTrue(ctf_is_initialized, "CTF not initialized");
 
-	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift);
+	ctf_parameters.SetBeamTilt(beam_tilt_x, beam_tilt_y);
+}
+
+void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y, bool calculate_complex_ctf)
+{
+	MyDebugAssertTrue(ctf_image->is_in_memory, "ctf_image memory not allocated");
+	MyDebugAssertTrue(beamtilt_image->is_in_memory, "beamtilt_image memory not allocated");
+	MyDebugAssertTrue(! ctf_image->is_in_real_space, "ctf_image not in Fourier space");
+	MyDebugAssertTrue(! beamtilt_image->is_in_real_space, "beamtilt_image not in Fourier space");
+
+	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift, beam_tilt_x, beam_tilt_y);
 	complex_ctf = calculate_complex_ctf;
 	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false || ! ctf_image_calculated)
 	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
@@ -255,7 +284,13 @@ void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, flo
 		current_ctf = ctf_parameters;
 		ctf_image->CalculateCTFImage(current_ctf, complex_ctf);
 	}
+	if (ctf_parameters.BeamTiltIsAlmostEqualTo(&current_ctf) == false || ! beamtilt_image_calculated)
+	// Need to calculate current_beamtilt_image to correct input image for beam tilt
+	{
+		beamtilt_image->CalculateBeamTiltImage(current_ctf);
+	}
 	ctf_image_calculated = true;
+	beamtilt_image_calculated = true;
 }
 
 void Particle::PhaseFlipImage()
@@ -272,6 +307,14 @@ void Particle::CTFMultiplyImage()
 
 	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
 	particle_image->MultiplyPixelWiseReal(*ctf_image);
+}
+
+void Particle::BeamTiltMultiplyImage()
+{
+	MyDebugAssertTrue(beamtilt_image_calculated, "Beamtilt image not calculated");
+
+	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
+	particle_image->ConjugateMultiplyPixelWise(*beamtilt_image);
 }
 
 void Particle::SetIndexForWeightedCorrelation(bool limit_resolution)
@@ -398,6 +441,7 @@ void Particle::CalculateProjection(Image &projection_image, ReconstructedVolume 
 	MyDebugAssertTrue(ctf_image_calculated, "CTF image not initialized");
 
 	input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
+	if (current_ctf.GetBeamTiltX() != 0.0f || current_ctf.GetBeamTiltY() != 0.0f) projection_image.MultiplyPixelWise(*beamtilt_image);
 }
 
 void Particle::GetParameters(float *output_parameters)
@@ -558,7 +602,7 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit)
+float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 
@@ -591,6 +635,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	temp_particle->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 	Image *ctf_input_image = new Image;
 	ctf_input_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+	Image *beamtilt_input_image = new Image;
+	beamtilt_input_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 
 //	if (filter_radius_high != 0.0)
 //	{
@@ -616,6 +662,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	temp_image2->CopyFrom(temp_image1);
 
 	ctf_input_image->CalculateCTFImage(input_ctf);
+	beamtilt_input_image->CalculateBeamTiltImage(input_ctf);
 	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
 //	temp_image1->PhaseFlipPixelWise(*ctf_image);
 //	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
@@ -625,6 +672,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	padded_unbinned_image.ClipInto(projection_image);
 	projection_image->ForwardFFT();
 	projection_image->PhaseFlipPixelWise(*ctf_input_image);
+	projection_image->MultiplyPixelWise(*beamtilt_input_image);
 
 //	temp_image2->MultiplyPixelWiseReal(*ctf_image);
 //	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
@@ -634,6 +682,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	padded_unbinned_image.ClipInto(temp_projection);
 	temp_projection->ForwardFFT();
 	temp_projection->MultiplyPixelWiseReal(*ctf_input_image);
+	temp_projection->MultiplyPixelWise(*beamtilt_input_image);
 //	temp_projection->CopyFrom(projection_image);
 //	projection_image->PhaseFlipPixelWise(*ctf_image);
 //	temp_projection->MultiplyPixelWiseReal(*ctf_image);
@@ -652,13 +701,13 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	particle_image->SwapRealSpaceQuadrants();
 //	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
 	input_image.BackwardFFT();
-	temp_particle->BackwardFFT();
+//	temp_particle->BackwardFFT();
 
 //	projection_image->SwapRealSpaceQuadrants();
 	projection_image->BackwardFFT();
 	// Apply some low-pass filtering to improve classification
 //	temp_projection->ApplyBFactor(effective_bfactor);
-	temp_projection->BackwardFFT();
+//	temp_projection->BackwardFFT();
 //	input_image.QuickAndDirtyWriteSlice("part.mrc", 1);
 //	projection_image->QuickAndDirtyWriteSlice("proj.mrc", 1);
 //	temp_particle->QuickAndDirtyWriteSlice("part2.mrc", 1);
@@ -688,7 +737,18 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	{
 //		variance_masked = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
 //	}
-
+	if (phase_difference != NULL)
+	{
+		phase_difference->CopyFrom(temp_particle);
+		phase_difference->ConjugateMultiplyPixelWise(*temp_projection);
+		phase_difference->CosineMask(original_pixel_size / filter_radius_high, 2.0f / phase_difference->logical_x_dimension);
+	}
+	temp_particle->BackwardFFT();
+	temp_projection->BackwardFFT();
+//	temp_particle->QuickAndDirtyWriteSlice("temp_particle.mrc", 1);
+//	temp_projection->QuickAndDirtyWriteSlice("temp_projection.mrc", 1);
+//	phase_difference->QuickAndDirtyWriteSlice("phase_difference.mrc", 1);
+//	exit(0);
 	temp_particle->SubtractImage(temp_projection);
 //	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
 	// This low-pass filter reduces the number of independent pixels. It should therefore be applied only to
@@ -762,6 +822,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	delete temp_particle;
 	delete temp_projection;
 	delete ctf_input_image;
+	delete beamtilt_input_image;
 
 	return 	logp;
 }

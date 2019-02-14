@@ -205,7 +205,8 @@ if test "x$HAVE_MKL" = "xyes"; then
 		if test "x$static_link" = "xtrue"; then
 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
 	    else
-	    	LIBS="$LIBS -lmkl_rt"
+#	    	LIBS="$LIBS -lmkl_rt"
+	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
 	    fi
 	fi
 else

@@ -97,6 +97,8 @@ const std::complex<float> I(0.0,1.0);
 #include "local_resolution_estimator.h"
 #include "pdb.h"
 #include "water.h"
+#include "cistem_parameters.h"
+#include "cistem_star_file_reader.h"
 
 
 #ifdef MKL

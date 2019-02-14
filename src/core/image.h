@@ -167,6 +167,7 @@ public:
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
 	void TriangleMask(float wanted_triangle_half_base_length);
 	void CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf = false);
+	void CalculateBeamTiltImage(CTF &ctf_of_image, bool output_phase_shifts = false);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
 	float ApplyMask(Image &mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
@@ -353,14 +354,14 @@ public:
 	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
 	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
-	void ApplyCTF(CTF ctf_to_apply, bool absolute = false);
+	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false);
 	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
 	void ZeroCentralPixel();
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
-	void ComputeAmplitudeSpectrumFull2D(Image *other_image);
-	void ComputeAmplitudeSpectrum(Image *other_image);
+	void ComputeAmplitudeSpectrumFull2D(Image *other_image, bool calculate_phases = false);
+	void ComputeAmplitudeSpectrum(Image *other_image, bool signed_values = false);
 	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
 	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
 	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space = false);

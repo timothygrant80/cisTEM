@@ -1,16 +1,16 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-extern MyMovieAssetPanel *movie_asset_panel;
+// extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
-extern MyFindCTFResultsPanel *ctf_results_panel;
+// extern MyFindCTFResultsPanel *ctf_results_panel;
 
-MatchTemplateMLPanel::MatchTemplateMLPanel( wxWindow* parent )
+RefineCTFPanel::RefineCTFPanel( wxWindow* parent )
 :
-MatchTemplateMLParentPanel( parent )
+MatchTemplateParentPanel( parent )
 {
 	// Set variables
 
@@ -45,7 +45,7 @@ MatchTemplateMLParentPanel( parent )
 }
 
 /*
-void MatchTemplatePanel::EnableMovieProcessingIfAppropriate()
+void RefineCTFPanel::EnableMovieProcessingIfAppropriate()
 {
 	// Check whether all members of the group have movie parents. If not, make sure we only allow image processing
 	MovieRadioButton->Enable(true);
@@ -64,7 +64,7 @@ void MatchTemplatePanel::EnableMovieProcessingIfAppropriate()
 	}
 }
 */
-void MatchTemplateMLPanel::OnInfoURL(wxTextUrlEvent& event)
+void RefineCTFPanel::OnInfoURL(wxTextUrlEvent& event)
 {
 	 const wxMouseEvent& ev = event.GetMouseEvent();
 
@@ -82,7 +82,7 @@ void MatchTemplateMLPanel::OnInfoURL(wxTextUrlEvent& event)
 	 wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
-void MatchTemplateMLPanel::Reset()
+void RefineCTFPanel::Reset()
 {
 	ProgressBar->SetValue(0);
 	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
@@ -120,13 +120,13 @@ void MatchTemplateMLPanel::Reset()
 	Layout();
 }
 
-void MatchTemplateMLPanel::ResetDefaults()
+void RefineCTFPanel::ResetDefaults()
 {
 	OutofPlaneStepNumericCtrl->ChangeValueFloat(2.5);
 	InPlaneStepNumericCtrl->ChangeValueFloat(1.5);
 }
 
-void MatchTemplateMLPanel::SetInfo()
+void RefineCTFPanel::SetInfo()
 {
 /*	#include "icons/ctffind_definitions.cpp"
 	#include "icons/ctffind_diagnostic_image.cpp"
@@ -242,17 +242,17 @@ void MatchTemplateMLPanel::SetInfo()
 
 }
 
-void MatchTemplateMLPanel::FillGroupComboBox()
+void RefineCTFPanel::FillGroupComboBox()
 {
 	GroupComboBox->FillComboBox(true);
 }
 
-void MatchTemplateMLPanel::FillRunProfileComboBox()
+void RefineCTFPanel::FillRunProfileComboBox()
 {
 	RunProfileComboBox->FillWithRunProfiles();
 }
 
-void MatchTemplateMLPanel::OnUpdateUI( wxUpdateUIEvent& event )
+void RefineCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	// are there enough members in the selected group.
 	if (main_frame->current_project.is_open == false)
@@ -323,7 +323,7 @@ void MatchTemplateMLPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 }
 
-void MatchTemplateMLPanel::OnExpertOptionsToggle(wxCommandEvent& event )
+void RefineCTFPanel::OnExpertOptionsToggle(wxCommandEvent& event )
 {
 
 	if (ExpertToggleButton->GetValue() == true)
@@ -339,7 +339,7 @@ void MatchTemplateMLPanel::OnExpertOptionsToggle(wxCommandEvent& event )
 }
 
 
-void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
+void RefineCTFPanel::StartEstimationClick( wxCommandEvent& event )
 {
 
 	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
@@ -351,6 +351,7 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 
 	int job_counter;
 	int number_of_rotations = 0;
+	int number_of_defocus_positions;
 
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
@@ -367,25 +368,51 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 	bool parameter_map[5]; // needed for euler search init
 	for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
 
-	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
-
-	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs() - 1;
-	int number_of_jobs = number_of_processes * active_group.number_of_members;
-
-
-	// how many jobs are there going to be..
-
 	float wanted_out_of_plane_angular_step = OutofPlaneStepNumericCtrl->ReturnValue();
 	float wanted_in_plane_angular_step = InPlaneStepNumericCtrl->ReturnValue();
 
+	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
+
+	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs() - 1;
+
+	// how many jobs are there going to be..
+
+	// get first image to make decisions about how many jobs.. .we assume this is representative.
+
+
+	current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
+	current_image_euler_search = new EulerSearch;
+	current_image_euler_search->InitGrid("C1", wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+
+	if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+	{
+		current_image_euler_search->theta_max = 180.0f;
+	}
+
+	current_image_euler_search->CalculateGridSearchPositions(false);
+
+
+	if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
+	else
+	if (current_image_euler_search->number_of_search_positions > number_of_processes * 250) number_of_jobs_per_image_in_gui = number_of_processes * 10;
+	else number_of_jobs_per_image_in_gui = number_of_processes * 5;
+
+	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
+
+	delete current_image_euler_search;
+
+// Some settings for testing
+	float defocus_search_range = 1200.0f;
+	float defocus_step = 200.0f;
+
+	// number of rotations
 
 	for (float current_psi = 0.0f; current_psi <= 360.0f; current_psi += wanted_in_plane_angular_step)
 	{
 		number_of_rotations++;
 	}
 
-	number_of_jobs_per_image_in_gui = number_of_processes;
-	my_job_package.Reset(active_refinement_run_profile, "match_template_nikoml", number_of_jobs);
+	my_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
 
 	expected_number_of_results = 0;
 	number_of_received_results = 0;
@@ -396,7 +423,7 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 
 	for (int image_counter = 0; image_counter < active_group.number_of_members; image_counter++)
 	{
-		image_number_for_gui = image_counter;
+		image_number_for_gui = image_counter + 1;
 
 		// current image asset
 
@@ -413,17 +440,21 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 		if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 		{
 			current_image_euler_search->theta_max = 180.0f;
-			current_image_euler_search->CalculateGridSearchPositions();
 		}
 
+		current_image_euler_search->CalculateGridSearchPositions(false);
 
-		wxPrintf("There are %i search positions\n", current_image_euler_search->number_of_search_positions);
+		number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
+
+		wxPrintf("There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions);
 		// how many orientations will each process do for this image..
-		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations;
-		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_processes) / float(number_of_processes);
+		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions;
+		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_jobs_per_image_in_gui) / float(number_of_jobs_per_image_in_gui);
+
 		current_orientation_counter = 0;
 
-		for (job_counter = 0; job_counter < number_of_processes; job_counter++)
+		for (job_counter = 0; job_counter < number_of_jobs_per_image_in_gui; job_counter++)
 		{
 			wxString 	input_search_images = current_image->filename.GetFullPath();
 			wxString 	input_reconstruction = current_volume->filename.GetFullPath();
@@ -436,40 +467,44 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 			double defocus2;
 			double defocus_angle;
 			double phase_shift;
+			double iciness;
 
-			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift);
+			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift,iciness);
 
 			float low_resolution_limit = 300.0f;
 			float high_resolution_limit = resolution_limit;
 			float angular_step = wanted_out_of_plane_angular_step;
 			int best_parameters_to_keep = 1;
-			float defocus_search_range = 0.0f;
-			float defocus_step = 0.0f;
+//			float defocus_search_range = 0.0f;
+//			float defocus_step = 0.0f;
 			float padding = 1;
 			bool ctf_refinement = false;
 			float mask_radius_search = EstimatedParticleSizeTextCtrl->ReturnValue();
-			float randomise_resolution = RandomResTextCtrl->ReturnValue();
 			wxString mip_output_file = "/dev/null";
 			wxString best_psi_output_file = "/dev/null";
 			wxString best_theta_output_file = "/dev/null";
 			wxString best_phi_output_file = "/dev/null";
+			wxString best_defocus_output_file = "/dev/null";
 			wxString scaled_mip_output_file ="/dev/null";
 			wxString correlation_variance_output_file = "/dev/null";
 			wxString my_symmetry = "C1";
 			float in_plane_angular_step = wanted_in_plane_angular_step;
 			wxString output_histogram_file = "/dev/null";
 
+			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int first_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter += orientations_per_process;
-			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions || job_counter == number_of_processes - 1) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
+			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions || job_counter == number_of_jobs_per_image_in_gui - 1) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int last_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter++;
+
+			wxString directory_for_results = main_frame->ReturnScratchDirectory();
 
 
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			my_job_package.AddJob("ttffffffffffifffbfftttttttftiiiitf",	input_search_images.ToUTF8().data(),
+			my_job_package.AddJob("ttffffffffffifffbffttttttttftiiiitt",	input_search_images.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -492,6 +527,7 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 																	best_psi_output_file.ToUTF8().data(),
 																	best_theta_output_file.ToUTF8().data(),
 																	best_phi_output_file.ToUTF8().data(),
+																	best_defocus_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
 																	correlation_variance_output_file.ToUTF8().data(),
 																	my_symmetry.ToUTF8().data(),
@@ -502,7 +538,7 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 																	image_number_for_gui,
 																	number_of_jobs_per_image_in_gui,
 																	correlation_variance_output_file.ToUTF8().data(),
-																	randomise_resolution);
+																	directory_for_results.ToUTF8().data());
 		}
 
 		delete current_image_euler_search;
@@ -567,7 +603,7 @@ void MatchTemplateMLPanel::StartEstimationClick( wxCommandEvent& event )
 	ProgressBar->Pulse();
 }
 
-void MatchTemplateMLPanel::FinishButtonClick( wxCommandEvent& event )
+void RefineCTFPanel::FinishButtonClick( wxCommandEvent& event )
 {
 	ProgressBar->SetValue(0);
 	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
@@ -594,7 +630,7 @@ void MatchTemplateMLPanel::FinishButtonClick( wxCommandEvent& event )
 
 }
 
-void MatchTemplateMLPanel::TerminateButtonClick( wxCommandEvent& event )
+void RefineCTFPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	// kill the job, this will kill the socket to terminate downstream processes
 	// - this will have to be improved when clever network failure is incorporated
@@ -618,7 +654,7 @@ void MatchTemplateMLPanel::TerminateButtonClick( wxCommandEvent& event )
 }
 
 
-void MatchTemplateMLPanel::WriteInfoText(wxString text_to_write)
+void RefineCTFPanel::WriteInfoText(wxString text_to_write)
 {
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
 	output_textctrl->AppendText(text_to_write);
@@ -626,7 +662,7 @@ void MatchTemplateMLPanel::WriteInfoText(wxString text_to_write)
 	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
 }
 
-void MatchTemplateMLPanel::WriteErrorText(wxString text_to_write)
+void RefineCTFPanel::WriteErrorText(wxString text_to_write)
 {
 	 output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
 	 output_textctrl->AppendText(text_to_write);
@@ -635,7 +671,7 @@ void MatchTemplateMLPanel::WriteErrorText(wxString text_to_write)
 }
 
 
-void MatchTemplateMLPanel::OnJobSocketEvent(wxSocketEvent& event)
+void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 {
 	SETUP_SOCKET_CODES
 
@@ -804,7 +840,7 @@ void MatchTemplateMLPanel::OnJobSocketEvent(wxSocketEvent& event)
 
 }
 
-void  MatchTemplateMLPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
+void  RefineCTFPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
 {
 
 	long current_time = time(NULL);
@@ -880,7 +916,7 @@ void  MatchTemplateMLPanel::ProcessResult(JobResult *result_to_process) // this 
 }
 
 
-void  MatchTemplateMLPanel::ProcessAllJobsFinished()
+void  RefineCTFPanel::ProcessAllJobsFinished()
 {
 
 	MyDebugAssertTrue(my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs,"In ProcessAllJobsFinished, but total_number_of_finished_jobs != total_number_of_jobs. Oops.");
@@ -914,7 +950,7 @@ void  MatchTemplateMLPanel::ProcessAllJobsFinished()
 }
 
 
-void MatchTemplateMLPanel::WriteResultToDataBase()
+void RefineCTFPanel::WriteResultToDataBase()
 {
 /*
 	long counter;
@@ -1105,7 +1141,7 @@ void MatchTemplateMLPanel::WriteResultToDataBase()
 }
 
 
-void MatchTemplateMLPanel::UpdateProgressBar()
+void RefineCTFPanel::UpdateProgressBar()
 {
 	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());

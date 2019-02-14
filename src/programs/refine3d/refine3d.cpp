@@ -366,6 +366,10 @@ bool Refine3DApp::DoCalculation()
 //	float defocus_range_std = 5000.0 * sqrtf(voltage_kV / 300.0);
 	float defocus_mean_score = 0.0;
 	float defocus_score;
+	float beam_tilt_x = 0.0f;
+	float beam_tilt_y = 0.0f;
+//	float beam_tilt_x = 0.5024f / 1000.0f * 1.2f;
+//	float beam_tilt_y = -1.1996f / 1000.0f * 1.2f;
 	bool skip_local_refinement = false;
 
 	bool take_random_best_parameter;
@@ -823,7 +827,7 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle.SetIndexForWeightedCorrelation();
 		refine_particle.SetParameterConstraints(powf(parameter_average[14],2));
 
-		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
+		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y);
 //		ctf_input_image.CalculateCTFImage(input_ctf);
 //		refine_particle.is_phase_flipped = true;
 
@@ -865,16 +869,17 @@ bool Refine3DApp::DoCalculation()
 			refine_particle.filter_radius_low = 30.0;
 			refine_particle.SetIndexForWeightedCorrelation();
 			binned_image.CopyFrom(refine_particle.particle_image);
-			refine_particle.InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+			refine_particle.InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
 			best_score = - std::numeric_limits<float>::max();
 			for (defocus_i = - myround(float(defocus_search_range)/float(defocus_step)); defocus_i <= myround(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 			{
 				refine_particle.SetDefocus(input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
-				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
+				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
 				if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
 //				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
 				else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
 				refine_particle.PhaseFlipImage();
+				refine_particle.BeamTiltMultiplyImage();
 //				refine_particle.CosineMask(false, true, 0.0);
 				refine_particle.CosineMask();
 				refine_particle.PhaseShift();
@@ -897,11 +902,11 @@ bool Refine3DApp::DoCalculation()
 			output_parameters[8] = input_parameters[8] + best_defocus_i * defocus_step;
 			output_parameters[9] = input_parameters[9] + best_defocus_i * defocus_step;
 			refine_particle.SetDefocus(output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11]);
-			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11]);
+			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
 		}
 		else
 		{
-			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
 		}
 		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.SetIndexForWeightedCorrelation();
@@ -909,6 +914,7 @@ bool Refine3DApp::DoCalculation()
 		// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
 		else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
 		refine_particle.PhaseFlipImage();
+		refine_particle.BeamTiltMultiplyImage();
 //		refine_particle.CosineMask(false, true, 0.0);
 		refine_particle.CosineMask();
 		refine_particle.PhaseShift();
@@ -942,7 +948,7 @@ bool Refine3DApp::DoCalculation()
 //				search_particle.logp = -std::numeric_limits<float>::max();
 				search_particle.SetParameters(input_parameters);
 				search_particle.number_of_search_dimensions = refine_particle.number_of_search_dimensions;
-				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
 				temp_image.CopyFrom(&input_image);
 				// Multiply by binning_factor so variance after binning is close to 1.
 //				temp_image.MultiplyByConstant(binning_factor_search);
@@ -963,6 +969,7 @@ bool Refine3DApp::DoCalculation()
 				// projections will not have SSNR (i.e. CTF-dependent) weighting applied
 				search_particle.WeightBySSNR(search_statistics.part_SSNR, 1);
 				search_particle.PhaseFlipImage();
+				search_particle.BeamTiltMultiplyImage();
 //				search_particle.CosineMask(false, true, 0.0);
 				search_particle.CosineMask();
 				search_particle.PhaseShift();
@@ -1155,6 +1162,7 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle.particle_image->MultiplyByConstant(binning_factor_refine);
 //		refine_particle.particle_image->QuickAndDirtyWriteSlice("part3.mrc", 1);
 //		refine_particle.PhaseFlipImage();
+//		refine_particle.BeamTiltMultiplyImage();
 //		refine_particle.CalculateProjection(projection_image, input_3d);
 //		projection_image.ClipInto(&unbinned_image);
 //		unbinned_image.BackwardFFT();

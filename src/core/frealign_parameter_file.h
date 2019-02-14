@@ -24,7 +24,7 @@ public:
 	void WriteCommentLine(wxString comment_string);
 	void WriteLine(float *parameters, bool comment = false);
 	int ReadFile(bool exclude_negative_film_numbers = false, int particles_in_stack = -1);
-	void ReadLine(float *parameters);
+	void ReadLine(float *parameters, int wanted_line_number = -1);
 	float ReadParameter(int wanted_line_number, int wanted_index);
 	void UpdateParameter(int wanted_line_number, int wanted_index, float wanted_value);
 	void Rewind();

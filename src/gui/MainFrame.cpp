@@ -30,7 +30,7 @@ extern Refine2DResultsPanel *refine2d_results_panel;
 
 #ifdef EXPERIMENTAL
 extern MatchTemplatePanel *match_template_panel;
-extern MatchTemplateMLPanel *match_templateml_panel;
+extern RefineCTFPanel *refine_ctf_panel;
 #endif
 
 extern MyOverviewPanel *overview_panel;
@@ -289,7 +289,7 @@ void MyMainFrame::DirtyVolumes()
 
 #ifdef EXPERIMENTAL
 	match_template_panel->volumes_are_dirty = true;
-	match_templateml_panel->volumes_are_dirty = true;
+	refine_ctf_panel->volumes_are_dirty = true;
 #endif
 
 }
@@ -311,7 +311,7 @@ void MyMainFrame::DirtyImageGroups()
 	picking_results_panel->group_combo_is_dirty = true;
 #ifdef EXPERIMENTAL
 	match_template_panel->group_combo_is_dirty = true;
-	match_templateml_panel->group_combo_is_dirty = true;
+	refine_ctf_panel->group_combo_is_dirty = true;
 #endif
 
 }
@@ -364,7 +364,7 @@ void MyMainFrame::DirtyRunProfiles()
 	generate_3d_panel->run_profiles_are_dirty = true;
 #ifdef EXPERIMENTAL
 	match_template_panel->run_profiles_are_dirty = true;
-	match_templateml_panel->run_profiles_are_dirty = true;
+	refine_ctf_panel->run_profiles_are_dirty = true;
 #endif
 }
 

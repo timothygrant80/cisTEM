@@ -467,8 +467,9 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			double defocus2;
 			double defocus_angle;
 			double phase_shift;
+			double iciness;
 
-			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift);
+			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift, iciness);
 
 			float low_resolution_limit = 300.0f;
 			float high_resolution_limit = resolution_limit;

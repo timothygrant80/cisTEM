@@ -49,8 +49,8 @@ void Project3DApp::DoInteractiveUserInput()
 	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
-	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x", "Beam tilt along the x axis in mrad", "0.0", -100.0, 100.0);
-	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y", "Beam tilt along the y axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x", "Beam tilt to be applied along the x axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y", "Beam tilt to be applied along the y axis in mrad", "0.0", -100.0, 100.0);
 	mask_radius = my_input->GetFloatFromUser("Mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", 0.0);
 	wanted_SNR = my_input->GetFloatFromUser("Wanted SNR", "The ratio of signal to noise variance after adding Gaussian noise and before masking", "1.0", 0.0);
 	padding = my_input->GetFloatFromUser("Padding factor", "Factor determining how much the input volume is padded to improve projections", "1.0", 1.0);
@@ -130,6 +130,9 @@ bool Project3DApp::DoCalculation()
 		MyPrintWithDetails("Error: Number of last particle to refine smaller than number of first particle to refine\n");
 		DEBUG_ABORT;
 	}
+
+	beam_tilt_x /= 1000.0f;
+	beam_tilt_y /= 1000.0f;
 
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, my_symmetry);
 	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);

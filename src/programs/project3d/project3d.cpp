@@ -27,6 +27,8 @@ void Project3DApp::DoInteractiveUserInput()
 	float		voltage_kV = 300.0;
 	float		spherical_aberration_mm = 2.7;
 	float		amplitude_contrast = 0.07;
+	float		beam_tilt_x;
+	float		beam_tilt_y;
 	float		mask_radius = 100.0;
 	float		padding = 1.0;
 	float		wanted_SNR = 1.0;
@@ -47,6 +49,8 @@ void Project3DApp::DoInteractiveUserInput()
 	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
+	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x", "Beam tilt along the x axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y", "Beam tilt along the y axis in mrad", "0.0", -100.0, 100.0);
 	mask_radius = my_input->GetFloatFromUser("Mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", 0.0);
 	wanted_SNR = my_input->GetFloatFromUser("Wanted SNR", "The ratio of signal to noise variance after adding Gaussian noise and before masking", "1.0", 0.0);
 	padding = my_input->GetFloatFromUser("Padding factor", "Factor determining how much the input volume is padded to improve projections", "1.0", 1.0);
@@ -58,15 +62,16 @@ void Project3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(17);
-	my_current_job.ManualSetArguments("tttiiffffffftbbbb",	input_parameter_file.ToUTF8().data(),
-															input_reconstruction.ToUTF8().data(),
-															ouput_projection_stack.ToUTF8().data(),
-															first_particle, last_particle,
-															pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
-															mask_radius, wanted_SNR, padding,
-															my_symmetry.ToUTF8().data(),
-															apply_CTF, apply_shifts, apply_mask, add_noise);
+	my_current_job.Reset(19);
+	my_current_job.ManualSetArguments("tttiiffffffffftbbbb",	input_parameter_file.ToUTF8().data(),
+																input_reconstruction.ToUTF8().data(),
+																ouput_projection_stack.ToUTF8().data(),
+																first_particle, last_particle,
+																pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
+																beam_tilt_x, beam_tilt_y,
+																mask_radius, wanted_SNR, padding,
+																my_symmetry.ToUTF8().data(),
+																apply_CTF, apply_shifts, apply_mask, add_noise);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -82,14 +87,16 @@ bool Project3DApp::DoCalculation()
 	float    voltage_kV							= my_current_job.arguments[6].ReturnFloatArgument();
 	float 	 spherical_aberration_mm			= my_current_job.arguments[7].ReturnFloatArgument();
 	float    amplitude_contrast					= my_current_job.arguments[8].ReturnFloatArgument();
-	float    mask_radius						= my_current_job.arguments[9].ReturnFloatArgument();
-	float	 wanted_SNR							= my_current_job.arguments[10].ReturnFloatArgument();
-	float	 padding							= my_current_job.arguments[11].ReturnFloatArgument();
-	wxString my_symmetry						= my_current_job.arguments[12].ReturnStringArgument();
-	bool	 apply_CTF							= my_current_job.arguments[13].ReturnBoolArgument();
-	bool	 apply_shifts						= my_current_job.arguments[14].ReturnBoolArgument();
-	bool	 apply_mask							= my_current_job.arguments[15].ReturnBoolArgument();
-	bool	 add_noise							= my_current_job.arguments[16].ReturnBoolArgument();
+	float    beam_tilt_x						= my_current_job.arguments[9].ReturnFloatArgument();
+	float    beam_tilt_y						= my_current_job.arguments[10].ReturnFloatArgument();
+	float    mask_radius						= my_current_job.arguments[11].ReturnFloatArgument();
+	float	 wanted_SNR							= my_current_job.arguments[12].ReturnFloatArgument();
+	float	 padding							= my_current_job.arguments[13].ReturnFloatArgument();
+	wxString my_symmetry						= my_current_job.arguments[14].ReturnStringArgument();
+	bool	 apply_CTF							= my_current_job.arguments[15].ReturnBoolArgument();
+	bool	 apply_shifts						= my_current_job.arguments[16].ReturnBoolArgument();
+	bool	 apply_mask							= my_current_job.arguments[17].ReturnBoolArgument();
+	bool	 add_noise							= my_current_job.arguments[18].ReturnBoolArgument();
 
 	Image projection_image;
 	Image final_image;
@@ -170,7 +177,7 @@ bool Project3DApp::DoCalculation()
 		if (temp_float[0] < first_particle || temp_float[0] > last_particle) continue;
 		image_counter++;
 		my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
-		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11]);
+		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11], beam_tilt_x, beam_tilt_y);
 
 		input_3d.density_map.ExtractSlice(projection_image, my_parameters);
 
@@ -180,7 +187,7 @@ bool Project3DApp::DoCalculation()
 		projection_image.ForwardFFT();
 		projection_image.ApplyBFactor(2.0);
 */
-		if (apply_CTF) projection_image.ApplyCTF(my_ctf);
+		if (apply_CTF) projection_image.ApplyCTF(my_ctf, false, true);
 		if (apply_shifts) projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
 		projection_image.SwapRealSpaceQuadrants();
 

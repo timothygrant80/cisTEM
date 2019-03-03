@@ -380,11 +380,12 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D &reconstruction, Reso
 		if (statistics.part_SSNR.data_y[i] > 0.0)
 		{
 //			wiener_constant[i] = 1.0 / statistics.part_SSNR.data_y[i];
-			wiener_constant[i] = 1.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
+//			wiener_constant[i] = 1.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
 			wiener_constant[i] = weiner_filter_nominator / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
 	//		wiener_constant[i] = 1;
 		}
 		else wiener_constant[i] = 0.0;
+//		wiener_constant[i] = 0.000001;
 	}
 
 	for (k = 0; k <= reconstruction.image_reconstruction.physical_upper_bound_complex_z; k++)

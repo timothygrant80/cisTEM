@@ -34,7 +34,7 @@ SettingsPanel *settings_panel;
 #ifdef EXPERIMENTAL
 ExperimentalPanel *experimental_panel;
 MatchTemplatePanel *match_template_panel;
-MatchTemplateMLPanel *match_templateml_panel;
+RefineCTFPanel *refine_ctf_panel;
 #endif
 
 MyMovieAssetPanel *movie_asset_panel;
@@ -157,7 +157,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	match_template_panel = new MatchTemplatePanel(experimental_panel->ExperimentalBook);
-	match_templateml_panel = new MatchTemplateMLPanel(experimental_panel->ExperimentalBook);
+	refine_ctf_panel = new RefineCTFPanel(experimental_panel->ExperimentalBook);
 #endif
 
 	// Setup list books
@@ -297,7 +297,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
-	experimental_panel->ExperimentalBook->AddPage(match_templateml_panel, "Match Templates ML", true, 0);
+	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
 #endif
 
 	// Setup Movie Panel

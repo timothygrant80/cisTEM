@@ -191,16 +191,18 @@ int FrealignParameterFile::ReadFile(bool exclude_negative_film_numbers, int part
 	return number_of_lines;
 }
 
-void FrealignParameterFile::ReadLine(float *parameters)
+void FrealignParameterFile::ReadLine(float *parameters, int wanted_line_number)
 {
 	MyDebugAssertTrue(parameter_cache != NULL, "File has not been read into memory");
 	MyDebugAssertTrue(current_line <= number_of_lines, "End of Frealign file reached");
 
 	int i;
-	int elements_read = records_per_line * current_line;
+	int elements_read;
+
+	if (wanted_line_number >= 0) elements_read = records_per_line * wanted_line_number;
+	else {elements_read = records_per_line * current_line; current_line++;}
 
 	for (i = 0; i < records_per_line; i++) {parameters[i] = parameter_cache[i + elements_read];};
-	current_line++;
 }
 
 float FrealignParameterFile::ReadParameter(int wanted_line_number, int wanted_index)

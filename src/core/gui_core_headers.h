@@ -116,7 +116,7 @@
 
 #ifdef EXPERIMENTAL
 #include "../gui/MatchTemplatePanel.h"
-#include "../gui/MatchTemplateMLPanel.h"
+#include "../gui/RefineCTFPanel.h"
 #endif
 
 #define REFINEMENT 0

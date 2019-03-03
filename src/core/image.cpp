@@ -3039,6 +3039,53 @@ void Image::CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf)
 	is_in_real_space = false;
 }
 
+void Image::CalculateBeamTiltImage(CTF &ctf_of_image, bool output_phase_shifts)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated for beam tilt image");
+//	MyDebugAssertTrue(is_in_real_space == false, "beam tilt image not in Fourier space");
+
+	int i;
+	int j;
+
+	long pixel_counter = 0;
+
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+
+	float y_coord_sq;
+
+	float frequency_squared;
+	float azimuth;
+	float phase_shift;
+
+	for (j = 0; j <= physical_upper_bound_complex_y; j++)
+	{
+		y_coordinate_2d = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y;
+		y_coord_sq = powf(y_coordinate_2d, 2);
+
+		for (i = 0; i <= physical_upper_bound_complex_x; i++)
+		{
+			x_coordinate_2d = i * fourier_voxel_size_x;
+			// Compute the azimuth
+			if ( i == 0 && j == 0 ) azimuth = 0.0;
+			else azimuth = atan2f(y_coordinate_2d,x_coordinate_2d);
+			// Compute the square of the frequency
+			frequency_squared = powf(x_coordinate_2d, 2) + y_coord_sq;
+
+			if (output_phase_shifts)
+			{
+				phase_shift = ctf_of_image.PhaseShiftGivenBeamTilt(frequency_squared, ctf_of_image.BeamTiltGivenAzimuth(azimuth));
+				complex_values[pixel_counter] = phase_shift + I * 0.0f;
+			}
+			else complex_values[pixel_counter] = ctf_of_image.EvaluateBeamTiltPhaseShift(frequency_squared, azimuth);
+
+			pixel_counter++;
+		}
+	}
+
+	is_in_real_space = false;
+}
+
 // Apply a cosine-edge mask. By default, pixels on the outside of the mask radius are flattened. If invert=true, the pixels near the center are flattened. This does not currently work when quadrants are swapped.
 float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge)
 {
@@ -6106,7 +6153,6 @@ void Image::SubtractImage(Image *other_image)
 	{
 		real_values[pixel_counter] -= other_image->real_values[pixel_counter];
 	}
-
 }
 
 void Image::SubtractSquaredImage(Image *other_image)
@@ -6117,7 +6163,6 @@ void Image::SubtractSquaredImage(Image *other_image)
 	{
 		real_values[pixel_counter] -= powf(other_image->real_values[pixel_counter],2);
 	}
-
 }
 
 int Image::ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index)
@@ -6698,7 +6743,7 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 }
 
 // The output image will be allocated to the correct dimensions (half-volume, a la FFTW)
-void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
+void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum, bool signed_values)
 {
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
 	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
@@ -6730,7 +6775,15 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 			for (i = 0; i < amplitude_spectrum->logical_x_dimension; i++)
 			{
 				address_in_self = ReturnFourier1DAddressFromPhysicalCoord(i,j,k);
-				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
+				if (! signed_values)
+				{
+					amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
+				}
+				else
+				{
+					if (real(complex_values[address_in_self]) >= 0.0f) amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
+					else amplitude_spectrum->real_values[address_in_amplitude_spectrum] = - abs(complex_values[address_in_self]);
+				}
 				address_in_amplitude_spectrum++;
 			}
 			address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
@@ -6740,7 +6793,7 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum)
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 
-void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
+void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calculate_phases)
 {
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
 	MyDebugAssertTrue(amplitude_spectrum->is_in_memory, "Other image memory not allocated");
@@ -6757,18 +6810,34 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum)
 	long address_in_amplitude_spectrum = 0;
 	long address_in_self;
 
+	float amplitude;
+	float phase;
+
 	// Loop over the amplitude spectrum
 	for (ampl_addr_j = 0; ampl_addr_j < amplitude_spectrum->logical_y_dimension; ampl_addr_j++)
 	{
 		for (ampl_addr_i = 0; ampl_addr_i < amplitude_spectrum->logical_x_dimension; ampl_addr_i++)
 		{
 			address_in_self = ReturnFourier1DAddressFromLogicalCoord(ampl_addr_i-amplitude_spectrum->physical_address_of_box_center_x,ampl_addr_j-amplitude_spectrum->physical_address_of_box_center_y,0);
-			amplitude_spectrum->real_values[address_in_amplitude_spectrum] = abs(complex_values[address_in_self]);
+			amplitude = abs(complex_values[address_in_self]);
+			if (! calculate_phases)
+			{
+				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = amplitude;
+			}
+			else
+			{
+				if (amplitude != 0.0f)
+				{
+					if (ampl_addr_i >= amplitude_spectrum->physical_address_of_box_center_x) phase = std::arg(complex_values[address_in_self]);
+					else phase = std::arg(conj(complex_values[address_in_self]));
+				}
+				else phase = 0.0f;
+				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = phase;
+			}
 			address_in_amplitude_spectrum++;
 		}
 		address_in_amplitude_spectrum += amplitude_spectrum->padding_jump_value;
 	}
-
 	// Done
 	amplitude_spectrum->is_in_real_space = true;
 	amplitude_spectrum->object_is_centred_in_box = true;
@@ -8169,7 +8238,7 @@ void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 
 }
 
-void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
+void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -8215,9 +8284,17 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute)
 			if (absolute) ctf_value = fabsf(ctf_value);
 
 			complex_values[pixel_counter] *= ctf_value;
+
+			if (apply_beam_tilt && (ctf_to_apply.GetBeamTiltX() != 0.0f || ctf_to_apply.GetBeamTiltY() != 0.0f)) complex_values[pixel_counter] *= ctf_to_apply.EvaluateBeamTiltPhaseShift(frequency_squared,azimuth);
+
 			pixel_counter++;
 		}
 	}
+//	Image temp_image;
+//	temp_image.Allocate(logical_x_dimension, logical_y_dimension, false);
+//	ComputeAmplitudeSpectrumFull2D(&temp_image, true);
+//	temp_image.QuickAndDirtyWriteSlice("junk.mrc", 1);
+//	exit(0);
 }
 
 void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
@@ -8597,8 +8674,6 @@ void Image::SwapRealSpaceQuadrants()
 	// keep track of center;
 	if (object_is_centred_in_box == true) object_is_centred_in_box = false;
 	else object_is_centred_in_box = true;
-
-
 }
 
 

@@ -56,6 +56,8 @@ noinst_HEADERS = core/asset_group.h \
                  core/angular_distribution_histogram.h \
                  core/pdb.h \
                  core/local_resolution_estimator.h \
+                 core/cistem_parameters.h \
+                 core/cistem_star_file_reader.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -201,10 +203,10 @@ noinst_LIBRARIES = libcore.a libguicore.a
 
 
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter align_coordinates convert_par_to_star niko_test
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += match_template match_template_nikoml refine_template make_template_result scattering_potential
+bin_PROGRAMS += match_template refine_ctf refine_template make_template_result scattering_potential
 endif
 
 
@@ -257,6 +259,8 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/rle3d.cpp \
                        core/angular_distribution_histogram.cpp \
                        core/pdb.cpp \
+                       core/cistem_parameters.cpp \
+                       core/cistem_star_file_reader.cpp \
                        core/local_resolution_estimator.cpp 
 
 
@@ -278,7 +282,7 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp
 
 if EXPERIMENTAL_AM
-cisTEM_SOURCES += gui/MatchTemplatePanel.cpp gui/MatchTemplateMLPanel.cpp
+cisTEM_SOURCES += gui/MatchTemplatePanel.cpp gui/RefineCTFPanel.cpp
 endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
@@ -502,7 +506,15 @@ local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_LDADD = libcore.a $(WX_LIBS_BASE)
 
+align_coordinates_SOURCES = programs/align_coordinates/align_coordinates.cpp
+align_coordinates_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+align_coordinates_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+align_coordinates_LDADD = libcore.a $(WX_LIBS_BASE)
 
+convert_par_to_star_SOURCES = programs/convert_par_to_star/convert_par_to_star.cpp
+convert_par_to_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+convert_par_to_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+convert_par_to_star_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
 make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp
@@ -515,17 +527,15 @@ match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
+refine_ctf_SOURCES = programs/refine_ctf/refine_ctf.cpp
+refine_ctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+refine_ctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+refine_ctf_LDADD = libcore.a $(WX_LIBS_BASE)
 
 scattering_potential_SOURCES = programs/scattering_potential/scattering_potential.cpp 
 scattering_potential_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 scattering_potential_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 scattering_potential_LDADD = libcore.a $(WX_LIBS_BASE)
-
-
-match_template_nikoml_SOURCES = programs/match_template_nikoml/match_template_nikoml.cpp
-match_template_nikoml_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-match_template_nikoml_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-match_template_nikoml_LDADD = libcore.a $(WX_LIBS_BASE)
 
 refine_template_SOURCES = programs/refine_template/refine_template.cpp
 refine_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)

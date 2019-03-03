@@ -1,8 +1,8 @@
-#ifndef __MatchTemplateMLPanel__
-#define __MatchTemplateMLPanel__
+#ifndef __RefineCTFPanel__
+#define __RefineCTFPanel__
 
 
-class MatchTemplateMLPanel : public MatchTemplateMLParentPanel
+class RefineCTFPanel : public MatchTemplateParentPanel
 {
 		long my_job_id;
 
@@ -20,7 +20,7 @@ class MatchTemplateMLPanel : public MatchTemplateMLParentPanel
 
 public:
 
-		MatchTemplateMLPanel( wxWindow* parent );
+		RefineCTFPanel( wxWindow* parent );
 		JobResult *buffered_results;
 
 		bool group_combo_is_dirty;
@@ -30,6 +30,7 @@ public:
 
 		long expected_number_of_results;
 		long number_of_received_results;
+
 		long current_job_starttime;
 		long time_of_last_update;
 

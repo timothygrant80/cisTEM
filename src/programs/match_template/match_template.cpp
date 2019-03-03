@@ -20,7 +20,6 @@ public:
 	float *collated_pixel_square_sums;
 	long *collated_histogram_data;
 
-
 	AggregatedTemplateResult();
 	~AggregatedTemplateResult();
 	void AddResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
@@ -1053,8 +1052,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		wxPrintf("writing to %s/n", wxString::Format("%s/mip.mrc\n", directory_for_writing_results));
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
@@ -1065,8 +1062,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_psi_data[pixel_counter];
 		}
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		//theta
@@ -1076,8 +1071,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_theta_data[pixel_counter];
 		}
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		// phi
@@ -1087,8 +1080,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_phi_data[pixel_counter];
 		}
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		// defocus
@@ -1098,8 +1089,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_defocus_data[pixel_counter];
 		}
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		// do the scaling..
@@ -1117,8 +1106,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		// sums
@@ -1128,8 +1115,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
 		}
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 		// square sums
@@ -1141,8 +1126,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		//temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 
-//		temp_image.InvertPixelOrder();
-//		temp_image.SwapRealSpaceQuadrants();
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 
 
@@ -1169,7 +1152,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		for (int line_counter = 0; line_counter <= histogram_number_of_points; line_counter++)
 		{
-//			expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(double(survival_histogram[0]));
 			expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(aggregated_results[array_location].collated_data_array[0] * aggregated_results[array_location].collated_data_array[1] * aggregated_results[array_location].total_number_of_ccs);
 		}
 

@@ -95,8 +95,9 @@ public:
 	inline float GetWavelength() { return wavelength; };
 	int ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
 	float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);
-	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth);
+	float ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth, bool inaccurate_is_ok = false);
 	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(float azimuth);
 	float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus);
 	float ReturnPhaseAberrationMaximum();
+	float ReturnPhaseAberrationMaximumGivenDefocus(float defocus);
 };

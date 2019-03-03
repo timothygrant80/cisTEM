@@ -1681,8 +1681,8 @@ bool CtffindApp::DoCalculation()
 		 *  Attempt some renormalisations - we want to do this over a range not affected by the central peak or strong Thon rings,
 		 *  so as to emphasize the "regular" Thon rings
 		 */
-		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,current_ctf.GetAstigmatismAzimuth()));
-		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,current_ctf.GetAstigmatismAzimuth()));
+		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,current_ctf.GetAstigmatismAzimuth(),true));
+		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,current_ctf.GetAstigmatismAzimuth(),true));
 		float normalization_radius_min = start_zero * average_spectrum->logical_x_dimension;
 		float normalization_radius_max = finish_zero * average_spectrum->logical_x_dimension;
 
@@ -1809,7 +1809,7 @@ bool CtffindApp::DoCalculation()
 			int number_of_bins_above_low_threshold = 0;
 			int number_of_bins_above_significance_threshold = 0;
 			int number_of_bins_above_high_threshold = 0;
-			int first_bin_to_check = int(sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(1,current_ctf.GetAstigmatismAzimuth()))*average_spectrum->logical_x_dimension);
+			int first_bin_to_check = 0.1 * number_of_bins_in_1d_spectra;
 			MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra,"Bad first bin to check\n");
 			//wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
 			last_bin_with_good_fit = -1;
@@ -2601,32 +2601,31 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 
 	/*
 	 * Initialize the curve objects. One keeps track of EPA pre phase aberration maximum (before Cs term takes over), the other post.
+	 * In the case where we are overfocus (negative defocus value), the phase aberration starts at 0.0 at the origin
+	 * and just gets more and more negative
 	 */
 	if (curve_x_is_linear)
 	{
 		float maximum_aberration_in_ctf = ctf->ReturnPhaseAberrationMaximum();
-		float maximum_sq_freq_in_spectrum= powf(spectrum->fourier_voxel_size_x * spectrum->logical_upper_bound_complex_x,2)+powf(spectrum->fourier_voxel_size_y * spectrum->logical_upper_bound_complex_y,2);
+		float maximum_sq_freq_in_spectrum= powf(spectrum->fourier_voxel_size_x * spectrum->logical_lower_bound_complex_x,2)+powf(spectrum->fourier_voxel_size_y * spectrum->logical_lower_bound_complex_y,2);
 		float lowest_sq_freq_of_ctf_aberration_max = std::min(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
 																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
+		float highest_sq_freq_of_ctf_aberration_max = std::max(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
+																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
 
-		// if we hit the CTF's max phase aberration within the spectrum, let's allocate both pre- and post-max curves properly
-		if (lowest_sq_freq_of_ctf_aberration_max <= maximum_sq_freq_in_spectrum)
-		{
-			int number_of_points = int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
-			epa_pre_max->SetupXAxis(-maximum_aberration_in_ctf,maximum_aberration_in_ctf,number_of_points);
-			epa_post_max->SetupXAxis(-maximum_aberration_in_ctf,maximum_aberration_in_ctf,number_of_points);
+		/*
+		 * Minimum phase aberration might be 0.0 (at the origin), or if the phase aberration function
+		 * peaks before Nyquist, it might be at the edge of the spectrum
+		 */
+		float minimum_aberration_in_ctf_at_edges = std::min(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1()),
+															ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2()));
 
-		}
-		else
-		{
-			float maximum_aberration_in_spectrum = std::max(	fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1())),
-																fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2())));
 
-			int number_of_points = 2 * int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
-			epa_pre_max->SetupXAxis(-maximum_aberration_in_spectrum,maximum_aberration_in_spectrum,number_of_points);
-			epa_post_max->SetupXAxis(-maximum_aberration_in_spectrum,maximum_aberration_in_spectrum,number_of_points);
-			// We shouldn't need the post-max curve ever
-		}
+		int number_of_points = int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
+
+		epa_pre_max->SetupXAxis(0.0,maximum_aberration_in_ctf,number_of_points);
+		epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf,minimum_aberration_in_ctf_at_edges-0.5f*fabsf(minimum_aberration_in_ctf_at_edges)),maximum_aberration_in_ctf,number_of_points);
+
 	}
 	else
 	{

@@ -132,35 +132,41 @@ int CTF::ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatia
 /*
  * Compute the frequency of the Nth zero of the CTF.
  */
-float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth)
+float CTF::ReturnSquaredSpatialFrequencyOfAZero(int which_zero, float azimuth, bool inaccurate_is_ok)
 {
 	/*
 	 * The method used below (ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth) makes assumptions which mean it will
 	 * only return the correct spatial frequency for the CTF zeroes between the origin and the frequency at which
 	 * the phase aberration peaks.
 	 */
-	float phase_shift = which_zero * PI;
-	MyDebugAssertTrue(phase_shift <= ReturnPhaseAberrationMaximum(),"Oops, this method only works for the first few zeroes");
+	float phase_shift;
+	float defocus = DefocusGivenAzimuth(azimuth);
+	if (defocus > 0.0)
+	{
+		phase_shift = which_zero * PI;
+	}
+	else
+	{
+		phase_shift = -1.0 * which_zero * PI;
+	}
+
+	if (! inaccurate_is_ok) {
+		MyDebugAssertTrue(phase_shift <= ReturnPhaseAberrationMaximum(),"Oops, this method only works for the first few zeroes");
+	}
 	return ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(phase_shift,azimuth);
 }
 
 /*
- * Return the maximum phase aberration
+ * Return the maximum phase aberration anywhere on the spectrum
  */
 float CTF::ReturnPhaseAberrationMaximum()
 {
-	// We use the maximum defocus
-	float defocus_max = std::max(fabs(defocus_1),fabs(defocus_2));
-	float sq_sf_of_phase_aberration_max;
-	if (spherical_aberration == 0.0)
-	{
-		sq_sf_of_phase_aberration_max = 99999.99;
-	}
-	else
-	{
-		sq_sf_of_phase_aberration_max= defocus_max / (squared_wavelength * spherical_aberration);
-	}
-	return PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(sq_sf_of_phase_aberration_max,defocus_max);
+	return std::max(ReturnPhaseAberrationMaximumGivenDefocus(defocus_1),ReturnPhaseAberrationMaximumGivenDefocus(defocus_2));
+}
+
+float CTF::ReturnPhaseAberrationMaximumGivenDefocus(float defocus)
+{
+	return PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus),defocus);
 }
 
 /*
@@ -176,7 +182,17 @@ float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(float a
  */
 float CTF::ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus)
 {
-	if (spherical_aberration == 0.0)
+	if (defocus <= 0.0)
+	{
+		/*
+		 * When the defocus value is negative (i.e. we are overfocus), the phase aberration
+		 * quadratic decreases from sf 0.0 onwards. Mathematically, the parabola peaks in
+		 * the negative squared spatial frequency. But there's no such thing as a negative squared
+		 * sf.
+		 */
+		return 0.0;
+	}
+	else if (spherical_aberration == 0.0)
 	{
 		return 9999.999;
 	}
@@ -255,7 +271,6 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 
 
 }
-//#pragma GCC pop_options
 
 
 // Set the defocus and astigmatism angle, given in pixels and radians

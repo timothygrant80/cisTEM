@@ -2,7 +2,7 @@
 #define CISTEM_VERSION_TEXT "1.0.2-beta"
 #define START_PORT 3000
 #define END_PORT 5000
-#define PI 3.14159265359
+#define PI 3.14159265359f
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"

@@ -11,6 +11,12 @@ Reconstruct3DApp : public MyApp
 	private:
 };
 
+float		beam_tilt_x = 0.0f;
+float		beam_tilt_y = 0.0f;
+float		particle_shift_x = 0.0f;
+float		particle_shift_y = 0.0f;
+int			max_threads = 1;
+
 IMPLEMENT_APP(Reconstruct3DApp)
 
 // override the DoInteractiveUserInput
@@ -31,8 +37,6 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	float		voltage_kV = 300.0;
 	float		spherical_aberration_mm = 2.7;
 	float		amplitude_contrast = 0.07;
-	float		beam_tilt_x;
-	float		beam_tilt_y;
 	float		molecular_mass_kDa = 1000.0;
 	float		inner_mask_radius = 0.0;
 	float		outer_mask_radius = 100.0;
@@ -72,8 +76,10 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
-	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x", "Beam tilt present in data along the x axis in mrad", "0.0", -100.0, 100.0);
-	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y", "Beam tilt present in data along the y axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x (mrad)", "Beam tilt present in data along the x axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y (mrad)", "Beam tilt present in data along the y axis in mrad", "0.0", -100.0, 100.0);
+	particle_shift_x = my_input->GetFloatFromUser("Particle shift along x (A)", "Average particle shift along the x axis as a result of beam tilt in A", "0.0", -1.0, 1.0);
+	particle_shift_y = my_input->GetFloatFromUser("Particle shift along y (A)", "Average particle shift along the y axis as a result of beam tilt in A", "0.0", -1.0, 1.0);
 	molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
 	inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the final reconstruction in Angstroms", "0.0", 0.0);
 	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
@@ -97,12 +103,18 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	dump_file_1 = my_input->GetFilenameFromUser("Output dump filename for odd particles", "The name of the first dump file with the intermediate reconstruction arrays", "dump_file_1.dat", false);
 	dump_file_2 = my_input->GetFilenameFromUser("Output dump filename for even particles", "The name of the second dump file with the intermediate reconstruction arrays", "dump_file_2.dat", false);
 
+#ifdef _OPENMP
+	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
+#else
+	max_threads = 1;
+#endif
+
 	delete my_input;
 
-	my_current_job.Reset(37);
-//	my_current_job.Reset(38);
-//	my_current_job.ManualSetArguments("ttttttttiifffffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
-	my_current_job.ManualSetArguments("ttttttttiifffffffffffffffbbbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
+	my_current_job.Reset(35);
+//	my_current_job.Reset(36);
+//	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
 																				input_parameter_file.ToUTF8().data(),
 																				input_reconstruction.ToUTF8().data(),
 																				output_reconstruction_1.ToUTF8().data(),
@@ -112,7 +124,6 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 																				my_symmetry.ToUTF8().data(),
 																				first_particle, last_particle,
 																				pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
-																				beam_tilt_x, beam_tilt_y,
 																				molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
 																				resolution_limit_rec, resolution_limit_ref, score_weight_conversion, score_threshold,
 																				smoothing_factor, padding, normalize_particles, adjust_scores,
@@ -141,39 +152,40 @@ bool Reconstruct3DApp::DoCalculation()
 	float    voltage_kV							= my_current_job.arguments[11].ReturnFloatArgument();
 	float 	 spherical_aberration_mm			= my_current_job.arguments[12].ReturnFloatArgument();
 	float    amplitude_contrast					= my_current_job.arguments[13].ReturnFloatArgument();
-	float    beam_tilt_x						= my_current_job.arguments[14].ReturnFloatArgument();
-	float    beam_tilt_y						= my_current_job.arguments[15].ReturnFloatArgument();
-	float 	 molecular_mass_kDa					= my_current_job.arguments[16].ReturnFloatArgument();
-	float    inner_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument();
-	float    outer_mask_radius					= my_current_job.arguments[18].ReturnFloatArgument();
-	float    resolution_limit_rec				= my_current_job.arguments[19].ReturnFloatArgument();
-	float    resolution_limit_ref				= my_current_job.arguments[20].ReturnFloatArgument();
-	float    score_weight_conversion			= my_current_job.arguments[21].ReturnFloatArgument();
-	float    score_threshold					= my_current_job.arguments[22].ReturnFloatArgument();
-	float	 smoothing_factor					= my_current_job.arguments[23].ReturnFloatArgument();
-	float    padding							= my_current_job.arguments[24].ReturnFloatArgument();
-	bool	 normalize_particles				= my_current_job.arguments[25].ReturnBoolArgument();
-	bool	 adjust_scores						= my_current_job.arguments[26].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[27].ReturnBoolArgument();
-	bool	 exclude_blank_edges				= my_current_job.arguments[28].ReturnBoolArgument();
-	bool	 crop_images						= my_current_job.arguments[29].ReturnBoolArgument();
-	bool	 split_even_odd						= my_current_job.arguments[30].ReturnBoolArgument();
-	bool	 center_mass						= my_current_job.arguments[31].ReturnBoolArgument();
-	bool	 use_input_reconstruction			= my_current_job.arguments[32].ReturnBoolArgument();
-	bool	 threshold_input_3d					= my_current_job.arguments[33].ReturnBoolArgument();
-//	int		 correct_ewald_sphere				= my_current_job.arguments[34].ReturnIntegerArgument();
+	float 	 molecular_mass_kDa					= my_current_job.arguments[14].ReturnFloatArgument();
+	float    inner_mask_radius					= my_current_job.arguments[15].ReturnFloatArgument();
+	float    outer_mask_radius					= my_current_job.arguments[16].ReturnFloatArgument();
+	float    resolution_limit_rec				= my_current_job.arguments[17].ReturnFloatArgument();
+	float    resolution_limit_ref				= my_current_job.arguments[18].ReturnFloatArgument();
+	float    score_weight_conversion			= my_current_job.arguments[19].ReturnFloatArgument();
+	float    score_threshold					= my_current_job.arguments[20].ReturnFloatArgument();
+	float	 smoothing_factor					= my_current_job.arguments[21].ReturnFloatArgument();
+	float    padding							= my_current_job.arguments[22].ReturnFloatArgument();
+	bool	 normalize_particles				= my_current_job.arguments[23].ReturnBoolArgument();
+	bool	 adjust_scores						= my_current_job.arguments[24].ReturnBoolArgument();
+	bool	 invert_contrast					= my_current_job.arguments[25].ReturnBoolArgument();
+	bool	 exclude_blank_edges				= my_current_job.arguments[26].ReturnBoolArgument();
+	bool	 crop_images						= my_current_job.arguments[27].ReturnBoolArgument();
+	bool	 split_even_odd						= my_current_job.arguments[28].ReturnBoolArgument();
+	bool	 center_mass						= my_current_job.arguments[29].ReturnBoolArgument();
+	bool	 use_input_reconstruction			= my_current_job.arguments[30].ReturnBoolArgument();
+	bool	 threshold_input_3d					= my_current_job.arguments[31].ReturnBoolArgument();
+//	int		 correct_ewald_sphere				= my_current_job.arguments[32].ReturnIntegerArgument();
 	int		 correct_ewald_sphere				= 0;
-	bool	 dump_arrays						= my_current_job.arguments[34].ReturnBoolArgument();
-	wxString dump_file_1 						= my_current_job.arguments[35].ReturnStringArgument();
-	wxString dump_file_2 						= my_current_job.arguments[36].ReturnStringArgument();
+	bool	 dump_arrays						= my_current_job.arguments[32].ReturnBoolArgument();
+	wxString dump_file_1 						= my_current_job.arguments[33].ReturnStringArgument();
+	wxString dump_file_2 						= my_current_job.arguments[34].ReturnStringArgument();
 
 	ReconstructedVolume input_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d1(molecular_mass_kDa);
 	ReconstructedVolume output_3d2(molecular_mass_kDa);
-	Image 				temp_image;
-	Image 				temp2_image;
-	Image				temp3_image;
+	Image				input_image_local;
+	Image				sum_power_local;
+	Image				temp3_image_local;
+	Image 				temp_image_local;
+	Image 				temp2_image_local;
+	Image				sum_power;
 	Image				current_ctf_image;
 	Image				current_beamtilt_image;
 	Image				projection_image;
@@ -191,13 +203,16 @@ bool Reconstruct3DApp::DoCalculation()
 
 	int i, j;
 	int current_image;
+	int current_image_local;
 	int images_to_process = 0;
+	int images_to_process_per_thread;
 	int images_for_noise_power = 0;
 	int image_counter = 0;
 	int box_size;
 	int original_box_size;
 	int intermediate_box_size;
 	int number_of_blank_edges;
+	int number_of_blank_edges_local;
 	int max_samples = 2000;
 	int random_seed_multiplier = 2;
 	int fsc_particle_repeat = 2;
@@ -206,6 +221,8 @@ bool Reconstruct3DApp::DoCalculation()
 	int number_of_rotations;
 	int min_class;
 	int max_class;
+	int random_reset_counter;
+	int random_reset_count = 10;
 	float temp_float;
 	float mask_volume_fraction;
 	float mask_falloff = 10.0;
@@ -226,6 +243,7 @@ bool Reconstruct3DApp::DoCalculation()
 	float symmetry_weight = 1.0;
 	bool rotational_blurring = true;
 	bool calculate_complex_ctf = false;
+	bool file_read;
 	wxDateTime my_time_in;
 
 	if (! DoesFileExist(input_parameter_file))
@@ -238,7 +256,7 @@ bool Reconstruct3DApp::DoCalculation()
 		SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_stack));
 		exit(-1);
 	}
-	MRCFile input_file(input_particle_stack.ToStdString(), false);
+	MRCFile input_stack(input_particle_stack.ToStdString(), false);
 	MRCFile *input_3d_file;
 	if (use_input_reconstruction)
 	{
@@ -250,7 +268,7 @@ bool Reconstruct3DApp::DoCalculation()
 		input_3d_file = new MRCFile(input_reconstruction.ToStdString(), false);
 	}
 	FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
-	input_par_file.ReadFile(true, input_file.ReturnZSize());
+	input_par_file.ReadFile(true, input_stack.ReturnZSize());
 /*	input_par_file.ReduceAngles();
 	min_class = myroundint(input_par_file.ReturnMin(7));
 	max_class = myroundint(input_par_file.ReturnMax(7));
@@ -276,7 +294,7 @@ bool Reconstruct3DApp::DoCalculation()
 		float result;
 		my_result.SetResult(1, &result);
 	}
-	if (input_file.ReturnXSize() != input_file.ReturnYSize())
+	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
 		SendError("Error: Particles are not square\n");
 		exit(-1);
@@ -287,9 +305,9 @@ bool Reconstruct3DApp::DoCalculation()
 		exit(-1);
 	}
 
-	if (last_particle == 0) last_particle = input_file.ReturnZSize();
+	if (last_particle == 0) last_particle = input_stack.ReturnZSize();
 	if (first_particle == 0) first_particle = 1;
-	if (last_particle > input_file.ReturnZSize()) last_particle = input_file.ReturnZSize();
+	if (last_particle > input_stack.ReturnZSize()) last_particle = input_stack.ReturnZSize();
 
 	input_par_file.CalculateDefocusDependence();
 	if (adjust_scores) input_par_file.AdjustScores();
@@ -297,10 +315,9 @@ bool Reconstruct3DApp::DoCalculation()
 	if (score_threshold > 0.0 && score_threshold < 1.0) score_threshold = input_par_file.ReturnThreshold(score_threshold);
 	if (score_threshold == 1.0) score_threshold = input_par_file.ReturnMin(15);
 
-	if (! split_even_odd) fsc_particle_repeat = myroundint((input_par_file.ReturnMax(0) - input_par_file.ReturnMin(0) + 1.0) / 100.0);
-	if (fsc_particle_repeat % 2 != 0) fsc_particle_repeat++;
-
 	if (correct_ewald_sphere != 0) calculate_complex_ctf = true;
+
+	if (is_running_locally == false) max_threads = 1;
 
 	my_time_in = wxDateTime::Now();
 	output_statistics_file.WriteCommentLine("C Refine3D run date and time:              " + my_time_in.FormatISOCombined(' '));
@@ -320,6 +337,8 @@ bool Reconstruct3DApp::DoCalculation()
 	output_statistics_file.WriteCommentLine("C Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
 	output_statistics_file.WriteCommentLine("C Beam tilt in x (mrad):                   " + wxString::Format("%f", beam_tilt_x));
 	output_statistics_file.WriteCommentLine("C Beam tilt in y (mrad):                   " + wxString::Format("%f", beam_tilt_y));
+	output_statistics_file.WriteCommentLine("C Particle shift in x (A):                 " + wxString::Format("%f", particle_shift_x));
+	output_statistics_file.WriteCommentLine("C Particle shift in y (A):                 " + wxString::Format("%f", particle_shift_y));
 	output_statistics_file.WriteCommentLine("C Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
 	output_statistics_file.WriteCommentLine("C Inner mask radius (A):                   " + wxString::Format("%f", inner_mask_radius));
 	output_statistics_file.WriteCommentLine("C Outer mask radius (A):                   " + wxString::Format("%f", outer_mask_radius));
@@ -346,7 +365,7 @@ bool Reconstruct3DApp::DoCalculation()
 	beam_tilt_x /= 1000.0f;
 	beam_tilt_y /= 1000.0f;
 
-	original_box_size = input_file.ReturnXSize();
+	original_box_size = input_stack.ReturnXSize();
 	// If resolution limit higher that Nyquist, do not do binning
 	if (resolution_limit_rec < 2.0 * pixel_size) resolution_limit_rec = 0.0;
 	if (resolution_limit_ref < 2.0 * pixel_size) resolution_limit_ref = 0.0;
@@ -393,13 +412,13 @@ bool Reconstruct3DApp::DoCalculation()
 	}
 
 	Particle input_particle(box_size, box_size);
-	input_particle.AllocateCTFImage(box_size, box_size);
-	if (use_input_reconstruction) unmasked_image.Allocate(box_size, box_size, true);
-	current_ctf_image.Allocate(original_box_size, original_box_size, false);
-	current_beamtilt_image.Allocate(original_box_size, original_box_size, false);
-	temp_image.Allocate(original_box_size, original_box_size, true);
-	temp3_image.Allocate(original_box_size, original_box_size, false);
-	if (resolution_limit_rec != 0.0 && crop_images) temp2_image.Allocate(intermediate_box_size, intermediate_box_size, true);
+//	input_particle.AllocateCTFImage(box_size, box_size);
+//	if (use_input_reconstruction) unmasked_image.Allocate(box_size, box_size, true);
+//	current_ctf_image.Allocate(original_box_size, original_box_size, false);
+//	current_beamtilt_image.Allocate(original_box_size, original_box_size, false);
+//	temp_image_local.Allocate(original_box_size, original_box_size, true);
+	sum_power.Allocate(original_box_size, original_box_size, false);
+//	if (resolution_limit_rec != 0.0 && crop_images) temp2_image_local.Allocate(intermediate_box_size, intermediate_box_size, true);
 	float input_parameters[input_particle.number_of_parameters];
 	float parameter_average[input_particle.number_of_parameters];
 	float parameter_variance[input_particle.number_of_parameters];
@@ -408,7 +427,7 @@ bool Reconstruct3DApp::DoCalculation()
 	ZeroFloatArray(parameter_variance, input_particle.number_of_parameters);
 
 // Read whole parameter file to work out average image_sigma_noise and average score
-	for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
+	for (current_image = 0; current_image < input_par_file.number_of_lines; current_image++)
 	{
 		input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		for (i = 0; i < input_particle.number_of_parameters; i++)
@@ -445,6 +464,8 @@ bool Reconstruct3DApp::DoCalculation()
 
 	wxPrintf("\nNumber of particles to reconstruct = %i, average sigma noise = %f, average score = %f\n", images_to_process, parameter_average[14], parameter_average[15]);
 	wxPrintf("Box size for reconstruction = %i, binning factor = %f\n", box_size, binning_factor);
+	if (rotational_blurring) wxPrintf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 4.0f) * 4.0f * box_size * box_size * box_size + (12.0f + 360.0 / std::max(2.0f * rad_2_deg(pixel_size / outer_mask_radius), 5.0f)) * 4.0f * box_size * box_size) / 1024.0f / 1024.0f / 1024.0f);
+	else wxPrintf("Memory required for calculation = %g GB\n", ((3.0f * max_threads + 3.0f) * 4.0f * box_size * box_size * box_size + 12.0f * 4.0f * box_size * box_size ) / 1024.0f / 1024.0f / 1024.0f);
 
 	if (images_to_process == 0)
 	{
@@ -460,6 +481,10 @@ bool Reconstruct3DApp::DoCalculation()
 		return true;
 	}
 
+	if (! split_even_odd) fsc_particle_repeat = myroundint((input_par_file.ReturnMax(0) - input_par_file.ReturnMin(0) + 1.0) / 100.0);
+	if (fsc_particle_repeat > images_to_process) fsc_particle_repeat = images_to_process;
+	if (fsc_particle_repeat % 2 != 0) fsc_particle_repeat++;
+
 	if (2.0 * outer_mask_in_pixels + mask_falloff / original_pixel_size > 0.95 * original_box_size)
 	{
 		outer_mask_in_pixels = 0.95 * original_box_size / 2.0 - mask_falloff / 2.0 / original_pixel_size;
@@ -468,36 +493,82 @@ bool Reconstruct3DApp::DoCalculation()
 	if (normalize_particles)
 	{
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
-		percentage = float(max_samples) / float(images_to_process);
-		temp3_image.SetToConstant(0.0);
+		random_reset_count = std::max(random_reset_count, max_threads);
+		percentage = float(max_samples) / float(images_to_process) / random_reset_count;
+		sum_power.SetToConstant(0.0);
 		number_of_blank_edges = 0;
-		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((temp3_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((temp3_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-		my_progress = new ProgressBar(images_for_noise_power);
-		for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
+		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+		if (is_running_locally == true) my_progress = new ProgressBar(images_for_noise_power / max_threads);
+		current_image = 0;
+		random_reset_counter = 0;
+
+		#pragma omp parallel num_threads(max_threads) default(none) shared(input_par_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, \
+			outer_mask_radius, pixel_size, mask_falloff, number_of_blank_edges, sum_power, current_image, global_random_number_generator, random_reset_count, random_reset_counter, \
+			outer_mask_in_pixels) \
+		private(current_image_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp3_image_local, sum_power_local, input_image_local, temp_float, file_read)
 		{
-			input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
+
+		image_counter = 0;
+		number_of_blank_edges_local = 0;
+		input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		temp3_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		sum_power_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+		sum_power_local.SetToConstant(0.0f);
+		file_read = false;
+
+		#pragma omp for schedule(static,1)
+		for (current_image_local = 0; current_image_local < input_par_file.number_of_lines; current_image_local++)
+		{
+			#pragma omp critical
+			{
+				input_par_file.ReadLine(input_parameters, current_image);
+				current_image++;
+				if (input_parameters[0] >= first_particle && input_parameters[0] <= last_particle)
+				{
+					file_read = false;
+					if (random_reset_counter == 0) temp_float = global_random_number_generator.GetUniformRandom();
+					if ((temp_float >= 1.0 - 2.0f * percentage) || (random_reset_counter != 0))
+					{
+						random_reset_counter++;
+						if (random_reset_counter == random_reset_count) random_reset_counter = 0;
+						input_image_local.ReadSlice(&input_stack, int(input_parameters[0] + 0.5f));
+						file_read = true;
+					}
+				}
+			}
 			if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 			image_counter++;
-			my_progress->Update(image_counter);
-			if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percentage)) continue;
-			current_ctf_image.ReadSlice(&input_file, int(input_parameters[0] + 0.5));
-			if (exclude_blank_edges && current_ctf_image.ContainsBlankEdges(outer_mask_radius / original_pixel_size)) {number_of_blank_edges++; continue;}
-			variance = current_ctf_image.ReturnVarianceOfRealValues(outer_mask_radius / original_pixel_size, 0.0, 0.0, 0.0, true);
-			if (variance == 0.0) continue;
-			current_ctf_image.MultiplyByConstant(1.0 / sqrtf(variance));
-			current_ctf_image.CosineMask(outer_mask_in_pixels, mask_falloff / original_pixel_size, true);
-			current_ctf_image.ForwardFFT();
-			temp_image.CopyFrom(&current_ctf_image);
-			temp_image.ConjugateMultiplyPixelWise(current_ctf_image);
-			temp3_image.AddImage(&temp_image);
+			if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
+			if (! file_read) continue;
+			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(outer_mask_radius / pixel_size)) {number_of_blank_edges_local++; continue;}
+			variance = input_image_local.ReturnVarianceOfRealValues(outer_mask_radius / pixel_size, 0.0f, 0.0f, 0.0f, true);
+			if (variance == 0.0f) continue;
+			input_image_local.MultiplyByConstant(1.0f / sqrtf(variance));
+			input_image_local.CosineMask(outer_mask_in_pixels, mask_falloff / pixel_size, true);
+			input_image_local.ForwardFFT();
+			temp3_image_local.CopyFrom(&input_image_local);
+			temp3_image_local.ConjugateMultiplyPixelWise(input_image_local);
+			sum_power_local.AddImage(&temp3_image_local);
 		}
-		delete my_progress;
-		temp3_image.Compute1DRotationalAverage(noise_power_spectrum, number_of_terms);
+
+		#pragma omp critical
+		{
+			number_of_blank_edges += number_of_blank_edges_local;
+			sum_power.AddImage(&sum_power_local);
+		}
+
+		input_image_local.Deallocate();
+		sum_power_local.Deallocate();
+		temp3_image_local.Deallocate();
+
+		} // end omp section
+
+		if (is_running_locally == true) delete my_progress;
+		sum_power.Compute1DRotationalAverage(noise_power_spectrum, number_of_terms);
 		noise_power_spectrum.SquareRoot();
 		noise_power_spectrum.Reciprocal();
 
-		input_par_file.Rewind();
 		if (exclude_blank_edges)
 		{
 			wxPrintf("\nImages with blank edges excluded from noise power calculation = %i\n", number_of_blank_edges);
@@ -507,8 +578,8 @@ bool Reconstruct3DApp::DoCalculation()
 	if (use_input_reconstruction)
 	{
 		input_3d.InitWithDimensions(original_box_size, original_box_size, original_box_size, pixel_size, my_symmetry);
-		projection_image.Allocate(original_box_size, original_box_size, false);
-		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
+//		projection_image.Allocate(original_box_size, original_box_size, false);
+//		if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
 		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
 		// Check that the input 3D map has reasonable density values
 //		float *temp_3d = new float [int(input_3d.density_map.number_of_real_space_pixels / 10.0 + input_3d.density_map.logical_x_dimension)];
@@ -535,7 +606,7 @@ bool Reconstruct3DApp::DoCalculation()
 		if (padding != 1.0)
 		{
 			input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
-			padded_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+//			padded_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 		}
 		input_3d.mask_radius = outer_mask_radius;
 		if (input_3d.mask_radius > input_3d.density_map.physical_address_of_box_center_x * pixel_size- mask_falloff) input_3d.mask_radius = input_3d.density_map.physical_address_of_box_center_x * pixel_size- mask_falloff;
@@ -546,31 +617,91 @@ bool Reconstruct3DApp::DoCalculation()
 		if (rotational_blurring)
 		{
 			padded_box_size = int(powf(2.0, float(padding_2d)) + 0.5) * box_size;
-			padded_image.Allocate(padded_box_size, padded_box_size, true);
+//			padded_image.Allocate(padded_box_size, padded_box_size, true);
 
 			psi_step = 2.0 * rad_2_deg(pixel_size / outer_mask_radius);
-			if (psi_step < 5.0) psi_step = 15.0;
+			if (psi_step < 5.0) psi_step = 5.0;
 			number_of_rotations = int(360.0 / psi_step + 0.5);
 			if (number_of_rotations % 2 == 0) number_of_rotations--;
 			psi_step = 360.0 / number_of_rotations;
 	//		psi_step = 2.0;
 			psi_start = - (number_of_rotations - 1) / 2.0 * psi_step;
 
-			rotation_cache = new Image [number_of_rotations];
-			for (i = 0; i < number_of_rotations; i++)
-			{
-				rotation_cache[i].Allocate(box_size, box_size, false);
-			}
+//			rotation_cache = new Image [number_of_rotations];
+//			for (i = 0; i < number_of_rotations; i++)
+//			{
+//				rotation_cache[i].Allocate(box_size, box_size, false);
+//			}
 			wxPrintf("\nUsing %i rotations for image blurring with angular step %g\n", number_of_rotations, psi_step);
 		}
 	}
 
 	wxPrintf("\nCalculating reconstruction...\n\n");
-	my_progress = new ProgressBar(images_to_process);
-	image_counter = 0;
-	for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
+	images_to_process_per_thread = std::max(images_to_process / max_threads, 4);
+	if (is_running_locally == true) my_progress = new ProgressBar(images_to_process_per_thread);
+	current_image = 0;
+
+	#pragma omp parallel num_threads(max_threads) default(none) shared(input_3d, input_par_file, input_stack, resolution_limit_rec, original_box_size, box_size, \
+		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, crop_images, symmetry_weight, score_threshold, use_input_reconstruction, \
+		voltage_kV, spherical_aberration_mm, amplitude_contrast, pixel_size, my_progress, outer_mask_radius, mask_falloff, current_image, padded_box_size, binning_factor, \
+		rotational_blurring, number_of_rotations, psi_step, psi_start, smoothing_factor, intermediate_box_size, original_pixel_size, calculate_complex_ctf, parameter_average, \
+		parameter_variance, fsc_particle_repeat, score_weight_conversion, my_symmetry, correct_ewald_sphere, my_reconstruction_1, my_reconstruction_2, center_mass, \
+		images_to_process_per_thread, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y) \
+	private(i, j, image_counter, input_particle, current_image_local, input_parameters, temp_float, input_ctf, variance, average, current_ctf, \
+		input_image_local, projection_image, padded_projection_image, temp3_image_local, padded_image, cropped_projection_image, temp_image_local, temp2_image_local, \
+		current_ctf_image, current_beamtilt_image, unmasked_image, ssq_X, psi, rotation_angle, rotation_cache)
+	{ // for omp
+
+	input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+	projection_image.Allocate(original_box_size, original_box_size, false);
+	temp3_image_local.Allocate(original_box_size, original_box_size, false);
+	temp_image_local.Allocate(original_box_size, original_box_size, true);
+	if (resolution_limit_rec != 0.0 || crop_images)
 	{
-		input_par_file.ReadLine(input_parameters);
+		cropped_projection_image.Allocate(box_size, box_size, false);
+		temp2_image_local.Allocate(intermediate_box_size, intermediate_box_size, true);
+	}
+	if (padding != 1.0) padded_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	if (rotational_blurring && use_input_reconstruction)
+	{
+		padded_image.Allocate(padded_box_size, padded_box_size, true);
+		rotation_cache = new Image [number_of_rotations];
+		for (i = 0; i < number_of_rotations; i++)
+		{
+			rotation_cache[i].Allocate(box_size, box_size, false);
+		}
+	}
+	if (use_input_reconstruction) unmasked_image.Allocate(box_size, box_size, true);
+	current_ctf_image.Allocate(original_box_size, original_box_size, false);
+	current_beamtilt_image.Allocate(original_box_size, original_box_size, false);
+	input_particle.Allocate(box_size, box_size);
+	input_particle.SetParameterStatistics(parameter_average, parameter_variance);
+	input_particle.mask_radius = outer_mask_radius;
+	input_particle.mask_falloff = mask_falloff;
+	Reconstruct3D my_reconstruction_1_local(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry, correct_ewald_sphere);
+	Reconstruct3D my_reconstruction_2_local(box_size, box_size, box_size, pixel_size, parameter_average[12], parameter_average[15], score_weight_conversion, my_symmetry, correct_ewald_sphere);
+	my_reconstruction_1_local.original_x_dimension = original_box_size;
+	my_reconstruction_1_local.original_y_dimension = original_box_size;
+	my_reconstruction_1_local.original_z_dimension = original_box_size;
+	my_reconstruction_1_local.original_pixel_size = original_pixel_size;
+	my_reconstruction_1_local.center_mass = center_mass;
+	my_reconstruction_2_local.original_x_dimension = original_box_size;
+	my_reconstruction_2_local.original_y_dimension = original_box_size;
+	my_reconstruction_2_local.original_z_dimension = original_box_size;
+	my_reconstruction_2_local.original_pixel_size = original_pixel_size;
+	my_reconstruction_2_local.center_mass = center_mass;
+
+	image_counter = 0;
+
+	#pragma omp for schedule(static,1)
+	for (current_image_local = 0; current_image_local < input_par_file.number_of_lines; current_image_local++)
+	{
+		#pragma omp critical
+		{
+			input_par_file.ReadLine(input_parameters, current_image);
+			current_image++;
+			if (input_parameters[0] >= first_particle && input_parameters[0] <= last_particle) input_image_local.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
+		}
 		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 
 		if (input_parameters[12] == 0.0 || input_parameters[15] < score_threshold || input_parameters[7] < 0.0)
@@ -588,15 +719,16 @@ bool Reconstruct3DApp::DoCalculation()
 		}
 
 		image_counter++;
+		temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		input_particle.location_in_stack = int(input_parameters[0] + 0.5);
 		input_particle.pixel_size = pixel_size;
 		input_particle.is_masked = false;
 
-		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, calculate_complex_ctf);
+		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y, calculate_complex_ctf);
 
 		if (use_input_reconstruction)
 		{
-			input_particle.alignment_parameters.Init(input_parameters[3], input_parameters[2], input_parameters[1], 0.0, 0.0);
+			input_particle.alignment_parameters.Init(input_parameters[1], input_parameters[2], input_parameters[3], 0.0, 0.0);
 			if (padding != 1.0)
 			{
 				input_3d.density_map.ExtractSlice(padded_projection_image, input_particle.alignment_parameters);
@@ -614,13 +746,13 @@ bool Reconstruct3DApp::DoCalculation()
 		}
 		else
 		{
-			input_particle.alignment_parameters.Init(input_parameters[3], input_parameters[2], input_parameters[1], input_parameters[4], input_parameters[5]);
+			input_particle.alignment_parameters.Init(input_parameters[1], input_parameters[2], input_parameters[3], input_parameters[4], input_parameters[5]);
 		}
 
 //		if (crop_images || binning_factor != 1.0)
 		if (use_input_reconstruction)
 		{
-			input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, original_pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y);
+			input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 01.0, 0.0, 0.0, original_pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 			if (input_ctf.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false)
 			// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 			{
@@ -636,48 +768,49 @@ bool Reconstruct3DApp::DoCalculation()
 		// Assume square images
 		if (crop_images)
 		{
-			temp_image.ReadSlice(&input_file, input_particle.location_in_stack);
-			if (invert_contrast) temp_image.InvertRealValues();
+//			temp_image_local.ReadSlice(&input_stack, input_particle.location_in_stack);
+			temp_image_local.CopyFrom(&input_image_local);
+			if (invert_contrast) temp_image_local.InvertRealValues();
 			if (normalize_particles)
 			{
-				temp_image.ForwardFFT();
-				temp_image.ApplyCurveFilter(&noise_power_spectrum);
+				temp_image_local.ForwardFFT();
+				temp_image_local.ApplyCurveFilter(&noise_power_spectrum);
 				if (use_input_reconstruction)
 				{
-					temp_image.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
-					temp_image.PhaseFlipPixelWise(current_ctf_image);
-					temp_image.ConjugateMultiplyPixelWise(current_beamtilt_image);
+					temp_image_local.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
+					temp_image_local.PhaseFlipPixelWise(current_ctf_image);
+					temp_image_local.ConjugateMultiplyPixelWise(current_beamtilt_image);
 				}
-				temp_image.BackwardFFT();
+				temp_image_local.BackwardFFT();
 				// Normalize background variance and average
-				variance = temp_image.ReturnVarianceOfRealValues(temp_image.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
-				average = temp_image.ReturnAverageOfRealValues(temp_image.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
-				temp_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+				variance = temp_image_local.ReturnVarianceOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
+				average = temp_image_local.ReturnAverageOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
+				temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			}
 			else
 			if (use_input_reconstruction)
 			{
-				temp_image.ForwardFFT();
-				temp_image.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
-				temp_image.PhaseFlipPixelWise(current_ctf_image);
-				temp_image.ConjugateMultiplyPixelWise(current_beamtilt_image);
-				if (binning_factor == 1.0) temp_image.BackwardFFT();
+				temp_image_local.ForwardFFT();
+				temp_image_local.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
+				temp_image_local.PhaseFlipPixelWise(current_ctf_image);
+				temp_image_local.ConjugateMultiplyPixelWise(current_beamtilt_image);
+				if (binning_factor == 1.0) temp_image_local.BackwardFFT();
 			}
 			if (binning_factor != 1.0)
 			{
 				if (use_input_reconstruction)
 				{
-					if (normalize_particles) temp_image.ForwardFFT();
-					temp_image.ClipInto(&temp2_image);
-					temp2_image.BackwardFFT();
-					temp2_image.ClipInto(input_particle.particle_image);
+					if (normalize_particles) temp_image_local.ForwardFFT();
+					temp_image_local.ClipInto(&temp2_image_local);
+					temp2_image_local.BackwardFFT();
+					temp2_image_local.ClipInto(input_particle.particle_image);
 					unmasked_image.CopyFrom(input_particle.particle_image);
 					input_particle.CosineMask(false, true, 0.0);
 					input_particle.ForwardFFT();
 					unmasked_image.ForwardFFT();
-					projection_image.ClipInto(&temp2_image);
-					temp2_image.BackwardFFT();
-					temp2_image.ClipInto(&cropped_projection_image);
+					projection_image.ClipInto(&temp2_image_local);
+					temp2_image_local.BackwardFFT();
+					temp2_image_local.ClipInto(&cropped_projection_image);
 					cropped_projection_image.ForwardFFT();
 					cropped_projection_image.SwapRealSpaceQuadrants();
 					cropped_projection_image.MultiplyPixelWiseReal(*input_particle.ctf_image, true);
@@ -720,10 +853,10 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 				else
 				{
-					if (normalize_particles) temp_image.ForwardFFT();
-					temp_image.ClipInto(&temp2_image);
-					temp2_image.BackwardFFT();
-					temp2_image.ClipInto(input_particle.particle_image);
+					if (normalize_particles) temp_image_local.ForwardFFT();
+					temp_image_local.ClipInto(&temp2_image_local);
+					temp2_image_local.BackwardFFT();
+					temp2_image_local.ClipInto(input_particle.particle_image);
 					input_particle.ForwardFFT();
 					input_particle.PhaseFlipImage();
 					input_particle.BeamTiltMultiplyImage();
@@ -733,7 +866,7 @@ bool Reconstruct3DApp::DoCalculation()
 			{
 				if (use_input_reconstruction)
 				{
-					temp_image.ClipInto(input_particle.particle_image);
+					temp_image_local.ClipInto(input_particle.particle_image);
 					unmasked_image.CopyFrom(input_particle.particle_image);
 					input_particle.CosineMask(false, true, 0.0);
 					input_particle.ForwardFFT();
@@ -780,7 +913,7 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 				else
 				{
-					temp_image.ClipInto(input_particle.particle_image);
+					temp_image_local.ClipInto(input_particle.particle_image);
 					input_particle.ForwardFFT();
 					input_particle.PhaseFlipImage();
 					input_particle.BeamTiltMultiplyImage();
@@ -791,41 +924,42 @@ bool Reconstruct3DApp::DoCalculation()
 		{
 			if (binning_factor != 1.0)
 			{
-				temp_image.ReadSlice(&input_file, input_particle.location_in_stack);
-				if (invert_contrast) temp_image.InvertRealValues();
+//				temp_image_local.ReadSlice(&input_stack, input_particle.location_in_stack);
+				temp_image_local.CopyFrom(&input_image_local);
+				if (invert_contrast) temp_image_local.InvertRealValues();
 				if (normalize_particles)
 				{
-					temp_image.ForwardFFT();
-					temp_image.ApplyCurveFilter(&noise_power_spectrum);
+					temp_image_local.ForwardFFT();
+					temp_image_local.ApplyCurveFilter(&noise_power_spectrum);
 					if (use_input_reconstruction)
 					{
-						temp_image.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
-						temp_image.PhaseFlipPixelWise(current_ctf_image);
-						temp_image.ConjugateMultiplyPixelWise(current_beamtilt_image);
+						temp_image_local.PhaseShift(- input_parameters[4] / original_pixel_size, - input_parameters[5] / original_pixel_size);
+						temp_image_local.PhaseFlipPixelWise(current_ctf_image);
+						temp_image_local.ConjugateMultiplyPixelWise(current_beamtilt_image);
 					}
-					temp_image.BackwardFFT();
+					temp_image_local.BackwardFFT();
 					// Normalize background variance and average
-					variance = temp_image.ReturnVarianceOfRealValues(temp_image.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
-					average = temp_image.ReturnAverageOfRealValues(temp_image.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
-					temp_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+					variance = temp_image_local.ReturnVarianceOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
+					average = temp_image_local.ReturnAverageOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
+					temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 				}
 				else
 				if (use_input_reconstruction)
 				{
-					temp_image.ForwardFFT();
-					temp_image.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
-					temp_image.PhaseFlipPixelWise(current_ctf_image);
-					temp_image.ConjugateMultiplyPixelWise(current_beamtilt_image);
-					temp_image.BackwardFFT();
+					temp_image_local.ForwardFFT();
+					temp_image_local.PhaseShift(- input_parameters[4] / - original_pixel_size, - input_parameters[5] / - original_pixel_size);
+					temp_image_local.PhaseFlipPixelWise(current_ctf_image);
+					temp_image_local.ConjugateMultiplyPixelWise(current_beamtilt_image);
+					temp_image_local.BackwardFFT();
 				}
 				if (use_input_reconstruction)
 				{
-					temp3_image.CopyFrom(&temp_image);
-					temp_image.CosineMask(outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size, false, true, 0.0);
-					temp_image.ForwardFFT();
-					temp3_image.ForwardFFT();
-					temp_image.ClipInto(input_particle.particle_image);
-					temp3_image.ClipInto(&unmasked_image);
+					temp3_image_local.CopyFrom(&temp_image_local);
+					temp_image_local.CosineMask(outer_mask_radius / original_pixel_size, mask_falloff / original_pixel_size, false, true, 0.0);
+					temp_image_local.ForwardFFT();
+					temp3_image_local.ForwardFFT();
+					temp_image_local.ClipInto(input_particle.particle_image);
+					temp3_image_local.ClipInto(&unmasked_image);
 					projection_image.ClipInto(&cropped_projection_image);
 					cropped_projection_image.MultiplyPixelWiseReal(*input_particle.ctf_image, true);
 					// Multiply by binning_factor to scale noise variance to 1 in binned image
@@ -867,15 +1001,16 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 				else
 				{
-					temp_image.ForwardFFT();
-					temp_image.ClipInto(input_particle.particle_image);
+					temp_image_local.ForwardFFT();
+					temp_image_local.ClipInto(input_particle.particle_image);
 					input_particle.PhaseFlipImage();
 					input_particle.BeamTiltMultiplyImage();
 				}
 			}
 			else
 			{
-				input_particle.particle_image->ReadSlice(&input_file, input_particle.location_in_stack);
+//				input_particle.particle_image->ReadSlice(&input_stack, input_particle.location_in_stack);
+				input_particle.particle_image->CopyFrom(&input_image_local);
 				if (invert_contrast) input_particle.particle_image->InvertRealValues();
 				if (normalize_particles)
 				{
@@ -960,7 +1095,6 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.sigma_noise = input_parameters[14];
 		if (input_particle.sigma_noise <= 0.0) input_particle.sigma_noise = parameter_average[14];
 
-//		if (current_image % 2 == 0)
 		if (int(input_parameters[0] + 0.5) % fsc_particle_repeat < fsc_particle_repeat / 2)
 		{
 			input_particle.insert_even = true;
@@ -977,7 +1111,7 @@ bool Reconstruct3DApp::DoCalculation()
 //		input_particle.particle_image->QuickAndDirtyWriteSlice("blurred.mrc", image_counter);
 		if (input_particle.insert_even)
 		{
-			my_reconstruction_2.InsertSliceWithCTF(input_particle, symmetry_weight);
+			my_reconstruction_2_local.InsertSliceWithCTF(input_particle, symmetry_weight);
 		}
 		else
 		{
@@ -985,7 +1119,7 @@ bool Reconstruct3DApp::DoCalculation()
 //			for (i = 0; i < input_particle.ctf_image->real_memory_allocated / 2; i++) input_particle.ctf_image->complex_values[i] = 1.0f + I * 0.0f;
 //			wxPrintf("2D central pixel = %g\n", std::abs(input_particle.particle_image->complex_values[0]));
 //			wxPrintf("2D central CTF   = %g\n", std::abs(input_particle.ctf_image->complex_values[0]));
-			my_reconstruction_1.InsertSliceWithCTF(input_particle, symmetry_weight);
+			my_reconstruction_1_local.InsertSliceWithCTF(input_particle, symmetry_weight);
 //			wxPrintf("3D central pixel = %g ratio = %g\n", std::abs(my_reconstruction_1.image_reconstruction.complex_values[0]), std::abs(my_reconstruction_1.image_reconstruction.complex_values[0])/std::abs(input_particle.particle_image->complex_values[0]));
 //			wxPrintf("3D central CTF   = %g\n", std::abs(my_reconstruction_1.ctf_reconstruction[0]));
 		}
@@ -998,14 +1132,46 @@ bool Reconstruct3DApp::DoCalculation()
 			AddJobToResultQueue(temp_result);
 			//wxPrintf("Refine3D : Adding job to job queue..\n");
 		}
-		my_progress->Update(image_counter);
+
+		if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(std::min(images_to_process_per_thread, image_counter));
 	}
-	delete my_progress;
+
+	#pragma omp critical
+	{
+		my_reconstruction_1 += my_reconstruction_1_local;
+		my_reconstruction_2 += my_reconstruction_2_local;
+	}
+
+	input_image_local.Deallocate();
+	projection_image.Deallocate();
+	temp3_image_local.Deallocate();
+	temp_image_local.Deallocate();
+	if (resolution_limit_rec != 0.0 || crop_images)
+	{
+		cropped_projection_image.Deallocate();
+		temp2_image_local.Deallocate();
+	}
+	if (padding != 1.0) padded_projection_image.Deallocate();
+	if (rotational_blurring && use_input_reconstruction)
+	{
+		padded_image.Deallocate();
+		delete [] rotation_cache;
+	}
+	if (use_input_reconstruction) unmasked_image.Deallocate();
+	current_ctf_image.Deallocate();
+	current_beamtilt_image.Deallocate();
+	input_particle.Deallocate();
+	my_reconstruction_1_local.FreeMemory();
+	my_reconstruction_2_local.FreeMemory();
+
+	} // end omp section
+
+	if (is_running_locally == true) delete my_progress;
 
 	if (use_input_reconstruction)
 	{
 		delete input_3d_file;
-		if (rotational_blurring) delete [] rotation_cache;
+//		if (rotational_blurring) delete [] rotation_cache;
 	}
 
 	if (dump_arrays)

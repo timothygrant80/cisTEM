@@ -246,11 +246,11 @@ void Particle::CenterInCorner()
 	is_centered_in_box = false;
 }
 
-void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y)
+void Particle::InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y, float particle_shift_x, float particle_shift_y)
 {
 //	MyDebugAssertTrue(! ctf_is_initialized, "CTF already initialized");
 
-	ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, phase_shift, beam_tilt_x, beam_tilt_y);
+	ctf_parameters.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.0, 0.0, pixel_size, phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 	ctf_is_initialized = true;
 }
 
@@ -262,21 +262,21 @@ void Particle::SetDefocus(float defocus_1, float defocus_2, float astigmatism_an
 	ctf_parameters.SetAdditionalPhaseShift(phase_shift);
 }
 
-void Particle::SetBeamTilt(float beam_tilt_x, float beam_tilt_y)
+void Particle::SetBeamTilt(float beam_tilt_x, float beam_tilt_y, float particle_shift_x, float particle_shift_y)
 {
 	MyDebugAssertTrue(ctf_is_initialized, "CTF not initialized");
 
-	ctf_parameters.SetBeamTilt(beam_tilt_x, beam_tilt_y);
+	ctf_parameters.SetBeamTilt(beam_tilt_x, beam_tilt_y, particle_shift_x / pixel_size, particle_shift_y / pixel_size);
 }
 
-void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y, bool calculate_complex_ctf)
+void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y, float particle_shift_x, float particle_shift_y, bool calculate_complex_ctf)
 {
 	MyDebugAssertTrue(ctf_image->is_in_memory, "ctf_image memory not allocated");
 	MyDebugAssertTrue(beamtilt_image->is_in_memory, "beamtilt_image memory not allocated");
 	MyDebugAssertTrue(! ctf_image->is_in_real_space, "ctf_image not in Fourier space");
 	MyDebugAssertTrue(! beamtilt_image->is_in_real_space, "beamtilt_image not in Fourier space");
 
-	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift, beam_tilt_x, beam_tilt_y);
+	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 	complex_ctf = calculate_complex_ctf;
 	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false || ! ctf_image_calculated)
 	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
@@ -602,7 +602,234 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference)
+void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar)
+{
+	int i;
+	int beamtilt_i;
+	int beamtilt_n;
+	int beamtilt_azimuth_i;
+	int beamtilt_azimuth_n;
+	int particle_shift_i;
+	int particle_shift_n;
+	int particle_shift_azimuth_i;
+	int particle_shift_azimuth_n;
+	int counter;
+	float beamtilt_azimuth;
+	float best_beamtilt_azimuth;
+	float beamtilt_azimuth_offset = 0.0f;
+	float best_azimuth;
+	float beamtilt;
+	float best_tilt;
+	float best_shift;
+	float azimuth_cos, azimuth_sin;
+	float beamtilt_step = 0.0005f;
+	float beamtilt_max = 0.005f;
+	float beamtilt_offset = 0.0f;
+	float beamtilt_azimuth_step = PI / 30.0f;
+	float particle_shift_step = 0.1;
+	float particle_shift_max = 1.0;
+	float particle_shift_offset;
+	float particle_shift;
+	float particle_shift_azimuth;
+	float particle_shift_azimuth_step = 0.05;
+	float particle_shift_azimuth_offset;
+	float best_particle_shift_azimuth;
+	float score;
+	float best_score;
+
+	AnglesAndShifts rotation_matrix;
+	ProgressBar *my_progress;
+
+	Image *phase_difference_spectrum = new Image;
+	phase_difference_spectrum->Allocate(sum_of_phase_differences.logical_x_dimension, sum_of_phase_differences.logical_y_dimension, false);
+	Image *beamtilt_spectrum = new Image;
+	beamtilt_spectrum->Allocate(sum_of_phase_differences.logical_x_dimension, sum_of_phase_differences.logical_y_dimension, false);
+	Image *temp_image = new Image;
+	temp_image->Allocate(sum_of_phase_differences.logical_x_dimension, sum_of_phase_differences.logical_y_dimension, false);
+
+	// Find beam tilt direction
+	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true);
+	phase_difference_spectrum->Binarise(0.0f);
+	temp_image->CopyFrom(phase_difference_spectrum);
+	temp_image->ApplyMirrorAlongY();
+
+	beamtilt_azimuth_n = myround(PI/beamtilt_azimuth_step);
+	best_score = std::numeric_limits<float>::max();
+	for (i = 0; i < 3; i++)
+	{
+		for (beamtilt_azimuth_i = - beamtilt_azimuth_n; beamtilt_azimuth_i <= beamtilt_azimuth_n; beamtilt_azimuth_i++)
+		{
+			beamtilt_azimuth = beamtilt_azimuth_i * beamtilt_azimuth_step + beamtilt_azimuth_offset;
+			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(beamtilt_azimuth));
+			temp_image->Rotate2D(*beamtilt_spectrum, rotation_matrix, 0.45 * beamtilt_spectrum->logical_x_dimension);
+			beamtilt_spectrum->SubtractImage(phase_difference_spectrum);
+//			beamtilt_spectrum->CosineMask(0.45 * beamtilt_spectrum->logical_x_dimension, mask_falloff / pixel_size);
+			beamtilt_spectrum->real_values[0] = 0.0f;
+			score = beamtilt_spectrum->ReturnSumOfSquares(0.45 * beamtilt_spectrum->logical_x_dimension);
+			if (score < best_score)
+			{
+				best_score = score;
+				best_azimuth = beamtilt_azimuth;
+				// delete 1
+//				wxPrintf("score, azimuth = %g %g\n", best_score, best_azimuth / 2.0f);
+			}
+		}
+		beamtilt_azimuth_n = 30;
+		beamtilt_azimuth_step /= 30.0;
+		beamtilt_azimuth_offset = best_azimuth;
+	}
+	best_azimuth /= 2.0f;
+
+	// Find beam tilt angle
+//	input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, output_parameters[8], output_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
+	beamtilt_n = myround(beamtilt_max / beamtilt_step);
+	particle_shift_n = myround(particle_shift_max / particle_shift_step);
+	best_score = std::numeric_limits<float>::max();
+//	phase_difference_spectrum->Binarise(0.0f);
+//	beamtilt_offset = beamtilt_n * beamtilt_step;
+	// delete 9
+//	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(&phase_difference_image, true, phase_multiplier);
+//	phase_difference_spectrum->ForwardFFT();
+//	phase_difference_spectrum->CosineMask(0.1f,0.2f);
+//	phase_difference_spectrum->CalculateDerivative(azimuth_cos, azimuth_sin);
+//	phase_difference_spectrum->BackwardFFT();
+//	phase_difference_spectrum->QuickAndDirtyWriteSlice("phase_difference_derivative.mrc", 1);
+//	phase_difference_spectrum->Binarise(0.0f);
+//	wxPrintf("P/N = %g\n", phase_difference_spectrum->ReturnAverageOfRealValues() / (1.0f - phase_difference_spectrum->ReturnAverageOfRealValues()));
+//	if (phase_difference_spectrum->ReturnAverageOfRealValues() / (1.0f - phase_difference_spectrum->ReturnAverageOfRealValues()) > 1.0f) {azimuth_cos = -azimuth_cos; azimuth_sin = -azimuth_sin;}
+	// remove to keep binarized image
+	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true, phase_multiplier);
+	phase_error_output.CopyFrom(phase_difference_spectrum);
+//	phase_difference_spectrum->WriteSlice(&ouput_phase_difference_file,1);
+	phase_difference_spectrum->Binarise(0.0f);
+	// delete 5
+//	phase_difference_spectrum->SetToConstant(1.0f);
+//	phase_difference_spectrum->CosineMask(phase_difference_spectrum->logical_x_dimension / 3.0f, 1.0f, false, true, 0.0f);
+//	phase_difference_spectrum->CalculateDerivative(azimuth_cos, azimuth_sin);
+//	phase_difference_spectrum->QuickAndDirtyWriteSlice("phase_difference_derivative.mrc",1);
+//	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(&phase_difference_image, true, phase_multiplier);
+	// delete 1
+//	beamtilt_offset = beamtilt_n * beamtilt_step / 2.0f;
+	beamtilt_azimuth_offset = best_azimuth;
+	particle_shift_azimuth_offset = best_azimuth;
+	particle_shift_azimuth_n = 0;
+	beamtilt_azimuth_n = particle_shift_azimuth_n;
+	particle_shift_offset = particle_shift_n * particle_shift_step / 2.0f;
+
+//	counter = (2 * beamtilt_azimuth_n + 1) * (2 * particle_shift_azimuth_n + 1) * (2 * beamtilt_n + 1) * (2 * particle_shift_n + 1);
+	counter = (2 * beamtilt_n + 1) * (2 * particle_shift_n + 1);
+	counter += 2 * (2 * myround(0.3f/particle_shift_azimuth_step) + 1) * 25;
+	counter += 7 * 125;
+//	counter += 2 * (2 * myround(0.3f/particle_shift_azimuth_step) + 1) * (2 * myround(0.3f/particle_shift_azimuth_step) + 1) * 25;
+//	counter += 7 * 625;
+	// delete 1
+//	wxPrintf("counter = %i\n", counter);
+	if (progress_bar) {wxPrintf("\nFitting beam tilt...\n\n"); my_progress = new ProgressBar(counter);}
+
+	counter = 0;
+	for (i = 0; i < 10; i++)
+	{
+		for (beamtilt_azimuth_i = - beamtilt_azimuth_n; beamtilt_azimuth_i <= beamtilt_azimuth_n; beamtilt_azimuth_i++)
+		{
+			beamtilt_azimuth = beamtilt_azimuth_i * beamtilt_azimuth_step + beamtilt_azimuth_offset;
+
+			for (particle_shift_azimuth_i = - particle_shift_azimuth_n; particle_shift_azimuth_i <= particle_shift_azimuth_n; particle_shift_azimuth_i++)
+			{
+				particle_shift_azimuth = particle_shift_azimuth_i * particle_shift_azimuth_step + particle_shift_azimuth_offset;
+//				wxPrintf("i = %i beamtilt_n, beamtilt_step, beamtilt_offset = %i %g %g\n", i, beamtilt_n, beamtilt_step, beamtilt_offset);
+				for (beamtilt_i = - beamtilt_n; beamtilt_i <= beamtilt_n; beamtilt_i++)
+				{
+					beamtilt = beamtilt_i * beamtilt_step + beamtilt_offset;
+
+					for (particle_shift_i = - particle_shift_n; particle_shift_i <= particle_shift_n; particle_shift_i++)
+					{
+						particle_shift = particle_shift_i * particle_shift_step + particle_shift_offset;
+
+						// delete 3
+//						beamtilt = -0.00022f;
+//						beamtilt = 0.0013f;
+//						particle_shift = 0.241454302095f;
+						input_ctf.SetBeamTilt(beamtilt * cosf(beamtilt_azimuth), - beamtilt * sinf(beamtilt_azimuth), particle_shift * cosf(particle_shift_azimuth) / pixel_size, - particle_shift * sinf(particle_shift_azimuth) / pixel_size);
+						temp_image->CalculateBeamTiltImage(input_ctf);
+						temp_image->ComputeAmplitudeSpectrumFull2D(beamtilt_spectrum, true, phase_multiplier);
+						beamtilt_spectrum->Binarise(0.0f);
+						beamtilt_spectrum->SubtractImage(phase_difference_spectrum);
+//						beamtilt_spectrum->CosineMask(pixel_size / high_resolution_limit, 2.0f / beamtilt_spectrum->logical_x_dimension);
+//						beamtilt_spectrum->complex_values[0] = 0.0f + I * 0.0f;
+//						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
+//						beamtilt_spectrum->CosineMask(pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension, 2.0f, false, true, 0.0f);
+//						beamtilt_spectrum->CosineMask(pixel_size / 10.0f * beamtilt_spectrum->logical_x_dimension, 2.0f, true, true, 0.0f);
+						beamtilt_spectrum->CosineMask(0.0f, pixel_size / 3.0f * beamtilt_spectrum->logical_x_dimension, true, true, 0.0f);
+//						if (i < 2) beamtilt_spectrum->CosineMask(0.0f, pixel_size / 3.0f * beamtilt_spectrum->logical_x_dimension, true, true, 0.0f);
+//						else beamtilt_spectrum->CosineMask(pixel_size / 6.0f * beamtilt_spectrum->logical_x_dimension, 2.0f, true, true, 0.0f);
+//						score = beamtilt_spectrum->ReturnSumOfSquares(pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
+						score = beamtilt_spectrum->ReturnSumOfSquares(0.45f * beamtilt_spectrum->logical_x_dimension);
+//						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
+//						score = beamtilt_spectrum->ReturnSumOfSquares();
+						if (score < best_score)
+						{
+							best_score = score;
+							best_beamtilt_azimuth = beamtilt_azimuth;
+							best_particle_shift_azimuth = particle_shift_azimuth;
+							best_tilt = beamtilt;
+							best_shift = particle_shift;
+							beamtilt_x = beamtilt * cosf(beamtilt_azimuth);
+							beamtilt_y = - beamtilt * sinf(beamtilt_azimuth);
+							particle_shift_x = - particle_shift * cosf(particle_shift_azimuth);
+							particle_shift_y = particle_shift * sinf(particle_shift_azimuth);
+							// delete 2
+//							wxPrintf("score, tilt, shift & azimuth = %g %g %g %g\n", best_score, 1000.0f * beamtilt, particle_shift, rad_2_deg(best_particle_shift_azimuth));
+//							wxPrintf("score, tilt & azimuth, shift & azimuth = %g %g %g %g %g\n", best_score, 1000.0f * beamtilt, rad_2_deg(best_beamtilt_azimuth), particle_shift, rad_2_deg(best_particle_shift_azimuth));
+							difference_image.CopyFrom(beamtilt_spectrum);
+							beamtilt_output.CopyFrom(temp_image);
+							// delete 6
+//							beamtilt_spectrum->ForwardFFT();
+//							beamtilt_spectrum->CosineMask(0.1f,0.2f);
+//							beamtilt_spectrum->CalculateDerivative(azimuth_cos, azimuth_sin);
+//							beamtilt_spectrum->BackwardFFT();
+//							beamtilt_spectrum->Binarise(0.0f);
+//							wxPrintf("P/N = %g\n", beamtilt_spectrum->ReturnAverageOfRealValues() / (1.0f - beamtilt_spectrum->ReturnAverageOfRealValues()));
+						}
+						counter++;
+						if (progress_bar) my_progress->Update(counter);
+					}
+				}
+			}
+		}
+		if (i == 0)
+		{
+			particle_shift_azimuth_n = myround(0.3f/particle_shift_azimuth_step);
+//			beamtilt_azimuth_n = particle_shift_azimuth_n;
+		}
+		if (i > 1)
+		{
+//			beamtilt_azimuth_n = 2;
+//			beamtilt_azimuth_step /= 2.0;
+//			beamtilt_azimuth_offset = best_beamtilt_azimuth;
+			particle_shift_azimuth_n = 2;
+			particle_shift_azimuth_step /= 2.0;
+			particle_shift_azimuth_offset = best_particle_shift_azimuth;
+		}
+		beamtilt_n = 2;
+		beamtilt_step /= 2.0;
+		beamtilt_offset = best_tilt;
+		particle_shift_n = 2;
+		particle_shift_step /= 2.0;
+		particle_shift_offset = best_shift;
+		if (i == 1) best_score = std::numeric_limits<float>::max();
+	}
+
+	temp_image->CopyFrom(&beamtilt_output);
+	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
+	difference_image.InvertRealValues();
+
+	delete phase_difference_spectrum;
+	delete beamtilt_spectrum;
+	delete temp_image;
+	if (progress_bar) delete my_progress;
+}
+
+float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 

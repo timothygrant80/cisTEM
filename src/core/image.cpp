@@ -3072,12 +3072,15 @@ void Image::CalculateBeamTiltImage(CTF &ctf_of_image, bool output_phase_shifts)
 			// Compute the square of the frequency
 			frequency_squared = powf(x_coordinate_2d, 2) + y_coord_sq;
 
+//			phase_shift = 2.0f * PI * (x_coordinate_2d * image_shift_x + y_coordinate_2d * image_shift_y);
+
 			if (output_phase_shifts)
 			{
-				phase_shift = ctf_of_image.PhaseShiftGivenBeamTilt(frequency_squared, ctf_of_image.BeamTiltGivenAzimuth(azimuth));
+				phase_shift = ctf_of_image.PhaseShiftGivenBeamTiltAndShift(frequency_squared, ctf_of_image.BeamTiltGivenAzimuth(azimuth), ctf_of_image.ParticleShiftGivenAzimuth(azimuth));
 				complex_values[pixel_counter] = phase_shift + I * 0.0f;
 			}
 			else complex_values[pixel_counter] = ctf_of_image.EvaluateBeamTiltPhaseShift(frequency_squared, azimuth);
+//			else complex_values[pixel_counter] = ctf_of_image.EvaluateBeamTiltPhaseShift(frequency_squared, azimuth) * (cosf( phase_shift ) + I * sinf( phase_shift ));
 
 			pixel_counter++;
 		}
@@ -6793,7 +6796,7 @@ void Image::ComputeAmplitudeSpectrum(Image *amplitude_spectrum, bool signed_valu
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 
-void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calculate_phases)
+void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calculate_phases, float phase_multiplier)
 {
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
 	MyDebugAssertTrue(amplitude_spectrum->is_in_memory, "Other image memory not allocated");
@@ -6832,7 +6835,12 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calcu
 					else phase = std::arg(conj(complex_values[address_in_self]));
 				}
 				else phase = 0.0f;
+				phase *= phase_multiplier;
+				phase = fmodf(phase, 2.0f * (float)PI);
+				if (phase > PI) phase -= 2.0f * PI;
+				if (phase <= -PI) phase += 2.0f * PI;
 				amplitude_spectrum->real_values[address_in_amplitude_spectrum] = phase;
+
 			}
 			address_in_amplitude_spectrum++;
 		}
@@ -8520,6 +8528,50 @@ void Image::ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, floa
 			}
 		}
 	}
+}
+
+void Image::CalculateDerivative(float direction_in_x, float direction_in_y, float direction_in_z)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+
+	int k;
+	int j;
+	int i;
+
+	long pixel_counter = 0;
+
+	float x_coord;
+	float y_coord;
+	float z_coord;
+
+	float length = sqrtf(powf(direction_in_x,2) + powf(direction_in_y,2) + powf(direction_in_z,2));
+	float unit_x = direction_in_x / length;
+	float unit_y = direction_in_y / length;
+	float unit_z = direction_in_z / length;
+
+	bool apply_fft = is_in_real_space;
+
+	if (apply_fft) ForwardFFT();
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z;
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y_coord = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y;
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x_coord = i * fourier_voxel_size_x;
+
+				complex_values[pixel_counter] *= 2.0f * PI * I * (x_coord * unit_x + y_coord * unit_y + z_coord * unit_z);
+				pixel_counter++;
+			}
+		}
+	}
+
+	if (apply_fft) BackwardFFT();
 }
 
 // If you set half_width to 1, only the central row or column of pixels will be masked. Half_width of 2 means 3 pixels will be masked.

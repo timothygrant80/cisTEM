@@ -351,6 +351,7 @@ public:
 	void SubtractSquaredImage(Image *other_image);
 	void ApplyBFactor(float bfactor);
 	void ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, float bfactor_high, float bfactor_res_limit);
+	void CalculateDerivative(float direction_in_x, float direction_in_y, float direction_in_z = 0.0f);
 	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
 	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
@@ -360,7 +361,7 @@ public:
 	void ZeroCentralPixel();
 	void CalculateCrossCorrelationImageWith(Image *other_image);
 	void SwapRealSpaceQuadrants();
-	void ComputeAmplitudeSpectrumFull2D(Image *other_image, bool calculate_phases = false);
+	void ComputeAmplitudeSpectrumFull2D(Image *other_image, bool calculate_phases = false, float phase_multiplier = 1.0f);
 	void ComputeAmplitudeSpectrum(Image *other_image, bool signed_values = false);
 	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
 	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);

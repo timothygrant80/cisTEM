@@ -15,6 +15,10 @@ CTF::CTF()
 	beam_tilt_y = 0;
 	beam_tilt = 0;
 	beam_tilt_azimuth = 0;
+	particle_shift_x = 0;
+	particle_shift_y = 0;
+	particle_shift = 0;
+	particle_shift_azimuth = 0;
 	// Fitting parameters
 	lowest_frequency_for_fitting = 0;
 	highest_frequency_for_fitting = 0;
@@ -29,7 +33,7 @@ CTF::CTF(		float wanted_acceleration_voltage, // keV
 				float wanted_spherical_aberration, // mm
 				float wanted_amplitude_contrast,
 				float wanted_defocus_1_in_angstroms, // A
-				float wanted_defocus_2_in_angstroms, //A
+				float wanted_defocus_2_in_angstroms, // A
 				float wanted_astigmatism_azimuth, // degrees
 				float wanted_lowest_frequency_for_fitting, // 1/A
 				float wanted_highest_frequency_for_fitting, // 1/A
@@ -37,23 +41,27 @@ CTF::CTF(		float wanted_acceleration_voltage, // keV
 				float pixel_size, // A
 				float wanted_additional_phase_shift_in_radians, // rad
 				float wanted_beam_tilt_x_in_radians, // rad
-				float wanted_beam_tilt_y_in_radians ) // rad
+				float wanted_beam_tilt_y_in_radians, // rad
+				float wanted_particle_shift_x_in_angstroms, // A
+				float wanted_particle_shift_y_in_angstroms) // A
 {
-	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,wanted_lowest_frequency_for_fitting,wanted_highest_frequency_for_fitting,wanted_astigmatism_tolerance,pixel_size,wanted_additional_phase_shift_in_radians,wanted_beam_tilt_x_in_radians,wanted_beam_tilt_y_in_radians);
+	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,wanted_lowest_frequency_for_fitting,wanted_highest_frequency_for_fitting,wanted_astigmatism_tolerance,pixel_size,wanted_additional_phase_shift_in_radians,wanted_beam_tilt_x_in_radians,wanted_beam_tilt_y_in_radians,wanted_particle_shift_x_in_angstroms,wanted_particle_shift_y_in_angstroms);
 }
 
 CTF::CTF(		float wanted_acceleration_voltage, // keV
 				float wanted_spherical_aberration, // mm
 				float wanted_amplitude_contrast,
 				float wanted_defocus_1_in_angstroms, // A
-				float wanted_defocus_2_in_angstroms, //A
+				float wanted_defocus_2_in_angstroms, // A
 				float wanted_astigmatism_azimuth, // degrees
 				float pixel_size, // A
 				float wanted_additional_phase_shift_in_radians, // rad
 				float wanted_beam_tilt_x_in_radians, // rad
-				float wanted_beam_tilt_y_in_radians ) // rad
+				float wanted_beam_tilt_y_in_radians, // rad
+				float wanted_particle_shift_x_in_angstroms, // A
+				float wanted_particle_shift_y_in_angstroms) // A
 {
-	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,0.0,1.0/(2.0*pixel_size),-10.0,pixel_size,wanted_additional_phase_shift_in_radians,wanted_beam_tilt_x_in_radians,wanted_beam_tilt_y_in_radians);
+	Init(wanted_acceleration_voltage,wanted_spherical_aberration,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth,0.0,1.0/(2.0*pixel_size),-10.0,pixel_size,wanted_additional_phase_shift_in_radians,wanted_beam_tilt_x_in_radians,wanted_beam_tilt_y_in_radians,wanted_particle_shift_x_in_angstroms,wanted_particle_shift_y_in_angstroms);
 }
 
 
@@ -67,14 +75,12 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
 				float wanted_spherical_aberration_in_mm, // mm
 				float wanted_amplitude_contrast,
 				float wanted_defocus_1_in_angstroms, // A
-				float wanted_defocus_2_in_angstroms, //A
+				float wanted_defocus_2_in_angstroms, // A
 				float wanted_astigmatism_azimuth_in_degrees, // degrees
 				float pixel_size_in_angstroms, // A
-				float wanted_additional_phase_shift_in_radians, // rad
-				float wanted_beam_tilt_x_in_radians, // rad
-				float wanted_beam_tilt_y_in_radians ) // rad
+				float wanted_additional_phase_shift_in_radians) // rad
 {
-	Init(wanted_acceleration_voltage_in_kV,wanted_spherical_aberration_in_mm,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth_in_degrees,0.0,1.0/(2.0*pixel_size_in_angstroms),-10.0,pixel_size_in_angstroms,wanted_additional_phase_shift_in_radians,wanted_beam_tilt_x_in_radians,wanted_beam_tilt_y_in_radians);
+	Init(wanted_acceleration_voltage_in_kV,wanted_spherical_aberration_in_mm,wanted_amplitude_contrast,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth_in_degrees,0.0,1.0/(2.0*pixel_size_in_angstroms),-10.0,pixel_size_in_angstroms,wanted_additional_phase_shift_in_radians,0.0f,0.0f,0.0f,0.0f);
 }
 
 // Initialise a CTF object
@@ -90,7 +96,9 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
 				float pixel_size_in_angstroms, // A
 				float wanted_additional_phase_shift_in_radians, // rad
 				float wanted_beam_tilt_x_in_radians, // rad
-				float wanted_beam_tilt_y_in_radians ) // rad
+				float wanted_beam_tilt_y_in_radians, // rad
+				float wanted_particle_shift_x_in_angstroms, // A
+				float wanted_particle_shift_y_in_angstroms) // A
 {
     wavelength = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
     squared_wavelength = powf(wavelength,2);
@@ -119,6 +127,17 @@ void CTF::Init(	float wanted_acceleration_voltage_in_kV, // keV
 	else
 	{
 		beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
+	}
+	particle_shift_x = wanted_particle_shift_x_in_angstroms / pixel_size_in_angstroms;
+	particle_shift_y = wanted_particle_shift_y_in_angstroms / pixel_size_in_angstroms;
+	particle_shift = sqrtf(powf(particle_shift_x, 2) + powf(particle_shift_y, 2));
+	if ( particle_shift_x == 0.0f && particle_shift_y == 0.0f )
+	{
+		particle_shift_azimuth = 0.0f;
+	}
+	else
+	{
+		particle_shift_azimuth = atan2f(particle_shift_y,particle_shift_x);
 	}
 }
 
@@ -309,10 +328,10 @@ void CTF::SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians)
 }
 
 // Set the beam tilt, given in radians
-void CTF::SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians)
+void CTF::SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels, float wanted_particle_shift_y_in_pixels)
 {
-	beam_tilt_x = fmodf(wanted_beam_tilt_x_in_radians,(float)PI);
-	beam_tilt_y = fmodf(wanted_beam_tilt_y_in_radians,(float)PI);
+	beam_tilt_x = wanted_beam_tilt_x_in_radians;
+	beam_tilt_y = wanted_beam_tilt_y_in_radians;
     beam_tilt = sqrtf(powf(beam_tilt_x, 2) + powf(beam_tilt_y, 2));
 	if ( beam_tilt_x == 0.0f && beam_tilt_y == 0.0f )
 	{
@@ -321,6 +340,17 @@ void CTF::SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_til
 	else
 	{
 		beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
+	}
+	particle_shift_x = wanted_particle_shift_x_in_pixels;
+	particle_shift_y = wanted_particle_shift_y_in_pixels;
+	particle_shift = sqrtf(powf(particle_shift_x, 2) + powf(particle_shift_y, 2));
+	if ( particle_shift_x == 0.0f && particle_shift_y == 0.0f )
+	{
+		particle_shift_azimuth = 0.0f;
+	}
+	else
+	{
+		particle_shift_azimuth = atan2f(particle_shift_y,particle_shift_x);
 	}
 }
 
@@ -371,13 +401,13 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
 {
 	MyDebugAssertTrue(squared_spatial_frequency >= 0.0f,"Bad squared spatial frequency: %f", squared_spatial_frequency);
 	// Save some time if no beam tilt
-	if (beam_tilt_x == 0.0f && beam_tilt_y == 0.0f)
+	if (beam_tilt == 0.0f && particle_shift == 0.0f)
 	{
 		return 1.0f + I * 0.0f;
 	}
 	else
 	{
-		float phase_shift = PhaseShiftGivenBeamTilt(squared_spatial_frequency, BeamTiltGivenAzimuth(azimuth));
+		float phase_shift = PhaseShiftGivenBeamTiltAndShift(squared_spatial_frequency, BeamTiltGivenAzimuth(azimuth), ParticleShiftGivenAzimuth(azimuth));
 //		wxPrintf("p1 = %g\n", phase_shift);
 //		phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
 //		if (phase_shift > PI) phase_shift -= 2.0f * PI;
@@ -390,9 +420,11 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
 }
 
 // Return the phase shift generated by beam tilt
-float CTF::PhaseShiftGivenBeamTilt(float squared_spatial_frequency, float beam_tilt)
+float CTF::PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, float beam_tilt, float particle_shift)
 {
-	float phase_shift = 2.0f * PI * spherical_aberration * squared_wavelength * squared_spatial_frequency * sqrtf(squared_spatial_frequency) * beam_tilt;
+	float spatial_frequency = sqrtf(squared_spatial_frequency);
+	float phase_shift = 2.0f * PI * spherical_aberration * squared_wavelength * squared_spatial_frequency * spatial_frequency * beam_tilt;
+	phase_shift -= 2.0f * PI * spatial_frequency * particle_shift;
 	phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
 	if (phase_shift > PI) phase_shift -= 2.0f * PI;
 	if (phase_shift <= -PI) phase_shift += 2.0f * PI;
@@ -409,6 +441,12 @@ float CTF::DefocusGivenAzimuth(float azimuth)
 float CTF::BeamTiltGivenAzimuth(float azimuth)
 {
 	return beam_tilt * cosf( azimuth - beam_tilt_azimuth );
+}
+
+// Return the effective beam tilt at the azimuth of interest
+float CTF::ParticleShiftGivenAzimuth(float azimuth)
+{
+	return particle_shift * cosf( azimuth - particle_shift_azimuth);
 }
 
 // Given acceleration voltage in keV, return the electron wavelength in Angstroms
@@ -430,6 +468,8 @@ bool CTF::IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus)
 	if (fabsf(this->defocus_2 - wanted_ctf->defocus_2) > delta_defocus) return false;
 	if (fabsf(this->beam_tilt_x - wanted_ctf->beam_tilt_x) > 0.00001) return false;
 	if (fabsf(this->beam_tilt_y - wanted_ctf->beam_tilt_y) > 0.00001) return false;
+	if (fabsf(this->particle_shift_x - wanted_ctf->particle_shift_x) > 0.001) return false;
+	if (fabsf(this->particle_shift_y - wanted_ctf->particle_shift_y) > 0.001) return false;
 
 	delta = fabsf(this->additional_phase_shift - wanted_ctf->additional_phase_shift);
 	delta = fmodf(delta, 2.0f * (float)PI);

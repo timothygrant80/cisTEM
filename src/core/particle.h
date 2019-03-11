@@ -95,10 +95,10 @@ public:
 	void CosineMask(bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CenterInBox();
 	void CenterInCorner();
-	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f);
+	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f);
 	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
-	void SetBeamTilt(float beam_tilt_x, float beam_tilt_y);
-	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f, bool calculate_complex_ctf = false);
+	void SetBeamTilt(float beam_tilt_x, float beam_tilt_y, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f);
+	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f, bool calculate_complex_ctf = false);
 	void PhaseFlipImage();
 	void CTFMultiplyImage();
 	void BeamTiltMultiplyImage();
@@ -118,7 +118,8 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(float *output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference = NULL);
+	void FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier = 20.0f, bool progress_bar = false);
+	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference = NULL);
 	void CalculateMaskedLogLikelihood(Image &projection_image, ReconstructedVolume &input_3d, float classification_resolution_limit);
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
 			int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,

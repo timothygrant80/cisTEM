@@ -11,6 +11,9 @@ Refine3DApp : public MyApp
 	private:
 };
 
+float		beam_tilt_x = 0.0f;
+float		beam_tilt_y = 0.0f;
+
 class ImageProjectionComparison
 {
 public:
@@ -154,6 +157,8 @@ void Refine3DApp::DoInteractiveUserInput()
 	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
+	beam_tilt_x = my_input->GetFloatFromUser("Beam tilt along x (mrad)", "Beam tilt present in data along the x axis in mrad", "0.0", -100.0, 100.0);
+	beam_tilt_y = my_input->GetFloatFromUser("Beam tilt along y (mrad)", "Beam tilt present in data along the y axis in mrad", "0.0", -100.0, 100.0);
 	molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
 	inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the input reconstruction in Angstroms", "0.0", 0.0);
 	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the input reconstruction and images during refinement, in Angstroms", "100.0", inner_mask_radius);
@@ -366,10 +371,10 @@ bool Refine3DApp::DoCalculation()
 //	float defocus_range_std = 5000.0 * sqrtf(voltage_kV / 300.0);
 	float defocus_mean_score = 0.0;
 	float defocus_score;
-	float beam_tilt_x = 0.0f;
-	float beam_tilt_y = 0.0f;
 //	float beam_tilt_x = 0.5024f / 1000.0f * 1.2f;
 //	float beam_tilt_y = -1.1996f / 1000.0f * 1.2f;
+	float particle_shift_x = 0.0f;
+	float particle_shift_y = 0.0f;
 	bool skip_local_refinement = false;
 
 	bool take_random_best_parameter;
@@ -488,6 +493,8 @@ bool Refine3DApp::DoCalculation()
 	my_output_par_file.WriteCommentLine("C Beam energy (keV):                       " + wxString::Format("%f", voltage_kV));
 	my_output_par_file.WriteCommentLine("C Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
 	my_output_par_file.WriteCommentLine("C Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
+	my_output_par_file.WriteCommentLine("C Beam tilt in x (mrad):                   " + wxString::Format("%f", beam_tilt_x));
+	my_output_par_file.WriteCommentLine("C Beam tilt in y (mrad):                   " + wxString::Format("%f", beam_tilt_y));
 	my_output_par_file.WriteCommentLine("C Molecular mass of particle (kDa):        " + wxString::Format("%f", molecular_mass_kDa));
 	my_output_par_file.WriteCommentLine("C Inner mask radius for refinement (A):    " + wxString::Format("%f", inner_mask_radius));
 	my_output_par_file.WriteCommentLine("C Outer mask radius for refinement (A):    " + wxString::Format("%f", outer_mask_radius));
@@ -530,6 +537,9 @@ bool Refine3DApp::DoCalculation()
 	fflush(my_output_par_file.parameter_file);
 //	my_output_par_shifts_file.WriteCommentLine("C    Particle#            Psi          Theta            Phi         ShiftX         ShiftY            Mag     Micrograph       Defocus1       Defocus2       AstigAng      Occupancy           LogP NormSigmaNoise          Score");
 	my_output_par_shifts_file.WriteCommentLine("C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE");
+
+	beam_tilt_x /= 1000.0f;
+	beam_tilt_y /= 1000.0f;
 
 	if (! refine_particle.parameter_map[1] && ! refine_particle.parameter_map[2] && ! refine_particle.parameter_map[3] && ! refine_particle.parameter_map[4] && ! refine_particle.parameter_map[5])
 	{
@@ -701,7 +711,7 @@ bool Refine3DApp::DoCalculation()
 			variance = input_image.ReturnVarianceOfRealValues(outer_mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
 			if (variance == 0.0) continue;
 			input_image.MultiplyByConstant(1.0 / sqrtf(variance));
-			input_image.CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size, true);
+			input_image.CosineMask(mask_radius_for_noise, mask_falloff / pixel_size, true);
 			input_image.ForwardFFT();
 			temp_image.CopyFrom(&input_image);
 			temp_image.ConjugateMultiplyPixelWise(input_image);
@@ -827,7 +837,7 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle.SetIndexForWeightedCorrelation();
 		refine_particle.SetParameterConstraints(powf(parameter_average[14],2));
 
-		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y);
+		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 //		ctf_input_image.CalculateCTFImage(input_ctf);
 //		refine_particle.is_phase_flipped = true;
 
@@ -869,12 +879,12 @@ bool Refine3DApp::DoCalculation()
 			refine_particle.filter_radius_low = 30.0;
 			refine_particle.SetIndexForWeightedCorrelation();
 			binned_image.CopyFrom(refine_particle.particle_image);
-			refine_particle.InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
+			refine_particle.InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 			best_score = - std::numeric_limits<float>::max();
 			for (defocus_i = - myround(float(defocus_search_range)/float(defocus_step)); defocus_i <= myround(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 			{
 				refine_particle.SetDefocus(input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11]);
-				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
+				refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8] + defocus_i * defocus_step, input_parameters[9] + defocus_i * defocus_step, input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 				if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
 //				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
 				else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
@@ -902,11 +912,11 @@ bool Refine3DApp::DoCalculation()
 			output_parameters[8] = input_parameters[8] + best_defocus_i * defocus_step;
 			output_parameters[9] = input_parameters[9] + best_defocus_i * defocus_step;
 			refine_particle.SetDefocus(output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11]);
-			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
+			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, output_parameters[8], output_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 		}
 		else
 		{
-			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
+			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 		}
 		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.SetIndexForWeightedCorrelation();
@@ -948,7 +958,7 @@ bool Refine3DApp::DoCalculation()
 //				search_particle.logp = -std::numeric_limits<float>::max();
 				search_particle.SetParameters(input_parameters);
 				search_particle.number_of_search_dimensions = refine_particle.number_of_search_dimensions;
-				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y);
+				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 				temp_image.CopyFrom(&input_image);
 				// Multiply by binning_factor so variance after binning is close to 1.
 //				temp_image.MultiplyByConstant(binning_factor_search);

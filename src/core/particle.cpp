@@ -636,6 +636,7 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	float best_particle_shift_azimuth;
 	float score;
 	float best_score;
+	float mask_radius;
 
 	AnglesAndShifts rotation_matrix;
 	ProgressBar *my_progress;
@@ -646,6 +647,15 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	beamtilt_spectrum->Allocate(sum_of_phase_differences.logical_x_dimension, sum_of_phase_differences.logical_y_dimension, false);
 	Image *temp_image = new Image;
 	temp_image->Allocate(sum_of_phase_differences.logical_x_dimension, sum_of_phase_differences.logical_y_dimension, false);
+
+	// Determine filter
+	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(temp_image);
+	temp_image->MultiplyByConstant(float(temp_image->logical_x_dimension));
+	temp_image->Binarise(0.00002f);
+	mask_radius = sqrtf((temp_image->ReturnAverageOfRealValues() * temp_image->logical_x_dimension * temp_image->logical_y_dimension) / PI);
+	// delete 2
+//	wxPrintf("mask radius = %g\n", mask_radius);
+//	temp_image->QuickAndDirtyWriteSlice("mask_image.mrc", 1);
 
 	// Find beam tilt direction
 	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true);
@@ -663,9 +673,11 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(beamtilt_azimuth));
 			temp_image->Rotate2D(*beamtilt_spectrum, rotation_matrix, 0.45 * beamtilt_spectrum->logical_x_dimension);
 			beamtilt_spectrum->SubtractImage(phase_difference_spectrum);
+//			beamtilt_spectrum->MultiplyPixelWise(*mask_image);
 //			beamtilt_spectrum->CosineMask(0.45 * beamtilt_spectrum->logical_x_dimension, mask_falloff / pixel_size);
 			beamtilt_spectrum->real_values[0] = 0.0f;
-			score = beamtilt_spectrum->ReturnSumOfSquares(0.45 * beamtilt_spectrum->logical_x_dimension);
+//			score = beamtilt_spectrum->ReturnSumOfSquares(0.45 * beamtilt_spectrum->logical_x_dimension);
+			score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius);
 			if (score < best_score)
 			{
 				best_score = score;
@@ -759,13 +771,14 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 //						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
 //						beamtilt_spectrum->CosineMask(pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension, 2.0f, false, true, 0.0f);
 //						beamtilt_spectrum->CosineMask(pixel_size / 10.0f * beamtilt_spectrum->logical_x_dimension, 2.0f, true, true, 0.0f);
-						beamtilt_spectrum->CosineMask(0.0f, pixel_size / 3.0f * beamtilt_spectrum->logical_x_dimension, true, true, 0.0f);
+//						beamtilt_spectrum->CosineMask(0.0f, pixel_size / 3.0f * beamtilt_spectrum->logical_x_dimension, true, true, 0.0f);
 //						if (i < 2) beamtilt_spectrum->CosineMask(0.0f, pixel_size / 3.0f * beamtilt_spectrum->logical_x_dimension, true, true, 0.0f);
 //						else beamtilt_spectrum->CosineMask(pixel_size / 6.0f * beamtilt_spectrum->logical_x_dimension, 2.0f, true, true, 0.0f);
 //						score = beamtilt_spectrum->ReturnSumOfSquares(pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
-						score = beamtilt_spectrum->ReturnSumOfSquares(0.45f * beamtilt_spectrum->logical_x_dimension);
+//						beamtilt_spectrum->MultiplyPixelWise(*mask_image);
+//						score = beamtilt_spectrum->ReturnSumOfSquares(0.45f * beamtilt_spectrum->logical_x_dimension);
 //						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
-//						score = beamtilt_spectrum->ReturnSumOfSquares();
+						score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius);
 						if (score < best_score)
 						{
 							best_score = score;
@@ -836,6 +849,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float number_of_independent_pixels;
 	float variance_masked;
 	float variance_difference;
+	float variance_particle;
+	float variance_projection;
 	float rotated_center_x;
 	float rotated_center_y;
 	float rotated_center_z;
@@ -972,6 +987,12 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	}
 	temp_particle->BackwardFFT();
 	temp_projection->BackwardFFT();
+	if (phase_difference != NULL)
+	{
+		variance_particle = temp_particle->ReturnVarianceOfRealValues();
+		variance_projection = temp_projection->ReturnVarianceOfRealValues();
+		phase_difference->DivideByConstant(sqrtf(variance_particle * variance_projection));
+	}
 //	temp_particle->QuickAndDirtyWriteSlice("temp_particle.mrc", 1);
 //	temp_projection->QuickAndDirtyWriteSlice("temp_projection.mrc", 1);
 //	phase_difference->QuickAndDirtyWriteSlice("phase_difference.mrc", 1);

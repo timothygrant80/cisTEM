@@ -372,6 +372,12 @@ bool RefineCTFApp::DoCalculation()
 
 	FrealignParameterFile my_output_par_file(ouput_parameter_file, OPEN_TO_WRITE);
 	FrealignParameterFile my_output_par_shifts_file(ouput_shift_file, OPEN_TO_WRITE, 16);
+	// Hack to make threading work
+	float *output_par_cache;
+	output_par_cache = new float[input_par_file.records_per_line * input_par_file.number_of_lines];
+	float *output_par_shifts_cache;
+	output_par_shifts_cache = new float[input_par_file.records_per_line * input_par_file.number_of_lines];
+	int cache_pointer, current_line;
 
 	if (input_stack.ReturnXSize() != input_stack.ReturnYSize())
 	{
@@ -644,10 +650,10 @@ bool RefineCTFApp::DoCalculation()
 	#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, parameter_variance, input_3d, input_par_file, input_stack, phase_difference_sum, max_threads, \
 		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
 		refine_statistics, voltage_kV, spherical_aberration_mm, amplitude_contrast, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, \
-		binning_factor_refine, cg_accuracy, low_resolution_limit, input_statistics, my_output_par_file, my_output_par_shifts_file, output_parameter_average, output_parameter_change, current_image) \
+		binning_factor_refine, cg_accuracy, low_resolution_limit, input_statistics, output_par_cache, output_par_shifts_cache, output_parameter_average, output_parameter_change, current_image) \
 	private(i, image_counter, refine_particle, current_image_local, phase_difference_sum_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object, \
 		best_score, defocus_i, score, cg_starting_point, output_parameter_average_local, output_parameter_change_local, input_image_local, phase_difference_image_local, unbinned_image, \
-		binned_image, projection_image_local, best_defocus_i)
+		binned_image, projection_image_local, best_defocus_i, cache_pointer, current_line)
 	{ // for omp
 
 	refine_particle.constraints_used[4] = true;		// Constraint for X shifts
@@ -674,6 +680,7 @@ bool RefineCTFApp::DoCalculation()
 		#pragma omp critical
 		{
 			input_par_file.ReadLine(input_parameters, current_image);
+			current_line = current_image;
 			current_image++;
 			if (input_parameters[0] >= first_particle && input_parameters[0] <= last_particle) input_image_local.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
 		}
@@ -812,6 +819,8 @@ bool RefineCTFApp::DoCalculation()
 		if (output_parameters[15] < 0.0f) output_parameters[15] = 0.0f;
 		// will not work with threading
 //		my_output_par_file.WriteLine(output_parameters);
+		cache_pointer = refine_particle.number_of_parameters * current_line;
+		for (i = 0; i < refine_particle.number_of_parameters; i++) {output_par_cache[i + cache_pointer] = output_parameters[i];};
 
 /*		if (is_running_locally == false) // send results back to the gui..
 		{
@@ -833,12 +842,13 @@ bool RefineCTFApp::DoCalculation()
 		for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameter_change_local[i] += powf(output_parameters[i],2);}
 		// will not work with threading
 //		my_output_par_shifts_file.WriteLine(output_parameters);
+		for (i = 0; i < refine_particle.number_of_parameters; i++) {output_par_shifts_cache[i + cache_pointer] = output_parameters[i];};
 
-		if (max_threads < 2)
-		{
-			fflush(my_output_par_file.parameter_file);
-			fflush(my_output_par_shifts_file.parameter_file);
-		}
+//		if (max_threads < 2)
+//		{
+//			fflush(my_output_par_file.parameter_file);
+//			fflush(my_output_par_shifts_file.parameter_file);
+//		}
 
 		if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 	}
@@ -860,6 +870,8 @@ bool RefineCTFApp::DoCalculation()
 
 	} // end omp section
 
+	phase_difference_sum.DivideByConstant(float(images_to_process));
+
 	if (is_running_locally == true) delete my_progress;
 
 	if (beamtilt_refinement)
@@ -874,6 +886,20 @@ bool RefineCTFApp::DoCalculation()
 		wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
 		wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
 	}
+
+	// Write output parameters and shifts
+	for (current_image = 0; current_image < input_par_file.number_of_lines; current_image++)
+	{
+		input_par_file.ReadLine(input_parameters, current_image);
+		if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
+		cache_pointer = refine_particle.number_of_parameters * current_image;
+		for (i = 0; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = output_par_cache[i + cache_pointer];};
+		my_output_par_file.WriteLine(output_parameters);
+		for (i = 0; i < refine_particle.number_of_parameters; i++) {output_parameters[i] = output_par_shifts_cache[i + cache_pointer];};
+		my_output_par_shifts_file.WriteLine(output_parameters);
+	}
+	delete [] output_par_cache;
+	delete [] output_par_shifts_cache;
 
 	for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameter_average[i] /= float(last_particle - first_particle + 1);}
 	for (i = 1; i < refine_particle.number_of_parameters; i++) {output_parameter_change[i] /= float(last_particle - first_particle + 1);}

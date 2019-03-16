@@ -6276,7 +6276,7 @@ void Image::AverageRadially()
 				{
 					i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
 					//
-					if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
+					if (FourierComponentIsExplicitHermitianMate(i,j,k)) {address ++; continue;}
 					rad = sqrt(float(i_logi));
 					//
 
@@ -6301,11 +6301,12 @@ void Image::AverageRadially()
 //			possible, which is approximately sqrt(2)*0.5 in Fourier space or sqrt(2)*0.5*logical_dimension in real space
 //			(to compute this properly, use ReturnMaximumDiagonalRadius * fourier_voxel_size). To use
 //			The Fourier space radius convention in real space, give fractional_radius_in_real_space
-void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space)
+void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space, bool average_real_parts)
 {
 
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(average.number_of_points == number_of_values.number_of_points,"Curves do not have the same number of points");
+	MyDebugAssertTrue((is_in_real_space && ! average_real_parts) || ! is_in_real_space, "average_real_part not possible for real space image");
 
 	int i;
 	int j;
@@ -6378,20 +6379,21 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 		}
 		else
 		{
-			for (k=0;k<logical_z_dimension;k++)
+			for (k = 0; k <= physical_upper_bound_complex_z; k++)
 			{
 				k_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
-				for (j=0;j<logical_y_dimension;j++)
+				for (j = 0; j <= physical_upper_bound_complex_y; j++)
 				{
 					j_logi = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2) + k_logi;
-					for (i=0;i<physical_upper_bound_complex_x;i++)
+					for (i = 0; i <= physical_upper_bound_complex_x; i++)
 					{
 						i_logi = pow(i * fourier_voxel_size_x,2) + j_logi;
 						//
-						if (FourierComponentIsExplicitHermitianMate(i,j,k)) continue;
+						if (FourierComponentIsExplicitHermitianMate(i,j,k)) {address ++; continue;}
 						rad = sqrt(float(i_logi));
 						//
-						average.AddValueAtXUsingLinearInterpolation(rad,abs(complex_values[address]),true);
+						if (average_real_parts) average.AddValueAtXUsingLinearInterpolation(rad,real(complex_values[address]),true);
+						else average.AddValueAtXUsingLinearInterpolation(rad,abs(complex_values[address]),true);
 						number_of_values.AddValueAtXUsingLinearInterpolation(rad,1.0,true);
 
 						// Increment the address

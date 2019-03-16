@@ -995,6 +995,27 @@ void Curve::Reciprocal()
 	}
 }
 
+void Curve::DivideBy(Curve &other_curve)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		if (other_curve.data_y[counter] != 0.0) data_y[counter] = data_y[counter] / other_curve.data_y[counter];
+	}
+}
+
+void Curve::MultiplyBy(Curve &other_curve)
+{
+	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+	MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		data_y[counter] = data_y[counter] * other_curve.data_y[counter];
+	}
+}
 
 void Curve::MultiplyXByConstant(float constant_to_multiply_by)
 {

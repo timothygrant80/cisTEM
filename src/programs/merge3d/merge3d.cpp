@@ -47,12 +47,14 @@ void Merge3DApp::DoInteractiveUserInput()
 	bool save_orthogonal_views_image = false;
 	wxString orthogonal_views_filename = "";
 	float weiner_nominator = 1.0f;
-	my_current_job.Reset(12);
+	my_current_job.Reset(14);
 	my_current_job.ManualSetArguments("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
-													molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
+													molecular_mass_kDa,
+													inner_mask_radius,
+													outer_mask_radius,
 													dump_file_seed_1.ToUTF8().data(),
 													dump_file_seed_2.ToUTF8().data(),
 													class_number_for_gui,

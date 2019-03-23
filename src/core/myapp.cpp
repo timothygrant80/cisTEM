@@ -486,10 +486,11 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	  {
 	    		  if (slave_sockets[counter] != NULL)
 	    		  {
-	    			  long milliseconds_spent_on_slave_thread;
+	    			  long milliseconds_spent_on_slave_thread = 0;
 	    			  slave_sockets[counter]->SetNotify(false);
 	    			  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    			  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    			  MyDebugAssertTrue(milliseconds_spent_on_slave_thread > 0,"Oops. Negative milliseconds spent on slave thread: %li\n",milliseconds_spent_on_slave_thread);
 	    			  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    			  slave_sockets[counter]->Destroy();
@@ -526,10 +527,11 @@ void MyApp::OnControllerSocketEvent(wxSocketEvent &event)
 	    	{
 	    	  if (slave_sockets[counter] != NULL)
 	    	  {
-	    		  long milliseconds_spent_on_slave_thread;
+	    		  long milliseconds_spent_on_slave_thread = 0;
 	    		  slave_sockets[counter]->SetNotify(false);
 	    		  WriteToSocket(slave_sockets[counter], socket_time_to_die, SOCKET_CODE_SIZE);
 	    		  ReadFromSocket(slave_sockets[counter], &milliseconds_spent_on_slave_thread, sizeof(long));
+	    		  MyDebugAssertTrue(milliseconds_spent_on_slave_thread > 0,"Oops. Negative milliseconds spent on slave thread: %li\n",milliseconds_spent_on_slave_thread);
 	    		  total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 
 	    		  slave_sockets[counter]->Destroy();
@@ -565,8 +567,9 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE);
 
 		// Receive timing for that slave before its thread dies
-		long milliseconds_spent_on_slave_thread;
+		long milliseconds_spent_on_slave_thread = 0;
 		ReadFromSocket(socket, &milliseconds_spent_on_slave_thread, sizeof(long));
+		MyDebugAssertTrue(milliseconds_spent_on_slave_thread > 0,"Oops. Negative milliseconds spent on slave thread: %li\n",milliseconds_spent_on_slave_thread);
 		total_milliseconds_spent_on_threads += milliseconds_spent_on_slave_thread;
 		socket->Destroy();
 		socket = NULL;

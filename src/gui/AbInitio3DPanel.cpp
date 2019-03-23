@@ -801,7 +801,9 @@ void AbInitio3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 			// As soon as it sends us the message that all jobs are finished, the controller should also
 			// send timing info - we need to remember this
 			long timing_from_controller;
+			timing_from_controller = 0;
 			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
+			MyDebugAssertTrue(timing_from_controller >= 0,"Oops. Got negative timing from controller: %li\n",timing_from_controller);
 			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
 			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
 			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);

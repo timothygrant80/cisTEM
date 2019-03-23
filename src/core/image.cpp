@@ -8552,6 +8552,7 @@ void Image::CalculateDerivative(float direction_in_x, float direction_in_y, floa
 	float unit_z = direction_in_z / length;
 
 	bool apply_fft = is_in_real_space;
+	bool radial_derivative = (direction_in_x == 0.0f && direction_in_y == 0.0f && direction_in_z == 0.0f);
 
 	if (apply_fft) ForwardFFT();
 
@@ -8567,7 +8568,8 @@ void Image::CalculateDerivative(float direction_in_x, float direction_in_y, floa
 			{
 				x_coord = i * fourier_voxel_size_x;
 
-				complex_values[pixel_counter] *= 2.0f * PI * I * (x_coord * unit_x + y_coord * unit_y + z_coord * unit_z);
+				if (radial_derivative) complex_values[pixel_counter] *= 2.0f * PI * (x_coord * x_coord + y_coord * y_coord + z_coord * z_coord);
+				else complex_values[pixel_counter] *= 2.0f * PI * I * (x_coord * unit_x + y_coord * unit_y + z_coord * unit_z);
 				pixel_counter++;
 			}
 		}
@@ -9795,7 +9797,6 @@ void Image::CorrectMagnificationDistortion(float distortion_angle, float distort
 }
 //END_FOR_STAND_ALONE_CTFFIND
 
-
 float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_radius, float filter_cosine_edge_width, float outside_mask_value, bool use_outside_mask_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -9821,8 +9822,10 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	Image *cosine_edge = new Image;
 	cosine_edge->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
-	Image *temp_image = new Image;
-	temp_image->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+	Image *mask_cosine_edge = new Image;
+	mask_cosine_edge->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+	Image *mask_cosine_double_edge = new Image;
+	mask_cosine_double_edge->Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
 
 	if (logical_z_dimension == 1) int_edge_z = 1;
 	else int_edge_z = int_edge;
@@ -9830,8 +9833,8 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	// Binarize input
 	for (pixel_counter = 0; pixel_counter < mask_volume.real_memory_allocated; pixel_counter++)
 	{
-		if (mask_volume.real_values[pixel_counter] > 0.0) temp_image->real_values[pixel_counter] = 1.0;
-		else temp_image->real_values[pixel_counter] = 0.0;
+		if (mask_volume.real_values[pixel_counter] > 0.0) mask_cosine_edge->real_values[pixel_counter] = 1.0;
+		else mask_cosine_edge->real_values[pixel_counter] = 0.0;
 	}
 
 	if (cosine_edge_width > 0.0)
@@ -9864,13 +9867,22 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 			}
 		}
 
-		temp_image->ForwardFFT();
 		cosine_edge->ForwardFFT(false);
-		temp_image->MultiplyPixelWise(*cosine_edge);
-		temp_image->BackwardFFT();
-		temp_image->MultiplyByConstant(1.0 / cos_volume);
-		for (pixel_counter = 0; pixel_counter < mask_volume.real_memory_allocated; pixel_counter++) if (fabsf(temp_image->real_values[pixel_counter]) < tiny) temp_image->real_values[pixel_counter] = 0.0;
-
+		mask_cosine_edge->ForwardFFT();
+		mask_cosine_edge->MultiplyPixelWise(*cosine_edge);
+		mask_cosine_edge->BackwardFFT();
+		mask_cosine_edge->MultiplyByConstant(1.0 / cos_volume);
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) if (fabsf(mask_cosine_edge->real_values[pixel_counter]) < tiny) mask_cosine_edge->real_values[pixel_counter] = 0.0;
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			if (mask_cosine_edge->real_values[pixel_counter] > 0.1f) mask_cosine_double_edge->real_values[pixel_counter] = 1.0f;
+			else mask_cosine_double_edge->real_values[pixel_counter] = 0.0f;
+		}
+		mask_cosine_double_edge->ForwardFFT();
+		mask_cosine_double_edge->MultiplyPixelWise(*cosine_edge);
+		mask_cosine_double_edge->BackwardFFT();
+		mask_cosine_double_edge->MultiplyByConstant(1.0 / cos_volume);
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) if (fabsf(mask_cosine_double_edge->real_values[pixel_counter]) < tiny) mask_cosine_double_edge->real_values[pixel_counter] = 0.0;
 	}
 
 	if (use_outside_mask_value)
@@ -9879,43 +9891,51 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 	}
 	else
 	{
-		edge_value = 0.0;
-		pixel_counter = 0;
-		for (k = 0; k < logical_z_dimension; k++) {
-			for (j = 0; j < logical_y_dimension; j++) {
-				for (i = 0; i < logical_x_dimension; i++) {
-					if (temp_image->real_values[pixel_counter] > tiny && temp_image->real_values[pixel_counter] < 1.0 - tiny) {edge_value += real_values[pixel_counter]; edge_sum++;}
-					pixel_counter++;
-				}
-				pixel_counter += padding_jump_value;
-			}
-		}
-		if (edge_sum != 0) edge_value /= edge_sum;
+//		edge_value = 0.0;
+//		pixel_counter = 0;
+//		for (k = 0; k < logical_z_dimension; k++) {
+//			for (j = 0; j < logical_y_dimension; j++) {
+//				for (i = 0; i < logical_x_dimension; i++) {
+//					if (mask_cosine_edge->real_values[pixel_counter] > tiny && mask_cosine_double_edge->real_values[pixel_counter] < 0.2f) {edge_value += real_values[pixel_counter]; edge_sum++;}
+//					pixel_counter++;
+//				}
+//				pixel_counter += padding_jump_value;
+//			}
+//		}
+//		if (edge_sum != 0) edge_value /= edge_sum;
+		edge_value = ReturnAverageOfRealValues(0.4f * logical_x_dimension, true);
 	}
 
+//	mask_cosine_edge->QuickAndDirtyWriteSlices("mask_cosine_edge.mrc", 1, logical_z_dimension);
+//	mask_cosine_double_edge->QuickAndDirtyWriteSlices("mask_cosine_double_edge.mrc", 1, logical_z_dimension);
 	if (low_pass_filter_radius > 0.0 && weight_outside_mask > 0.0 && cosine_edge_width > 0.0)
 	{
 		cosine_edge->CopyFrom(this);
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			cosine_edge->real_values[pixel_counter] = mask_cosine_double_edge->real_values[pixel_counter] * edge_value + (1.0 - mask_cosine_double_edge->real_values[pixel_counter]) * cosine_edge->real_values[pixel_counter];
+		}
+//		cosine_edge->QuickAndDirtyWriteSlices("inside_mask_removed.mrc", 1, cosine_edge->logical_z_dimension);
 		cosine_edge->ForwardFFT();
 		cosine_edge->CosineMask(low_pass_filter_radius, filter_cosine_edge_width);
 		cosine_edge->BackwardFFT();
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 		{
-			real_values[pixel_counter] = temp_image->real_values[pixel_counter] * real_values[pixel_counter] + weight_outside_mask * (1.0 - temp_image->real_values[pixel_counter]) * cosine_edge->real_values[pixel_counter];
-			sum += temp_image->real_values[pixel_counter];
+			real_values[pixel_counter] = mask_cosine_edge->real_values[pixel_counter] * real_values[pixel_counter] + weight_outside_mask * (1.0 - mask_cosine_edge->real_values[pixel_counter]) * cosine_edge->real_values[pixel_counter];
+			sum += mask_cosine_edge->real_values[pixel_counter];
 		}
 	}
 	else
 	{
 		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
 		{
-			real_values[pixel_counter] = (1.0 - temp_image->real_values[pixel_counter]) * edge_value + temp_image->real_values[pixel_counter] * real_values[pixel_counter];
-			sum += temp_image->real_values[pixel_counter];
+			real_values[pixel_counter] = (1.0 - mask_cosine_edge->real_values[pixel_counter]) * edge_value + mask_cosine_edge->real_values[pixel_counter] * real_values[pixel_counter];
+			sum += mask_cosine_edge->real_values[pixel_counter];
 		}
 	}
 
 	delete cosine_edge;
-	delete temp_image;
+	delete mask_cosine_edge;
 
 
 	return float(sum);

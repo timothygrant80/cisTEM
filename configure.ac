@@ -58,6 +58,7 @@ static_link="false"
 AC_ARG_ENABLE(staticmode, [  --enable-staticmode     Link statically [[default=no]]],[
   if test "$enableval" = yes; then
 	static_link="true"
+	WXCONFIGFLAGS="--static=yes"
   fi
   ])
 
@@ -166,14 +167,14 @@ WXTEST
 
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1 * 1000 + $2) * 1000 + $3;}'`
-if test -n "$vers" && test "$vers" -eq 3000002; then
-        WX_CPPFLAGS="`$WXCONFIG --cppflags`"
-        WX_CXXFLAGS="`$WXCONFIG --cxxflags | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS="`$WXCONFIG --libs richtext,std,aui`"
+if test -n "$vers" && test "$vers" -ge 3000002; then
+        WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
+        WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
+        WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
 
-        WX_CPPFLAGS_BASE="`$WXCONFIG --cppflags base`"
-        WX_CXXFLAGS_BASE="`$WXCONFIG --cxxflags base | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS_BASE="`$WXCONFIG --libs base,net`"
+        WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags base`"
+        WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
+        WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net`"
         wx_is_available=1
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.2 is currently supported.")

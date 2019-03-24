@@ -5840,8 +5840,8 @@ void Image::SetMaximumValueOnCentralCross(float maximum_value)
  * (Biyani et al ,2018):
  * "
  * The introduced measure, iciness, is the ratio of the intensity in the
- * resolution band between 3.5 and 3.9 Å and the intensity in the
- * resolution band between 30 and  6  Å,  which  gives  a  good  estimate
+ * resolution band between 3.5 and 3.9 A and the intensity in the
+ * resolution band between 30 and  6  A,  which  gives  a  good  estimate
  * of  the  ice  crystal  content  of  the  vitreous  specimen.
  * Cryo-EM  images  of  correctly  vitrified  specimens  usually
  * have  an  iciness  value  below 1.0. Iciness values higher than

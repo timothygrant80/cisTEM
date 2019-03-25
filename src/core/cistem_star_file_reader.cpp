@@ -35,7 +35,7 @@ cisTEMStarFileReader::cisTEMStarFileReader()
 
 }
 
-cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer)
+cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
 {
 	filename = "";
 	input_file = NULL;
@@ -78,7 +78,7 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 		using_external_array = true;
 	}
 
-	ReadFile(wanted_filename, NULL, alternate_cached_parameters_pointer);
+	ReadFile(wanted_filename, NULL, alternate_cached_parameters_pointer, exclude_negative_film_numbers);
 }
 
 cisTEMStarFileReader::~cisTEMStarFileReader()
@@ -130,7 +130,7 @@ void cisTEMStarFileReader::Close()
 
 }
 
-bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxString *error_string)
+bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxString *error_string, bool exclude_negative_film_numbers)
 {
 	// extract info.
 
@@ -437,7 +437,37 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.beam_tilt_y = float(temp_double);
 	}
 
-	cached_parameters->Add(temp_parameters);
+	// image_shift_x
+
+	if ( image_shift_x_column == -1) temp_parameters.image_shift_x = 0.0f;
+	else
+	{
+		if (all_tokens[image_shift_x_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_shift_x_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_x_column]);
+			return false;
+		}
+
+		temp_parameters.image_shift_x = float(temp_double);
+	}
+
+	// image_shift_y
+
+	if ( image_shift_y_column == -1) temp_parameters.image_shift_y = 0.0f;
+	else
+	{
+		if (all_tokens[image_shift_y_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_shift_y_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_shift_y_column]);
+			return false;
+		}
+
+		temp_parameters.image_shift_y = float(temp_double);
+	}
+
+	if (temp_parameters.image_is_active >= 0.0) cached_parameters->Add(temp_parameters);
 
 	return true;
 
@@ -445,7 +475,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 
 
 
-bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_string, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer)
+bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_string, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
 {
 	Open(wanted_filename, alternate_cached_parameters_pointer);
 	wxString current_line;
@@ -561,6 +591,10 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		if (current_line.StartsWith("_cisTEMBeamTiltX ") == true) beam_tilt_x_column = current_column;
 		else
 		if (current_line.StartsWith("_cisTEMBeamTiltY ") == true) beam_tilt_y_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMImageShiftX ") == true) image_shift_x_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMImageShiftY ") == true) image_shift_y_column = current_column;
 
 	    current_column++;
 	}
@@ -632,7 +666,7 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 
 	// we have the headers, the current line should be the first parameter to extract the info
 
-	if (ExtractParametersFromLine(current_line, error_string) == false) return false;
+	if (ExtractParametersFromLine(current_line, error_string, exclude_negative_film_numbers) == false) return false;
 
 	// loop over the data lines and fill in..
 

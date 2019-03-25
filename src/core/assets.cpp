@@ -51,6 +51,7 @@ MovieAsset::MovieAsset()
 	asset_name = wxEmptyString;
 	
 	gain_filename = wxEmptyString;
+	dark_filename = wxEmptyString;
 
 	output_binning_factor = 1;
 
@@ -85,9 +86,9 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	dose_per_frame = 0;
 	spherical_aberration = 0;
 	total_dose = 0;
-	gain_filename = "";
 	
 	gain_filename = wxEmptyString;
+	dark_filename = wxEmptyString;
 
 	output_binning_factor = 1;
 
@@ -160,6 +161,7 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	total_dose = casted_asset->total_dose;
 	asset_name = casted_asset->asset_name;
 	gain_filename = casted_asset->gain_filename;
+	dark_filename = casted_asset->dark_filename;
 	output_binning_factor = casted_asset->output_binning_factor;
 	correct_mag_distortion = casted_asset->correct_mag_distortion;
 	mag_distortion_angle = casted_asset->mag_distortion_angle;

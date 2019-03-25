@@ -322,9 +322,11 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 	wxString	output_particle_images;
 	wxString    output_parameter_file;
 	wxString 	symmetry;
+	wxString	input_reconstruction_filename;
+	wxString	input_mask_filename;
 
 	bool do_subtraction;
-	wxString	input_reconstruction_filename;
+
 	float		pixel_size = 1.0;
 	float		voltage_kV = 300.0;
 	float		spherical_aberration_mm = 2.7;
@@ -351,7 +353,8 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 
 	if (do_subtraction == true)
 	{
-		input_reconstruction_filename = my_input->GetFilenameFromUser("Input reconstruction for subtraction", "The 3D reconstruction which will be subtracted", "my_reconstruction.mrc", true);
+		input_reconstruction_filename = my_input->GetFilenameFromUser("Input original reconstruction for subtraction", "The 3D reconstruction which will be masked, then subtracted", "my_reconstruction.mrc", true);
+		input_mask_filename = my_input->GetFilenameFromUser("Input mask of area to be subtracted", "A mask specify the area to subtract", "my_subtraction_mask.mrc", true);
 		pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
 		voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 		spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
@@ -370,6 +373,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 		amplitude_contrast = 0.0f;
 		use_least_squares_scaling = false;
 		mask_radius = 0.0f;
+		do_centring_and_cropping = false;
 	}
 
 	if (do_centring_and_cropping == true)
@@ -393,8 +397,8 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(17);
-	my_current_job.ManualSetArguments("tttttbtffffbfbfffiii",	input_particle_images.ToUTF8().data(),
+	my_current_job.Reset(21);
+	my_current_job.ManualSetArguments("tttttbtffffbfbfffiiit",	input_particle_images.ToUTF8().data(),
 															input_parameter_file.ToUTF8().data(),
 															output_particle_images.ToUTF8().data(),
 															output_parameter_file.ToUTF8().data(),
@@ -413,7 +417,8 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 															centre_z_coord,
 															cropped_box_size,
 															first_particle,
-															last_particle);
+															last_particle,
+															input_mask_filename.ToUTF8().data());
 }
 
 // override the do calculation method which will be what is actually run..
@@ -443,14 +448,13 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	int			cropped_box_size				= my_current_job.arguments[17].ReturnIntegerArgument();
 	int			first_particle					= my_current_job.arguments[18].ReturnIntegerArgument();
 	int			last_particle					= my_current_job.arguments[19].ReturnIntegerArgument();
+	wxString	input_mask_filename				= my_current_job.arguments[20].ReturnStringArgument();
 
 
 	long current_image;
 	long position_in_output_stack = 1;
 	int symmetry_counter;
 	int number_of_images_to_process;
-
-
 
 	float temp_float[50];
 	float current_phi;
@@ -461,7 +465,8 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	float variance;
 	float mask_radius_for_noise;
 	float scale_factor;
-
+	float per_image_norm_offset;
+	float per_image_norm_scaling;
 
 	float original_x_coord;
 	float original_y_coord;
@@ -471,6 +476,7 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	float rotated_y_coord;
 	float rotated_z_coord;
 
+	float average;
 
 	double dot_product;
 	double self_dot_product;
@@ -482,6 +488,12 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	float old_x_shift;
 	float old_y_shift;
 
+	double average_scale_factor = 0.0;
+	long number_of_scale_factors_calculated = 0;
+
+	double average_difference = 0.0;
+	long number_of_differences_calculated = 0;
+
 	int number_of_images_processed;
 
 	Image particle_image;
@@ -489,6 +501,7 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	Image sum_power;
 	Image temp_image;
 	Image projection_image;
+	Image unmasked_projection_image;
 	Image cropped_image;
 
 
@@ -501,8 +514,13 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	RotationMatrix matrix_for_centring;
 
 	ImageFile input_stack(input_particle_images.ToStdString(), false);
+
 	ImageFile *input_3d_file;
+	ImageFile *input_mask_file;
+
 	ReconstructedVolume input_3d;
+	ReconstructedVolume input_3d_masked;
+	Image input_mask;
 
 	FrealignParameterFile my_input_par_file(input_parameter_file, OPEN_TO_READ);
 	FrealignParameterFile my_output_par_file(output_parameter_file, OPEN_TO_WRITE);
@@ -521,21 +539,12 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 	if (do_subtraction == true)
 	{
-		input_3d_file = new ImageFile(input_reconstruction_filename.ToStdString(), false);
-		input_3d.InitWithDimensions(input_3d_file->ReturnXSize(), input_3d_file->ReturnYSize(), input_3d_file->ReturnZSize(), pixel_size, "C1");
-		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
-		input_3d.mask_radius = FLT_MAX;
-		input_3d.PrepareForProjections(0.0, 2.0 * pixel_size);
+		// get the power spectra..
 
-		original_x_coord = centre_x_coord - input_3d.density_map.physical_address_of_box_center_x;
-		original_y_coord = centre_y_coord - input_3d.density_map.physical_address_of_box_center_y;
-		original_z_coord = centre_z_coord - input_3d.density_map.physical_address_of_box_center_z;
-
-		projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-		sum_power.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+		projection_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+		unmasked_projection_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+		sum_power.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		if (do_centring_and_cropping == true) cropped_image.Allocate(cropped_box_size, cropped_box_size, 1);
-
-		// now get the power spectra..
 
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
 
@@ -548,8 +557,8 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 			mask_radius_for_noise = 0.95 * particle_image.logical_x_dimension / 2.0 - 0.05 / 2.0 / pixel_size;
 		}
 
-		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
+		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(3.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(3.0) + 1.0));
 
 		my_progress = new ProgressBar(my_input_par_file.number_of_lines);
 		image_counter = 0;
@@ -576,9 +585,70 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 		sum_power.Compute1DRotationalAverage(noise_power_spectrum, number_of_terms);
 		noise_power_spectrum.SquareRoot();
+		noise_power_spectrum.Reciprocal();
 
 		my_input_par_file.Rewind();
 		delete my_progress;
+
+		input_3d_file = new ImageFile(input_reconstruction_filename.ToStdString(), false);
+		input_mask_file = new ImageFile(input_mask_filename.ToStdString(), false);
+
+		input_3d.InitWithDimensions(input_3d_file->ReturnXSize(), input_3d_file->ReturnYSize(), input_3d_file->ReturnZSize(), pixel_size, "C1");
+		input_3d_masked.InitWithDimensions(input_3d_file->ReturnXSize(), input_3d_file->ReturnYSize(), input_3d_file->ReturnZSize(), pixel_size, "C1");
+
+		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
+		//
+//		input_3d.density_map.AddConstant(0.1f);
+
+		input_3d.mask_radius = FLT_MAX;
+//		input_3d.density_map.QuickAndDirtyWriteSlices("/tmp/original_3d.mrc", 1, input_3d.density_map.logical_z_dimension);
+		input_3d.density_map.CorrectSinc(900000000,1.0,true, 0.0);
+	//	input_3d.density_map.CorrectSinc(900000000,1.0,false);
+	//	input_3d.density_map.QuickAndDirtyWriteSlices("/tmp/scaled_3d.mrc", 1, input_3d.density_map.logical_z_dimension);
+
+		wxPrintf("Adding %f\n", -input_3d.density_map.ReturnAverageOfRealValuesAtRadius(input_3d.density_map.physical_address_of_box_center_x * 0.9));
+		//offset
+		//input_3d.density_map.AddConstant(-input_3d.density_map.ReturnAverageOfRealValues(input_3d.density_map.physical_address_of_box_center_x - (10.0f / pixel_size), true));
+		input_3d.density_map.AddConstant(-input_3d.density_map.ReturnAverageOfRealValuesAtRadius(input_3d.density_map.physical_address_of_box_center_x * 0.9));
+		input_3d.density_map.CorrectSinc(9000000000,1.0,true, 0.0);
+		//input_3d.density_map.AddConstant(0.5f);
+		//scaling
+		//input_3d.density_map.MultiplyByConstant(sqrtf(input_3d.density_map.ReturnVarianceOfRealValues(input_3d.density_map.physical_address_of_box_center_x , 0.0, 0.0, 0.0, true)));
+		// apply curve filter
+	
+		//input_3d.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		//input_3d.density_map.ApplyCurveFilter(&noise_power_spectrum);
+		
+
+
+		input_mask.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
+
+		input_3d_masked.density_map.CopyFrom(&input_3d.density_map);
+		//input_3d_masked.density_map.SwapRealSpaceQuadrants();
+		//input_3d_masked.density_map.BackwardFFT();
+		//input_3d_masked.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		//input_3d_masked.density_map.ApplyMask(input_mask, 10.0f, 0.0f, 0.0f, 0.0f, input_3d_masked.density_map.ReturnAverageOfRealValues(), true);
+		input_3d_masked.density_map.MultiplyPixelWise(input_mask);
+
+		///nput_3d_masked.PrepareForProjections(0.0, 2.0 * pixel_size);
+		input_3d_masked.density_map.ForwardFFT();
+		input_3d_masked.density_map.SwapRealSpaceQuadrants();
+		
+		input_3d.density_map.ForwardFFT();
+		input_3d.density_map.SwapRealSpaceQuadrants();
+		//input_3d_masked.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+
+		//input_3d_masked.density_map.MultiplyByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+
+		input_3d_masked.mask_radius = FLT_MAX;
+		//input_3d_masked.density_map.QuickAndDirtyWriteSlices("/tmp/masked_3d.mrc", 1, input_3d_masked.density_map.logical_z_dimension);
+
+		original_x_coord = centre_x_coord - input_3d.density_map.physical_address_of_box_center_x;
+		original_y_coord = centre_y_coord - input_3d.density_map.physical_address_of_box_center_y;
+		original_z_coord = centre_z_coord - input_3d.density_map.physical_address_of_box_center_z;
+
+
+
 	}
 
 	if (do_subtraction == false) wxPrintf("\nExpanding...\n\n");
@@ -599,6 +669,24 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 		particle_image.ReadSlice(&input_stack, current_image);
 
+		if (do_subtraction == true)
+		{
+			//normalise
+			particle_image.ForwardFFT();
+			particle_image.ApplyCurveFilter(&noise_power_spectrum);
+			particle_image.BackwardFFT();
+
+			// Normalize background variance and average
+			variance = particle_image.ReturnVarianceOfRealValues(particle_image.physical_address_of_box_center_x - (10.0f / pixel_size), 0.0, 0.0, 0.0, true);
+			average = particle_image.ReturnAverageOfRealValues(particle_image.physical_address_of_box_center_x - (10.0f / pixel_size), true);
+			particle_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+		}
+
+	//	particle_image_transform.CopyFrom(&particle_image);
+		//particle_image_transform.CircleMask(mask_radius / pixel_size);
+	//	particle_image_transform.ForwardFFT();
+	//	particle_image_transform.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
+
 		current_phi = temp_float[1];
 		current_theta = temp_float[2];
 		current_psi = temp_float[3];
@@ -617,15 +705,137 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
 				my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11]);
 
-				input_3d.density_map.ExtractSlice(projection_image, my_parameters);
+				input_3d_masked.density_map.ExtractSlice(projection_image, my_parameters);
+				projection_image.complex_values[0] = input_3d_masked.density_map.complex_values[0]; // cos extract slice sets central pixel to zero.
+
 				projection_image.ApplyCTF(my_ctf);
 				projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
 				projection_image.SwapRealSpaceQuadrants();
-				projection_image.ApplyCurveFilter(&noise_power_spectrum);
+
+				//projection_image.ApplyCurveFilter(&noise_power_spectrum);
 				projection_image.BackwardFFT();
+				//projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
+				//projection_image.AddConstant(-projection_image.ReturnAverageOfRealValuesAtRadius(projection_image.physical_address_of_box_center_x * 0.9));
 
 				if (use_least_squares_scaling == true)
 				{
+					// work out a frequency dependent scaling based on the unmasked projection
+
+					input_3d.density_map.ExtractSlice(unmasked_projection_image, my_parameters);
+					unmasked_projection_image.complex_values[0] = input_3d.density_map.complex_values[0]; // cos extract slice sets central pixel to zero.
+
+					unmasked_projection_image.ApplyCTF(my_ctf);
+					unmasked_projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
+					unmasked_projection_image.SwapRealSpaceQuadrants();
+					//unmasked_projection_image.ApplyCurveFilter(&noise_power_spectrum);
+					unmasked_projection_image.BackwardFFT();
+					//unmasked_projection_image.CircleMask(mask_radius / pixel_size);
+					//unmasked_projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
+
+					if (current_image == 1 && symmetry_counter == 1 && first_particle == 1) unmasked_projection_image.QuickAndDirtyWriteSlice("/tmp/unmasked_proj.mrc", 1);
+
+					//projection_image.ForwardFFT();
+					//projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
+
+				/*	int j, i, yi;
+					float x,y;
+					float frequency_squared;
+					float bin;
+					int ibin;
+					float difference;
+
+					int number_of_bins = particle_image.ReturnSmallestLogicalDimension() / 2 + 1;
+					int number_of_bins2 = 2 * (number_of_bins - 1);
+					std::complex<double> temp_c;
+
+					double *dot_products = new double[number_of_bins2];
+					double *used_pixels = new double[number_of_bins2];
+					double *self_dot_products = new double[number_of_bins2];
+					double *scale_factors = new double[number_of_bins2];
+
+					ZeroDoubleArray(dot_products, number_of_bins2);
+					ZeroDoubleArray(used_pixels, number_of_bins2);
+					ZeroDoubleArray(self_dot_products, number_of_bins2);
+					ZeroDoubleArray(scale_factors, number_of_bins2);
+
+					pixel_counter = 0;
+
+					for (j = 0; j <= particle_image_transform.physical_upper_bound_complex_y; j++)
+					{
+						yi = particle_image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
+						y = powf(yi * particle_image_transform.fourier_voxel_size_y, 2);
+
+						for (i = 0; i <= particle_image_transform.physical_upper_bound_complex_x; i++)
+						{
+							x = powf(i * particle_image_transform.fourier_voxel_size_x, 2);
+							frequency_squared = x + y;
+							bin = sqrtf(frequency_squared) * number_of_bins2;
+							ibin = int(bin);
+							difference = bin - float(ibin);
+
+							//wxPrintf("ibin = %i\n", ibin);
+							temp_c = real(particle_image_transform.complex_values[pixel_counter] * conj(unmasked_projection_image.complex_values[pixel_counter])) + I * 0.0f;
+							dot_product = real(temp_c);
+							//wxPrintf("dot_product = %f\n", dot_product);
+							dot_products[ibin] += dot_product * (1-difference);
+							dot_products[ibin + 1] += dot_product * difference;
+
+							self_dot_product = real(unmasked_projection_image.complex_values[pixel_counter] * conj(unmasked_projection_image.complex_values[pixel_counter]));
+							//wxPrintf("self_dot_product = %f\n", self_dot_product);
+							self_dot_products[ibin] += self_dot_product * (1-difference);
+							self_dot_products[ibin + 1] += self_dot_product * difference;
+
+
+							used_pixels[ibin] += 1-difference;
+							used_pixels[ibin + 1] += difference;
+
+							pixel_counter++;
+						}
+
+					}
+
+					for (int bin_counter = 0; bin_counter < number_of_bins2; bin_counter++)
+					{
+						if (used_pixels[bin_counter] != 0.0f && self_dot_products[bin_counter] != 0.0f)
+						{
+							scale_factors[bin_counter] = dot_products[bin_counter] / self_dot_products[bin_counter];
+						}
+						else
+						{
+							scale_factors[bin_counter] = 1.0f;
+						}
+
+						//wxPrintf ("scale factor %i = %f\n", bin_counter, scale_factors[bin_counter]);
+						//wxPrintf ("used pixels %i = %f\n", bin_counter, used_pixels[bin_counter]);
+						wxPrintf ("self_dot_product %i = %f\n", bin_counter, self_dot_products[bin_counter]);
+					}
+
+					// apply the scaling..
+
+					pixel_counter = 0;
+					for (j = 0; j <= particle_image.physical_upper_bound_complex_y; j++)
+					{
+						yi = particle_image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
+						y = powf(yi * particle_image.fourier_voxel_size_y, 2);
+
+						for (i = 0; i <= particle_image.physical_upper_bound_complex_x; i++)
+						{
+							x = powf(i * particle_image.fourier_voxel_size_x, 2);
+							frequency_squared = x + y;
+							bin = sqrtf(frequency_squared) * number_of_bins2;
+							ibin = int(bin);
+							difference = bin - float(ibin);
+
+							projection_image.complex_values[pixel_counter] *= scale_factors[ibin];
+							pixel_counter++;
+						}
+					}
+
+					projection_image.BackwardFFT();
+					projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
+*/
+
+
 					used_pixels = 0;
 					dot_product = 0.0;
 					self_dot_product = 0.0;
@@ -649,10 +859,10 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 							x_rad_sq = powf(x - particle_image.physical_address_of_box_center_x, 2.0f);
 							current_radius_squared = x_rad_sq + y_rad_sq;
 
-							if (particle_image.real_values[pixel_counter] != 0. && projection_image.real_values[pixel_counter] != 0. && current_radius_squared < max_radius)
+							if (particle_image.real_values[pixel_counter] != 0. && unmasked_projection_image.real_values[pixel_counter] != 0. && current_radius_squared < max_radius)
 							{
-								dot_product += particle_image.real_values[pixel_counter] * projection_image.real_values[pixel_counter];
-								self_dot_product += pow(projection_image.real_values[pixel_counter], 2);
+								dot_product += particle_image.real_values[pixel_counter] * unmasked_projection_image.real_values[pixel_counter];
+								self_dot_product += pow(unmasked_projection_image.real_values[pixel_counter], 2);
 								used_pixels++;
 							}
 							pixel_counter++;
@@ -664,7 +874,45 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 					}
 
 					scale_factor = dot_product / self_dot_product;
+					average_scale_factor += scale_factor;
+					number_of_scale_factors_calculated++;
+
+					unmasked_projection_image.MultiplyByConstant(scale_factor);
+
+					pixel_counter = 0;
+					float difference = 0.0f;
+					int num_pixels = 0;
+
+					for ( y = 0; y < particle_image.logical_y_dimension; y ++ )
+					{
+						y_rad_sq = powf(y - particle_image.physical_address_of_box_center_y, 2.0f);
+
+						for ( x = 0; x < particle_image.logical_x_dimension; x ++ )
+						{
+
+							difference += particle_image.real_values[pixel_counter] - unmasked_projection_image.real_values[pixel_counter];
+							num_pixels++;
+							pixel_counter++;
+
+						}
+
+						pixel_counter += particle_image.padding_jump_value;
+
+					}
+
+					average_difference += (difference / float(num_pixels));
+					number_of_differences_calculated++;
+					//scale_factor = 0.058925565;
+					//scale_factor = 0.5;
 					projection_image.MultiplyByConstant(scale_factor);
+
+
+				}
+
+				if (current_image == 1 && symmetry_counter == 1 && first_particle == 1)
+				{
+					projection_image.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
+					particle_image.QuickAndDirtyWriteSlice("/tmp/particle.mrc", position_in_output_stack);
 				}
 
 				buffer_image.SubtractImage(&projection_image);
@@ -676,9 +924,11 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 			if (do_centring_and_cropping == true)
 			{
-				// work out rotated coords..
 
+				// work out rotated coords..
+				//buffer_image.PhaseShift(-temp_float[4] / pixel_size, -temp_float[5] / pixel_size);
 				matrix_for_centring.SetToEulerRotation(-temp_float[1], -temp_float[2], -temp_float[3]);
+				//current_symmetry_related_matrix = matrix_for_centring * my_symmetry_matrices.rot_mat[symmetry_counter - 1];
 				matrix_for_centring.RotateCoords(original_x_coord, original_y_coord, original_z_coord, rotated_x_coord, rotated_y_coord, rotated_z_coord);
 
 				//wxPrintf("original coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, original_x_coord, original_y_coord, original_z_coord);
@@ -693,13 +943,12 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 				if (do_subtraction == true)
 				{
-					buffer_image.PhaseShift(-rotated_x_coord - temp_float[4] / pixel_size, -rotated_y_coord - temp_float[5] / pixel_size);
-					//buffer_image.PhaseShift(-rotated_x_coord, -rotated_y_coord);
+					buffer_image.PhaseShift(-rotated_x_coord - (temp_float[4] / pixel_size), -rotated_y_coord  - (temp_float[5] / pixel_size));
 					buffer_image.ClipInto(&cropped_image);
 				}
 				else
 				{
-					particle_image.PhaseShift(-rotated_x_coord - temp_float[4] / pixel_size, -rotated_y_coord - temp_float[5] / pixel_size);
+					particle_image.PhaseShift(-rotated_x_coord - (temp_float[4] / pixel_size), -rotated_y_coord  - (temp_float[5] / pixel_size));
 					particle_image.ClipInto(&cropped_image);
 				}
 
@@ -712,6 +961,7 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				else particle_image.WriteSlice(&output_stack, position_in_output_stack);
 			}
 
+
 			temp_float[0] = (current_image - 1) * ReturnNumberofAsymmetricUnits(symmetry) + symmetry_counter;
 			position_in_output_stack++;
 
@@ -719,12 +969,17 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 			{
 				temp_float[4] = 0.0f;
 				temp_float[5] = 0.0f;
-				temp_float[4] = old_x_shift;
-				temp_float[5] = old_y_shift;
+				//temp_float[4] = old_x_shift;
+				//temp_float[5] = old_y_shift;
 			}
 
 			my_output_par_file.WriteLine(temp_float);
 
+			if (do_centring_and_cropping)
+			{
+				temp_float[4] = old_x_shift;
+				temp_float[5] = old_y_shift;
+			}
 		}
 
 		number_of_images_processed++;
@@ -736,8 +991,13 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	if (do_subtraction == true)
 	{
 		delete input_3d_file;
+		delete input_mask_file;
 	}
 
+	average_scale_factor /= double(number_of_scale_factors_calculated);
+	average_difference /= double(number_of_differences_calculated);
+	wxPrintf("Average scale factor = %f\n", average_scale_factor);
+	wxPrintf("Average differnce = %f\n", average_difference);
 	wxPrintf("\nSymmetryExpandStackAndPar: Normal termination\n\n");
 
 	return true;

@@ -14,7 +14,7 @@ UnBlurApp : public MyApp
 
 };
 
-void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, float *x_shifts, float *y_shifts);
+void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts);
 
 IMPLEMENT_APP(UnBlurApp)
 
@@ -24,6 +24,8 @@ void UnBlurApp::DoInteractiveUserInput()
 {
 	std::string input_filename;
 	std::string output_filename;
+	std::string aligned_frames_filename;
+	std::string output_shift_text_file;
 	float original_pixel_size = 1;
 	float minimum_shift_in_angstroms = 2;
 	float maximum_shift_in_angstroms = 80;
@@ -40,6 +42,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	float pre_exposure_amount = 0.0;
 	bool movie_is_gain_corrected = true;
 	wxString gain_filename = "";
+	bool movie_is_dark_corrected = true;
+	wxString dark_filename = "";
 	float output_binning_factor = 1;
 
 	bool set_expert_options;
@@ -49,13 +53,20 @@ void UnBlurApp::DoInteractiveUserInput()
 	float mag_distortion_minor_scale;
 	int first_frame;
 	int last_frame;
+	int number_of_frames_for_running_average;
+	int max_threads;
+
+	bool save_aligned_frames;
 
 
 
-	 UserInput *my_input = new UserInput("Unblur", 1.0);
+
+
+	 UserInput *my_input = new UserInput("Unblur", 2.0);
 
 	 input_filename = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true );
 	 output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
+	 output_shift_text_file = my_input->GetFilenameFromUser("Output shift text file", "The output text file, containing shifts in angstroms", "my_shifts.txt", false);
 	 original_pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
 	 output_binning_factor = my_input->GetFloatFromUser("Output binning factor", "Output images will be binned (downsampled) by this factor relative to the input images", "1", 1);
 	 should_dose_filter = my_input->GetYesNoFromUser("Apply Exposure filter?", "Apply an exposure-dependent filter to frames before summing them", "yes");
@@ -90,6 +101,13 @@ void UnBlurApp::DoInteractiveUserInput()
 	 		 should_restore_power = my_input->GetYesNoFromUser("Restore Noise Power?", "Restore the power of the noise to the level it would be without exposure filtering", "yes");
 	 	 }
 
+	 	 movie_is_dark_corrected = my_input->GetYesNoFromUser("Input stack is dark-subtracted?", "The input frames are already dark substracted", "yes");
+
+	 	 if (!movie_is_dark_corrected)
+	 	 {
+	 		 dark_filename = my_input->GetFilenameFromUser("Dark image filename", "The filename of the camera's dark reference image", "my_dark_reference.dm4", true);
+	 	 }
+
 	 	 movie_is_gain_corrected = my_input->GetYesNoFromUser("Input stack is gain-corrected?", "The input frames are already gain-corrected", "yes");
 
 	 	 if (!movie_is_gain_corrected)
@@ -99,6 +117,18 @@ void UnBlurApp::DoInteractiveUserInput()
 
 	 	 first_frame = my_input->GetIntFromUser("First frame to use for sum", "You can use this to ignore the first n frames", "1", 1);
 	 	 last_frame = my_input->GetIntFromUser("Last frame to use for sum (0 for last frame)", "You can use this to ignore the last n frames", "0", 0);
+
+	 	 number_of_frames_for_running_average = my_input->GetIntFromUser("Number of frames for running average", "use a running average of frames, useful for low SNR frames, must be odd", "1", 1);
+
+	 	 save_aligned_frames = my_input->GetYesNoFromUser("Save Aligned Frames?", "If yes, save the aligned frames", "no");
+	 	 if (save_aligned_frames == true)
+	 	 {
+	 		 aligned_frames_filename = my_input->GetFilenameFromUser("Output aligned frames filename", "The output file, containing your aligned movie frames", "my_aligned_frames.mrc", false );
+	 	 }
+	 	 else
+	 	 {
+	 		 aligned_frames_filename = "";
+	 	 }
  	 }
  	 else
  	 {
@@ -111,9 +141,14 @@ void UnBlurApp::DoInteractiveUserInput()
  		 max_iterations = 20;
  		 should_restore_power = true;
  		 movie_is_gain_corrected = true;
+ 		 movie_is_dark_corrected = true;
  		 gain_filename = "";
+ 		 dark_filename = "";
  		 first_frame = 1;
  		 last_frame = 0;
+ 		 number_of_frames_for_running_average = 1;
+ 		 save_aligned_frames = false;
+ 		 aligned_frames_filename = "";
 
  	 }
 
@@ -132,6 +167,12 @@ void UnBlurApp::DoInteractiveUserInput()
 		mag_distortion_minor_scale = 1.0;
 	}
 
+#ifdef _OPENMP
+	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
+#else
+	max_threads = 1;
+#endif
+
 	 delete my_input;
 
 	// this are defaulted to off in the interactive version for now
@@ -140,8 +181,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	bool write_out_small_sum_image = false;
 	std::string small_sum_image_filename = "/dev/null";
 
-	my_current_job.Reset(25);
-	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsfbfffbtbtii",input_filename.c_str(),
+	my_current_job.Reset(36);
+	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibtt",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -159,6 +200,8 @@ void UnBlurApp::DoInteractiveUserInput()
 																 pre_exposure_amount,
 																 movie_is_gain_corrected,
 																 gain_filename.ToStdString().c_str(),
+																 movie_is_dark_corrected,
+																 dark_filename.ToStdString().c_str(),
 																 output_binning_factor,
 																 correct_mag_distortion,
 																 mag_distortion_angle,
@@ -169,7 +212,12 @@ void UnBlurApp::DoInteractiveUserInput()
 																 write_out_small_sum_image,
 																 small_sum_image_filename.c_str(),
 																 first_frame,
-																 last_frame);
+																 last_frame,
+																 number_of_frames_for_running_average,
+																 max_threads,
+																 save_aligned_frames,
+																 aligned_frames_filename.c_str(),
+																 output_shift_text_file.c_str());
 
 
 }
@@ -212,18 +260,24 @@ bool UnBlurApp::DoCalculation()
 	float       pre_exposure_amount                 = my_current_job.arguments[15].ReturnFloatArgument();
 	bool		movie_is_gain_corrected				= my_current_job.arguments[16].ReturnBoolArgument();
 	wxString	gain_filename						= my_current_job.arguments[17].ReturnStringArgument();
-	float		output_binning_factor				= my_current_job.arguments[18].ReturnFloatArgument();
-	bool        correct_mag_distortion				= my_current_job.arguments[19].ReturnBoolArgument();
-    float       mag_distortion_angle				= my_current_job.arguments[20].ReturnFloatArgument();
-    float       mag_distortion_major_scale          = my_current_job.arguments[21].ReturnFloatArgument();
-	float       mag_distortion_minor_scale          = my_current_job.arguments[22].ReturnFloatArgument();
-	bool 		write_out_amplitude_spectrum 		= my_current_job.arguments[23].ReturnBoolArgument();
-	std::string amplitude_spectrum_filename 		= my_current_job.arguments[24].ReturnStringArgument();
-	bool 		write_out_small_sum_image 			= my_current_job.arguments[25].ReturnBoolArgument();
-	std::string small_sum_image_filename 			= my_current_job.arguments[26].ReturnStringArgument();
-	int         first_frame							= my_current_job.arguments[27].ReturnIntegerArgument();
-	int         last_frame							= my_current_job.arguments[28].ReturnIntegerArgument();
-
+	bool		movie_is_dark_corrected				= my_current_job.arguments[18].ReturnBoolArgument();
+	wxString	dark_filename						= my_current_job.arguments[19].ReturnStringArgument();
+	float		output_binning_factor				= my_current_job.arguments[20].ReturnFloatArgument();
+	bool        correct_mag_distortion				= my_current_job.arguments[21].ReturnBoolArgument();
+    float       mag_distortion_angle				= my_current_job.arguments[22].ReturnFloatArgument();
+    float       mag_distortion_major_scale          = my_current_job.arguments[23].ReturnFloatArgument();
+	float       mag_distortion_minor_scale          = my_current_job.arguments[24].ReturnFloatArgument();
+	bool 		write_out_amplitude_spectrum 		= my_current_job.arguments[25].ReturnBoolArgument();
+	std::string amplitude_spectrum_filename 		= my_current_job.arguments[26].ReturnStringArgument();
+	bool 		write_out_small_sum_image 			= my_current_job.arguments[27].ReturnBoolArgument();
+	std::string small_sum_image_filename 			= my_current_job.arguments[28].ReturnStringArgument();
+	int         first_frame							= my_current_job.arguments[29].ReturnIntegerArgument();
+	int         last_frame							= my_current_job.arguments[30].ReturnIntegerArgument();
+	int         number_of_frames_for_running_average= my_current_job.arguments[31].ReturnIntegerArgument();
+	int			max_threads							= my_current_job.arguments[32].ReturnIntegerArgument();
+	bool		saved_aligned_frames				= my_current_job.arguments[33].ReturnBoolArgument();
+	std::string aligned_frames_filename 			= my_current_job.arguments[34].ReturnStringArgument();
+	std::string output_shift_text_file				= my_current_job.arguments[35].ReturnStringArgument();
 
 	//my_current_job.PrintAllArguments();
 
@@ -239,6 +293,9 @@ bool UnBlurApp::DoCalculation()
 	wxDateTime	final_alignment_start;
 	wxDateTime	final_alignment_finish;
 
+	float temp_float[2];
+
+	if (IsOdd(number_of_frames_for_running_average == false)) SendError("Error: number of frames for running average must be odd");
 
 	// The Files
 
@@ -249,11 +306,18 @@ bool UnBlurApp::DoCalculation()
 	}
 	ImageFile input_file(input_filename, false);
 	//MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
+
 	ImageFile gain_file;
+	ImageFile dark_file;
 
 	if (! movie_is_gain_corrected)
 	{
 		gain_file.OpenFile(gain_filename.ToStdString(), false);
+	}
+
+	if (! movie_is_dark_corrected)
+	{
+		dark_file.OpenFile(dark_filename.ToStdString(), false);
 	}
 
 	long number_of_input_images = input_file.ReturnNumberOfSlices();
@@ -276,7 +340,10 @@ bool UnBlurApp::DoCalculation()
 
 	Image *unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
 	Image *image_stack = new Image[number_of_input_images];
+	Image *running_average_stack; // we will allocate this later if necessary;
+
 	Image gain_image;
+	Image dark_image;
 
 	// output sizes..
 
@@ -321,7 +388,11 @@ bool UnBlurApp::DoCalculation()
 	float *dose_filter;
 	float *dose_filter_sum_of_squares;
 
-
+	int first_frame_to_preprocess;
+	int last_frame_to_preprocess;
+	int number_of_preprocess_blocks;
+	int preprocess_block_counter;
+	int total_processed;
 
 	// Electron dose object for if dose filtering..
 
@@ -338,56 +409,94 @@ bool UnBlurApp::DoCalculation()
 		exit(-1);
 	}
 
-	// Read in gain reference
+	// Read in dark/gain reference
 	if (!movie_is_gain_corrected) { gain_image.ReadSlice(&gain_file,1);	}
+	if (!movie_is_dark_corrected) { dark_image.ReadSlice(&dark_file,1);	}
 
 	// Read in, gain-correct, FFT and resample all the images..
 
 	read_frames_start = wxDateTime::Now();
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
-	{
-		// Read from disk
-		image_stack[image_counter].ReadSlice(&input_file,image_counter+1);
 
-		// Gain correction
-		if (! movie_is_gain_corrected)
+	// big loop over number of threads, so that far large number of frames you might save some memory..
+
+
+	// read in frames, non threaded..
+
+	number_of_preprocess_blocks = int(ceilf(float(number_of_input_images) / float(max_threads)));
+
+	first_frame_to_preprocess = 1;
+	last_frame_to_preprocess = max_threads;
+	total_processed = 0;
+
+	for (preprocess_block_counter = 0; preprocess_block_counter < number_of_preprocess_blocks; preprocess_block_counter++)
+	{
+
+		for (image_counter = first_frame_to_preprocess; image_counter <= last_frame_to_preprocess; image_counter++)
 		{
-			if (! image_stack[image_counter].HasSameDimensionsAs(&gain_image))
+			// Read from disk
+			image_stack[image_counter - 1].ReadSlice(&input_file,image_counter);
+		}
+
+		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+		for (image_counter = first_frame_to_preprocess; image_counter <= last_frame_to_preprocess; image_counter++)
+		{
+		// Dark correction
+		if (! movie_is_dark_corrected)
+		{
+			if (! image_stack[image_counter - 1].HasSameDimensionsAs(&dark_image))
 			{
-				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter+1, input_filename, gain_filename));
+				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the dark image (%s)", image_counter, input_filename, dark_filename));
 				wxSleep(10);
 				exit(-1);
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
-			image_stack[image_counter].MultiplyPixelWise(gain_image);
+			image_stack[image_counter - 1].SubtractImage(&dark_image);
 		}
 
-		image_stack[image_counter].ReplaceOutliersWithMean(6);
+		// Gain correction
+		if (! movie_is_gain_corrected)
+		{
+			if (! image_stack[image_counter - 1].HasSameDimensionsAs(&gain_image))
+			{
+				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter, input_filename, gain_filename));
+				wxSleep(10);
+				exit(-1);
+			}
+			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
+			image_stack[image_counter - 1].MultiplyPixelWise(gain_image);
+		}
+
+		image_stack[image_counter - 1].ReplaceOutliersWithMean(12);
 
 		if (correct_mag_distortion == true)
 		{
-			image_stack[image_counter].CorrectMagnificationDistortion(mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
+			image_stack[image_counter - 1].CorrectMagnificationDistortion(mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
 		}
 
 		// FT
-		image_stack[image_counter].ForwardFFT(true);
-		image_stack[image_counter].ZeroCentralPixel();
+		image_stack[image_counter - 1].ForwardFFT(true);
+		image_stack[image_counter - 1].ZeroCentralPixel();
 
 		// Resize the FT (binning)
 		if (output_binning_factor > 1.0001)
 		{
-			image_stack[image_counter].Resize(myroundint(image_stack[image_counter].logical_x_dimension/output_binning_factor),myroundint(image_stack[image_counter].logical_y_dimension/output_binning_factor),1);
+			image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension/output_binning_factor),myroundint(image_stack[image_counter - 1].logical_y_dimension/output_binning_factor),1);
 		}
 
 		// Init shifts
-		x_shifts[image_counter] = 0.0;
-		y_shifts[image_counter] = 0.0;
-	}
+		x_shifts[image_counter - 1] = 0.0;
+		y_shifts[image_counter - 1] = 0.0;
+		} // end omp block
 
+		first_frame_to_preprocess+=max_threads;
+		last_frame_to_preprocess+=max_threads;
+
+		if (first_frame_to_preprocess > number_of_input_images) first_frame_to_preprocess = number_of_input_images;
+		if (last_frame_to_preprocess > number_of_input_images) last_frame_to_preprocess = number_of_input_images;
+	}
 	input_file.CloseFile();
 
 	read_frames_finish = wxDateTime::Now();
-
 
 	// if we are binning - choose a binning factor..
 
@@ -424,6 +533,7 @@ bool UnBlurApp::DoCalculation()
 
 	if (pre_binning_factor > 1)
 	{
+		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
 			image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
@@ -440,13 +550,13 @@ bool UnBlurApp::DoCalculation()
 	// do the initial refinement (only 1 round - with the min shift)
 	first_alignment_start = wxDateTime::Now();
 	//SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
-	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
 	first_alignment_finish = wxDateTime::Now();
 
 	// now do the actual refinement..
 	main_alignment_start = wxDateTime::Now();
 	//SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
-	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, x_shifts, y_shifts);
+	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
 	main_alignment_finish = wxDateTime::Now();
 
 
@@ -462,6 +572,7 @@ bool UnBlurApp::DoCalculation()
 
 		// Adjust the shifts, then phase shift the original images
 
+		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
 			x_shifts[image_counter] *= pre_binning_factor;
@@ -482,7 +593,7 @@ bool UnBlurApp::DoCalculation()
 
 		// do the refinement..
 		//SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
-		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, x_shifts, y_shifts);
+		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
 
 		// if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
 
@@ -504,36 +615,72 @@ bool UnBlurApp::DoCalculation()
 			sum_image_no_dose_filter.SetToConstant(0.0);
 		}
 
-		// allocate arrays for the filter, and the sum of squares..
 
-		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
-		dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-
-		for (pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++)
+		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
-			dose_filter[pixel_counter] = 0.0;
-			dose_filter_sum_of_squares[pixel_counter] = 0.0;
+			if (write_out_amplitude_spectrum == true)
+			{
+				sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
+			}
 		}
 
+		// allocate arrays for the filter, and the sum of squares..
+
+		dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
+		ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated/2);
+
+
+		#pragma omp parallel default(shared) num_threads(max_threads) private(image_counter, dose_filter, pixel_counter)
+		{ // for omp
+
+
+		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
+		ZeroFloatArray(dose_filter, image_stack[0].real_memory_allocated/2);
+		float *thread_dose_filter_sum_of_squares = new  float[image_stack[0].real_memory_allocated / 2];
+		ZeroFloatArray(thread_dose_filter_sum_of_squares, image_stack[0].real_memory_allocated/2);
+
+		#pragma omp for
 		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
 
 			// filter the image, and also calculate the sum of squares..
 
-			if (write_out_amplitude_spectrum == true)
-			{
-				sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
-			}
+
 
 			for (pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++)
 			{
 				image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
-				dose_filter_sum_of_squares[pixel_counter] += pow(dose_filter[pixel_counter], 2);
+				thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
 				//if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
 			}
+		}
 
+		delete [] dose_filter;
+
+		// copy the local sum of squares to global
+
+		#pragma omp critical
+		{
+
+			for (pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++)
+			{
+				dose_filter_sum_of_squares[pixel_counter] += thread_dose_filter_sum_of_squares[pixel_counter];
+			}
+		}
+
+		delete [] thread_dose_filter_sum_of_squares;
+
+		} // end omp section
+
+		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
+		{
 			sum_image.AddImage(&image_stack[image_counter]);
+
+			if (saved_aligned_frames == true)
+			{
+				image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
+			}
 		}
 	}
 	else // just add them
@@ -541,6 +688,11 @@ bool UnBlurApp::DoCalculation()
 		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			sum_image.AddImage(&image_stack[image_counter]);
+
+			if (saved_aligned_frames == true)
+			{
+				image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
+			}
 		}
 	}
 
@@ -555,7 +707,7 @@ bool UnBlurApp::DoCalculation()
 		{
 			if (dose_filter_sum_of_squares[pixel_counter] != 0)
 			{
-				sum_image.complex_values[pixel_counter] /= sqrt(dose_filter_sum_of_squares[pixel_counter]);
+				sum_image.complex_values[pixel_counter] /= sqrtf(dose_filter_sum_of_squares[pixel_counter]);
 			}
 		}
 	}
@@ -666,11 +818,17 @@ bool UnBlurApp::DoCalculation()
 
 	float *result_array = new float[number_of_input_images * 2];
 
+	NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
+	shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str());
+
 	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 	{
 		result_array[image_counter] = x_shifts[image_counter] * output_pixel_size;
 		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
 
+		temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+		temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+		shifts_file.WriteLine(temp_float);
 		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
 	}
 
@@ -684,7 +842,6 @@ bool UnBlurApp::DoCalculation()
 	if (should_dose_filter == true)
 	{
 		delete my_electron_dose;
-		delete [] dose_filter;
 		delete [] dose_filter_sum_of_squares;
 	}
 
@@ -695,13 +852,18 @@ bool UnBlurApp::DoCalculation()
 	return true;
 }
 
-void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, float *x_shifts, float *y_shifts)
+void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts)
 {
 	long pixel_counter;
 	long image_counter;
+	int running_average_counter;
+	int start_frame_for_average;
+	int end_frame_for_average;
 	long iteration_counter;
 
 	int number_of_middle_image = number_of_images / 2;
+	int running_average_half_size = (number_of_frames_for_running_average - 1) / 2;
+	if (running_average_half_size < 1) running_average_half_size = 1;
 
 	float *current_x_shifts = new float[number_of_images];
 	float *current_y_shifts = new float[number_of_images];
@@ -712,10 +874,17 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 	float max_shift;
 	float total_shift;
 
+	if (IsOdd(savitzy_golay_window_size) == false) savitzy_golay_window_size++;
+	if (savitzy_golay_window_size < 5) savitzy_golay_window_size = 5;
+
 	Image sum_of_images;
 	Image sum_of_images_minus_current;
+	Image *running_average_stack;
 
+	Image *stack_for_alignment; // pointer that can be switched between running average stack and image stack if necessary
 	Peak my_peak;
+
+
 
 	Curve x_shifts_curve;
 	Curve y_shifts_curve;
@@ -723,8 +892,19 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 	sum_of_images.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
 	sum_of_images.SetToConstant(0.0);
 
-	sum_of_images_minus_current.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
 
+	if (number_of_frames_for_running_average > 1)
+	{
+		running_average_stack = new Image[number_of_images];
+
+		for (image_counter = 0; image_counter < number_of_images; image_counter++)
+		{
+			running_average_stack[image_counter].Allocate(input_stack[image_counter].logical_x_dimension, input_stack[image_counter].logical_y_dimension, 1, false);
+		}
+
+		stack_for_alignment = running_average_stack;
+	}
+	else stack_for_alignment = input_stack;
 
 
 	// prepare the initial sum
@@ -743,12 +923,52 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 	//	wxPrintf("Starting iteration number %li\n\n", iteration_counter);
 		max_shift = -FLT_MAX;
 
+		// make the current running average if necessary
+
+		if (number_of_frames_for_running_average > 1)
+		{
+			#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter, start_frame_for_average, end_frame_for_average, running_average_counter)
+			for (image_counter = 0; image_counter < number_of_images; image_counter++)
+			{
+				start_frame_for_average = image_counter - running_average_half_size;
+				end_frame_for_average = image_counter + running_average_half_size;
+
+				if (start_frame_for_average < 0)
+				{
+					end_frame_for_average -= start_frame_for_average; // add it to the right
+					start_frame_for_average = 0;
+				}
+
+				if (end_frame_for_average >= number_of_images)
+				{
+					start_frame_for_average -= (end_frame_for_average - (number_of_images - 1));
+					end_frame_for_average = number_of_images - 1;
+				}
+
+				if (start_frame_for_average < 0) start_frame_for_average = 0;
+				if (end_frame_for_average >= number_of_images) end_frame_for_average = number_of_images - 1;
+				running_average_stack[image_counter].SetToConstant(0.0f);
+
+				for (running_average_counter = start_frame_for_average; running_average_counter <= end_frame_for_average; running_average_counter++)
+				{
+					running_average_stack[image_counter].AddImage(&input_stack[running_average_counter]);
+				}
+			}
+		}
+
+
+		#pragma omp parallel default(shared) num_threads(max_threads) private(image_counter, sum_of_images_minus_current, my_peak)
+		{ // for omp
+
+			sum_of_images_minus_current.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
+
+		#pragma omp for
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
 			// prepare the sum reference by subtracting out the current image, applying a bfactor and masking central cross
 
-			sum_of_images_minus_current = sum_of_images;
-			sum_of_images_minus_current.SubtractImage(&input_stack[image_counter]);
+			sum_of_images_minus_current.CopyFrom(&sum_of_images);
+			sum_of_images_minus_current.SubtractImage(&stack_for_alignment[image_counter]);
 			sum_of_images_minus_current.ApplyBFactor(unitless_bfactor);
 
 			if (mask_central_cross == true)
@@ -758,7 +978,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 			// compute the cross correlation function and find the peak
 
-		    sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&input_stack[image_counter]);
+		    sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&stack_for_alignment[image_counter]);
 		    my_peak = sum_of_images_minus_current.FindPeakWithParabolaFit(inner_radius_for_peak_search, outer_radius_for_peak_search);
 
 			// update the shifts..
@@ -767,6 +987,8 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			current_y_shifts[image_counter] = my_peak.y;
 		}
 
+			sum_of_images_minus_current.Deallocate();
+		} // end omp
 		// smooth the shifts
 
 		x_shifts_curve.ClearData();
@@ -777,21 +999,41 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			x_shifts_curve.AddPoint(image_counter, x_shifts[image_counter] + current_x_shifts[image_counter]);
 			y_shifts_curve.AddPoint(image_counter, y_shifts[image_counter] + current_y_shifts[image_counter]);
 
-			//wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
+			wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
 		}
 
 
-		x_shifts_curve.FitSavitzkyGolayToData(5, 3);
-		y_shifts_curve.FitSavitzkyGolayToData(5, 3);
-
-		// copy them back..
-
-		for (image_counter = 0; image_counter < number_of_images; image_counter++)
+		if (inner_radius_for_peak_search != 0) // in this case, weird things can happen (+1/-1 flips), we want to really smooth it. use a polynomial.  This should only affect the first round..
 		{
-			current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
-			current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
-		//	wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+			x_shifts_curve.FitPolynomialToData(4);
+			y_shifts_curve.FitPolynomialToData(4);
+
+			// copy back
+
+			for (image_counter = 0; image_counter < number_of_images; image_counter++)
+			{
+				current_x_shifts[image_counter] = x_shifts_curve.polynomial_fit[image_counter] - x_shifts[image_counter];
+				current_y_shifts[image_counter] = y_shifts_curve.polynomial_fit[image_counter] - y_shifts[image_counter];
+				wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+			}
+
 		}
+		else
+		{
+			x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
+			y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
+
+			// copy them back..
+
+			for (image_counter = 0; image_counter < number_of_images; image_counter++)
+			{
+				current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
+				current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
+				wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+			}
+
+		}
+
 
 
 
@@ -811,7 +1053,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		}
 
 		// actually shift the images, also add the subtracted shifts to the overall shifts
-
+		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
 			input_stack[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 0.0);
@@ -824,14 +1066,19 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 		if (iteration_counter >= max_iterations || max_shift <= max_shift_convergence_threshold)
 		{
-		//	wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+			wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 			delete [] current_x_shifts;
 			delete [] current_y_shifts;
+
+			if (number_of_frames_for_running_average > 1)
+			{
+				delete [] running_average_stack;
+			}
 			return;
 		}
 		else
 		{
-		//	wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+			wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 
 		}
 

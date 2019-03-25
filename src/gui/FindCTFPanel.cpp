@@ -582,6 +582,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	bool		resample_if_pixel_too_small;
 	bool		large_astigmatism_expected;
 
+	wxString	current_dark_filename;
+	bool 		movie_is_dark_corrected;
 	wxString	current_gain_filename;
 	bool 		movie_is_gain_corrected;
 
@@ -716,6 +718,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 			current_gain_filename = current_movie->gain_filename;
 			movie_is_gain_corrected = current_gain_filename.IsEmpty();
 
+			current_dark_filename = current_movie->dark_filename;
+			movie_is_dark_corrected = current_dark_filename.IsEmpty();
+
 			correct_movie_mag_distortion = current_movie->correct_mag_distortion;
 
 			if (correct_movie_mag_distortion == true)
@@ -735,11 +740,13 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		{
 			current_gain_filename = "";
 			movie_is_gain_corrected = true;
+			current_dark_filename = "";
+			movie_is_dark_corrected = true;
 		}
 
 		const int number_of_threads = 1;
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbfffbfffi",input_filename.c_str(), // 0
+		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -765,6 +772,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	resample_if_pixel_too_small,// 23
 																	movie_is_gain_corrected,
 																	current_gain_filename.ToStdString().c_str(),
+																	movie_is_dark_corrected,
+																	current_dark_filename.ToStdString().c_str(),
 																	correct_movie_mag_distortion,
 																	movie_mag_distortion_angle,
 																	movie_mag_distortion_major_scale,

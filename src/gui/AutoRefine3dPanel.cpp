@@ -1422,7 +1422,7 @@ void AutoRefinementManager::SetupReconstructionJob()
         }
 	}
 
-	written_parameter_files = output_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_output_par");
+	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_output_par");
 
 	int class_counter;
 	long counter;
@@ -1457,7 +1457,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 			wxString output_reconstruction_1    = "/dev/null";
 			wxString output_reconstruction_2			= "/dev/null";
 			wxString output_reconstruction_filtered		= "/dev/null";
-			wxString output_resolution_statistics		= "/dev/null";
+			wxString output_resolution_statistics		= wxString::Format("/tmp/stats_%i\n", myroundint(current_particle_counter));
 			wxString my_symmetry						= active_refinement_package->symmetry;
 
 			long	 first_particle						= myroundint(current_particle_counter);
@@ -1491,6 +1491,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 			if (current_percent_used * 3.0f < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
 			else score_threshold = current_percent_used / 100.0; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
 
+			if (score_threshold > 1.0f) score_threshold = 1.0f;
 			// OVERIDES ABOVE!
 			//score_threshold = 0.0;
 
@@ -1537,6 +1538,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 			bool     centre_mass                        = my_parent->AutoCenterYesRadioButton->GetValue();
 
 			bool threshold_input_3d = true;
+
 
 			my_parent->my_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
 																		input_particle_stack.ToUTF8().data(),
@@ -1729,8 +1731,7 @@ void AutoRefinementManager::SetupRefinementJob()
 		input_refinement->number_of_classes = 1;
 	}
 
-
-	written_parameter_files = input_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_par");
+	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_par");
 	written_res_files = input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_stats");
 
 	// for now, number of jobs is number of processes -1 (master)..
@@ -1779,7 +1780,7 @@ void AutoRefinementManager::SetupRefinementJob()
 			//else percent_used = current_percent_used * 0.01;
 			//if (percent_used > 1) percent_used = 1;
 #ifdef DEBUG
-			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li.par", first_particle, last_particle);
+			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li.star", first_particle, last_particle);
 #else
 			wxString output_parameter_file = "/dev/null";
 #endif
@@ -1939,30 +1940,43 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 	if (running_job_type == REFINEMENT)
 	{
 
-		int current_class = int(result_to_process->result_data[0] + 0.5);
+		int current_class = int(result_to_process->result_data[0]+ 0.5);
 		long current_particle = long(result_to_process->result_data[1] + 0.5) - 1;
+
+/*		wxPrintf("Recieved a result for particle %li, x_shift = %f, y_shift = %f, psi = %f, theta = %f, phi = %f\n",	long(result_to_process->result_data[1] + 0.5),
+																														result_to_process->result_data[6],
+																														result_to_process->result_data[7],
+																														result_to_process->result_data[3],
+																														result_to_process->result_data[4],
+																														result_to_process->result_data[5]);*/
 
 		MyDebugAssertTrue(current_particle != -1 && current_class != -1, "Current Particle (%li) or Current Class(%i) = -1!", current_particle, current_class);
 
-	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
+//		wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
 		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
 
-
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack = long(result_to_process->result_data[1] + 0.5);
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi = result_to_process->result_data[2];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].theta = result_to_process->result_data[3];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phi = result_to_process->result_data[4];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift = result_to_process->result_data[5];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].yshift = result_to_process->result_data[6];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus1 = result_to_process->result_data[9];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus2 = result_to_process->result_data[10];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus_angle = result_to_process->result_data[11];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phase_shift = result_to_process->result_data[12];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].occupancy = result_to_process->result_data[13];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].logp = result_to_process->result_data[14];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[15];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[16];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[8]);
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[2]);
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi = result_to_process->result_data[3];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].theta = result_to_process->result_data[4];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phi = result_to_process->result_data[5];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift = result_to_process->result_data[6];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].yshift = result_to_process->result_data[7];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus1 = result_to_process->result_data[8];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus2 = result_to_process->result_data[9];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus_angle = result_to_process->result_data[10];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phase_shift = result_to_process->result_data[11];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].occupancy = result_to_process->result_data[12];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].logp = result_to_process->result_data[13];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[14];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[15];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].pixel_size = result_to_process->result_data[17];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].microscope_voltage_kv = result_to_process->result_data[18];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].microscope_spherical_aberration_mm = result_to_process->result_data[19];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_x = result_to_process->result_data[20];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_y = result_to_process->result_data[21];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_x = result_to_process->result_data[22];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y = result_to_process->result_data[23];
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");
@@ -2176,6 +2190,15 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].defocus_angle = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus_angle;
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].phase_shift = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].phase_shift;
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].logp;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].score;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].pixel_size = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].pixel_size;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_voltage_kv = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_x = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_x;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_y = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_y;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_x = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_shift_x;
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_y = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_shift_y;
+
 				}
 
 				output_refinement->class_refinement_results[class_counter].average_occupancy = 100.0f / output_refinement->number_of_classes;

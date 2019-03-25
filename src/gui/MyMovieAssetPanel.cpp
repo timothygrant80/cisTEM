@@ -299,13 +299,14 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(6, "Exp. per frame", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(7, "Cs", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(8, "Voltage", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(9, "Gain filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(10,"Output bin. factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(11,"Correct Mag. Distortion?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(12,"Dist. angle", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(13,"Dist. major scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(14,"Dist. minor scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
-		ContentsListBox->InsertColumn(15,"Particles are white?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(9, "Dark filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(10, "Gain filename", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(11,"Output bin. factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(12,"Correct Mag. Distortion?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(13,"Dist. angle", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(14,"Dist. major scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(15,"Dist. minor scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(16,"Particles are white?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -356,20 +357,23 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->microscope_voltage);
 	    	break;
 	    case 9  :
+	    	return wxFileName(all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->dark_filename).GetFullName();
+	    	break;
+	    case 10  :
 	    	return wxFileName(all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->gain_filename).GetFullName();
 	    	break;
-	    case 10:
-	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->output_binning_factor);
 	    case 11:
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->output_binning_factor);
+	    case 12:
 	    	if ( all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->correct_mag_distortion == true) return "Yes";
 	    	else return "No";
-	    case 12:
-	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_angle);
 	    case 13:
-	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_major_scale);
+	    	return wxString::Format(wxT("%.2f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_angle);
 	    case 14:
-	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_minor_scale);
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_major_scale);
 	    case 15:
+	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_minor_scale);
+	    case 16:
 			return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->protein_is_white);
 		default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
@@ -416,6 +420,11 @@ bool MyMovieAssetPanel::ReturnAssetProteinIsWhite(long wanted_asset)
 wxString MyMovieAssetPanel::ReturnAssetGainFilename(long wanted_asset)
 {
 	return wxString(all_assets_list->ReturnMovieAssetPointer(wanted_asset)->gain_filename);
+}
+
+wxString MyMovieAssetPanel::ReturnAssetDarkFilename(long wanted_asset)
+{
+	return wxString(all_assets_list->ReturnMovieAssetPointer(wanted_asset)->dark_filename);
 }
 
 float MyMovieAssetPanel::ReturnAssetBinningFactor(long wanted_asset)

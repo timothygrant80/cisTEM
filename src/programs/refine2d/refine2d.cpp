@@ -1,5 +1,6 @@
 #include "../../core/core_headers.h"
 
+// TODO : Switch to new parameter file format (star) properly and remove hacks
 class
 Refine2DApp : public MyApp
 {
@@ -137,19 +138,19 @@ bool Refine2DApp::DoCalculation()
 	float	 smoothing_factor					= my_current_job.arguments[19].ReturnFloatArgument();
 	int		 padding_factor						= my_current_job.arguments[20].ReturnIntegerArgument();
 // Psi, Theta, Phi, ShiftX, ShiftY
-	input_particle.parameter_map[3]				= true;
-	input_particle.parameter_map[2]				= false;
-	input_particle.parameter_map[1]				= false;
-	input_particle.parameter_map[4]				= true;
-	input_particle.parameter_map[5]				= true;
+	input_particle.parameter_map.psi			= true;
+	input_particle.parameter_map.theta			= false;
+	input_particle.parameter_map.phi			= false;
+	input_particle.parameter_map.x_shift		= true;
+	input_particle.parameter_map.y_shift		= true;
 	bool	 normalize_particles				= my_current_job.arguments[21].ReturnBoolArgument();
 	bool	 invert_contrast					= my_current_job.arguments[22].ReturnBoolArgument();
 	bool	 exclude_blank_edges				= my_current_job.arguments[23].ReturnBoolArgument();
 	bool	 dump_arrays						= my_current_job.arguments[24].ReturnBoolArgument();
 	dump_file	 								= my_current_job.arguments[25].ReturnStringArgument();
 
-	input_particle.constraints_used[4] = true;		// Constraint for X shifts
-	input_particle.constraints_used[5] = true;		// Constraint for Y shifts
+	input_particle.constraints_used.x_shift = true;		// Constraint for X shifts
+	input_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
 
 	Image	input_image, cropped_input_image;
 	Image	sum_power, ctf_input_image, padded_image;
@@ -170,10 +171,10 @@ bool Refine2DApp::DoCalculation()
 	int projection_counter;
 	int padded_box_size, cropped_box_size, binned_box_size;
 	int best_class;
-	float input_parameters[input_particle.number_of_parameters];
-	float output_parameters[input_particle.number_of_parameters];
-	float parameter_average[input_particle.number_of_parameters];
-	float parameter_variance[input_particle.number_of_parameters];
+	float input_parameters[17];
+	float output_parameters[17];
+	float parameter_average[17];
+	float parameter_variance[17];
 	float binning_factor, binned_pixel_size;
 	float temp_float;
 	float psi;
@@ -194,10 +195,10 @@ bool Refine2DApp::DoCalculation()
 	int max_samples = 2000;
 	wxDateTime my_time_in;
 
-	ZeroFloatArray(input_parameters, input_particle.number_of_parameters);
-	ZeroFloatArray(output_parameters, input_particle.number_of_parameters);
-	ZeroFloatArray(parameter_average, input_particle.number_of_parameters);
-	ZeroFloatArray(parameter_variance, input_particle.number_of_parameters);
+	ZeroFloatArray(input_parameters, 17);
+	ZeroFloatArray(output_parameters, 17);
+	ZeroFloatArray(parameter_average, 17);
+	ZeroFloatArray(parameter_variance, 17);
 
 	if (! DoesFileExist(input_parameter_file))
 	{
@@ -262,7 +263,7 @@ bool Refine2DApp::DoCalculation()
 		input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		if (input_parameters[7] > 0.0)
 		{
-			for (i = 0; i < input_particle.number_of_parameters; i++)
+			for (i = 0; i < 17; i++)
 			{
 					parameter_average[i] += input_parameters[i];
 					parameter_variance[i] += powf(input_parameters[i],2);
@@ -274,21 +275,33 @@ bool Refine2DApp::DoCalculation()
 
 	if (image_counter > 0)
 	{
-		for (i = 0; i < input_particle.number_of_parameters; i++)
+		for (i = 0; i < 17; i++)
 		{
 			parameter_average[i] /= image_counter;
 			parameter_variance[i] /= image_counter;
 			parameter_variance[i] -= powf(parameter_average[i],2);
 
-			if (parameter_variance[i] < 0.001) input_particle.constraints_used[i] = false;
+			// nasty hack for new file format support in other programs
+
+			if (parameter_variance[i] < 0.001 && i == 1) input_particle.constraints_used.phi = false;
+			if (parameter_variance[i] < 0.001 && i == 2) input_particle.constraints_used.theta = false;
+			if (parameter_variance[i] < 0.001 && i == 3) input_particle.constraints_used.psi = false;
+			if (parameter_variance[i] < 0.001 && i == 4) input_particle.constraints_used.x_shift = false;
+			if (parameter_variance[i] < 0.001 && i == 5) input_particle.constraints_used.y_shift = false;
 		}
 	}
 	else
 	{
-		for (i = 0; i < input_particle.number_of_parameters; i++)
+		input_particle.constraints_used.psi 	= false;
+		input_particle.constraints_used.theta 	= false;
+		input_particle.constraints_used.phi 	= false;
+		input_particle.constraints_used.x_shift = false;
+		input_particle.constraints_used.y_shift = false;
+
+		/*for (i = 0; i < 17; i++)
 		{
 			input_particle.constraints_used[i] = false;
-		}
+		}*/
 	}
 
 	xy_dimensions = input_stack.ReturnXSize();
@@ -298,7 +311,51 @@ bool Refine2DApp::DoCalculation()
 //	average_snr = 0.002;
 	wxPrintf("\nShift averages x, y = %g, %g, shift std x, y = %g, %g, average SNR = %g\n", parameter_average[4], parameter_average[5],
 			sqrtf(parameter_variance[4]), sqrtf(parameter_variance[5]), average_snr);
-	input_particle.SetParameterStatistics(parameter_average, parameter_variance);
+
+
+	// hack because of changes to new parameter file..
+
+	cisTEMParameterLine parameter_averages;
+	cisTEMParameterLine parameter_variances;
+
+	parameter_averages.position_in_stack = parameter_average[0];
+	parameter_averages.psi = parameter_average[3];
+	parameter_averages.theta = parameter_average[2];
+	parameter_averages.phi = parameter_average[1];
+	parameter_averages.x_shift = parameter_average[4];
+	parameter_averages.y_shift = parameter_average[5];
+	parameter_averages.image_is_active = parameter_average[7];
+	parameter_averages.defocus_1 = parameter_average[8];
+	parameter_averages.defocus_2 = parameter_average[9];
+	parameter_averages.defocus_angle = parameter_average[10];
+	parameter_averages.phase_shift = parameter_average[11];
+	parameter_averages.occupancy = parameter_average[12];
+	parameter_averages.logp = parameter_average[13];
+	parameter_averages.sigma = parameter_average[14];
+	parameter_averages.score = parameter_average[15];
+	parameter_averages.score_change = parameter_average[16];
+
+	parameter_variances.position_in_stack = parameter_variance[0];
+	parameter_variances.psi = parameter_variance[3];
+	parameter_variances.theta = parameter_variance[2];
+	parameter_variances.phi = parameter_variance[1];
+	parameter_variances.x_shift = parameter_variance[4];
+	parameter_variances.y_shift = parameter_variance[5];
+	parameter_variances.image_is_active = parameter_variance[7];
+	parameter_variances.defocus_1 = parameter_variance[8];
+	parameter_variances.defocus_2 = parameter_variance[9];
+	parameter_variances.defocus_angle = parameter_variance[10];
+	parameter_variances.phase_shift = parameter_variance[11];
+	parameter_variances.occupancy = parameter_variance[12];
+	parameter_variances.logp = parameter_variance[13];
+	parameter_variances.sigma = parameter_variance[14];
+	parameter_variances.score = parameter_variance[15];
+	parameter_variances.score_change = parameter_variance[16];
+
+
+	// end of hack
+
+	input_particle.SetParameterStatistics(parameter_averages, parameter_variances);
 	input_par_file.Rewind();
 
 	if (max_search_x == 0.0) max_search_x = input_stack.ReturnXSize() / 2.0 * pixel_size;
@@ -610,7 +667,8 @@ bool Refine2DApp::DoCalculation()
 			input_parameters[7] = fabsf(input_parameters[7]);
 			temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 		}
-		for (i = 0; i < input_particle.number_of_parameters; i++) {output_parameters[i] = input_parameters[i];}
+
+		for (i = 0; i < 17; i++) {output_parameters[i] = input_parameters[i];}
 
 
 // Set up Particle object
@@ -622,7 +680,32 @@ bool Refine2DApp::DoCalculation()
 		// The following line would allow using particles with different pixel sizes
 		input_particle.pixel_size = binned_pixel_size;
 //		input_particle.snr = average_snr * powf(binning_factor, 2);
-		input_particle.SetParameters(input_parameters);
+
+		// hack due to changes in parameter files
+
+		cisTEMParameterLine input_params_new_format;
+		
+		input_params_new_format.position_in_stack = input_parameters[0];
+		input_params_new_format.psi = input_parameters[3];
+		input_params_new_format.theta = input_parameters[2];
+		input_params_new_format.phi = input_parameters[1];
+		input_params_new_format.x_shift = input_parameters[4];
+		input_params_new_format.y_shift = input_parameters[5];
+		input_params_new_format.image_is_active = input_parameters[7];
+		input_params_new_format.defocus_1 = input_parameters[8];
+		input_params_new_format.defocus_2 = input_parameters[9];
+		input_params_new_format.defocus_angle = input_parameters[10];
+		input_params_new_format.phase_shift = input_parameters[11];
+		input_params_new_format.occupancy = input_parameters[12];
+		input_params_new_format.logp = input_parameters[13];
+		input_params_new_format.sigma = input_parameters[14];
+		input_params_new_format.score = input_parameters[15];
+		input_params_new_format.score_change = input_parameters[16];
+
+
+		// end of hack
+		
+		input_particle.SetParameters(input_params_new_format);
 		input_particle.SetParameterConstraints(1.0 / average_snr / powf(binning_factor, 2));
 
 		input_image.ReplaceOutliersWithMean(5.0);
@@ -725,6 +808,7 @@ bool Refine2DApp::DoCalculation()
 
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 		{
+			//wxPrintf("Working on class %i\n", current_class);
 			logp[current_class] = input_particle.MLBlur(input_classes_cache, ssq_X, cropped_input_image, rotation_cache,
 					blurred_images[current_class], current_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
 					max_logp_particle, best_class, input_parameters[3], best_correlation_map);
@@ -732,7 +816,8 @@ bool Refine2DApp::DoCalculation()
 			sum_logp_particle = ReturnSumOfLogP(sum_logp_particle, logp[current_class], log_range);
 		}
 		sum_logp_total = ReturnSumOfLogP(sum_logp_total, sum_logp_particle, log_range);
-		if (input_particle.current_parameters[14] != 0.0) sum_snr += 1.0 / input_particle.current_parameters[14];
+
+		if (input_particle.current_parameters.sigma != 0.0) sum_snr += 1.0 / input_particle.current_parameters.sigma;
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 		{
 			// Divide class likelihoods by summed likelihood; this is a simple subtraction of the log values
@@ -742,24 +827,48 @@ bool Refine2DApp::DoCalculation()
 				// Sum the class likelihoods (now divided by the summed likelihood)
 				class_logp[current_class] = ReturnSumOfLogP(class_logp[current_class], logp[current_class], log_range);
 				// Apply likelihood weight to blurred image
-				if (input_particle.current_parameters[14] > 0.0)
+				if (input_particle.current_parameters.sigma > 0.0)
 				{
 					temp_float = expf(logp[current_class]);
 					// Need to divide here by sigma^2; already divided once on input, therefore divide only by sigma here.
-					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle.current_parameters[14]);
+					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle.current_parameters.sigma);
 					// Add weighted image to class average
 					class_averages[current_class].AddImage(&blurred_images[current_class]);
 					// Copy and multiply CTF image
 					temp_image.CopyFrom(&ctf_input_image);
 					temp_image.MultiplyPixelWiseReal(ctf_input_image);
-					temp_image.MultiplyByConstant(temp_float / input_particle.current_parameters[14]);
+					temp_image.MultiplyByConstant(temp_float / input_particle.current_parameters.sigma);
 					CTF_sums[current_class].AddImage(&temp_image);
-					if (current_class + 1 == input_particle.current_parameters[7]) input_particle.current_parameters[12] = 100.0 * temp_float;
+					if (current_class + 1 == input_particle.current_parameters.image_is_active) input_particle.current_parameters.occupancy = 100.0 * temp_float;
 				}
 			}
 		}
 
-		input_particle.GetParameters(output_parameters);
+		// hack due to update to new parmaeter format..
+
+		cisTEMParameterLine output_params_new_format;
+		input_particle.GetParameters(output_params_new_format);
+
+		output_parameters[0] = output_params_new_format.position_in_stack;
+		output_parameters[3] = output_params_new_format.psi;
+		output_parameters[2] = output_params_new_format.theta;
+		output_parameters[1] = output_params_new_format.phi;
+		output_parameters[4] = output_params_new_format.x_shift;
+		output_parameters[5] = output_params_new_format.y_shift;
+		output_parameters[6] = input_parameters[6];
+		output_parameters[7] = output_params_new_format.image_is_active;
+		output_parameters[8] = output_params_new_format.defocus_1;
+		output_parameters[9] = output_params_new_format.defocus_2;
+		output_parameters[10] = output_params_new_format.defocus_angle;
+		output_parameters[11] = output_params_new_format.phase_shift;
+		output_parameters[12] = output_params_new_format.occupancy;
+		output_parameters[13] = output_params_new_format.logp;
+		output_parameters[14] = output_params_new_format.sigma;
+		output_parameters[15] = output_params_new_format.score;
+		output_parameters[16] = output_params_new_format.score_change;
+
+		// end hack
+
 		temp_float = output_parameters[1]; output_parameters[1] = output_parameters[3]; output_parameters[3] = temp_float;
 		output_parameters[7] = list_of_nozero_classes[myroundint(output_parameters[7]) - 1] + 1.0;
 		// Multiply measured sigma noise in binned image by binning factor to obtain sigma noise of unbinned image

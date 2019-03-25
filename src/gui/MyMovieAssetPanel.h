@@ -35,6 +35,7 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		bool ReturnAssetProteinIsWhite(long wanted_asset);
 		int ReturnAssetID(long wanted_asset);
 		wxString ReturnAssetGainFilename(long wanted_asset);
+		wxString ReturnAssetDarkFilename(long wanted_asset);
 		float ReturnAssetBinningFactor(long wanted_asset);
 		bool ReturnCorrectMagDistortion(long wanted_asset);
 		float ReturnMagDistortionAngle(long wanted_asset);

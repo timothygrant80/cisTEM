@@ -709,8 +709,7 @@ void Generate3DPanel::OnJobSocketEvent(wxSocketEvent& event)
 void Generate3DPanel::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
-	written_parameter_files = input_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/generate3d_par");
-
+	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/generate3d_par");
 	int class_counter;
 	long counter;
 	int job_counter;

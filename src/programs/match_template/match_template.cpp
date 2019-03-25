@@ -66,7 +66,7 @@ public:
 float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values)
 {
 	ImageProjectionComparison *comparison_object = reinterpret_cast < ImageProjectionComparison *> (scoring_parameters);
-	for (int i = 0; i < comparison_object->particle->number_of_parameters; i++) {comparison_object->particle->temp_float[i] = comparison_object->particle->current_parameters[i];}
+	comparison_object->particle->temp_parameters = comparison_object->particle->current_parameters;
 	comparison_object->particle->UnmapParameters(array_of_values);
 
 //	comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
@@ -114,7 +114,7 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 //			comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
 	return 	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
 			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
-			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
+			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
 		// This penalty term assumes a Gaussian x,y distribution that is probably not correct in most cases. It might be better to leave it out.
 
 }
@@ -370,9 +370,9 @@ bool MatchTemplateApp::DoCalculation()
 	wxPrintf("last location = %i\n", last_search_position);
 	*/
 
-	bool parameter_map[5]; // needed for euler search init
-	for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
-
+	ParameterMap parameter_map; // needed for euler search init
+	//for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
+	parameter_map.SetAllTrue();
 
 	float outer_mask_radius;
 	float current_psi;

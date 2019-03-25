@@ -517,6 +517,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int first_frame;
 	int last_frame;
 
+	int number_of_frames_for_running_average;
+	int max_threads;
+
 	int current_asset_id;
 	int number_of_previous_alignments;
 
@@ -540,6 +543,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	std::string current_filename;
 	wxString current_gain_filename;
+	wxString current_dark_filename;
 	wxString output_filename;
 	wxFileName buffer_filename;
 
@@ -550,6 +554,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	wxString small_sum_image_filename;
 
 	bool movie_is_gain_corrected;
+	bool movie_is_dark_corrected;
 	float output_binning_factor;
 
 	bool correct_mag_distortion;
@@ -675,7 +680,28 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(active_group.members[counter]);
 
 		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(active_group.members[counter]);
-		movie_is_gain_corrected = current_gain_filename.IsEmpty();
+		current_dark_filename = movie_asset_panel->ReturnAssetDarkFilename(active_group.members[counter]);
+
+		if (current_gain_filename.IsEmpty() == true)
+		{
+			current_gain_filename = "/dev/null";
+			movie_is_gain_corrected = true;
+		}
+		else
+		{
+			movie_is_gain_corrected = false;
+		}
+
+		if (current_dark_filename.IsEmpty() == true)
+		{
+			current_dark_filename = "/dev/null";
+			movie_is_dark_corrected = true;
+		}
+		else
+		{
+			movie_is_dark_corrected = false;
+		}
+
 
 		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]);
 
@@ -685,7 +711,14 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
 
 
-		my_job_package.AddJob("ssfffbbfifbiifffbsfbfffbtbtii",current_filename.c_str(), //0
+		number_of_frames_for_running_average = 1;
+		max_threads = 1;
+
+		bool saved_aligned_frames = false;
+		std::string aligned_frames_filename = "/dev/null";
+		std::string output_shift_text_file = "/dev/null";
+
+		my_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtt",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -703,6 +736,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														current_pre_exposure, //15
 														movie_is_gain_corrected,
 														current_gain_filename.ToStdString().c_str(),
+														movie_is_dark_corrected,
+														current_dark_filename.ToStdString().c_str(),
 														output_binning_factor,
 														correct_mag_distortion,
 														mag_distortion_angle,
@@ -713,7 +748,12 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														write_out_small_sum_image,
 														small_sum_image_filename.ToStdString().c_str(),
 														first_frame,
-														last_frame);
+														last_frame,
+														number_of_frames_for_running_average,
+														max_threads,
+														saved_aligned_frames,
+														aligned_frames_filename.c_str(),
+														output_shift_text_file.c_str());
 
 		my_progress_dialog->Update(counter + 1);
 	}
@@ -1047,12 +1087,12 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 		wxFileName sum_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
 		//GraphPanel->title->SetName(current_filename.GetFullName());
 
-		float current_corrected_pixel_size = my_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / my_job_package.jobs[result_to_process->job_number].arguments[18].ReturnFloatArgument();
+		float current_corrected_pixel_size = my_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / my_job_package.jobs[result_to_process->job_number].arguments[20].ReturnFloatArgument();
 		// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
 
-		if (my_job_package.jobs[result_to_process->job_number].arguments[19].ReturnBoolArgument() == true) // correct mag distortion
+		if (my_job_package.jobs[result_to_process->job_number].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
 		{
-			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, my_job_package.jobs[result_to_process->job_number].arguments[21].ReturnFloatArgument(), my_job_package.jobs[result_to_process->job_number].arguments[22].ReturnFloatArgument());
+			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, my_job_package.jobs[result_to_process->job_number].arguments[23].ReturnFloatArgument(), my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnFloatArgument());
 		}
 
 		float current_nyquist;
@@ -1065,9 +1105,9 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		// draw..
 
-		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnStringArgument()) == true)
+		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
 		{
-			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnStringArgument(), 1);
+			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), 1);
 			GraphPanel->SpectraPanel->should_show = true;
 			GraphPanel->SpectraPanel->Refresh();
 		}
@@ -1080,9 +1120,9 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		GraphPanel->Draw();
 
-		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
+		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument()) == true)
 		{
-			GraphPanel->ImageDisplayPanel->ChangeFile(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), "");
+			GraphPanel->ImageDisplayPanel->ChangeFile(my_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument(), "");
 		}
 		else
 		if (DoesFileExist(sum_filename.GetFullPath()) == true) GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
@@ -1197,8 +1237,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
 																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument(), // vertical mask
 																					include_all_frames_checkbox->GetValue(), // include all frames
-																					my_job_package.jobs[counter].arguments[27].ReturnIntegerArgument(), // first_frame
-																					my_job_package.jobs[counter].arguments[28].ReturnIntegerArgument() // last_frame
+																					my_job_package.jobs[counter].arguments[29].ReturnIntegerArgument(), // first_frame
+																					my_job_package.jobs[counter].arguments[30].ReturnIntegerArgument() // last_frame
 																					);
 
 		alignment_id++;
@@ -1258,9 +1298,9 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 				// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
 
-				if (my_job_package.jobs[counter].arguments[19].ReturnBoolArgument() == true) // correct mag distortion
+				if (my_job_package.jobs[counter].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
 				{
-					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, my_job_package.jobs[counter].arguments[21].ReturnFloatArgument(), my_job_package.jobs[counter].arguments[22].ReturnFloatArgument());
+					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, my_job_package.jobs[counter].arguments[23].ReturnFloatArgument(), my_job_package.jobs[counter].arguments[24].ReturnFloatArgument());
 				}
 
 				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);

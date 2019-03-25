@@ -377,6 +377,8 @@ std::complex<float> CTF::EvaluateComplex(float squared_spatial_frequency, float 
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 {
+	if (defocus_1 == 0.0f && defocus_2 == 0.0f) return -0.7; // for defocus sweep
+	else
 	return -sinf( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) );
 }
 

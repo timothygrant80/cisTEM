@@ -41,6 +41,8 @@ void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
     if (openFileDialog.ShowModal() == wxID_OK)
     {
     	wxArrayString selected_paths;
+    	wxArrayString final_paths;
+
     	openFileDialog.GetPaths(selected_paths);
 
       	PathListCtrl->Freeze();
@@ -49,7 +51,7 @@ void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
     	{
     		// is this an actual filename, that exists - in which case add it.
 
-    		if (DoesFileExist(selected_paths.Item(counter)) == true) PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+    		if (DoesFileExist(selected_paths.Item(counter)) == true) final_paths.Add(selected_paths.Item(counter));
     		else
     		{
     			// perhaps it is a wildcard..
@@ -67,11 +69,18 @@ void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
     				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
     				current_extension = current_extension.MakeLower();
 
-    				if ( current_extension == "mrc" || current_extension == "mrcs") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+    				if ( current_extension == "mrc" || current_extension == "mrcs") final_paths.Add(wildcard_files.Item(wildcard_counter));
     			}
 
     		}
     	}
+
+    	final_paths.Sort();
+
+    	for (int file_counter = 0; file_counter < final_paths.GetCount(); file_counter++)
+    	{
+    		PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), final_paths.Item(file_counter), PathListCtrl->GetItemCount());
+        }
 
     	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
     	PathListCtrl->Thaw();

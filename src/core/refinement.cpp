@@ -22,6 +22,13 @@ RefinementResult::RefinementResult()
 	sigma = 0;
 	score = 0;
 	image_is_active = 1;
+	pixel_size = 0;
+	microscope_voltage_kv = 0;
+	microscope_spherical_aberration_mm = 0;
+	beam_tilt_x = 0.0f;
+	beam_tilt_y = 0.0f;
+	image_shift_x = 0.0f;
+	image_shift_y = 0.0f;
 
 }
 
@@ -332,6 +339,67 @@ void Refinement::WriteSingleClassFrealignParameterFile(wxString filename,int wan
 	delete my_output_par_file;
 }
 
+void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide, float sigma_override)
+{
+	long particle_counter;
+	float temp_float;
+
+	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(filename, OPEN_TO_WRITE);
+
+	cisTEMParameters output_params;
+	output_params.PreallocateMemoryAndBlank(number_of_particles);
+
+	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
+	{
+		output_params.all_parameters[particle_counter].position_in_stack = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].position_in_stack;
+
+		if (percent_used_overide < 1.0)
+		{
+			temp_float = global_random_number_generator.GetUniformRandom();
+			if (temp_float < 1.0 - 2.0 * percent_used_overide)
+			{
+				output_params.all_parameters[particle_counter].image_is_active = -1;
+			}
+			else
+			{
+				output_params.all_parameters[particle_counter].image_is_active = 1;
+			}
+		}
+		else
+		{
+			output_params.all_parameters[particle_counter].image_is_active = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_is_active;
+		}
+
+		output_params.all_parameters[particle_counter].psi = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].psi;
+		output_params.all_parameters[particle_counter].theta = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].theta;
+		output_params.all_parameters[particle_counter].phi = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].phi;
+		output_params.all_parameters[particle_counter].x_shift = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].xshift;
+		output_params.all_parameters[particle_counter].y_shift = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].yshift;
+		output_params.all_parameters[particle_counter].defocus_1 = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus1;
+		output_params.all_parameters[particle_counter].defocus_2 = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus2;
+		output_params.all_parameters[particle_counter].defocus_angle = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].defocus_angle;
+		output_params.all_parameters[particle_counter].phase_shift = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].phase_shift;
+		output_params.all_parameters[particle_counter].occupancy = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].occupancy;
+		output_params.all_parameters[particle_counter].logp = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].logp;
+
+		if (sigma_override > 0.0) output_params.all_parameters[particle_counter].sigma = sigma_override;
+		else output_params.all_parameters[particle_counter].sigma = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].sigma;
+
+		output_params.all_parameters[particle_counter].score = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].score;
+		output_params.all_parameters[particle_counter].score_change = 0.0f;
+		output_params.all_parameters[particle_counter].pixel_size = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].pixel_size;
+		output_params.all_parameters[particle_counter].microscope_voltage_kv = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].microscope_voltage_kv;
+		output_params.all_parameters[particle_counter].microscope_spherical_aberration_mm = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm;
+		output_params.all_parameters[particle_counter].beam_tilt_x = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_x;
+		output_params.all_parameters[particle_counter].beam_tilt_y = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_y;
+		output_params.all_parameters[particle_counter].image_shift_x = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_shift_x;
+		output_params.all_parameters[particle_counter].image_shift_y = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_shift_y;
+	}
+
+	output_params.WriteTocisTEMStarFile(filename);
+}
+
+
 wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide, float sigma_override)
 {
 	MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
@@ -347,6 +415,26 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 		current_filename = base_filename + wxString::Format("_%li_%i.par", refinement_id, class_counter + 1);
 		output_filenames.Add(current_filename);
 		WriteSingleClassFrealignParameterFile(current_filename, class_counter, percent_used_overide, sigma_override);
+	}
+
+	return output_filenames;
+}
+
+wxArrayString Refinement::WritecisTEMStarFiles(wxString base_filename, float percent_used_overide, float sigma_override)
+{
+	MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
+	wxArrayString output_filenames;
+	wxString current_filename;
+
+
+	int class_counter;
+
+
+	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
+	{
+		current_filename = base_filename + wxString::Format("_%li_%i.star", refinement_id, class_counter + 1);
+		output_filenames.Add(current_filename);
+		WriteSingleClasscisTEMStarFile(current_filename, class_counter, percent_used_overide, sigma_override);
 	}
 
 	return output_filenames;

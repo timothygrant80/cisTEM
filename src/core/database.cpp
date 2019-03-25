@@ -882,7 +882,7 @@ bool Database::DoesColumnExist(wxString table_name, wxString column_name)
 	return return_code == SQLITE_OK;
 }
 
-void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white)
+void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &movies_are_dark_corrected, wxString dark_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -899,13 +899,15 @@ void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberratio
 	exposure_per_frame = sqlite3_column_double(sqlite_statement, 4);
 	movies_are_gain_corrected = sqlite3_column_int(sqlite_statement, 5);
 	gain_reference_filename = sqlite3_column_text(sqlite_statement, 6);
-	resample_movies = sqlite3_column_int(sqlite_statement, 7);
-	desired_pixel_size = sqlite3_column_double(sqlite_statement, 8);
-	correct_mag_distortion = sqlite3_column_int(sqlite_statement, 9);
-	mag_distortion_angle = sqlite3_column_double(sqlite_statement, 10);
-	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 11);
-	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 12);
-	protein_is_white = sqlite3_column_int(sqlite_statement,13);
+	movies_are_dark_corrected = sqlite3_column_int(sqlite_statement, 7);
+	dark_reference_filename = sqlite3_column_text(sqlite_statement, 8);
+	resample_movies = sqlite3_column_int(sqlite_statement, 9);
+	desired_pixel_size = sqlite3_column_double(sqlite_statement, 10);
+	correct_mag_distortion = sqlite3_column_int(sqlite_statement, 11);
+	mag_distortion_angle = sqlite3_column_double(sqlite_statement, 12);
+	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 13);
+	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 14);
+	protein_is_white = sqlite3_column_int(sqlite_statement,15);
 
 	Finalize(sqlite_statement);
 }
@@ -1089,12 +1091,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 18, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME","OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE");
+	BeginBatchInsert("MOVIE_ASSETS", 19, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME", "DARK_FILENAME", "OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white)
 {
-	AddToBatchInsert("ittiiiirrrrtrirrri", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale,protein_is_white);
+	AddToBatchInsert("ittiiiirrrrttrirrri", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), dark_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale,protein_is_white);
 }
 
 /*
@@ -1662,7 +1664,7 @@ MovieAsset Database::GetNextMovieAsset()
 	MovieAsset temp_asset;
 	int correct_mag_distortion;
 
-	GetFromBatchSelect("itfiiiirrrrtrirrri", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, & temp_asset.gain_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale, &temp_asset.protein_is_white);
+	GetFromBatchSelect("itfiiiirrrrttrirrri", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, &temp_asset.gain_filename, &temp_asset.dark_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale, &temp_asset.protein_is_white);
 	temp_asset.correct_mag_distortion = correct_mag_distortion;
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;
@@ -1848,11 +1850,11 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
-		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 15 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE");
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 22 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y");
 
 		for (counter = 0; counter < refinement_to_add->number_of_particles; counter++)
 		{
-			AddToBatchInsert("lrrrrrrrrrrrrri", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_is_active);
+			AddToBatchInsert("lrrrrrrrrrrrrrirrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_is_active, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].pixel_size, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_voltage_kv, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_spherical_aberration_mm, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_y, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_y);
 		}
 
 		EndBatchInsert();
@@ -2007,7 +2009,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 
 			while (more_data == true)
 			{
-				more_data = GetFromBatchSelect("lsssssssssssssi", &temp_result.position_in_stack,
+				more_data = GetFromBatchSelect("lsssssssssssssisssssss", &temp_result.position_in_stack,
 					                                                                              &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
@@ -2021,7 +2023,14 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 																								  &temp_result.logp,
 																								  &temp_result.sigma,
 																								  &temp_result.score,
-																								  &temp_result.image_is_active);
+																								  &temp_result.image_is_active,
+																								  &temp_result.pixel_size,
+																								  &temp_result.microscope_voltage_kv,
+																								  &temp_result.microscope_spherical_aberration_mm,
+																								  &temp_result.beam_tilt_x,
+																								  &temp_result.beam_tilt_y,
+																								  &temp_result.image_shift_x,
+																								  &temp_result.image_shift_y);
 
 				temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
 

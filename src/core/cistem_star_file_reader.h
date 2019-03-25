@@ -24,6 +24,8 @@ class  cisTEMStarFileReader {
 	int		microscope_spherical_aberration_mm_column;
 	int		beam_tilt_x_column;
 	int		beam_tilt_y_column;
+	int		image_shift_x_column;
+	int		image_shift_y_column;
 
 public:
 
@@ -37,13 +39,13 @@ public:
 	cisTEMStarFileReader();
 	~cisTEMStarFileReader();
 
-	cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL);
+	cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
 	void Open(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL);
 	void Close();
-	bool ReadFile(wxString wanted_filename, wxString *error_string = NULL, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL);
+	bool ReadFile(wxString wanted_filename, wxString *error_string = NULL, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
-	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL);
+	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL, bool exclude_negative_film_numbers = false);
 
 	inline int   ReturnPositionInStack(int line_number) { return cached_parameters->Item(line_number).position_in_stack;}
 	inline int   ReturnImageIsActive(int line_number) { return cached_parameters->Item(line_number).image_is_active;}
@@ -65,6 +67,7 @@ public:
 	inline float ReturnMicroscopeCs(int line_number) { return cached_parameters->Item(line_number).microscope_spherical_aberration_mm;}
 	inline float ReturnBeamTiltX(int line_number) { return cached_parameters->Item(line_number).beam_tilt_x;}
 	inline float ReturnBeamTiltY(int line_number) { return cached_parameters->Item(line_number).beam_tilt_y;}
-
+	inline float ReturnImageShiftX(int line_number) { return cached_parameters->Item(line_number).image_shift_x;}
+	inline float ReturnImageShiftY(int line_number) { return cached_parameters->Item(line_number).image_shift_y;}
 
 };

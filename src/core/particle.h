@@ -1,6 +1,49 @@
 /*  \brief  ReconstructedVolume class */
 
 class ReconstructedVolume;
+/*
+class ParameterMap {
+
+	bool position_in_stack;
+	bool image_is_active;
+	bool psi;
+	bool theta;
+	bool phi;
+	bool x_shift;
+	bool y_shift;
+	bool defocus_1;
+	bool defocus_2;
+	bool defocus_angle;
+	bool phase_shift;
+	bool occupancy;
+	bool logp;
+	bool sigma;
+	bool score;
+	bool score_change;
+	bool pixel_size;
+	bool microscope_voltage_kv;
+	bool microscope_spherical_aberration_mm;
+	bool beam_tilt_x;
+	bool beam_tilt_y;
+	bool image_shift_x;
+	bool image_shift_y;
+
+	ParameterMap();
+};*/
+
+class ParameterMap {
+
+public :
+
+	bool phi;
+	bool theta;
+	bool psi;
+	bool x_shift;
+	bool y_shift;
+
+	ParameterMap();
+	void SetAllTrue();
+};
 
 class Particle {
 
@@ -59,14 +102,15 @@ public:
 	bool						is_centered_in_box;
 	int							shift_counter;
 	bool						insert_even;
-	int							number_of_parameters;
+	//int							number_of_parameters;
 	float						target_phase_error;
-	float						*temp_float;
-	float						*current_parameters;
-	float						*parameter_average;
-	float						*parameter_variance;
-	bool						*parameter_map;
-	bool						*constraints_used;
+	//float						*temp_float;
+	cisTEMParameterLine			current_parameters;
+	cisTEMParameterLine			temp_parameters;
+	cisTEMParameterLine			parameter_average;
+	cisTEMParameterLine			parameter_variance;
+	ParameterMap				parameter_map;
+	ParameterMap				constraints_used;
 	int							number_of_search_dimensions;
 	int							*bin_index;
 	float						mask_center_2d_x;
@@ -90,7 +134,7 @@ public:
 	void PhaseShift();
 	void PhaseShiftInverse();
 	void Whiten(float resolution_limit = 0.49);
-	void ForwardFFT();
+	void ForwardFFT(bool do_scaling = true);
 	void BackwardFFT();
 	void CosineMask(bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void CenterInBox();
@@ -106,17 +150,17 @@ public:
 	void WeightBySSNR(Curve &SSNR, int include_reference_weighting = 1, bool no_ctf = false);
 	void WeightBySSNR(Curve &SSNR, Image &projection_image, bool weight_particle_image = true, bool weight_projection_image = true);
 	void CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d);
-	void GetParameters(float *output_parameters);
-	void SetParameters(float *wanted_parameters, bool initialize_scores = false);
+	void GetParameters(cisTEMParameterLine &output_parameters);
+	void SetParameters(cisTEMParameterLine &wanted_parameters, bool initialize_scores = false);
 	void SetAlignmentParameters(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x = 0.0, float wanted_shift_y = 0.0);
-	void SetParameterStatistics(float *wanted_averages, float *wanted_variances);
+	void SetParameterStatistics(cisTEMParameterLine &wanted_averages, cisTEMParameterLine &wanted_variances);
 	void SetParameterConstraints(float wanted_noise_variance);
-	float ReturnParameterPenalty(float *parameters);
-	float ReturnParameterLogP(float *parameters);
+	float ReturnParameterPenalty(cisTEMParameterLine &parameters);
+	float ReturnParameterLogP(cisTEMParameterLine &parameters);
 	int MapParameterAccuracy(float *accuracies);
-	int MapParametersFromExternal(float *input_parameters, float *mapped_parameters);
+	int MapParametersFromExternal(cisTEMParameterLine &input_parameters, float *mapped_parameters);
 	int MapParameters(float *mapped_parameters);
-	int UnmapParametersToExternal(float *output_parameters, float *mapped_parameters);
+	int UnmapParametersToExternal(cisTEMParameterLine &output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
 	void FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier = 20.0f, bool progress_bar = false);
 	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference = NULL);

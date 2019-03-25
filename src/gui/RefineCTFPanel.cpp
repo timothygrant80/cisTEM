@@ -365,8 +365,8 @@ void RefineCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 	current_volume = volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->GetSelection());
 
-	bool parameter_map[5]; // needed for euler search init
-	for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
+	ParameterMap parameter_map;
+	parameter_map.SetAllTrue();
 
 	float wanted_out_of_plane_angular_step = OutofPlaneStepNumericCtrl->ReturnValue();
 	float wanted_in_plane_angular_step = InPlaneStepNumericCtrl->ReturnValue();

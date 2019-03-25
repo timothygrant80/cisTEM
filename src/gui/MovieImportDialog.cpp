@@ -31,6 +31,8 @@ MovieImportDialog( parent )
 		float default_exposure_per_frame;
 		bool default_movies_are_gain_corrected;
 		wxString default_gain_reference_filename;
+		bool default_movies_are_dark_corrected;
+		wxString default_dark_reference_filename;
 		bool default_resample_movies;
 		float default_desired_pixel_size;
 		bool  default_correct_mag_distortion;
@@ -39,7 +41,7 @@ MovieImportDialog( parent )
 		float default_mag_distortion_minor_scale;
 		bool default_protein_is_white;
 
-		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale, default_protein_is_white);
+		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_movies_are_dark_corrected, default_dark_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale, default_protein_is_white);
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
@@ -48,14 +50,23 @@ MovieImportDialog( parent )
 
 		if (default_movies_are_gain_corrected == true)
 		{
-			MoviesAreGainCorrectedCheckBox->SetValue(true);
+			ApplyGainImageCheckbox->SetValue(false);
 		}
 		else
 		{
-			MoviesAreGainCorrectedCheckBox->SetValue(false);
+			ApplyGainImageCheckbox->SetValue(true);
 		}
 
-		// don't set the gain reference as this is likely to be different, and i want to force users to have to pick the correct one.
+		if (default_movies_are_dark_corrected == true)
+		{
+			ApplyDarkImageCheckbox->SetValue(false);
+		}
+		else
+		{
+			ApplyDarkImageCheckbox->SetValue(true);
+		}
+
+		// don't set the gain/dark  references as these is likely to be different, and i want to force users to have to pick the correct one.
 
 		if (default_resample_movies == true)
 		{
@@ -80,8 +91,9 @@ MovieImportDialog( parent )
 
 		MoviesHaveInvertedContrast->SetValue(default_protein_is_white);
 
-		GainFilePicker->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
-		GainFileStaticText->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+		GainFilePicker->Enable(ApplyGainImageCheckbox->IsChecked());
+		DarkFilePicker->Enable(ApplyDarkImageCheckbox->IsChecked());
+
 		DesiredPixelSizeStaticText->Enable(ResampleMoviesCheckBox->IsChecked());
 		DesiredPixelSizeTextCtrl->Enable(ResampleMoviesCheckBox->IsChecked());
 		DistortionAngleTextCtrl->Enable(CorrectMagDistortionCheckBox->IsChecked());
@@ -106,7 +118,9 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
     if (openFileDialog.ShowModal() == wxID_OK)
     {
     	wxArrayString selected_paths;
+    	wxArrayString final_paths;
       	openFileDialog.GetPaths(selected_paths);
+
 
       	PathListCtrl->Freeze();
 
@@ -114,7 +128,7 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
       	{
       		// is this an actual filename, that exists - in which case add it.
 
-      		if (DoesFileExist(selected_paths.Item(counter)) == true) PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), selected_paths.Item(counter), PathListCtrl->GetItemCount());
+      		if (DoesFileExist(selected_paths.Item(counter)) == true) final_paths.Add(selected_paths.Item(counter));
       		else
       		{
       			// perhaps it is a wildcard..
@@ -132,10 +146,17 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
       				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
       				current_extension = current_extension.MakeLower();
 
-      				if ( current_extension == "mrc" || current_extension == "mrcs" || current_extension == "tif") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+      				if ( current_extension == "mrc" || current_extension == "mrcs" || current_extension == "tif") final_paths.Add(wildcard_files.Item(wildcard_counter));
       			}
 
       		}
+      	}
+
+      	final_paths.Sort();
+
+		for (int file_counter = 0; file_counter < final_paths.GetCount(); file_counter++)
+      	{
+			PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), final_paths.Item(file_counter), PathListCtrl->GetItemCount());
       	}
 
       	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
@@ -222,7 +243,8 @@ void MyMovieImportDialog::CheckImportButtonStatus()
 
 	if (VoltageCombo->IsTextEmpty() == true || PixelSizeText->GetLineLength(0) == 0 || CsText->GetLineLength (0) == 0 || DoseText->GetLineLength(0) == 0) enable_import_box = false;
 
-	if ((! MoviesAreGainCorrectedCheckBox->IsChecked()) && (! GainFilePicker->GetFileName().Exists()) ) enable_import_box = false;
+	if ((ApplyGainImageCheckbox->IsChecked()) && (! GainFilePicker->GetFileName().Exists()) ) enable_import_box = false;
+	if ((ApplyDarkImageCheckbox->IsChecked()) && (! DarkFilePicker->GetFileName().Exists()) ) enable_import_box = false;
 
 	//if ((! MoviesAreGainCorrectedCheckBox->IsChecked())) wxPrintf("Movies are not gain corrected\n");
 	//if (GainFilePicker->GetFileName().Exists()) wxPrintf("Gain file exists\n");
@@ -253,8 +275,8 @@ void MyMovieImportDialog::OnGainFilePickerChanged(wxFileDirPickerEvent & event )
 
 void MyMovieImportDialog::OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & event )
 {
-	GainFilePicker->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
-	GainFileStaticText->Enable(! MoviesAreGainCorrectedCheckBox->IsChecked());
+	GainFilePicker->Enable( ApplyGainImageCheckbox->IsChecked());
+	DarkFilePicker->Enable( ApplyDarkImageCheckbox->IsChecked());
 	CheckImportButtonStatus();
 }
 
@@ -293,11 +315,17 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 	int gain_ref_x_size = -1;
 	int gain_ref_y_size = -1;
 
+	int dark_ref_x_size = -1;
+	int dark_ref_y_size = -1;
+
 	int movies_are_gain_corrected;
+	int movies_are_dark_corrected;
+
 	int resample_movies;
 	int correct_mag_distortion;
 
 	wxString gain_ref_filename;
+	wxString dark_ref_filename;
 
 	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
 	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
@@ -313,17 +341,16 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 	{
 		MovieAsset temp_asset;
 
-
-
 		temp_asset.microscope_voltage = microscope_voltage;
 		temp_asset.pixel_size = pixel_size;
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
 		temp_asset.protein_is_white = MoviesHaveInvertedContrast->IsChecked();
 
-		movies_are_gain_corrected = MoviesAreGainCorrectedCheckBox->IsChecked();
+		movies_are_gain_corrected = !ApplyGainImageCheckbox->IsChecked();
+		movies_are_dark_corrected = !ApplyDarkImageCheckbox->IsChecked();
 
-		if (MoviesAreGainCorrectedCheckBox->IsChecked())
+		if (ApplyGainImageCheckbox->IsChecked() == false)
 		{
 			temp_asset.gain_filename = "";
 			gain_ref_filename = "";
@@ -347,8 +374,29 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		}
 
-		// get the size of the gain ref..
+		if (ApplyDarkImageCheckbox->IsChecked() == false)
+		{
+			temp_asset.dark_filename = "";
+			dark_ref_filename = "";
+		}
+		else
+		{
+			temp_asset.dark_filename = DarkFilePicker->GetFileName().GetFullPath();
+			dark_ref_filename = DarkFilePicker->GetFileName().GetFullPath();
 
+			ImageFile dark_ref;
+			if (dark_ref.OpenFile(temp_asset.dark_filename.ToStdString(), false) == false)
+			{
+				my_error->ErrorText->AppendText(wxString::Format(wxT("cannot open dark reference file (%s)\n"), temp_asset.dark_filename));
+				have_errors = true;
+			}
+			else
+			{
+				dark_ref_x_size = dark_ref.ReturnXSize();
+				dark_ref_y_size = dark_ref.ReturnYSize();
+			}
+
+		}
 
 		resample_movies = ResampleMoviesCheckBox->IsChecked();
 		if (ResampleMoviesCheckBox->IsChecked() == false)
@@ -409,9 +457,15 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 			// check everything ok with gain_ref
 
-			if (MoviesAreGainCorrectedCheckBox->IsChecked() == false && (temp_asset.x_size != gain_ref_x_size || temp_asset.y_size != gain_ref_y_size))
+			if (ApplyGainImageCheckbox->IsChecked() == true && (temp_asset.x_size != gain_ref_x_size || temp_asset.y_size != gain_ref_y_size))
 			{
 				my_error->ErrorText->AppendText(wxString::Format(wxT("%s does not have the same size as the provided gain reference, skipping\n"), temp_asset.ReturnFullPathString()));
+				have_errors = true;
+			}
+			else
+			if (ApplyDarkImageCheckbox->IsChecked() == true && (temp_asset.x_size != dark_ref_x_size || temp_asset.y_size != dark_ref_y_size))
+			{
+				my_error->ErrorText->AppendText(wxString::Format(wxT("%s does not have the same size as the provided dark reference, skipping\n"), temp_asset.ReturnFullPathString()));
 				have_errors = true;
 			}
 			else
@@ -436,7 +490,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.dark_filename, temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white);
 					}
 				}
 				else
@@ -463,7 +517,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		main_frame->current_project.database.DeleteTable("MOVIE_IMPORT_DEFAULTS");
 		main_frame->current_project.database.CreateMovieImportDefaultsTable();
-		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrritirirrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()), int(MoviesHaveInvertedContrast->IsChecked()));
+		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrrititirirrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "MOVIES_ARE_DARK_CORRECTED", "DARK_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), movies_are_dark_corrected, dark_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()), int(MoviesHaveInvertedContrast->IsChecked()));
 		main_frame->current_project.database.Commit();
 
 		main_frame->DirtyMovieGroups();

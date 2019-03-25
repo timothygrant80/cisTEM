@@ -433,6 +433,8 @@ float FrealignParameterFile::ReturnThreshold(float wanted_percentage, bool exclu
 			}
 		}
 		percentage = sum_occ / number_of_lines / average_occ;
+
+	//	wxPrintf("sum_occ = %f : threshold = %f\n", sum_occ, threshold);
 		if (percentage >= wanted_percentage) break;
 	}
 
@@ -484,7 +486,7 @@ void FrealignParameterFile::AdjustScores(bool exclude_negative_film_numbers)
 		if (parameter_cache[7 + index] >= 0 || ! exclude_negative_film_numbers)
 		{
 			defocus = (parameter_cache[8 + index] + parameter_cache[9 + index]) / 2.0;
-			parameter_cache[15 + index] -= ReturnScoreAdjustment(defocus);
+			if (defocus != 0.0f) parameter_cache[15 + index] -= ReturnScoreAdjustment(defocus); // added 0 check for defocus sweep
 		}
 	}
 }

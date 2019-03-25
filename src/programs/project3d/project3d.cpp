@@ -148,7 +148,10 @@ bool Project3DApp::DoCalculation()
 		input_3d.density_map.Resize(input_3d.density_map.logical_x_dimension * padding, input_3d.density_map.logical_y_dimension * padding, input_3d.density_map.logical_z_dimension * padding, input_3d.density_map.ReturnAverageOfRealValuesOnEdges());
 	}
 	input_3d.mask_radius = mask_radius;
+	input_3d.density_map.CorrectSinc(mask_radius / pixel_size);
 	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size * binning_factor);
+	//input_3d.density_map.ForwardFFT();
+	//input_3d.density_map.SwapRealSpaceQuadrants();
 	projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
 	final_image.Allocate(input_file.ReturnXSize() / binning_factor, input_file.ReturnYSize() / binning_factor, true);
 
@@ -189,6 +192,7 @@ bool Project3DApp::DoCalculation()
 		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 
 		input_3d.density_map.ExtractSlice(projection_image, my_parameters);
+		projection_image.complex_values[0] = input_3d.density_map.complex_values[0];
 
 /*		projection_image.BackwardFFT();
 		variance = projection_image.ReturnVarianceOfRealValues();

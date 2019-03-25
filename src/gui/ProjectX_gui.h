@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 19 2018)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO *NOT* EDIT THIS FILE!
+// PLEASE DO "NOT" EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #ifndef __PROJECTX_GUI_H__
@@ -26,6 +26,7 @@ class DisplayPanel;
 class DisplayRefinementResultsPanel;
 class ImageGroupPickerComboPanel;
 class ImagesPickerComboPanel;
+class JobPanel;
 class MemoryComboBox;
 class MovieGroupPickerComboPanel;
 class MyFSCPanel;
@@ -1253,8 +1254,9 @@ class MovieImportDialog : public wxDialog
 		wxTextCtrl* PixelSizeText;
 		wxStaticText* m_staticText22;
 		wxTextCtrl* DoseText;
-		wxCheckBox* MoviesAreGainCorrectedCheckBox;
-		wxStaticText* GainFileStaticText;
+		wxCheckBox* ApplyDarkImageCheckbox;
+		wxFilePickerCtrl* DarkFilePicker;
+		wxCheckBox* ApplyGainImageCheckbox;
 		wxFilePickerCtrl* GainFilePicker;
 		wxCheckBox* ResampleMoviesCheckBox;
 		wxStaticText* DesiredPixelSizeStaticText;

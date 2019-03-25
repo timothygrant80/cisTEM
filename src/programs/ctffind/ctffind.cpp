@@ -304,6 +304,8 @@ void CtffindApp::DoInteractiveUserInput()
 	float additional_phase_shift_search_step;
 	bool give_expert_options;
 	bool resample_if_pixel_too_small;
+	bool movie_is_dark_corrected;
+	wxString dark_filename;
 	bool movie_is_gain_corrected;
 	wxString gain_filename;
 	bool correct_movie_mag_distortion = false;
@@ -335,6 +337,8 @@ void CtffindApp::DoInteractiveUserInput()
 		resample_if_pixel_too_small = true;
 		movie_is_gain_corrected = true;
 		gain_filename = "";
+		movie_is_dark_corrected = true;
+		dark_filename = "";
 
 		char buf[4096];
 		wxString my_string;
@@ -623,6 +627,16 @@ void CtffindApp::DoInteractiveUserInput()
 			resample_if_pixel_too_small 		= my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?","When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed","yes");
 			if (input_is_a_movie)
 			{
+				movie_is_dark_corrected			= my_input->GetYesNoFromUser("Movie is dark-subtracted?", "If the movie is not dark-subtracted you will need to provide a dark reference image", "yes");
+				if (movie_is_dark_corrected)
+				{
+					dark_filename 				= "";
+				}
+				else
+				{
+					dark_filename 				= my_input->GetFilenameFromUser("Dark image filename", "The filename of the dark reference image for the detector/camera", "dark.dm4", true);
+				}
+
 				movie_is_gain_corrected			= my_input->GetYesNoFromUser("Movie is gain-corrected?", "If the movie is not gain-corrected, you will need to provide a gain reference image", "yes");
 				if (movie_is_gain_corrected)
 				{
@@ -654,6 +668,9 @@ void CtffindApp::DoInteractiveUserInput()
 			else
 			{
 				movie_is_gain_corrected 		= true;
+				movie_is_dark_corrected 		= true;
+				gain_filename = "";
+				dark_filename = "";
 			}
 			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","no");
 			if (defocus_is_known)
@@ -687,6 +704,9 @@ void CtffindApp::DoInteractiveUserInput()
 		{
 			resample_if_pixel_too_small			= true;
 			movie_is_gain_corrected				= true;
+			movie_is_dark_corrected 			= true;
+			gain_filename 						= "";
+			dark_filename						= "";
 			defocus_is_known					= false;
 			desired_number_of_threads			= 1;
 		}
@@ -695,8 +715,8 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(35);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbfffbfffi",input_filename.c_str(), //1
+	my_current_job.Reset(37);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbffi",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -722,6 +742,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			resample_if_pixel_too_small,
 																			movie_is_gain_corrected,
 																			gain_filename.ToStdString().c_str(),
+																			movie_is_dark_corrected,
+																			dark_filename.ToStdString().c_str(),
 																			correct_movie_mag_distortion,
 																			movie_mag_distortion_angle,
 																			movie_mag_distortion_major_scale,
@@ -782,15 +804,17 @@ bool CtffindApp::DoCalculation()
 	const bool			resample_if_pixel_too_small			= my_current_job.arguments[23].ReturnBoolArgument();
 	const bool			movie_is_gain_corrected				= my_current_job.arguments[24].ReturnBoolArgument();
 	const wxString		gain_filename						= my_current_job.arguments[25].ReturnStringArgument();
-	const bool          correct_movie_mag_distortion 		= my_current_job.arguments[26].ReturnBoolArgument();
-	const float      	movie_mag_distortion_angle          = my_current_job.arguments[27].ReturnFloatArgument();
-	const float         movie_mag_distortion_major_scale    = my_current_job.arguments[28].ReturnFloatArgument();
-	const float         movie_mag_distortion_minor_scale    = my_current_job.arguments[29].ReturnFloatArgument();
-	const bool			defocus_is_known					= my_current_job.arguments[30].ReturnBoolArgument();
-	const float			known_defocus_1						= my_current_job.arguments[31].ReturnFloatArgument();
-	const float			known_defocus_2						= my_current_job.arguments[32].ReturnFloatArgument();
-	const float			known_phase_shift					= my_current_job.arguments[33].ReturnFloatArgument();
-	int					desired_number_of_threads			= my_current_job.arguments[34].ReturnIntegerArgument();
+	const bool			movie_is_dark_corrected				= my_current_job.arguments[26].ReturnBoolArgument();
+	const wxString		dark_filename						= my_current_job.arguments[27].ReturnStringArgument();
+	const bool          correct_movie_mag_distortion 		= my_current_job.arguments[28].ReturnBoolArgument();
+	const float      	movie_mag_distortion_angle          = my_current_job.arguments[29].ReturnFloatArgument();
+	const float         movie_mag_distortion_major_scale    = my_current_job.arguments[30].ReturnFloatArgument();
+	const float         movie_mag_distortion_minor_scale    = my_current_job.arguments[31].ReturnFloatArgument();
+	const bool			defocus_is_known					= my_current_job.arguments[32].ReturnBoolArgument();
+	const float			known_defocus_1						= my_current_job.arguments[33].ReturnFloatArgument();
+	const float			known_defocus_2						= my_current_job.arguments[34].ReturnFloatArgument();
+	const float			known_phase_shift					= my_current_job.arguments[35].ReturnFloatArgument();
+	int					desired_number_of_threads			= my_current_job.arguments[36].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -897,6 +921,8 @@ bool CtffindApp::DoCalculation()
 	int					last_bin_without_aliasing;
 	ImageFile			gain_file;
 	Image				*gain = new Image();
+	ImageFile			dark_file;
+	Image				*dark = new Image();
 	float				final_score;
 
 	// Timings variables
@@ -968,11 +994,17 @@ bool CtffindApp::DoCalculation()
 	time_before_spectrum_computation = wxDateTime::Now();
 
 
-	// Prepare the gain_reference
+	// Prepare the dark/gain_reference
 	if (input_is_a_movie && ! movie_is_gain_corrected)
 	{
 		gain_file.OpenFile(gain_filename.ToStdString(), false);
 		gain->ReadSlice(&gain_file,1);
+	}
+
+	if (input_is_a_movie && ! movie_is_dark_corrected)
+	{
+		dark_file.OpenFile(dark_filename.ToStdString(), false);
+		dark->ReadSlice(&dark_file,1);
 	}
 
 	// Prepare the average spectrum image
@@ -1036,6 +1068,7 @@ bool CtffindApp::DoCalculation()
 							delete number_of_extrema_image;
 							delete ctf_values_image;
 							delete gain;
+							delete dark;
 							delete [] values_to_write_out;
 
 							return true;
@@ -1048,6 +1081,18 @@ bool CtffindApp::DoCalculation()
 							ExitMainLoop();
 						}
 
+					}
+
+					// Apply dark reference
+					if (input_is_a_movie && ! movie_is_dark_corrected)
+					{
+						if (! current_input_image->HasSameDimensionsAs(dark))
+						{
+							SendError(wxString::Format("Error: location %i of input file %s does not have same dimensions as the dark image",current_input_location,input_filename));
+							ExitMainLoop();
+						}
+
+						current_input_image->SubtractImage(dark);
 					}
 
 					// Apply gain reference
@@ -1860,7 +1905,7 @@ bool CtffindApp::DoCalculation()
 		}
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
 
-		normalization_radius_max = std::max(normalization_radius_max,float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
+		normalization_radius_max = average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit];
 		average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(	normalization_radius_min,
 																	normalization_radius_max,
 																	average,sigma);
@@ -2042,6 +2087,7 @@ bool CtffindApp::DoCalculation()
 	delete number_of_extrema_image;
 	delete ctf_values_image;
 	delete gain;
+	delete dark;
 	delete [] values_to_write_out;
 	if (is_running_locally) delete output_text;
 	if (compute_extra_stats)

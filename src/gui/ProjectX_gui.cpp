@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 19 2018)
+// C++ code generated with wxFormBuilder (version Jun 20 2017)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO *NOT* EDIT THIS FILE!
+// PLEASE DO "NOT" EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #include "../core/gui_core_headers.h"
@@ -254,7 +254,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
-	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
@@ -286,7 +286,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	m_staticText531 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText531->Wrap( -1 );
-	m_staticText531->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText531->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	bSizer258->Add( m_staticText531, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
@@ -416,7 +416,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	m_staticText532 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("3D Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText532->Wrap( -1 );
-	m_staticText532->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText532->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText532, 0, wxALL, 5 );
 	
@@ -502,7 +502,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	m_staticText377 = new wxStaticText( OrthResultsPanel, wxID_ANY, wxT("Orthogonal Slices / Projections"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText377->Wrap( -1 );
-	m_staticText377->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText377->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer326->Add( m_staticText377, 0, wxALL, 5 );
 	
@@ -783,7 +783,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 2D classification."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
-	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
@@ -846,7 +846,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText318 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText318->Wrap( -1 );
-	m_staticText318->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText318->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	bSizer258->Add( m_staticText318, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -1216,7 +1216,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText708 = new wxStaticText( m_panel125, wxID_ANY, wxT("Angular Distribution"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText708->Wrap( -1 );
-	m_staticText708->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText708->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer497->Add( m_staticText708, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
@@ -1288,7 +1288,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Refinement ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText72->Wrap( -1 );
-	m_staticText72->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1298,7 +1298,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText74->Wrap( -1 );
-	m_staticText74->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1308,7 +1308,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText93->Wrap( -1 );
-	m_staticText93->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1318,7 +1318,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText785 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Percent Used :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText785->Wrap( -1 );
-	m_staticText785->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText785->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText785, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1328,7 +1328,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Ref. Volume ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText83->Wrap( -1 );
-	m_staticText83->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1338,7 +1338,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Ref. Refinement ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText82->Wrap( -1 );
-	m_staticText82->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1348,7 +1348,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Low Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText85->Wrap( -1 );
-	m_staticText85->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1358,7 +1358,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("High Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText87->Wrap( -1 );
-	m_staticText87->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1368,7 +1368,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText89->Wrap( -1 );
-	m_staticText89->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1378,7 +1378,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText777 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Signed CC Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText777->Wrap( -1 );
-	m_staticText777->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText777->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText777, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1388,7 +1388,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText779 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Global Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText779->Wrap( -1 );
-	m_staticText779->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText779->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText779, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1398,7 +1398,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText781 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Global Mask Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText781->Wrap( -1 );
-	m_staticText781->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText781->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText781, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1408,7 +1408,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText783 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("No. Results Refined :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText783->Wrap( -1 );
-	m_staticText783->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText783->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText783, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1418,7 +1418,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Angular Search Step :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText91->Wrap( -1 );
-	m_staticText91->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1428,7 +1428,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Search Range X :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText79->Wrap( -1 );
-	m_staticText79->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1438,7 +1438,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText99 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Search Range Y :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText99->Wrap( -1 );
-	m_staticText99->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText99->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText99, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1448,7 +1448,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Class. Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText95->Wrap( -1 );
-	m_staticText95->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1458,7 +1458,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	LargeAstigExpectedLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Focus Classify? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	LargeAstigExpectedLabel->Wrap( -1 );
-	LargeAstigExpectedLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	LargeAstigExpectedLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( LargeAstigExpectedLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1468,7 +1468,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	ToleratedAstigLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Sphere X Co-ord :"), wxDefaultPosition, wxDefaultSize, 0 );
 	ToleratedAstigLabel->Wrap( -1 );
-	ToleratedAstigLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	ToleratedAstigLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( ToleratedAstigLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1478,7 +1478,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	NumberOfAveragedFramesLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Sphere Y Co-ord :"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesLabel->Wrap( -1 );
-	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1488,7 +1488,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText787 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Sphere Z Co-ord :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText787->Wrap( -1 );
-	m_staticText787->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText787->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText787, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1498,7 +1498,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText789 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Sphere Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText789->Wrap( -1 );
-	m_staticText789->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText789->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText789, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1508,7 +1508,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText791 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Refine CTF? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText791->Wrap( -1 );
-	m_staticText791->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText791->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText791, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1518,7 +1518,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText793 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Search Range :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText793->Wrap( -1 );
-	m_staticText793->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText793->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText793, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1528,7 +1528,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText795 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Search Step :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText795->Wrap( -1 );
-	m_staticText795->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText795->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText795, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1538,7 +1538,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText797 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("AutoMask? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText797->Wrap( -1 );
-	m_staticText797->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText797->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText797, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1548,7 +1548,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText799 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Also Refine Input? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText799->Wrap( -1 );
-	m_staticText799->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText799->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText799, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1558,7 +1558,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText801 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Use Supplied Mask? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText801->Wrap( -1 );
-	m_staticText801->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText801->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText801, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1568,7 +1568,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText803 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Asset ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText803->Wrap( -1 );
-	m_staticText803->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText803->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText803, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1578,7 +1578,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText805 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Edge Width :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText805->Wrap( -1 );
-	m_staticText805->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText805->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText805, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1588,7 +1588,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText807 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Out. Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText807->Wrap( -1 );
-	m_staticText807->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText807->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText807, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1598,7 +1598,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText809 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Filter Out. Mask? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText809->Wrap( -1 );
-	m_staticText809->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText809->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText809, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1608,7 +1608,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText811 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Filter Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText811->Wrap( -1 );
-	m_staticText811->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText811->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText811, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1618,7 +1618,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText813 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Reconstruction ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText813->Wrap( -1 );
-	m_staticText813->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText813->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText813, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1628,7 +1628,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText815 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Inner Mask Rad. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText815->Wrap( -1 );
-	m_staticText815->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText815->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText815, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1638,7 +1638,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText817 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Outer Mask Rad. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText817->Wrap( -1 );
-	m_staticText817->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText817->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText817, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1648,7 +1648,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText820 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Res. Cut-Off :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText820->Wrap( -1 );
-	m_staticText820->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText820->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText820, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1658,7 +1658,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	Score = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Weight Constant :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Score->Wrap( -1 );
-	Score->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	Score->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( Score, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1668,7 +1668,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText823 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Adjust Scores? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText823->Wrap( -1 );
-	m_staticText823->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText823->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText823, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1678,7 +1678,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText825 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Crop Images? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText825->Wrap( -1 );
-	m_staticText825->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText825->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText825, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1688,7 +1688,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText827 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Likelihood Blur? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText827->Wrap( -1 );
-	m_staticText827->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText827->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText827, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1698,7 +1698,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText829 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Smoothing Factor :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText829->Wrap( -1 );
-	m_staticText829->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText829->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText829, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1775,7 +1775,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText377 = new wxStaticText( m_panel88, wxID_ANY, wxT("2D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText377->Wrap( -1 );
-	m_staticText377->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText377->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer302->Add( m_staticText377, 0, wxALL, 5 );
 	
@@ -1795,7 +1795,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText378 = new wxStaticText( m_panel89, wxID_ANY, wxT("1D CTF Fit Result"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText378->Wrap( -1 );
-	m_staticText378->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText378->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer303->Add( m_staticText378, 0, wxALL, 5 );
 	
@@ -1822,7 +1822,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText379 = new wxStaticText( m_panel86, wxID_ANY, wxT("Estimated CTF Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText379->Wrap( -1 );
-	m_staticText379->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText379->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer304->Add( m_staticText379, 0, wxALL, 5 );
 	
@@ -1837,7 +1837,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText380 = new wxStaticText( m_panel86, wxID_ANY, wxT("\tDefocus 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText380->Wrap( -1 );
-	m_staticText380->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText380->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1847,7 +1847,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText389 = new wxStaticText( m_panel86, wxID_ANY, wxT("Score :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText389->Wrap( -1 );
-	m_staticText389->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText389->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1857,7 +1857,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText382 = new wxStaticText( m_panel86, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText382->Wrap( -1 );
-	m_staticText382->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText382->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1867,7 +1867,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText391 = new wxStaticText( m_panel86, wxID_ANY, wxT("Fit Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText391->Wrap( -1 );
-	m_staticText391->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText391->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1877,7 +1877,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText384 = new wxStaticText( m_panel86, wxID_ANY, wxT("Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText384->Wrap( -1 );
-	m_staticText384->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText384->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1887,7 +1887,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText393->Wrap( -1 );
-	m_staticText393->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText393->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1897,7 +1897,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText386 = new wxStaticText( m_panel86, wxID_ANY, wxT("Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText386->Wrap( -1 );
-	m_staticText386->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText386->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1907,7 +1907,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	IcinessLabel = new wxStaticText( m_panel86, wxID_ANY, wxT("Iciness :"), wxDefaultPosition, wxDefaultSize, 0 );
 	IcinessLabel->Wrap( -1 );
-	IcinessLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	IcinessLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	gSizer14->Add( IcinessLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -1932,13 +1932,13 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	
 	m_staticText394 = new wxStaticText( m_panel86, wxID_ANY, wxT("Image / Aligned Movie Sum"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText394->Wrap( -1 );
-	m_staticText394->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText394->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer306->Add( m_staticText394, 0, wxALL, 5 );
 	
 	ImageFileText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	ImageFileText->Wrap( -1 );
-	ImageFileText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	ImageFileText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer306->Add( ImageFileText, 0, wxALL, 5 );
 	
@@ -2045,7 +2045,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Classification ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText72->Wrap( -1 );
-	m_staticText72->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2055,7 +2055,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText74->Wrap( -1 );
-	m_staticText74->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2065,7 +2065,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText93->Wrap( -1 );
-	m_staticText93->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2075,7 +2075,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Refinement Package ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText83->Wrap( -1 );
-	m_staticText83->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2085,7 +2085,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Ref. Classification ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText82->Wrap( -1 );
-	m_staticText82->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2095,7 +2095,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText78 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("No. Classes :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText78->Wrap( -1 );
-	m_staticText78->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText78->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText78, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2105,7 +2105,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("No. Input Particles :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
-	m_staticText96->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText96->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText96, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2115,7 +2115,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Low Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText85->Wrap( -1 );
-	m_staticText85->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2125,7 +2125,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("High Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText87->Wrap( -1 );
-	m_staticText87->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2135,7 +2135,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText89->Wrap( -1 );
-	m_staticText89->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2145,7 +2145,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Angular Search Step :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText91->Wrap( -1 );
-	m_staticText91->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2155,7 +2155,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Search Range X :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText79->Wrap( -1 );
-	m_staticText79->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2165,7 +2165,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Smoothing Factor :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText95->Wrap( -1 );
-	m_staticText95->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2175,7 +2175,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	LargeAstigExpectedLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Exclude Blank Edges? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	LargeAstigExpectedLabel->Wrap( -1 );
-	LargeAstigExpectedLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	LargeAstigExpectedLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( LargeAstigExpectedLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2185,7 +2185,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText99 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Search Range Y :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText99->Wrap( -1 );
-	m_staticText99->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText99->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText99, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2195,7 +2195,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	ToleratedAstigLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Auto Percent Used? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	ToleratedAstigLabel->Wrap( -1 );
-	ToleratedAstigLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	ToleratedAstigLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( ToleratedAstigLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2205,7 +2205,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	NumberOfAveragedFramesLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Percent Used :"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesLabel->Wrap( -1 );
-	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2244,7 +2244,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	m_staticText321 = new wxStaticText( m_panel49, wxID_ANY, wxT("Manage class average selections"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText321->Wrap( -1 );
-	m_staticText321->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText321->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer269->Add( m_staticText321, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
@@ -2308,7 +2308,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	
 	ClassNumberStaticText = new wxStaticText( m_panel49, wxID_ANY, wxT("Images for class #1"), wxDefaultPosition, wxDefaultSize, 0 );
 	ClassNumberStaticText->Wrap( -1 );
-	ClassNumberStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	ClassNumberStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer206->Add( ClassNumberStaticText, 0, wxALIGN_LEFT|wxALL|wxBOTTOM, 5 );
 	
@@ -2597,7 +2597,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Estimation ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText72->Wrap( -1 );
-	m_staticText72->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2607,7 +2607,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText74->Wrap( -1 );
-	m_staticText74->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2617,7 +2617,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText93->Wrap( -1 );
-	m_staticText93->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2627,7 +2627,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Voltage :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText83->Wrap( -1 );
-	m_staticText83->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2637,7 +2637,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Cs :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText82->Wrap( -1 );
-	m_staticText82->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2647,7 +2647,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText78 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText78->Wrap( -1 );
-	m_staticText78->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText78->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText78, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2657,7 +2657,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Amp. Contrast :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
-	m_staticText96->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText96->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText96, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2667,7 +2667,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Box Size :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText85->Wrap( -1 );
-	m_staticText85->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2677,7 +2677,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText87->Wrap( -1 );
-	m_staticText87->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2687,7 +2687,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText89->Wrap( -1 );
-	m_staticText89->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2697,7 +2697,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Defocus :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText91->Wrap( -1 );
-	m_staticText91->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2707,7 +2707,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Defocus :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText79->Wrap( -1 );
-	m_staticText79->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2717,7 +2717,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Step :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText95->Wrap( -1 );
-	m_staticText95->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2727,7 +2727,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	LargeAstigExpectedLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Exhaustive Search? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	LargeAstigExpectedLabel->Wrap( -1 );
-	LargeAstigExpectedLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	LargeAstigExpectedLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( LargeAstigExpectedLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2737,7 +2737,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText99 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Restrain Astig.?:"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText99->Wrap( -1 );
-	m_staticText99->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText99->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText99, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2747,7 +2747,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	ToleratedAstigLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Tolerated Astig. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	ToleratedAstigLabel->Wrap( -1 );
-	ToleratedAstigLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	ToleratedAstigLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( ToleratedAstigLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2757,7 +2757,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	NumberOfAveragedFramesLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Num. Averaged Frames :"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesLabel->Wrap( -1 );
-	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALL, 5 );
 	
@@ -2767,7 +2767,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText103 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Add. Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText103->Wrap( -1 );
-	m_staticText103->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText103->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText103, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2777,7 +2777,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	MinPhaseShiftLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MinPhaseShiftLabel->Wrap( -1 );
-	MinPhaseShiftLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	MinPhaseShiftLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( MinPhaseShiftLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2787,7 +2787,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	MaxPhaseShiftLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaxPhaseShiftLabel->Wrap( -1 );
-	MaxPhaseShiftLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	MaxPhaseShiftLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( MaxPhaseShiftLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2797,7 +2797,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	PhaseShiftStepLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Phase Shift Step :"), wxDefaultPosition, wxDefaultSize, 0 );
 	PhaseShiftStepLabel->Wrap( -1 );
-	PhaseShiftStepLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	PhaseShiftStepLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( PhaseShiftStepLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2977,7 +2977,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pick ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText72->Wrap( -1 );
-	m_staticText72->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2987,7 +2987,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText74->Wrap( -1 );
-	m_staticText74->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -2997,7 +2997,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText93->Wrap( -1 );
-	m_staticText93->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3007,7 +3007,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText83->Wrap( -1 );
-	m_staticText83->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3017,7 +3017,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Manual edit :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText82->Wrap( -1 );
-	m_staticText82->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3027,7 +3027,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText78 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Threshold :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText78->Wrap( -1 );
-	m_staticText78->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText78->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText78, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3037,7 +3037,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
-	m_staticText96->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText96->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText96, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3047,7 +3047,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Charact. Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText85->Wrap( -1 );
-	m_staticText85->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3057,7 +3057,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Highest Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText87->Wrap( -1 );
-	m_staticText87->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3067,7 +3067,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Edge Dist. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText89->Wrap( -1 );
-	m_staticText89->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3077,7 +3077,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Avoid High Var. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText91->Wrap( -1 );
-	m_staticText91->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3087,7 +3087,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Avoid Hi/Lo Mean :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText79->Wrap( -1 );
-	m_staticText79->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3097,7 +3097,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	
 	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Num. Bckgd. Boxes :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText95->Wrap( -1 );
-	m_staticText95->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3277,7 +3277,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Alignment ID :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText72->Wrap( -1 );
-	m_staticText72->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3287,7 +3287,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText74->Wrap( -1 );
-	m_staticText74->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3297,7 +3297,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText93->Wrap( -1 );
-	m_staticText93->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3307,7 +3307,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Voltage :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText83->Wrap( -1 );
-	m_staticText83->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3317,7 +3317,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText78 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText78->Wrap( -1 );
-	m_staticText78->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText78->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText78, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3327,7 +3327,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Exp. per Frame :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText82->Wrap( -1 );
-	m_staticText82->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3337,7 +3337,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pre Exp. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
-	m_staticText96->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText96->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText96, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3347,7 +3347,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText85->Wrap( -1 );
-	m_staticText85->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3357,7 +3357,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText87->Wrap( -1 );
-	m_staticText87->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3367,7 +3367,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Term. Threshold :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText89->Wrap( -1 );
-	m_staticText89->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3377,7 +3377,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Max. Iterations :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText91->Wrap( -1 );
-	m_staticText91->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3387,7 +3387,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("b-factor :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText79->Wrap( -1 );
-	m_staticText79->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3397,7 +3397,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Exp. Filter :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText95->Wrap( -1 );
-	m_staticText95->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3407,7 +3407,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText99 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Restore Power :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText99->Wrap( -1 );
-	m_staticText99->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText99->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText99, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3417,7 +3417,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText101 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Mask Cross :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText101->Wrap( -1 );
-	m_staticText101->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText101->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText101, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3427,7 +3427,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText103 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Horiz. Mask :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText103->Wrap( -1 );
-	m_staticText103->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText103->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText103, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3437,7 +3437,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText105 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Vert. Mask :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText105->Wrap( -1 );
-	m_staticText105->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText105->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText105, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3447,7 +3447,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText1051 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Sum all Frames :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1051->Wrap( -1 );
-	m_staticText1051->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText1051->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText1051, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3457,7 +3457,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText1052 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("First Frame :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1052->Wrap( -1 );
-	m_staticText1052->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText1052->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText1052, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -3467,7 +3467,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	
 	m_staticText1053 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Last Frame :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1053->Wrap( -1 );
-	m_staticText1053->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText1053->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	InfoSizer->Add( m_staticText1053, 0, wxALIGN_RIGHT|wxALL|wxRIGHT, 5 );
 	
@@ -3805,7 +3805,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	PleaseEstimateCTFStaticText = new wxStaticText( this, wxID_ANY, wxT("Please run CTF estimation on this group before picking particles"), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseEstimateCTFStaticText->Wrap( -1 );
-	PleaseEstimateCTFStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseEstimateCTFStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseEstimateCTFStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	
 	bSizer1211->Add( PleaseEstimateCTFStaticText, 0, wxALL, 5 );
@@ -3913,7 +3913,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	
 	ExpertOptionsStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
 	ExpertOptionsStaticText->Wrap( -1 );
-	ExpertOptionsStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	ExpertOptionsStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	ExpertOptionsSizer->Add( ExpertOptionsStaticText, 0, wxALL|wxEXPAND, 5 );
 	
@@ -4389,27 +4389,25 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer32, 0, wxEXPAND, 5 );
 	
-	wxBoxSizer* bSizer321;
-	bSizer321 = new wxBoxSizer( wxHORIZONTAL );
+	wxBoxSizer* bSizer2292;
+	bSizer2292 = new wxBoxSizer( wxHORIZONTAL );
 	
-	MoviesAreGainCorrectedCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Movies are gain corrected"), wxDefaultPosition, wxDefaultSize, 0 );
-	MoviesAreGainCorrectedCheckBox->SetValue(true); 
-	bSizer321->Add( MoviesAreGainCorrectedCheckBox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ApplyDarkImageCheckbox = new wxCheckBox( this, wxID_ANY, wxT("Apply dark image :"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2292->Add( ApplyDarkImageCheckbox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DarkFilePicker = new wxFilePickerCtrl( this, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("Any supported type (*.mrc;*.tif;*.dm;*.dm3;*.dm4)|*.mrc;*.tif;*.dm;*.dm3;*.dm4|MRC files (*.mrc) | *.mrc |TIFF files (*.tif) | *.tif | DM files (*.dm;*.dm3;*.dm4)|*.dm;*.dm3;*.dm4"), wxDefaultPosition, wxDefaultSize, wxFLP_DEFAULT_STYLE|wxFLP_FILE_MUST_EXIST );
+	DarkFilePicker->Enable( false );
+	
+	bSizer2292->Add( DarkFilePicker, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
-	bSizer321->Add( 0, 0, 50, wxEXPAND, 5 );
-	
-	
-	bSizer26->Add( bSizer321, 0, wxEXPAND, 5 );
+	bSizer26->Add( bSizer2292, 0, wxEXPAND, 5 );
 	
 	wxBoxSizer* bSizer229;
 	bSizer229 = new wxBoxSizer( wxHORIZONTAL );
 	
-	GainFileStaticText = new wxStaticText( this, wxID_ANY, wxT("        Camera gain image :"), wxDefaultPosition, wxDefaultSize, 0 );
-	GainFileStaticText->Wrap( -1 );
-	GainFileStaticText->Enable( false );
-	
-	bSizer229->Add( GainFileStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ApplyGainImageCheckbox = new wxCheckBox( this, wxID_ANY, wxT("Apply gain image :"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer229->Add( ApplyGainImageCheckbox, 50, wxALL, 5 );
 	
 	GainFilePicker = new wxFilePickerCtrl( this, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("Any supported type (*.mrc;*.tif;*.dm;*.dm3;*.dm4)|*.mrc;*.tif;*.dm;*.dm3;*.dm4|MRC files (*.mrc) | *.mrc |TIFF files (*.tif) | *.tif | DM files (*.dm;*.dm3;*.dm4)|*.dm;*.dm3;*.dm4"), wxDefaultPosition, wxDefaultSize, wxFLP_DEFAULT_STYLE|wxFLP_FILE_MUST_EXIST );
 	GainFilePicker->Enable( false );
@@ -4562,7 +4560,9 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	PixelSizeText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Connect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
-	MoviesAreGainCorrectedCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	ApplyDarkImageCheckbox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	DarkFilePicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
+	ApplyGainImageCheckbox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
 	GainFilePicker->Connect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
 	ResampleMoviesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnResampleMoviesCheckBox ), NULL, this );
 	DesiredPixelSizeTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
@@ -4589,7 +4589,9 @@ MovieImportDialog::~MovieImportDialog()
 	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	DoseText->Disconnect( wxEVT_CHAR, wxKeyEventHandler( MovieImportDialog::OnTextKeyPress ), NULL, this );
 	DoseText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
-	MoviesAreGainCorrectedCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	ApplyDarkImageCheckbox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
+	DarkFilePicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
+	ApplyGainImageCheckbox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesAreGainCorrectedCheckBox ), NULL, this );
 	GainFilePicker->Disconnect( wxEVT_COMMAND_FILEPICKER_CHANGED, wxFileDirPickerEventHandler( MovieImportDialog::OnGainFilePickerChanged ), NULL, this );
 	ResampleMoviesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnResampleMoviesCheckBox ), NULL, this );
 	DesiredPixelSizeTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
@@ -4880,7 +4882,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label0Title = new wxStaticText( this, wxID_ANY, wxT("Label 0 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label0Title->Wrap( -1 );
-	Label0Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label0Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label0Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4902,7 +4904,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label1Title = new wxStaticText( this, wxID_ANY, wxT("Label 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label1Title->Wrap( -1 );
-	Label1Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label1Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label1Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4912,7 +4914,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label2Title = new wxStaticText( this, wxID_ANY, wxT("Label 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label2Title->Wrap( -1 );
-	Label2Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label2Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label2Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4922,7 +4924,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label3Title = new wxStaticText( this, wxID_ANY, wxT("Label 3 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label3Title->Wrap( -1 );
-	Label3Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label3Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label3Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4932,7 +4934,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label4Title = new wxStaticText( this, wxID_ANY, wxT("Label 4 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label4Title->Wrap( -1 );
-	Label4Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label4Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label4Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4942,7 +4944,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label5Title = new wxStaticText( this, wxID_ANY, wxT("Label 5 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label5Title->Wrap( -1 );
-	Label5Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label5Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label5Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4952,7 +4954,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label6Title = new wxStaticText( this, wxID_ANY, wxT("Label 6 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label6Title->Wrap( -1 );
-	Label6Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label6Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label6Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4962,7 +4964,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label7Title = new wxStaticText( this, wxID_ANY, wxT("Label 7 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label7Title->Wrap( -1 );
-	Label7Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label7Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label7Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4972,7 +4974,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label8Title = new wxStaticText( this, wxID_ANY, wxT("Label 8 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label8Title->Wrap( -1 );
-	Label8Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label8Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label8Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -4982,7 +4984,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	Label9Title = new wxStaticText( this, wxID_ANY, wxT("Label 9 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label9Title->Wrap( -1 );
-	Label9Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label9Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	gSizer1->Add( Label9Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -5428,7 +5430,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	m_staticText43 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Shifts"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText43->Wrap( -1 );
-	m_staticText43->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText43->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText43, 0, wxALL, 5 );
 	
@@ -5455,7 +5457,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	m_staticText44 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Exposure Filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText44->Wrap( -1 );
-	m_staticText44->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText44->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText44, 0, wxALL, 5 );
 	
@@ -5474,7 +5476,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	m_staticText45 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Convergence"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText45->Wrap( -1 );
-	m_staticText45->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText45->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText45, 0, wxALL, 5 );
 	
@@ -5497,7 +5499,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	m_staticText48 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText48->Wrap( -1 );
-	m_staticText48->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText48->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText48, 0, wxALL, 5 );
 	
@@ -5534,7 +5536,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	m_staticText481 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Final Sum"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText481->Wrap( -1 );
-	m_staticText481->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText481->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText481, 0, wxALL, 5 );
 	
@@ -5881,7 +5883,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
-	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
@@ -5913,7 +5915,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText318 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Parameters To Refine"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText318->Wrap( -1 );
-	m_staticText318->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText318->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	bSizer258->Add( m_staticText318, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -5965,7 +5967,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("General Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText202->Wrap( -1 );
-	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText202, 0, wxALL, 5 );
 	
@@ -6009,7 +6011,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
-	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
 	
@@ -6076,7 +6078,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText200 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Classification"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText200->Wrap( -1 );
-	m_staticText200->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText200->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText200, 0, wxALL, 5 );
 	
@@ -6152,7 +6154,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText323 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("CTF Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText323->Wrap( -1 );
-	m_staticText323->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText323->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText323, 0, wxALL, 5 );
 	
@@ -6199,7 +6201,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText329 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText329->Wrap( -1 );
-	m_staticText329->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText329->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText329, 0, wxALL, 5 );
 	
@@ -6300,7 +6302,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText405->Wrap( -1 );
-	m_staticText405->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText405->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText405, 0, wxALL, 5 );
 	
@@ -6621,7 +6623,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	m_staticText1006 = new wxStaticText( this, wxID_ANY, wxT("Filtering"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1006->Wrap( -1 );
-	m_staticText1006->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText1006->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText1006, 0, wxALL, 5 );
 	
@@ -6705,7 +6707,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	m_staticText202 = new wxStaticText( this, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText202->Wrap( -1 );
-	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer11->Add( m_staticText202, 0, wxALL, 5 );
 	
@@ -6728,7 +6730,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	m_staticText671 = new wxStaticText( this, wxID_ANY, wxT("Additional"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText671->Wrap( -1 );
-	m_staticText671->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText671->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer11->Add( m_staticText671, 0, wxALL, 5 );
 	
@@ -6784,7 +6786,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	
 	m_staticText699 = new wxStaticText( this, wxID_ANY, wxT("Plot of Relative Log Amplitudes"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText699->Wrap( -1 );
-	m_staticText699->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText699->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	InputSizer->Add( m_staticText699, 0, wxALL, 5 );
 	
@@ -6981,7 +6983,7 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
-	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
@@ -7013,7 +7015,7 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	m_staticText329 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText329->Wrap( -1 );
-	m_staticText329->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText329->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	bSizer258->Add( m_staticText329, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
@@ -7407,7 +7409,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	PleaseCreateRefinementPackageText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Please create a refinement package (in the assets panel) in order to perform a 3D refinement."), wxDefaultPosition, wxDefaultSize, 0 );
 	PleaseCreateRefinementPackageText->Wrap( -1 );
-	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	PleaseCreateRefinementPackageText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	PleaseCreateRefinementPackageText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	PleaseCreateRefinementPackageText->Hide();
 	
@@ -7462,7 +7464,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("General Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText202->Wrap( -1 );
-	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText202, 0, wxALL, 5 );
 	
@@ -7492,7 +7494,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
-	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
 	
@@ -7529,7 +7531,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	m_staticText329 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText329->Wrap( -1 );
-	m_staticText329->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText329->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText329, 0, wxALL, 5 );
 	
@@ -7593,7 +7595,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText405->Wrap( -1 );
-	m_staticText405->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText405->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText405, 0, wxALL, 5 );
 	
@@ -7914,7 +7916,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText202->Wrap( -1 );
-	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText202, 0, wxALL, 5 );
 	
@@ -7960,7 +7962,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
-	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
 	
@@ -8023,7 +8025,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	m_staticText200 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Phase Plates"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText200->Wrap( -1 );
-	m_staticText200->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+	m_staticText200->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
 	
 	fgSizer1->Add( m_staticText200, 0, wxALL, 5 );
 	
@@ -8339,7 +8341,7 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
-	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
 	
@@ -8636,7 +8638,7 @@ MatchTemplateMLParentPanel::MatchTemplateMLParentPanel( wxWindow* parent, wxWind
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
-	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
 	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
 	
@@ -9512,7 +9514,7 @@ FilterDialog::FilterDialog( wxWindow* parent, wxWindowID id, const wxString& tit
 	
 	m_staticText64 = new wxStaticText( this, wxID_ANY, wxT("Filter By :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText64->Wrap( -1 );
-	m_staticText64->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	m_staticText64->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	MainBoxSizer->Add( m_staticText64, 0, wxALL, 5 );
 	
@@ -9531,7 +9533,7 @@ FilterDialog::FilterDialog( wxWindow* parent, wxWindowID id, const wxString& tit
 	
 	m_staticText81 = new wxStaticText( this, wxID_ANY, wxT("\nSort By :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText81->Wrap( -1 );
-	m_staticText81->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	m_staticText81->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
 	
 	MainBoxSizer->Add( m_staticText81, 0, wxALL, 5 );
 	
@@ -9603,7 +9605,7 @@ ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wx
 	wxStaticBoxSizer* sbSizer3;
 	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
 	
-	GroupComboBox = new wxComboBox( sbSizer3->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
 	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
@@ -9612,7 +9614,7 @@ ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wx
 	wxStaticBoxSizer* sbSizer4;
 	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Destination directory") ), wxVERTICAL );
 	
-	DestinationDirectoryPickerCtrl = new wxDirPickerCtrl( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxT("Select a folder"), wxDefaultPosition, wxDefaultSize, wxDIRP_DEFAULT_STYLE );
+	DestinationDirectoryPickerCtrl = new wxDirPickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a folder"), wxDefaultPosition, wxDefaultSize, wxDIRP_DEFAULT_STYLE );
 	sbSizer4->Add( DestinationDirectoryPickerCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	
@@ -9688,7 +9690,7 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 	wxStaticBoxSizer* sbSizer3;
 	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
 	
-	GroupComboBox = new wxComboBox( sbSizer3->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
 	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
@@ -9753,7 +9755,7 @@ FrealignExportDialog::FrealignExportDialog( wxWindow* parent, wxWindowID id, con
 	wxStaticBoxSizer* sbSizer4;
 	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Output image stack") ), wxVERTICAL );
 	
-	OutputImageStackPicker = new wxFilePickerCtrl( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE|wxFLP_USE_TEXTCTRL );
+	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE|wxFLP_USE_TEXTCTRL );
 	sbSizer4->Add( OutputImageStackPicker, 0, wxALL|wxEXPAND, 5 );
 	
 	
@@ -9831,7 +9833,7 @@ RelionExportDialog::RelionExportDialog( wxWindow* parent, wxWindowID id, const w
 	wxStaticBoxSizer* sbSizer3;
 	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
 	
-	GroupComboBox = new wxComboBox( sbSizer3->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	GroupComboBox = new wxComboBox( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
 	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
 	
 	
@@ -9922,10 +9924,10 @@ RelionExportDialog::RelionExportDialog( wxWindow* parent, wxWindowID id, const w
 	wxBoxSizer* bSizer229;
 	bSizer229 = new wxBoxSizer( wxHORIZONTAL );
 	
-	OutputImageStackPicker = new wxFilePickerCtrl( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrcs)|*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE );
+	OutputImageStackPicker = new wxFilePickerCtrl( m_panel38, wxID_ANY, wxEmptyString, wxT("Select a file"), wxT("MRC files (*.mrcs)|*.mrcs"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE );
 	bSizer229->Add( OutputImageStackPicker, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	FileNameStaticText = new wxStaticText( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	FileNameStaticText = new wxStaticText( m_panel38, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	FileNameStaticText->Wrap( -1 );
 	bSizer229->Add( FileNameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
@@ -10829,7 +10831,7 @@ FSCPanel::FSCPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const w
 	
 	TitleStaticText = new wxStaticText( this, wxID_ANY, wxT("Current FSC"), wxDefaultPosition, wxDefaultSize, 0 );
 	TitleStaticText->Wrap( -1 );
-	TitleStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	TitleStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	TitleSizer->Add( TitleStaticText, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -11208,13 +11210,13 @@ UnblurResultsPanelParent::UnblurResultsPanelParent( wxWindow* parent, wxWindowID
 	
 	m_staticText372 = new wxStaticText( m_panel82, wxID_ANY, wxT("Aligned Sum Spectra (Nyquist :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText372->Wrap( -1 );
-	m_staticText372->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText372->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer299->Add( m_staticText372, 0, wxALL, 5 );
 	
 	SpectraNyquistStaticText = new wxStaticText( m_panel82, wxID_ANY, wxT("2.8 Å)"), wxDefaultPosition, wxDefaultSize, 0 );
 	SpectraNyquistStaticText->Wrap( -1 );
-	SpectraNyquistStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	SpectraNyquistStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer299->Add( SpectraNyquistStaticText, 0, wxALL, 5 );
 	
@@ -11237,7 +11239,7 @@ UnblurResultsPanelParent::UnblurResultsPanelParent( wxWindow* parent, wxWindowID
 	
 	m_staticText373 = new wxStaticText( m_panel83, wxID_ANY, wxT("Plot of Shifts"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText373->Wrap( -1 );
-	m_staticText373->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText373->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer288->Add( m_staticText373, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
@@ -11273,13 +11275,13 @@ UnblurResultsPanelParent::UnblurResultsPanelParent( wxWindow* parent, wxWindowID
 	
 	m_staticText371 = new wxStaticText( m_panel81, wxID_ANY, wxT("Aligned Movie Sum"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText371->Wrap( -1 );
-	m_staticText371->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	m_staticText371->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer300->Add( m_staticText371, 0, wxALL, 5 );
 	
 	FilenameStaticText = new wxStaticText( m_panel81, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	FilenameStaticText->Wrap( -1 );
-	FilenameStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	FilenameStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer300->Add( FilenameStaticText, 0, wxALL, 5 );
 	
@@ -11371,7 +11373,7 @@ DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWind
 	
 	AngularPlotText = new wxStaticText( TopPanel, wxID_ANY, wxT("Angular Plot"), wxDefaultPosition, wxDefaultSize, 0 );
 	AngularPlotText->Wrap( -1 );
-	AngularPlotText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	AngularPlotText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer302->Add( AngularPlotText, 0, wxALL, 5 );
 	
@@ -11409,7 +11411,7 @@ DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWind
 	
 	OrthText = new wxStaticText( RightPanel, wxID_ANY, wxT("Orthogonal Slices / Projections"), wxDefaultPosition, wxDefaultSize, 0 );
 	OrthText->Wrap( -1 );
-	OrthText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+	OrthText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
 	
 	bSizer304->Add( OrthText, 0, wxALL, 5 );
 	
@@ -11454,7 +11456,7 @@ PopupTextDialogParent::PopupTextDialogParent( wxWindow* parent, wxWindowID id, c
 	bSizer363 = new wxBoxSizer( wxVERTICAL );
 	
 	OutputTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_MULTILINE|wxTE_READONLY );
-	OutputTextCtrl->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Fixed") ) );
+	OutputTextCtrl->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 90, false, wxT("Fixed") ) );
 	
 	bSizer363->Add( OutputTextCtrl, 1, wxALL|wxEXPAND, 5 );
 	

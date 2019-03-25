@@ -105,12 +105,26 @@ bool CalculateFSC::DoCalculation()
 		mask_volume.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
 		mask_volume_in_voxels = density_map_1.ApplyMask(mask_volume, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
 		mask_volume_in_voxels = density_map_2.ApplyMask(mask_volume, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
-		wxPrintf("\nMask volume = %g voxels\n\n", mask_volume_in_voxels);
+
+		float estimated_molecule_size =  kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3);
+		float volume_fraction = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3) / mask_volume_in_voxels;
+
+		wxPrintf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
+		wxPrintf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
+		wxPrintf("Volume Fraction = %.3f\n\n", volume_fraction);
+
 	}
 	else
 	{
 		mask_volume_in_voxels = density_map_1.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
 		mask_volume_in_voxels = density_map_2.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
+
+		float estimated_molecule_size =  kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3);
+		float volume_fraction = kDa_to_Angstrom3(molecular_mass_in_kDa) / powf(pixel_size,3) / mask_volume_in_voxels;
+
+		wxPrintf("\nEstimated molecule volume = %.2f voxels\n", estimated_molecule_size);
+		wxPrintf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
+		wxPrintf("Volume Fraction = %.3f\n\n", volume_fraction);
 	}
 
 	density_map_1.ForwardFFT();

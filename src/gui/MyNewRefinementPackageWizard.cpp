@@ -732,7 +732,13 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
-
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = current_image_asset->pixel_size;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = current_image_asset->microscope_voltage;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = current_image_asset->spherical_aberration;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = 0.0f;
 			}
 
 			my_dialog->Update(counter + 1);
@@ -940,6 +946,13 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = class_average_particle_infos[counter].pixel_size;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = class_average_particle_infos[counter].microscope_voltage;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = class_average_particle_infos[counter].spherical_aberration;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = 0.0f;
 				}
 
 			}
@@ -1001,6 +1014,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score = 0.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active = 1;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma = 1.0;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = current_image_asset->pixel_size;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = current_image_asset->microscope_voltage;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = current_image_asset->spherical_aberration;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = 0.0f;
 
 				}
 			}
@@ -1232,6 +1253,13 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].score = active_result.score;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active = active_result.image_is_active;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma = active_result.sigma;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = active_result.pixel_size;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = active_result.microscope_voltage_kv;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = active_result.microscope_spherical_aberration_mm;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = active_result.beam_tilt_x;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = active_result.beam_tilt_y;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = active_result.image_shift_x;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = active_result.image_shift_y;
 			}
 
 			my_dialog->Update(particle_counter + 1);

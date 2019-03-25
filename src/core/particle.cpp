@@ -1,5 +1,23 @@
 #include "core_headers.h"
 
+ParameterMap::ParameterMap()
+{
+	phi = false;
+	theta = false;
+	psi = false;
+	x_shift = false;
+	y_shift = false;
+}
+
+void ParameterMap::SetAllTrue()
+{
+	phi = true;
+	theta = true;
+	psi = true;
+	x_shift = true;
+	y_shift = true;
+}
+
 Particle::Particle()
 {
 	Init();
@@ -14,12 +32,6 @@ Particle::Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimensio
 
 Particle::~Particle()
 {
-	delete [] temp_float;
-	delete [] current_parameters;
-	delete [] parameter_average;
-	delete [] parameter_variance;
-	delete [] parameter_map;
-	delete [] constraints_used;
 
 	if (particle_image != NULL)
 	{
@@ -44,7 +56,6 @@ Particle::~Particle()
 
 void Particle::Init()
 {
-	number_of_parameters = 17;
 	target_phase_error = 45.0;
 	origin_micrograph = -1;
 	origin_x_coordinate = -1;
@@ -95,18 +106,6 @@ void Particle::Init()
 	is_centered_in_box = true;
 	shift_counter = 0;
 	insert_even = false;
-	temp_float = new float [number_of_parameters];
-	current_parameters = new float [number_of_parameters];
-	parameter_average = new float [number_of_parameters];
-	parameter_variance = new float [number_of_parameters];
-	parameter_map = new bool [number_of_parameters];
-	constraints_used = new bool [number_of_parameters];
-	ZeroFloatArray(temp_float, number_of_parameters);
-	ZeroFloatArray(current_parameters, number_of_parameters);
-	ZeroFloatArray(parameter_average, number_of_parameters);
-	ZeroFloatArray(parameter_variance, number_of_parameters);
-	ZeroBoolArray(parameter_map, number_of_parameters);
-	ZeroBoolArray(constraints_used, number_of_parameters);
 	number_of_search_dimensions = 0;
 	bin_index = NULL;
 	mask_center_2d_x = 0.0;
@@ -198,12 +197,12 @@ void Particle::Whiten(float resolution_limit)
 	particle_image->Whiten(resolution_limit);
 }
 
-void Particle::ForwardFFT()
+void Particle::ForwardFFT(bool do_scaling)
 {
 	MyDebugAssertTrue(particle_image->is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(particle_image->is_in_real_space, "Image not in real space");
 
-	particle_image->ForwardFFT();
+	particle_image->ForwardFFT(do_scaling);
 }
 
 void Particle::BackwardFFT()
@@ -444,18 +443,23 @@ void Particle::CalculateProjection(Image &projection_image, ReconstructedVolume 
 	if (current_ctf.GetBeamTiltX() != 0.0f || current_ctf.GetBeamTiltY() != 0.0f) projection_image.MultiplyPixelWise(*beamtilt_image);
 }
 
-void Particle::GetParameters(float *output_parameters)
+void Particle::GetParameters(cisTEMParameterLine &output_parameters)
 {
-	for (int i = 0; i < number_of_parameters; i++) {output_parameters [i] = current_parameters[i];}
+	output_parameters = current_parameters;
 }
 
-void Particle::SetParameters(float *wanted_parameters, bool initialize_scores)
+void Particle::SetParameters(cisTEMParameterLine &wanted_parameters, bool initialize_scores)
 {
-	int i;
-	for (i = 0; i < number_of_parameters; i++) {current_parameters[i] = wanted_parameters[i];}
-	if (initialize_scores) for (i = 13; i < 16; i++) {current_parameters[i] = -std::numeric_limits<float>::max();}
+	current_parameters = wanted_parameters;
 
-	alignment_parameters.Init(current_parameters[1], current_parameters[2], current_parameters[3], current_parameters[4], current_parameters[5]);
+	if (initialize_scores)
+	{
+		current_parameters.logp = -std::numeric_limits<float>::max();
+		current_parameters.sigma = -std::numeric_limits<float>::max();
+		current_parameters.score = -std::numeric_limits<float>::max();
+	}
+
+	alignment_parameters.Init(current_parameters.phi, current_parameters.theta, current_parameters.psi, current_parameters.x_shift, current_parameters.y_shift);
 }
 
 void Particle::SetAlignmentParameters(float wanted_euler_phi, float wanted_euler_theta, float wanted_euler_psi, float wanted_shift_x, float wanted_shift_y)
@@ -463,86 +467,101 @@ void Particle::SetAlignmentParameters(float wanted_euler_phi, float wanted_euler
 	alignment_parameters.Init(wanted_euler_phi, wanted_euler_theta, wanted_euler_psi, wanted_shift_x, wanted_shift_y);
 }
 
-void Particle::SetParameterStatistics(float *wanted_averages, float *wanted_variances)
+void Particle::SetParameterStatistics(cisTEMParameterLine &wanted_averages, cisTEMParameterLine &wanted_variances)
 {
-	int i;
-	for (i = 1; i < number_of_parameters; i++) {parameter_average[i] = wanted_averages[i];}
-	for (i = 1; i < number_of_parameters; i++) {parameter_variance[i] = wanted_variances[i];}
+	parameter_average = wanted_averages;
+	parameter_variance = wanted_variances;
+
 }
 
 void Particle::SetParameterConstraints(float wanted_noise_variance)
 {
-	MyDebugAssertTrue(! constraints_used[1] || parameter_variance[1] > 0.0, "Phi variance not positive");
-	MyDebugAssertTrue(! constraints_used[2] || parameter_variance[2] > 0.0, "Theta variance not positive");
-	MyDebugAssertTrue(! constraints_used[3] || parameter_variance[3] > 0.0, "Psi variance not positive");
-	MyDebugAssertTrue(! constraints_used[4] || parameter_variance[4] > 0.0, "Shift_X variance not positive");
-	MyDebugAssertTrue(! constraints_used[5] || parameter_variance[5] > 0.0, "Shift_Y variance not positive");
+	MyDebugAssertTrue(! constraints_used.phi || parameter_variance.phi > 0.0, "Phi variance not positive");
+	MyDebugAssertTrue(! constraints_used.theta || parameter_variance.theta > 0.0, "Theta variance not positive");
+	MyDebugAssertTrue(! constraints_used.psi || parameter_variance.psi > 0.0, "Psi variance not positive");
+	MyDebugAssertTrue(! constraints_used.x_shift || parameter_variance.x_shift > 0.0, "Shift_X variance not positive");
+	MyDebugAssertTrue(! constraints_used.y_shift || parameter_variance.y_shift > 0.0, "Shift_Y variance not positive");
 
 	scaled_noise_variance = wanted_noise_variance;
-	if (constraints_used[1]) parameter_constraints.InitPhi(parameter_average[1], parameter_variance[1], scaled_noise_variance);
-	if (constraints_used[2]) parameter_constraints.InitTheta(parameter_average[2], parameter_variance[2], scaled_noise_variance);
-	if (constraints_used[3]) parameter_constraints.InitPsi(parameter_average[3], parameter_variance[3], scaled_noise_variance);
-	if (constraints_used[4]) parameter_constraints.InitShiftX(parameter_average[4], parameter_variance[4], scaled_noise_variance);
-	if (constraints_used[5]) parameter_constraints.InitShiftY(parameter_average[5], parameter_variance[5], scaled_noise_variance);
+	if (constraints_used.phi) parameter_constraints.InitPhi(parameter_average.phi, parameter_variance.phi, scaled_noise_variance);
+	if (constraints_used.theta) parameter_constraints.InitTheta(parameter_average.theta, parameter_variance.theta, scaled_noise_variance);
+	if (constraints_used.psi) parameter_constraints.InitPsi(parameter_average.psi, parameter_variance.psi, scaled_noise_variance);
+	if (constraints_used.x_shift) parameter_constraints.InitShiftX(parameter_average.x_shift, parameter_variance.x_shift, scaled_noise_variance);
+	if (constraints_used.y_shift) parameter_constraints.InitShiftY(parameter_average.y_shift, parameter_variance.y_shift, scaled_noise_variance);
 }
 
-float Particle::ReturnParameterPenalty(float *parameters)
+float Particle::ReturnParameterPenalty(cisTEMParameterLine &parameters)
 {
 	float penalty = 0.0;
 
-/*	if (constraints_used[1]) penalty += parameter_constraints.ReturnPhiAnglePenalty(parameters[1]);
-	if (constraints_used[2]) penalty += parameter_constraints.ReturnThetaAnglePenalty(parameters[2]);
-	if (constraints_used[3]) penalty += parameter_constraints.ReturnPsiAnglePenalty(parameters[3]);
-	if (constraints_used[4]) penalty += parameter_constraints.ReturnShiftXPenalty(parameters[4]);
-	if (constraints_used[5]) penalty += parameter_constraints.ReturnShiftYPenalty(parameters[5]);
-*/
 // Assume that sigma_noise is approximately equal to sigma_image, i.e. the SNR in the image is very low
-	if (constraints_used[1]) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnPhiAngleLogP(parameters[1]);
-	if (constraints_used[2]) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnThetaAngleLogP(parameters[2]);
-	if (constraints_used[3]) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnPsiAngleLogP(parameters[3]);
-	if (constraints_used[4]) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnShiftXLogP(parameters[4]);
-	if (constraints_used[5]) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnShiftYLogP(parameters[5]);
+	if (constraints_used.phi) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnPhiAngleLogP(parameters.phi);
+	if (constraints_used.theta) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnThetaAngleLogP(parameters.theta);
+	if (constraints_used.psi) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnPsiAngleLogP(parameters.psi);
+	if (constraints_used.x_shift) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnShiftXLogP(parameters.x_shift);
+	if (constraints_used.y_shift) penalty += sigma_noise / mask_volume * parameter_constraints.ReturnShiftYLogP(parameters.y_shift);
 
 	return penalty;
 }
 
-float Particle::ReturnParameterLogP(float *parameters)
+float Particle::ReturnParameterLogP(cisTEMParameterLine &parameters)
 {
 	float logp = 0.0;
 
-	if (constraints_used[1]) logp += parameter_constraints.ReturnPhiAngleLogP(parameters[1]);
-	if (constraints_used[2]) logp += parameter_constraints.ReturnThetaAngleLogP(parameters[2]);
-	if (constraints_used[3]) logp += parameter_constraints.ReturnPsiAngleLogP(parameters[3]);
-	if (constraints_used[4]) logp += parameter_constraints.ReturnShiftXLogP(parameters[4]);
-	if (constraints_used[5]) logp += parameter_constraints.ReturnShiftYLogP(parameters[5]);
+	if (constraints_used.phi) logp += parameter_constraints.ReturnPhiAngleLogP(parameters.phi);
+	if (constraints_used.theta) logp += parameter_constraints.ReturnThetaAngleLogP(parameters.theta);
+	if (constraints_used.psi) logp += parameter_constraints.ReturnPsiAngleLogP(parameters.psi);
+	if (constraints_used.x_shift) logp += parameter_constraints.ReturnShiftXLogP(parameters.x_shift);
+	if (constraints_used.y_shift) logp += parameter_constraints.ReturnShiftYLogP(parameters.y_shift);
 
 	return logp;
 }
 
 int Particle::MapParameterAccuracy(float *accuracies)
 {
-	ZeroFloatArray(temp_float, number_of_parameters);
-	temp_float[1] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
-	temp_float[2] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
-	temp_float[3] = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
-	temp_float[4] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
-	temp_float[5] = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
-	number_of_search_dimensions = MapParametersFromExternal(temp_float, accuracies);
+	cisTEMParameterLine accuracy_line;
+	accuracy_line.psi = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	accuracy_line.theta = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	accuracy_line.phi = target_phase_error / (1.0 / filter_radius_high * 2.0 * PI * mask_radius) / 5.0;
+	accuracy_line.x_shift = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
+	accuracy_line.y_shift = deg_2_rad(target_phase_error) / (1.0 / filter_radius_high * 2.0 * PI * pixel_size) / 5.0;
+	number_of_search_dimensions = MapParametersFromExternal(accuracy_line, accuracies);
 	return number_of_search_dimensions;
 }
 
-int Particle::MapParametersFromExternal(float *input_parameters, float *mapped_parameters)
+int Particle::MapParametersFromExternal(cisTEMParameterLine &input_parameters, float *mapped_parameters)
 {
 	int i;
 	int j = 0;
 
-	for (i = 0; i < number_of_parameters; i++)
+	if (parameter_map.phi == true)
 	{
-		if (parameter_map[i])
-		{
-			mapped_parameters[j] = input_parameters[i];
-			j++;
-		}
+		mapped_parameters[j] = input_parameters.phi;
+		j++;
+	}
+
+	if (parameter_map.theta == true)
+	{
+		mapped_parameters[j] = input_parameters.theta;
+		j++;
+	}
+
+	if (parameter_map.psi == true)
+	{
+		mapped_parameters[j] = input_parameters.psi;
+		j++;
+	}
+
+	if (parameter_map.x_shift == true)
+	{
+		mapped_parameters[j] = input_parameters.x_shift;
+		j++;
+	}
+
+	if (parameter_map.y_shift == true)
+	{
+		mapped_parameters[j] = input_parameters.y_shift;
+		j++;
 	}
 
 	return j;
@@ -554,30 +573,73 @@ int Particle::MapParameters(float *mapped_parameters)
 	int i;
 	int j = 0;
 
-	for (i = 0; i < number_of_parameters; i++)
+	if (parameter_map.phi == true)
 	{
-		if (parameter_map[i])
-		{
-			mapped_parameters[j] = current_parameters[i];
-			j++;
-		}
+		mapped_parameters[j] = current_parameters.phi;
+		j++;
+	}
+
+	if (parameter_map.theta == true)
+	{
+		mapped_parameters[j] = current_parameters.theta;
+		j++;
+	}
+
+	if (parameter_map.psi == true)
+	{
+		mapped_parameters[j] = current_parameters.psi;
+		j++;
+	}
+
+	if (parameter_map.x_shift == true)
+	{
+		mapped_parameters[j] = current_parameters.x_shift;
+		j++;
+	}
+
+	if (parameter_map.y_shift == true)
+	{
+		mapped_parameters[j] = current_parameters.y_shift;
+		j++;
 	}
 
 	return j;
 }
 
-int Particle::UnmapParametersToExternal(float *output_parameters, float *mapped_parameters)
+int Particle::UnmapParametersToExternal(cisTEMParameterLine &output_parameters, float *mapped_parameters)
 {
 	int i;
 	int j = 0;
 
-	for (i = 0; i < number_of_parameters; i++)
+
+	if (parameter_map.phi == true)
 	{
-		if (parameter_map[i])
-		{
-			output_parameters[i] = mapped_parameters[j];
-			j++;
-		}
+		output_parameters.phi = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.theta == true)
+	{
+		output_parameters.theta = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.psi == true)
+	{
+		output_parameters.psi = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.x_shift == true)
+	{
+		output_parameters.x_shift = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.y_shift == true)
+	{
+		output_parameters.y_shift = mapped_parameters[j];
+		j++;
 	}
 
 	return j;
@@ -588,16 +650,37 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	int i;
 	int j = 0;
 
-	for (i = 0; i < number_of_parameters; i++)
+	if (parameter_map.phi == true)
 	{
-		if (parameter_map[i])
-		{
-			current_parameters[i] = mapped_parameters[j];
-			j++;
-		}
+		current_parameters.phi = mapped_parameters[j];
+		j++;
 	}
 
-	alignment_parameters.Init(current_parameters[1], current_parameters[2], current_parameters[3], current_parameters[4], current_parameters[5]);
+	if (parameter_map.theta == true)
+	{
+		current_parameters.theta = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.psi == true)
+	{
+		current_parameters.psi = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.x_shift == true)
+	{
+		current_parameters.x_shift = mapped_parameters[j];
+		j++;
+	}
+
+	if (parameter_map.y_shift == true)
+	{
+		current_parameters.y_shift = mapped_parameters[j];
+		j++;
+	}
+
+	alignment_parameters.Init(current_parameters.phi, current_parameters.theta, current_parameters.psi, current_parameters.x_shift, current_parameters.y_shift);
 
 	return j;
 }
@@ -930,7 +1013,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	temp_projection->MultiplyPixelWiseReal(*ctf_image);
 //	temp_projection->CopyFrom(projection_image);
 	if (input_image.is_in_real_space) input_image.ForwardFFT();
-	input_image.PhaseShift(- current_parameters[4] / original_pixel_size, - current_parameters[5] / original_pixel_size);
+	input_image.PhaseShift(- current_parameters.x_shift / original_pixel_size, - current_parameters.y_shift / original_pixel_size);
 	temp_particle->CopyFrom(&input_image);
 
 //	if (includes_reference_ssnr_weighting) temp_projection->Whiten(pixel_size / filter_radius_high);
@@ -970,7 +1053,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	if (apply_2D_masking)
 	{
 		AnglesAndShifts	reverse_alignment_parameters;
-		reverse_alignment_parameters.Init(- current_parameters[3], - current_parameters[2], - current_parameters[1], 0.0, 0.0);
+		reverse_alignment_parameters.Init(- current_parameters.psi, - current_parameters.theta, - current_parameters.phi, 0.0, 0.0);
 		reverse_alignment_parameters.euler_matrix.RotateCoords(pixel_center_2d_x, pixel_center_2d_y, pixel_center_2d_z, rotated_center_x, rotated_center_y, rotated_center_z);
 //		variance_masked = particle_image->ReturnVarianceOfRealValues(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
 //				rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0);
@@ -1095,12 +1178,12 @@ void Particle::CalculateMaskedLogLikelihood(Image &projection_image, Reconstruct
 
 	AnglesAndShifts	reverse_alignment_parameters;
 
-	reverse_alignment_parameters.Init(- current_parameters[3], - current_parameters[2], - current_parameters[1], 0.0, 0.0);
+	reverse_alignment_parameters.Init(- current_parameters.psi, - current_parameters.theta, - current_parameters.phi, 0.0, 0.0);
 	reverse_alignment_parameters.euler_matrix.RotateCoords(pixel_center_2d_x, pixel_center_2d_y, pixel_center_2d_z, rotated_center_x, rotated_center_y, rotated_center_z);
 
 	input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / classification_resolution_limit, false, false, false, true, is_phase_flipped);
 
-	particle_image->PhaseShift(- current_parameters[4] / pixel_size, - current_parameters[5] / pixel_size);
+	particle_image->PhaseShift(- current_parameters.x_shift / pixel_size, - current_parameters.y_shift / pixel_size);
 	particle_image->BackwardFFT();
 //	wxPrintf("ssq part = %g var part = %g\n", particle_image->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + particle_image->physical_address_of_box_center_x,
 //			rotated_center_y + particle_image->physical_address_of_box_center_y, 0.0), particle_image->ReturnVarianceOfRealValues());
@@ -1169,7 +1252,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 	MyDebugAssertTrue(input_classes_cache[0].is_in_memory, "input_classes_cache: memory not allocated");
 	MyDebugAssertTrue(! ctf_image->is_in_real_space, "ctf_image in real space");
 	MyDebugAssertTrue(! input_classes_cache[0].is_in_real_space, "input_classes_cache not in Fourier space");
-
+	
 	int i, j;
 	int pixel_counter;
 	int current_rotation;
@@ -1192,8 +1275,8 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 	float dx, dy;
 	float mid_x;
 	float mid_y;
-	float rvar2_x = powf(pixel_size, 2) / parameter_variance[4] / 2.0;
-	float rvar2_y = powf(pixel_size, 2) / parameter_variance[5] / 2.0;
+	float rvar2_x = powf(pixel_size, 2) / parameter_variance.x_shift / 2.0;
+	float rvar2_y = powf(pixel_size, 2) / parameter_variance.y_shift / 2.0;
 	float penalty_x, penalty_y;
 	float number_of_independent_pixels;
 	float norm_X, norm_A;
@@ -1249,7 +1332,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		if (calculate_correlation_map_only) {psi = best_psi; current_rotation = number_of_rotations;}
 		else psi = 360.0 - current_rotation * psi_step - psi_start;
 		rotation_angle.GenerateRotationMatrix2D(psi);
-		rotation_angle.euler_matrix.RotateCoords2D(parameter_average[4], parameter_average[4], mid_x, mid_y);
+		rotation_angle.euler_matrix.RotateCoords2D(parameter_average.x_shift, parameter_average.y_shift, mid_x, mid_y);
 		mid_x /= pixel_size;
 		mid_y /= pixel_size;
 		rotation_angle.GenerateRotationMatrix2D(- psi);
@@ -1283,19 +1366,19 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		// The following is divided by 2 according to the LogP formula
 		for (j = 0; j < particle_image->logical_y_dimension; j++)
 		{
-			if (constraints_used[5])
+			if (constraints_used.y_shift)
 			{
 				if (j > particle_image->physical_address_of_box_center_y) dy = particle_image->logical_y_dimension - j;
 				else dy = j;
-				penalty_y = powf(dy - mid_y, 2) * rvar2_y;
+				penalty_y = powf(dy - mid_y, 2) * rvar2_y;				
 			}
 			for (i = 0; i < particle_image->logical_x_dimension; i++)
 			{
-				if (constraints_used[4])
+				if (constraints_used.x_shift)
 				{
 					if (i > particle_image->physical_address_of_box_center_x) dx = particle_image->logical_y_dimension - i;
 					else dx = i;
-					penalty_x = powf(dx - mid_x, 2) * rvar2_x;
+					penalty_x = powf(dx - mid_x, 2) * rvar2_x;					
 				}
 				correlation_map->real_values[pixel_counter] = correlation_map->real_values[pixel_counter] * number_of_pixels - norm_A - penalty_x - penalty_y;
 				pixel_counter++;
@@ -1319,9 +1402,9 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 					max_logp_particle = correlation_map->real_values[pixel_counter];
 					// Store correlation coefficient that corresponds to highest likelihood
 					snr_psi = temp_image->real_values[pixel_counter];
-					rotation_angle.euler_matrix.RotateCoords2D(dx, dy, current_parameters[4], current_parameters[5]);
-					current_parameters[3] = psi;
-					current_parameters[7] = current_class + 1;
+					rotation_angle.euler_matrix.RotateCoords2D(dx, dy, current_parameters.x_shift, current_parameters.y_shift);
+					current_parameters.psi = psi;
+					current_parameters.image_is_active = current_class + 1;
 				}
 				pixel_counter++;
 			}
@@ -1335,9 +1418,9 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 //					ssq_X, snr_psi, ssq_A, particle_image->number_of_real_space_pixels,  number_of_independent_pixels, var_A);
 			snr_psi = (ssq_X - 2.0 * snr_psi + ssq_A) * particle_image->number_of_real_space_pixels / number_of_independent_pixels / var_A;
 			// Update SIGMA (SNR)
-			if (snr_psi >= 0.0) current_parameters[14] = sqrtf(snr_psi);
+			if (snr_psi >= 0.0) current_parameters.sigma = sqrtf(snr_psi);
 			// Update SCORE
-			current_parameters[15] = 100.0 * (max_logp_particle + norm_A) / number_of_pixels / ssq_XA2;
+			current_parameters.score = 100.0 * (max_logp_particle + norm_A) / number_of_pixels / ssq_XA2;
 		}
 
 		rmdr = remainderf(best_psi - psi, 360.0);
@@ -1354,9 +1437,9 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 			snr = snr_psi;
 			best_correlation_map.CopyFrom(correlation_map);
 			// Update SIGMA (SNR)
-			if (snr_psi >= 0.0) current_parameters[14] = sqrtf(snr_psi);
+			if (snr_psi >= 0.0) current_parameters.sigma = sqrtf(snr_psi);
 			// Update SCORE
-			current_parameters[15] = 100.0 * (max_logp_particle + norm_A) / number_of_pixels / ssq_XA2;
+			current_parameters.score = 100.0 * (max_logp_particle + norm_A) / number_of_pixels / ssq_XA2;
 			break;
 		}
 		else
@@ -1537,7 +1620,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 
 //		wxPrintf("log sump_class = %g old_max_logp = %g number_of_independent_pixels = %g ssq_X = %g\n", logf(sump_class), old_max_logp, number_of_independent_pixels, ssq_X);
 		logp = logf(sump_class) + old_max_logp - 0.5 * (number_of_independent_pixels * logf(2.0 * PI) + number_of_pixels * ssq_X);
-		current_parameters[13] = logp;
+		current_parameters.logp = logp;
 	}
 	else
 	{

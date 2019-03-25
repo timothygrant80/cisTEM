@@ -144,6 +144,7 @@ void MyVolumeAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id)
 	asset_array_position = all_assets_list->ReturnArrayPositionFromID(wanted_asset_id);
 	all_assets_list->RemoveAsset(asset_array_position);
 	RemoveAssetFromGroups(asset_array_position);
+	main_frame->DirtyVolumes();
 }
 
 void MyVolumeAssetPanel::DoAfterDeletionCleanup()
@@ -285,7 +286,7 @@ void MyVolumeAssetPanel::ImportAllFromDatabase()
 
 	main_frame->current_project.database.EndAllVolumeGroupsSelect();
 
-	is_dirty = true;
+	main_frame->DirtyVolumes();
 }
 
 void MyVolumeAssetPanel::FillAssetSpecificContentsList()
@@ -354,6 +355,6 @@ void MyVolumeAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
 	MyVolumeImportDialog *import_dialog = new MyVolumeImportDialog(this);
 		import_dialog->ShowModal();
-		 is_dirty = true;
+		main_frame->DirtyVolumes();
 
 }

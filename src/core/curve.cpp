@@ -974,7 +974,7 @@ void Curve::FitPolynomialToData(int wanted_polynomial_order)
 
 	polynomial_fit = new float[number_of_points];
 	polynomial_order = wanted_polynomial_order;
-	polynomial_coefficients = new float[polynomial_order];
+	polynomial_coefficients = new float[polynomial_order + 1];
 	have_polynomial = true;
 
 	LS_POLY(data_x, data_y, number_of_points, polynomial_order, polynomial_fit, polynomial_coefficients); // weird old code to do the fit

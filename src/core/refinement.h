@@ -18,7 +18,14 @@ public:
 	float logp;
 	float sigma;
 	float score;
-	int image_is_active;
+	int   image_is_active;
+	float pixel_size;
+	float microscope_voltage_kv;
+	float microscope_spherical_aberration_mm;
+	float beam_tilt_x;
+	float beam_tilt_y;
+	float image_shift_x;
+	float image_shift_y;
 };
 
 WX_DECLARE_OBJARRAY(RefinementResult, ArrayofRefinementResults);
@@ -107,8 +114,10 @@ public :
 	RefinementResult ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack);
 
 	void WriteSingleClassFrealignParameterFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+	void WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
 
 	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+	wxArrayString WritecisTEMStarFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
 	wxArrayString WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor = 1.0f);
 
 	long ReturnNumberOfActiveParticlesInFirstClass();

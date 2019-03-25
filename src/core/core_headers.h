@@ -46,6 +46,8 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/txtstrm.h>
 #include <wx/textfile.h>
 #include <wx/regex.h>
+#include "cistem_parameters.h"
+#include "cistem_star_file_reader.h"
 #include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
@@ -97,8 +99,7 @@ const std::complex<float> I(0.0,1.0);
 #include "local_resolution_estimator.h"
 #include "pdb.h"
 #include "water.h"
-#include "cistem_parameters.h"
-#include "cistem_star_file_reader.h"
+
 
 
 #ifdef MKL

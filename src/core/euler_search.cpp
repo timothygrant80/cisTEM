@@ -12,7 +12,7 @@ EulerSearch::EulerSearch()
 //	kernel_index = NULL;
 //	best_values = NULL;
 //	starting_values = NULL;
-	parameter_map = NULL;
+	//parameter_map = NULL;
 	angular_step_size = 0.0;
 	phi_max = 0.0;
 	phi_start = 0.0;
@@ -31,12 +31,12 @@ EulerSearch::EulerSearch()
 EulerSearch::~EulerSearch()
 {
 //	if (best_values != NULL) delete [] best_values;
-	if (parameter_map != NULL) delete [] parameter_map;
+//	if (parameter_map != NULL) delete [] parameter_map;
 	if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
 	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
 }
 
-void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
+void EulerSearch::Init(float wanted_resolution_limit, ParameterMap &wanted_parameter_map, int wanted_parameters_to_keep)
 {
 	MyDebugAssertTrue(number_of_search_positions == 0,"Euler search object is already setup");
 	MyDebugAssertTrue(wanted_parameters_to_keep > 0,"Must at least keep one set of best parameters");
@@ -44,10 +44,12 @@ void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map
 	int i;
 
 //	best_values    						= 	new float[5];
-	parameter_map						= 	new bool[5];
+	//parameter_map						= 	new bool[5];
+
+	parameter_map = wanted_parameter_map;
 
 // Need to add 1 to index of input parameter map since this refers to line in parameter file
-	for (i = 0; i < 5; i++) {parameter_map[i] = wanted_parameter_map[i + 1];};
+	//for (i = 0; i < 5; i++) {parameter_map[i] = wanted_parameter_map[i + 1];};
 	resolution_limit = wanted_resolution_limit;
 
 	//if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
@@ -55,7 +57,7 @@ void EulerSearch::Init(float wanted_resolution_limit, bool *wanted_parameter_map
 	//Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
 }
 
-void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
+void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular_step_size, float wanted_phi_start, float wanted_theta_start, float wanted_psi_max, float wanted_psi_step, float wanted_psi_start, float wanted_resolution_limit, ParameterMap &wanted_parameter_map, int wanted_parameters_to_keep)
 {
 	if (number_of_search_positions == 0) Init(wanted_resolution_limit, wanted_parameter_map, wanted_parameters_to_keep);
 
@@ -82,7 +84,7 @@ void EulerSearch::InitGrid(wxString wanted_symmetry_symbol, float wanted_angular
 }
 
 // This method has not been tested
-void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, bool *wanted_parameter_map, int wanted_parameters_to_keep)
+void EulerSearch::InitRandom(wxString wanted_symmetry_symbol, float wanted_psi_step, int wanted_number_of_search_positions, float wanted_resolution_limit, ParameterMap &wanted_parameter_map, int wanted_parameters_to_keep)
 {
 	int i;
 
@@ -120,8 +122,8 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 //	phi_max = 360.0;
 	theta_max_local = theta_max;
 
-	if (! parameter_map[0]) phi_start_local = phi_start;
-	if (parameter_map[1])
+	if (! parameter_map.phi) phi_start_local = phi_start;
+	if (parameter_map.phi)
 	{
 //		theta_max_local = 90.0;
 		// make sure that theta_step produces an integer number of steps
@@ -147,7 +149,7 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 	number_of_search_positions = 0;
 	for (theta = theta_start_local; theta < theta_max_local + theta_step / 2.0; theta += theta_step)
 	{
-		if (parameter_map[0])
+		if (parameter_map.phi)
 		{
 	        if (theta == 0.0 || theta == 180.0)
 	        {
@@ -178,7 +180,7 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 	number_of_search_positions = 0;
 	for (theta = theta_start_local; theta < theta_max_local + theta_step / 2.0; theta += theta_step)
 	{
-		if (parameter_map[0])
+		if (parameter_map.phi)
 		{
 	        if (theta == 0.0 || theta == 180.0)
 	        {
@@ -203,7 +205,7 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 		}
 	}
 
-	if (! parameter_map[2])
+	if (! parameter_map.psi)
 	{
 		test_mirror = false;
 	}
@@ -241,7 +243,7 @@ void EulerSearch::CalculateRandomSearchPositions()
 
 	while (number_of_positions < number_of_search_positions)
 	{
-		if (parameter_map[0])
+		if (parameter_map.phi)
 		{
 			phi = phi_max * (global_random_number_generator.GetUniformRandom() + 1.0) / 2.0;
 		}
@@ -249,7 +251,7 @@ void EulerSearch::CalculateRandomSearchPositions()
 		{
 			phi = phi_start;
 		}
-		if (parameter_map[1])
+		if (parameter_map.theta)
 		{
 			theta = theta_max * (global_random_number_generator.GetUniformRandom() + 1.0) / 2.0;
 		}
@@ -273,7 +275,7 @@ void EulerSearch::CalculateRandomSearchPositions()
 		trials++;
 	}
 
-	if (! parameter_map[2])
+	if (! parameter_map.psi)
 	{
 		test_mirror = false;
 	}
@@ -371,7 +373,7 @@ void EulerSearch::SetSymmetryLimits()
 }
 
 // Run the search
-void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_values, Image *projections)
+void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections)
 {
 	MyDebugAssertTrue(number_of_search_positions > 0,"EulerSearch not initialized");
 	MyDebugAssertTrue(particle.particle_image->is_in_memory,"Particle image not allocated");
@@ -439,7 +441,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 		list_of_best_parameters[i][5] = - std::numeric_limits<float>::max();
 	}
 
-	if (parameter_map[2])
+	if (parameter_map.psi)
 	{
 		number_of_psi_positions = myroundint(psi_max / psi_step);
 		if (number_of_psi_positions < 1) number_of_psi_positions = 1;
@@ -469,7 +471,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, float *starting_value
 	for (psi_i = 0; psi_i < number_of_psi_positions; psi_i++)
 	{
 //		wxPrintf("rotation_cache[psi_m].logical_z_dimension = %i\n", rotation_cache[psi_m].logical_z_dimension);
-		if (parameter_map[2])
+		if (parameter_map.psi)
 		{
 //			flipped_image->RotateFourier2DFromIndex(rotation_cache[psi_m], kernel_index[psi_i]);
 			angles.GenerateRotationMatrix2D(psi_i * psi_step + psi_start);

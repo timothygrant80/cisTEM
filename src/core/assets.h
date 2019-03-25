@@ -44,6 +44,7 @@ class MovieAsset : public Asset {
 	double total_dose;
 
 	wxString gain_filename;
+	wxString dark_filename;
 
 	double output_binning_factor; // If this is a super-resolution movie, but we never intend to use the "super resolution" part of the spectrum, this factor should be > 1
 

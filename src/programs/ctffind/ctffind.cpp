@@ -2642,7 +2642,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 
 	const bool spectrum_is_blank = spectrum->IsConstant();
 
-	const int curve_oversampling_factor = 2;
+	const int curve_oversampling_factor = 3;
 	const bool curve_x_is_linear = true;
 
 	/*
@@ -2656,8 +2656,10 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 		float maximum_sq_freq_in_spectrum= powf(spectrum->fourier_voxel_size_x * spectrum->logical_lower_bound_complex_x,2)+powf(spectrum->fourier_voxel_size_y * spectrum->logical_lower_bound_complex_y,2);
 		float lowest_sq_freq_of_ctf_aberration_max = std::min(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
 																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
-		float highest_sq_freq_of_ctf_aberration_max = std::max(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
-																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
+
+		float maximum_aberration_in_spectrum = std::max(	fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1())),
+															fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2())));
+
 
 		/*
 		 * Minimum phase aberration might be 0.0 (at the origin), or if the phase aberration function
@@ -2667,7 +2669,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 															ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2()));
 
 
-		int number_of_points = int(spectrum->ReturnMaximumDiagonalRadius()) * curve_oversampling_factor;
+		int number_of_points = spectrum->ReturnMaximumDiagonalRadius() * curve_oversampling_factor * maximum_aberration_in_ctf / maximum_aberration_in_spectrum;
 
 		epa_pre_max->SetupXAxis(0.0,maximum_aberration_in_ctf,number_of_points);
 		epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf,minimum_aberration_in_ctf_at_edges-0.5f*fabsf(minimum_aberration_in_ctf_at_edges)),maximum_aberration_in_ctf,number_of_points);

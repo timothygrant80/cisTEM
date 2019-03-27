@@ -857,7 +857,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 bool Database::SetProjectStatistics(double &total_cpu_hours, int &total_jobs_run)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
-	MyDebugAssertTrue(total_cpu_hours > 0.0,"Oops, negative total number of CPU hours: %f",total_cpu_hours);
+	MyDebugAssertTrue(total_cpu_hours >= 0.0,"Oops, negative total number of CPU hours: %f",total_cpu_hours);
 
 	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f",total_jobs_run,float(total_cpu_hours)));
 	return true;

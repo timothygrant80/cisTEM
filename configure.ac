@@ -92,8 +92,8 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $INPUT_CPPFLAGS"
-  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $INPUT_CXXFLAGS"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -Wall $INPUT_CPPFLAGS"
+  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -Wall $INPUT_CXXFLAGS"
   fi
   ])
   

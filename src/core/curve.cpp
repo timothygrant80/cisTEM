@@ -247,6 +247,7 @@ Curve & Curve::operator = (const Curve &other_curve)
 void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points)
 {
 	ClearData();
+	AllocateMemory(wanted_number_of_points);
 
 	for ( int counter = 0; counter < wanted_number_of_points; counter++ )
 	{
@@ -656,6 +657,16 @@ void Curve::CheckMemory()
 		data_x = x_buffer;
 		data_y = y_buffer;
 	}
+}
+
+void Curve::AllocateMemory(int wanted_number_of_points)
+{
+	delete [] data_x;
+	delete [] data_y;
+	allocated_space_for_points = wanted_number_of_points;
+	data_x = new float[allocated_space_for_points];
+	data_y = new float[allocated_space_for_points];
+	number_of_points = 0;
 }
 
 void Curve::AddPoint(float x_value, float y_value)

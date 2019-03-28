@@ -8569,7 +8569,7 @@ void Image::CalculateDerivative(float direction_in_x, float direction_in_y, floa
 				x_coord = i * fourier_voxel_size_x;
 
 				if (radial_derivative) complex_values[pixel_counter] *= 2.0f * PI * (x_coord * x_coord + y_coord * y_coord + z_coord * z_coord);
-				else complex_values[pixel_counter] *= 2.0f * PI * I * (x_coord * unit_x + y_coord * unit_y + z_coord * unit_z);
+				else complex_values[pixel_counter] *= 2.0f * (float)PI * I * (x_coord * unit_x + y_coord * unit_y + z_coord * unit_z);
 				pixel_counter++;
 			}
 		}

@@ -389,12 +389,12 @@ taking the sine of the returned phase shift.
 */
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(float squared_spatial_frequency, float defocus)
 {
-	return PI * wavelength * squared_spatial_frequency * ( defocus - 0.5 * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+	return PIf * wavelength * squared_spatial_frequency * ( defocus - 0.5f * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
 }
 
 float CTF::PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth)
 {
-	return PI * wavelength * squared_spatial_frequency * ( DefocusGivenAzimuth(azimuth) - 0.5f * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
+	return PIf * wavelength * squared_spatial_frequency * ( DefocusGivenAzimuth(azimuth) - 0.5f * squared_wavelength * squared_spatial_frequency * spherical_aberration) + additional_phase_shift + precomputed_amplitude_contrast_term;
 }
 
 std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_frequency, float azimuth)
@@ -434,7 +434,7 @@ float CTF::PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, floa
 // Return the effective defocus at the azimuth of interest
 float CTF::DefocusGivenAzimuth(float azimuth)
 {
-	return 0.5 * ( defocus_1 + defocus_2 + cosf( 2.0 * (azimuth - astigmatism_azimuth )) * (defocus_1 - defocus_2));
+	return 0.5f * ( defocus_1 + defocus_2 + cosf( 2.0f * (azimuth - astigmatism_azimuth )) * (defocus_1 - defocus_2));
 }
 
 // Return the effective beam tilt at the azimuth of interest
@@ -452,7 +452,7 @@ float CTF::ParticleShiftGivenAzimuth(float azimuth)
 // Given acceleration voltage in keV, return the electron wavelength in Angstroms
 float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 {
-	return 12.26 / sqrtf(1000.0 * acceleration_voltage + 0.9784 * powf(1000.0 * acceleration_voltage,2)/powf(10.0,6));
+	return 12.26f / sqrtf(1000.0f * acceleration_voltage + 0.9784f * powf(1000.0f * acceleration_voltage,2)/powf(10.0f,6));
 }
 
 
@@ -521,9 +521,9 @@ void CTF::EnforceConvention() {
 		defocus_tmp = defocus_2;
 		defocus_2 = defocus_1;
 		defocus_1 = defocus_tmp;
-		astigmatism_azimuth += PI*0.5;
+		astigmatism_azimuth += PIf*0.5f;
 	}
-	astigmatism_azimuth -= PI * roundf(astigmatism_azimuth/PI);
+	astigmatism_azimuth -= PIf * roundf(astigmatism_azimuth/PIf);
 }
 
 void CTF::ChangePixelSize(float old_pixel_size, float new_pixel_size)

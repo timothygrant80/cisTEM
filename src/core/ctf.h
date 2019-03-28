@@ -13,8 +13,8 @@ private:
 	float beam_tilt_y; // rad
 	float beam_tilt; // rad
 	float beam_tilt_azimuth; // rad
-	float particle_shift_x; // A
-	float particle_shift_y; // A
+	float particle_shift_x; // pixels
+	float particle_shift_y; // pixels
 	float particle_shift; // A
 	float particle_shift_azimuth; // rad
 	// Fitting parameters

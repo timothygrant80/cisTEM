@@ -6,6 +6,8 @@
 const std::string ctffind_version = "4.1.14";
 /*
  * Changelog
+ * - 4.1.14
+ * -- bug fixes (memory)
  * - 4.1.13
  * -- EPA bug fixed (affected 4.1.12 only)
  * - 4.1.12
@@ -118,12 +120,9 @@ ImageCTFComparison::~ImageCTFComparison()
 		img[image_counter].Deallocate();
 	}
 	delete [] img;
-	if (number_to_correlate > 0)
-	{
-		delete [] azimuths;
-		delete [] spatial_frequency_squared;
-		delete [] addresses;
-	}
+	delete [] azimuths;
+	delete [] spatial_frequency_squared;
+	delete [] addresses;
 	number_to_correlate = 0;
 }
 
@@ -284,50 +283,51 @@ void CtffindApp::DoInteractiveUserInput()
 
 	float lowest_allowed_minimum_resolution = 50.0;
 
-	std::string input_filename;
-	bool input_is_a_movie;
-	int number_of_frames_to_average;
-	std::string output_diagnostic_filename;
-	float pixel_size;
-	float acceleration_voltage;
-	float spherical_aberration;
-	float amplitude_contrast;
-	int box_size;
-	float minimum_resolution;
-	float maximum_resolution;
-	float minimum_defocus;
-	float maximum_defocus;
-	float defocus_search_step;
-	bool astigmatism_is_known;
-	float known_astigmatism;
-	float known_astigmatism_angle;
-	bool slower_search;
-	bool should_restrain_astigmatism;
-	float astigmatism_tolerance;
-	bool find_additional_phase_shift;
-	float minimum_additional_phase_shift;
-	float maximum_additional_phase_shift;
-	float additional_phase_shift_search_step;
-	bool give_expert_options;
-	bool resample_if_pixel_too_small;
-	bool movie_is_gain_corrected;
-	wxString gain_filename;
+	std::string input_filename = "/dev/null";
+	bool input_is_a_movie = false;
+	int number_of_frames_to_average = 0;
+	std::string output_diagnostic_filename = "/dev/null";
+	float pixel_size = 0.0;
+	float acceleration_voltage = 0.0;
+	float spherical_aberration = 0.0;
+	float amplitude_contrast = 0.0;
+	int box_size = 0;
+	float minimum_resolution = 0.0;
+	float maximum_resolution = 0.0;
+	float minimum_defocus = 0.0;
+	float maximum_defocus = 0.0;
+	float defocus_search_step = 0.0;
+	bool astigmatism_is_known = false;
+	float known_astigmatism = 0.0;
+	float known_astigmatism_angle = 0.0;
+	bool slower_search = false;
+	bool should_restrain_astigmatism = false;
+	float astigmatism_tolerance = 0.0;
+	bool find_additional_phase_shift = false;
+	float minimum_additional_phase_shift = 0.0;
+	float maximum_additional_phase_shift = 0.0;
+	float additional_phase_shift_search_step = 0.0;
+	bool give_expert_options = false;
+	bool resample_if_pixel_too_small = false;
+	bool movie_is_gain_corrected = false;
+	wxString gain_filename = "/dev/null";
 	bool correct_movie_mag_distortion = false;
 	float movie_mag_distortion_angle = 0.0;
 	float movie_mag_distortion_major_scale = 1.0;
 	float movie_mag_distortion_minor_scale = 1.0;
-	bool defocus_is_known;
-	float known_defocus_1;
-	float known_defocus_2;
-	float known_phase_shift;
-	int desired_number_of_threads;
+	bool defocus_is_known = false;
+	float known_defocus_1 = 0.0;
+	float known_defocus_2 = 0.0;
+	float known_phase_shift = 0.0;
+	int desired_number_of_threads = 1;
 
 
 	// Things we need for old school input
-	double temp_double;
-	long temp_long;
-	float xmag, dstep;
-	int token_counter;
+	double temp_double = -1.0;
+	long temp_long = -1;
+	float xmag = -1;
+	float dstep = -1.0;
+	int token_counter = -1;
 	const bool		old_school_input          = command_line_parser.FoundSwitch("old-school-input");
 	const bool 		old_school_input_ctffind4 = command_line_parser.FoundSwitch("old-school-input-ctffind4");
 
@@ -866,7 +866,7 @@ bool CtffindApp::DoCalculation()
 	Image				*sum_image = new Image();
 	Image				*resampled_power_spectrum = new Image();
 	bool				resampling_is_necessary;
-	CTF					current_ctf;
+	CTF					*current_ctf = new CTF();
 	float				average, sigma;
 	int					convolution_box_size;
 	ImageCTFComparison	*comparison_object_2D;
@@ -883,8 +883,8 @@ bool CtffindApp::DoCalculation()
 	ConjugateGradient   *conjugate_gradient_minimizer;
 	int 				current_output_location;
 	int					number_of_bins_in_1d_spectra;
-	Curve				number_of_averaged_pixels;
-	Curve				rotational_average;
+	Curve				*number_of_averaged_pixels = new Curve();
+	Curve				*rotational_average = new Curve();
 	Image				*number_of_extrema_image = new Image();
 	Image				*ctf_values_image = new Image();
 	double				*rotational_average_astig = NULL;
@@ -1000,7 +1000,7 @@ bool CtffindApp::DoCalculation()
 			average_spectrum->Allocate(box_size,box_size,1,false);
 			current_power_spectrum->ClipInto(average_spectrum);
 			average_spectrum->BackwardFFT();
-			average_spectrum_masked = average_spectrum;
+			average_spectrum_masked->CopyFrom(average_spectrum);
 		}
 		else
 		{
@@ -1233,24 +1233,24 @@ bool CtffindApp::DoCalculation()
 #endif
 
 		// Set up the CTF object
-		current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,maximum_resolution_for_initial_search),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
-		current_ctf.SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
-		current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+		current_ctf->Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,maximum_resolution_for_initial_search),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
+		current_ctf->SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
+		current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
 		// Set up the comparison object
-		comparison_object_2D = new ImageCTFComparison(1,current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
+		comparison_object_2D = new ImageCTFComparison(1,*current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
 		comparison_object_2D->SetImage(0,average_spectrum_masked);
 		comparison_object_2D->SetupQuickCorrelation();
 
 		if (defocus_is_known)
 		{
-			current_ctf.SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PIf);
-			current_ctf.SetAdditionalPhaseShift(known_phase_shift);
-			current_ctf.SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
-			comparison_object_2D->SetCTF(current_ctf);
+			current_ctf->SetDefocus(known_defocus_1/pixel_size_for_fitting,known_defocus_2/pixel_size_for_fitting,known_astigmatism_angle / 180.0 * PIf);
+			current_ctf->SetAdditionalPhaseShift(known_phase_shift);
+			current_ctf->SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
+			comparison_object_2D->SetCTF(*current_ctf);
 			comparison_object_2D->SetupQuickCorrelation();
 			final_score = 0.0;
-			final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
+			final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(*current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
 					comparison_object_2D->spatial_frequency_squared, comparison_object_2D->azimuths);
 
 		}
@@ -1289,17 +1289,17 @@ bool CtffindApp::DoCalculation()
 
 				// 1D rotational average
 				number_of_bins_in_1d_spectra = int(ceil(average_spectrum_masked->ReturnMaximumDiagonalRadius()));
-				rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_masked->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
-				number_of_averaged_pixels = rotational_average;
-				average_spectrum_masked->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+				rotational_average->SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum_masked->fourier_voxel_size_x,number_of_bins_in_1d_spectra);
+				number_of_averaged_pixels->CopyFrom(rotational_average);
+				average_spectrum_masked->Compute1DRotationalAverage(*rotational_average,*number_of_averaged_pixels,true);
 
 
 
-				comparison_object_1D.ctf = current_ctf;
+				comparison_object_1D.ctf = *current_ctf;
 				comparison_object_1D.curve = new float[number_of_bins_in_1d_spectra];
 				for (counter=0; counter < number_of_bins_in_1d_spectra; counter++)
 				{
-					comparison_object_1D.curve[counter] = rotational_average.data_y[counter];
+					comparison_object_1D.curve[counter] = rotational_average->data_y[counter];
 				}
 				comparison_object_1D.find_phase_shift = find_additional_phase_shift;
 				comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
@@ -1341,8 +1341,8 @@ bool CtffindApp::DoCalculation()
 				 * The end point of the BF search is the beginning of the CG search, but we will want to use
 				 * the full resolution range
 				 */
-				current_ctf.SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
-				comparison_object_1D.ctf = current_ctf;
+				current_ctf->SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
+				comparison_object_1D.ctf = *current_ctf;
 				for (counter=0;counter<number_of_search_dimensions;counter++)
 				{
 					cg_starting_point[counter] = brute_force_search->GetBestValue(counter);
@@ -1356,16 +1356,16 @@ bool CtffindApp::DoCalculation()
 				{
 					cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
 				}
-				current_ctf.SetDefocus(cg_starting_point[0], cg_starting_point[0],estimated_astigmatism_angle / 180.0 * PIf);
+				current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0],estimated_astigmatism_angle / 180.0 * PIf);
 				if (find_additional_phase_shift)
 				{
 					if (fixed_additional_phase_shift)
 					{
-						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+						current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 					}
 					else
 					{
-						current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+						current_ctf->SetAdditionalPhaseShift(cg_starting_point[1]);
 					}
 				}
 
@@ -1444,8 +1444,8 @@ bool CtffindApp::DoCalculation()
 					if (astigmatism_is_known)
 					{
 
-						bf_midpoint[0] = current_ctf.GetDefocus1();
-						bf_midpoint[1] = current_ctf.GetAdditionalPhaseShift();
+						bf_midpoint[0] = current_ctf->GetDefocus1();
+						bf_midpoint[1] = current_ctf->GetAdditionalPhaseShift();
 
 						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
 						bf_stepsize[1] = additional_phase_shift_search_step;
@@ -1466,9 +1466,9 @@ bool CtffindApp::DoCalculation()
 					else
 					{
 
-						bf_midpoint[0] = current_ctf.GetDefocus1();
-						bf_midpoint[1] = current_ctf.GetDefocus2();
-						bf_midpoint[2] = current_ctf.GetAstigmatismAzimuth();
+						bf_midpoint[0] = current_ctf->GetDefocus1();
+						bf_midpoint[1] = current_ctf->GetDefocus2();
+						bf_midpoint[2] = current_ctf->GetAstigmatismAzimuth();
 						bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
 
 						bf_stepsize[0] = defocus_search_step/pixel_size_for_fitting;
@@ -1513,35 +1513,35 @@ bool CtffindApp::DoCalculation()
 				//
 				if (astigmatism_is_known)
 				{
-					current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
+					current_ctf->SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
 					if (find_additional_phase_shift)
 					{
 						if (fixed_additional_phase_shift)
 						{
-							current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+							current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 						}
 						else
 						{
-							current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+							current_ctf->SetAdditionalPhaseShift(cg_starting_point[1]);
 						}
 					}
 				}
 				else
 				{
-					current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
+					current_ctf->SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
 					if (find_additional_phase_shift)
 					{
 						if (fixed_additional_phase_shift)
 						{
-							current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+							current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 						}
 						else
 						{
-							current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+							current_ctf->SetAdditionalPhaseShift(cg_starting_point[3]);
 						}
 					}
 				}
-				current_ctf.EnforceConvention();
+				current_ctf->EnforceConvention();
 
 				// Remember the best score so far
 				best_score_after_initial_phase = - brute_force_search->GetBestScore();
@@ -1555,7 +1555,7 @@ bool CtffindApp::DoCalculation()
 			//if (is_running_locally && old_school_input)
 			{
 				wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PIf,best_score_after_initial_phase);
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f\n",current_ctf->GetDefocus1()*pixel_size_for_fitting,current_ctf->GetDefocus2()*pixel_size_for_fitting,current_ctf->GetAstigmatismAzimuth()*180.0/PIf,best_score_after_initial_phase);
 			}
 
 			// Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
@@ -1571,8 +1571,8 @@ bool CtffindApp::DoCalculation()
 			 */
 			if (astigmatism_is_known)
 			{
-				cg_starting_point[0] = current_ctf.GetDefocus1();
-				if (find_additional_phase_shift) cg_starting_point[1] = current_ctf.GetAdditionalPhaseShift();
+				cg_starting_point[0] = current_ctf->GetDefocus1();
+				if (find_additional_phase_shift) cg_starting_point[1] = current_ctf->GetAdditionalPhaseShift();
 				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 2;
@@ -1590,13 +1590,13 @@ bool CtffindApp::DoCalculation()
 				cg_accuracy[1] = 100.0;
 				cg_accuracy[2] = 0.025;
 				cg_accuracy[3] = 0.05;
-				cg_starting_point[0] = current_ctf.GetDefocus1();
-				cg_starting_point[1] = current_ctf.GetDefocus2();
+				cg_starting_point[0] = current_ctf->GetDefocus1();
+				cg_starting_point[1] = current_ctf->GetDefocus2();
 				if (slower_search || (!slower_search && follow_1d_search_with_local_2D_brute_force))
 				{
 					// we did a search against the 2D power spectrum so we have a better estimate
 					// of the astigmatism angle in the CTF object
-					cg_starting_point[2] = current_ctf.GetAstigmatismAzimuth();
+					cg_starting_point[2] = current_ctf->GetAstigmatismAzimuth();
 				}
 				else
 				{
@@ -1605,7 +1605,7 @@ bool CtffindApp::DoCalculation()
 					cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PIf;
 				}
 
-				if (find_additional_phase_shift) cg_starting_point[3] = current_ctf.GetAdditionalPhaseShift();
+				if (find_additional_phase_shift) cg_starting_point[3] = current_ctf->GetAdditionalPhaseShift();
 				if (find_additional_phase_shift && ! fixed_additional_phase_shift)
 				{
 					number_of_search_dimensions = 4;
@@ -1616,9 +1616,7 @@ bool CtffindApp::DoCalculation()
 				}
 			}
 			// CG minimization
-			current_ctf.Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/maximum_resolution,astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
-			comparison_object_2D->SetCTF(current_ctf);
-			comparison_object_2D->SetupQuickCorrelation();
+			comparison_object_2D->SetCTF(*current_ctf);
 			conjugate_gradient_minimizer = new ConjugateGradient();
 			conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,cg_starting_point,cg_accuracy);
 			conjugate_gradient_minimizer->Run();
@@ -1630,43 +1628,43 @@ bool CtffindApp::DoCalculation()
 			}
 			if (astigmatism_is_known)
 			{
-				current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
+				current_ctf->SetDefocus(cg_starting_point[0],cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
 				if (find_additional_phase_shift)
 				{
 					if (fixed_additional_phase_shift)
 					{
-						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+						current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 					}
 					else
 					{
-						current_ctf.SetAdditionalPhaseShift(cg_starting_point[1]);
+						current_ctf->SetAdditionalPhaseShift(cg_starting_point[1]);
 					}
 				}
 			}
 			else
 			{
-				current_ctf.SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
+				current_ctf->SetDefocus(cg_starting_point[0],cg_starting_point[1],cg_starting_point[2]);
 				if (find_additional_phase_shift)
 				{
 					if (fixed_additional_phase_shift)
 					{
-						current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+						current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 					}
 					else
 					{
-						current_ctf.SetAdditionalPhaseShift(cg_starting_point[3]);
+						current_ctf->SetAdditionalPhaseShift(cg_starting_point[3]);
 					}
 				}
 			}
-			current_ctf.EnforceConvention();
+			current_ctf->EnforceConvention();
 
 			// Print results to the terminal
 			if (is_running_locally && old_school_input)
 			{
-				wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth()*180.0/PIf,-conjugate_gradient_minimizer->GetBestScore());
+				wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n",current_ctf->GetDefocus1()*pixel_size_for_fitting,current_ctf->GetDefocus2()*pixel_size_for_fitting,current_ctf->GetAstigmatismAzimuth()*180.0/PIf,-conjugate_gradient_minimizer->GetBestScore());
 				if (find_additional_phase_shift)
 				{
-					wxPrintf("Final phase shift = %0.3f radians\n",current_ctf.GetAdditionalPhaseShift());
+					wxPrintf("Final phase shift = %0.3f radians\n",current_ctf->GetAdditionalPhaseShift());
 				}
 			}
 
@@ -1688,15 +1686,15 @@ bool CtffindApp::DoCalculation()
 		 *  Attempt some renormalisations - we want to do this over a range not affected by the central peak or strong Thon rings,
 		 *  so as to emphasize the "regular" Thon rings
 		 */
-		float start_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(3,current_ctf.GetAstigmatismAzimuth(),true));
-		float finish_zero = sqrtf(current_ctf.ReturnSquaredSpatialFrequencyOfAZero(4,current_ctf.GetAstigmatismAzimuth(),true));
+		float start_zero = sqrtf(current_ctf->ReturnSquaredSpatialFrequencyOfAZero(3,current_ctf->GetAstigmatismAzimuth(),true));
+		float finish_zero = sqrtf(current_ctf->ReturnSquaredSpatialFrequencyOfAZero(4,current_ctf->GetAstigmatismAzimuth(),true));
 		float normalization_radius_min = start_zero * average_spectrum->logical_x_dimension;
 		float normalization_radius_max = finish_zero * average_spectrum->logical_x_dimension;
 
-		if (start_zero > current_ctf.GetHighestFrequencyForFitting() || start_zero < current_ctf.GetLowestFrequencyForFitting() || finish_zero > current_ctf.GetHighestFrequencyForFitting() || finish_zero < current_ctf.GetLowestFrequencyForFitting())
+		if (start_zero > current_ctf->GetHighestFrequencyForFitting() || start_zero < current_ctf->GetLowestFrequencyForFitting() || finish_zero > current_ctf->GetHighestFrequencyForFitting() || finish_zero < current_ctf->GetLowestFrequencyForFitting())
 		{
-			normalization_radius_max = current_ctf.GetHighestFrequencyForFitting() * average_spectrum->logical_x_dimension;
-			normalization_radius_min = std::max(0.5f * normalization_radius_max, current_ctf.GetLowestFrequencyForFitting() * average_spectrum->logical_x_dimension);
+			normalization_radius_max = current_ctf->GetHighestFrequencyForFitting() * average_spectrum->logical_x_dimension;
+			normalization_radius_min = std::max(0.5f * normalization_radius_max, current_ctf->GetLowestFrequencyForFitting() * average_spectrum->logical_x_dimension);
 		}
 
 		MyDebugAssertTrue(normalization_radius_max > normalization_radius_min,"Bad values for min (%f) and max (%f) normalization radii\n");
@@ -1721,11 +1719,11 @@ bool CtffindApp::DoCalculation()
 
 		// 1D rotational average
 		number_of_bins_in_1d_spectra = int(ceil(average_spectrum->ReturnMaximumDiagonalRadius()));
-		rotational_average.SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
-		rotational_average.ZeroYData();
+		rotational_average->SetupXAxis(0.0,float(number_of_bins_in_1d_spectra) * average_spectrum->fourier_voxel_size_x ,number_of_bins_in_1d_spectra);
+		rotational_average->ZeroYData();
 		//number_of_averaged_pixels.ZeroYData();
-		number_of_averaged_pixels = rotational_average;
-		average_spectrum->Compute1DRotationalAverage(rotational_average,number_of_averaged_pixels,true);
+		number_of_averaged_pixels->CopyFrom(rotational_average);
+		average_spectrum->Compute1DRotationalAverage(*rotational_average,*number_of_averaged_pixels,true);
 
 		// Rotational average, taking astigmatism into account
 		Curve equiphase_average_pre_max;
@@ -1742,32 +1740,32 @@ bool CtffindApp::DoCalculation()
 			ctf_values_profile 						= new float[number_of_bins_in_1d_spectra];
 			fit_frc									= new double[number_of_bins_in_1d_spectra];
 			fit_frc_sigma							= new double[number_of_bins_in_1d_spectra];
-			ComputeImagesWithNumberOfExtremaAndCTFValues(&current_ctf, number_of_extrema_image, ctf_values_image);
+			ComputeImagesWithNumberOfExtremaAndCTFValues(current_ctf, number_of_extrema_image, ctf_values_image);
 			//ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
 			if (dump_debug_files)
 			{
 				average_spectrum->QuickAndDirtyWriteSlice("dbg_spectrum_before_1dave.mrc",1);
 				number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc",1);
 			}
-			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
+			ComputeRotationalAverageOfPowerSpectrum(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
-			ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, &current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+			ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
 			// Replace the old curve with EPA values
 			{
 				float current_sq_sf;
-				float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(&current_ctf);
-				float defocus_for_1d_plots = current_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots);
-				float sq_sf_of_phase_shift_maximum = current_ctf.ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
+				float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(current_ctf);
+				float defocus_for_1d_plots = current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
+				float sq_sf_of_phase_shift_maximum = current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
 				for (counter=1;counter<number_of_bins_in_1d_spectra;counter++)
 				{
 					current_sq_sf = powf(spatial_frequency[counter],2);
 					if (current_sq_sf <= sq_sf_of_phase_shift_maximum)
 					{
-						rotational_average_astig[counter] = equiphase_average_pre_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+						rotational_average_astig[counter] = equiphase_average_pre_max.ReturnLinearInterpolationFromX(current_ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
 					}
 					else
 					{
-						rotational_average_astig[counter] = equiphase_average_post_max.ReturnLinearInterpolationFromX(current_ctf.PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
+						rotational_average_astig[counter] = equiphase_average_post_max.ReturnLinearInterpolationFromX(current_ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf,defocus_for_1d_plots));
 					}
 					rotational_average_astig_renormalized[counter] = rotational_average_astig[counter];
 				}
@@ -1778,7 +1776,7 @@ bool CtffindApp::DoCalculation()
 			int first_fit_bin = 0;
 			for (int bin_counter = number_of_bins_in_1d_spectra - 1; bin_counter >= 0; bin_counter -- )
 			{
-				if (spatial_frequency[bin_counter] >= current_ctf.GetLowestFrequencyForFitting()) first_fit_bin = bin_counter;
+				if (spatial_frequency[bin_counter] >= current_ctf->GetLowestFrequencyForFitting()) first_fit_bin = bin_counter;
 			}
 			ComputeFRCBetween1DSpectrumAndFit(number_of_bins_in_1d_spectra,rotational_average_astig_renormalized,rotational_average_astig_fit,number_of_extrema_profile,fit_frc,fit_frc_sigma,first_fit_bin);
 
@@ -1875,7 +1873,7 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma );
 
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-		OverlayCTF(average_spectrum, &current_ctf, number_of_extrema_image, ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,number_of_extrema_profile,ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+		OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,number_of_extrema_profile,ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
 
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
@@ -1898,10 +1896,10 @@ bool CtffindApp::DoCalculation()
 			wxPrintf(" Diagnosis            : %s\n",time_to_diagnose.Format());
 			wxPrintf(" Total                : %s\n",time_total.Format());
 
-			wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf.GetDefocus1()*pixel_size_for_fitting,current_ctf.GetDefocus2()*pixel_size_for_fitting,current_ctf.GetAstigmatismAzimuth() / PIf * 180.0);
+			wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n",current_ctf->GetDefocus1()*pixel_size_for_fitting,current_ctf->GetDefocus2()*pixel_size_for_fitting,current_ctf->GetAstigmatismAzimuth() / PIf * 180.0);
 			if (find_additional_phase_shift)
 			{
-				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n",current_ctf.GetAdditionalPhaseShift() / PIf * 180.0, current_ctf.GetAdditionalPhaseShift(),current_ctf.GetAdditionalPhaseShift() / PIf);
+				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n",current_ctf->GetAdditionalPhaseShift() / PIf * 180.0, current_ctf->GetAdditionalPhaseShift(),current_ctf->GetAdditionalPhaseShift() / PIf);
 			}
 			wxPrintf("Score                           : %0.5f\n", final_score);
 			wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n",pixel_size_for_fitting);
@@ -1920,7 +1918,7 @@ bool CtffindApp::DoCalculation()
 		}
 
 		// Warn the user if significant aliasing occurred within the fit range
-		if (compute_extra_stats && last_bin_without_aliasing != 0 && spatial_frequency[last_bin_without_aliasing] < current_ctf.GetHighestFrequencyForFitting())
+		if (compute_extra_stats && last_bin_without_aliasing != 0 && spatial_frequency[last_bin_without_aliasing] < current_ctf->GetHighestFrequencyForFitting())
 		{
 			if (is_running_locally && number_of_micrographs == 1)
 			{
@@ -1937,10 +1935,10 @@ bool CtffindApp::DoCalculation()
 		{
 			// Write out results to a summary file
 			values_to_write_out[0] = current_micrograph_number;
-			values_to_write_out[1] = current_ctf.GetDefocus1() * pixel_size_for_fitting;
-			values_to_write_out[2] = current_ctf.GetDefocus2() * pixel_size_for_fitting;
-			values_to_write_out[3] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PIf;
-			values_to_write_out[4] = current_ctf.GetAdditionalPhaseShift();
+			values_to_write_out[1] = current_ctf->GetDefocus1() * pixel_size_for_fitting;
+			values_to_write_out[2] = current_ctf->GetDefocus2() * pixel_size_for_fitting;
+			values_to_write_out[3] = current_ctf->GetAstigmatismAzimuth() * 180.0 / PIf;
+			values_to_write_out[4] = current_ctf->GetAdditionalPhaseShift();
 			values_to_write_out[5] = final_score;
 			if (compute_extra_stats)
 			{
@@ -1975,7 +1973,7 @@ bool CtffindApp::DoCalculation()
 				spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size_for_fitting;
 			}
 			output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
-			output_text_avrot->WriteLine(rotational_average.data_y);
+			output_text_avrot->WriteLine(rotational_average->data_y);
 			output_text_avrot->WriteLine(rotational_average_astig);
 			output_text_avrot->WriteLine(rotational_average_astig_fit);
 			output_text_avrot->WriteLine(fit_frc);
@@ -1983,7 +1981,7 @@ bool CtffindApp::DoCalculation()
 			delete [] spatial_frequency_in_reciprocal_angstroms;
 		}
 
-		if (! defocus_is_known) delete comparison_object_2D;
+		delete comparison_object_2D;
 
 	} // End of loop over micrographs
 
@@ -2010,10 +2008,10 @@ bool CtffindApp::DoCalculation()
 
 	// Send results back
 	float results_array[8];
-	results_array[0] = current_ctf.GetDefocus1() * pixel_size_for_fitting;				// Defocus 1 (Angstroms)
-	results_array[1] = current_ctf.GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
-	results_array[2] = current_ctf.GetAstigmatismAzimuth() * 180.0 / PIf;	// Astigmatism angle (degrees)
-	results_array[3] = current_ctf.GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
+	results_array[0] = current_ctf->GetDefocus1() * pixel_size_for_fitting;				// Defocus 1 (Angstroms)
+	results_array[1] = current_ctf->GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
+	results_array[2] = current_ctf->GetAstigmatismAzimuth() * 180.0 / PIf;	// Astigmatism angle (degrees)
+	results_array[3] = current_ctf->GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
 	results_array[4] = final_score;		// CTFFIND score
 	if (last_bin_with_good_fit == 0)
 	{
@@ -2038,6 +2036,7 @@ bool CtffindApp::DoCalculation()
 
 
 	// Cleanup
+	delete current_ctf;
 	delete average_spectrum;
 	delete average_spectrum_masked;
 	delete current_power_spectrum;
@@ -2064,6 +2063,9 @@ bool CtffindApp::DoCalculation()
 		delete output_text_avrot;
 	}
 	if (! defocus_is_known) delete conjugate_gradient_minimizer;
+
+	delete number_of_averaged_pixels;
+	delete rotational_average;
 
 
 
@@ -2623,7 +2625,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 
 
 		/*
-		 * Minimum phase aberration might be 0.0 (at the origin), or if the phase aberration function
+		 * Minimum phase aberration might be 0.0 + additional_phase_shift (at the origin), or if the phase aberration function
 		 * peaks before Nyquist, it might be at the edge of the spectrum
 		 */
 		float minimum_aberration_in_ctf_at_edges = std::min(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1()),
@@ -2632,7 +2634,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 
 		int number_of_points = spectrum->ReturnMaximumDiagonalRadius() * curve_oversampling_factor * maximum_aberration_in_ctf / maximum_aberration_in_spectrum;
 
-		epa_pre_max->SetupXAxis(0.0,maximum_aberration_in_ctf,number_of_points);
+		epa_pre_max->SetupXAxis(ctf->GetAdditionalPhaseShift(),maximum_aberration_in_ctf,number_of_points);
 		epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf,minimum_aberration_in_ctf_at_edges-0.5f*fabsf(minimum_aberration_in_ctf_at_edges)),maximum_aberration_in_ctf,number_of_points);
 
 	}
@@ -2646,10 +2648,10 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 	/*
 	 * We'll also need to keep track of the number of values
 	 */
-	Curve count_pre_max;
-	Curve count_post_max;
-	count_pre_max.CopyFrom(epa_pre_max);
-	count_post_max.CopyFrom(epa_post_max);
+	Curve * count_pre_max = new Curve;
+	Curve * count_post_max = new Curve;
+	count_pre_max->CopyFrom(epa_pre_max);
+	count_post_max->CopyFrom(epa_post_max);
 
 	if (!spectrum_is_blank)
 	{
@@ -2682,7 +2684,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 				{
 					// Add to pre-max
 					epa_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
-					count_pre_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+					count_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
 				}
 				else
 				{
@@ -2691,7 +2693,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 					 */
 					// Add to post-max
 					epa_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,spectrum->real_values[address],curve_x_is_linear);
-					count_post_max.AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
+					count_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration,1.0,curve_x_is_linear);
 				}
 				//
 				address++;
@@ -2702,9 +2704,12 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 		/*
 		 * Do the averaging
 		 */
-		epa_pre_max->DivideBy(&count_pre_max);
-		epa_post_max->DivideBy(&count_post_max);
+		epa_pre_max->DivideBy(count_pre_max);
+		epa_post_max->DivideBy(count_post_max);
 	}
+
+	delete count_pre_max;
+	delete count_post_max;
 
 }
 

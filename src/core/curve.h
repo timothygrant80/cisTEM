@@ -5,23 +5,23 @@ private:
 
 public:
 
-	bool have_polynomial;
-	bool have_savitzky_golay;
-	int number_of_points;
-	int allocated_space_for_points;
+	bool have_polynomial = false;
+	bool have_savitzky_golay = false;
+	int number_of_points = 0;
+	int allocated_space_for_points = 0;
 
-	float *data_x;
-	float *data_y;
+	float *data_x = NULL;
+	float *data_y = NULL;
 
-	float *polynomial_fit;
-	float *savitzky_golay_fit;
+	float *polynomial_fit = NULL;
+	float *savitzky_golay_fit = NULL;
 
-	int savitzky_golay_window_size;
-	int savitzky_golay_polynomial_order;
-	float **savitzky_golay_coefficients;
+	int savitzky_golay_window_size = 0;
+	int savitzky_golay_polynomial_order = 0;
+	float **savitzky_golay_coefficients = NULL;
 
-	int polynomial_order;
-	float *polynomial_coefficients;
+	int polynomial_order = 0;
+	float *polynomial_coefficients = 0;
 
 
 	// Constructors, destructors

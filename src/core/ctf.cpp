@@ -381,7 +381,7 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 }
 
 /* returns the argument (radians) to the sine and cosine terms of the ctf
-We follow the convention, like the rest of the cryo-EM/3DEM field, that underfocusing the objective lens
+We follow the convention that underfocusing the objective lens
 gives rise to a positive phase shift of scattered electrons, whereas the spherical aberration gives a
 negative phase shift of scattered electrons.
 Note that there is an additional (precomputed) term so that the CTF can then be computed by simply

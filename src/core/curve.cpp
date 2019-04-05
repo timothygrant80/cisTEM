@@ -512,6 +512,8 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
 		index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
 	}
 
+	MyDebugAssertTrue(index_of_previous_bin >= 0 && index_of_previous_bin < number_of_points,"Oops. Bad index_of_previous_bin: %i\n",index_of_previous_bin);
+
 	if (index_of_previous_bin == number_of_points - 1)
 	{
 		return_value.index_m = index_of_previous_bin;

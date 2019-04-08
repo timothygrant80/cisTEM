@@ -27,6 +27,7 @@ CTF::CTF()
 	precomputed_amplitude_contrast_term = 0;
 	squared_wavelength = 0;
 	cubed_wavelength = 0;
+	low_resolution_contrast = 0;
 }
 
 CTF::CTF(		float wanted_acceleration_voltage, // keV
@@ -360,6 +361,12 @@ void CTF::SetHighestFrequencyForFitting(float wanted_highest_frequency_in_recipr
 	highest_frequency_for_fitting = wanted_highest_frequency_in_reciprocal_pixels;
 }
 
+void CTF::SetLowResolutionContrast(float wanted_low_resolution_contrast)
+{
+	MyDebugAssertTrue(wanted_low_resolution_contrast >= 0.0f && wanted_low_resolution_contrast <= 1.0f,"Bad low_resolution_contrast: %f", wanted_low_resolution_contrast);
+	low_resolution_contrast = asin(wanted_low_resolution_contrast);
+}
+
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 std::complex<float> CTF::EvaluateComplex(float squared_spatial_frequency, float azimuth)
 {
@@ -379,7 +386,17 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 {
 	if (defocus_1 == 0.0f && defocus_2 == 0.0f) return -0.7; // for defocus sweep
 	else
-	return -sinf( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) );
+	{
+		if (low_resolution_contrast == 0.0f) return -sinf( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) );
+		else
+		{
+			float low_res_limit = ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenAzimuth(azimuth);
+			float phase_shift = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth);
+			float threshold = PI / 2.0f;
+			if (phase_shift >= threshold) return -sinf(phase_shift);
+			else return -sinf(phase_shift + low_resolution_contrast * (threshold - phase_shift) / threshold);
+		}
+	}
 }
 
 /* returns the argument (radians) to the sine and cosine terms of the ctf

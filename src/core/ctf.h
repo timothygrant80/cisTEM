@@ -25,6 +25,7 @@ private:
 	float precomputed_amplitude_contrast_term;
 	float squared_wavelength;
 	float cubed_wavelength;
+	float low_resolution_contrast;
 
 public:
 
@@ -91,6 +92,7 @@ public:
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
 	void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
 	void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
+	void SetLowResolutionContrast(float wanted_low_resolution_contrast);
 	//
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);

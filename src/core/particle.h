@@ -142,6 +142,7 @@ public:
 	void InitCTF(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f);
 	void SetDefocus(float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift);
 	void SetBeamTilt(float beam_tilt_x, float beam_tilt_y, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f);
+	void SetLowResolutionContrast(float low_resolution_contrast);
 	void InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x = 0.0f, float beam_tilt_y = 0.0f, float particle_shift_x = 0.0f, float particle_shift_y = 0.0f, bool calculate_complex_ctf = false);
 	void PhaseFlipImage();
 	void CTFMultiplyImage();

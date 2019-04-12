@@ -4069,6 +4069,280 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	return float(mask_volume);
 }
 
+float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
+{
+//	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
+	if (is_in_real_space)
+	{
+		MyDebugAssertTrue(wanted_mask_edge >= 1.0, "Edge width too small");
+	}
+	else
+	{
+		MyDebugAssertTrue(wanted_mask_edge > 0.0, "Edge width too small");
+	}
+
+	int i;
+	int j;
+	int k;
+	int ii;
+	int jj;
+	int kk;
+	long number_of_pixels;
+
+	int x;
+	int y;
+	int z;
+	float float_x;
+	float float_y;
+	float float_z;
+
+	long pixel_counter = 0;
+
+	float distance_from_center;
+	float mask_radius_plus_edge_x;
+	float mask_radius_plus_edge_y;
+	float mask_radius_plus_edge_z;
+	float mask_radius_x;
+	float mask_radius_y;
+	float mask_radius_z;
+	float edge;
+	double pixel_sum;
+
+	double mask_volume = 0.0;
+
+	mask_radius_x = wanted_mask_radius_x - wanted_mask_edge * 0.5;
+	mask_radius_y = wanted_mask_radius_y - wanted_mask_edge * 0.5;
+	mask_radius_z = wanted_mask_radius_z - wanted_mask_edge * 0.5;
+	if (mask_radius_x < 0.0) mask_radius_x = 0.0;
+	if (mask_radius_y < 0.0) mask_radius_y = 0.0;
+	if (mask_radius_z < 0.0) mask_radius_z = 0.0;
+	mask_radius_plus_edge_x = mask_radius_x + wanted_mask_edge;
+	mask_radius_plus_edge_y = mask_radius_y + wanted_mask_edge;
+	mask_radius_plus_edge_z = mask_radius_z + wanted_mask_edge;
+
+	pixel_sum = 0.0;
+	number_of_pixels = 0;
+	if (is_in_real_space && object_is_centred_in_box)
+	{
+		if (force_mask_value)
+		{
+			pixel_sum = wanted_mask_value;
+		}
+		else
+		{
+			for (k = 0; k < logical_z_dimension; k++)
+			{
+				z = abs(k - physical_address_of_box_center_z);
+
+				for (j = 0; j < logical_y_dimension; j++)
+				{
+					y = abs(j - physical_address_of_box_center_y);
+
+					for (i = 0; i < logical_x_dimension; i++)
+					{
+						x = abs(i - physical_address_of_box_center_x);
+
+						if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x <= mask_radius_plus_edge_x && y <= mask_radius_plus_edge_y && z <= mask_radius_plus_edge_z))
+						{
+							pixel_sum += real_values[pixel_counter];
+							number_of_pixels++;
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+			MyDebugAssertTrue(number_of_pixels > 0, "Oops, did not find any pixels to average over");
+			pixel_sum /= number_of_pixels;
+		}
+
+		pixel_counter = 0.0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			z = abs(k - physical_address_of_box_center_z);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				y = abs(j - physical_address_of_box_center_y);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					x = abs(i - physical_address_of_box_center_x);
+
+					if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x < mask_radius_plus_edge_x && y < mask_radius_plus_edge_y && z < mask_radius_plus_edge_z))
+					{
+						edge = 1.0f;
+						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0;
+						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0;
+						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						if (invert)
+						{
+							real_values[pixel_counter] = real_values[pixel_counter] * (1.0 - edge) + edge * pixel_sum;
+							mask_volume += powf(1.0 - edge,2);
+						}
+						else
+						{
+							real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+							mask_volume += powf(edge,2);
+						}
+					}
+					else
+					if (invert)
+					{
+						if (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z)
+						{
+							real_values[pixel_counter] = pixel_sum;
+						}
+						else
+						{
+							mask_volume += 1.0;
+						}
+					}
+					else
+					{
+						if (x >= mask_radius_plus_edge_x || y >= mask_radius_plus_edge_y || z >= mask_radius_plus_edge_z) real_values[pixel_counter] = pixel_sum;
+						else
+						{
+							mask_volume += 1.0;
+						}
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+	else
+	if (is_in_real_space)
+	{
+		if (force_mask_value)
+		{
+			pixel_sum = wanted_mask_value;
+		}
+		else
+		{
+			for (k = 0; k < logical_z_dimension; k++)
+			{
+				kk = k;
+				if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
+				z = abs(kk);
+
+				for (j = 0; j < logical_y_dimension; j++)
+				{
+					jj = j;
+					if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
+					y = abs(jj);
+
+					for (i = 0; i < logical_x_dimension; i++)
+					{
+						ii = i;
+						if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
+						x = abs(ii);
+
+						if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x <= mask_radius_plus_edge_x && y <= mask_radius_plus_edge_y && z <= mask_radius_plus_edge_z))
+						{
+							pixel_sum += real_values[pixel_counter];
+							number_of_pixels++;
+						}
+						pixel_counter++;
+					}
+					pixel_counter += padding_jump_value;
+				}
+			}
+			pixel_sum /= number_of_pixels;
+		}
+
+		pixel_counter = 0.0;
+		for (k = 0; k < logical_z_dimension; k++)
+		{
+			kk = k;
+			if (kk >= physical_address_of_box_center_z) kk -= logical_z_dimension;
+			z = abs(kk);
+
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				jj = j;
+				if (jj >= physical_address_of_box_center_y) jj -= logical_y_dimension;
+				y = abs(jj);
+
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					ii = i;
+					if (ii >= physical_address_of_box_center_x) ii -= logical_x_dimension;
+					x = abs(ii);
+
+					if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x < mask_radius_plus_edge_x && y < mask_radius_plus_edge_y && z < mask_radius_plus_edge_z))
+					{
+						edge = 1.0f;
+						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0;
+						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0;
+						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+						mask_volume += powf(edge,2);
+					}
+					else
+						if (x >= mask_radius_plus_edge_x || y >= mask_radius_plus_edge_y || z >= mask_radius_plus_edge_z) real_values[pixel_counter] = pixel_sum;
+					else
+					{
+						mask_volume += 1.0;
+					}
+
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
+	}
+	else
+	{
+		for (k = 0; k <= physical_upper_bound_complex_z; k++)
+		{
+			float_z = fabsf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z);
+
+			for (j = 0; j <= physical_upper_bound_complex_y; j++)
+			{
+				float_y = fabsf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y);
+
+				for (i = 0; i <= physical_upper_bound_complex_x; i++)
+				{
+					float_x = i * fourier_voxel_size_x;
+
+					// compute squared radius, in units of reciprocal pixels
+
+					if ( ! (float_x <= mask_radius_x && float_y <= mask_radius_y && float_z <= mask_radius_z) && (float_x < mask_radius_plus_edge_x && float_y < mask_radius_plus_edge_y && float_z < mask_radius_plus_edge_z))
+					{
+						edge = 1.0f;
+						if (float_x > mask_radius_x && float_x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (float_x - mask_radius_x) / wanted_mask_edge)) / 2.0;
+						if (float_y > mask_radius_y && float_y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (float_y - mask_radius_y) / wanted_mask_edge)) / 2.0;
+						if (float_z > mask_radius_z && float_z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (float_z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						if (invert)
+						{
+							complex_values[pixel_counter] *= (1.0 - edge);
+						}
+						else
+						{
+							complex_values[pixel_counter] *= edge;
+						}
+					}
+					if (invert)
+					{
+						if (float_x <= mask_radius_x && float_y <= mask_radius_y && float_z <= mask_radius_z) complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					}
+					else
+					{
+						if (float_x >= mask_radius_plus_edge_x || float_y >= mask_radius_plus_edge_y || float_z >= mask_radius_plus_edge_z) complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					}
+
+					pixel_counter++;
+				}
+			}
+		}
+	}
+
+	return float(mask_volume);
+}
+
 Image & Image::operator = (const Image &other_image)
 {
 	*this = &other_image;
@@ -7931,6 +8205,61 @@ void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_
 	Consume(&temp_image);
 }
 
+void Image::RealSpaceBinning(int bin_x, int bin_y, int bin_z)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(bin_x >= 1 && bin_y >= 1 && bin_z >= 1, "Invalid bin factor");
+
+	if (bin_x == 1 && bin_y == 1 && bin_z == 1) return;
+
+	int i,j,k;
+	int l,m,n;
+	int ix,iy,iz;
+	int counter;
+	int new_x_dimension = ceilf(float(logical_x_dimension) / bin_x);
+	int new_y_dimension = ceilf(float(logical_y_dimension) / bin_y);
+	int new_z_dimension = ceilf(float(logical_z_dimension) / bin_z);
+	long pointer = 0;
+	float average;
+
+	Image temp_image;
+	temp_image.Allocate(new_x_dimension, new_y_dimension, new_z_dimension);
+
+	for (n = 0; n < new_z_dimension; n++)
+	{
+		for (m = 0; m < new_y_dimension; m++)
+		{
+			for (l = 0; l < new_x_dimension; l++)
+			{
+				average = 0.0f;
+				counter = 0.0f;
+				for (k = 0; k < bin_z; k++)
+				{
+					iz = bin_z * n + k;
+					for (j = 0; j < bin_y; j++)
+					{
+						iy = bin_y * m + j;
+						for (i = 0; i < bin_x; i++)
+						{
+							ix = bin_x * l + i;
+
+							if (ix >= 0 && ix < logical_x_dimension && iy >= 0 && iy < logical_y_dimension && iz >= 0 && iz < logical_z_dimension)
+							{
+								counter++;
+								average += ReturnRealPixelFromPhysicalCoord(ix, iy, iz);
+							}
+						}
+					}
+				}
+				average /= counter;
+				temp_image.real_values[pointer] = average;
+				pointer++;
+			}
+			pointer += temp_image.padding_jump_value;
+		}
+	}
+	Consume(&temp_image);
+}
 
 void Image::CopyFrom(Image *other_image)
 {

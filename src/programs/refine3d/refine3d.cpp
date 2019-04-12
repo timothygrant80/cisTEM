@@ -452,6 +452,7 @@ bool Refine3DApp::DoCalculation()
 //	float beam_tilt_y = -1.1996f / 1000.0f * 1.2f;
 	float particle_shift_x = 0.0f;
 	float particle_shift_y = 0.0f;
+//	float low_resolution_contrast = 0.5f;
 	bool skip_local_refinement = false;
 
 	bool take_random_best_parameter;
@@ -966,6 +967,7 @@ bool Refine3DApp::DoCalculation()
 		refine_particle.SetParameterConstraints(powf(parameter_average.sigma,2));
 
 		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
+//		input_ctf.SetLowResolutionContrast(low_resolution_contrast);
 //		ctf_input_image.CalculateCTFImage(input_ctf);
 //		refine_particle.is_phase_flipped = true;
 
@@ -1049,6 +1051,7 @@ bool Refine3DApp::DoCalculation()
 		{
 			refine_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 		}
+//		refine_particle.SetLowResolutionContrast(low_resolution_contrast);
 		refine_particle.filter_radius_low = low_resolution_limit;
 		refine_particle.SetIndexForWeightedCorrelation();
 		if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
@@ -1090,6 +1093,7 @@ bool Refine3DApp::DoCalculation()
 				search_particle.SetParameters(input_parameters);
 				search_particle.number_of_search_dimensions = refine_particle.number_of_search_dimensions;
 				search_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
+//				search_particle.SetLowResolutionContrast(low_resolution_contrast);
 				temp_image.CopyFrom(&input_image);
 				// Multiply by binning_factor so variance after binning is close to 1.
 //				temp_image.MultiplyByConstant(binning_factor_search);

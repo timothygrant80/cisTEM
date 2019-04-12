@@ -191,6 +191,7 @@ bool Refine2DApp::DoCalculation()
 	float max_corr, max_logp_particle;
 	float percentage;
 	float random_shift;
+	float low_resolution_contrast = 0.5f;
 	int number_of_blank_edges;
 	int max_samples = 2000;
 	wxDateTime my_time_in;
@@ -711,7 +712,9 @@ bool Refine2DApp::DoCalculation()
 		input_image.ReplaceOutliersWithMean(5.0);
 		if (invert_contrast) input_image.InvertRealValues();
 		input_particle.InitCTFImage(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], input_parameters[11]);
+		input_particle.SetLowResolutionContrast(low_resolution_contrast);
 		input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, input_parameters[8], input_parameters[9], input_parameters[10], 0.0, 0.0, 0.0, pixel_size, input_parameters[11]);
+		input_ctf.SetLowResolutionContrast(low_resolution_contrast);
 		ctf_input_image.CalculateCTFImage(input_ctf);
 
 		if (normalize_particles)

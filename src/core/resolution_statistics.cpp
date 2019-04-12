@@ -510,8 +510,8 @@ void ResolutionStatistics::CalculateFSC(Image &reconstructed_volume_1, Image &re
 
 	if (smooth_curve)
 	{
-		if (window < 5) window = 5;
 		if (window > number_of_bins_extended / 10) window = number_of_bins_extended / 10;
+		if (window < 5) window = 5;
 
 		if (IsOdd(window) == false) window++;
 

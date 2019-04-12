@@ -268,6 +268,13 @@ void Particle::SetBeamTilt(float beam_tilt_x, float beam_tilt_y, float particle_
 	ctf_parameters.SetBeamTilt(beam_tilt_x, beam_tilt_y, particle_shift_x / pixel_size, particle_shift_y / pixel_size);
 }
 
+void Particle::SetLowResolutionContrast(float low_resolution_contrast)
+{
+	MyDebugAssertTrue(ctf_is_initialized, "CTF not initialized");
+
+	ctf_parameters.SetLowResolutionContrast(low_resolution_contrast);
+}
+
 void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, float amplitude_contrast, float defocus_1, float defocus_2, float astigmatism_angle, float phase_shift, float beam_tilt_x, float beam_tilt_y, float particle_shift_x, float particle_shift_y, bool calculate_complex_ctf)
 {
 	MyDebugAssertTrue(ctf_image->is_in_memory, "ctf_image memory not allocated");

@@ -159,6 +159,7 @@ public:
 	void AddByLinearInterpolationFourier2D(float &wanted_x_coordinate, float &wanted_y_coordinate, std::complex<float> &wanted_value);
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
+	float CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	void GaussianLowPassFilter(float sigma);
 	void GaussianHighPassFilter(float sigma);
 	void ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels);
@@ -339,6 +340,7 @@ public:
 	void ClipInto(Image *other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
 	void InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
+	void RealSpaceBinning(int bin_x, int bin_y, int bin_z = 1);
 	void CopyFrom(Image *other_image);
 	void CopyLoopingAndAddressingFrom(Image *other_image);
 	void Consume(Image *other_image);

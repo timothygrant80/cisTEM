@@ -50,7 +50,7 @@ Peak TemplateScore(void *scoring_parameters)
 	// Use the MKL
 	vmcMulByConj(current_projection.real_memory_allocated/2,reinterpret_cast <MKL_Complex8 *> (comparison_object->windowed_particle->complex_values),reinterpret_cast <MKL_Complex8 *> (current_projection.complex_values),reinterpret_cast <MKL_Complex8 *> (current_projection.complex_values),VML_EP|VML_FTZDAZ_ON|VML_ERRMODE_IGNORE);
 #else
-	for (pixel_counter = 0; pixel_counter < current_projection.real_memory_allocated / 2; pixel_counter ++)
+	for (long pixel_counter = 0; pixel_counter < current_projection.real_memory_allocated / 2; pixel_counter ++)
 	{
 		current_projection.complex_values[pixel_counter] = conj(current_projection.complex_values[pixel_counter]) * comparison_object->windowed_particle->complex_values[pixel_counter];
 	}

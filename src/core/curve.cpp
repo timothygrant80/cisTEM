@@ -246,6 +246,9 @@ Curve & Curve::operator = (const Curve &other_curve)
 
 void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points)
 {
+	MyDebugAssertFalse(isnan(lower_bound),"Lower bound is NaN");
+	MyDebugAssertFalse(isnan(upper_bound),"Lower bound is NaN");
+	MyDebugAssertTrue(wanted_number_of_points > 1,"Bad number of points");
 	ClearData();
 	AllocateMemory(wanted_number_of_points);
 

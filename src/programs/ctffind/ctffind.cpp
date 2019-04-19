@@ -2658,6 +2658,9 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 	 * Initialize the curve objects. One keeps track of EPA pre phase aberration maximum (before Cs term takes over), the other post.
 	 * In the case where we are overfocus (negative defocus value), the phase aberration starts at 0.0 at the origin
 	 * and just gets more and more negative
+	 *
+	 * This is one of the messiest parts of the code. I really need to come up with a cleaner way to decide how many points
+	 * to give each curve. This is a goldilocks problem: too few or too many both give worse curves and FRCs.
 	 */
 	if (curve_x_is_linear)
 	{
@@ -2666,7 +2669,7 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 		float lowest_sq_freq_of_ctf_aberration_max = std::min(	fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1())),
 																fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2())));
 
-		float maximum_aberration_in_spectrum = std::max(	fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1())),
+		float maximum_abs_aberration_in_spectrum = std::max(	fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus1())),
 															fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2())));
 
 
@@ -2678,10 +2681,12 @@ void ComputeEquiPhaseAverageOfPowerSpectrum( Image *spectrum, CTF *ctf, Curve *e
 															ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum,ctf->GetDefocus2()));
 
 
-		int number_of_points = spectrum->ReturnMaximumDiagonalRadius() * curve_oversampling_factor * maximum_aberration_in_ctf / maximum_aberration_in_spectrum;
+		// Watch out: messy heuristics
+		int number_of_points_pre_max = std::max(2,myroundint(spectrum->ReturnMaximumDiagonalRadius() * curve_oversampling_factor * maximum_aberration_in_ctf / maximum_abs_aberration_in_spectrum));
+		int number_of_points_post_max = std::max(2,myroundint(spectrum->ReturnMaximumDiagonalRadius() * curve_oversampling_factor));
 
-		epa_pre_max->SetupXAxis(ctf->GetAdditionalPhaseShift(),maximum_aberration_in_ctf,number_of_points);
-		epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf,minimum_aberration_in_ctf_at_edges-0.5f*fabsf(minimum_aberration_in_ctf_at_edges)),maximum_aberration_in_ctf,number_of_points);
+		epa_pre_max->SetupXAxis(ctf->GetAdditionalPhaseShift(),maximum_aberration_in_ctf,number_of_points_pre_max);
+		epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf,minimum_aberration_in_ctf_at_edges-0.5f*fabsf(minimum_aberration_in_ctf_at_edges)),maximum_aberration_in_ctf,number_of_points_post_max);
 
 	}
 	else

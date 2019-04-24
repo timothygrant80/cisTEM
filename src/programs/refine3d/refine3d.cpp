@@ -696,9 +696,10 @@ bool Refine3DApp::DoCalculation()
 		// Assume square particles
 		search_reference_3d = input_3d;
 		search_statistics = input_statistics;
-		search_box_size = ReturnClosestFactorizedUpper(myroundint(2.0 * padding * (std::max(max_search_x, max_search_y) + mask_radius_search)), 3, true);
+		search_box_size = ReturnClosestFactorizedUpper(myroundint(2.0 / pixel_size * padding * (std::max(max_search_x, max_search_y) + mask_radius_search)), 3, true);
 		if (search_box_size > search_reference_3d.density_map.logical_x_dimension) search_box_size = search_reference_3d.density_map.logical_x_dimension;
 		if (search_box_size != search_reference_3d.density_map.logical_x_dimension) search_reference_3d.density_map.Resize(search_box_size, search_box_size, search_box_size);
+		if (mask_radius_search > float(search_box_size) / 2.0 * pixel_size - mask_falloff) mask_radius_search = float(search_box_size) / 2.0 * pixel_size - mask_falloff;
 //		search_reference_3d.PrepareForProjections(high_resolution_limit_search, true);
 		search_reference_3d.PrepareForProjections(low_resolution_limit, high_resolution_limit_search, true);
 //		search_statistics.Init(search_reference_3d.pixel_size, search_reference_3d.density_map.logical_y_dimension / 2 + 1);

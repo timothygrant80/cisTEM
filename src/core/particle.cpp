@@ -726,7 +726,7 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	float best_particle_shift_azimuth;
 	float score;
 	float best_score;
-	float mask_radius;
+	float mask_radius_local;
 
 	AnglesAndShifts rotation_matrix;
 	ProgressBar *my_progress;
@@ -742,9 +742,9 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	sum_of_phase_differences.ComputeAmplitudeSpectrumFull2D(temp_image);
 	temp_image->MultiplyByConstant(float(temp_image->logical_x_dimension));
 	temp_image->Binarise(0.00002f);
-	mask_radius = sqrtf((temp_image->ReturnAverageOfRealValues() * temp_image->logical_x_dimension * temp_image->logical_y_dimension) / PI);
+	mask_radius_local = sqrtf((temp_image->ReturnAverageOfRealValues() * temp_image->logical_x_dimension * temp_image->logical_y_dimension) / PI);
 	// delete 2
-//	wxPrintf("mask radius = %g\n", mask_radius);
+//	wxPrintf("mask radius = %g\n", mask_radius_local);
 //	temp_image->QuickAndDirtyWriteSlice("mask_image.mrc", 1);
 
 	// Find beam tilt direction
@@ -767,7 +767,7 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 //			beamtilt_spectrum->CosineMask(0.45 * beamtilt_spectrum->logical_x_dimension, mask_falloff / pixel_size);
 			beamtilt_spectrum->real_values[0] = 0.0f;
 //			score = beamtilt_spectrum->ReturnSumOfSquares(0.45 * beamtilt_spectrum->logical_x_dimension);
-			score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius);
+			score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius_local);
 			if (score < best_score)
 			{
 				best_score = score;
@@ -868,7 +868,7 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 //						beamtilt_spectrum->MultiplyPixelWise(*mask_image);
 //						score = beamtilt_spectrum->ReturnSumOfSquares(0.45f * beamtilt_spectrum->logical_x_dimension);
 //						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
-						score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius);
+						score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius_local);
 						if (score < best_score)
 						{
 							best_score = score;

@@ -32,6 +32,7 @@ const std::complex<float> I(0.0,1.0);
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <random>
 #include <fftw3.h>
 #include <math.h>
 #include "sqlite/sqlite3.h"

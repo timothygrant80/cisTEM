@@ -32,6 +32,7 @@ const std::complex<float> I(0.0,1.0);
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <random>
 #include <fftw3.h>
 #include <math.h>
 #include "sqlite/sqlite3.h"
@@ -46,6 +47,8 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/txtstrm.h>
 #include <wx/textfile.h>
 #include <wx/regex.h>
+#include "cistem_parameters.h"
+#include "cistem_star_file_reader.h"
 #include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
@@ -95,10 +98,11 @@ const std::complex<float> I(0.0,1.0);
 #include "myapp.h"
 #include "rle3d.h"
 #include "local_resolution_estimator.h"
+#ifdef EXPERIMENTAL
 #include "pdb.h"
 #include "water.h"
-#include "cistem_parameters.h"
-#include "cistem_star_file_reader.h"
+#endif
+
 
 
 #ifdef MKL

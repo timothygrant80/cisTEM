@@ -7,7 +7,8 @@ const std::string ctffind_version = "4.1.14";
 /*
  * Changelog
  * - 4.1.14
- * -- bug fixes (memory)
+ * -- bug fixes (memory, equiphase averaging)
+ * -- bug fixes from David Mastronarde (fixed/known phase shift)
  * - 4.1.13
  * -- EPA bug fixed (affected 4.1.12 only)
  * - 4.1.12
@@ -1238,7 +1239,7 @@ bool CtffindApp::DoCalculation()
 		current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
 		// Set up the comparison object
-		comparison_object_2D = new ImageCTFComparison(1,*current_ctf,pixel_size_for_fitting,find_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
+		comparison_object_2D = new ImageCTFComparison(1,*current_ctf,pixel_size_for_fitting,find_additional_phase_shift && ! fixed_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
 		comparison_object_2D->SetImage(0,average_spectrum_masked);
 		comparison_object_2D->SetupQuickCorrelation();
 
@@ -1301,7 +1302,7 @@ bool CtffindApp::DoCalculation()
 				{
 					comparison_object_1D.curve[counter] = rotational_average->data_y[counter];
 				}
-				comparison_object_1D.find_phase_shift = find_additional_phase_shift;
+				comparison_object_1D.find_phase_shift = find_additional_phase_shift && ! fixed_additional_phase_shift;
 				comparison_object_1D.number_of_bins = number_of_bins_in_1d_spectra;
 				comparison_object_1D.reciprocal_pixel_size = average_spectrum_masked->fourier_voxel_size_x;
 
@@ -1322,6 +1323,12 @@ bool CtffindApp::DoCalculation()
 				else
 				{
 					number_of_search_dimensions = 1;
+				}
+
+				// DNM: Do one-time set of phase shift for fixed value
+				if (find_additional_phase_shift && fixed_additional_phase_shift)
+				{
+					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
 				}
 
 				// Actually run the BF search

@@ -1041,7 +1041,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 	{
 		// TODO send the result back to the GUI, for now hack mode to save the files to the directory..
 
-		wxString directory_for_writing_results = my_job_package.jobs[0].arguments[34].ReturnStringArgument();
+		wxString directory_for_writing_results = current_job_package.jobs[0].arguments[34].ReturnStringArgument();
 
 		Image temp_image;
 		temp_image.Allocate(int(aggregated_results[array_location].collated_data_array[0]), int(aggregated_results[array_location].collated_data_array[1]), true);

@@ -34,6 +34,7 @@ const std::complex<float> I(0.0,1.0);
 #include <utility>
 #include <vector>
 #include <random>
+#include <functional>
 #include <fftw3.h>
 #include <math.h>
 #include "sqlite/sqlite3.h"
@@ -49,6 +50,7 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/textfile.h>
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
+
 
 class StackDump : public wxStackWalker // so we can give backtraces..
 {

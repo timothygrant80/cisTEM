@@ -232,6 +232,7 @@ void MyRunProfilesPanel::OnEndProfileEdit( wxListEvent& event )
 	{
 		SetProfileName(event.GetIndex(), event.GetLabel());
 		main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnProfilePointer(event.GetIndex()));
+		event.Skip();
 	}
 
 }

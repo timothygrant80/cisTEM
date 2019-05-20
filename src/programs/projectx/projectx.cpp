@@ -351,5 +351,7 @@ int MyGuiApp::OnExit()
 	align_movies_panel->Destroy();
 	run_profiles_panel->Destroy();*/
 
+	return 0;
+
 }
 

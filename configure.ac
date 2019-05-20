@@ -1,4 +1,4 @@
-AC_INIT(cisTEM, [1.0.2-beta])
+AC_INIT(cisTEM, [2.0.0-alpha])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -24,15 +24,44 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
 	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"		
-	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"
+	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	
 	#sqlite needs dl on gcc
 	
 	LIBS="$LIBS -ldl"
 fi
+
+#
+# What kind of OS are we on?
+#
+AC_CANONICAL_HOST
+
+build_linux=no
+build_windows=no
+build_mac=no
+
+# Detect the target system
+case "${host_os}" in
+    linux*)
+        build_linux=yes
+        ;;
+    cygwin*|mingw*)
+        build_windows=yes
+        ;;
+    darwin*)
+        build_mac=yes
+        ;;
+    *)
+        AC_MSG_ERROR(["OS $host_os is not supported"])
+        ;;
+esac
+# Pass the conditionals to automake
+AM_CONDITIONAL([LINUX_AM], [test "$build_linux" = "yes"])
+AM_CONDITIONAL([WINDOWS_AM], [test "$build_windows" = "yes"])
+AM_CONDITIONAL([OSX_AM], [test "$build_mac" = "yes"])
 
 # Use all available processor instruction sets
 AC_ARG_ENABLE(latest-instruction-set, [  --enable-latest-instruction-set     Use latest available CPU instruction set [[default=yes]]],[
@@ -92,7 +121,7 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -Wall $INPUT_CPPFLAGS"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -Wall $INPUT_CPPFLAGS"
   CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -Wall $INPUT_CXXFLAGS"
   fi
   ])
@@ -121,8 +150,16 @@ AC_ARG_ENABLE(experimental, [  --enable-experimental  Compile with experimental 
   compile_experimental="true"
   fi
   ])
+ 
+#rigorous socket check 
 
-
+AC_ARG_ENABLE(rigorous-sockets, [  --enable-rigorous-sockets  Use rigorous socket checking [[default=no]]],[
+  if test "$enableval" = yes; then
+  CPPFLAGS="$CPPFLAGS -DRIGOROUS_SOCKET_CHECK"
+  CXXFLAGS="$CXXFLAGS -DRIGOROUS_SOCKET_CHECK"  
+  fi
+  ])
+ 
 AM_CONDITIONAL([EXPERIMENTAL_AM],[test x$compile_experimental = xtrue])
 
 # OpenMP
@@ -166,18 +203,25 @@ AC_DEFUN([WXTEST],
 WXTEST
 
 # Verify minimus requires
-vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1 * 1000 + $2) * 1000 + $3;}'`
-if test -n "$vers" && test "$vers" -ge 3000002; then
+vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1  1000 + $2)  1000 + $3;}'`
+if test -n "$vers" && test "$vers" -ge 3000004; then
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
         WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
 
-        WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags base`"
-        WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net`"
+        if test "$build_mac" =  "yes"; then
+          WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
+          WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
+          WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
+        else
+          WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags base`"
+          WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
+          WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net`"
+        fi
+                
         wx_is_available=1
 else
-        AC_MSG_ERROR("Only wxWidgets version 3.0.2 is currently supported.")
+        AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
 fi
 

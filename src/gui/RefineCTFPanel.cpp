@@ -673,7 +673,7 @@ void RefineCTFPanel::WriteErrorText(wxString text_to_write)
 
 void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 {
-	SETUP_SOCKET_CODES
+	/*SETUP_SOCKET_CODES
 
 	wxString s = _("OnSocketEvent: ");
 	wxSocketBase *sock = event.GetSocket();
@@ -703,7 +703,7 @@ void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 		// We disable input events, so that the test doesn't trigger
 		// wxSocketEvent again.
 		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 
 		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
 		{
@@ -737,7 +737,7 @@ void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 			// which job is finished?
 
 			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
+			ReadFromSocket(sock, &finished_job, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_WXSTRING);
 			my_job_tracker.MarkJobFinished();
 
 			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
@@ -771,7 +771,7 @@ void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 			// how many connections are there?
 
 			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
+			ReadFromSocket(sock, &number_of_connections, sizeof(int), true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_WXSTRING);
 
 
 			my_job_tracker.AddConnection();
@@ -806,7 +806,7 @@ void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 			// As soon as it sends us the message that all jobs are finished, the controller should also
 			// send timing info - we need to remember this
 			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
+			ReadFromSocket(sock, &timing_from_controller, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_WXSTRING);
 			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project.");
 			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
 			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour");
@@ -837,7 +837,7 @@ void RefineCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
 	}
 	default: ;
 	}
-
+*/
 }
 
 void  RefineCTFPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.

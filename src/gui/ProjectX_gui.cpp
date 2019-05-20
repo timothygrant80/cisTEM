@@ -176,8 +176,34 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
 	
-	m_staticline12 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline12, 0, wxEXPAND | wxALL, 5 );
+	TopStaticLine = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( TopStaticLine, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer504;
+	bSizer504 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ImageOrClassAverageStaticText = new wxStaticText( this, wxID_ANY, wxT("Use Images or Class Averages? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImageOrClassAverageStaticText->Wrap( -1 );
+	bSizer504->Add( ImageOrClassAverageStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	wxBoxSizer* bSizer502;
+	bSizer502 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ImageInputRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Images"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImageInputRadioButton->SetValue( true ); 
+	bSizer502->Add( ImageInputRadioButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ClassAverageInputRadioButton = new wxRadioButton( this, wxID_ANY, wxT("Class Averages"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer502->Add( ClassAverageInputRadioButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer504->Add( bSizer502, 1, wxEXPAND, 5 );
+	
+	
+	bSizer43->Add( bSizer504, 0, wxEXPAND, 5 );
+	
+	BottomStaticLine = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( BottomStaticLine, 0, wxEXPAND | wxALL, 5 );
 	
 	wxBoxSizer* bSizer451;
 	bSizer451 = new wxBoxSizer( wxHORIZONTAL );
@@ -194,15 +220,29 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	fgSizer15->SetFlexibleDirection( wxBOTH );
 	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText262 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
-	m_staticText262->Wrap( -1 );
-	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	InputRefinementPackageStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Refinement Package :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	InputRefinementPackageStaticText->Wrap( -1 );
+	fgSizer15->Add( InputRefinementPackageStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	RefinementPackageComboBox = new RefinementPackagePickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RefinementPackageComboBox->Enable( false );
 	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
 	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
 	fgSizer15->Add( RefinementPackageComboBox, 1, wxEXPAND | wxALL, 5 );
+	
+	InputClassificationSelectionStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Input Classification Selection :"), wxDefaultPosition, wxDefaultSize, 0 );
+	InputClassificationSelectionStaticText->Wrap( -1 );
+	InputClassificationSelectionStaticText->Enable( false );
+	
+	fgSizer15->Add( InputClassificationSelectionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	ClassSelectionComboBox = new ClassSelectionPickerComboPanel( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ClassSelectionComboBox->Enable( false );
+	ClassSelectionComboBox->SetMinSize( wxSize( 350,-1 ) );
+	ClassSelectionComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( ClassSelectionComboBox, 1, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer200->Add( fgSizer15, 0, wxALIGN_CENTER_VERTICAL, 5 );
@@ -210,38 +250,66 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	m_staticline52 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer200->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
 	
-	wxGridSizer* gSizer10;
-	gSizer10 = new wxGridSizer( 0, 1, 0, 0 );
+	wxFlexGridSizer* fgSizer35;
+	fgSizer35 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer35->SetFlexibleDirection( wxBOTH );
+	fgSizer35->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	wxBoxSizer* bSizer216;
-	bSizer216 = new wxBoxSizer( wxHORIZONTAL );
+	NoClassesStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. Classes :"), wxDefaultPosition, wxDefaultSize, 0 );
+	NoClassesStaticText->Wrap( -1 );
+	NoClassesStaticText->Enable( false );
 	
-	m_staticText415 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Number of Starts :"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer35->Add( NoClassesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	NumberClassesSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 1 );
+	NumberClassesSpinCtrl->Enable( false );
+	NumberClassesSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
+	
+	fgSizer35->Add( NumberClassesSpinCtrl, 0, wxALL, 5 );
+	
+	m_staticText415 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Starts :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText415->Wrap( -1 );
-	bSizer216->Add( m_staticText415, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	fgSizer35->Add( m_staticText415, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	NumberStartsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxT("2"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 1000, 0 );
 	NumberStartsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
-	bSizer216->Add( NumberStartsSpinCtrl, 0, wxALL, 5 );
+	fgSizer35->Add( NumberStartsSpinCtrl, 0, wxALL, 5 );
 	
-	m_staticline90 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer216->Add( m_staticline90, 0, wxEXPAND | wxALL, 5 );
 	
-	m_staticText264 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Cycles per Start:"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer200->Add( fgSizer35, 0, wxALIGN_CENTER_VERTICAL, 5 );
+	
+	m_staticline144 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer200->Add( m_staticline144, 0, wxEXPAND | wxALL, 5 );
+	
+	wxFlexGridSizer* fgSizer36;
+	fgSizer36 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer36->SetFlexibleDirection( wxBOTH );
+	fgSizer36->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	SymmetryStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Symmetry : "), wxDefaultPosition, wxDefaultSize, 0 );
+	SymmetryStaticText->Wrap( -1 );
+	SymmetryStaticText->Enable( false );
+	
+	fgSizer36->Add( SymmetryStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	SymmetryComboBox = new wxComboBox( InputParamsPanel, wxID_ANY, wxT("C1"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 ); 
+	SymmetryComboBox->Enable( false );
+	SymmetryComboBox->SetMinSize( wxSize( 100,-1 ) );
+	
+	fgSizer36->Add( SymmetryComboBox, 0, wxALL, 5 );
+	
+	m_staticText264 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Cycles :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText264->Wrap( -1 );
-	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer36->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 5, 100, 40 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
-	bSizer216->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
+	fgSizer36->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
 	
 	
-	gSizer10->Add( bSizer216, 1, 0, 5 );
-	
-	
-	bSizer200->Add( gSizer10, 0, wxALIGN_CENTER_VERTICAL, 5 );
+	bSizer200->Add( fgSizer36, 0, wxALIGN_CENTER_VERTICAL, 5 );
 	
 	
 	bSizer200->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -260,9 +328,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	bSizer441->Add( PleaseCreateRefinementPackageText, 0, wxALL, 5 );
 	
-	m_staticline10 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer441->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
-	
 	
 	InputParamsPanel->SetSizer( bSizer441 );
 	InputParamsPanel->Layout();
@@ -272,13 +337,14 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	bSizer43->Add( bSizer451, 0, wxEXPAND, 5 );
 	
+	m_staticline141 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline141, 0, wxEXPAND | wxALL, 5 );
+	
 	wxBoxSizer* bSizer46;
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -352,9 +418,9 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	SearchRangeYTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SearchRangeYTextCtrl, 0, wxALL, 5 );
 	
-	m_staticText324 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Auto-Masking?"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText324->Wrap( -1 );
-	fgSizer1->Add( m_staticText324, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	UseAutoMaskingStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Auto-Masking?"), wxDefaultPosition, wxDefaultSize, 0 );
+	UseAutoMaskingStaticText->Wrap( -1 );
+	fgSizer1->Add( UseAutoMaskingStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	wxBoxSizer* bSizer264;
 	bSizer264 = new wxBoxSizer( wxHORIZONTAL );
@@ -445,6 +511,24 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText662 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Class Averages"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText662->Wrap( -1 );
+	m_staticText662->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( m_staticText662, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText663 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Images per Class :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText663->Wrap( -1 );
+	fgSizer1->Add( m_staticText663, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ImagesPerClassSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 500, 5 );
+	ImagesPerClassSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
+	
+	fgSizer1->Add( ImagesPerClassSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -647,6 +731,8 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AbInitio3DPanelParent::OnUpdateUI ) );
+	ImageInputRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnMethodChange ), NULL, this );
+	ClassAverageInputRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnMethodChange ), NULL, this );
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AbInitio3DPanelParent::OnInfoURL ), NULL, this );
@@ -661,6 +747,8 @@ AbInitio3DPanelParent::~AbInitio3DPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AbInitio3DPanelParent::OnUpdateUI ) );
+	ImageInputRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnMethodChange ), NULL, this );
+	ClassAverageInputRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AbInitio3DPanelParent::OnMethodChange ), NULL, this );
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::OnExpertOptionsToggle ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AbInitio3DPanelParent::OnInfoURL ), NULL, this );
@@ -952,8 +1040,8 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	AutoPercentUsedRadioYes = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
 	bSizer2631->Add( AutoPercentUsedRadioYes, 0, wxALL, 5 );
 	
-	SphereClassificatonNoRadio1 = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer2631->Add( SphereClassificatonNoRadio1, 0, wxALL, 5 );
+	SpherAutoPercentUsedRadioNo = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2631->Add( SpherAutoPercentUsedRadioNo, 0, wxALL, 5 );
 	
 	
 	fgSizer1->Add( bSizer2631, 1, wxEXPAND, 5 );
@@ -968,6 +1056,38 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	PercentUsedTextCtrl->Enable( false );
 	
 	fgSizer1->Add( PercentUsedTextCtrl, 0, wxALL, 5 );
+	
+	m_staticText650 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("AutoMask Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText650->Wrap( -1 );
+	fgSizer1->Add( m_staticText650, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26311;
+	bSizer26311 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoMaskRadioYes = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26311->Add( AutoMaskRadioYes, 0, wxALL, 5 );
+	
+	AutoMaskRadioNo = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26311->Add( AutoMaskRadioNo, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26311, 1, wxEXPAND, 5 );
+	
+	m_staticText651 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Auto Centre Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText651->Wrap( -1 );
+	fgSizer1->Add( m_staticText651, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26312;
+	bSizer26312 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AutoCentreRadioYes = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26312->Add( AutoCentreRadioYes, 0, wxALL, 5 );
+	
+	AutoCentreRadioNo = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26312->Add( AutoCentreRadioNo, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer26312, 1, wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -5934,25 +6054,35 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	wxBoxSizer* bSizer257;
 	bSizer257 = new wxBoxSizer( wxHORIZONTAL );
 	
+	wxGridSizer* gSizer14;
+	gSizer14 = new wxGridSizer( 0, 3, 0, 0 );
+	
 	RefinePsiCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Psi"), wxDefaultPosition, wxDefaultSize, 0 );
 	RefinePsiCheckBox->SetValue(true); 
-	bSizer257->Add( RefinePsiCheckBox, 0, wxALL, 5 );
+	gSizer14->Add( RefinePsiCheckBox, 0, wxALL, 5 );
 	
 	RefineThetaCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Theta"), wxDefaultPosition, wxDefaultSize, 0 );
 	RefineThetaCheckBox->SetValue(true); 
-	bSizer257->Add( RefineThetaCheckBox, 0, wxALL, 5 );
+	gSizer14->Add( RefineThetaCheckBox, 0, wxALL, 5 );
 	
 	RefinePhiCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Phi"), wxDefaultPosition, wxDefaultSize, 0 );
 	RefinePhiCheckBox->SetValue(true); 
-	bSizer257->Add( RefinePhiCheckBox, 0, wxALL, 5 );
+	gSizer14->Add( RefinePhiCheckBox, 0, wxALL, 5 );
 	
 	RefineXShiftCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("X Shift"), wxDefaultPosition, wxDefaultSize, 0 );
 	RefineXShiftCheckBox->SetValue(true); 
-	bSizer257->Add( RefineXShiftCheckBox, 0, wxALL, 5 );
+	gSizer14->Add( RefineXShiftCheckBox, 0, wxALL, 5 );
 	
 	RefineYShiftCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Y Shift"), wxDefaultPosition, wxDefaultSize, 0 );
 	RefineYShiftCheckBox->SetValue(true); 
-	bSizer257->Add( RefineYShiftCheckBox, 0, wxALL, 5 );
+	gSizer14->Add( RefineYShiftCheckBox, 0, wxALL, 5 );
+	
+	RefineOccupanciesCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Occupancy"), wxDefaultPosition, wxDefaultSize, 0 );
+	RefineOccupanciesCheckBox->SetValue(true); 
+	gSizer14->Add( RefineOccupanciesCheckBox, 0, wxALL, 5 );
+	
+	
+	bSizer257->Add( gSizer14, 1, wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( bSizer257, 0, wxEXPAND, 5 );

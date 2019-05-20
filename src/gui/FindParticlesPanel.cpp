@@ -52,7 +52,6 @@ FindParticlesPanel( parent )
 
 	ExclusionRadiusNumericCtrl->SetPrecision(0);
 	TemplateRadiusNumericCtrl->SetPrecision(0);
-
 }
 
 
@@ -1213,7 +1212,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	number_of_background_boxes = NumberOfBackgroundBoxesSpinCtrl->GetValue();
 
 
-	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "find_particles", number_of_jobs);
+	current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "find_particles", number_of_jobs);
 
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
@@ -1238,7 +1237,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		output_stack_filename += wxString::Format("/%s_COOS_%i.mrc", wxFileName::StripExtension(current_image_asset->ReturnShortNameString()),number_of_previous_picks);
 
 
-		my_job_package.AddJob("tffffffffbtbiffftiifbbffbiib",	input_filename.c_str(), // 0
+		current_job_package.AddJob("tffffffffbtbiffftiifbbffbiib",	input_filename.c_str(), // 0
 															pixel_size,
 															acceleration_voltage,
 															spherical_aberration,
@@ -1281,36 +1280,10 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_processes = my_job_package.number_of_jobs + 1;
-		else number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_processes >= 100000) length_of_process_number = 6;
-		else
-		if (number_of_processes >= 10000) length_of_process_number = 5;
-		else
-		if (number_of_processes >= 1000) length_of_process_number = 4;
-		else
-		if (number_of_processes >= 100) length_of_process_number = 3;
-		else
-		if (number_of_processes >= 10) length_of_process_number = 2;
-		else
-		length_of_process_number = 1;
-
-		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", 0, number_of_processes));
-		else
-		NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", 0, number_of_processes));
+		SetNumberConnectedTextToZeroAndStartTracking();
 
 		StartPanel->Show(false);
 		ProgressPanel->Show(true);
-
 
 		PickingParametersPanel->Show(false);
 		ExpertOptionsPanel->Show(false);
@@ -1326,7 +1299,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 		RightPanel->Layout();
 
 		running_job = true;
-		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
+
 
 	}
 	ProgressBar->Pulse();
@@ -1398,7 +1371,6 @@ void MyFindParticlesPanel::TerminateButtonClick( wxCommandEvent& event )
 
 }
 
-
 void MyFindParticlesPanel::WriteInfoText(wxString text_to_write)
 {
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
@@ -1467,168 +1439,6 @@ void MyFindParticlesPanel::CheckWhetherGroupsCanBePicked()
 
 
 
-
-void MyFindParticlesPanel::OnJobSocketEvent(wxSocketEvent& event)
-{
-	SETUP_SOCKET_CODES
-
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
-	}
-
-	//m_text->AppendText(s);
-
-	//MyDebugPrint(s);
-
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
-
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
-			// my_job_tracker.MarkJobFinished();
-			ProcessResult(NULL,finished_job);
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//   	  WriteInfoText(wxString::Format("Job %i has finished with no results (socket_job_finished)", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			if (temp_result.result_size > 0)
-			{
-				ProcessResult(&temp_result);
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-
-			int total_processes;
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			// Other stuff to do once all jobs finished
-			ProcessAllJobsFinished();
-		}
-
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-		break;
-	}
-
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
-}
-
 void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const int &wanted_job_number) // this will have to be overidden in the parent clas when i make it.
 {
 
@@ -1643,8 +1453,8 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 		if (current_time - time_of_last_result_update > 3)
 		{
 			ArrayOfParticlePositionAssets array_of_assets;
-			//wxPrintf("processing result. filename = %s\n",my_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
-			wxString image_filename = my_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
+			//wxPrintf("processing result. filename = %s\n",current_job_package.jobs[job_number].arguments[0].ReturnStringArgument());
+			wxString image_filename = current_job_package.jobs[job_number].arguments[0].ReturnStringArgument();
 			int image_asset_id = -1;
 			double iciness = 0.0;
 			if (result_to_process)
@@ -1655,24 +1465,24 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 				double acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift;
 				main_frame->current_project.database.GetCTFParameters(current_image_asset->ctf_estimation_id,acceleration_voltage,spherical_aberration,amplitude_contrast,defocus_1,defocus_2,astigmatism_angle,additional_phase_shift,iciness);
 			}
-			float radius_in_angstroms = my_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
-			float pixel_size_in_angstroms = my_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
+			float radius_in_angstroms = current_job_package.jobs[job_number].arguments[14].ReturnFloatArgument();
+			float pixel_size_in_angstroms = current_job_package.jobs[job_number].arguments[1].ReturnFloatArgument();
 			PickingResultsPanel->PickingResultsImagePanel->allow_editing_of_coordinates = false;
 			CTF ctf_of_current_result;
-			ctf_of_current_result.Init( my_job_package.jobs[job_number].arguments[2].ReturnFloatArgument(), //akv
-										my_job_package.jobs[job_number].arguments[3].ReturnFloatArgument(), //cs
-										my_job_package.jobs[job_number].arguments[4].ReturnFloatArgument(), //amp cont
-										my_job_package.jobs[job_number].arguments[6].ReturnFloatArgument(), //def1
-										my_job_package.jobs[job_number].arguments[7].ReturnFloatArgument(), //def2
-										my_job_package.jobs[job_number].arguments[8].ReturnFloatArgument(), //ang ast
+			ctf_of_current_result.Init( current_job_package.jobs[job_number].arguments[2].ReturnFloatArgument(), //akv
+										current_job_package.jobs[job_number].arguments[3].ReturnFloatArgument(), //cs
+										current_job_package.jobs[job_number].arguments[4].ReturnFloatArgument(), //amp cont
+										current_job_package.jobs[job_number].arguments[6].ReturnFloatArgument(), //def1
+										current_job_package.jobs[job_number].arguments[7].ReturnFloatArgument(), //def2
+										current_job_package.jobs[job_number].arguments[8].ReturnFloatArgument(), //ang ast
 										pixel_size_in_angstroms,
-										my_job_package.jobs[job_number].arguments[5].ReturnFloatArgument()); //phase shift
+										current_job_package.jobs[job_number].arguments[5].ReturnFloatArgument()); //phase shift
 			PickingResultsPanel->Draw(image_filename, array_of_assets, radius_in_angstroms, pixel_size_in_angstroms,ctf_of_current_result,image_asset_id,iciness);
 
 			time_of_last_result_update = time(NULL);
 		}
 
-		my_job_tracker.MarkJobFinished();
+		//my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
 		// store the results..
@@ -1680,7 +1490,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 	}
 	else
 	{
-		my_job_tracker.MarkJobFinished();
+		//my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 /*
 		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
@@ -1717,6 +1527,7 @@ void MyFindParticlesPanel::ProcessAllJobsFinished()
 
 	//
 	WriteResultToDataBase();
+
 
 	if (buffered_results != NULL)
 	{
@@ -1766,6 +1577,8 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 
 	// global begin..
 
+	//wxPrintf("\n\n\n\Writing Results to database! - total jobs is %i\n\n\n", my_job_tracker.total_number_of_jobs);
+
 	main_frame->current_project.database.Begin();
 
 	// Record the parameters we used to pick
@@ -1785,7 +1598,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 																						"NUM_BACKGROUND_BOXES",
 																						"MANUAL_EDIT");
 	picking_id = starting_picking_id + 1;
-	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
+	for (int counter = 0; counter < current_job_package.number_of_jobs; counter ++ )
 	{
 		main_frame->current_project.database.AddToBatchInsert("iiliirrrriiiii", 		picking_id,
 																						picking_job_id,
@@ -1830,7 +1643,7 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 	int starting_asset_id = 0;
 	if (starting_picking_id > 0) starting_asset_id = main_frame->current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT MAX(POSITION_ID) FROM PARTICLE_PICKING_RESULTS_%i",picking_job_id-1));
 	picking_id = starting_picking_id + 1;
-	for (int counter = 0; counter < my_job_tracker.total_number_of_jobs; counter ++ )
+	for (int counter = 0; counter < current_job_package.number_of_jobs; counter ++ )
 	{
 		temp_array_of_assets = ParticlePositionsFromJobResults(&buffered_results[counter],image_asset_panel->ReturnAssetID(active_group.members[counter]),picking_job_id,picking_id,starting_asset_id);
 		WX_APPEND_ARRAY(array_of_assets,temp_array_of_assets);
@@ -1838,14 +1651,14 @@ void MyFindParticlesPanel::WriteResultToDataBase()
 		picking_id++;
 	}
 
-	my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 1);
+	my_progress_dialog->Update( current_job_package.number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 1);
 
 	// Now that we have our array of assets, let's add them to the database
 	main_frame->current_project.database.CreateParticlePickingResultsTable(picking_job_id);
 	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToResultsTable(picking_job_id,&array_of_assets);
 	main_frame->current_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&array_of_assets);
 
-	my_progress_dialog->Update( my_job_tracker.total_number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 2);
+	my_progress_dialog->Update(current_job_package.number_of_jobs + particle_position_asset_panel->all_groups_list->number_of_groups + 2);
 
 	// global commit..
 	main_frame->current_project.database.Commit();
@@ -1903,4 +1716,33 @@ void MyFindParticlesPanel::UpdateProgressBar()
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
 
 	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
+}
+
+void MyFindParticlesPanel::OnSocketJobResultMsg(JobResult &received_result)
+{
+	if (received_result.result_size > 0)
+	{
+		ProcessResult(&received_result);
+	}
+}
+
+void MyFindParticlesPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
+
+void MyFindParticlesPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
+
+void MyFindParticlesPanel::OnSocketJobFinished(int finished_job_number)
+{
+	ProcessResult(NULL, finished_job_number);
+}
+
+void MyFindParticlesPanel::OnSocketAllJobsFinished()
+{
+		// Other stuff to do once all jobs finished
+		ProcessAllJobsFinished();
 }

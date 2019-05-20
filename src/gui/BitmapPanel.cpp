@@ -61,8 +61,6 @@ void BitmapPanel::OnEraseBackground(wxEraseEvent& event)
 
 void BitmapPanel::OnPaint(wxPaintEvent & evt)
 {
-	Freeze();
-
 	int window_x_size;
 	int window_y_size;
 
@@ -262,9 +260,6 @@ void BitmapPanel::OnPaint(wxPaintEvent & evt)
 
 		}
 	}
-
-	Thaw();
-
 }
 
 /*

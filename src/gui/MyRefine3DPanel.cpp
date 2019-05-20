@@ -507,6 +507,7 @@ void MyRefine3DPanel::SetDefaults()
 		RefinePsiCheckBox->SetValue(true);
 		RefineXShiftCheckBox->SetValue(true);
 		RefineYShiftCheckBox->SetValue(true);
+		RefineOccupanciesCheckBox->SetValue(true);
 
 		float low_res_limit = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
 		if (low_res_limit > 300.00) low_res_limit = 300.00;
@@ -1109,174 +1110,35 @@ void MyRefine3DPanel::FillRunProfileComboBoxes()
 	ReconstructionRunProfileComboBox->FillWithRunProfiles();
 	RefinementRunProfileComboBox->FillWithRunProfiles();
 }
-
-void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
+void MyRefine3DPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
-	SETUP_SOCKET_CODES
+	my_refinement_manager.ProcessJobResult(&received_result);
 
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
 
-	// First, print a message
-	switch(event.GetSocketEvent())
+}
+
+void MyRefine3DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue)
+{
+	for (int counter = 0; counter < received_queue.GetCount(); counter++)
 	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
+		my_refinement_manager.ProcessJobResult(&received_queue.Item(counter));
 	}
 
-	//m_text->AppendText(s);
+}
 
-	//MyDebugPrint(s);
+void MyRefine3DPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
 
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
+void MyRefine3DPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
 
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
-
-			my_job_tracker.MarkJobFinished();
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			// send the result to the
-
-			my_refinement_manager.ProcessJobResult(&temp_result);
-			wxPrintf("Warning: Received socket_job_result - should this happen?");
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			ArrayofJobResults temp_queue;
-			ReceiveResultQueueFromSocket(sock, temp_queue);
-
-			for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-			{
-				my_refinement_manager.ProcessJobResult(&temp_queue.Item(counter));
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-
-			int total_processes = my_job_package.my_profile.ReturnTotalJobs();
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			my_refinement_manager.ProcessAllJobsFinished();
-		}
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
-		break;
-	}
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
+void MyRefine3DPanel::OnSocketAllJobsFinished()
+{
+	my_refinement_manager.ProcessAllJobsFinished();
 }
 
 RefinementManager::RefinementManager()
@@ -1511,8 +1373,8 @@ void RefinementManager::RunRefinementJob()
 	if (current_job_id != -1)
 	{
 		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else
@@ -1541,7 +1403,7 @@ void RefinementManager::RunRefinementJob()
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
 
 	}
 
@@ -1558,7 +1420,7 @@ void RefinementManager::SetupMerge3dJob()
 
 	int class_counter;
 
-	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
@@ -1579,7 +1441,7 @@ void RefinementManager::SetupMerge3dJob()
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
 
-		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
 															output_reconstruction_filtered.ToUTF8().data(),
 															output_resolution_statistics.ToUTF8().data(),
@@ -1611,8 +1473,8 @@ void RefinementManager::RunMerge3dJob()
 	if (current_job_id != -1)
 	{
 		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else
@@ -1654,7 +1516,7 @@ void RefinementManager::RunMerge3dJob()
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
 
 		}
 
@@ -1691,7 +1553,7 @@ void RefinementManager::SetupReconstructionJob()
 	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
 
-	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
@@ -1769,7 +1631,7 @@ void RefinementManager::SetupReconstructionJob()
 
 			bool threshold_input_3d = true;
 
-			my_parent->my_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
+			my_parent->current_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1851,8 +1713,8 @@ void RefinementManager::RunReconstructionJob()
 	if (current_job_id != -1)
 	{
 		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
+	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
 		else
@@ -1880,7 +1742,7 @@ void RefinementManager::RunReconstructionJob()
 		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
 		my_parent->Layout();
 		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
 
 	}
 		my_parent->ProgressBar->Pulse();
@@ -1914,7 +1776,7 @@ void RefinementManager::SetupRefinementJob()
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
@@ -2017,7 +1879,7 @@ void RefinementManager::SetupRefinementJob()
 
 			bool threshold_input_3d = true;
 			bool defocus_bias = false;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
+			my_parent->current_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -2106,7 +1968,7 @@ void RefinementManager::SetupRefinementJob()
 		if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 		else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-		my_parent->my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
+		my_parent->current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
 
 		for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
 		{
@@ -2198,7 +2060,7 @@ void RefinementManager::SetupRefinementJob()
 				if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true) normalize_input_3d = false;
 				else normalize_input_3d = true;
 
-				my_parent->my_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbi",
+				my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbi",
 																	input_particle_images.ToUTF8().data(), 				// 0
 																	input_parameter_file.ToUTF8().data(), 				// 1
 																	input_reconstruction.ToUTF8().data(), 				// 2
@@ -2456,7 +2318,8 @@ void RefinementManager::ProcessAllJobsFinished()
 		// calculate occupancies..
 		//if (output_refinement->percent_used < 99.99) output_refinement->UpdateOccupancies(false);
 		//else output_refinement->UpdateOccupancies(true);
-		output_refinement->UpdateOccupancies();
+		if (my_parent->RefineOccupanciesCheckBox->GetValue() == true) output_refinement->UpdateOccupancies();
+		else output_refinement->UpdateAverageOccupancy();
 
 		SetupReconstructionJob();
 		RunReconstructionJob();

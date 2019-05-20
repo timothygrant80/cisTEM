@@ -103,6 +103,7 @@ public :
 
 	void SizeAndFillWithEmpty(long number_of_particles, int number_of_classes);
 	void UpdateOccupancies(bool use_old_occupancies = true);
+	void UpdateAverageOccupancy();
 	wxArrayFloat UpdatePSSNR();
 
 	wxArrayLong reference_volume_ids;

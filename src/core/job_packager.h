@@ -70,9 +70,12 @@ public:
 	void SetArguments(const char *format, va_list args);
 	void ManualSetArguments(const char *format, ...);
 	long ReturnEncodedByteTransferSize();
-	void SendJob(wxSocketBase *socket);
-	void RecieveJob(wxSocketBase *socket);
+	bool SendJob(wxSocketBase *socket);
+	bool RecieveJob(wxSocketBase *socket);
 	void PrintAllArguments();
+
+	RunJob & operator = (const RunJob &other_job);
+	RunJob & operator = (const RunJob *other_job);
 
 
 };
@@ -93,11 +96,14 @@ public :
 
 	void Reset(RunProfile wanted_profile, wxString wanted_executable_name, int wanted_number_of_jobs);
 	void AddJob(const char *format, ...);
-	void SendJobPackage(wxSocketBase *socket);
-	void ReceiveJobPackage(wxSocketBase *socket);
+	bool SendJobPackage(wxSocketBase *socket);
+	bool ReceiveJobPackage(wxSocketBase *socket);
 
 	long ReturnEncodedByteTransferSize();
 	int ReturnNumberOfJobsRemaining();
+
+	JobPackage & operator = (const JobPackage &other_package);
+	JobPackage & operator = (const JobPackage *other_package);
 
 };
 
@@ -122,12 +128,12 @@ public:
 	JobResult & operator = (const JobResult *other_result);
 
 	void SetResult(int wanted_result_size, float *wanted_result_data);
-	void SendToSocket(wxSocketBase *wanted_socket);
-	void ReceiveFromSocket(wxSocketBase *wanted_socket);
+	bool SendToSocket(wxSocketBase *wanted_socket);
+	bool ReceiveFromSocket(wxSocketBase *wanted_socket);
 
 };
 
 WX_DECLARE_OBJARRAY(JobResult, ArrayofJobResults);
 
-void ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_array);
-void SendResultQueueToSocket(wxSocketBase *socket, ArrayofJobResults &my_array);
+bool ReceiveResultQueueFromSocket(wxSocketBase *socket, ArrayofJobResults &my_array);
+bool SendResultQueueToSocket(wxSocketBase *socket, ArrayofJobResults &my_array);

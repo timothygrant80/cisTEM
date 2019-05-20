@@ -620,7 +620,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	buffered_results = new JobResult[number_of_jobs];
 
-	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
+	current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
 
 
 
@@ -718,7 +718,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		std::string aligned_frames_filename = "/dev/null";
 		std::string output_shift_text_file = "/dev/null";
 
-		my_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtt",current_filename.c_str(), //0
+		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtt",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -787,8 +787,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_processes = my_job_package.number_of_jobs + 1;
-		else number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
+		if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs + 1;
+		else number_of_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_processes >= 100000) length_of_process_number = 6;
 		else
@@ -828,7 +828,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		Layout();
 
 		running_job = true;
-		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
+		my_job_tracker.StartTracking(current_job_package.number_of_jobs);
 
 	}
 	ProgressBar->Pulse();
@@ -899,166 +899,27 @@ void MyAlignMoviesPanel::WriteErrorText(wxString text_to_write)
 	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
 }
 
-
-void MyAlignMoviesPanel::OnJobSocketEvent(wxSocketEvent& event)
+void MyAlignMoviesPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
-	SETUP_SOCKET_CODES
-
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
+	if (received_result.result_size > 0)
 	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
+		ProcessResult(&received_result);
 	}
+}
 
-	//m_text->AppendText(s);
+void MyAlignMoviesPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
 
-	//MyDebugPrint(s);
+void MyAlignMoviesPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
 
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-		case wxSOCKET_INPUT:
-		{
-
-			MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-			// We disable input events, so that the test doesn't trigger
-			// wxSocketEvent again.
-			sock->SetNotify(wxSOCKET_LOST_FLAG);
-			ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-			if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-			{
-				// send the job details..
-
-				//wxPrintf("Sending Job Details...\n");
-				my_job_package.SendJobPackage(sock);
-
-			}
-			else
-			if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-			{
-
-				wxString error_message;
-				error_message = ReceivewxStringFromSocket(sock);
-
-				WriteErrorText(error_message);
-			}
-			else
-			if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-			{
-
-				wxString info_message;
-				info_message = ReceivewxStringFromSocket(sock);
-
-				WriteInfoText(info_message);
-			}
-			else
-			if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-			{
-				// which job is finished?
-
-				int finished_job;
-				ReadFromSocket(sock, &finished_job, 4);
-
-				my_job_tracker.MarkJobFinished();
-
-				if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-				//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			if (temp_result.result_size > 0)
-			{
-				ProcessResult(&temp_result);
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-
-			my_job_tracker.AddConnection();
-
-			if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-
-			int total_processes;
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			// Other stuff to do once all jobs finished
-			ProcessAllJobsFinished();
-			return;
-		}
-
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-		break;
-	}
-
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		//sock->Destroy();
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
+void MyAlignMoviesPanel::OnSocketAllJobsFinished()
+{
+	ProcessAllJobsFinished();
 }
 
 void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
@@ -1072,7 +933,7 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 	// mark the job as finished, update progress bar
 
 
-	float exposure_per_frame = my_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
+	float exposure_per_frame = current_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
 
 	// ok the result should be x-shifts, followed by y-shifts..
 	//WriteInfoText(wxString::Format("Job #%i finished.", job_number));
@@ -1083,16 +944,16 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 	if (current_time - time_of_last_graph_update > 1)
 	{
 		GraphPanel->ClearGraph();
-		wxFileName current_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
-		wxFileName sum_filename = wxString(my_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
+		wxFileName current_filename = wxString(current_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
+		wxFileName sum_filename = wxString(current_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
 		//GraphPanel->title->SetName(current_filename.GetFullName());
 
-		float current_corrected_pixel_size = my_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / my_job_package.jobs[result_to_process->job_number].arguments[20].ReturnFloatArgument();
+		float current_corrected_pixel_size = current_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / current_job_package.jobs[result_to_process->job_number].arguments[20].ReturnFloatArgument();
 		// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
 
-		if (my_job_package.jobs[result_to_process->job_number].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
+		if (current_job_package.jobs[result_to_process->job_number].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
 		{
-			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, my_job_package.jobs[result_to_process->job_number].arguments[23].ReturnFloatArgument(), my_job_package.jobs[result_to_process->job_number].arguments[24].ReturnFloatArgument());
+			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, current_job_package.jobs[result_to_process->job_number].arguments[23].ReturnFloatArgument(), current_job_package.jobs[result_to_process->job_number].arguments[24].ReturnFloatArgument());
 		}
 
 		float current_nyquist;
@@ -1105,9 +966,9 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		// draw..
 
-		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
+		if (DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
 		{
-			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(my_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), 1);
+			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), 1);
 			GraphPanel->SpectraPanel->should_show = true;
 			GraphPanel->SpectraPanel->Refresh();
 		}
@@ -1120,9 +981,9 @@ void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		GraphPanel->Draw();
 
-		if (DoesFileExist(my_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument()) == true)
+		if (DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument()) == true)
 		{
-			GraphPanel->ImageDisplayPanel->ChangeFile(my_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument(), "");
+			GraphPanel->ImageDisplayPanel->ChangeFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument(), "");
 		}
 		else
 		if (DoesFileExist(sum_filename.GetFullPath()) == true) GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
@@ -1221,24 +1082,24 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				                                                                    (long int) now.GetAsDOS(),
 																					alignment_job_id,
 																					movie_asset_panel->ReturnAssetID(active_group.members[counter]),
-																					my_job_package.jobs[counter].arguments[1].ReturnStringArgument().c_str(), // output_filename
-																					my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
-																					my_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
-																					my_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
-																					my_job_package.jobs[counter].arguments[15].ReturnFloatArgument(), // current_pre_exposure
-																					my_job_package.jobs[counter].arguments[3].ReturnFloatArgument(), // min shift
-																					my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // max shift
-																					my_job_package.jobs[counter].arguments[5].ReturnBoolArgument(), // should dose filter
-																					my_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
-																					my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
-																					my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
-																					int(my_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
-																					my_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
-																					my_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
-																					my_job_package.jobs[counter].arguments[12].ReturnIntegerArgument(), // vertical mask
+																					current_job_package.jobs[counter].arguments[1].ReturnStringArgument().c_str(), // output_filename
+																					current_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
+																					current_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
+																					current_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
+																					current_job_package.jobs[counter].arguments[15].ReturnFloatArgument(), // current_pre_exposure
+																					current_job_package.jobs[counter].arguments[3].ReturnFloatArgument(), // min shift
+																					current_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // max shift
+																					current_job_package.jobs[counter].arguments[5].ReturnBoolArgument(), // should dose filter
+																					current_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
+																					current_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
+																					current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
+																					int(current_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
+																					current_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
+																					current_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
+																					current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument(), // vertical mask
 																					include_all_frames_checkbox->GetValue(), // include all frames
-																					my_job_package.jobs[counter].arguments[29].ReturnIntegerArgument(), // first_frame
-																					my_job_package.jobs[counter].arguments[30].ReturnIntegerArgument() // last_frame
+																					current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument(), // first_frame
+																					current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument() // last_frame
 																					);
 
 		alignment_id++;
@@ -1281,7 +1142,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-			temp_asset.Update(my_job_package.jobs[counter].arguments[1].ReturnStringArgument());
+			temp_asset.Update(current_job_package.jobs[counter].arguments[1].ReturnStringArgument());
 
 			if (temp_asset.is_valid == true)
 			{
@@ -1294,13 +1155,13 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				y_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->y_size) / float(temp_asset.y_size);
 				average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
 
-				corrected_pixel_size = my_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * average_bin_factor;
+				corrected_pixel_size = current_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * average_bin_factor;
 
 				// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
 
-				if (my_job_package.jobs[counter].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
+				if (current_job_package.jobs[counter].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
 				{
-					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, my_job_package.jobs[counter].arguments[23].ReturnFloatArgument(), my_job_package.jobs[counter].arguments[24].ReturnFloatArgument());
+					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, current_job_package.jobs[counter].arguments[23].ReturnFloatArgument(), current_job_package.jobs[counter].arguments[24].ReturnFloatArgument());
 				}
 
 				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
@@ -1313,7 +1174,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 					temp_asset.asset_name = movie_asset_panel->ReturnAssetName(active_group.members[counter]) + "_aligned";
 					temp_asset.parent_id = parent_id;
 					temp_asset.alignment_id = alignment_id;
-					temp_asset.microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
+					temp_asset.microscope_voltage = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
 
 					temp_asset.pixel_size = corrected_pixel_size;
 
@@ -1327,17 +1188,17 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 				}
 				else
 				{// TODO:: Rewrite this to use return asset pointer..//
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].filename = my_job_package.jobs[counter].arguments[1].ReturnStringArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].filename = current_job_package.jobs[counter].arguments[1].ReturnStringArgument();
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = my_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
+					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = corrected_pixel_size;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
 					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
 
 					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_name,
-							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            my_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
+							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            current_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
 																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
 																											parent_id,
 																											alignment_id,

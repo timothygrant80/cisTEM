@@ -6,15 +6,10 @@ extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 
-
-
 AbInitio3DPanel::AbInitio3DPanel( wxWindow* parent )
 :
 AbInitio3DPanelParent( parent )
 {
-
-	my_job_id = -1;
-	running_job = false;
 
 	SetInfo();
 
@@ -28,6 +23,7 @@ AbInitio3DPanelParent( parent )
 
 	refinement_package_combo_is_dirty = false;
 	run_profiles_are_dirty = false;
+	classification_selections_are_dirty = false;
 	selected_refinement_package = -1;
 
 	my_abinitio_manager.SetParent(this);
@@ -50,6 +46,27 @@ AbInitio3DPanelParent( parent )
 	active_mask_thread_id = -1;
 	active_sym_thread_id = -1;
 	next_thread_id = 1;
+
+	running_job = false;
+
+  	SymmetryComboBox->Append("C1");
+  	SymmetryComboBox->Append("C2");
+  	SymmetryComboBox->Append("C3");
+  	SymmetryComboBox->Append("C4");
+  	SymmetryComboBox->Append("D2");
+  	SymmetryComboBox->Append("D3");
+  	SymmetryComboBox->Append("D4");
+  	SymmetryComboBox->Append("I");
+  	SymmetryComboBox->Append("I2");
+  	SymmetryComboBox->Append("O");
+  	SymmetryComboBox->Append("T");
+  	SymmetryComboBox->Append("T2");
+  	SymmetryComboBox->ChangeValue("C1");
+
+	old_symmetry = "C1";
+	old_number_of_classes = 1;
+	old_class_selection = -1;
+	old_automask_value = true;
 }
 
 void AbInitio3DPanel::Reset()
@@ -79,6 +96,19 @@ void AbInitio3DPanel::Reset()
 	RefinementPackageComboBox->Clear();
 	RefinementRunProfileComboBox->Clear();
 	ReconstructionRunProfileComboBox->Clear();
+
+	ImageInputRadioButton->SetValue(true);
+	ClassSelectionComboBox->Clear();
+	ClassSelectionComboBox->Enable(false);
+
+	NumberClassesSpinCtrl->Enable(false);
+	SymmetryComboBox->Enable(false);
+
+	ImageOrClassAverageStaticText->Show(true);
+	ImageInputRadioButton->Show(true);
+	ClassAverageInputRadioButton->Show(true);
+	TopStaticLine->Show(true);
+	BottomStaticLine->Show(true);
 
 	if (running_job == true)
 	{
@@ -272,6 +302,56 @@ void AbInitio3DPanel::OnInfoURL( wxTextUrlEvent& event )
 }
 
 
+void AbInitio3DPanel::OnSocketJobResultMsg(JobResult &received_result)
+{
+	if (my_abinitio_manager.running_job_type == ALIGN_SYMMETRY)
+	{
+		// is this better than all the current_best?
+		int current_class = received_result.result_data[7] + 0.5;
+
+		//wxPrintf("got final result %f, %f, %f - %f, %f, %f = %f\n", temp_result.result_data[0], temp_result.result_data[1], temp_result.result_data[2], temp_result.result_data[3], temp_result.result_data[4], temp_result.result_data[5], temp_result.result_data[6]);
+		if (received_result.result_data[6] > my_abinitio_manager.align_sym_best_correlations[current_class])
+		{
+			my_abinitio_manager.align_sym_best_correlations[current_class] = received_result.result_data[6];
+			my_abinitio_manager.align_sym_best_x_rots[current_class] = received_result.result_data[0];
+			my_abinitio_manager.align_sym_best_y_rots[current_class] = received_result.result_data[1];
+			my_abinitio_manager.align_sym_best_z_rots[current_class] = received_result.result_data[2];
+			my_abinitio_manager.align_sym_best_x_shifts[current_class] = received_result.result_data[3];
+			my_abinitio_manager.align_sym_best_y_shifts[current_class] = received_result.result_data[4];
+			my_abinitio_manager.align_sym_best_z_shifts[current_class] = received_result.result_data[5];
+		}
+	}
+	else
+	{
+		my_abinitio_manager.ProcessJobResult(&received_result);
+	}
+
+}
+
+void AbInitio3DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue)
+{
+	for (int counter = 0; counter < received_queue.GetCount(); counter++)
+	{
+		my_abinitio_manager.ProcessJobResult(&received_queue.Item(counter));
+	}
+
+}
+
+void AbInitio3DPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
+
+void AbInitio3DPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
+
+void AbInitio3DPanel::OnSocketAllJobsFinished()
+{
+	my_abinitio_manager.ProcessAllJobsFinished();
+}
+
 void AbInitio3DPanel::WriteInfoText(wxString text_to_write)
 {
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
@@ -320,6 +400,7 @@ void AbInitio3DPanel::FillRunProfileComboBoxes()
 void AbInitio3DPanel::NewRefinementPackageSelected()
 {
 	selected_refinement_package = RefinementPackageComboBox->GetSelection();
+	if (ImageInputRadioButton->GetValue() == false && RefinementPackageComboBox->GetCount() > 0) ClassSelectionComboBox->FillComboBox(false, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).asset_id);
 	SetDefaults();
 	//wxPrintf("New Refinement Package Selection\n");
 
@@ -327,12 +408,13 @@ void AbInitio3DPanel::NewRefinementPackageSelected()
 
 void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 {
+
 	if (RefinementPackageComboBox->GetCount() > 0)
 	{
 		ExpertPanel->Freeze();
 
 		float 	 molecular_mass_kDa = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-		wxString current_symmetry_string = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry;
+		wxString current_symmetry_string = SymmetryComboBox->GetValue();
 		wxChar   symmetry_type;
 
 		current_symmetry_string = current_symmetry_string.Trim();
@@ -353,15 +435,17 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		}
 */
 
-		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.15f);
-		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.15f);
+		SearchRangeXTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
+		SearchRangeYTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.4f);
 
 		float    mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.75;
 
 		GlobalMaskRadiusTextCtrl->ChangeValueFloat(mask_radius);
 		InnerMaskRadiusTextCtrl->ChangeValueFloat(0.0f);
 
-		AutoMaskYesRadio->SetValue(true);
+		if (ImageInputRadioButton->GetValue() == true) AutoMaskYesRadio->SetValue(true);
+		else old_automask_value = true;
+
 		NumberStartsSpinCtrl->SetValue(2);
 		NumberRoundsSpinCtrl->SetValue(40);
 
@@ -383,6 +467,7 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		SmoothingFactorTextCtrl->ChangeValueFloat(1.00);
 
 		AlwaysApplySymmetryNoButton->SetValue(true);
+		ImagesPerClassSpinCtrl->SetValue(5);
 
 		ExpertPanel->Thaw();
 	}
@@ -399,6 +484,9 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		StartRefinementButton->Enable(false);
 		NumberStartsSpinCtrl->Enable(false);
 		NumberRoundsSpinCtrl->Enable(false);
+
+		ImageInputRadioButton->Enable(false);
+		ClassAverageInputRadioButton->Enable(false);
 
 		if (ExpertPanel->IsShown() == true)
 		{
@@ -441,6 +529,9 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RefinementRunProfileComboBox->Enable(true);
 			ReconstructionRunProfileComboBox->Enable(true);
 			ExpertToggleButton->Enable(true);
+			ImageInputRadioButton->Enable(true);
+			ClassAverageInputRadioButton->Enable(true);
+
 
 			if (RefinementPackageComboBox->GetCount() > 0)
 			{
@@ -458,7 +549,7 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				RefinementPackageComboBox->ChangeValue("");
 				RefinementPackageComboBox->Enable(false);
 
-				if (PleaseCreateRefinementPackageText->IsShown() == false)
+				if (PleaseCreateRefinementPackageText->IsShown() == false && ImageInputRadioButton->GetValue() == true)
 				{
 					PleaseCreateRefinementPackageText->Show(true);
 					Layout();
@@ -496,21 +587,48 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					SmoothingFactorStaticText->Enable(false);
 				}
 
+				if (ImageInputRadioButton->GetValue() == true)
+				{
+					ImagesPerClassSpinCtrl->Enable(false);
+				}
+				else
+				{
+					ImagesPerClassSpinCtrl->Enable(true);
+				}
+
 			}
 
 
 
 			bool estimation_button_status = false;
 
-			if (RefinementPackageComboBox->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
+			if (ImageInputRadioButton->GetValue() == true)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+
+				if (RefinementPackageComboBox->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
 				{
-					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND)
+					if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
 					{
-						estimation_button_status = true;
+						if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND)
+						{
+							estimation_button_status = true;
+						}
 					}
 
+				}
+			}
+			else
+			{
+				if (ClassSelectionComboBox->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
+				{
+					if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+					{
+						if (ClassSelectionComboBox->GetSelection() != wxNOT_FOUND)
+						{
+							wxString symmetry = SymmetryComboBox->GetValue();
+							if (IsAValidSymmetry(&symmetry) == true) estimation_button_status = true;
+						}
+					}
 				}
 			}
 
@@ -553,6 +671,12 @@ void AbInitio3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			FillRunProfileComboBoxes();
 			run_profiles_are_dirty = false;
+		}
+
+		if (classification_selections_are_dirty)
+		{
+			if (ImageInputRadioButton->GetValue() == false && RefinementPackageComboBox->GetCount() > 0) ClassSelectionComboBox->FillComboBox(false, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).asset_id);
+			classification_selections_are_dirty = false;
 		}
 	}
 
@@ -622,6 +746,12 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 
+	ImageOrClassAverageStaticText->Show(true);
+	ImageInputRadioButton->Show(true);
+	ClassAverageInputRadioButton->Show(true);
+	TopStaticLine->Show(true);
+	BottomStaticLine->Show(true);
+
 	if (ExpertToggleButton->GetValue() == true) ExpertPanel->Show(true);
 	else ExpertPanel->Show(false);
 	running_job = false;
@@ -636,6 +766,7 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 void AbInitio3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
 	my_abinitio_manager.BeginRefinementCycle();
+	running_job = true;
 }
 
 void AbInitio3DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
@@ -643,203 +774,75 @@ void AbInitio3DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
 	SetDefaults();
 }
 
-void AbInitio3DPanel::OnJobSocketEvent(wxSocketEvent& event)
-{
-	SETUP_SOCKET_CODES
 
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
-	}
-
-	//m_text->AppendText(s);
-
-	//MyDebugPrint(s);
-
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
-
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
-
-			my_job_tracker.MarkJobFinished();
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			// send the result to the
-			if (my_abinitio_manager.running_job_type == ALIGN_SYMMETRY)
-			{
-					// is this better than all the current_best?
-
-				int current_class = temp_result.result_data[7] + 0.5;
-
-				//wxPrintf("got final result %f, %f, %f - %f, %f, %f = %f\n", temp_result.result_data[0], temp_result.result_data[1], temp_result.result_data[2], temp_result.result_data[3], temp_result.result_data[4], temp_result.result_data[5], temp_result.result_data[6]);
-				if (temp_result.result_data[6] > my_abinitio_manager.align_sym_best_correlations[current_class])
-				{
-					my_abinitio_manager.align_sym_best_correlations[current_class] = temp_result.result_data[6];
-					my_abinitio_manager.align_sym_best_x_rots[current_class] = temp_result.result_data[0];
-					my_abinitio_manager.align_sym_best_y_rots[current_class] = temp_result.result_data[1];
-					my_abinitio_manager.align_sym_best_z_rots[current_class] = temp_result.result_data[2];
-					my_abinitio_manager.align_sym_best_x_shifts[current_class] = temp_result.result_data[3];
-					my_abinitio_manager.align_sym_best_y_shifts[current_class] = temp_result.result_data[4];
-					my_abinitio_manager.align_sym_best_z_shifts[current_class] = temp_result.result_data[5];
-				}
-			}
-			else
-			{
-				my_abinitio_manager.ProcessJobResult(&temp_result);
-			}
-			//wxPrintf("Warning: Received socket_job_result - should this happen?");
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			ArrayofJobResults temp_queue;
-			ReceiveResultQueueFromSocket(sock, temp_queue);
-
-			for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-			{
-				my_abinitio_manager.ProcessJobResult(&temp_queue.Item(counter));
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-
-			int total_processes = my_job_package.my_profile.ReturnTotalJobs();
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			timing_from_controller = 0;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(timing_from_controller >= 0,"Oops. Got negative timing from controller: %li\n",timing_from_controller);
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			my_abinitio_manager.ProcessAllJobsFinished();
-		}
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
-		break;
-	}
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
-
-}
 
 void AbInitio3DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
 {
 	NewRefinementPackageSelected();
 }
+
+void AbInitio3DPanel::OnMethodChange( wxCommandEvent& event )
+{
+	InputParamsPanel->Freeze();
+
+	if (ImageInputRadioButton->GetValue() == true)
+	{
+		InputClassificationSelectionStaticText->Enable(false);
+		ClassSelectionComboBox->Enable(false);
+		NoClassesStaticText->Enable(false);
+		NumberClassesSpinCtrl->Enable(false);
+		SymmetryStaticText->Enable(false);
+		SymmetryComboBox->Enable(false);
+
+		old_class_selection = ClassSelectionComboBox->AssetComboBox->currently_selected_id;
+		old_number_of_classes = NumberClassesSpinCtrl->GetValue();
+		old_symmetry = SymmetryComboBox->GetValue();
+		old_automask_value = AutoMaskYesRadio->GetValue();
+
+		AutoMaskNoRadio->SetValue(true);
+		AutoMaskNoRadio->Enable(false);
+		AutoMaskYesRadio->Enable(false);
+		UseAutoMaskingStaticText->Enable(false);
+
+
+		if (RefinementPackageComboBox->ReturnSelection() >= 0)
+		{
+			NumberClassesSpinCtrl->SetValue(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).number_of_classes);
+			SymmetryComboBox->SetValue(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry);
+		}
+		else
+		{
+			NumberClassesSpinCtrl->SetValue(1);
+			SymmetryComboBox->SetValue("");
+		}
+
+		ClassSelectionComboBox->Clear();
+	}
+	else
+	{
+		InputClassificationSelectionStaticText->Enable(true);
+		ClassSelectionComboBox->Enable(true);
+		NoClassesStaticText->Enable(true);
+		NumberClassesSpinCtrl->Enable(true);
+		SymmetryStaticText->Enable(true);
+		SymmetryComboBox->Enable(true);
+
+
+		AutoMaskNoRadio->SetValue(old_automask_value);
+		AutoMaskNoRadio->Enable(true);
+		AutoMaskYesRadio->Enable(true);
+		UseAutoMaskingStaticText->Enable(true);
+
+		if (RefinementPackageComboBox->GetCount() > 0) ClassSelectionComboBox->FillComboBox(false, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).asset_id);
+		NumberClassesSpinCtrl->SetValue(old_number_of_classes);
+		SymmetryComboBox->SetValue(old_symmetry);
+	}
+
+	//InputParamsPanel->Layout();
+	InputParamsPanel->Thaw();
+}
+
+
 
 
 void AbInitio3DPanel::TakeLastStartClicked( wxCommandEvent& event )
@@ -959,20 +962,68 @@ void AbInitioManager::BeginRefinementCycle()
 	number_of_starts_run = 0;
 	number_of_rounds_run = 0;
 
+	active_use_classums = my_parent->ClassAverageInputRadioButton->GetValue();
+
 	// set the active refinement package..
 
-	active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
-	current_refinement_package_asset_id = active_refinement_package->asset_id;
+	if (active_use_classums == false)
+	{
+		active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection());
+		current_refinement_package_asset_id = active_refinement_package->asset_id;
+		// this should be the random start..
+		current_input_refinement_id = active_refinement_package->refinement_ids[0];
+		// create a refinement with random angles etc..
 
-	// this should be the random start..
-	current_input_refinement_id = active_refinement_package->refinement_ids[0];
-	// create a refinement with random angles etc..
+		input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
+		input_refinement->refinement_id = 0;
+		output_refinement = input_refinement;
+		current_output_refinement_id = input_refinement->refinement_id;
+	}
+	else
+	{
+		if (my_parent->ClassSelectionComboBox->GetSelection() >= 0)
+		{
+			long selected_id  = my_parent->ClassSelectionComboBox->AssetComboBox->associated_ids[my_parent->ClassSelectionComboBox->GetSelection()];
 
-	input_refinement = main_frame->current_project.database.GetRefinementByID(current_input_refinement_id);
-	input_refinement->refinement_id = 0;
-	output_refinement = input_refinement;
-	current_output_refinement_id = input_refinement->refinement_id;
+			for (counter = 0; counter < refinement_package_asset_panel->all_classification_selections.GetCount(); counter++)
+			{
+				if (refinement_package_asset_panel->all_classification_selections[counter].selection_id == selected_id)
+				{
+					active_classification_selection =  refinement_package_asset_panel->all_classification_selections[counter];
+					break;
+				}
+			}
 
+			active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(active_classification_selection.refinement_package_asset_id));
+			int smallest_class = INT_MAX;
+
+			for (counter = 0; counter < active_classification_selection.selections.GetCount(); counter++)
+			{
+				smallest_class = std::min(smallest_class, main_frame->current_project.database.ReturnNumberOf2DClassMembers(active_classification_selection.classification_id, int(active_classification_selection.selections[counter])));
+			}
+
+			active_images_per_class = my_parent->ImagesPerClassSpinCtrl->GetValue();
+			active_number_of_2d_classes = smallest_class / active_images_per_class;
+			int min_number_of_classes = 2500 / active_classification_selection.selections.GetCount(); // we don't less than 2500
+			int max_number_of_classes = 20000 / active_classification_selection.selections.GetCount(); // we don't want more than 20000
+			if (active_number_of_2d_classes < min_number_of_classes) active_number_of_2d_classes = min_number_of_classes;
+			else
+			if (active_number_of_2d_classes > max_number_of_classes) active_number_of_2d_classes = max_number_of_classes;
+
+			input_refinement = new Refinement;
+			input_refinement->SizeAndFillWithEmpty(active_classification_selection.selections.GetCount() * active_number_of_2d_classes, 1);
+			input_refinement->resolution_statistics_pixel_size = active_refinement_package->contained_particles[0].pixel_size;
+			input_refinement->resolution_statistics_box_size = active_refinement_package->stack_box_size;
+			input_refinement->refinement_id = 0;
+			output_refinement = input_refinement;
+			current_output_refinement_id = input_refinement->refinement_id;
+
+			for (counter = 0; counter < input_refinement->number_of_particles; counter++)
+			{
+				input_refinement->class_refinement_results[0].particle_refinement_results[counter].position_in_stack = counter + 1;
+			}
+		}
+	}
 
 	number_of_starts_to_run = my_parent->NumberStartsSpinCtrl->GetValue();
 	number_of_rounds_to_run = my_parent->NumberRoundsSpinCtrl->GetValue();
@@ -999,18 +1050,57 @@ void AbInitioManager::BeginRefinementCycle()
 	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
 	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
 
+
+
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
 
 	active_auto_set_percent_used = my_parent->AutoPercentUsedYesRadio->GetValue();
 
-	if (active_always_apply_symmetry == true && active_refinement_package->symmetry != "C1") apply_symmetry = true;
+	// need to take into account symmetry
+
+	active_symmetry_string = my_parent->SymmetryComboBox->GetValue();
+	wxChar   symmetry_type;
+	long     symmetry_number;
+
+	active_symmetry_string = active_symmetry_string.Trim();
+	active_symmetry_string = active_symmetry_string.Trim(false);
+	active_symmetry_string = active_symmetry_string.Capitalize();
+
+	MyDebugAssertTrue(active_symmetry_string.Length() > 0, "symmetry string is blank");
+	symmetry_type = active_symmetry_string.Capitalize()[0];
+
+	if (active_symmetry_string.Length() == 1)
+	{
+		symmetry_number = 0;
+	}
+	else
+	{
+		if (! active_symmetry_string.Mid(1).ToLong(&symmetry_number))
+		{
+			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", active_symmetry_string.Mid(1));
+			DEBUG_ABORT;
+		}
+	}
+
+	if (active_always_apply_symmetry == true && active_symmetry_string != "C1") apply_symmetry = true;
 	else apply_symmetry = false;
 
 	// work out the percent used
 
-	long number_of_particles = active_refinement_package->contained_particles.GetCount();
-	int number_of_classes = active_refinement_package->number_of_classes;
+	long number_of_particles;
+	int number_of_classes;
+
+	if (active_use_classums == false)
+	{
+		number_of_particles = active_refinement_package->contained_particles.GetCount();
+		number_of_classes = active_refinement_package->number_of_classes;
+	}
+	else
+	{
+		number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
+		number_of_classes = 1;
+	}
 
 	// re-randomise the input parameters, and set the default resolution statistics..
 
@@ -1041,34 +1131,9 @@ void AbInitioManager::BeginRefinementCycle()
 		input_refinement->class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
 	}
 
-	// need to take into account symmetry
-
-	wxString current_symmetry_string = active_refinement_package->symmetry;
-	wxChar   symmetry_type;
-	long     symmetry_number;
-
-	current_symmetry_string = current_symmetry_string.Trim();
-	current_symmetry_string = current_symmetry_string.Trim(false);
-
-	MyDebugAssertTrue(current_symmetry_string.Length() > 0, "symmetry string is blank");
-	symmetry_type = current_symmetry_string.Capitalize()[0];
-
-	if (current_symmetry_string.Length() == 1)
-	{
-		symmetry_number = 0;
-	}
-	else
-	{
-		if (! current_symmetry_string.Mid(1).ToLong(&symmetry_number))
-		{
-			MyPrintWithDetails("Error: Invalid n after symmetry symbol: %s\n", current_symmetry_string.Mid(1));
-			DEBUG_ABORT;
-		}
-	}
-
 	if (active_auto_set_percent_used == true)
 	{
-		int symmetry_number = ReturnNumberofAsymmetricUnits(active_refinement_package->symmetry);
+		int symmetry_number = ReturnNumberofAsymmetricUnits(active_symmetry_string);
 
 		long number_of_asym_units = number_of_particles;
 
@@ -1138,11 +1203,17 @@ void AbInitioManager::BeginRefinementCycle()
 	my_parent->InfoPanel->Show(false);
 	my_parent->OutputTextPanel->Show(true);
 
+	my_parent->ImageOrClassAverageStaticText->Show(false);
+	my_parent->ImageInputRadioButton->Show(false);
+	my_parent->ClassAverageInputRadioButton->Show(false);
+	my_parent->TopStaticLine->Show(false);
+	my_parent->BottomStaticLine->Show(false);
+
 	my_parent->ExpertToggleButton->Enable(false);
 
 	// are we pre-preparing the stack?
 
-	if (active_end_res > active_refinement_package->contained_particles[0].pixel_size * 3.0f )
+	if (active_end_res > active_refinement_package->contained_particles[0].pixel_size * 3.0f || active_use_classums == true)
 	{
 		SetupPrepareStackJob();
 		RunPrepareStackJob();
@@ -1202,7 +1273,10 @@ void AbInitioManager::CycleRefinement()
 	{
 		output_refinement = new Refinement;
 		output_refinement->refinement_id = 0;
-		output_refinement->number_of_classes = input_refinement->number_of_classes;
+
+		if (active_use_classums == false) output_refinement->number_of_classes = input_refinement->number_of_classes;
+		else output_refinement->number_of_classes = 1;
+
 		start_with_reconstruction = false;
 
 		if (active_should_automask == true)
@@ -1358,14 +1432,15 @@ void AbInitioManager::SetupReconstructionJob()
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
 	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
 
-	number_of_particles = active_refinement_package->contained_particles.GetCount();
+	if (active_use_classums == false) number_of_particles = active_refinement_package->contained_particles.GetCount();
+	else number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
 
 	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
 
-	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * output_refinement->number_of_classes);
 
-	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 	{
 		current_particle_counter = 1.0;
 
@@ -1379,7 +1454,7 @@ void AbInitioManager::SetupReconstructionJob()
 			wxString output_resolution_statistics		= "/dev/null";
 			wxString my_symmetry;
 
-			if (apply_symmetry == true)	my_symmetry = active_refinement_package->symmetry;
+			if (apply_symmetry == true)	my_symmetry = active_symmetry_string;
 			else my_symmetry = "C1";
 
 			long	 first_particle						= myroundint(current_particle_counter);
@@ -1409,10 +1484,10 @@ void AbInitioManager::SetupReconstructionJob()
 			float percent_multiplier;
 
 			//percent_multiplier = 2.5 + (3.5 - 2.5) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-			//percent_multiplier = 8.0f;
+			percent_multiplier = 5.0f;
 			//if (current_percent_used * percent_multiplier < 100.0f) score_threshold = 0.125f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
-			if (current_percent_used * percent_multiplier < 100.0f) score_threshold = 0.333f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
-			else score_threshold = current_percent_used / 100.0; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
+			if (current_percent_used * percent_multiplier < 100.0f) score_threshold = 0.2f; // we are refining 3 times more then current_percent_used, we want to use current percent used so it is always 1/3.
+			else score_threshold = 1.0f; 	// now 3 times current_percent_used is more than 100%, we therefire refined them all, and so just take current_percent used
 
 
 		//	if (number_of_rounds_run == 0 && number_of_starts_run == 0) score_threshold = 1.0f;
@@ -1460,7 +1535,7 @@ void AbInitioManager::SetupReconstructionJob()
 			float    padding							= 1.0f;
 			bool	 normalize_particles;
 
-			if (stack_has_been_precomputed == true) normalize_particles = false;
+			if (stack_has_been_precomputed == true && active_use_classums == false) normalize_particles = false;
 			else normalize_particles = true;
 
 			bool	 exclude_blank_edges				= false;
@@ -1469,7 +1544,7 @@ void AbInitioManager::SetupReconstructionJob()
 
 			bool threshold_input_3d = false;
 
-			my_parent->my_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
+			my_parent->current_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1547,39 +1622,7 @@ void AbInitioManager::RunReconstructionJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 		my_parent->ProgressBar->Pulse();
 }
@@ -1591,9 +1634,9 @@ void AbInitioManager::SetupMerge3dJob()
 
 	int class_counter;
 
-	my_parent->my_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "merge3d", output_refinement->number_of_classes);
 
-	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 	{
 		wxString output_reconstruction_1			= "/dev/null";
 		wxString output_reconstruction_2			= "/dev/null";
@@ -1623,18 +1666,23 @@ void AbInitioManager::SetupMerge3dJob()
 		else iner_nominator = 1.0f;
 
 		*/
+
+	//	if (active_use_classums == true) wiener_nominator = 500.0f;
+	//	else
 		if (number_of_rounds_run == 0 && number_of_starts_run == 0) wiener_nominator = 500.0f;
 		else
 		if (number_of_starts_run == 0)
 		{
-			wiener_nominator = 200 + (10 - 100) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
+			wiener_nominator = 200 + (10 - 200) * (float(number_of_rounds_run) / float(number_of_rounds_to_run));
 			if (wiener_nominator < 10.0f) wiener_nominator = 10.0f;
 		}
 		else wiener_nominator = 10.0f;
 
+
+		wiener_nominator = 50.0f;
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
-		my_parent->my_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1666,43 +1714,10 @@ void AbInitioManager::RunMerge3dJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+	}
 
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
-		}
-
-		my_parent->ProgressBar->Pulse();
+	my_parent->ProgressBar->Pulse();
 }
 
 void AbInitioManager::SetupRefinementJob()
@@ -1716,8 +1731,8 @@ void AbInitioManager::SetupRefinementJob()
 	long number_of_particles;
 	float particles_per_job;
 
-	// get the last refinement for the currently selected refinement package..
-
+	if (active_use_classums == false) number_of_particles = active_refinement_package->contained_particles.GetCount();
+	else number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
 
 	wxArrayString written_parameter_files;
 	wxArrayString written_res_files;
@@ -1770,13 +1785,12 @@ void AbInitioManager::SetupRefinementJob()
 	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
 
-	number_of_particles = active_refinement_package->contained_particles.GetCount();
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * input_refinement->number_of_classes);
 
-	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
 		current_particle_counter = 1;
 
@@ -1795,7 +1809,7 @@ void AbInitioManager::SetupRefinementJob()
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry;
-			if (apply_symmetry == true) my_symmetry = active_refinement_package->symmetry;
+			if (apply_symmetry == true) my_symmetry = active_symmetry_string;
 			else my_symmetry = "C1";
 
 			long	 first_particle							= myroundint(current_particle_counter);
@@ -1811,8 +1825,8 @@ void AbInitioManager::SetupRefinementJob()
 			float percent_used;
 			float percent_multiplier;
 
-			percent_multiplier = 2.5 + (3.5 - 2.5) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
-	//		percent_multiplier = 8.0f;
+			//percent_multiplier = 2.5 + (3.5 - 2.5) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
+			percent_multiplier = 5.0f;
 			percent_used = current_percent_used * percent_multiplier;
 			if (percent_used > 100.0f) percent_used = 100.0f;
 			percent_used *= 0.01f;
@@ -1845,9 +1859,9 @@ void AbInitioManager::SetupRefinementJob()
 
 			float    high_resolution_limit					= current_high_res_limit;
 			float	 signed_CC_limit;
-			signed_CC_limit = 0.0f;
-		//	if (IsOdd(number_of_rounds_run) == true || number_of_rounds_run == number_of_rounds_to_run - 1) signed_CC_limit = 0.0f;
-		//	else signed_CC_limit = 10.0f;
+			//signed_CC_limit = 0.0f;
+			if (IsOdd(number_of_rounds_run) == true || number_of_rounds_run == number_of_rounds_to_run - 1) signed_CC_limit = 0.0f;
+			else signed_CC_limit = 15.0f;
 
 			float	 classification_resolution_limit		= 8.0f;
 //			float    mask_radius_search						= input_refinement->resolution_statistics_box_size * 0.45 * input_refinement->resolution_statistics_pixel_size;
@@ -1862,6 +1876,12 @@ void AbInitioManager::SetupRefinementJob()
 
 			//if (number_of_rounds_run < 5) best_parameters_to_keep = 20;
 			//else best_parameters_to_keep = -10000;
+
+			//best_parameters_to_keep = -100000;
+
+			//if (active_use_classums == true) best_parameters_to_keep = 20;
+			//else best_parameters_to_keep = -100000;
+
 			best_parameters_to_keep = -100000;
 
 			float	 max_search_x							= active_search_range_x;
@@ -1898,7 +1918,7 @@ void AbInitioManager::SetupRefinementJob()
 
 			bool normalize_particles;
 
-			if (stack_has_been_precomputed == true) normalize_particles = false;
+			if (stack_has_been_precomputed == true && active_use_classums == false) normalize_particles = false;
 			else normalize_particles = true;
 
 			bool exclude_blank_edges = false;
@@ -1910,7 +1930,7 @@ void AbInitioManager::SetupRefinementJob()
 			bool threshold_input_3d = false;
 			bool ignore_input_parameters = false;
 			bool defocus_bias = false;
-			my_parent->my_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
+			my_parent->current_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1996,39 +2016,7 @@ void AbInitioManager::RunRefinementJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
 
@@ -2041,70 +2029,159 @@ void AbInitioManager::RunRefinementJob()
 
 void AbInitioManager::SetupPrepareStackJob()
 {
-	int class_counter;
-	float particles_per_job;
-	int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	int	number_of_refinement_jobs = number_of_refinement_processes - 1;
-
-	int	number_of_particles = active_refinement_package->contained_particles.GetCount();
-//	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1.0f;
-//	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
-	//if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	//else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
-	particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
-
-	// we don't want less than 100 particles per job..
-
-	if (particles_per_job < 100)
+	if (active_use_classums == true)
 	{
-		if (number_of_particles < 100)
+		int counter;
+		float temp_float;
+
+		// write output files for the classification, and the selection..
+		NumericTextFile selection_file(main_frame->ReturnStartupScratchDirectory() + "/class_average_selection.txt", OPEN_TO_WRITE, 1);
+
+		for (counter = 0; counter < active_classification_selection.selections.GetCount(); counter++)
 		{
-			particles_per_job = number_of_particles;
-			number_of_refinement_jobs = 1;
+			temp_float = active_classification_selection.selections[counter];
+			selection_file.WriteLine(&temp_float);
 		}
-		else
+
+		// now the classification par..
+
+		RefinementPackage *classification_package = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(active_classification_selection.refinement_package_asset_id));
+		Classification *input_classification = main_frame->current_project.database.GetClassificationByID(active_classification_selection.classification_id);
+		wxString input_parameter_file = input_classification->WriteFrealignParameterFiles(main_frame->ReturnStartupScratchDirectory() + "/classification_par", classification_package);
+		delete input_classification;
+
+		// setup the job
+
+		int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+		int	number_of_refinement_jobs = number_of_refinement_processes - 1;
+		float class_averages_per_job = float(active_classification_selection.selections.GetCount()) / float(number_of_refinement_jobs - 1);
+
+		if (class_averages_per_job < 1)
 		{
-			particles_per_job = 100.0f;
-			number_of_refinement_jobs = number_of_particles / 100.0f;
+			class_averages_per_job = 1;
+			number_of_refinement_jobs = active_classification_selection.selections.GetCount() + 1;
 		}
+
+		if (number_of_refinement_jobs > active_classification_selection.selections.GetCount() + 1) number_of_refinement_jobs = active_classification_selection.selections.GetCount() + 1;
+		my_parent->current_job_package.Reset(active_refinement_run_profile, "prepare_stack_classaverage", number_of_refinement_jobs);
+
+		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
+		float current_classaverage_counter = 0.0f;
+
+		for (counter = 0; counter < number_of_refinement_jobs; counter++)
+		{
+			wxString input_particle_images 				= classification_package->stack_filename;
+			wxString output_classaverage_images 		= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
+
+			wxString input_selection_file 				= main_frame->ReturnStartupScratchDirectory() + "/class_average_selection.txt";
+			float pixel_size				          	= classification_package->contained_particles[0].pixel_size;
+			float  mask_radius                          = classification_package->estimated_particle_size_in_angstroms * 0.6;
+			bool resample_box = false;
+			if (ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(classification_package->stack_box_size, binning_factor), 3, true) < classification_package->stack_box_size) resample_box = true;
+			int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(classification_package->stack_box_size, binning_factor), 3, true);
+
+			float  microscope_voltage					= classification_package->contained_particles[0].microscope_voltage;
+			float microscope_cs 						= classification_package->contained_particles[0].spherical_aberration;
+			float amplitude_contrast 					= classification_package->contained_particles[0].amplitude_contrast;
+			bool process_a_subset						= true;
+			int  first_classaverage					    = myroundint(current_classaverage_counter);
+
+			current_classaverage_counter += class_averages_per_job;
+			if (current_classaverage_counter > active_classification_selection.selections.GetCount() - 1  || counter == number_of_refinement_jobs - 1) current_classaverage_counter = active_classification_selection.selections.GetCount() - 1;
+
+			int	 last_classaverage  					= myroundint(current_classaverage_counter);
+			current_classaverage_counter++;
+
+			bool invert_contrast = true;
+
+			int number_of_classes = active_number_of_2d_classes;
+			int images_per_class = active_images_per_class;
+
+			my_parent->current_job_package.AddJob("ttttffbiiifffbbii",	input_particle_images.ToUTF8().data(),
+																		output_classaverage_images.ToUTF8().data(),
+																		input_parameter_file.ToUTF8().data(),
+																		input_selection_file.ToUTF8().data(),
+																		pixel_size,
+																		mask_radius,
+																		resample_box,
+																		wanted_output_box_size,
+																		number_of_classes,
+																		images_per_class,
+																		microscope_voltage,
+																		microscope_cs,
+																		amplitude_contrast,
+																		invert_contrast,
+																		process_a_subset,
+																		first_classaverage,
+																		last_classaverage);
+		}
+
+		number_of_expected_results = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
+
 
 	}
-
-	my_parent->my_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
-
-	float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
-	float current_particle_counter = 1.0f;
-
-	for (int counter = 0; counter < number_of_refinement_jobs; counter++)
+	else
 	{
+		float particles_per_job;
+		int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+		int	number_of_refinement_jobs = number_of_refinement_processes - 1;
 
-		wxString input_particle_images 				= active_refinement_package->stack_filename;
-		wxString output_particle_images 			= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
-		float pixel_size				          	= active_refinement_package->contained_particles[0].pixel_size;;
-		float  mask_radius                          = active_global_mask_radius;
-		bool resample_box							= true;
-		int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
-		bool process_a_subset						= true;
-		int	 first_particle							= myroundint(current_particle_counter);
+		int	number_of_particles = active_refinement_package->contained_particles.GetCount();
+		particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-		current_particle_counter += particles_per_job;
-		if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
+		// we don't want less than 100 particles per job..
 
-		int	 last_particle							= myroundint(current_particle_counter);
-		current_particle_counter++;
+		if (particles_per_job < 100)
+		{
+			if (number_of_particles < 100)
+			{
+				particles_per_job = number_of_particles;
+				number_of_refinement_jobs = 1;
+			}
+			else
+			{
+				particles_per_job = 100.0f;
+				number_of_refinement_jobs = number_of_particles / 100.0f;
+			}
+		}
 
-		//wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
+		my_parent->current_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
 
-		my_parent->my_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
-													output_particle_images.ToUTF8().data(),
-													pixel_size,
-													mask_radius,
-													resample_box,
-													wanted_output_box_size,
-													process_a_subset,
-													first_particle,
-													last_particle);
+		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
+		float current_particle_counter = 1.0f;
 
+		for (int counter = 0; counter < number_of_refinement_jobs; counter++)
+		{
+
+			wxString input_particle_images 				= active_refinement_package->stack_filename;
+			wxString output_particle_images 			= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
+			float pixel_size				          	= active_refinement_package->contained_particles[0].pixel_size;;
+			float  mask_radius                          = active_global_mask_radius;
+			bool resample_box							= true;
+			int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
+			bool process_a_subset						= true;
+			int	 first_particle							= myroundint(current_particle_counter);
+
+			current_particle_counter += particles_per_job;
+			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
+
+			int	 last_particle							= myroundint(current_particle_counter);
+			current_particle_counter++;
+
+			//wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
+
+			my_parent->current_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
+																output_particle_images.ToUTF8().data(),
+																pixel_size,
+																mask_radius,
+																resample_box,
+																wanted_output_box_size,
+																process_a_subset,
+																first_particle,
+																last_particle);
+		}
+
+		number_of_expected_results = output_refinement->number_of_particles;
 	}
 
 }
@@ -2125,38 +2202,7 @@ void AbInitioManager::RunPrepareStackJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-		if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-		else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
 	my_parent->ProgressBar->Pulse();
@@ -2174,7 +2220,7 @@ void AbInitioManager::SetupAlignSymmetryJob()
 	float angle_step;
 
 	int number_of_refinement_processes= active_refinement_run_profile.ReturnTotalJobs() ;
-	int	number_of_refinement_jobs_per_class = (number_of_refinement_processes - 1) / active_refinement_package->number_of_classes;
+	int	number_of_refinement_jobs_per_class = (number_of_refinement_processes - 1) / input_refinement->number_of_classes;
 
 	if (number_of_refinement_jobs_per_class < 1)
 	{
@@ -2207,9 +2253,9 @@ void AbInitioManager::SetupAlignSymmetryJob()
 
 	//wxPrintf("reset job package with %i\n", number_of_refinement_jobs_per_class * active_refinement_package->number_of_classes);
 
-	my_parent->my_job_package.Reset(active_refinement_run_profile, "align_symmetry", number_of_refinement_jobs_per_class * active_refinement_package->number_of_classes);
+	my_parent->current_job_package.Reset(active_refinement_run_profile, "align_symmetry", number_of_refinement_jobs_per_class * input_refinement->number_of_classes);
 
-	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
 		align_sym_best_correlations.Add(-FLT_MAX);
 		align_sym_best_x_rots.Add(0.0f);
@@ -2222,14 +2268,14 @@ void AbInitioManager::SetupAlignSymmetryJob()
 		for (current_start_angle = start_angle; current_start_angle <= end_angle; current_start_angle += angle_step )
 		{
 			wxString input_volume_file = current_reference_filenames.Item(class_counter);
-			wxString wanted_symmetry = active_refinement_package->symmetry;
+			wxString wanted_symmetry = active_symmetry_string;
 			wxString output_volume_file_no_sym = "";
 			wxString output_volume_file_with_sym = "";
 			float start_angle_for_search = current_start_angle;
 			float end_angle_for_search = current_start_angle + angle_step;
 			float initial_angular_step = wanted_intial_angular_step;
 
-			my_parent->my_job_package.AddJob("ttttfffi",	input_volume_file.ToUTF8().data(),
+			my_parent->current_job_package.AddJob("ttttfffi",	input_volume_file.ToUTF8().data(),
 															wanted_symmetry.ToUTF8().data(),
 															output_volume_file_no_sym.ToUTF8().data(),
 															output_volume_file_with_sym.ToUTF8().data(),
@@ -2297,7 +2343,7 @@ void AbInitioManager::RunAlignSymmetryJob()
 	current_job_starttime = time(NULL);
 	time_of_last_update = current_job_starttime;
 
-	if (active_refinement_package->number_of_classes > 1) my_parent->WriteBlueText("Aligning 3D's to symmetry axes...");
+	if (input_refinement->number_of_classes > 1) my_parent->WriteBlueText("Aligning 3D's to symmetry axes...");
 	else my_parent->WriteBlueText("Aligning 3D to symmetry axes...");
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
@@ -2305,38 +2351,7 @@ void AbInitioManager::RunAlignSymmetryJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-		if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-		else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
 	my_parent->ProgressBar->Pulse();
@@ -2527,13 +2542,13 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 		else
 		if (current_time != time_of_last_update)
 		{
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles) * 100.0;
+			int current_percentage =  float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			time_of_last_update = current_time;
 			if (current_percentage > 100) current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 
@@ -2695,7 +2710,7 @@ void AbInitioManager::ProcessAllJobsFinished()
 		my_parent->active_sym_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
 
-		ImposeAlignmentAndSymmetryThread *symmetry_thread = new ImposeAlignmentAndSymmetryThread(my_parent, current_reference_filenames, symmetry_filenames, align_sym_best_x_rots, align_sym_best_y_rots, align_sym_best_z_rots, align_sym_best_x_shifts, align_sym_best_y_shifts, align_sym_best_z_shifts, active_refinement_package->symmetry, my_parent->active_sym_thread_id);
+		ImposeAlignmentAndSymmetryThread *symmetry_thread = new ImposeAlignmentAndSymmetryThread(my_parent, current_reference_filenames, symmetry_filenames, align_sym_best_x_rots, align_sym_best_y_rots, align_sym_best_z_rots, align_sym_best_x_shifts, align_sym_best_y_shifts, align_sym_best_z_shifts, active_symmetry_string, my_parent->active_sym_thread_id);
 
 		if ( symmetry_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2891,6 +2906,8 @@ wxThread::ExitCode ResampleVolumeThread::Entry()
 	finished_event->SetInt(class_number);
 
 	wxQueueEvent(parent_window, finished_event);
+
+	return (wxThread::ExitCode) 0;
 }
 
 wxThread::ExitCode ImposeAlignmentAndSymmetryThread::Entry()
@@ -2925,4 +2942,6 @@ wxThread::ExitCode ImposeAlignmentAndSymmetryThread::Entry()
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_IMPOSESYMMETRY_DONE);
 	my_thread_event->SetInt(thread_id);
 	wxQueueEvent(parent_window, my_thread_event);
+
+	return (wxThread::ExitCode) 0;
 }

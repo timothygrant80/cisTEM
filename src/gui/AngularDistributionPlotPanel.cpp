@@ -529,14 +529,14 @@ void AngularDistributionPlotPanel::UpdateScalingAndDimensions()
 void AngularDistributionPlotPanel::OnPaint(wxPaintEvent & evt)
 {
 
-	Freeze();
+
 	if (should_show == true)
 	{
 		wxPaintDC dc(this);
 		dc.DrawBitmap(buffer_bitmap, wxPoint(0,0));
 	}
 
-    Thaw();
+
 
 
 }

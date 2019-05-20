@@ -18,9 +18,9 @@ RefinementResult::RefinementResult()
 	defocus_angle = 0;
 	phase_shift = 0;
 	occupancy = 0;
-	logp = 0;
-	sigma = 0;
-	score = 0;
+	logp = -1000;
+	sigma = 10.0f;
+	score = 1.0f;
 	image_is_active = 1;
 	pixel_size = 0;
 	microscope_voltage_kv = 0;
@@ -474,12 +474,12 @@ void Refinement::SizeAndFillWithEmpty(long wanted_number_of_particles, int wante
 	reference_volume_ids.Clear();
 	reference_volume_ids.Add(-1, number_of_classes);
 
-	class_refinement_results.Alloc(number_of_classes);
+	//class_refinement_results.Alloc(number_of_classes);
 	class_refinement_results.Add(junk_class_results, number_of_classes);
 
 	for (int class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-		class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
+		//class_refinement_results[class_counter].particle_refinement_results.Alloc(number_of_particles);
 		class_refinement_results[class_counter].particle_refinement_results.Add(junk_result, number_of_particles);
 	}
 }
@@ -644,24 +644,33 @@ void Refinement::UpdateOccupancies(bool use_old_occupancies)
 
 		// calculate the new average occupancies..
 
-		for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
-		{
-			number_of_active_images = 0;
-			this->class_refinement_results[class_counter].average_occupancy = 0.0f;
-
-			for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
-			{
-				if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
-				{
-					this->class_refinement_results[class_counter].average_occupancy += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-					number_of_active_images++;
-				}
-			}
-
-			if (number_of_active_images > 0) this->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
-		}
+		UpdateAverageOccupancy();
 
 	}
 }
 
+void Refinement::UpdateAverageOccupancy()
+{
+	int class_counter;
+	int particle_counter;
+	int number_of_active_images;
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+		number_of_active_images = 0;
+		this->class_refinement_results[class_counter].average_occupancy = 0.0f;
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			if (this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_is_active >= 0)
+			{
+				this->class_refinement_results[class_counter].average_occupancy += this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
+				number_of_active_images++;
+			}
+		}
+
+		if (number_of_active_images > 0) this->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
+	}
+
+}
 

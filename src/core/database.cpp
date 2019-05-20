@@ -879,6 +879,8 @@ bool Database::DoesColumnExist(wxString table_name, wxString column_name)
 
 	return_code = sqlite3_prepare_v2(sqlite_database, sql_command.ToUTF8().data(), sql_command.Length() + 1, &current_statement, NULL);
 
+	Finalize(current_statement);
+
 	return return_code == SQLITE_OK;
 }
 
@@ -1637,6 +1639,11 @@ ArrayOfParticlePositionAssets Database::ReturnArrayOfParticlePositionAssetsFromA
 	}
 	EndBatchSelect();
 	return array_of_assets;
+}
+
+int Database::ReturnNumberOf2DClassMembers(long wanted_classification_id, int wanted_class_number)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM CLASSIFICATION_RESULT_%li WHERE BEST_CLASS = %i", wanted_classification_id, wanted_class_number));
 }
 
 wxArrayLong  Database::Return2DClassMembers(long wanted_classifiction_id, int wanted_class_number)

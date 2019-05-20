@@ -8,9 +8,8 @@ class MyAlignMoviesPanel : public AlignMoviesPanel
 {
 
 		bool show_expert_options;
-		long my_job_id;
 		int length_of_process_number;
-		JobPackage my_job_package;
+
 		JobTracker my_job_tracker;
 		bool running_job;
 		AssetGroup active_group;
@@ -46,6 +45,12 @@ public:
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);
 
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketAllJobsFinished();
+
+
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 
@@ -55,10 +60,6 @@ public:
 
 		void Reset();
 		void ResetDefaults();
-
-		virtual void OnJobSocketEvent(wxSocketEvent& event);
-
-
 };
 
 #endif // __AlignMoviesPanel__

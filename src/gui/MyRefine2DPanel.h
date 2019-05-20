@@ -94,7 +94,6 @@ public:
 	bool refinement_package_combo_is_dirty;
 	bool run_profiles_are_dirty;
 	bool input_params_combo_is_dirty;
-	long my_job_id;
 	bool running_job;
 
 	long selected_refinement_package;
@@ -125,14 +124,15 @@ public:
 	void SetDefaults();
 	void SetInfo();
 
-	JobPackage my_job_package;
+	void OnSocketJobResultMsg(JobResult &received_result);
+	void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+	void SetNumberConnectedText(wxString wanted_text);
+	void SetTimeRemainingText(wxString wanted_text);
+	void OnSocketAllJobsFinished();
+
+
+
 	JobTracker my_job_tracker;
-
-
-	int length_of_process_number;
-
-
-
 
 
 	friend class ClassificationManager;

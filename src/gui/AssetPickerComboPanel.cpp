@@ -139,11 +139,18 @@ void AssetPickerComboPanel::GetAssetFromPopup()
 }
 
 
+ClassSelectionPickerComboPanel::ClassSelectionPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: AssetPickerComboPanel(parent, id, pos, size, style)
+{
+
+}
+
 VolumeAssetPickerComboPanel::VolumeAssetPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
 : AssetPickerComboPanel(parent, id, pos, size, style)
 {
 
 }
+
 
 RefinementPackagePickerComboPanel::RefinementPackagePickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
 : AssetPickerComboPanel(parent, id, pos, size, style)

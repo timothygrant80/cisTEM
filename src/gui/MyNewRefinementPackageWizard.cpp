@@ -1730,7 +1730,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	{
 		RefinementPackage *input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() - 3);
 		if (input_package->number_of_classes == 1) return wizard_pointer->number_of_classes_page;
-		else wizard_pointer->class_setup_pageE;
+		else return wizard_pointer->class_setup_pageE;
 	}
 	else return wizard_pointer->number_of_classes_page;
  }

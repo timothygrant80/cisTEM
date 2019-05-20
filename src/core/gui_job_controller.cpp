@@ -180,12 +180,11 @@ void GuiJobController::KillJob(int job_to_kill)
 	{
 		if (job_list[job_to_kill].socket != NULL)
 		{
-			job_list[job_to_kill].socket->Notify(false);
 			if (job_list[job_to_kill].socket->IsConnected() == true && job_list[job_to_kill].socket->IsOk() == true)
 			{
-				WriteToSocket(job_list[job_to_kill].socket, socket_time_to_die, SOCKET_CODE_SIZE);
+				WriteToSocket(job_list[job_to_kill].socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 			}
-			job_list[job_to_kill].socket->Destroy();
+			job_list[job_to_kill].parent_panel->StopMonitoringAndDestroySocket(job_list[job_to_kill].socket);
 		}
 
 		job_list[job_to_kill].socket = NULL;

@@ -123,8 +123,9 @@ bool SumAllMRC::DoCalculation()
 	wxPrintf("Summing All Files...\n\n");
 	ProgressBar *my_progress = new ProgressBar(all_files.GetCount());
 
+	int number_processed = 0;
 	// thread if available
-#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, my_progress) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
+#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, number_processed, my_progress) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
 	{ // bracket for omp
 
 	Image buffer_image;
@@ -167,7 +168,9 @@ bool SumAllMRC::DoCalculation()
 		current_input_file->CloseFile();
 		delete current_input_file;
 
-		my_progress->Update(file_counter + 1);
+#pragma omp atomic
+		number_processed++;
+		my_progress->Update(number_processed);
 
 	}
 
@@ -190,7 +193,7 @@ bool SumAllMRC::DoCalculation()
 		}
 	}
 
-	delete [] sum_squares_image;
+	if (make_dark_and_gain == true)	delete [] sum_squares_image;
 	delete [] sum_image;
 
 
@@ -220,11 +223,13 @@ bool SumAllMRC::DoCalculation()
 
 
 	delete [] global_sum_image;
-	delete [] global_sum_squares_image;
+	if (make_dark_and_gain == true)	delete [] global_sum_squares_image;
 
 	delete my_progress;
 
-	return true;
+	wxPrintf("\n\nSum All MRC File finished Cleanly!\n\n");
+
+
 
 
 	return true;

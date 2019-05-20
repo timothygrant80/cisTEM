@@ -45,7 +45,148 @@ float ReturnMagDistortionCorrectedPixelSize(float original_pixel_size, float maj
 
 wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
 
-inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes, bool die_on_error = false)
+bool SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);
+wxString ReceivewxStringFromSocket(wxSocketBase *socket, bool &receive_worked);
+
+inline bool WriteToSocket(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes, bool die_on_error = false,  wxString identification_code = "NO_IDENT", wxString sender_details = "NO_DETAILS" )
+{
+	if (socket != NULL)
+	{
+		if (socket->IsOk() == true && socket->IsConnected() == true)
+		{
+
+#ifdef DEBUG
+			if (socket->GetFlags() != (SOCKET_FLAGS)) 	{MyPrintWithDetails("Wait all / block flag not set!"); DEBUG_ABORT;}
+#endif
+
+
+#ifdef RIGOROUS_SOCKET_CHECK
+			// if we are doing intensive socket checking, use the identification code etc
+
+			wxCharBuffer identification_string_buffer = identification_code.mb_str();
+			int length_of_string = identification_string_buffer.length();
+
+			// send the length of the string, followed by the string
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(&length_of_string, sizeof(int));
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(identification_string_buffer.data(), length_of_string);
+
+			// send caller details..
+
+			wxCharBuffer sender_details_string_buffer = sender_details.mb_str();
+			length_of_string = sender_details_string_buffer.length();
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(&length_of_string, sizeof(int));
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(sender_details_string_buffer.data(), length_of_string);
+
+#endif
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(buffer, nbytes);
+
+			if (socket->LastWriteCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't write all bytes! (%u / %u)", socket->LastWriteCount(), nbytes); return false;}
+			if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); return false;}
+
+			return true; // if we got here, should be ok.
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	return false;
+}
+
+inline bool ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes,  bool die_on_error = false, wxString identification_code = "NO_IDENT", wxString receiver_details = "NO_DETAILS" )
+{
+
+	if (socket != NULL)
+	{
+		if (socket->IsOk() == true && socket->IsConnected() == true)
+		{
+#ifdef DEBUG
+			if (socket->GetFlags() != (SOCKET_FLAGS)) 	{MyPrintWithDetails("Wait all / block flag not set!"); DEBUG_ABORT}
+#endif
+
+
+#ifdef RIGOROUS_SOCKET_CHECK
+			// if we are intensive checking use the identification code etc.
+
+			int length_of_string;
+
+			// receive the length of the string, followed by the string
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(&length_of_string, sizeof(int));
+
+			unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
+
+			// setup a temp array to receive the string into.
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(transfer_buffer,length_of_string);
+
+			// add the null
+
+			transfer_buffer[length_of_string] = 0;
+
+			// make a wxstring from this buffer..
+
+			wxString sent_identification_code(transfer_buffer);
+
+			delete [] transfer_buffer;
+
+			// get sender details..
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(&length_of_string, sizeof(int));
+			transfer_buffer = new unsigned char[length_of_string + 1];
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(transfer_buffer,length_of_string);
+			transfer_buffer[length_of_string] = 0;
+			wxString sender_details(transfer_buffer);
+
+			delete [] transfer_buffer;
+
+			if (sent_identification_code != identification_code)
+			{
+				MyDebugPrint("\n\nERROR : Mismatched socket identification codes\nSender: %s, Expected: %s\n", sent_identification_code, identification_code);
+				MyDebugPrint("Receiver at %s\n", receiver_details);
+				MyDebugPrintWithDetails("Sender at %s\n\n", sender_details);
+
+			}
+		//	else wxPrintf("Ident ok - Sender: %s, Expected: %s\n", sent_identification_code, identification_code);
+#endif
+
+			//socket->SetTimeout(60);
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(buffer, nbytes);
+
+			if (socket->LastReadCount() != nbytes) {MyDebugPrintWithDetails("Socket didn't read all bytes! (%u / %u)", socket->LastReadCount(), nbytes); return false;}
+			if (socket->Error() == true) {MyDebugPrintWithDetails("Socket has an error (%s) ", ReturnSocketErrorText(socket)); return false;}
+
+			}
+
+		return true;
+		}
+		else
+		{
+			return false;
+		}
+
+	return false;
+}
+
+
+/*
+inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes, bool die_on_error = false,  wxString identification_code = "NO_IDENT", wxString sender_details = "NO_DETAILS" )
 {
 
 	bool should_abort = false;
@@ -57,14 +198,42 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 #ifdef DEBUG
 			//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 			//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
-			if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+			if (socket->GetFlags() != (SOCKET_FLAGS)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+#endif
+
+
+#ifdef RIGOROUS_SOCKET_CHECK
+			// if we are doing intensive socket checking, use the identification code etc
+
+			wxCharBuffer identification_string_buffer = identification_code.mb_str();
+			int length_of_string = identification_string_buffer.length();
+
+			// send the length of the string, followed by the string
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(&length_of_string, sizeof(int));
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(identification_string_buffer.data(), length_of_string);
+
+			// send caller details..
+
+			wxCharBuffer sender_details_string_buffer = sender_details.mb_str();
+			length_of_string = sender_details_string_buffer.length();
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(&length_of_string, sizeof(int));
+
+			if (socket->IsData() == false) socket->WaitForWrite();
+			socket->Write(sender_details_string_buffer.data(), length_of_string);
+
 #endif
 
 			//socket->SetTimeout(60);
-			socket->WaitForWrite();
+			if (socket->IsData() == false) socket->WaitForWrite();
 			socket->Write(buffer, nbytes);
 
-			int number_of_retries = 0;
+			int number_of_retries = 100;
 			while (socket->LastWriteCount() == 0 && number_of_retries < 10)
 			{
 				wxMilliSleep(100);
@@ -98,8 +267,10 @@ inline void WriteToSocket	(	wxSocketBase *socket, const void * 	buffer, wxUint32
 		}
 	}
 }
+*/
 
-inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes, bool die_on_error = false)
+/*
+inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbytes,  bool die_on_error = false, wxString identification_code = "NO_IDENT", wxString receiver_details = "NO_DETAILS" )
 {
 	bool should_abort = false;
 	if (socket != NULL)
@@ -109,14 +280,64 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 #ifdef DEBUG
 			//	socket->SetFlags(wxSOCKET_WAITALL | wxSOCKET_BLOCK);
 			//if (socket->GetFlags() != (wxSOCKET_WAITALL) && socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all flag not set!"); should_abort = true;}
-			if (socket->GetFlags() != (wxSOCKET_WAITALL | wxSOCKET_BLOCK)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+			if (socket->GetFlags() != (SOCKET_FLAGS)) 	{MyPrintWithDetails("Wait all / block flag not set!"); should_abort = true;}
+#endif
+
+
+#ifdef RIGOROUS_SOCKET_CHECK
+			// if we are intensive checking use the identification code etc.
+
+			int length_of_string;
+
+			// receive the length of the string, followed by the string
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(&length_of_string, sizeof(int));
+
+			unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
+
+			// setup a temp array to receive the string into.
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(transfer_buffer,length_of_string);
+
+			// add the null
+
+			transfer_buffer[length_of_string] = 0;
+
+			// make a wxstring from this buffer..
+
+			wxString sent_identification_code(transfer_buffer);
+
+			delete [] transfer_buffer;
+
+			// get sender details..
+
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(&length_of_string, sizeof(int));
+			transfer_buffer = new unsigned char[length_of_string + 1];
+			if (socket->IsData() == false) socket->WaitForRead();
+			socket->Read(transfer_buffer,length_of_string);
+			transfer_buffer[length_of_string] = 0;
+			wxString sender_details(transfer_buffer);
+
+			delete [] transfer_buffer;
+
+			if (sent_identification_code != identification_code)
+			{
+				wxPrintf("\n\nERROR : Mismatched socket identification codes\nSender: %s, Expected: %s\n", sent_identification_code, identification_code);
+				wxPrintf("Receiver at %s\n", receiver_details);
+				wxPrintf("Sender at %s\n\n", sender_details);
+				DEBUG_ABORT;
+			}
+		//	else wxPrintf("Ident ok - Sender: %s, Expected: %s\n", sent_identification_code, identification_code);
 #endif
 
 			//socket->SetTimeout(60);
-			socket->WaitForRead();
+			if (socket->IsData() == false) socket->WaitForRead();
 			socket->Read(buffer, nbytes);
 
-			int number_of_retries = 0;
+			int number_of_retries = 100;
 			while (socket->LastReadCount() == 0 && number_of_retries < 10)
 			{
 				wxMilliSleep(100);
@@ -150,7 +371,7 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 		}
 	}
 }
-
+*/
 
 
 inline void ZeroDoubleArray(double *array_to_zero, int size_of_array)
@@ -238,9 +459,6 @@ inline bool IsOdd(int number)
 
 wxArrayString ReturnIPAddress();
 wxString ReturnIPAddressFromSocket(wxSocketBase *socket);
-
-void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);
-wxString ReceivewxStringFromSocket(wxSocketBase *socket);
 
 inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float dimension_size)
 {

@@ -359,7 +359,7 @@ void PickingBitmapPanel::OnSize(wxSizeEvent & event)
 void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 {
 
-	Freeze();
+	//Freeze();
 
 	int window_x_size;
 	int window_y_size;
@@ -495,7 +495,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent & evt)
 		}
 	}
 
-	Thaw();
+//	Thaw();
 
 
 }

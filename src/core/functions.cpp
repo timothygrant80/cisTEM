@@ -149,7 +149,7 @@ bool GetMRCDetails(const char *filename, int &x_size, int &y_size, int &number_o
 // Assumption is that turning off of events etc has been done, and that
 // all other considerations have done.
 
-void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
+bool SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 {
 	wxCharBuffer buffer = string_to_send->mb_str();
 	int length_of_string = buffer.length();
@@ -158,8 +158,10 @@ void SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	// send the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	WriteToSocket(socket, char_pointer, 4, true);
-	WriteToSocket(socket, buffer.data(), length_of_string, true);
+	if (WriteToSocket(socket, char_pointer, 4, true, "SendwxStringToSocketSize",  FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+	if (WriteToSocket(socket, buffer.data(), length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+
+	return true;
 }
 
 // This is here as when the binned resolution is too close to the refinement resolution or reconstruction
@@ -175,8 +177,9 @@ int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor)
 	return myroundint(float(original_box_size) / bin_factor);
 }
 
-wxString ReceivewxStringFromSocket(wxSocketBase *socket)
+wxString ReceivewxStringFromSocket(wxSocketBase *socket, bool &receive_worked)
 {
+	receive_worked = true;
 
 	int length_of_string;
 	unsigned char *char_pointer;
@@ -184,13 +187,22 @@ wxString ReceivewxStringFromSocket(wxSocketBase *socket)
 	// receive the length of the string, followed by the string
 
 	char_pointer = (unsigned char*)&length_of_string;
-	ReadFromSocket(socket, char_pointer, 4, true);
+	if (ReadFromSocket(socket, char_pointer, 4, true,  "SendwxStringToSocketSize", FUNCTION_DETAILS_AS_WXSTRING) == false)
+	{
+		receive_worked = false;
+		return "";
+	}
 
 	// setup a temp array to receive the string into.
 
 	unsigned char *transfer_buffer = new unsigned char[length_of_string + 1]; // + 1 for the terminating null character;
 
-	ReadFromSocket(socket, transfer_buffer, length_of_string, true);
+	if (ReadFromSocket(socket, transfer_buffer, length_of_string, true, "SendwxStringToSocketString", FUNCTION_DETAILS_AS_WXSTRING) == false)
+	{
+		receive_worked = false;
+		delete [] transfer_buffer;
+		return "";
+	}
 
 	// add the null
 
@@ -678,17 +690,15 @@ std::vector<size_t> rankSort(const std::vector<float>& v_temp) {
 wxString StringFromSocketCode(unsigned char *socket_input_buffer)
 {
 	if (memcmp(socket_input_buffer, socket_please_identify, 			SOCKET_CODE_SIZE) == 0) { return "socket_please_identify"; }
-	if (memcmp(socket_input_buffer, socket_identification, 				SOCKET_CODE_SIZE) == 0) { return "socket_identification"; }
+	if (memcmp(socket_input_buffer, socket_sending_identification, 		SOCKET_CODE_SIZE) == 0) { return "socket_sending_identification"; }
 	if (memcmp(socket_input_buffer, socket_you_are_connected, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_connected"; }
 	if (memcmp(socket_input_buffer, socket_send_job_details,			SOCKET_CODE_SIZE) == 0) { return "socket_send_job_details"; }
-	if (memcmp(socket_input_buffer, socket_ready_to_send_job_package, 	SOCKET_CODE_SIZE) == 0) { return "socket_ready_to_send_job_package"; }
-	if (memcmp(socket_input_buffer, socket_send_job_package, 			SOCKET_CODE_SIZE) == 0) { return "socket_send_job_package"; }
+	if (memcmp(socket_input_buffer, socket_sending_job_package,      	SOCKET_CODE_SIZE) == 0) { return "socket_sending_job_package"; }
 	if (memcmp(socket_input_buffer, socket_you_are_the_master, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_the_master"; }
 	if (memcmp(socket_input_buffer, socket_you_are_a_slave, 			SOCKET_CODE_SIZE) == 0) { return "socket_you_are_a_slave"; }
 	if (memcmp(socket_input_buffer, socket_send_next_job, 				SOCKET_CODE_SIZE) == 0) { return "socket_send_next_job"; }
 	if (memcmp(socket_input_buffer, socket_time_to_die, 				SOCKET_CODE_SIZE) == 0) { return "socket_time_to_die"; }
 	if (memcmp(socket_input_buffer, socket_ready_to_send_single_job, 	SOCKET_CODE_SIZE) == 0) { return "socket_ready_to_send_single_job"; }
-	if (memcmp(socket_input_buffer, socket_send_single_job, 			SOCKET_CODE_SIZE) == 0) { return "socket_send_single_job"; }
 	if (memcmp(socket_input_buffer, socket_i_have_an_error, 			SOCKET_CODE_SIZE) == 0) { return "socket_i_have_an_error"; }
 	if (memcmp(socket_input_buffer, socket_i_have_info, 				SOCKET_CODE_SIZE) == 0) { return "socket_i_have_info"; }
 	if (memcmp(socket_input_buffer, socket_job_finished, 				SOCKET_CODE_SIZE) == 0) { return "socket_job_finished"; }

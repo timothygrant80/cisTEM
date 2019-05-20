@@ -29,54 +29,6 @@ Refine2DPanel( parent )
 	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);
 
 	input_params_combo_is_dirty = false;
-
-	/*
-	buffered_results = NULL;
-
-	// Fill combo box..
-
-	//FillGroupComboBox();
-
-	my_job_id = -1;
-
-
-//	group_combo_is_dirty = false;
-//	run_profiles_are_dirty = false;FillReifnem
-
-
-//	FillGroupComboBox();
-//	FillRunProfileComboBox();
-
-
-
-
-	// set values //
-
-	/*
-	AmplitudeContrastNumericCtrl->SetMinMaxValue(0.0f, 1.0f);
-	MinResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-	MaxResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-	DefocusStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
-	ToleratedAstigmatismNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
-	MinPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	MaxPhaseShiftNumericCtrl->SetMinMaxValue(-3.15, 3.15);
-	PhaseShiftStepNumericCtrl->SetMinMaxValue(0.001, 3.15);
-
-	result_bitmap.Create(1,1, 24);
-	time_of_last_result_update = time(NULL);*/
-
-//	refinement_package_combo_is_dirty = false;
-//	run_profiles_are_dirty = false;
-//	input_params_combo_is_dirty = false;
-//	selected_refinement_package = -1;
-
-//	my_refinement_manager.SetParent(this);
-
-//
-
-//	long time_of_last_result_update;
-
-
 }
 
 
@@ -674,6 +626,8 @@ void MyRefine2DPanel::SetDefaults()
 		ExcludeBlankEdgesNoRadio->SetValue(true);
 		AutoPercentUsedRadioYes->SetValue(true);
 		PercentUsedTextCtrl->SetValue("100.00");
+		AutoMaskRadioNo->SetValue(true);
+		AutoCentreRadioNo->SetValue(true);
 		ExpertPanel->Thaw();
 	}
 }
@@ -753,196 +707,6 @@ void MyRefine2DPanel::OnInputParametersComboBox( wxCommandEvent& event )
 	ExpertPanel->Thaw();
 }
 
-
-
-
-
-
-
-/*
-
-
-void MyRefine3DPanel::OnHighResLimitChange( wxCommandEvent& event )
-{
-	float global_angular_step = CalculateAngularStep(HighResolutionLimitTextCtrl->ReturnValue(), MaskRadiusTextCtrl->ReturnValue());
-	AngularStepTextCtrl->SetValue(wxString::Format("%.2f", global_angular_step));
-	ClassificationHighResLimitTextCtrl->SetValue(wxString::Format("%.2f", HighResolutionLimitTextCtrl->ReturnValue()));
-}
-
-
-
-
-
-void MyRefine3DPanel::NewRefinementPackageSelected()
-{
-	selected_refinement_package = RefinementPackageComboBox->GetSelection();
-	FillInputParamsComboBox();
-	SetDefaults();
-	//wxPrintf("New Refinement Package Selection\n");
-
-}
-
-
-void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
-{
-	my_refinement_manager.BeginRefinementCycle();
-}
-
-
-void MyRefine3DPanel::OnJobSocketEvent(wxSocketEvent& event)
-{
-      SETUP_SOCKET_CODES
-
-	  wxString s = _("OnSocketEvent: ");
-	  wxSocketBase *sock = event.GetSocket();
-	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-	//  MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-	  // First, print a message
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	    case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	    default             : s.Append(_("Unexpected event !\n")); break;
-	  }
-
-	  //m_text->AppendText(s);
-
-	  //MyDebugPrint(s);
-
-	  // Now we process the event
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_INPUT:
-	    {
-	      // We disable input events, so that the test doesn't trigger
-	      // wxSocketEvent again.
-	      sock->SetNotify(wxSOCKET_LOST_FLAG);
-	      ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-	      if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-	    	  // send the job details..
-
-	    	  //wxPrintf("Sending Job Details...\n");
-	    	  my_job_package.SendJobPackage(sock);
-
-	      }
-	      else
-	      if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-
-	    	  wxString error_message;
-   			  error_message = ReceivewxStringFromSocket(sock);
-
-   			  WriteErrorText(error_message);
-    	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-	      {
-
-	    	  wxString info_message;
-   			  info_message = ReceivewxStringFromSocket(sock);
-
-   			  WriteInfoText(info_message);
-    	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	 		 // which job is finished?
-
-	 		 int finished_job;
-	 		 ReadFromSocket(sock, &finished_job, 4);
-
-	 		 my_job_tracker.MarkJobFinished();
-
-//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-	 		 //WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-	 	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	    	  JobResult temp_result;
-	    	  temp_result.ReceiveFromSocket(sock);
-
-	    	  // send the result to the
-
-	    	  my_refinement_manager.ProcessJobResult(&temp_result);
-	    	  wxPrintf("Warning: Received socket_job_result - should this happen?");
-
-	 	  }
-	      else
-	      if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-	 	  {
-	    	  ArrayofJobResults temp_queue;
-	    	  ReceiveResultQueueFromSocket(sock, temp_queue);
-
-	    	  for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-	    	  {
-	    		  my_refinement_manager.ProcessJobResult(&temp_queue.Item(counter));
-	    	  }
-	 	  }
-	      else
-		  if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		  {
-			  // how many connections are there?
-
-			  int number_of_connections;
-			  ReadFromSocket(sock, &number_of_connections, 4);
-
-              my_job_tracker.AddConnection();
-
-    //          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-              //WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-              // send the info to the gui
-
-              int total_processes = my_job_package.my_profile.ReturnTotalJobs();
-
-		 	  if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			  if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-		      else
-			  if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			  else
-			  if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			  else
-		      NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		  }
-	      else
-		  if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		  {
-			  my_refinement_manager.ProcessAllJobsFinished();
-		  }
-
-	      // Enable input events again.
-
-	      sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
-	      break;
-	    }
-
-
-	    case wxSOCKET_LOST:
-	    {
-
-	    	//MyDebugPrint("Socket Disconnected!!\n");
-	        sock->Destroy();
-	        break;
-	    }
-	    default: ;
-	  }
-
-}
-
-*/
 
 void ClassificationManager::SetParent(MyRefine2DPanel *wanted_parent)
 {
@@ -1038,7 +802,7 @@ void ClassificationManager::RunInitialStartJob()
 	}
 
 	wxString input_parameter_file = output_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", active_refinement_package);
-	my_parent->my_job_package.Reset(active_run_profile, "refine2d", 1);
+	my_parent->current_job_package.Reset(active_run_profile, "refine2d", 1);
 
 	wxString input_particle_images =  active_refinement_package->stack_filename;
 	wxString input_class_averages = "/dev/null";
@@ -1066,8 +830,11 @@ void ClassificationManager::RunInitialStartJob()
 	bool dump_arrays = false;
 	wxString dump_file = "/dev/null";
 
+	bool auto_mask = false;
+	bool auto_centre = false;
 
-	my_parent->my_job_package.AddJob("tttttiiiffffffffffffibbbbt",	input_particle_images.ToUTF8().data(),
+
+	my_parent->current_job_package.AddJob("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																	input_parameter_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	output_parameter_file.ToUTF8().data(),
@@ -1092,7 +859,9 @@ void ClassificationManager::RunInitialStartJob()
 																	invert_contrast,
 																	exclude_blank_edges,
 																	dump_arrays,
-																	dump_file.ToUTF8().data());
+																	dump_file.ToUTF8().data(),
+																	auto_mask,
+																	auto_centre);
 
 
 	my_parent->WriteBlueText("Creating Initial References...");
@@ -1101,35 +870,6 @@ void ClassificationManager::RunInitialStartJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-        if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-        else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
 		my_parent->StartPanel->Show(false);
 		my_parent->ProgressPanel->Show(true);
 
@@ -1144,13 +884,7 @@ void ClassificationManager::RunInitialStartJob()
 		my_parent->RefinementPackageComboBox->Enable(false);
 		my_parent->InputParametersComboBox->Enable(false);
 
-
-
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
 	my_parent->ProgressBar->Pulse();
@@ -1297,7 +1031,7 @@ void ClassificationManager::RunRefinementJob()
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1.0;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->my_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_jobs);
+	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_jobs);
 	current_particle_counter = 1.0;
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
@@ -1337,9 +1071,10 @@ void ClassificationManager::RunRefinementJob()
 		bool exclude_blank_edges = output_classification->exclude_blank_edges;
 		bool dump_arrays = true;
 		wxString dump_file = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
+		bool auto_mask = my_parent->AutoMaskRadioYes->GetValue();
+		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
 
-
-		my_parent->my_job_package.AddJob("tttttiiiffffffffffffibbbbt",	input_particle_images.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),
 																		output_parameter_file.ToUTF8().data(),
@@ -1364,7 +1099,9 @@ void ClassificationManager::RunRefinementJob()
 																		invert_contrast,
 																		exclude_blank_edges,
 																		dump_arrays,
-																		dump_file.ToUTF8().data());
+																		dump_file.ToUTF8().data(),
+																		auto_mask,
+																		auto_centre);
 	}
 
 	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));
@@ -1380,35 +1117,6 @@ void ClassificationManager::RunRefinementJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-        if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-        else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
 		my_parent->StartPanel->Show(false);
 		my_parent->ProgressPanel->Show(true);
 
@@ -1424,11 +1132,7 @@ void ClassificationManager::RunRefinementJob()
 		my_parent->RefinementPackageComboBox->Enable(false);
 		my_parent->InputParametersComboBox->Enable(false);
 
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 	my_parent->ProgressBar->Pulse();
 
@@ -1451,191 +1155,48 @@ void ClassificationManager::RemoveFilesFromScratch()
 	}
 }
 
-
-void MyRefine2DPanel::OnJobSocketEvent(wxSocketEvent& event)
+void MyRefine2DPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
-	SETUP_SOCKET_CODES
+	my_classification_manager.ProcessJobResult(&received_result);
+}
 
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
+void MyRefine2DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue)
+{
+	for (int counter = 0; counter < received_queue.GetCount(); counter++)
 	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
+		my_classification_manager.ProcessJobResult(&received_queue.Item(counter));
 	}
+}
 
-	//m_text->AppendText(s);
+void MyRefine2DPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
 
-	//MyDebugPrint(s);
+void MyRefine2DPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
 
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
-
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
-
-			my_job_tracker.MarkJobFinished();
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			// send the result to the
-
-			my_classification_manager.ProcessJobResult(&temp_result);
-			wxPrintf("Warning: Received socket_job_result - should this happen?");
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			ArrayofJobResults temp_queue;
-			ReceiveResultQueueFromSocket(sock, temp_queue);
-
-			for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-			{
-				my_classification_manager.ProcessJobResult(&temp_queue.Item(counter));
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-
-			int total_processes;
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project.");
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour");
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			// Other stuff to do once all jobs finished
-			my_classification_manager.ProcessAllJobsFinished();
-		}
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-
-		break;
-	}
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
+void MyRefine2DPanel::OnSocketAllJobsFinished()
+{
+	my_classification_manager.ProcessAllJobsFinished();
 }
 
 
 void ClassificationManager::RunMerge2dJob()
 {
 
-	int number_of_refinement_jobs = my_parent->my_job_package.my_profile.ReturnTotalJobs() - 1;
+	int number_of_refinement_jobs = my_parent->current_job_package.my_profile.ReturnTotalJobs() - 1;
 
 	running_job_type = MERGE;
 
-	my_parent->my_job_package.Reset(active_run_profile, "merge2d", 1);
+	my_parent->current_job_package.Reset(active_run_profile, "merge2d", 1);
 
 	wxString output_class_averages = output_classification->class_average_file;
 	wxString dump_file_seed = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_.dump", output_classification->classification_id);
 
-	my_parent->my_job_package.AddJob("tti",	output_class_averages.ToUTF8().data(),
+	my_parent->current_job_package.AddJob("tti",	output_class_averages.ToUTF8().data(),
 											dump_file_seed.ToUTF8().data(),
 											number_of_refinement_jobs);
 	// start job..
@@ -1647,34 +1208,6 @@ void ClassificationManager::RunMerge2dJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-		if (my_parent->my_job_package.number_of_jobs + 1 < my_parent->my_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->my_job_package.number_of_jobs + 1;
-		else number_of_refinement_processes =  my_parent->my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
 
 		my_parent->StartPanel->Show(false);
 		my_parent->ProgressPanel->Show(true);
@@ -1683,18 +1216,12 @@ void ClassificationManager::RunMerge2dJob()
 		my_parent->InfoPanel->Show(false);
 		my_parent->InputParamsPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
-		//my_parent->PlotPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);
 		my_parent->InputParametersComboBox->Enable(false);
 
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->my_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 		}
 
 		my_parent->ProgressBar->Pulse();
@@ -1790,177 +1317,6 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
 		}
 	}
-
-	/*
-	if (running_job_type == REFINEMENT)
-	{
-
-		int current_class = int(result_to_process->result_data[0] + 0.5);
-		long current_particle = long(result_to_process->result_data[1] + 0.5) - 1;
-
-		MyDebugAssertTrue(current_particle != -1 && current_class != -1, "Current Particle (%li) or Current Class(%i) = -1!", current_particle, current_class);
-
-	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
-		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
-
-
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack = long(result_to_process->result_data[1] + 0.5);
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi = result_to_process->result_data[2];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].theta = result_to_process->result_data[3];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phi = result_to_process->result_data[4];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift = result_to_process->result_data[5];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].yshift = result_to_process->result_data[6];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus1 = result_to_process->result_data[9];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus2 = result_to_process->result_data[10];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].defocus_angle = result_to_process->result_data[11];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].occupancy = result_to_process->result_data[12];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].logp = result_to_process->result_data[13];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].sigma = result_to_process->result_data[14];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score = result_to_process->result_data[15];
-		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].score_change = result_to_process->result_data[16];
-
-		number_of_received_particle_results++;
-		//wxPrintf("received result!\n");
-		long current_time = time(NULL);
-
-		if (number_of_received_particle_results == 1)
-		{
-			current_job_starttime = current_time;
-			time_of_last_update = 0;
-			my_parent->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,output_refinement->number_of_particles);
-			my_parent->AngularPlotPanel->Show(true);
-			my_parent->FSCResultsPanel->Show(false);
-			my_parent->Layout();
-		}
-		else
-		if (current_time != time_of_last_update)
-		{
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
-			time_of_last_update = current_time;
-			if (current_percentage > 100) current_percentage = 100;
-			my_parent->ProgressBar->SetValue(current_percentage);
-			long job_time = current_time - current_job_starttime;
-			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * output_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
-
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
-		}
-
-
-        // Add this result to the list of results to be plotted onto the angular plot
-		if (current_class == 0)
-		{
-			my_parent->AngularPlotPanel->AddRefinementResult( &output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
-	         // Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
-
-	        if(my_parent->AngularPlotPanel->refinement_results_to_plot.Count() * my_parent->AngularPlotPanel->symmetry_matrices.number_of_matrices < 1500 || current_time - my_parent->time_of_last_result_update > 0)
-	        {
-
-	            my_parent->AngularPlotPanel->Refresh();
-	            my_parent->time_of_last_result_update = current_time;
-	        }
-
-		}
-	}
-	else
-	if (running_job_type == RECONSTRUCTION)
-	{
-		//wxPrintf("Got reconstruction job \n");
-		number_of_received_particle_results++;
-	//	wxPrintf("Received a reconstruction intermmediate result\n");
-
-		long current_time = time(NULL);
-
-		if (number_of_received_particle_results == 1)
-		{
-			time_of_last_update = 0;
-			current_job_starttime = current_time;
-		}
-		else
-		if (current_time - time_of_last_update >= 1)
-		{
-			time_of_last_update = current_time;
-			int current_percentage = float(number_of_received_particle_results) / float(output_refinement->number_of_particles * output_refinement->number_of_classes) * 100.0;
-			if (current_percentage > 100) current_percentage = 100;
-			my_parent->ProgressBar->SetValue(current_percentage);
-			long job_time = current_time - current_job_starttime;
-			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((input_refinement->number_of_particles * input_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
-
-			TimeRemaining time_remaining;
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
-		}
-
-
-	}
-	else
-	if (running_job_type == MERGE)
-	{
-	//	wxPrintf("received merge result!\n");
-
-		// add to the correct resolution statistics..
-
-		int number_of_points = result_to_process->result_data[0];
-		int class_number = int(result_to_process->result_data[1] + 0.5);
-		int array_position = 2;
-		float current_resolution;
-		float fsc;
-		float part_fsc;
-		float part_ssnr;
-		float rec_ssnr;
-
-		wxPrintf("class_number = %i\n", class_number);
-		// add the points..
-
-		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.Init(output_refinement->resolution_statistics_pixel_size, output_refinement->resolution_statistics_box_size);
-
-		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.FSC.ClearData();
-		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_FSC.ClearData();
-		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.ClearData();
-		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.ClearData();
-
-
-		for (int counter = 0; counter < number_of_points; counter++)
-		{
-			current_resolution = result_to_process->result_data[array_position];
-			array_position++;
-			fsc = result_to_process->result_data[array_position];
-			array_position++;
-			part_fsc = result_to_process->result_data[array_position];
-			array_position++;
-			part_ssnr = result_to_process->result_data[array_position];
-			array_position++;
-			rec_ssnr = result_to_process->result_data[array_position];
-			array_position++;
-
-
-			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.FSC.AddPoint(current_resolution, fsc);
-			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_FSC.AddPoint(current_resolution, part_fsc);
-			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.AddPoint(current_resolution, part_ssnr);
-			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.AddPoint(current_resolution, rec_ssnr);
-
-		}
-
-	}
-
-
-	*/
 }
 
 void ClassificationManager::ProcessAllJobsFinished()
@@ -1990,282 +1346,6 @@ void ClassificationManager::ProcessAllJobsFinished()
 		//global_delete_refine2d_scratch();
 		CycleRefinement();
 	}
-
-	/*
-	if (running_job_type == REFINEMENT)
-	{
-		//wxPrintf("Refinement has finished\n");
-		main_frame->job_controller.KillJob(my_parent->my_job_id);
-		//wxPrintf("Setting up reconstruction\n");
-		SetupReconstructionJob();
-		//wxPrintf("Running reconstruction\n");
-		RunReconstructionJob();
-
-	}
-	else
-	if (running_job_type == RECONSTRUCTION)
-	{
-		main_frame->job_controller.KillJob(my_parent->my_job_id);
-		//wxPrintf("Reconstruction has finished\n");
-		SetupMerge3dJob();
-		RunMerge3dJob();
-	}
-	else
-	if (running_job_type == MERGE)
-	{
-
-		int class_counter;
-
-		main_frame->job_controller.KillJob(my_parent->my_job_id);
-
-		VolumeAsset temp_asset;
-
-		temp_asset.reconstruction_job_id = current_output_refinement_id;
-		temp_asset.pixel_size = output_refinement->resolution_statistics_pixel_size;
-		temp_asset.x_size = output_refinement->resolution_statistics_box_size;
-		temp_asset.y_size = output_refinement->resolution_statistics_box_size;
-		temp_asset.z_size = output_refinement->resolution_statistics_box_size;
-
-		// add the volumes to the database..
-
-		output_refinement->reference_volume_ids.Clear();
-		active_refinement_package->references_for_next_refinement.Clear();
-		main_frame->current_project.database.BeginVolumeAssetInsert();
-
-		my_parent->WriteInfoText("");
-
-		for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-		{
-			my_parent->WriteInfoText(wxString::Format(wxT("    Estimated 0.143 resolution for Class %2i = %2.2f Å"), class_counter + 1, output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution()));
-			temp_asset.asset_id = volume_asset_panel->current_asset_number;
-
-			if (start_with_reconstruction == true)
-			{
-				temp_asset.asset_name = wxString::Format("Volume From Initial Params #%li - Class #%i", current_output_refinement_id, class_counter + 1);
-
-			}
-			else
-			{
-				if (my_parent->GlobalRefinementRadio->GetValue() == true)
-				{
-					temp_asset.asset_name = wxString::Format("Volume From Global Search #%li - Class #%i", current_output_refinement_id, class_counter + 1);
-				}
-				else temp_asset.asset_name = wxString::Format("Volume From Local Search #%li - Class #%i", current_output_refinement_id, class_counter + 1);
-
-			}
-
-
-			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
-			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
-
-			active_refinement_package->references_for_next_refinement.Add(temp_asset.asset_id);
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
-
-
-			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
-		}
-
-		my_parent->WriteInfoText("");
-
-		main_frame->current_project.database.EndVolumeAssetInsert();
-
-		// Now calculate the occupancies..
-		wxPrintf("Calculating Occupancies\n");
-		if (output_refinement->number_of_classes > 1)
-		{
-			int class_counter;
-			int particle_counter;
-			int point_counter;
-
-			float sum_probabilities;
-			float occupancy;
-			float max_logp;
-			float average_occupancies[output_refinement->number_of_classes];
-			float sum_part_ssnr;
-			float sum_ave_occ;
-			float current_part_ssnr;
-
-
-			// calculate average occupancies
-			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-			{
-				average_occupancies[class_counter] = 0.0;
-
-				for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-				{
-					average_occupancies[class_counter] += output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-				}
-
-				average_occupancies[class_counter] /= float(output_refinement->number_of_particles);
-			}
-
-
-			for (particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-			{
-				max_logp = -FLT_MAX;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp > max_logp) max_logp = output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp;
-				}
-
-
-				sum_probabilities = 0.0;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (max_logp - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-					{
-						sum_probabilities += exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp  - max_logp) * average_occupancies[class_counter];
-					}
-				}
-
-				output_refinement->average_sigma = 0.0;
-
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					if (max_logp -  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp < 10.0)
-					{
-						occupancy = exp(output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].logp - max_logp) * average_occupancies[class_counter] / sum_probabilities *100.0;
-					}
-					else
-					{
-						occupancy = 0.0;
-					}
-
-					occupancy = 1. * (occupancy - output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy) + output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy;
-					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = occupancy;
-					output_refinement->average_sigma +=  output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].sigma * output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy / 100.0;
-				}
-
-			}
-
-			// Now work out the proper part_ssnr
-
-			sum_ave_occ = 0.0;
-
-			for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-			{
-				sum_ave_occ += average_occupancies[class_counter];
-
-			}
-
-			//wxPrintf("For class %i there are %i points", class_counter, output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points);
-
-			for (point_counter = 0; point_counter < output_refinement->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++)
-			{
-				sum_part_ssnr = 0;
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					sum_part_ssnr += output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];
-				}
-
-				current_part_ssnr = sum_part_ssnr / sum_ave_occ;
-
-				for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
-				{
-					output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] = current_part_ssnr;
-				}
-
-			}
-
-
-
-		}
-		else
-		{
-			output_refinement->average_sigma = 0.0;
-			for (long particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
-			{
-				output_refinement->average_sigma += output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
-			}
-
-			output_refinement->average_sigma /= float (output_refinement->number_of_particles);
-		}
-
-
-
-		//wxPrintf("Writing to databse\n");
-		// write the refinement to the database
-
-		if (start_with_reconstruction == true)
-		{
-			long point_counter;
-
-			volume_asset_panel->is_dirty = true;
-			refinement_package_asset_panel->is_dirty = true;
-			my_parent->input_params_combo_is_dirty = true;
-		//	my_parent->SetDefaults();
-			refinement_results_panel->is_dirty = true;
-
-			Refinement *current_refinement = main_frame->current_project.database.GetRefinementByID(output_refinement->refinement_id);
-			//update resolution statistics in database and gui..
-
-			main_frame->current_project.database.UpdateRefinementResolutionStatistics(output_refinement);
-
-			for (class_counter = 0; class_counter < current_refinement->number_of_classes; class_counter++)
-			{
-				current_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.ClearData();
-				current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.ClearData();
-				current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.ClearData();
-				current_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.ClearData();
-
-				for (point_counter = 0; point_counter < output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.number_of_points; point_counter++)
-				{
-					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.data_y[point_counter]);
-					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_y[point_counter]);
-					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter]);
-					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.data_y[point_counter]);
-
-				}
-
-			}
-
-
-			my_parent->FSCResultsPanel->AddRefinement(output_refinement);
-		}
-		else
-		{
-			main_frame->current_project.database.AddRefinement(output_refinement);
-			ShortRefinementInfo temp_info;
-			temp_info = output_refinement;
-			refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
-
-			// add this refinment to the refinement package..
-
-			active_refinement_package->last_refinment_id = output_refinement->refinement_id;
-			active_refinement_package->refinement_ids.Add(output_refinement->refinement_id);
-
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=%li WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", output_refinement->refinement_id, current_refinement_package_asset_id));
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, active_refinement_package->refinement_ids.GetCount(),  output_refinement->refinement_id));
-
-			volume_asset_panel->is_dirty = true;
-			refinement_package_asset_panel->is_dirty = true;
-			my_parent->input_params_combo_is_dirty = true;
-	//		my_parent->SetDefaults();
-			refinement_results_panel->is_dirty = true;
-
-			my_parent->FSCResultsPanel->AddRefinement(output_refinement);
-
-
-
-		}
-
-		if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath(), wxPATH_RMDIR_RECURSIVE);
-		if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath()) == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath());
-
-		my_parent->FSCResultsPanel->Show(true);
-		my_parent->AngularPlotPanel->Show(false);
-		my_parent->Layout();
-
-
-		//wxPrintf("Calling cycle refinement\n");
-		CycleRefinement();
-	}
-	*/
-
 }
 
 void ClassificationManager::CycleRefinement()

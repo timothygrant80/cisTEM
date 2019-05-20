@@ -49,6 +49,7 @@ public:
 	void GenerateJobCode(unsigned char *job_code);
 	void KillJob(int job_to_kill);
 	void KillJobIfSocketExists(wxSocketBase *socket);
+	wxSocketBase * ReturnJobSocketPointer(int wanted_job);
 
 
 

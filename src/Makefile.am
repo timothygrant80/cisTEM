@@ -58,6 +58,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/local_resolution_estimator.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
+                 core/socket_communicator.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -201,12 +202,10 @@ endif
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-
-
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter align_coordinates convert_par_to_star niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates refine3d niko_test
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += match_template refine_ctf refine_template make_template_result scattering_potential
+bin_PROGRAMS += match_template refine_ctf refine_template make_template_result  scattering_potential 
 endif
 
 
@@ -258,17 +257,16 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/classification_selection.cpp \
                        core/rle3d.cpp \
                        core/angular_distribution_histogram.cpp \
-                       core/pdb.cpp \
+                       core/local_resolution_estimator.cpp  \
                        core/cistem_parameters.cpp \
+                       core/pdb.cpp \
                        core/cistem_star_file_reader.cpp \
-                       core/local_resolution_estimator.cpp 
-
+                       core/socket_communicator.cpp
 
 
 if EXPERIMENTAL_AM
 libcore_a_SOURCES += core/water.cpp
 endif
-
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -277,7 +275,6 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
-
 
 cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp
 
@@ -292,8 +289,7 @@ cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_LDFLAGS = $(WX_LIBS_BASE)
-cisTEM_job_control_LDADD = libcore.a
+cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE)
 
 console_test_SOURCES = programs/console_test/console_test.cpp 
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -304,7 +300,6 @@ unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_LDADD = libcore.a $(LIBS) $(WX_LIBS_BASE)
-
 
 applyctf_SOURCES = programs/applyctf/applyctf.cpp
 applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -461,6 +456,11 @@ prepare_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_LDADD = libcore.a $(WX_LIBS_BASE)
 
+prepare_stack_classaverage_SOURCES = programs/prepare_stack_classaverage/prepare_stack_classaverage.cpp
+prepare_stack_classaverage_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_classaverage_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_classaverage_LDADD = libcore.a $(WX_LIBS_BASE)
+
 subtract_from_stack_SOURCES = programs/subtract_from_stack/subtract_from_stack.cpp
 subtract_from_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 subtract_from_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -506,10 +506,30 @@ local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_LDADD = libcore.a $(WX_LIBS_BASE)
 
+subtract_two_stacks_SOURCES = programs/subtract_two_stacks/subtract_two_stacks.cpp
+subtract_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+subtract_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+subtract_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+
 align_coordinates_SOURCES = programs/align_coordinates/align_coordinates.cpp
 align_coordinates_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 align_coordinates_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 align_coordinates_LDADD = libcore.a $(WX_LIBS_BASE)
+
+add_two_stacks_SOURCES = programs/add_two_stacks/add_two_stacks.cpp
+add_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+add_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+add_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+
+multiply_two_stacks_SOURCES = programs/multiply_two_stacks/multiply_two_stacks.cpp
+multiply_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+multiply_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+multiply_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+
+divide_two_stacks_SOURCES = programs/divide_two_stacks/divide_two_stacks.cpp
+divide_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+divide_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+divide_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
 
 convert_par_to_star_SOURCES = programs/convert_par_to_star/convert_par_to_star.cpp
 convert_par_to_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -543,5 +563,3 @@ refine_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
 endif
-
-

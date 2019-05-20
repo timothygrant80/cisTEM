@@ -139,11 +139,31 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 	cisTEMParameterLine temp_parameters;
 
 	double temp_double;
+	long temp_long;
 
 	while (tokens.HasMoreTokens() == true)
 	{
 		all_tokens.Add(tokens.GetNextToken());
 	}
+
+	// start with image is active, because sometimes we can just stop..
+
+	// image is active
+
+	if (image_is_active_column == -1) temp_parameters.image_is_active = 1.0;
+	else
+	{
+		if (all_tokens[image_is_active_column].ToLong(&temp_long) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
+			return false;
+		}
+
+		temp_parameters.image_is_active = int(temp_long);
+	}
+
+	if (temp_parameters.image_is_active < 0 && exclude_negative_film_numbers == true) return true;
 
 	// position in stack
 
@@ -272,21 +292,6 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.phase_shift = deg_2_rad(float(temp_double));
 	}
 
-	// image is active
-
-	if (image_is_active_column == -1) temp_parameters.image_is_active = -1.0;
-	else
-	{
-		if (all_tokens[image_is_active_column].ToDouble(&temp_double) == false)
-		{
-			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
-			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[image_is_active_column]);
-			return false;
-		}
-
-		temp_parameters.image_is_active = int(temp_double);
-	}
-
 	// occupancy
 
 	if (occupancy_column == -1) temp_parameters.occupancy = 100.0f;
@@ -345,6 +350,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		}
 
 		temp_parameters.score = float(temp_double);
+		//wxPrintf("Score = %f, image_is_active = %i, exclude negative = %s\n", temp_parameters.score, temp_parameters.image_is_active, BoolToYesNo(exclude_negative_film_numbers));
 	}
 
 	// score_change
@@ -467,7 +473,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.image_shift_y = float(temp_double);
 	}
 
-	if (temp_parameters.image_is_active >= 0.0) cached_parameters->Add(temp_parameters);
+	cached_parameters->Add(temp_parameters);
 
 	return true;
 
@@ -681,7 +687,7 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		if (current_line.IsEmpty() == true) break;
 		if (current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';') continue;
 
-		if (ExtractParametersFromLine(current_line, error_string) == false) return false;
+		if (ExtractParametersFromLine(current_line, error_string, exclude_negative_film_numbers) == false) return false;
 	}
 
 	return true;

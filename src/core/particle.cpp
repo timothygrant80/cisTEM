@@ -1375,7 +1375,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		{
 			if (constraints_used.y_shift)
 			{
-				if (j > particle_image->physical_address_of_box_center_y) dy = particle_image->logical_y_dimension - j;
+				if (j > particle_image->physical_address_of_box_center_y) dy = j - particle_image->logical_y_dimension;
 				else dy = j;
 				penalty_y = powf(dy - mid_y, 2) * rvar2_y;				
 			}
@@ -1383,7 +1383,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 			{
 				if (constraints_used.x_shift)
 				{
-					if (i > particle_image->physical_address_of_box_center_x) dx = particle_image->logical_y_dimension - i;
+					if (i > particle_image->physical_address_of_box_center_x) dx = i - particle_image->logical_y_dimension;
 					else dx = i;
 					penalty_x = powf(dx - mid_x, 2) * rvar2_x;					
 				}
@@ -1397,11 +1397,11 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		new_max_found = false;
 		for (j = 0; j < particle_image->logical_y_dimension; j++)
 		{
-			if (j > particle_image->physical_address_of_box_center_y) dy = particle_image->logical_y_dimension - j;
+			if (j > particle_image->physical_address_of_box_center_y) dy = j - particle_image->logical_y_dimension;
 			else dy = j;
 			for (i = 0; i < particle_image->logical_x_dimension; i++)
 			{
-				if (i > particle_image->physical_address_of_box_center_x) dx = particle_image->logical_y_dimension - i;
+				if (i > particle_image->physical_address_of_box_center_x) dx = i - particle_image->logical_y_dimension;
 				else dx = i;
 				if(correlation_map->real_values[pixel_counter] > max_logp_particle)
 				{
@@ -1410,6 +1410,9 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 					// Store correlation coefficient that corresponds to highest likelihood
 					snr_psi = temp_image->real_values[pixel_counter];
 					rotation_angle.euler_matrix.RotateCoords2D(dx, dy, current_parameters.x_shift, current_parameters.y_shift);
+					current_parameters.x_shift *= pixel_size;
+					current_parameters.y_shift *= pixel_size;
+
 					current_parameters.psi = psi;
 					current_parameters.image_is_active = current_class + 1;
 				}
@@ -1612,7 +1615,8 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		sum_image->ForwardFFT();
 		if (uncrop)
 		{
-			sum_image->CosineMask(0.45, 0.1);
+		//	sum_image->CosineMask(0.45, 0.1);
+			sum_image->CosineMask(0.3, 0.4);
 			sum_image->ClipInto(&cropped_input_image);
 			cropped_input_image.BackwardFFT();
 			cropped_input_image.ClipIntoLargerRealSpace2D(&blurred_image, cropped_input_image.ReturnAverageOfRealValuesOnEdges());

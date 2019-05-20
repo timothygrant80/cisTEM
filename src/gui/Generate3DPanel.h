@@ -14,7 +14,14 @@ class Generate3DPanel : public Generate3DPanelParent
 		void FinishButtonClick( wxCommandEvent& event );
 		void StartReconstructionClick( wxCommandEvent& event );
 		void ResetAllDefaultsClick( wxCommandEvent& event );
-		void OnJobSocketEvent(wxSocketEvent& event);
+
+		// overridden socket methods..
+
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketAllJobsFinished();
 
 		int length_of_process_number;
 		//RefinementManager my_refinement_manager;
@@ -32,7 +39,7 @@ class Generate3DPanel : public Generate3DPanelParent
 		bool input_params_combo_is_dirty;
 
 		JobResult *buffered_results;
-		long my_job_id;
+
 		long current_job_id;
 		long selected_refinement_package;
 
@@ -44,7 +51,6 @@ class Generate3DPanel : public Generate3DPanelParent
 
 		//int length_of_process_number;
 
-		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
 		bool running_job;

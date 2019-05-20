@@ -780,6 +780,8 @@ wxThread::ExitCode SharpenMapThread::Entry()
 	}
 
 	wxQueueEvent(main_thread_pointer, finished_event);
+
+	return (wxThread::ExitCode) 0;
 }
 
 

@@ -89,6 +89,7 @@ ParticlePositionAsset* MyParticlePositionAssetPanel::ReturnAssetPointer(long wan
 int MyParticlePositionAssetPanel::ShowDeleteMessageDialog()
 {
 	wxMessageDialog check_dialog(this, "This will remove the selected particle positions from your ENTIRE project!  It will also remove them from the relevant particle picking results.\n\nIn general, if the positions were created from within cisTEM (i.e. they weren't imported) you probably don't want to do this, you probably want to remove them using the particle picking results panel. Any changes you make here\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO | wxICON_WARNING);
+	return check_dialog.ShowModal();
 }
 
 

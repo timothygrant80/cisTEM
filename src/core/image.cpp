@@ -69,7 +69,7 @@ Image::Image( const Image &other_image) // copy constructor
 {
 
 	SetupInitialValues();
-	MyDebugPrint("Warning: copying an image object");
+	//MyDebugPrint("Warning: copying an image object");
 	*this = other_image;
 }
 
@@ -8467,6 +8467,14 @@ void Image::DilateBinarizedMask(float dilation_radius)
 		}
 	}
 	delete [] buffer;
+}
+
+void Image::MakeAbsolute()
+{
+	for (long counter = 0; counter < real_memory_allocated; counter++)
+	{
+		real_values[counter] = fabsf(real_values[counter]);
+	}
 }
 
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift)

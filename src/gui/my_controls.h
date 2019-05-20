@@ -26,7 +26,7 @@ public:
 
 };
 
-class MemoryComboBox : public wxOwnerDrawnComboBox
+class MemoryComboBox : public wxComboBox
 {
 public :
 	MemoryComboBox (wxWindow *parent, wxWindowID id, const wxString &value=wxEmptyString, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, int n=0, const wxString choices[]=NULL, long style=0, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxComboBoxNameStr);
@@ -55,7 +55,7 @@ public :
 	bool FillWithImages(long wanted_image_group);
 	bool FillWithClassifications(long wanted_refinement_package, bool include_new_classification, bool always_select_newest = false);
 	bool FillWithRefinements(long wanted_refinement_package, bool always_select_newest = false);
-
+	bool FillWithClassAverageSelections(bool always_select_newest = false, long wanted_refinement_package_id = -1);
 
 	void OnComboBox(wxCommandEvent& event);
 

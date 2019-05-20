@@ -8,7 +8,6 @@ class MyFindCTFPanel : public FindCTFPanel
 
 		int length_of_process_number;
 
-		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
 		bool running_job;
@@ -46,6 +45,11 @@ public:
 		void OnInfoURL(wxTextUrlEvent& event);
 		void EnableMovieProcessingIfAppropriate();
 
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketAllJobsFinished();
+
 		void WriteInfoText(wxString text_to_write);
 		void WriteErrorText(wxString text_to_write);
 
@@ -53,7 +57,6 @@ public:
 		void ProcessAllJobsFinished();
 		void UpdateProgressBar();
 
-		virtual void OnJobSocketEvent(wxSocketEvent& event);
 		void Reset();
 		void ResetDefaults();
 

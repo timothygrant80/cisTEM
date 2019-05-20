@@ -133,7 +133,13 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		void OnUseMaskCheckBox ( wxCommandEvent& event );
 		void OnAutoMaskButton( wxCommandEvent& event );
 
-		void OnJobSocketEvent(wxSocketEvent& event);
+		// overridden socket methods..
+
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketAllJobsFinished();
 
 		int length_of_process_number;
 
@@ -153,12 +159,10 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		bool volumes_are_dirty;
 
 		JobResult *buffered_results;
-		long my_job_id;
 		long selected_refinement_package;
 
 		//int length_of_process_number;
 
-		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
 		bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected

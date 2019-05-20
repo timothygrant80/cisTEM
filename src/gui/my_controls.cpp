@@ -9,7 +9,7 @@ wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
-		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
+		wxComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
 {
 	associated_ids.clear();
 	selected_id_on_last_clear -10;
@@ -26,7 +26,10 @@ MemoryComboBox::~MemoryComboBox()
 
 void MemoryComboBox::OnComboBox(wxCommandEvent& event)
 {
-	if (GetSelection() >= 0) currently_selected_id = associated_ids.Item(GetSelection());
+	if (GetSelection() >= 0)
+	{
+		currently_selected_id = associated_ids.Item(GetSelection());
+	}
 	event.Skip();
 }
 
@@ -37,7 +40,7 @@ void MemoryComboBox::SetSelection(int n)
 		currently_selected_id = associated_ids.Item(n);
 	}
 
-	wxOwnerDrawnComboBox::SetSelection(n);
+	wxComboBox::SetSelection(n);
 }
 
 void MemoryComboBox::SetSelectionWithEvent(int n)
@@ -47,7 +50,7 @@ void MemoryComboBox::SetSelectionWithEvent(int n)
 		currently_selected_id = associated_ids.Item(n);
 	}
 
-	wxOwnerDrawnComboBox::SetSelection(n);
+	wxComboBox::SetSelection(n);
 
 	wxCommandEvent *change_event = new wxCommandEvent(wxEVT_COMBOBOX);
 	GetEventHandler()->QueueEvent(change_event);
@@ -55,11 +58,15 @@ void MemoryComboBox::SetSelectionWithEvent(int n)
 
 void MemoryComboBox::Clear()
 {
-	associated_ids.clear();
-	associated_text.clear();
-	selected_id_on_last_clear = currently_selected_id;
-	currently_selected_id = -10;
-	wxOwnerDrawnComboBox::Clear();
+	if (GetCount() > 0)
+	{
+		associated_ids.clear();
+		associated_text.clear();
+		selected_id_on_last_clear = currently_selected_id;
+		currently_selected_id = -10;
+		wxComboBox::Clear();
+		wxComboBox::ChangeValue("");
+	}
 }
 
 void MemoryComboBox::Reset()
@@ -68,7 +75,8 @@ void MemoryComboBox::Reset()
 	associated_text.clear();
 	selected_id_on_last_clear = -10;
 	currently_selected_id = -10;
-	wxOwnerDrawnComboBox::Clear();
+	wxComboBox::Clear();
+	wxComboBox::ChangeValue("");
 }
 
 void MemoryComboBox::AddMemoryItem(wxString wanted_text, long wanted_id)
@@ -402,6 +410,49 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool al
 	else return false;
 }
 
+
+bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, long wanted_refinement_package_id) // -1 = all refinement packages
+{
+	Freeze();
+	Clear();
+	ChangeValue("");
+
+	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+
+
+
+	long new_selection = -1;
+	long new_id = -1;
+
+	for (long counter = 0; counter < refinement_package_asset_panel->all_classification_selections.GetCount(); counter++)
+	{
+		if (refinement_package_asset_panel->all_classification_selections[counter].refinement_package_asset_id == wanted_refinement_package_id || wanted_refinement_package_id == -1)
+		{
+			AddMemoryItem(refinement_package_asset_panel->all_classification_selections[counter].name, refinement_package_asset_panel->all_classification_selections[counter].selection_id);
+			if ( refinement_package_asset_panel->all_classification_selections[counter].selection_id == selected_id_on_last_clear)
+			{
+				new_selection = counter;
+				new_id = selected_id_on_last_clear;
+			}
+		}
+	}
+
+	if (GetCount() > 0)
+	{
+		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
+		else SetSelectionWithEvent(new_selection);
+	}
+
+	currently_selected_id = new_id;
+	Thaw();
+
+	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
+	else return false;
+}
+
+
+
+
 OneSecondProgressDialog::OneSecondProgressDialog(const wxString &title, const wxString &message, int maximum, wxWindow *parent, int style)
 :
 wxProgressDialog(title, message, maximum, parent, style)
@@ -413,11 +464,14 @@ bool OneSecondProgressDialog::Update(int value, const wxString & newmsg, bool * 
 {
 	if (time(NULL) - time_of_last_update > 0 || newmsg != wxEmptyString)
 	{
-		wxProgressDialog::Update(value, newmsg, skip);
+		bool return_value;
+		return_value = wxProgressDialog::Update(value, newmsg, skip);
 		if (newmsg != wxEmptyString) Fit();
 		time_of_last_update = time(NULL);
+		return return_value;
 	}
 
+	return true;
 }
 
 
@@ -1784,6 +1838,8 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 
 
 	wxQueueEvent(main_thread_pointer, finished_event);
+
+	return (wxThread::ExitCode) 0;
 
 
 }

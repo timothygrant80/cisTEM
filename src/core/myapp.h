@@ -1,8 +1,7 @@
-#define SERVER_ID 100
-#define SOCKET_ID 101
-
 class ReturnProgramDefinedResultEvent;
 wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEvent);
+
+#define PrintIfLocal(...) {if (is_running_lcally == true) wxPrintf(__VA_ARGS__);}
 
 class ReturnProgramDefinedResultEvent: public wxThreadEvent
 {
@@ -69,23 +68,25 @@ class CalculateThread : public wxThread
 
 // The console APP class.. should just deal with events..
 
+#ifdef __WXOSX__
 class
-MyApp : public wxAppConsole
+MyApp : public wxApp, public SocketCommunicator
+#else
+class
+MyApp : public wxAppConsole, public SocketCommunicator
+#endif
 {
-
-		wxTimer *connection_timer;
 		wxTimer *zombie_timer;
-		wxTimer *queue_timer;
-
 		bool i_am_a_zombie;
-		bool queue_timer_set;
-		bool running_image_writer_thread;
-
 		int number_of_failed_connections;
-		void CheckForConnections();
-		void OnConnectionTimer(wxTimerEvent& event);
-		void OnZombieTimer(wxTimerEvent& event);
+
+		wxTimer *queue_timer;
+		bool queue_timer_set;
+
+
+
 		void OnQueueTimer(wxTimerEvent& event);
+		void OnZombieTimer(wxTimerEvent& event);
 
 		virtual float GetMaxJobWaitTimeInSeconds() {return 30.0f;}
 
@@ -93,11 +94,32 @@ MyApp : public wxAppConsole
 		long total_milliseconds_spent_on_threads;
 		MRCFile master_output_file;
 
-
 	public:
 
 		bool OnInit();
+		int OnExit();
 		virtual void ProgramSpecificInit() {};
+		virtual void ProgramSpecificCleanUp() {};
+		void OnEventLoopEnter(wxEventLoopBase *	loop);
+
+		// Socket overides
+
+		void HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code);
+		void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package);
+		void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket);
+		void HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string);
+		void HandleSocketTimeToDie(wxSocketBase *connected_socket);
+		void HandleSocketJobResult(wxSocketBase *connected_socket, JobResult *received_result);
+		void HandleSocketIHaveAnError(wxSocketBase *connected_socket, wxString error_message);
+		void HandleSocketIHaveInfo(wxSocketBase *connected_socket, wxString info_message);
+		void HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result);
+		void HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJobResults *received_queue);
+		void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack);
+		void HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, float *data_array, int size_of_data_array, int result_number, int number_of_expected_results);
+		void HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds);
+		void HandleSocketYouAreConnected(wxSocketBase *connected_socket);
+		void HandleSocketReadyToSendSingleJob(wxSocketBase *connected_socket, RunJob *received_job);
+		void HandleSocketDisconnect(wxSocketBase *connected_socket);
 
 		// array for sending back the results - this may be better off being made into an object..
 
@@ -111,20 +133,18 @@ MyApp : public wxAppConsole
 		bool            currently_running_a_job;
 		wxIPV4address 	active_controller_address;
 		long 			controller_port;
-		unsigned char   job_code[SOCKET_CODE_SIZE];
+
 		short int my_port;
 		wxString my_ip_address;
 		wxString my_port_string;
 
 		bool is_running_locally;
 
-		wxSocketServer *socket_server;
-
 		bool i_am_the_master;
 
 		int number_of_results_sent;
+		int number_of_timing_results_received;
 
-		JobPackage my_job_package;
 		RunJob my_current_job;
 		RunJob global_job_parameters;
 
@@ -174,18 +194,8 @@ MyApp : public wxAppConsole
 		void SocketSendError(wxString error_message);
 		void SocketSendInfo(wxString info_message);
 
-		void SetupServer();
-
 		void SendNextJobTo(wxSocketBase *socket);
 
-		void OnOriginalSocketEvent(wxSocketEvent& event);
-		void OnMasterSocketEvent(wxSocketEvent& event);
-		void OnSlaveSocketEvent(wxSocketEvent& event);
-		void OnControllerSocketEvent(wxSocketEvent& event);
-
-
-
-		void OnServerEvent(wxSocketEvent& event);
 		void OnThreadComplete(wxThreadEvent& my_event);
 		void OnThreadEnding(wxThreadEvent& my_event);
 		void OnThreadSendError(wxThreadEvent& my_event);

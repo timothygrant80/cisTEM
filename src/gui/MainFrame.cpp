@@ -46,9 +46,18 @@ MainFrame( parent )
 	// Add Movies..
 	//movie_branch = AssetTree->AppendItem(tree_root, wxString("Movies (0)"));
 
+	// initialize sockets in main thread.
+
+	wxSocketBase::Initialize();
+
 	is_fullscreen = false;
-	socket_server = NULL;
 	SetupServer();
+
+	// get port and ip addresses..
+
+	my_port = ReturnServerPort();
+	my_port_string = ReturnServerPortString();
+	all_my_ip_addresses = ReturnServerAllIpAddresses();
 
 	int screen_x_size = wxSystemSettings::GetMetric ( wxSYS_SCREEN_X );
 	int screen_y_size = wxSystemSettings::GetMetric ( wxSYS_SCREEN_Y );
@@ -72,16 +81,17 @@ MainFrame( parent )
 
 	Bind(wxEVT_CHAR_HOOK, &MyMainFrame::OnCharHook, this);
 
+	// Set brother event handler, this is a nastly little hack so that the socket communicator can use the event handler, and it will work whether the "brother" is a console app or gui panel.
+
+	brother_event_handler = this;
+
 
 }
 
 MyMainFrame::~MyMainFrame()
 {
-	if (socket_server != NULL)
-	{
-		socket_server->Destroy();
-	}
-
+	ShutDownServer();
+	ShutDownSocketMonitor();
 	ClearScratchDirectory();
 }
 
@@ -113,53 +123,6 @@ void MyMainFrame::OnCharHook( wxKeyEvent& event )
 
 	event.Skip();
 }
-
-void MyMainFrame::SetupServer()
-{
-	wxIPV4address my_address;
-//	wxIPV4address buffer_address;
-
-	for (short int current_port = START_PORT; current_port <= END_PORT; current_port++)
-	{
-
-		if (current_port == END_PORT)
-		{
-			wxPrintf("JOB CONTROL : Could not find a valid port !\n\n");
-			Destroy();
-			return;
-		}
-
-		my_port = current_port;
-		my_address.Service(my_port);
-
-		socket_server = new wxSocketServer(my_address);
-		socket_server->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-		if ( socket_server->IsOk())
-		{
-			  // setup events for the socket server..
-
-		   	  socket_server->SetEventHandler(*this, SERVER_ID);
-		   	  socket_server->SetNotify(wxSOCKET_CONNECTION_FLAG);
-		  	  socket_server->Notify(true);
-
-		  	  this->Connect(SERVER_ID, wxEVT_SOCKET, wxSocketEventHandler( MyMainFrame::OnServerEvent) );
-
-//			  buffer_address.Hostname(wxGetFullHostName()); // hopefully get my ip
-			 // my_ip_address = buffer_address.IPAddress();
-		      all_my_ip_addresses = ReturnIPAddress();
-			  my_port_string = wxString::Format("%hi", my_port);
-
-			  break;
-		}
-		else
-		{
-			socket_server->Destroy();
-		}
-	}
-
-}
-
 
 void MyMainFrame::RecalculateAssetBrowser(void)
 {
@@ -349,6 +312,7 @@ void MyMainFrame::DirtyClassifications()
 void MyMainFrame::DirtyClassificationSelections()
 {
 	refine2d_results_panel->classification_selections_are_dirty = true;
+	ab_initio_3d_panel->classification_selections_are_dirty = true;
 }
 
 void MyMainFrame::DirtyRunProfiles()
@@ -371,80 +335,42 @@ void MyMainFrame::DirtyRunProfiles()
 
 // SOCKETS
 
-void MyMainFrame::OnSocketEvent(wxSocketEvent& event)
+void MyMainFrame::HandleNewSocketConnection(wxSocketBase *new_connection, unsigned char *identification_code)
 {
-	MyDebugPrint("MyMainFrame::OnSocketEvent - This should not happen!");
-}
+	SETUP_SOCKET_CODES
 
-void MyMainFrame::OnServerEvent(wxSocketEvent& event)
-{
-	  SETUP_SOCKET_CODES
+	if (new_connection != NULL)
+	{
+		// does this correspond to one of our jobs?
 
-	  long current_job;
-	  wxString s = _("OnServerEvent (MyMainFrame): ");
-	  wxSocketBase *sock = NULL;
+		long current_job = job_controller.ReturnJobNumberFromJobCode(identification_code);
 
-	  switch(event.GetSocketEvent())
-	  {
-	    case wxSOCKET_CONNECTION : s.Append(_("wxSOCKET_CONNECTION\n")); break;
-	    default                  : s.Append(_("Unexpected event !\n")); break;
-	  }
+		// delete the code..
 
-	  //MyDebugPrint(s);
+		delete [] identification_code;
 
-      // Accept new connection if there is one in the pending
-      // connections queue, else exit. We use Accept(false) for
-      // non-blocking accept (although if we got here, there
-      // should ALWAYS be a pending connection).
+	    if (current_job == -1)
+	    {
+	    	MyDebugPrint(" GUI : Unknown JOB ID - Closing Connection\n");
 
-      sock = socket_server->Accept();
-	  sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL );//|wxSOCKET_BLOCK);
+	    	// incorrect identification - close the connection..
+	    	new_connection->Destroy();
+	    	new_connection = NULL;
+	    }
+	    else
+	    {
+	    	MyDebugPrint("Connection from Job #%li", current_job);
 
-	  // request identification..
-	  //MyDebugPrint(" Requesting identification...");
-	  WriteToSocket(sock, socket_please_identify, SOCKET_CODE_SIZE);
+	    	job_controller.job_list[current_job].socket = new_connection;
 
-	  //MyDebugPrint(" Waiting for reply...");
-  //	  sock->WaitForRead(5);
+	    	// let the correct panel look after it from now on..
+	    	job_controller.job_list[current_job].parent_panel->MonitorSocket(new_connection);
 
-    //  if (sock->IsData() == true)
-     // {
-    	  ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
+	    	// tell it it is connected
 
-    	  // does this correspond to one of our jobs?
-
-    	  current_job = job_controller.ReturnJobNumberFromJobCode(socket_input_buffer);
-
-  	      if (current_job == -1)
-  	      {
-  	    	  MyDebugPrint(" GUI : Unknown JOB ID - Closing Connection\n");
-
-  	    	  // incorrect identification - close the connection..
-	    	  sock->Destroy();
-	    	  sock = NULL;
-	      }
-	      else
-	      {
-	    	  MyDebugPrint("Connection from Job #%li", current_job);
-
-	    	  job_controller.job_list[current_job].socket = sock;
-	    	  sock->SetEventHandler(*job_controller.job_list[current_job].parent_panel, SOCKET_ID);
-	    	  //sock->SetEventHandler(*this, SOCKET_ID);
-	    	  // Tell the socket it is connected
-
-	    	  WriteToSocket(sock, socket_you_are_connected, SOCKET_CODE_SIZE);
-
-	    	  sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_LOST_FLAG);
-	    	  sock->Notify(true);
-	      }
- //     }
-  //    else
-   //	  {
-	 // 	   	   MyDebugPrint(" ...Read Timeout \n\n");
-	  //	   	   // time out - close the connection
-	   // 	   sock->Destroy();
-	   // 	   sock = NULL;
-	  //}
+	    	WriteToSocket(new_connection, socket_you_are_connected, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+	    }
+	}
 }
 
 void MyMainFrame::OnHelpLaunch( wxCommandEvent& event )
@@ -669,7 +595,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		my_dialog->Update(6, "Opening project (loading movie alignment results...)");
 		movie_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT MOVIE_ASSET_ID FROM MOVIE_ALIGNMENT_LIST");
 		my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
-		current_project.database.AddCTFIcinessColumnIfNecessary();
+	//	current_project.database.AddCTFIcinessColumnIfNecessary();
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
 		my_dialog->Update(8, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();

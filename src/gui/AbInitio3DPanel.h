@@ -19,7 +19,9 @@ public:
 	int running_job_type;
 	int number_of_rounds_to_run;
 	int number_of_rounds_run;
+
 	long current_job_id;
+
 
 	long current_refinement_package_asset_id;
 	long current_input_refinement_id;
@@ -41,10 +43,14 @@ public:
 	Refinement *input_refinement;
 	Refinement *output_refinement;
 
+	ClassificationSelection active_classification_selection;
+
 	RunProfile active_refinement_run_profile;
 	RunProfile active_reconstruction_run_profile;
 
 	bool active_always_apply_symmetry;
+
+	wxString active_symmetry_string;
 
 	//float startup_percent_used;
 	float current_high_res_limit;
@@ -73,6 +79,10 @@ public:
 
 	bool active_should_apply_blurring;
 	bool active_smoothing_factor;
+	bool active_use_classums;
+
+	int active_images_per_class;
+	int active_number_of_2d_classes;
 
 	int number_of_starts_to_run;
 	int number_of_starts_run;
@@ -144,16 +154,18 @@ public:
 	long time_of_last_result_update;
 	bool refinement_package_combo_is_dirty;
 	bool run_profiles_are_dirty;
+	bool classification_selections_are_dirty;
 
-	long my_job_id;
 	long selected_refinement_package;
 
 	int number_of_resampled_volumes_recieved;
 	long current_startup_id;
 	wxArrayString resampled_volume_filenames;
 
-	JobPackage my_job_package;
-	JobTracker my_job_tracker;
+	wxString old_symmetry;
+	int old_number_of_classes;
+	int old_class_selection;
+	bool old_automask_value;
 
 	int active_orth_thread_id;
 	int active_mask_thread_id;
@@ -165,19 +177,26 @@ public:
 
 
 	AbInitio3DPanel( wxWindow* parent );
+	wxString ReturnName() {return "AbInitioPanel";}
 
 	void WriteInfoText(wxString text_to_write);
 	void WriteErrorText(wxString text_to_write);
 	void WriteWarningText(wxString text_to_write);
 	void WriteBlueText(wxString text_to_write);
 
-	void OnJobSocketEvent(wxSocketEvent& event);
+	// overridden socket methods..
+
+	void OnSocketJobResultMsg(JobResult &received_result);
+	void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+	void SetNumberConnectedText(wxString wanted_text);
+	void SetTimeRemainingText(wxString wanted_text);
+	void OnSocketAllJobsFinished();
+
+
 	void OnMaskerThreadComplete(wxThreadEvent& my_event);
 	void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 	void OnVolumeResampled(ReturnProcessedImageEvent& my_event);
 	void OnImposeSymmetryThreadComplete(wxThreadEvent& event);
-
-	int length_of_process_number;
 
 public:
 
@@ -189,6 +208,7 @@ public:
 	void NewRefinementPackageSelected();
 
 	void OnRefinementPackageComboBox( wxCommandEvent& event );
+	void OnMethodChange( wxCommandEvent& event );
 
 	void TakeLastStartClicked( wxCommandEvent& event );
 	void TakeCurrentClicked( wxCommandEvent& event );
@@ -261,3 +281,4 @@ class ImposeAlignmentAndSymmetryThread : public wxThread
 
 
 #endif
+

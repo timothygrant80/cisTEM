@@ -348,6 +348,8 @@ public:
 	void DilateBinarizedMask(float dilation_radius);
 	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
+	void MakeAbsolute();
+
 	void AddImage(Image *other_image);
 	void SubtractImage(Image *other_image);
 	void SubtractSquaredImage(Image *other_image);

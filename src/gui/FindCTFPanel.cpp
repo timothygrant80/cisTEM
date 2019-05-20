@@ -637,7 +637,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
-	my_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "ctffind", number_of_jobs);
+	current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "ctffind", number_of_jobs);
 
 	for (counter = 0; counter < number_of_jobs; counter++)
 	{
@@ -746,7 +746,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		const int number_of_threads = 1;
 
-		my_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), // 0
+		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -817,8 +817,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_processes = my_job_package.number_of_jobs + 1;
-		else number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
+		if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs + 1;
+		else number_of_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_processes >= 100000) length_of_process_number = 6;
 		else
@@ -858,7 +858,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 		Layout();
 
 		running_job = true;
-		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
+		my_job_tracker.StartTracking(current_job_package.number_of_jobs);
 
 	}
 	ProgressBar->Pulse();
@@ -947,165 +947,27 @@ void MyFindCTFPanel::WriteErrorText(wxString text_to_write)
 	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
 }
 
-
-
-
-void MyFindCTFPanel::OnJobSocketEvent(wxSocketEvent& event)
+void MyFindCTFPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
-	SETUP_SOCKET_CODES
-
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
+	if (received_result.result_size > 0)
 	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
+		ProcessResult(&received_result);
 	}
+}
 
-	//m_text->AppendText(s);
+void MyFindCTFPanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
 
-	//MyDebugPrint(s);
+void MyFindCTFPanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
 
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
-
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE);
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, 4);
-			my_job_tracker.MarkJobFinished();
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			if (temp_result.result_size > 0)
-			{
-				ProcessResult(&temp_result);
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, 4);
-
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-			int total_processes;
-
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long));
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project. Total number before adding: %f. Timing from controller: %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour: %f %li",main_frame->current_project.total_cpu_hours,timing_from_controller);
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			// Other stuff to do once all jobs finished
-			ProcessAllJobsFinished();
-		}
-
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-		break;
-	}
-
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-
+void MyFindCTFPanel::OnSocketAllJobsFinished()
+{
+	ProcessAllJobsFinished();
 }
 
 void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
@@ -1133,7 +995,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 		wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath();
 
-		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], image_filename);
+		CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], image_filename);
 		time_of_last_result_update = time(NULL);
 	}
 
@@ -1255,7 +1117,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	{
 		image_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->asset_id;
 
-		if (my_job_package.jobs[counter].arguments[15].ReturnFloatArgument() < 0)
+		if (current_job_package.jobs[counter].arguments[15].ReturnFloatArgument() < 0)
 		{
 			restrain_astigmatism = false;
 			tolerated_astigmatism = 0;
@@ -1263,15 +1125,15 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		else
 		{
 			restrain_astigmatism = true;
-			tolerated_astigmatism = my_job_package.jobs[counter].arguments[15].ReturnFloatArgument();
+			tolerated_astigmatism = current_job_package.jobs[counter].arguments[15].ReturnFloatArgument();
 		}
 
-		if ( my_job_package.jobs[counter].arguments[16].ReturnBoolArgument())
+		if ( current_job_package.jobs[counter].arguments[16].ReturnBoolArgument())
 		{
 			find_additional_phase_shift = true;
-			min_phase_shift = my_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
-			max_phase_shift = my_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
-			phase_shift_step = my_job_package.jobs[counter].arguments[19].ReturnFloatArgument();
+			min_phase_shift = current_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
+			max_phase_shift = current_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
+			phase_shift_step = current_job_package.jobs[counter].arguments[19].ReturnFloatArgument();
 		}
 		else
 		{
@@ -1286,17 +1148,17 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 ctf_estimation_job_id,
 																					 (long int) now.GetAsDOS(),
 																					 image_asset_id,
-																					 my_job_package.jobs[counter].arguments[1].ReturnBoolArgument(), // input_is_a_movie
-																					 my_job_package.jobs[counter].arguments[5].ReturnFloatArgument(), // voltage
-																					 my_job_package.jobs[counter].arguments[6].ReturnFloatArgument(), // spherical_aberration
-																					 my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // pixel_size
-																					 my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // amplitude contrast
-																					 my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // box_size
-																					 my_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // min resolution
-																					 my_job_package.jobs[counter].arguments[10].ReturnFloatArgument(),  // max resolution
-																					 my_job_package.jobs[counter].arguments[11].ReturnFloatArgument(), // min defocus
-																					 my_job_package.jobs[counter].arguments[12].ReturnFloatArgument(), // max defocus
-																					 my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // defocus_step
+																					 current_job_package.jobs[counter].arguments[1].ReturnBoolArgument(), // input_is_a_movie
+																					 current_job_package.jobs[counter].arguments[5].ReturnFloatArgument(), // voltage
+																					 current_job_package.jobs[counter].arguments[6].ReturnFloatArgument(), // spherical_aberration
+																					 current_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // pixel_size
+																					 current_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // amplitude contrast
+																					 current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // box_size
+																					 current_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // min resolution
+																					 current_job_package.jobs[counter].arguments[10].ReturnFloatArgument(),  // max resolution
+																					 current_job_package.jobs[counter].arguments[11].ReturnFloatArgument(), // min defocus
+																					 current_job_package.jobs[counter].arguments[12].ReturnFloatArgument(), // max defocus
+																					 current_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // defocus_step
 																					 restrain_astigmatism,
 																					 tolerated_astigmatism,
 																					 find_additional_phase_shift,
@@ -1310,9 +1172,9 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 buffered_results[counter].result_data[4], // score
 																					 buffered_results[counter].result_data[5], // detected ring resolution
 																					 buffered_results[counter].result_data[6], // detected aliasing resolution
-																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
-																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
-																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument(),  // large astigmatism expected
+																					 current_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
+																					 current_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
+																					 current_job_package.jobs[counter].arguments[14].ReturnBoolArgument(),  // large astigmatism expected
 																					 buffered_results[counter].result_data[7]); // iciness
 		ctf_estimation_id++;
 		my_progress_dialog->Update(counter + 1);

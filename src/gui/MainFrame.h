@@ -2,7 +2,7 @@
 #define __MainFrame__
 
 /** Implementing MainFrame */
-class MyMainFrame : public MainFrame
+class MyMainFrame : public MainFrame, public SocketCommunicator
 {
 		bool is_fullscreen;
 	public:
@@ -11,8 +11,6 @@ class MyMainFrame : public MainFrame
 		~MyMainFrame();
 
 	//// end generated class members
-
-		wxSocketServer *socket_server;
 
 		wxTreeItemId tree_root;
 		wxTreeItemId movie_branch;
@@ -26,7 +24,8 @@ class MyMainFrame : public MainFrame
 
 		short int my_port;
 
-		void SetupServer();
+		virtual wxString ReturnName() {return "MainFrame";}
+
 		void RecalculateAssetBrowser(void);
 		void OnCollapseAll( wxCommandEvent& event );
 		void OnMenuBookChange( wxBookCtrlEvent& event );
@@ -50,8 +49,15 @@ class MyMainFrame : public MainFrame
 
 		void OnCharHook( wxKeyEvent& event );
 
-		void OnServerEvent(wxSocketEvent& event);
-		void OnSocketEvent(wxSocketEvent& event);
+	//	void OnServerEvent(wxSocketEvent& event);
+	//	void OnSocketEvent(wxSocketEvent& event);
+
+		// Socket Handling overrides..
+
+		void HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code);
+
+		// end socket
+
 
 		void DirtyEverything();
 		void DirtyMovieGroups();

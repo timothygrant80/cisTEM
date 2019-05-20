@@ -63,6 +63,8 @@ void Refine2DApp::DoInteractiveUserInput()
 	bool		invert_contrast = false;
 	bool		exclude_blank_edges = true;
 	bool		dump_arrays = false;
+	bool 		auto_mask = false;
+	bool		auto_centre = false;
 
 	UserInput *my_input = new UserInput("Refine2D", 1.02);
 
@@ -96,8 +98,8 @@ void Refine2DApp::DoInteractiveUserInput()
 	delete my_input;
 
 	int current_class = 0;
-	my_current_job.Reset(26);
-	my_current_job.ManualSetArguments("tttttiiiffffffffffffibbbbt",	input_particle_images.ToUTF8().data(),
+	my_current_job.Reset(28);
+	my_current_job.ManualSetArguments("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																	input_parameter_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	ouput_parameter_file.ToUTF8().data(),
@@ -107,7 +109,9 @@ void Refine2DApp::DoInteractiveUserInput()
 																	mask_radius, low_resolution_limit, high_resolution_limit,
 																	angular_step, max_search_x, max_search_y, smoothing_factor,
 																	padding_factor, normalize_particles, invert_contrast,
-																	exclude_blank_edges, dump_arrays, dump_file.ToUTF8().data());
+																	exclude_blank_edges, dump_arrays, dump_file.ToUTF8().data(),
+																	auto_mask,
+																	auto_centre);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -148,6 +152,8 @@ bool Refine2DApp::DoCalculation()
 	bool	 exclude_blank_edges				= my_current_job.arguments[23].ReturnBoolArgument();
 	bool	 dump_arrays						= my_current_job.arguments[24].ReturnBoolArgument();
 	dump_file	 								= my_current_job.arguments[25].ReturnStringArgument();
+	bool auto_mask 								= my_current_job.arguments[26].ReturnBoolArgument();
+	bool auto_centre							= my_current_job.arguments[27].ReturnBoolArgument();
 
 	input_particle.constraints_used.x_shift = true;		// Constraint for X shifts
 	input_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
@@ -438,8 +444,11 @@ bool Refine2DApp::DoCalculation()
 	cropped_input_image.Allocate(cropped_box_size, cropped_box_size, true);
 	binning_factor = high_resolution_limit / pixel_size / 2.0;
 	if (binning_factor < 1.0) binning_factor = 1.0;
-	fourier_size = ReturnClosestFactorizedUpper(cropped_box_size / binning_factor, 3, true);
+	//fourier_size = ReturnClosestFactorizedUpper(cropped_box_size / binning_factor, 3, true);
+	fourier_size = ReturnClosestFactorizedUpper((cropped_box_size * 1.6) / binning_factor, 3, true);
 	if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
+
+	//if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
 	best_correlation_map.Allocate(fourier_size, fourier_size, true);
 	binning_factor = float(cropped_box_size) / float(fourier_size);
 	binned_pixel_size = pixel_size * binning_factor;
@@ -495,17 +504,113 @@ bool Refine2DApp::DoCalculation()
 	if (input_classes != NULL)
 	{
 		j = 0;
+		Image buffer_image;
+		//float original_average_value = -FLT_MAX;
+		float average_value;
+		float average_of_100_max;
+		float threshold_value;
+		Image size_image;
+		long address;
+		Peak center_of_mass;
+		Image copy_image;
+		Image difference_image;
+
+
+		float original_average_value = -0.3f;
+
 		for (current_class = 0; current_class < number_of_classes; current_class++)
 		{
+
 			input_image.ReadSlice(input_classes, current_class + 1);
 			variance = input_image.ReturnSumOfSquares();
 			if (variance == 0.0 && input_classes != NULL) continue;
-			input_image.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
-			input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
-			// Not clear if the following is the right thing to do here...
-//			input_image.AddConstant(- input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true));
+
 			input_image.MultiplyByConstant(binning_factor);
+
+			if (auto_mask == true)
+			{
+				copy_image.CopyFrom(&input_image);
+				difference_image.CopyFrom(&input_image);
+				buffer_image.CopyFrom(&input_image);
+				buffer_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
+				buffer_image.ForwardFFT();
+				buffer_image.CosineMask(pixel_size / 20.0f, pixel_size / 10.0f);
+				buffer_image.BackwardFFT();
+
+				average_value = buffer_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
+				average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, mask_radius / pixel_size);
+				threshold_value = average_value + ((average_of_100_max - average_value) * 0.02);
+
+				buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, -FLT_MAX);
+				buffer_image.Binarise(threshold_value);
+
+				rle3d my_rle3d(buffer_image);
+				size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+				my_rle3d.ConnectedSizeDecodeTo(size_image);
+
+				float size_of_biggest_thing = size_image.ReturnMaximumValue();
+				size_image.Binarise(size_of_biggest_thing - 1.0f);
+				size_image.DilateBinarizedMask(5.0f / pixel_size);
+				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
+
+				for (address = 0; address < input_image.real_memory_allocated; address++)
+				{
+					if (size_image.real_values[address] == 0.0f) buffer_image.real_values[address] = 1.0f;
+					else buffer_image.real_values[address] = 0.0f;
+				}
+
+				// look for holes so we can fill them in
+				rle3d my_rle3d2(buffer_image);
+				my_rle3d2.ConnectedSizeDecodeTo(buffer_image);
+
+				for (address = 0; address < input_image.real_memory_allocated; address++)
+				{
+					if (buffer_image.real_values[address] <= size_of_biggest_thing) size_image.real_values[address] = 1.0f;
+					else size_image.real_values[address] = 0.0f;
+
+				}
+
+				size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
+
+
+				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
+				input_image.SetMinimumValue(original_average_value);
+
+				for (address = 0; address < input_image.real_memory_allocated; address++)
+				{
+					if (size_image.real_values[address] <= 0.0f) input_image.real_values[address] = original_average_value;
+					//else
+					//input_image.real_values[address] += original_average_value;
+
+					//input_image.real_values[address] -= original_average_value;
+				}
+
+				input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
+				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
+				difference_image.CopyFrom(&input_image);
+				difference_image.SubtractImage(&copy_image);
+
+				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
+				difference_image.MultiplyByConstant(0.5f);
+				copy_image.AddImage(&difference_image);
+				input_image.CopyFrom(&copy_image);
+			}
+			else
+			{
+				input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
+				input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
+			}
+
+			if (auto_centre == true)
+			{
+				input_image.CenterOfMass();
+				center_of_mass = input_image.CenterOfMass(0.0f, true);
+				input_image.RealSpaceIntegerShift(myroundint(center_of_mass.x), myroundint(center_of_mass.y), 0);
+			}
+
+
 			input_image.ClipInto(&cropped_input_image);
+			if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/masked.mrc", current_class + 1);
 			cropped_input_image.ForwardFFT();
 			cropped_input_image.ClipInto(&input_classes_cache[j]);
 			j++;

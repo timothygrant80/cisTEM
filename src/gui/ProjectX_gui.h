@@ -17,6 +17,7 @@ class AssetPickerListCtrl;
 class AutoWrapStaticText;
 class BitmapPanel;
 class CTF1DPanel;
+class ClassSelectionPickerComboPanel;
 class ClassificationPickerComboPanel;
 class ClassificationPlotPanel;
 class ClassificationSelectionListCtrl;
@@ -67,10 +68,10 @@ class VolumeAssetPickerComboPanel;
 #include <wx/button.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
+#include <wx/radiobut.h>
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 #include <wx/textctrl.h>
-#include <wx/radiobut.h>
 #include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
@@ -159,18 +160,27 @@ class AbInitio3DPanelParent : public JobPanel
 	private:
 	
 	protected:
-		wxStaticLine* m_staticline12;
+		wxStaticLine* TopStaticLine;
+		wxStaticText* ImageOrClassAverageStaticText;
+		wxRadioButton* ImageInputRadioButton;
+		wxRadioButton* ClassAverageInputRadioButton;
+		wxStaticLine* BottomStaticLine;
 		wxPanel* InputParamsPanel;
-		wxStaticText* m_staticText262;
+		wxStaticText* InputRefinementPackageStaticText;
+		wxStaticText* InputClassificationSelectionStaticText;
 		wxStaticLine* m_staticline52;
+		wxStaticText* NoClassesStaticText;
+		wxSpinCtrl* NumberClassesSpinCtrl;
 		wxStaticText* m_staticText415;
 		wxSpinCtrl* NumberStartsSpinCtrl;
-		wxStaticLine* m_staticline90;
+		wxStaticLine* m_staticline144;
+		wxStaticText* SymmetryStaticText;
+		wxComboBox* SymmetryComboBox;
 		wxStaticText* m_staticText264;
 		wxSpinCtrl* NumberRoundsSpinCtrl;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticText* PleaseCreateRefinementPackageText;
-		wxStaticLine* m_staticline10;
+		wxStaticLine* m_staticline141;
 		wxScrolledWindow* ExpertPanel;
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText531;
@@ -187,7 +197,7 @@ class AbInitio3DPanelParent : public JobPanel
 		NumericTextCtrl* SearchRangeXTextCtrl;
 		wxStaticText* SearchRangeYStaticText;
 		NumericTextCtrl* SearchRangeYTextCtrl;
-		wxStaticText* m_staticText324;
+		wxStaticText* UseAutoMaskingStaticText;
 		wxRadioButton* AutoMaskYesRadio;
 		wxRadioButton* AutoMaskNoRadio;
 		wxStaticText* m_staticText4151;
@@ -206,6 +216,9 @@ class AbInitio3DPanelParent : public JobPanel
 		wxRadioButton* ApplyBlurringNoRadioButton;
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* m_staticText662;
+		wxStaticText* m_staticText663;
+		wxSpinCtrl* ImagesPerClassSpinCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		AbInitioPlotPanel* PlotPanel;
@@ -234,6 +247,7 @@ class AbInitio3DPanelParent : public JobPanel
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnMethodChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
@@ -246,10 +260,11 @@ class AbInitio3DPanelParent : public JobPanel
 	
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
+		ClassSelectionPickerComboPanel* ClassSelectionComboBox;
 		wxPanel* OrthResultsPanel;
 		DisplayPanel* ShowOrthDisplayPanel;
 		
-		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,686 ), long style = wxTAB_TRAVERSAL ); 
+		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1631,686 ), long style = wxTAB_TRAVERSAL ); 
 		~AbInitio3DPanelParent();
 	
 };
@@ -302,9 +317,15 @@ class Refine2DPanel : public JobPanel
 		wxRadioButton* ExcludeBlankEdgesNoRadio;
 		wxStaticText* m_staticText334;
 		wxRadioButton* AutoPercentUsedRadioYes;
-		wxRadioButton* SphereClassificatonNoRadio1;
+		wxRadioButton* SpherAutoPercentUsedRadioNo;
 		wxStaticText* PercentUsedStaticText;
 		NumericTextCtrl* PercentUsedTextCtrl;
+		wxStaticText* m_staticText650;
+		wxRadioButton* AutoMaskRadioYes;
+		wxRadioButton* AutoMaskRadioNo;
+		wxStaticText* m_staticText651;
+		wxRadioButton* AutoCentreRadioYes;
+		wxRadioButton* AutoCentreRadioNo;
 		wxPanel* InfoPanel;
 		wxRichTextCtrl* InfoText;
 		wxStaticLine* m_staticline11;
@@ -1620,6 +1641,7 @@ class Refine3DPanel : public JobPanel
 		wxCheckBox* RefinePhiCheckBox;
 		wxCheckBox* RefineXShiftCheckBox;
 		wxCheckBox* RefineYShiftCheckBox;
+		wxCheckBox* RefineOccupanciesCheckBox;
 		wxStaticText* m_staticText202;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;

@@ -126,27 +126,27 @@ void cisTEMParameterLine::SetAllToZero()
 
 void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_params)
 {
-	if (isnanf(psi) || isinff(psi)) psi = other_params.psi;
-	if (isnanf(theta) || isinff(theta)) theta = other_params.theta;
-	if (isnanf(phi) || isinff(phi)) phi = other_params.phi;
-	if (isnanf(x_shift) || isinff(x_shift)) x_shift = other_params.x_shift;
-	if (isnanf(y_shift) || isinff(y_shift)) y_shift = other_params.y_shift;
-	if (isnanf(defocus_1) || isinff(defocus_1)) defocus_1 = other_params.defocus_1;
-	if (isnanf(defocus_2) || isinff(defocus_2)) defocus_2 = other_params.defocus_2;
-	if (isnanf(defocus_angle) || isinff(defocus_angle)) defocus_angle = other_params.defocus_angle;
-	if (isnanf(phase_shift) || isinff(phase_shift)) phase_shift = other_params.phase_shift;
-	if (isnanf(occupancy) || isinff(occupancy)) occupancy = other_params.occupancy;
-	if (isnanf(logp) || isinff(logp)) logp = other_params.logp;
-	if (isnanf(sigma) || isinff(sigma)) sigma = other_params.sigma;
-	if (isnanf(score) || isinff(score)) score = other_params.score;
-	if (isnanf(score_change) || isinff(score_change)) score_change = other_params.score_change;
-	if (isnanf(pixel_size) || isinff(pixel_size)) pixel_size = other_params.pixel_size;
-	if (isnanf(microscope_voltage_kv) || isinff(microscope_voltage_kv)) microscope_voltage_kv = other_params.microscope_voltage_kv;
-	if (isnanf(microscope_spherical_aberration_mm) || isinff(microscope_spherical_aberration_mm)) microscope_spherical_aberration_mm = other_params.microscope_spherical_aberration_mm;
-	if (isnanf(beam_tilt_x) || isinff(beam_tilt_x)) beam_tilt_x = other_params.beam_tilt_x;
-	if (isnanf(beam_tilt_y) || isinff(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
-	if (isnanf(image_shift_x) || isinff(image_shift_x)) image_shift_x = other_params.image_shift_x;
-	if (isnanf(image_shift_y) || isinff(image_shift_y)) image_shift_y = other_params.image_shift_y;
+	if (isnan(psi) || isinf(psi)) psi = other_params.psi;
+	if (isnan(theta) || isinf(theta)) theta = other_params.theta;
+	if (isnan(phi) || isinf(phi)) phi = other_params.phi;
+	if (isnan(x_shift) || isinf(x_shift)) x_shift = other_params.x_shift;
+	if (isnan(y_shift) || isinf(y_shift)) y_shift = other_params.y_shift;
+	if (isnan(defocus_1) || isinf(defocus_1)) defocus_1 = other_params.defocus_1;
+	if (isnan(defocus_2) || isinf(defocus_2)) defocus_2 = other_params.defocus_2;
+	if (isnan(defocus_angle) || isinf(defocus_angle)) defocus_angle = other_params.defocus_angle;
+	if (isnan(phase_shift) || isinf(phase_shift)) phase_shift = other_params.phase_shift;
+	if (isnan(occupancy) || isinf(occupancy)) occupancy = other_params.occupancy;
+	if (isnan(logp) || isinf(logp)) logp = other_params.logp;
+	if (isnan(sigma) || isinf(sigma)) sigma = other_params.sigma;
+	if (isnan(score) || isinf(score)) score = other_params.score;
+	if (isnan(score_change) || isinf(score_change)) score_change = other_params.score_change;
+	if (isnan(pixel_size) || isinf(pixel_size)) pixel_size = other_params.pixel_size;
+	if (isnan(microscope_voltage_kv) || isinf(microscope_voltage_kv)) microscope_voltage_kv = other_params.microscope_voltage_kv;
+	if (isnan(microscope_spherical_aberration_mm) || isinf(microscope_spherical_aberration_mm)) microscope_spherical_aberration_mm = other_params.microscope_spherical_aberration_mm;
+	if (isnan(beam_tilt_x) || isinf(beam_tilt_x)) beam_tilt_x = other_params.beam_tilt_x;
+	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
+	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
+	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
 
 
 }

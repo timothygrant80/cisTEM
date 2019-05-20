@@ -818,18 +818,26 @@ bool UnBlurApp::DoCalculation()
 
 	float *result_array = new float[number_of_input_images * 2];
 
-	NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
-	shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str());
-
-	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+	if (is_running_locally == true)
 	{
-		result_array[image_counter] = x_shifts[image_counter] * output_pixel_size;
-		result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+		NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
+		shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str());
 
-		temp_float[0] = x_shifts[image_counter] * output_pixel_size;
-		temp_float[1] = y_shifts[image_counter] * output_pixel_size;
-		shifts_file.WriteLine(temp_float);
-		wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		{
+			temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+			temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+			shifts_file.WriteLine(temp_float);
+			wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+		}
+	}
+	else
+	{
+		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+		{
+			result_array[image_counter] = x_shifts[image_counter] * output_pixel_size;
+			result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+		}
 	}
 
 	my_result.SetResult(number_of_input_images * 2, result_array);

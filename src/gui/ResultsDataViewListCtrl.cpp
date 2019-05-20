@@ -389,6 +389,8 @@ bool CheckboxRenderer::ActivateCell	(const wxRect & cell, wxDataViewModel * 	mod
 			if (current_mode == UNCHECKED) model->ChangeValue(wxVariant(UNCHECKED_WITH_EYE), item, col);
 		}
 	}
+
+	return true; // I have no idea what this is used for, documentation doesn't specify
 }
 
 
@@ -417,6 +419,9 @@ bool CheckboxRenderer:: Render(wxRect 	cell, wxDC *dc,	int state)
 	if (current_mode == UNCHECKED_WITH_EYE) dc->DrawBitmap(unchecked_eye_bmp, cell.x, cell.y, true);
 	else
 	if (current_mode == CHECKED_WITH_EYE) dc->DrawBitmap(checked_eye_bmp, cell.x, cell.y, true);
+
+	return true; // I have no idea what this is used for, documentation doesn't specify
+
 }
 
 

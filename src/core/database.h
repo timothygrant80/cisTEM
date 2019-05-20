@@ -119,6 +119,7 @@ public :
 	void AddRefinementPackageAsset(RefinementPackage *asset_to_add);
 
 	wxArrayLong Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
+	int ReturnNumberOf2DClassMembers(long wanted_classification_id, int wanted_class_number);
 
 	//Convenience insertion functions..
 

@@ -270,7 +270,7 @@ bool Reconstruct3DApp::DoCalculation()
 
 	//FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	cisTEMParameters input_star_file;
-	input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+	input_star_file.ReadFromcisTEMStarFile(input_star_filename, true);
 
 //	input_par_file.ReadFile(true, input_stack.ReturnZSize());
 /*	input_par_file.ReduceAngles();
@@ -321,10 +321,19 @@ bool Reconstruct3DApp::DoCalculation()
 	input_star_file.CalculateDefocusDependence();
 
 	//if (adjust_scores) input_par_file.AdjustScores();
-	if (adjust_scores) input_star_file.AdjustScores();
+	if (adjust_scores)
+	{
+		input_star_file.AdjustScores();
+	}
 
-	if (score_threshold > 0.0 && score_threshold < 1.0) score_threshold = input_star_file.ReturnScoreThreshold(score_threshold);
-	if (score_threshold == 1.0) score_threshold = input_star_file.ReturnMinScore();
+	if (score_threshold > 0.0 && score_threshold < 1.0)
+	{
+		score_threshold = input_star_file.ReturnScoreThreshold(score_threshold);
+	}
+	if (score_threshold == 1.0)
+	{
+		score_threshold = input_star_file.ReturnMinScore();
+	}
 
 	if (correct_ewald_sphere != 0) calculate_complex_ctf = true;
 

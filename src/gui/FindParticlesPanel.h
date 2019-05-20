@@ -5,10 +5,8 @@
 class MyFindParticlesPanel : public FindParticlesPanel
 {
 		long my_job_id;
-
 		int length_of_process_number;
 
-		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
 		bool running_job;
@@ -101,7 +99,13 @@ public:
 		void ProcessResult(JobResult *result_to_process, const int &wanted_job_number = -1);
 		void UpdateProgressBar();
 
-		virtual void OnJobSocketEvent(wxSocketEvent& event);
+		// overridden socket methods..
+
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketJobFinished(int finished_job_number);
+		void OnSocketAllJobsFinished();
 
 		//
 		enum particle_picking_algorithms { ab_initio, number_of_picking_algorithms };

@@ -1328,7 +1328,7 @@ bool CtffindApp::DoCalculation()
 				// DNM: Do one-time set of phase shift for fixed value
 				if (find_additional_phase_shift && fixed_additional_phase_shift)
 				{
-					current_ctf.SetAdditionalPhaseShift(minimum_additional_phase_shift);
+					current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 				}
 
 				// Actually run the BF search

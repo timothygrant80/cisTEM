@@ -1679,7 +1679,6 @@ void AbInitioManager::SetupMerge3dJob()
 		else wiener_nominator = 10.0f;
 
 
-		wiener_nominator = 50.0f;
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
 		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),

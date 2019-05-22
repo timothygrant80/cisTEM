@@ -7,8 +7,6 @@ class MyFindParticlesPanel : public FindParticlesPanel
 		long my_job_id;
 		int length_of_process_number;
 
-		JobTracker my_job_tracker;
-
 		bool running_job;
 
 		//Image result_image;

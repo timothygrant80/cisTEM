@@ -9,7 +9,7 @@ wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
-		wxComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
+		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
 {
 	associated_ids.clear();
 	selected_id_on_last_clear -10;
@@ -40,7 +40,7 @@ void MemoryComboBox::SetSelection(int n)
 		currently_selected_id = associated_ids.Item(n);
 	}
 
-	wxComboBox::SetSelection(n);
+	wxOwnerDrawnComboBox::SetSelection(n);
 }
 
 void MemoryComboBox::SetSelectionWithEvent(int n)
@@ -50,7 +50,7 @@ void MemoryComboBox::SetSelectionWithEvent(int n)
 		currently_selected_id = associated_ids.Item(n);
 	}
 
-	wxComboBox::SetSelection(n);
+	wxOwnerDrawnComboBox::SetSelection(n);
 
 	wxCommandEvent *change_event = new wxCommandEvent(wxEVT_COMBOBOX);
 	GetEventHandler()->QueueEvent(change_event);
@@ -64,8 +64,8 @@ void MemoryComboBox::Clear()
 		associated_text.clear();
 		selected_id_on_last_clear = currently_selected_id;
 		currently_selected_id = -10;
-		wxComboBox::Clear();
-		wxComboBox::ChangeValue("");
+		wxOwnerDrawnComboBox::Clear();
+		wxOwnerDrawnComboBox::ChangeValue("");
 	}
 }
 
@@ -75,8 +75,8 @@ void MemoryComboBox::Reset()
 	associated_text.clear();
 	selected_id_on_last_clear = -10;
 	currently_selected_id = -10;
-	wxComboBox::Clear();
-	wxComboBox::ChangeValue("");
+	wxOwnerDrawnComboBox::Clear();
+	wxOwnerDrawnComboBox::ChangeValue("");
 }
 
 void MemoryComboBox::AddMemoryItem(wxString wanted_text, long wanted_id)

@@ -1482,7 +1482,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			time_of_last_result_update = time(NULL);
 		}
 
-		//my_job_tracker.MarkJobFinished();
+		my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
 		// store the results..
@@ -1490,7 +1490,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 	}
 	else
 	{
-		//my_job_tracker.MarkJobFinished();
+		my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 /*
 		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)

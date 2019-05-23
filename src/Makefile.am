@@ -258,7 +258,6 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/classification_selection.cpp \
                        core/rle3d.cpp \
                        core/angular_distribution_histogram.cpp \
-                       core/pdb.cpp \
                        core/cistem_parameters.cpp \
                        core/cistem_star_file_reader.cpp \
                        core/local_resolution_estimator.cpp 
@@ -266,7 +265,7 @@ libcore_a_SOURCES =    core/functions.cpp \
 
 
 if EXPERIMENTAL_AM
-libcore_a_SOURCES += core/water.cpp
+libcore_a_SOURCES += core/water.cpp core/pdb.cpp
 endif
 
 

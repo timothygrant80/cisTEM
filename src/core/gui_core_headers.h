@@ -78,6 +78,7 @@
 #include "../gui/PickingResultsDisplayPanel.h"
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
+#include "../gui/MyPhenixSettingsPanel.h"
 #include "../gui/MyNewProjectWizard.h"
 #include "../gui/ImportRefinementPackageWizard.h"
 #include "../gui/ExportRefinementPackageWizard.h"

@@ -2,6 +2,7 @@
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+extern MyPhenixSettingsPanel *phenix_settings_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 

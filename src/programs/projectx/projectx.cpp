@@ -50,6 +50,7 @@ Refine2DResultsPanel *refine2d_results_panel;
 MyRefinementResultsPanel *refinement_results_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
+MyPhenixSettingsPanel *phenix_settings_panel;
 
 wxImageList *MenuBookIconImages;
 wxImageList *ActionsBookIconImages;
@@ -132,6 +133,7 @@ bool MyGuiApp::OnInit()
 
 	// Individual Panels
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
+	phenix_settings_panel = new MyPhenixSettingsPanel(settings_panel->SettingsBook);
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
@@ -204,6 +206,7 @@ bool MyGuiApp::OnInit()
 	wxBitmap sharpen_map_icon_bmp = wxBITMAP_PNG_FROM_DATA(sharpen_map_icon);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
+	wxBitmap phenix_settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
 #ifdef EXPERIMENTAL
 	wxBitmap match_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(match_template_icon);
@@ -245,6 +248,7 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages->Add(refine3d_icon_bmp);
 
 	SettingsBookIconImages->Add(run_profiles_icon_bmp);
+	SettingsBookIconImages->Add(phenix_settings_icon_bmp);
 
 #ifdef EXPERIMENTAL
 	ExperimentalBookIconImages->Add(match_template_icon_bmp);
@@ -298,6 +302,7 @@ bool MyGuiApp::OnInit()
 	results_panel->ResultsBook->AddPage(refinement_results_panel, "3D Refinement", false, 4);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
+	settings_panel->SettingsBook->AddPage(phenix_settings_panel, "Phenix Settings", false, 0);
 
 #ifdef EXPERIMENTAL
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
@@ -353,7 +358,8 @@ int MyGuiApp::OnExit()
 	movie_asset_panel->Destroy();
 	image_asset_panel->Destroy();
 	align_movies_panel->Destroy();
-	run_profiles_panel->Destroy();*/
+	run_profiles_panel->Destroy();
+	phenix_settings_panel->Destroy();*/
 
 	return 0;
 

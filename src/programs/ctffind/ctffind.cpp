@@ -723,7 +723,7 @@ void CtffindApp::DoInteractiveUserInput()
 	}
 
 	my_current_job.Reset(37);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbffi",	input_filename.c_str(), //1
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -752,7 +752,7 @@ void CtffindApp::DoInteractiveUserInput()
 																			movie_is_dark_corrected,
 																			dark_filename.ToStdString().c_str(),
 																			correct_movie_mag_distortion,
-																			movie_mag_distortion_angle,
+																			movie_mag_distortion_angle, //30
 																			movie_mag_distortion_major_scale,
 																			movie_mag_distortion_minor_scale,
 																			defocus_is_known,

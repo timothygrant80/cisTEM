@@ -444,20 +444,34 @@ void MyApp::SendAllResultsFromResultQueue()
 
 	// we want to pop off all the jobs, and send them in one big lump..
 
-	while (1==1)
-	{
-		JobResult *popped_job = PopJobFromResultQueue();
+	wxMutexLocker *lock = new wxMutexLocker(job_lock);
 
-		if (popped_job == NULL)
+	if (lock->IsOk() == true)
+	{
+		while (1==1)
 		{
-			break;
-		}
-		else
-		{
-			my_queue_array.Add(*popped_job);
-			delete popped_job;
+
+			JobResult *popped_job = PopJobFromResultQueue();
+
+			if (popped_job == NULL)
+			{
+				break;
+			}
+			else
+			{
+				my_queue_array.Add(*popped_job);
+				delete popped_job;
+			}
 		}
 	}
+	else
+	{
+		SocketSendError("Job Lock Error!");
+		MyPrintWithDetails("Can't get job lock!");
+	}
+
+
+	delete lock;
 
 	// ok, send them all..
 
@@ -607,26 +621,11 @@ void MyApp::SendProgramDefinedResultToMaster(float *array_to_send, long size_of_
 }
 
 
-JobResult * MyApp::PopJobFromResultQueue()
+JobResult * MyApp::PopJobFromResultQueue()  // MAKE SURE THE MUTEX JOB_LOCK IS LOCKED BEFORE CALLING THIS!
 {
 	JobResult *popped_job = NULL;
 
-	wxMutexLocker *lock = new wxMutexLocker(job_lock);
-
-	if (lock->IsOk() == true)
-	{
-		if (job_queue.GetCount() > 0)
-		{
-			popped_job = job_queue.Detach(0);
-		}
-	}
-	else
-	{
-		SocketSendError("Job Lock Error!");
-		MyPrintWithDetails("Can't get job lock!");
-	}
-
-	delete lock;
+	if (job_queue.GetCount() > 0) popped_job = job_queue.Detach(0);
 	return popped_job;
 }
 
@@ -1024,6 +1023,8 @@ void MyApp::HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, I
 {
 	if (master_output_file.IsOpen() == false || master_output_file.filename != filename_to_write_to)
 	{
+		// if we are writing a file, close it..
+		if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
 		master_output_file.OpenFile(filename_to_write_to.ToStdString(), true);
 		image_to_write->WriteSlice(&master_output_file, 1); // to setup the file..
 	}
@@ -1064,7 +1065,7 @@ void MyApp::HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, flo
 void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds)
 {
 	total_milliseconds_spent_on_threads += received_timing_in_milliseconds;
-	StopMonitoringSocket(connected_socket);
+	StopMonitoringAndDestroySocket(connected_socket);
 	//connected_socket->Destroy();
 
 	number_of_timing_results_received++;
@@ -1073,6 +1074,9 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 
 	if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == number_of_connected_slaves)
 	{
+		// if we are writing a file, close it..
+		if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
+
 		SendAllJobsFinished();
 
 		if (current_job_package.ReturnNumberOfJobsRemaining() != 0)
@@ -1082,10 +1086,11 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 
 		// time to die!
 
-		ShutDownSocketMonitor();
+
+		//ShutDownSocketMonitor();
 		//controller_socket->Destroy();
-		ExitMainLoop();
-		return;
+		//ExitMainLoop();
+		//return;
 	}
 }
 

@@ -563,6 +563,13 @@ void MyRefine3DPanel::SetDefaults()
 		LowPassMaskNoRadio->SetValue(true);
 		MaskFilterResolutionText->ChangeValueFloat(20.00);
 
+		MergeMapModelYesRadioButton->SetValue(false);
+		MergeMapModelNoRadioButton->SetValue(true);
+		MergeMapModelFmodelResolutionTextCtrl->ChangeValueFloat(2.00);
+		MergeMapModelBoundaryResolutionTextCtrl->ChangeValueFloat(8.00);
+		MergeMapModelBoundaryWidthTextCtrl->ChangeValueFloat(10);
+		MergeMapModelModelFilenameTextCtrl->SetValue("");
+
 		ExpertPanel->Thaw();
 	}
 
@@ -950,6 +957,42 @@ void MyRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	}
 }
 
+void MyRefine3DPanel::OnMergeMapModelYesRadioButton( wxCommandEvent& event )
+{
+	MergeMapModelFmodelResolutionStaticText->Enable(true);
+	MergeMapModelFmodelResolutionTextCtrl->Enable(true);
+	MergeMapModelBoundaryResolutionStaticText->Enable(true);
+	MergeMapModelBoundaryResolutionTextCtrl->Enable(true);
+	MergeMapModelBoundaryWidthStaticText->Enable(true);
+	MergeMapModelBoundaryWidthTextCtrl->Enable(true);
+	MergeMapModelModelFilenameStaticText->Enable(true);
+	MergeMapModelModelFilenameTextCtrl->Enable(true);
+	MergeMapModelModelFilenameBrowseButton->Enable(true);
+}
+
+void MyRefine3DPanel::OnMergeMapModelNoRadioButton( wxCommandEvent& event )
+{
+	MergeMapModelFmodelResolutionStaticText->Enable(false);
+	MergeMapModelFmodelResolutionTextCtrl->Enable(false);
+	MergeMapModelBoundaryResolutionStaticText->Enable(false);
+	MergeMapModelBoundaryResolutionTextCtrl->Enable(false);
+	MergeMapModelBoundaryWidthStaticText->Enable(false);
+	MergeMapModelBoundaryWidthTextCtrl->Enable(false);
+	MergeMapModelModelFilenameStaticText->Enable(false);
+	MergeMapModelModelFilenameTextCtrl->Enable(false);
+	MergeMapModelModelFilenameBrowseButton->Enable(false);
+}
+
+void MyRefine3DPanel::OnModelFileBrowseButtonClick( wxCommandEvent& event )
+{
+	wxFileDialog openFileDialog(this, _("Select atomic model"), "", "", "PDB, PDBx, mmcif|*.pdb;*.cif", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+
+	if (openFileDialog.ShowModal() == wxID_OK)
+	{
+		MergeMapModelModelFilenameTextCtrl->SetValue(openFileDialog.GetPath());
+	}
+}
+
 void MyRefine3DPanel::ReDrawActiveReferences()
 {
 	Active3DReferencesListCtrl->ClearAll();
@@ -1078,7 +1121,34 @@ void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
-	my_refinement_manager.BeginRefinementCycle();
+	if (my_refinement_manager.my_parent->MergeMapModelYesRadioButton->GetValue() == true)
+	{
+		// Validate paths supplied to merge_map_model before launching
+		MyErrorDialog *my_error = new MyErrorDialog(this);
+		bool have_errors = false;
+		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Validate Parameters", "Validating Parameters...", 2, this, wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_REMAINING_TIME);
+		if (! wxDirExists(phenix_settings_panel->buffer_phenix_path))
+		{
+			my_error->ErrorText->AppendText(wxString::Format(wxT("Can't read this directory for Phenix executables:%s\n"), (phenix_settings_panel->buffer_phenix_path).ToStdString()));
+			have_errors = true;
+		}
+		my_progress_dialog->Update(1);
+		if (! wxFileExists(my_refinement_manager.my_parent->MergeMapModelModelFilenameTextCtrl->GetValue()))
+		{
+			my_error->ErrorText->AppendText(wxString::Format(wxT("Can't read the model: %s\n"), (my_refinement_manager.my_parent->MergeMapModelModelFilenameTextCtrl->GetValue()).ToStdString()));
+			have_errors = true;
+		}
+		my_progress_dialog->Destroy();
+		if (have_errors == true)
+		{
+			my_error->ShowModal();
+		}
+		my_error->Destroy();
+		if (have_errors == false)
+		{
+			my_refinement_manager.BeginRefinementCycle();
+		}
+	}
 }
 
 void MyRefine3DPanel::WriteInfoText(wxString text_to_write)
@@ -1195,11 +1265,19 @@ void RefinementManager::BeginRefinementCycle()
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
 	active_centre_mass = my_parent->AutoCenterYesRadioButton->GetValue();
+	active_should_merge_map_model = my_parent->MergeMapModelYesRadioButton->GetValue();
 
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_asset_id = -1;
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_filename = "";
+
+	if (active_should_merge_map_model) active_fmodel_model_filename = my_parent->MergeMapModelModelFilenameTextCtrl->GetValue();
+	else active_fmodel_model_filename = "";
+	if (active_should_merge_map_model) active_fmodel_resolution = my_parent->MergeMapModelFmodelResolutionTextCtrl->ReturnValue();
+	else active_fmodel_resolution = 0;
+	if (active_should_merge_map_model) active_boundary_resolution = my_parent->MergeMapModelBoundaryResolutionTextCtrl->ReturnValue();
+	else active_boundary_resolution = 0;
 
 	active_should_low_pass_filter_mask = my_parent->LowPassMaskYesRadio->GetValue();
 	active_mask_filter_resolution = my_parent->MaskFilterResolutionText->ReturnValue();
@@ -1288,6 +1366,11 @@ void RefinementManager::BeginRefinementCycle()
 			current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
 
+		if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
+		{
+			my_parent->WriteBlueText("Merging the last reference volume with a map calculated from the provided model...\n");
+			MergeMapModel();
+		}
 		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
 		{
 			DoMasking();
@@ -2608,13 +2691,124 @@ void RefinementManager::DoMasking()
 
 }
 
+void RefinementManager::MergeMapModel()
+{
+	wxString		current_reference_filename; // reference volume (iterable)
+	wxString		current_reference_dir; // parts
+	wxString		current_reference_basename; // parts
+	wxString		current_reference_ext; // parts
+	wxArrayString   merged_filenames; // generated (array)
+	wxString		current_merged_filename; // generated (iterable)
+	wxString		phenix_bin_dir; // accept from user params
+	wxString		model_filename; // accept from user params
+	float			model_resolution; // accept from user params
+	float			boundary_resolution; // accept from user params
+
+	phenix_bin_dir = phenix_settings_panel->buffer_phenix_path;
+	MyDebugAssertTrue(wxDirExists(phenix_bin_dir), "Can't read this directory for Phenix executables:%s",phenix_bin_dir.ToStdString());
+	MyDebugAssertTrue(phenix_bin_dir.find_last_of("bin") != wxNOT_FOUND, "Path to Phenix bin directory does not contain \"bin\"");
+
+	for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
+	{
+		current_reference_filename = current_reference_filenames.Item(class_counter);
+		wxFileName::SplitPath(current_reference_filenames.Item(class_counter), &current_reference_dir, &current_reference_basename, &current_reference_ext, wxPATH_NATIVE);
+		current_merged_filename = main_frame->ReturnRefine3DScratchDirectory() + "/" + current_reference_basename + "_merged.mrc";
+		wxPrintf(current_merged_filename + "\n");
+		merged_filenames.Add(current_merged_filename);
+	}
+
+
+	// BEGIN Instead of the thread
+	Image input_image;
+	Image fmodel_image;
+	Image scaled_fmodel_image;
+	wxString fmodel_filename;
+	ImageFile fmodel_file;
+	ImageFile input_map_file;
+	MRCFile output_map_file;
+
+	float boundary_frequency;
+	float half_shell_width;
+	float boundary_shell_lower;
+	float boundary_shell_upper;
+	float reference_amplitude;
+	float fmodel_amplitude;
+	float amplitude_scale_factor;
+
+	// call the fmodel calculation class with regridding
+	model_filename = active_fmodel_model_filename;
+	MyDebugAssertTrue(wxFileName::IsFileReadable(model_filename), "Can't read the model:%s",model_filename.ToStdString());
+	fmodel_filename = model_filename + ".mrc"; // FIXME TEMP make this nicer
+	model_resolution = active_fmodel_resolution;
+	boundary_resolution = active_boundary_resolution;
+	boundary_frequency = 1/boundary_resolution;
+	wxPrintf("boundary_frequency:%.16f\n",boundary_frequency);
+	my_parent->WriteBlueText("Merging the last reference volume with a map calculated from the provided model. This could take a minute...\n");
+	// TODO: put a spinning wheel of death to let the user know it's working
+	FmodelRegrid fmodel_regrid_tool;
+	fmodel_regrid_tool.SetupLauncher(phenix_bin_dir, main_frame->ReturnRefine3DScratchDirectory());
+	fmodel_regrid_tool.SetAllUserParameters(model_filename, current_reference_filenames.Item(0), fmodel_filename, model_resolution); // any of the references is fine to get the dimensions right
+	fmodel_regrid_tool.RunFmodelRegrid();
+	MyDebugAssertTrue(wxFileName::IsFileReadable(fmodel_filename), "Can't read the generated map:%s",fmodel_filename.ToStdString());
+	fmodel_file.OpenFile(fmodel_filename.ToStdString(), false);
+	fmodel_image.ReadSlices(&fmodel_file, 1, fmodel_file.ReturnNumberOfSlices());
+	fmodel_image.ForwardFFT();
+	fmodel_file.CloseFile();
+
+	// get the average amplitude in the shell at the boundary resolution for scaling purposes, and the shell bounds
+	half_shell_width = fmodel_image.fourier_voxel_size_z * 20;
+	wxPrintf("half_shell_width:%.16f\n",half_shell_width);
+	boundary_shell_lower = boundary_frequency - half_shell_width;
+	boundary_shell_upper = boundary_frequency + half_shell_width;
+	fmodel_amplitude = fmodel_image.ReturnAverageAmplitudeInShell(boundary_shell_lower, boundary_shell_upper);
+	wxPrintf("fmodel_amplitude:%.16f\n",fmodel_amplitude);
+
+	// loop through classes, read each map, merge map and fmodel map, write out the matching merged image
+	// loop over the classes. For each, calculate the average amplitude in the shell at the boundary resolution
+	// and scale the fmodel amplitudes to match. Then replace the high frequency region of the input image with
+	// the scaled fmodel frequencies.
+
+	for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
+	{
+		// read the experimental map
+		input_map_file.OpenFile(current_reference_filenames.Item(class_counter).ToStdString(), false);
+		//input_map_file.OpenFile("/gne/scratch/u/youngi4/Apof_1p4975px/Assets/Volumes/volume_14_1.mrc", false); // TMP TESTING
+		input_image.ReadSlices(&input_map_file, 1, input_map_file.ReturnNumberOfSlices());
+		input_map_file.CloseFile();
+
+		// take the high resolution pixels from the scaled_fmodel_image and the rest from the input_image
+		input_image.ForwardFFT();
+		reference_amplitude = input_image.ReturnAverageAmplitudeInShell(boundary_shell_lower, boundary_shell_upper);
+		wxPrintf("reference_amplitude:%.16f\n",reference_amplitude);
+		amplitude_scale_factor = reference_amplitude/fmodel_amplitude;
+		wxPrintf("amlitude_scale_factor:%.16f\n",amplitude_scale_factor);
+		scaled_fmodel_image.CopyFrom(&fmodel_image);
+		scaled_fmodel_image.MultiplyByConstant(amplitude_scale_factor);
+		input_image.ReplaceHighRes(&scaled_fmodel_image, boundary_frequency);
+		input_image.BackwardFFT();
+
+		// write out the new merged map
+		output_map_file.OpenFile(merged_filenames.Item(class_counter).ToStdString(), true);
+		input_image.WriteSlices(&output_map_file, 1, input_image.logical_z_dimension);
+		output_map_file.CloseFile();
+		wxPrintf("wrote merged map at %s\n",merged_filenames.Item(class_counter).ToStdString());
+	}
+	// END Instead of the thread
+
+	current_reference_filenames = merged_filenames;
+	return;
+}
+
 void RefinementManager::CycleRefinement()
 {
 	if (start_with_reconstruction == true)
 	{
 		output_refinement = new Refinement;
 		start_with_reconstruction = false;
-
+		if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
+		{
+			MergeMapModel();
+		}
 		if (active_should_mask == true || active_should_auto_mask == true)
 		{
 			DoMasking();
@@ -2636,6 +2830,10 @@ void RefinementManager::CycleRefinement()
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
 
+			if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
+			{
+				MergeMapModel();
+			}
 			if (active_should_mask == true || active_should_auto_mask == true)
 			{
 				DoMasking();

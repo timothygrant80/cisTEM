@@ -59,6 +59,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communicator.h \
+                 core/phenix_tools.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -263,6 +264,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/cistem_star_file_reader.cpp \
                        core/socket_communicator.cpp
 
+libcore_a_SOURCES += core/phenix_tools.cpp
 
 if EXPERIMENTAL_AM
 libcore_a_SOURCES += core/water.cpp core/pdb.cpp

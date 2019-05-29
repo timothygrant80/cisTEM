@@ -135,7 +135,7 @@ bool PhenixFmodelApp::DoCalculation()
 	{
 		wxRemoveFile(intermed_mtz);
 	}
-	fmodel_args = intermed_pdb + " scattering_table=electron generate_fake_p1_symmetry=True high_resolution=" + std::to_string(resolution) + " output.file_name=" + intermed_mtz;
+	fmodel_args = intermed_pdb + " scattering_table=electron generate_fake_p1_symmetry=True high_resolution=" + wxString::Format("%.2f", resolution) + " output.file_name=" + intermed_mtz;
 	wxPrintf("\nLaunching phenix.fmodel calculation...\n");
 	fmodel_main = phenix_installation + "/build/bin/phenix.fmodel " + fmodel_args;
 	fmodel_echo = "\nExecuting command \"" + fmodel_main + "\"\n";

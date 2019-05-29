@@ -53,12 +53,16 @@ public:
 	bool active_should_mask;
 	bool active_should_auto_mask;
 	bool active_centre_mass;
+	bool active_should_merge_map_model;
 	wxString active_mask_filename;
 	bool active_should_low_pass_filter_mask;
 	float active_mask_filter_resolution;
 	float active_mask_edge;
 	float active_mask_weight;
 	long active_mask_asset_id;
+	wxString active_fmodel_model_filename;
+	float active_fmodel_resolution;
+	float active_boundary_resolution;
 
 	long current_job_starttime;
 	long time_of_last_update;
@@ -112,6 +116,7 @@ public:
 	void OnMaskerThreadComplete();
 
 	void DoMasking();
+	void MergeMapModel();
 
 //	void StartRefinement();
 //	void StartReconstruction();
@@ -128,6 +133,9 @@ class MyRefine3DPanel : public Refine3DPanel
 		// Handlers for Refine3DPanel events.
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void OnExpertOptionsToggle( wxCommandEvent& event );
+		void OnMergeMapModelYesRadioButton( wxCommandEvent& event );
+		void OnMergeMapModelNoRadioButton( wxCommandEvent& event );
+		void OnModelFileBrowseButtonClick( wxCommandEvent& event );
 		void OnInfoURL( wxTextUrlEvent& event );
 		void TerminateButtonClick( wxCommandEvent& event );
 		void FinishButtonClick( wxCommandEvent& event );
@@ -155,6 +163,7 @@ class MyRefine3DPanel : public Refine3DPanel
 
 		int active_orth_thread_id;
 		int active_mask_thread_id;
+//		int active_mergemapmodel_thread_id;
 		int next_thread_id;
 
 	public:

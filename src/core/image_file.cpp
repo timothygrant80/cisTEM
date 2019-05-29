@@ -112,6 +112,7 @@ int ImageFile::ReturnXSize()
 	case DM_FILE: return dm_file.ReturnXSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return -1;
 }
 
 int ImageFile::ReturnYSize()
@@ -123,6 +124,7 @@ int ImageFile::ReturnYSize()
 	case DM_FILE: return dm_file.ReturnYSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return -1;
 }
 
 int ImageFile::ReturnZSize()
@@ -134,6 +136,7 @@ int ImageFile::ReturnZSize()
 	case DM_FILE: return dm_file.ReturnZSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return -1;
 }
 
 int ImageFile::ReturnNumberOfSlices()
@@ -145,6 +148,7 @@ int ImageFile::ReturnNumberOfSlices()
 	case DM_FILE: return dm_file.ReturnNumberOfSlices(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return -1;
 }
 
 float ImageFile::ReturnPixelSize()
@@ -156,6 +160,7 @@ float ImageFile::ReturnPixelSize()
 	case DM_FILE: return dm_file.ReturnPixelSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return - 1;
 }
 
 bool ImageFile::IsOpen()
@@ -167,6 +172,7 @@ bool ImageFile::IsOpen()
 	case DM_FILE: return dm_file.IsOpen();
 	default: MyPrintWithDetails("Unsupported file type\n"); abort; break;
 	}
+	return false;
 }
 
 void ImageFile::PrintInfo()

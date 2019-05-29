@@ -3,12 +3,13 @@
 MRCFile::MRCFile()
 {
 	rewrite_header_on_close = false;
-
+	max_number_of_seconds_to_wait_for_file_to_exist = 30;
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite)
 {
 	rewrite_header_on_close = false;
+	max_number_of_seconds_to_wait_for_file_to_exist = 30;
 	OpenFile(filename, overwrite);
 
 }
@@ -16,6 +17,7 @@ MRCFile::MRCFile(std::string filename, bool overwrite)
 MRCFile::MRCFile(std::string filename, bool overwrite,bool wait_for_file_to_exist)
 {
 	rewrite_header_on_close = false;
+	max_number_of_seconds_to_wait_for_file_to_exist = 30;
 	OpenFile(filename, overwrite,wait_for_file_to_exist);
 
 }
@@ -49,6 +51,8 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 	{
 		file_already_exists = DoesFileExist(wanted_filename);
 	}
+
+	//MyDebugPrintWithDetails("%s File size = %li\n",wanted_filename,ReturnFileSizeInBytesAlternative(wanted_filename));
 
 	// if overwrite is specified, then we delete the file nomatter what..
 	// if it isn't, then we need to know if the file already exists..

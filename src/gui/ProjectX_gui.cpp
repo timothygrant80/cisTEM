@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Mar 25 2019)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -5489,6 +5489,69 @@ RunProfilesPanel::~RunProfilesPanel()
 	
 }
 
+PhenixSettingsPanel::PhenixSettingsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	this->SetMinSize( wxSize( 680,400 ) );
+	
+	wxBoxSizer* bSizer56;
+	bSizer56 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline12 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer56->Add( m_staticline12, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer37;
+	bSizer37 = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer3;
+	fgSizer3 = new wxFlexGridSizer( 0, 5, 0, 0 );
+	fgSizer3->AddGrowableCol( 2 );
+	fgSizer3->SetFlexibleDirection( wxBOTH );
+	fgSizer3->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	
+	fgSizer3->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText36 = new wxStaticText( this, wxID_ANY, wxT("Phenix bin directory :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText36->Wrap( -1 );
+	fgSizer3->Add( m_staticText36, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PhenixPathTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_WORDWRAP|wxALWAYS_SHOW_SB|wxHSCROLL );
+	fgSizer3->Add( PhenixPathTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	PhenixPathBrowseButton = new wxButton( this, wxID_ANY, wxT("Browse"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer3->Add( PhenixPathBrowseButton, 0, wxALL, 5 );
+	
+	
+	bSizer37->Add( fgSizer3, 0, wxEXPAND, 5 );
+	
+	PhenixPathErrorStaticText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	PhenixPathErrorStaticText->Wrap( -1 );
+	PhenixPathErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	
+	bSizer37->Add( PhenixPathErrorStaticText, 0, wxALL, 5 );
+	
+	
+	bSizer56->Add( bSizer37, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer56 );
+	this->Layout();
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( PhenixSettingsPanel::OnUpdateUI ) );
+	PhenixPathTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathTextChanged ), NULL, this );
+	PhenixPathBrowseButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathBrowseButtonClick ), NULL, this );
+}
+
+PhenixSettingsPanel::~PhenixSettingsPanel()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( PhenixSettingsPanel::OnUpdateUI ) );
+	PhenixPathTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathTextChanged ), NULL, this );
+	PhenixPathBrowseButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathBrowseButtonClick ), NULL, this );
+	
+}
+
 AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : JobPanel( parent, id, pos, size, style )
 {
 	wxBoxSizer* bSizer43;
@@ -6151,7 +6214,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, -21 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, -163 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 	
 	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6452,14 +6515,14 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	fgSizer1->Add( MaskEdgeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL, 5 );
+	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	MaskWeightStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outside Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaskWeightStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskWeightStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL, 5 );
+	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	LowPassYesNoStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Pass Filter Outside Mask?"), wxDefaultPosition, wxDefaultSize, 0 );
 	LowPassYesNoStaticText->Wrap( -1 );
@@ -6482,7 +6545,87 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	fgSizer1->Add( FilterResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
+	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL|wxEXPAND, 5 );
+	
+	MapModelMergetaticText_mapmodelmerge = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Map Model Merge"), wxDefaultPosition, wxDefaultSize, 0 );
+	MapModelMergetaticText_mapmodelmerge->Wrap( -1 );
+	MapModelMergetaticText_mapmodelmerge->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( MapModelMergetaticText_mapmodelmerge, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	MapModelMergeEnableStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Merge reference with model?"), wxDefaultPosition, wxDefaultSize, 0 );
+	MapModelMergeEnableStaticText->Wrap( -1 );
+	fgSizer1->Add( MapModelMergeEnableStaticText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer266122;
+	bSizer266122 = new wxBoxSizer( wxHORIZONTAL );
+	
+	MergeMapModelYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266122->Add( MergeMapModelYesRadioButton, 0, wxALL, 5 );
+	
+	MergeMapModelNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266122->Add( MergeMapModelNoRadioButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer266122, 1, wxEXPAND, 5 );
+	
+	MergeMapModelFmodelResolutionStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Calculated Fmodel Resolution (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelFmodelResolutionStaticText->Wrap( -1 );
+	MergeMapModelFmodelResolutionStaticText->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelFmodelResolutionStaticText, 0, wxALL, 5 );
+	
+	MergeMapModelFmodelResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelFmodelResolutionTextCtrl->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelFmodelResolutionTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	MergeMapModelBoundaryResolutionStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Boundary Resolution (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelBoundaryResolutionStaticText->Wrap( -1 );
+	MergeMapModelBoundaryResolutionStaticText->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelBoundaryResolutionStaticText, 0, wxALL, 5 );
+	
+	MergeMapModelBoundaryResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelBoundaryResolutionTextCtrl->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelBoundaryResolutionTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	MergeMapModelBoundaryWidthStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Boundary Width (px) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelBoundaryWidthStaticText->Wrap( -1 );
+	MergeMapModelBoundaryWidthStaticText->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelBoundaryWidthStaticText, 0, wxALL, 5 );
+	
+	MergeMapModelBoundaryWidthTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelBoundaryWidthTextCtrl->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelBoundaryWidthTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	MergeMapModelModelFilenameStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Path to model :"), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelModelFilenameStaticText->Wrap( -1 );
+	MergeMapModelModelFilenameStaticText->Enable( false );
+	
+	fgSizer1->Add( MergeMapModelModelFilenameStaticText, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer2661221;
+	bSizer2661221 = new wxBoxSizer( wxHORIZONTAL );
+	
+	MergeMapModelModelFilenameTextCtrl = new wxTextCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelModelFilenameTextCtrl->Enable( false );
+	
+	bSizer2661221->Add( MergeMapModelModelFilenameTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	MergeMapModelModelFilenameBrowseButton = new wxButton( ExpertPanel, wxID_ANY, wxT("Browse..."), wxDefaultPosition, wxDefaultSize, 0 );
+	MergeMapModelModelFilenameBrowseButton->Enable( false );
+	
+	bSizer2661221->Add( MergeMapModelModelFilenameBrowseButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2661221, 1, wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -6670,6 +6813,10 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	MergeMapModelYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnMergeMapModelYesRadioButton ), NULL, this );
+	MergeMapModelNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnMergeMapModelNoRadioButton ), NULL, this );
+	MergeMapModelModelFilenameTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnPathChange ), NULL, this );
+	MergeMapModelModelFilenameBrowseButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnModelFileBrowseButtonClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
@@ -6687,6 +6834,10 @@ Refine3DPanel::~Refine3DPanel()
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	MergeMapModelYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnMergeMapModelYesRadioButton ), NULL, this );
+	MergeMapModelNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnMergeMapModelNoRadioButton ), NULL, this );
+	MergeMapModelModelFilenameTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnPathChange ), NULL, this );
+	MergeMapModelModelFilenameBrowseButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnModelFileBrowseButtonClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );

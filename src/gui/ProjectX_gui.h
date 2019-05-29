@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 20 2017)
+// C++ code generated with wxFormBuilder (version Mar 25 2019)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -1529,6 +1529,33 @@ class RunProfilesPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class PhenixSettingsPanel
+///////////////////////////////////////////////////////////////////////////////
+class PhenixSettingsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxStaticText* m_staticText36;
+		wxTextCtrl* PhenixPathTextCtrl;
+		wxButton* PhenixPathBrowseButton;
+		wxStaticText* PhenixPathErrorStaticText;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnPhenixPathTextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPhenixPathBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		PhenixSettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+		~PhenixSettingsPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class AlignMoviesPanel
 ///////////////////////////////////////////////////////////////////////////////
 class AlignMoviesPanel : public JobPanel
@@ -1722,6 +1749,19 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* LowPassMaskNoRadio;
 		wxStaticText* FilterResolutionStaticText;
 		NumericTextCtrl* MaskFilterResolutionText;
+		wxStaticText* MapModelMergetaticText_mapmodelmerge;
+		wxStaticText* MapModelMergeEnableStaticText;
+		wxRadioButton* MergeMapModelYesRadioButton;
+		wxRadioButton* MergeMapModelNoRadioButton;
+		wxStaticText* MergeMapModelFmodelResolutionStaticText;
+		NumericTextCtrl* MergeMapModelFmodelResolutionTextCtrl;
+		wxStaticText* MergeMapModelBoundaryResolutionStaticText;
+		NumericTextCtrl* MergeMapModelBoundaryResolutionTextCtrl;
+		wxStaticText* MergeMapModelBoundaryWidthStaticText;
+		NumericTextCtrl* MergeMapModelBoundaryWidthTextCtrl;
+		wxStaticText* MergeMapModelModelFilenameStaticText;
+		wxTextCtrl* MergeMapModelModelFilenameTextCtrl;
+		wxButton* MergeMapModelModelFilenameBrowseButton;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -1749,6 +1789,10 @@ class Refine3DPanel : public JobPanel
 		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMergeMapModelYesRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnMergeMapModelNoRadioButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPathChange( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnModelFileBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

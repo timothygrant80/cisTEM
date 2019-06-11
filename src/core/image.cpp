@@ -3645,7 +3645,7 @@ void Image::GaussianLowPassFilter(float sigma)
 
 					distance_from_center_squared = x + y + z;
 
-					real_values[pixel_counter] *= exp(-distance_from_center_squared * one_over_two_sigma_squared);
+					real_values[pixel_counter] *= expf(-distance_from_center_squared * one_over_two_sigma_squared);
 
 					pixel_counter++;
 				}
@@ -3676,7 +3676,7 @@ void Image::GaussianLowPassFilter(float sigma)
 
 					// compute squared radius, in units of reciprocal pixels
 					frequency_squared = x + y + z;
-					complex_values[pixel_counter] *= exp(-frequency_squared * one_over_two_sigma_squared);
+					complex_values[pixel_counter] *= expf(-frequency_squared * one_over_two_sigma_squared);
 					pixel_counter++;
 
 				}
@@ -3718,7 +3718,7 @@ void Image::GaussianHighPassFilter(float sigma)
 
 				// compute squared radius, in units of reciprocal pixels
 				frequency_squared = x + y + z;
-				complex_values[pixel_counter] *= 1.0 - exp(-frequency_squared * one_over_two_sigma_squared);
+				complex_values[pixel_counter] *= 1.0 - expf(-frequency_squared * one_over_two_sigma_squared);
 				pixel_counter++;
 
 			}
@@ -4074,11 +4074,11 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
 	if (is_in_real_space)
 	{
-		MyDebugAssertTrue(wanted_mask_edge >= 1.0, "Edge width too small");
+		MyDebugAssertTrue(wanted_mask_edge >= 1.0f, "Edge width too small");
 	}
 	else
 	{
-		MyDebugAssertTrue(wanted_mask_edge > 0.0, "Edge width too small");
+		MyDebugAssertTrue(wanted_mask_edge > 0.0f, "Edge width too small");
 	}
 
 	int i;
@@ -4108,19 +4108,19 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	float edge;
 	double pixel_sum;
 
-	double mask_volume = 0.0;
+	double mask_volume = 0.0f;
 
-	mask_radius_x = wanted_mask_radius_x - wanted_mask_edge * 0.5;
-	mask_radius_y = wanted_mask_radius_y - wanted_mask_edge * 0.5;
-	mask_radius_z = wanted_mask_radius_z - wanted_mask_edge * 0.5;
-	if (mask_radius_x < 0.0) mask_radius_x = 0.0;
-	if (mask_radius_y < 0.0) mask_radius_y = 0.0;
-	if (mask_radius_z < 0.0) mask_radius_z = 0.0;
+	mask_radius_x = wanted_mask_radius_x - wanted_mask_edge * 0.5f;
+	mask_radius_y = wanted_mask_radius_y - wanted_mask_edge * 0.5f;
+	mask_radius_z = wanted_mask_radius_z - wanted_mask_edge * 0.5f;
+	if (mask_radius_x < 0.0f) mask_radius_x = 0.0f;
+	if (mask_radius_y < 0.0f) mask_radius_y = 0.0f;
+	if (mask_radius_z < 0.0f) mask_radius_z = 0.0f;
 	mask_radius_plus_edge_x = mask_radius_x + wanted_mask_edge;
 	mask_radius_plus_edge_y = mask_radius_y + wanted_mask_edge;
 	mask_radius_plus_edge_z = mask_radius_z + wanted_mask_edge;
 
-	pixel_sum = 0.0;
+	pixel_sum = 0.0f;
 	number_of_pixels = 0;
 	if (is_in_real_space && object_is_centred_in_box)
 	{
@@ -4156,7 +4156,7 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 			pixel_sum /= number_of_pixels;
 		}
 
-		pixel_counter = 0.0;
+		pixel_counter = 0.0f;
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			z = abs(k - physical_address_of_box_center_z);
@@ -4172,17 +4172,17 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 					if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x < mask_radius_plus_edge_x && y < mask_radius_plus_edge_y && z < mask_radius_plus_edge_z))
 					{
 						edge = 1.0f;
-						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0;
-						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0;
-						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0f + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0f;
+						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0f + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0f;
+						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0f + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0f;
 						if (invert)
 						{
-							real_values[pixel_counter] = real_values[pixel_counter] * (1.0 - edge) + edge * pixel_sum;
-							mask_volume += powf(1.0 - edge,2);
+							real_values[pixel_counter] = real_values[pixel_counter] * (1.0f - edge) + edge * pixel_sum;
+							mask_volume += powf(1.0f - edge,2);
 						}
 						else
 						{
-							real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+							real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0f - edge) * pixel_sum;
 							mask_volume += powf(edge,2);
 						}
 					}
@@ -4195,7 +4195,7 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 						}
 						else
 						{
-							mask_volume += 1.0;
+							mask_volume += 1.0f;
 						}
 					}
 					else
@@ -4203,7 +4203,7 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 						if (x >= mask_radius_plus_edge_x || y >= mask_radius_plus_edge_y || z >= mask_radius_plus_edge_z) real_values[pixel_counter] = pixel_sum;
 						else
 						{
-							mask_volume += 1.0;
+							mask_volume += 1.0f;
 						}
 					}
 
@@ -4253,7 +4253,7 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 			pixel_sum /= number_of_pixels;
 		}
 
-		pixel_counter = 0.0;
+		pixel_counter = 0.0f;
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			kk = k;
@@ -4275,17 +4275,17 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 					if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x < mask_radius_plus_edge_x && y < mask_radius_plus_edge_y && z < mask_radius_plus_edge_z))
 					{
 						edge = 1.0f;
-						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0;
-						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0;
-						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0;
-						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * pixel_sum;
+						if (x > mask_radius_x && x < mask_radius_plus_edge_x) edge *= (1.0f + cosf(PI * (x - mask_radius_x) / wanted_mask_edge)) / 2.0;
+						if (y > mask_radius_y && y < mask_radius_plus_edge_y) edge *= (1.0f + cosf(PI * (y - mask_radius_y) / wanted_mask_edge)) / 2.0;
+						if (z > mask_radius_z && z < mask_radius_plus_edge_z) edge *= (1.0f + cosf(PI * (z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0f - edge) * pixel_sum;
 						mask_volume += powf(edge,2);
 					}
 					else
 						if (x >= mask_radius_plus_edge_x || y >= mask_radius_plus_edge_y || z >= mask_radius_plus_edge_z) real_values[pixel_counter] = pixel_sum;
 					else
 					{
-						mask_volume += 1.0;
+						mask_volume += 1.0f;
 					}
 
 					pixel_counter++;
@@ -4313,12 +4313,12 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 					if ( ! (float_x <= mask_radius_x && float_y <= mask_radius_y && float_z <= mask_radius_z) && (float_x < mask_radius_plus_edge_x && float_y < mask_radius_plus_edge_y && float_z < mask_radius_plus_edge_z))
 					{
 						edge = 1.0f;
-						if (float_x > mask_radius_x && float_x < mask_radius_plus_edge_x) edge *= (1.0 + cosf(PI * (float_x - mask_radius_x) / wanted_mask_edge)) / 2.0;
-						if (float_y > mask_radius_y && float_y < mask_radius_plus_edge_y) edge *= (1.0 + cosf(PI * (float_y - mask_radius_y) / wanted_mask_edge)) / 2.0;
-						if (float_z > mask_radius_z && float_z < mask_radius_plus_edge_z) edge *= (1.0 + cosf(PI * (float_z - mask_radius_z) / wanted_mask_edge)) / 2.0;
+						if (float_x > mask_radius_x && float_x < mask_radius_plus_edge_x) edge *= (1.0f + cosf(PI * (float_x - mask_radius_x) / wanted_mask_edge)) / 2.0f;
+						if (float_y > mask_radius_y && float_y < mask_radius_plus_edge_y) edge *= (1.0f + cosf(PI * (float_y - mask_radius_y) / wanted_mask_edge)) / 2.0f;
+						if (float_z > mask_radius_z && float_z < mask_radius_plus_edge_z) edge *= (1.0f + cosf(PI * (float_z - mask_radius_z) / wanted_mask_edge)) / 2.0f;
 						if (invert)
 						{
-							complex_values[pixel_counter] *= (1.0 - edge);
+							complex_values[pixel_counter] *= (1.0f - edge);
 						}
 						else
 						{
@@ -6864,6 +6864,47 @@ void Image::ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit)
 
 }
 
+// This assumes an X axis set up with
+// SetupXAxis(0.0f, 0.5f * sqrtf(dimension_of_image), int((scale / 2.0f + 1.0f) * sqrtf(dimension_of_image) + 1.0f))
+void Image::ApplyCurveFilterUninterpolated(Curve *filter_to_apply, float resolution_limit, float scale)
+{
+	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
+	MyDebugAssertFalse(is_in_real_space,"Image not in Fourier space");
+
+	int i,j,k;
+	float sq_dist_x, sq_dist_y, sq_dist_z;
+	int counter;
+	int index;
+	long pixel_counter = 0;
+	float spatial_frequency;
+//	float resolution_limit_sq = powf(resolution_limit, 2);
+//	float resolution_limit_pixel = resolution_limit * logical_x_dimension;
+	if (scale == 0.0f) scale = logical_x_dimension;
+
+	for ( k = 0; k <= physical_upper_bound_complex_z; k ++ )
+	{
+		sq_dist_z = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z,2);
+		for ( j = 0; j <= physical_upper_bound_complex_y; j ++ )
+		{
+			sq_dist_y = pow(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y,2);
+			for  ( i = 0; i <= physical_upper_bound_complex_x; i ++ )
+			{
+				sq_dist_x = pow(i * fourier_voxel_size_x,2);
+				spatial_frequency = sqrt(sq_dist_x+sq_dist_y+sq_dist_z);
+
+				if (spatial_frequency <= resolution_limit)
+				{
+					index = myroundint(spatial_frequency * scale);
+					complex_values[pixel_counter] *= filter_to_apply->data_y[index];
+				}
+				else complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter ++;
+			}
+		}
+	}
+
+}
+
 void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels)
 {
 	MyDebugAssertTrue(HasSameDimensionsAs(&local_resolution_map),"Local resolution map does not have expected dimensions");
@@ -8205,25 +8246,43 @@ void Image::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_
 	Consume(&temp_image);
 }
 
-void Image::RealSpaceBinning(int bin_x, int bin_y, int bin_z)
+void Image::RealSpaceBinning(int bin_x, int bin_y, int bin_z, bool symmetrical, bool exclude_incomplete_bins)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(bin_x >= 1 && bin_y >= 1 && bin_z >= 1, "Invalid bin factor");
+	MyDebugAssertTrue(! (symmetrical && exclude_incomplete_bins), "symmetrical and exclude_incomplete_bins flags cannot be active at the same time");
 
 	if (bin_x == 1 && bin_y == 1 && bin_z == 1) return;
 
 	int i,j,k;
 	int l,m,n;
 	int ix,iy,iz;
-	int counter;
 	int new_x_dimension = ceilf(float(logical_x_dimension) / bin_x);
 	int new_y_dimension = ceilf(float(logical_y_dimension) / bin_y);
 	int new_z_dimension = ceilf(float(logical_z_dimension) / bin_z);
+	int bin_x2 = 0;
+	int bin_y2 = 0;
+	int bin_z2 = 0;
 	long pointer = 0;
-	float average;
+	long counter;
+	double average;
+
+	if (exclude_incomplete_bins)
+	{
+		new_x_dimension = floorf(float(logical_x_dimension) / bin_x);
+		new_y_dimension = floorf(float(logical_y_dimension) / bin_y);
+		new_z_dimension = floorf(float(logical_z_dimension) / bin_z);
+	}
 
 	Image temp_image;
 	temp_image.Allocate(new_x_dimension, new_y_dimension, new_z_dimension);
+
+	if (symmetrical)
+	{
+		bin_x2 = bin_x / 2;
+		bin_y2 = bin_y / 2;
+		bin_z2 = bin_z / 2;
+	}
 
 	for (n = 0; n < new_z_dimension; n++)
 	{
@@ -8233,13 +8292,13 @@ void Image::RealSpaceBinning(int bin_x, int bin_y, int bin_z)
 			{
 				average = 0.0f;
 				counter = 0.0f;
-				for (k = 0; k < bin_z; k++)
+				for (k = -bin_z2; k < bin_z - bin_z2; k++)
 				{
 					iz = bin_z * n + k;
-					for (j = 0; j < bin_y; j++)
+					for (j = -bin_y2; j < bin_y - bin_y2; j++)
 					{
 						iy = bin_y * m + j;
-						for (i = 0; i < bin_x; i++)
+						for (i = -bin_x2; i < bin_x - bin_x2; i++)
 						{
 							ix = bin_x * l + i;
 
@@ -8259,6 +8318,74 @@ void Image::RealSpaceBinning(int bin_x, int bin_y, int bin_z)
 		}
 	}
 	Consume(&temp_image);
+}
+
+float Image::ReturnVarianceOfRealValuesTiled(int bin_x, int bin_y, int bin_z, bool exclude_incomplete_bins)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(bin_x >= 1 && bin_y >= 1 && bin_z >= 1, "Invalid bin factor");
+
+	if (bin_x == 1 && bin_y == 1 && bin_z == 1) return 0.0f;
+
+	int i,j,k;
+	int l,m,n;
+	int ix,iy,iz;
+	int new_x_dimension = ceilf(float(logical_x_dimension) / bin_x);
+	int new_y_dimension = ceilf(float(logical_y_dimension) / bin_y);
+	int new_z_dimension = ceilf(float(logical_z_dimension) / bin_z);
+	long counter1;
+	long counter2;
+	double average;
+	double variance;
+	double temp_float;
+	double average_variance;
+
+	if (exclude_incomplete_bins)
+	{
+		new_x_dimension = floorf(float(logical_x_dimension) / bin_x);
+		new_y_dimension = floorf(float(logical_y_dimension) / bin_y);
+		new_z_dimension = floorf(float(logical_z_dimension) / bin_z);
+	}
+
+	average_variance = 0.0f;
+	counter2 = 0;
+	for (n = 0; n < new_z_dimension; n++)
+	{
+		for (m = 0; m < new_y_dimension; m++)
+		{
+			for (l = 0; l < new_x_dimension; l++)
+			{
+				average = 0.0f;
+				variance = 0.0f;
+				counter1 = 0.0f;
+				for (k = 0; k < bin_z; k++)
+				{
+					iz = bin_z * n + k;
+					for (j = 0; j < bin_y; j++)
+					{
+						iy = bin_y * m + j;
+						for (i = 0; i < bin_x; i++)
+						{
+							ix = bin_x * l + i;
+
+							if (ix >= 0 && ix < logical_x_dimension && iy >= 0 && iy < logical_y_dimension && iz >= 0 && iz < logical_z_dimension)
+							{
+								counter1++;
+								temp_float = ReturnRealPixelFromPhysicalCoord(ix, iy, iz);
+								average += temp_float;
+								variance += pow(temp_float, 2);
+							}
+						}
+					}
+				}
+				counter2++;
+				average /= counter1;
+				average_variance += variance / counter1 - pow(average, 2);
+			}
+		}
+	}
+
+	return float(average_variance / counter2);
 }
 
 void Image::CopyFrom(Image *other_image)

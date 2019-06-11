@@ -202,7 +202,7 @@ endif
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates refine3d niko_test
+bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates find_dqe niko_test
 
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += match_template refine_ctf refine_template make_template_result  scattering_potential 
@@ -534,6 +534,11 @@ convert_par_to_star_SOURCES = programs/convert_par_to_star/convert_par_to_star.c
 convert_par_to_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_par_to_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 convert_par_to_star_LDADD = libcore.a $(WX_LIBS_BASE)
+
+find_dqe_SOURCES = programs/find_dqe/find_dqe.cpp
+find_dqe_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+find_dqe_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+find_dqe_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
 make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp

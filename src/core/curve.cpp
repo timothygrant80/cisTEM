@@ -769,6 +769,9 @@ float Curve::ReturnSavitzkyGolayInterpolationFromX( float wanted_x )
 	// Find the nearest data point to the wanted_x
 	int index_of_nearest_point = ReturnIndexOfNearestPointFromX( wanted_x );
 
+	// Savitzky-Golay coefficients are zero for last index
+	if (index_of_nearest_point == number_of_points - 1) index_of_nearest_point--;
+
 	// Evaluate the polynomial defined at the nearest point.
 	// TODO: use a better algorithm to evaluate the poynomial, e.g. Horner, see Numerical Recipes
 	double y = savitzky_golay_coefficients[index_of_nearest_point][0];
@@ -778,7 +781,6 @@ float Curve::ReturnSavitzkyGolayInterpolationFromX( float wanted_x )
 	}
 
 	return float(y);
-
 }
 
 int Curve::ReturnIndexOfNearestPointFromX( float wanted_x )

@@ -68,7 +68,7 @@ float ConjugateGradient::Run()
 {
 	int iprint = 0;
 	int icon = 1;
-	int maxit = 50;
+	int maxit = 500;
 	int va04_success = 0;
 
 	va04_success = va04a_(&n,e,&escale,&num_function_calls,target_function,parameters,&best_score,&iprint,&icon,&maxit,best_values);

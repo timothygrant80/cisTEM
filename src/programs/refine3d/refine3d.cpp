@@ -979,7 +979,8 @@ bool Refine3DApp::DoCalculation()
 		{
 			input_image.ForwardFFT();
 			// Whiten noise
-			input_image.ApplyCurveFilter(&noise_power_spectrum);
+			input_image.ApplyCurveFilterUninterpolated(&noise_power_spectrum);
+//			input_image.ApplyCurveFilter(&noise_power_spectrum);
 			// Apply cosine filter to reduce ringing
 //			input_image.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
 			input_image.BackwardFFT();

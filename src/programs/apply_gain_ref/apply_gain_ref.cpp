@@ -101,7 +101,7 @@ bool ApplyGainRef::DoCalculation()
 	Image dark_reference;
 
 	gain_reference.ReadSlice(&my_gain_file, 1);
-	dark_reference.QuickAndDirtyReadSlice(input_dark_filename, 1);
+	if (also_use_dark == true) dark_reference.QuickAndDirtyReadSlice(input_dark_filename, 1);
 
 	wxPrintf("\nCorrecting...\n\n");
 

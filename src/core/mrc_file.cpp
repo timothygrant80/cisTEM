@@ -199,8 +199,12 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 			uint8 low_4bits;
 			uint8 hi_4bits;
 
+			// For signed integers
 			char *temp_char_array = new char [records_to_read];
 			my_file.read(temp_char_array, records_to_read);
+			// For unsigned integers
+//			unsigned char *temp_char_array = new unsigned char [records_to_read];
+//			my_file.read((char *)temp_char_array, records_to_read);
 
 			for (long counter = 0; counter < records_to_read; counter++)
 			{

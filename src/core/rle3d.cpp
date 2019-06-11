@@ -12,13 +12,14 @@ rle3d_coord::rle3d_coord()
 
 rle3d::rle3d()
 {
-	wxPrintf("\n\nError: rle3d constructed without argument - this is not allowed!!\n\n");
-	DEBUG_ABORT;
+	allocated_coordinates = 0;
+	number_of_coordinates = -1;
+	number_of_groups = 0;
 }
 
 rle3d::rle3d(Image &input3d)
 {
-	allocated_coordinates = false;
+	allocated_coordinates = 0;
 	number_of_coordinates = -1;
 	number_of_groups = 0;
 
@@ -49,6 +50,7 @@ void rle3d::EncodeFrom(Image &input3d)
 	{
 		delete [] rle_coordinates;
 		number_of_coordinates = -1;
+		allocated_coordinates = 0;
 	}
 
 
@@ -65,11 +67,11 @@ void rle3d::EncodeFrom(Image &input3d)
 
 	pixel_counter = 0;
 
-	for ( int k = 0; k < input3d.logical_z_dimension; k ++ )
+	for ( k = 0; k < input3d.logical_z_dimension; k ++ )
 	{
-		for ( int j = 0; j < input3d.logical_y_dimension; j ++ )
+		for ( j = 0; j < input3d.logical_y_dimension; j ++ )
 		{
-			for ( int i = 0; i < input3d.logical_x_dimension; i ++ )
+			for ( i = 0; i < input3d.logical_x_dimension; i ++ )
 			{
 				if (pixel_counter >= input3d.real_memory_allocated) break;
 
@@ -86,16 +88,9 @@ void rle3d::EncodeFrom(Image &input3d)
 					{
 						if (inner_x == input3d.logical_x_dimension)
 						{
-							inner_x = 0;
-							inner_y++;
-							inner_pixel_counter += input3d.padding_jump_value;
+							inner_pixel_counter--;
+							inner_x--;
 							break;
-						}
-
-						if (inner_y == input3d.logical_y_dimension)
-						{
-							inner_y = 0;
-							inner_z++;
 						}
 
 						if (input3d.real_values[inner_pixel_counter] == 1)
@@ -109,27 +104,10 @@ void rle3d::EncodeFrom(Image &input3d)
 
 					AddCoord(i, j, k, current_length);
 
-					if (inner_x == input3d.logical_x_dimension)
-					{
-						inner_x = 0;
-						inner_y++;
-						inner_pixel_counter += input3d.padding_jump_value;
-					}
-
-					if (inner_y == input3d.logical_y_dimension)
-					{
-						inner_y = 0;
-						inner_z++;
-					}
-
 					// we can skip to the end now..
 
 					pixel_counter = inner_pixel_counter;
 					i = inner_x;
-					j = inner_y;
-					k = inner_z;
-
-
 				}
 
 				pixel_counter++;
@@ -288,7 +266,7 @@ void rle3d::Write(const char *filename)
       DEBUG_ABORT;
     }
 
-    for (long counter = 0; counter < number_of_coordinates; counter ++)
+    for (long counter = 0; counter <= number_of_coordinates; counter ++)
     {
         fprintf (output_file, "%d %d %d %d\n", int(rle_coordinates[counter].x_pos), int(rle_coordinates[counter].y_pos), int(rle_coordinates[counter].z_pos), int(rle_coordinates[counter].length));
 
@@ -317,7 +295,7 @@ void rle3d::GroupConnected()
 
 
 
-	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
 	{
 		if (coord_counter == 0)
 		{
@@ -443,7 +421,7 @@ void rle3d::ConnectedSizeDecodeTo(Image &output3d)
 
 	// first of all - how many pixels are in all the groups group..
 
-	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
 	{
 		group_size[rle_coordinates[coord_counter].group_number] += rle_coordinates[coord_counter].length;
 
@@ -451,7 +429,7 @@ void rle3d::ConnectedSizeDecodeTo(Image &output3d)
 
 	// now decode..
 
-	for (coord_counter = 0; coord_counter < number_of_coordinates; coord_counter++)
+	for (coord_counter = 0; coord_counter <= number_of_coordinates; coord_counter++)
 	{
 		start_address = output3d.ReturnReal1DAddressFromPhysicalCoord(rle_coordinates[coord_counter].x_pos, rle_coordinates[coord_counter].y_pos, rle_coordinates[coord_counter].z_pos);
 		inner_pixel_counter = 0;

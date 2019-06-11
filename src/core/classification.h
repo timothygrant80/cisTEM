@@ -41,6 +41,9 @@ public :
 	bool auto_percent_used;
 	float percent_used;
 
+	float ReturnXShiftByPositionInStack(long wanted_position_in_stack);
+	float ReturnYShiftByPositionInStack(long wanted_position_in_stack);
+
 
 	void SizeAndFillWithEmpty(long number_of_particles);
 

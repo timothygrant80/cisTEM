@@ -55,8 +55,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	float		low_resolution_limit = 300.0;
 	float		high_resolution_limit = 8.0;
 	float		angular_step = 5.0;
-	float		max_search_x = 0;
-	float		max_search_y = 0;
+	float		max_search_range = 0;
 	float		smoothing_factor = 1.0;
 	int			padding_factor = 1;
 	bool		normalize_particles = true;
@@ -85,8 +84,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
 	high_resolution_limit = my_input->GetFloatFromUser("High resolution limit (A)", "High resolution limit of the data used for alignment in Angstroms", "8.0", 0.0);
 	angular_step = my_input->GetFloatFromUser("Angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
-	max_search_x = my_input->GetFloatFromUser("Search range in X (A) (0.0 = max)", "The maximum global peak search distance along X from the particle box center", "0.0", 0.0);
-	max_search_y = my_input->GetFloatFromUser("Search range in Y (A) (0.0 = max)", "The maximum global peak search distance along Y from the particle box center", "0.0", 0.0);
+	max_search_range = my_input->GetFloatFromUser("Search range in X (A) (0.0 = max)", "The maximum global peak search distance along X from the particle box center", "0.0", 0.0);
 	smoothing_factor = my_input->GetFloatFromUser("Tuning parameter: smoothing factor", "Factor for likelihood-weighting; values smaller than 1 will blur results more, larger values will emphasize peaks", "1.0", 0.01);
 	padding_factor = my_input->GetIntFromUser("Tuning parameter: padding factor for interpol.", "Factor determining how padding is used to improve interpolation for image rotation", "2", 1);
 	normalize_particles = my_input->GetYesNoFromUser("Normalize particles", "The input particle images should always be normalized unless they were pre-processed", "Yes");
@@ -98,8 +96,8 @@ void Refine2DApp::DoInteractiveUserInput()
 	delete my_input;
 
 	int current_class = 0;
-	my_current_job.Reset(28);
-	my_current_job.ManualSetArguments("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+	my_current_job.Reset(27);
+	my_current_job.ManualSetArguments("tttttiiifffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																	input_parameter_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	ouput_parameter_file.ToUTF8().data(),
@@ -107,7 +105,7 @@ void Refine2DApp::DoInteractiveUserInput()
 																	number_of_classes, first_particle, last_particle, percent_used,
 																	pixel_size, voltage_kV, spherical_aberration_mm, amplitude_contrast,
 																	mask_radius, low_resolution_limit, high_resolution_limit,
-																	angular_step, max_search_x, max_search_y, smoothing_factor,
+																	angular_step, max_search_range, smoothing_factor,
 																	padding_factor, normalize_particles, invert_contrast,
 																	exclude_blank_edges, dump_arrays, dump_file.ToUTF8().data(),
 																	auto_mask,
@@ -137,23 +135,22 @@ bool Refine2DApp::DoCalculation()
 	float    low_resolution_limit				= my_current_job.arguments[14].ReturnFloatArgument();
 	float    high_resolution_limit				= my_current_job.arguments[15].ReturnFloatArgument();
 	float	 angular_step						= my_current_job.arguments[16].ReturnFloatArgument();
-	float	 max_search_x						= my_current_job.arguments[17].ReturnFloatArgument();
-	float	 max_search_y						= my_current_job.arguments[18].ReturnFloatArgument();
-	float	 smoothing_factor					= my_current_job.arguments[19].ReturnFloatArgument();
-	int		 padding_factor						= my_current_job.arguments[20].ReturnIntegerArgument();
+	float	 max_search_range					= my_current_job.arguments[17].ReturnFloatArgument();
+	float	 smoothing_factor					= my_current_job.arguments[18].ReturnFloatArgument();
+	int		 padding_factor						= my_current_job.arguments[19].ReturnIntegerArgument();
 // Psi, Theta, Phi, ShiftX, ShiftY
 	input_particle.parameter_map.psi			= true;
 	input_particle.parameter_map.theta			= false;
 	input_particle.parameter_map.phi			= false;
 	input_particle.parameter_map.x_shift		= true;
 	input_particle.parameter_map.y_shift		= true;
-	bool	 normalize_particles				= my_current_job.arguments[21].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[22].ReturnBoolArgument();
-	bool	 exclude_blank_edges				= my_current_job.arguments[23].ReturnBoolArgument();
-	bool	 dump_arrays						= my_current_job.arguments[24].ReturnBoolArgument();
-	dump_file	 								= my_current_job.arguments[25].ReturnStringArgument();
-	bool auto_mask 								= my_current_job.arguments[26].ReturnBoolArgument();
-	bool auto_centre							= my_current_job.arguments[27].ReturnBoolArgument();
+	bool	 normalize_particles				= my_current_job.arguments[20].ReturnBoolArgument();
+	bool	 invert_contrast					= my_current_job.arguments[21].ReturnBoolArgument();
+	bool	 exclude_blank_edges				= my_current_job.arguments[22].ReturnBoolArgument();
+	bool	 dump_arrays						= my_current_job.arguments[23].ReturnBoolArgument();
+	dump_file	 								= my_current_job.arguments[24].ReturnStringArgument();
+	bool auto_mask 								= my_current_job.arguments[25].ReturnBoolArgument();
+	bool auto_centre							= my_current_job.arguments[26].ReturnBoolArgument();
 
 	input_particle.constraints_used.x_shift = true;		// Constraint for X shifts
 	input_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
@@ -365,8 +362,7 @@ bool Refine2DApp::DoCalculation()
 	input_particle.SetParameterStatistics(parameter_averages, parameter_variances);
 	input_par_file.Rewind();
 
-	if (max_search_x == 0.0) max_search_x = input_stack.ReturnXSize() / 2.0 * pixel_size;
-	if (max_search_y == 0.0) max_search_y = input_stack.ReturnYSize() / 2.0 * pixel_size;
+	if (max_search_range == 0.0) max_search_range = std::max(input_stack.ReturnXSize(), input_stack.ReturnYSize()) / 2.0 * pixel_size;
 
 	my_time_in = wxDateTime::Now();
 	output_par_file.WriteCommentLine("C Refine2D run date and time:              " + my_time_in.FormatISOCombined(' '));
@@ -386,8 +382,7 @@ bool Refine2DApp::DoCalculation()
 	output_par_file.WriteCommentLine("C Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
 	output_par_file.WriteCommentLine("C High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
 	output_par_file.WriteCommentLine("C Angular step:                            " + wxString::Format("%f", angular_step));
-	output_par_file.WriteCommentLine("C Search range in X (A):                   " + wxString::Format("%f", max_search_x));
-	output_par_file.WriteCommentLine("C Search range in Y (A):                   " + wxString::Format("%f", max_search_y));
+	output_par_file.WriteCommentLine("C Search range (A):                        " + wxString::Format("%f", max_search_range));
 	output_par_file.WriteCommentLine("C Smoothing factor:                        " + wxString::Format("%f", smoothing_factor));
 	output_par_file.WriteCommentLine("C Padding factor:                          " + wxString::Format("%i", padding_factor));
 	output_par_file.WriteCommentLine("C Normalize particles:                     " + BoolToYesNo(normalize_particles));
@@ -439,13 +434,13 @@ bool Refine2DApp::DoCalculation()
 	sum_power.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 	temp_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	ctf_input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
-	cropped_box_size = ReturnClosestFactorizedUpper(myroundint(2.0 * (std::max(max_search_x,max_search_y) + mask_radius + mask_falloff) / pixel_size), 3, true);
+	cropped_box_size = ReturnClosestFactorizedUpper(myroundint(2.0 * (max_search_range + mask_radius + mask_falloff) / pixel_size), 3, true);
 	if (cropped_box_size > input_stack.ReturnXSize()) cropped_box_size = input_stack.ReturnXSize();
 	cropped_input_image.Allocate(cropped_box_size, cropped_box_size, true);
 	binning_factor = high_resolution_limit / pixel_size / 2.0;
 	if (binning_factor < 1.0) binning_factor = 1.0;
-	//fourier_size = ReturnClosestFactorizedUpper(cropped_box_size / binning_factor, 3, true);
-	fourier_size = ReturnClosestFactorizedUpper((cropped_box_size * 1.6) / binning_factor, 3, true);
+	fourier_size = ReturnClosestFactorizedUpper(cropped_box_size / binning_factor, 3, true);
+	//fourier_size = ReturnClosestFactorizedUpper((cropped_box_size * 1.6) / binning_factor, 3, true);
 	if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
 
 	//if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
@@ -469,8 +464,8 @@ bool Refine2DApp::DoCalculation()
 	psi_start = psi_step / 2.0 * global_random_number_generator.GetUniformRandom();
 	psi_max = 360.0;
 
-	wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, binning factor = %f, new pixel size = %f, resolution limit = %f, angular step size = %f\n",
-			number_of_classes, number_of_nonzero_classes, fourier_size, binning_factor, binned_pixel_size, binned_pixel_size * 2.0, psi_step);
+	wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, binning factor = %f, new pixel size = %f, resolution limit = %f, angular step size = %f, percent_used = %f\n",
+			number_of_classes, number_of_nonzero_classes, fourier_size, binning_factor, binned_pixel_size, binned_pixel_size * 2.0, psi_step, percent_used);
 
 	class_logp = new float [number_of_nonzero_classes];
 	float *class_variance_correction = new float [number_of_rotations * number_of_nonzero_classes + 1];
@@ -551,7 +546,7 @@ bool Refine2DApp::DoCalculation()
 				float size_of_biggest_thing = size_image.ReturnMaximumValue();
 				size_image.Binarise(size_of_biggest_thing - 1.0f);
 				size_image.DilateBinarizedMask(5.0f / pixel_size);
-				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
+//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
 
 				for (address = 0; address < input_image.real_memory_allocated; address++)
 				{
@@ -573,7 +568,7 @@ bool Refine2DApp::DoCalculation()
 				size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
 
 
-				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
+//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
 				input_image.SetMinimumValue(original_average_value);
 
 				for (address = 0; address < input_image.real_memory_allocated; address++)
@@ -586,11 +581,11 @@ bool Refine2DApp::DoCalculation()
 				}
 
 				input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
-				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
+//				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
 				difference_image.CopyFrom(&input_image);
 				difference_image.SubtractImage(&copy_image);
 
-				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
+//				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
 				difference_image.MultiplyByConstant(0.5f);
 				copy_image.AddImage(&difference_image);
 				input_image.CopyFrom(&copy_image);
@@ -610,7 +605,7 @@ bool Refine2DApp::DoCalculation()
 
 
 			input_image.ClipInto(&cropped_input_image);
-			if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/masked.mrc", current_class + 1);
+//			if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/masked.mrc", current_class + 1);
 			cropped_input_image.ForwardFFT();
 			cropped_input_image.ClipInto(&input_classes_cache[j]);
 			j++;
@@ -624,15 +619,55 @@ bool Refine2DApp::DoCalculation()
 		image_counter = 0;
 		random_shift = mask_radius / pixel_size * 0.2;
 		for (current_class = 0; current_class < number_of_classes; current_class++) {list_of_nozero_classes[current_class] = 0;}
+
+
+		// read in blocks to avoid seeking a lot in large files
+		int block_size = myroundint(float(images_to_process) / 100.0f);
+		if (float(block_size) > float(input_par_file.number_of_lines) * percent_used * 0.01f)
+		{
+			block_size = myroundint(float(input_par_file.number_of_lines) * percent_used * 0.01f);
+		}
+		if (block_size < 1) block_size = 1;
+
+		bool keep_reading = false;
+		int current_block_read_size = 0;
+
 		for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
 		{
 			input_par_file.ReadLine(input_parameters);
+
 			if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
+
 			image_counter++;
 			my_progress->Update(image_counter);
 
+			if (keep_reading == false)
+			{
+				if (global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * (percent_used / float(block_size)))
+				{
+					/*if (is_running_locally == false)
+					{
+						temp_float = current_image;
+						JobResult *temp_result = new JobResult;
+						temp_result->SetResult(1, &temp_float);
+						AddJobToResultQueue(temp_result);
+						//wxPrintf("Refine3D : Adding job to job queue..\n");
+					} */
+					continue;
+				}
+				else
+				{
+					keep_reading = true;
+					current_block_read_size = 0;
+				}
+
+			}
+
+			current_block_read_size++;
+			if (current_block_read_size == block_size) keep_reading = false;
+
 			input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
-			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
+			//if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
 			if (normalize_particles)
 			{
 				variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
@@ -644,7 +679,8 @@ bool Refine2DApp::DoCalculation()
 			if (! invert_contrast) input_image.MultiplyByConstant(- 1.0 );
 			for (current_class = 0; current_class < number_of_classes; current_class++)
 			{
-				if (global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 * percent_used / number_of_classes)
+				//if (global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 * percent_used / number_of_classes)
+				if (global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 / number_of_classes)
 				{
 					input_image.RealSpaceIntegerShift(myroundint(random_shift * global_random_number_generator.GetUniformRandom()),
 							myroundint(random_shift * global_random_number_generator.GetUniformRandom()));
@@ -662,6 +698,7 @@ bool Refine2DApp::DoCalculation()
 				//wxPrintf("Refine3D : Adding job to job queue..\n");
 			}
 		}
+
 		for (current_class = 0; current_class < number_of_classes; current_class++)
 		{
 			if (list_of_nozero_classes[current_class] != 0) class_averages[current_class].MultiplyByConstant(1.0 / list_of_nozero_classes[current_class]);
@@ -703,13 +740,39 @@ bool Refine2DApp::DoCalculation()
 		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 		image_counter = 0;
 		my_progress = new ProgressBar(images_to_process);
+
+		// read in blocks to avoid seeking a lot in large files
+		int block_size = 100;
+		if (float(block_size) > float(images_to_process) * percentage * 0.1f)
+		{
+			block_size = myroundint(float(images_to_process) * percentage * 0.1f);
+		}
+		if (block_size < 1) block_size = 1;
+
+		bool keep_reading = false;
+		int current_block_read_size = 0;
+
+
 		for (current_image = 1; current_image <= input_par_file.number_of_lines; current_image++)
 		{
 			input_par_file.ReadLine(input_parameters); temp_float = input_parameters[1]; input_parameters[1] = input_parameters[3]; input_parameters[3] = temp_float;
 			if (input_parameters[0] < first_particle || input_parameters[0] > last_particle) continue;
 			image_counter++;
 			my_progress->Update(image_counter);
-			if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percentage)) continue;
+
+			if (keep_reading == false)
+			{
+				if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * (percentage / float(block_size)))) continue;
+				else
+				{
+					keep_reading = true;
+					current_block_read_size = 0;
+				}
+			}
+
+			current_block_read_size++;
+			if (current_block_read_size == block_size) keep_reading = false;
+
 			input_image.ReadSlice(&input_stack, int(input_parameters[0] + 0.5));
 			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
 			variance = input_image.ReturnVarianceOfRealValues(mask_radius / pixel_size, 0.0, 0.0, 0.0, true);
@@ -911,7 +974,7 @@ bool Refine2DApp::DoCalculation()
 			rotation_cache[number_of_rotations].ForwardFFT();
 			temp_float = input_particle.MLBlur(input_classes_cache, ssq_X, cropped_input_image, rotation_cache,
 					blurred_images[0], best_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
-					max_logp_particle, best_class, input_parameters[3], best_correlation_map, true);
+					max_logp_particle, best_class, input_parameters[3], best_correlation_map, true, true, true, NULL, NULL,  max_search_range );
 		}
 
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
@@ -919,7 +982,7 @@ bool Refine2DApp::DoCalculation()
 			//wxPrintf("Working on class %i\n", current_class);
 			logp[current_class] = input_particle.MLBlur(input_classes_cache, ssq_X, cropped_input_image, rotation_cache,
 					blurred_images[current_class], current_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
-					max_logp_particle, best_class, input_parameters[3], best_correlation_map);
+					max_logp_particle, best_class, input_parameters[3], best_correlation_map, false, true, true, NULL, NULL, max_search_range);
 			// Sum likelihoods of all classes
 			sum_logp_particle = ReturnSumOfLogP(sum_logp_particle, logp[current_class], log_range);
 		}

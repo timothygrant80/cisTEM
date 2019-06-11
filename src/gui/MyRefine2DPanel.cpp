@@ -617,10 +617,9 @@ void MyRefine2DPanel::SetDefaults()
 		MaskRadiusTextCtrl->SetValue(wxString::Format("%.2f", local_mask_radius));
 		AngularStepTextCtrl->SetValue("15.00");
 
-		float search_range = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.5;
+		float search_range = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.33;
 
-		SearchRangeXTextCtrl->SetValue(wxString::Format("%.2f", search_range));
-		SearchRangeYTextCtrl->SetValue(wxString::Format("%.2f", search_range));
+		MaxSearchRangeTextCtrl->SetValue(wxString::Format("%.2f", search_range));
 
 		SmoothingFactorTextCtrl->SetValue("1.00");
 		ExcludeBlankEdgesNoRadio->SetValue(true);
@@ -734,8 +733,7 @@ void ClassificationManager::BeginRefinementCycle()
 	active_finish_high_resolution_limit = my_parent->HighResolutionLimitFinishTextCtrl->ReturnValue();
 	active_mask_radius = my_parent->MaskRadiusTextCtrl->ReturnValue();
 	active_angular_search_step = my_parent->AngularStepTextCtrl->ReturnValue();
-	active_search_range_x = my_parent->SearchRangeXTextCtrl->ReturnValue();
-	active_search_range_y = my_parent->SearchRangeYTextCtrl->ReturnValue();
+	active_max_search_range = my_parent->MaxSearchRangeTextCtrl->ReturnValue();
 	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
 	active_exclude_blank_edges = my_parent->ExcludeBlankEdgesYesRadio->GetValue();
 	active_auto_percent_used = my_parent->AutoPercentUsedRadioYes->GetValue();
@@ -785,8 +783,8 @@ void ClassificationManager::RunInitialStartJob()
 	output_classification->high_resolution_limit = active_start_high_resolution_limit;
 	output_classification->mask_radius = active_mask_radius;
 	output_classification->angular_search_step = active_angular_search_step;
-	output_classification->search_range_x = active_search_range_x;
-	output_classification->search_range_y = active_search_range_y;
+	output_classification->search_range_x = active_max_search_range;
+	output_classification->search_range_y = active_max_search_range;
 	output_classification->smoothing_factor = active_smoothing_factor;
 	output_classification->exclude_blank_edges = active_exclude_blank_edges;
 	output_classification->auto_percent_used = active_auto_percent_used;
@@ -834,7 +832,7 @@ void ClassificationManager::RunInitialStartJob()
 	bool auto_centre = false;
 
 
-	my_parent->current_job_package.AddJob("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+	my_parent->current_job_package.AddJob("tttttiiifffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																	input_parameter_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	output_parameter_file.ToUTF8().data(),
@@ -851,8 +849,7 @@ void ClassificationManager::RunInitialStartJob()
 																	low_resolution_limit,
 																	high_resolution_limit,
 																	angular_step,
-																	max_search_x,
-																	max_search_y,
+																	active_max_search_range,
 																	smoothing_factor,
 																	padding_factor,
 																	normalize_particles,
@@ -917,8 +914,8 @@ void ClassificationManager::RunRefinementJob()
 	//output_classification->high_resolution_limit = my_parent->HighResolutionLimitTextCtrl->ReturnValue();
 	output_classification->mask_radius = active_mask_radius;
 	output_classification->angular_search_step = active_angular_search_step;
-	output_classification->search_range_x = active_search_range_x;
-	output_classification->search_range_y = active_search_range_y;
+	output_classification->search_range_x = active_max_search_range;
+	output_classification->search_range_y = active_max_search_range;
 	output_classification->smoothing_factor = active_smoothing_factor;
 	output_classification->exclude_blank_edges = active_exclude_blank_edges;
 	output_classification->auto_percent_used = active_auto_percent_used;
@@ -1062,8 +1059,7 @@ void ClassificationManager::RunRefinementJob()
 		float low_resolution_limit =output_classification->low_resolution_limit;
 		float high_resolution_limit = output_classification->high_resolution_limit;
 		float angular_step = output_classification->angular_search_step;
-		float max_search_x = output_classification->search_range_x;
-		float max_search_y = output_classification->search_range_y;
+		float max_search_range = active_max_search_range;
 		float smoothing_factor = output_classification->smoothing_factor;
 		int padding_factor = 2;
 		bool normalize_particles = true;
@@ -1074,7 +1070,7 @@ void ClassificationManager::RunRefinementJob()
 		bool auto_mask = my_parent->AutoMaskRadioYes->GetValue();
 		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
 
-		my_parent->current_job_package.AddJob("tttttiiiffffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("tttttiiifffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),
 																		output_parameter_file.ToUTF8().data(),
@@ -1091,8 +1087,7 @@ void ClassificationManager::RunRefinementJob()
 																		low_resolution_limit,
 																		high_resolution_limit,
 																		angular_step,
-																		max_search_x,
-																		max_search_y,
+																		max_search_range,
 																		smoothing_factor,
 																		padding_factor,
 																		normalize_particles,
@@ -1250,14 +1245,16 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 		else
 		if (current_time != time_of_last_update)
 		{
-			int current_percentage = float(number_of_received_particle_results) / float(output_classification->number_of_particles) * 100.0;
+			int current_percentage = float(number_of_received_particle_results) / float(output_classification->number_of_particles * output_classification->percent_used * 0.01) * 100.0;
 			time_of_last_update = current_time;
 			if (current_percentage > 100) current_percentage = 100;
+			else if (current_percentage < 0) current_percentage = 0;
+
 			my_parent->ProgressBar->SetValue(current_percentage);
 
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
-			long seconds_remaining = float((output_classification->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
+			long seconds_remaining = float((output_classification->number_of_particles * output_classification->percent_used * 0.01) - number_of_received_particle_results) * seconds_per_job;
 
 			TimeRemaining time_remaining;
 
@@ -1299,6 +1296,8 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 			int current_percentage = float(number_of_received_particle_results) / float(output_classification->number_of_particles) * 100.0;
 			time_of_last_update = current_time;
 			if (current_percentage > 100) current_percentage = 100;
+			else if (current_percentage < 0) current_percentage = 0;
+
 			my_parent->ProgressBar->SetValue(current_percentage);
 
 			long job_time = current_time - current_job_starttime;

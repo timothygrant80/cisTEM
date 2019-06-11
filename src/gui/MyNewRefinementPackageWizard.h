@@ -268,6 +268,54 @@ class ClassSelectionWizardPage : public wxWizardPage
 
 };
 
+class RecentrePicksWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	RecentrePicksWizardPanel *my_panel;
+
+	RecentrePicksWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+ 	~RecentrePicksWizardPage ();
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
+class RemoveDuplicatesWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	RemoveDuplicatesWizardPanel *my_panel;
+
+	RemoveDuplicatesWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+ 	~RemoveDuplicatesWizardPage ();
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+
+};
+
+class RemoveDuplicateThresholdWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	RemoveDuplicateThresholdWizardPanel *my_panel;
+
+	RemoveDuplicateThresholdWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+ 	~RemoveDuplicateThresholdWizardPage ();
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+};
+
+
 
 class MyNewRefinementPackageWizard : public NewRefinementPackageWizard
 {
@@ -286,6 +334,10 @@ public:
 		MolecularWeightWizardPage *molecular_weight_page;
 		LargestDimensionWizardPage *largest_dimension_page;
 		ClassSelectionWizardPage *class_selection_page;
+
+		RecentrePicksWizardPage *recentre_picks_page;
+		RemoveDuplicatesWizardPage *remove_duplicate_picks_page;
+		RemoveDuplicateThresholdWizardPage *remove_duplicate_picks_threshold_page;
 
 		ClassesSetupWizardPageA *class_setup_pageA;
 		ClassesSetupWizardPageB *class_setup_pageB;

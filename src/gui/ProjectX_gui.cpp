@@ -993,19 +993,12 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	AngularStepTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("15.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( AngularStepTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	SearchRangeXStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Range in X (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	SearchRangeXStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Max Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	SearchRangeXStaticText->Wrap( -1 );
 	fgSizer1->Add( SearchRangeXStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	SearchRangeXTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( SearchRangeXTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	SearchRangeYStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Range in Y (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	SearchRangeYStaticText->Wrap( -1 );
-	fgSizer1->Add( SearchRangeYStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	SearchRangeYTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( SearchRangeYTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	MaxSearchRangeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MaxSearchRangeTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText330 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Smoothing Factor :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText330->Wrap( -1 );
@@ -10764,6 +10757,126 @@ ClassesSetupWizardPanelA::ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID
 }
 
 ClassesSetupWizardPanelA::~ClassesSetupWizardPanelA()
+{
+}
+
+RecentrePicksWizardPanel::RecentrePicksWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer15311;
+	bSizer15311 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer14711;
+	bSizer14711 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("Re-Centre Based on Classification? : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText21411->Wrap( -1 );
+	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer367;
+	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ReCentreYesButton = new wxRadioButton( this, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( ReCentreYesButton, 0, wxALL, 5 );
+	
+	m_radioBtn40 = new wxRadioButton( this, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( m_radioBtn40, 0, wxALL, 5 );
+	
+	
+	bSizer14711->Add( bSizer367, 1, wxEXPAND, 5 );
+	
+	
+	bSizer15311->Add( bSizer14711, 0, wxEXPAND, 5 );
+	
+	
+	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to use the shifts estimated for the class averages to re-centre the picking co-ordinates prior to cutting out the images?  This can be especially helpful when the centreing on the picking was not very good, and a subsequent 2D classification with centre averages set to yes was run.   Note : This will only apply if cisTEM has images and co-ordinates for the particles, it will do nothing if the images come from an imported stack."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer15311 );
+	this->Layout();
+}
+
+RecentrePicksWizardPanel::~RecentrePicksWizardPanel()
+{
+}
+
+RemoveDuplicatesWizardPanel::RemoveDuplicatesWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer15311;
+	bSizer15311 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer14711;
+	bSizer14711 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("Remove Duplicate Particle Positions? : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText21411->Wrap( -1 );
+	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer367;
+	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
+	
+	RemoveDuplicateYesButton = new wxRadioButton( this, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( RemoveDuplicateYesButton, 0, wxALL, 5 );
+	
+	m_radioBtn40 = new wxRadioButton( this, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer367->Add( m_radioBtn40, 0, wxALL, 5 );
+	
+	
+	bSizer14711->Add( bSizer367, 1, wxEXPAND, 5 );
+	
+	
+	bSizer15311->Add( bSizer14711, 0, wxEXPAND, 5 );
+	
+	
+	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to remove duplicate (within a certain distance) picks?  After re-centring based on 2D classification it can happen that multiple different picks are moved onto the same point. In this case, selecting yes here will keep only one of these picks and help reduce having multiple copies of the same particle."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer15311 );
+	this->Layout();
+}
+
+RemoveDuplicatesWizardPanel::~RemoveDuplicatesWizardPanel()
+{
+}
+
+RemoveDuplicateThresholdWizardPanel::RemoveDuplicateThresholdWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer153;
+	bSizer153 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer147;
+	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Duplicate Pick Threshold Distance (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214->Wrap( -1 );
+	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DuplicatePickThresholdTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer147->Add( DuplicatePickThresholdTextCtrl, 1, wxALL, 5 );
+	
+	
+	bSizer153->Add( bSizer147, 0, wxEXPAND, 5 );
+	
+	
+	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("When removing duplicate picks, picks within this distance will be counted as duplicate and thus removed.  Typically this would be around 1/3rd to 1/2 the size of your particle."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer153 );
+	this->Layout();
+}
+
+RemoveDuplicateThresholdWizardPanel::~RemoveDuplicateThresholdWizardPanel()
 {
 }
 

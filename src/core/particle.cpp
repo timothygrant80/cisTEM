@@ -1251,7 +1251,7 @@ void Particle::CalculateMaskedLogLikelihood(Image &projection_image, Reconstruct
 float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
 		int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_logp_particle,
 		int best_class, float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only, bool uncrop, bool apply_ctf_to_classes,
-		Image *image_to_blur, Image *diff_image_to_blur)
+		Image *image_to_blur, Image *diff_image_to_blur, float max_shift_in_angstroms)
 {
 	MyDebugAssertTrue(cropped_input_image.is_in_memory, "cropped_input_image: memory not allocated");
 	MyDebugAssertTrue(rotation_cache[0].is_in_memory, "rotation_cache: memory not allocated");
@@ -1298,6 +1298,11 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 	temp_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
 	Image *sum_image = new Image;
 	sum_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, true);
+
+	wxPrintf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
+	float max_radius_squared = powf(max_shift_in_angstroms / pixel_size, 2);
+	float current_squared_radius;
+
 #ifndef MKL
 	float *temp_k1 = new float [particle_image->real_memory_allocated];
 	float *temp_k2; temp_k2 = temp_k1 + 1;
@@ -1403,7 +1408,13 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 			{
 				if (i > particle_image->physical_address_of_box_center_x) dx = i - particle_image->logical_y_dimension;
 				else dx = i;
-				if(correlation_map->real_values[pixel_counter] > max_logp_particle)
+
+				current_squared_radius = powf(dx, 2) + powf(dy, 2);
+				if (current_squared_radius > max_radius_squared)
+				{
+					correlation_map->real_values[pixel_counter] = 0.0f;
+				}
+				else if(correlation_map->real_values[pixel_counter] > max_logp_particle)
 				{
 					new_max_found = true;
 					max_logp_particle = correlation_map->real_values[pixel_counter];
@@ -1459,6 +1470,8 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 			pixel_counter = 0;
 			non_zero_pixels = 0;
 			sump_psi = 0.0;
+
+
 			for (j = 0; j < particle_image->logical_y_dimension; j++)
 			{
 				if (j > particle_image->physical_address_of_box_center_y) dy = particle_image->logical_y_dimension - j;
@@ -1467,7 +1480,8 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 				{
 					if (i > particle_image->physical_address_of_box_center_x) dx = particle_image->logical_y_dimension - i;
 					else dx = i;
-					if (correlation_map->real_values[pixel_counter] >= log_threshold)
+
+					if (correlation_map->real_values[pixel_counter] >= log_threshold && correlation_map->real_values[pixel_counter] != 0.0f)
 					{
 						correlation_map->real_values[pixel_counter] = exp(correlation_map->real_values[pixel_counter] - max_logp_particle);
 						sump_psi += correlation_map->real_values[pixel_counter];
@@ -1615,8 +1629,8 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 		sum_image->ForwardFFT();
 		if (uncrop)
 		{
-		//	sum_image->CosineMask(0.45, 0.1);
-			sum_image->CosineMask(0.3, 0.4);
+			sum_image->CosineMask(0.45, 0.1);
+		//	sum_image->CosineMask(0.3, 0.4);
 			sum_image->ClipInto(&cropped_input_image);
 			cropped_input_image.BackwardFFT();
 			cropped_input_image.ClipIntoLargerRealSpace2D(&blurred_image, cropped_input_image.ReturnAverageOfRealValuesOnEdges());

@@ -645,10 +645,11 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		 return;
 	}
 	else
+	if (connected_socket == master_socket)
 	{
 		//must be from the master..
 
-	//	SendError("Controller received a disconnect from the master before the job was finished..");
+		SendError("Controller received a disconnect from the master before the job was finished..");
 
 
 		ShutDownServer();
@@ -664,4 +665,9 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		exit(0);
 		return;
 	}
+	else // who knows what this is!
+	{
+		 StopMonitoringAndDestroySocket(connected_socket);
+	}
+
 }

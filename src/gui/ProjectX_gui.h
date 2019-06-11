@@ -307,9 +307,7 @@ class Refine2DPanel : public JobPanel
 		wxStaticText* AngularStepStaticText;
 		NumericTextCtrl* AngularStepTextCtrl;
 		wxStaticText* SearchRangeXStaticText;
-		NumericTextCtrl* SearchRangeXTextCtrl;
-		wxStaticText* SearchRangeYStaticText;
-		NumericTextCtrl* SearchRangeYTextCtrl;
+		NumericTextCtrl* MaxSearchRangeTextCtrl;
 		wxStaticText* m_staticText330;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
 		wxStaticText* PhaseShiftStepStaticText;
@@ -2896,6 +2894,65 @@ class ClassesSetupWizardPanelA : public wxPanel
 		
 		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
 		~ClassesSetupWizardPanelA();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RecentrePicksWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class RecentrePicksWizardPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn40;
+	
+	public:
+		wxRadioButton* ReCentreYesButton;
+		AutoWrapStaticText* InfoText;
+		
+		RecentrePicksWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~RecentrePicksWizardPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RemoveDuplicatesWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class RemoveDuplicatesWizardPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn40;
+	
+	public:
+		wxRadioButton* RemoveDuplicateYesButton;
+		AutoWrapStaticText* InfoText;
+		
+		RemoveDuplicatesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~RemoveDuplicatesWizardPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RemoveDuplicateThresholdWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class RemoveDuplicateThresholdWizardPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText214;
+	
+	public:
+		NumericTextCtrl* DuplicatePickThresholdTextCtrl;
+		AutoWrapStaticText* InfoText;
+		
+		RemoveDuplicateThresholdWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~RemoveDuplicateThresholdWizardPanel();
 	
 };
 

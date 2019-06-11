@@ -82,6 +82,13 @@ bool PrepareStackApp::DoCalculation()
 	float variance;
 	float average;
 
+	if (is_running_locally == false)
+	{
+		float result;
+		my_result.SetResult(1, &result);
+	}
+
+
 	ImageFile input_file(input_particle_images.ToStdString());
 	MRCFile *output_file;
 
@@ -182,7 +189,7 @@ bool PrepareStackApp::DoCalculation()
 
 
 	if (is_running_locally == true) wxPrintf("\nPrepareStack: Normal termination\n\n");
-	else wxSleep(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
+	//else wxSleep(10); // to make sure we don't die before the image data has been sent over completely (not sure if necessary)
 
 	return true;
 }

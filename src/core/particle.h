@@ -169,6 +169,6 @@ public:
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
 			int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,
 			float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only = false, bool uncrop = true, bool apply_ctf_to_classes = true,
-			Image *image_to_blur = NULL, Image *diff_image_to_blur = NULL);
+			Image *image_to_blur = NULL, Image *diff_image_to_blur = NULL, float max_shift_in_angstroms = FLT_MAX);
 	void EstimateSigmaNoise();
 };

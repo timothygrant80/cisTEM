@@ -1324,7 +1324,7 @@ void AbInitioManager::CycleRefinement()
 			if (apply_symmetry == true)	current_percent_used = symmetry_start_percent_used + (symmetry_end_percent_used - symmetry_start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 			else current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
-			if (number_of_rounds_run == myroundint(float(number_of_rounds_to_run) * 0.75f) && active_refinement_package->symmetry != "C1" && active_always_apply_symmetry == false && number_of_starts_run == 0) // we need to align to the symmetry
+			if (number_of_rounds_run == myroundint(float(number_of_rounds_to_run) * 0.75f) && active_symmetry_string != "C1" && active_always_apply_symmetry == false && number_of_starts_run == 0) // we need to align to the symmetry
 			{
 				SetupAlignSymmetryJob();
 				RunAlignSymmetryJob();
@@ -1679,6 +1679,8 @@ void AbInitioManager::SetupMerge3dJob()
 		else wiener_nominator = 10.0f;
 
 
+
+		//wiener_nominator = 50.0f;
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
 		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),

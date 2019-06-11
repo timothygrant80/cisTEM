@@ -117,11 +117,13 @@ bool SumAllTIF::DoCalculation()
 
 	// loop over all files, and do summing..
 
+
 	wxPrintf("Summing All Files...\n\n");
 	ProgressBar *my_progress = new ProgressBar(all_files.GetCount());
 
+int number_processed = 0;
 	// thread if available
-#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, my_progress) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
+#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, number_processed, my_progress) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
 	{ // bracket for omp
 
 	Image buffer_image;
@@ -164,7 +166,9 @@ bool SumAllTIF::DoCalculation()
 		current_input_file->CloseFile();
 		delete current_input_file;
 
-		my_progress->Update(file_counter + 1);
+#pragma omp atomic
+		number_processed++;
+		my_progress->Update(number_processed);
 
 	}
 

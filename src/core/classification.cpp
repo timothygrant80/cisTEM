@@ -146,5 +146,52 @@ wxString Classification::WriteFrealignParameterFiles(wxString base_filename, Ref
 	return output_filename;
 }
 
+float Classification::ReturnXShiftByPositionInStack(long wanted_position_in_stack)
+{
+	long particle_counter;
+
+	long start_pos = wanted_position_in_stack - 1;
+	if (start_pos >= number_of_particles) start_pos = number_of_particles - 1;
+
+	for ( particle_counter = start_pos; particle_counter < number_of_particles; particle_counter++)
+	{
+		if (classification_results[particle_counter].position_in_stack == wanted_position_in_stack) return classification_results[particle_counter].xshift;
+	}
+
+	// if we got here, haven't found it yet, try again..
+
+	for ( particle_counter = 0; particle_counter < start_pos; particle_counter++)
+	{
+		if (classification_results[particle_counter].position_in_stack == wanted_position_in_stack) return classification_results[particle_counter].xshift;
+	}
+
+	// if we got here, it isn't there..
+
+	return 0.0;
+}
+
+float Classification::ReturnYShiftByPositionInStack(long wanted_position_in_stack)
+{
+	long particle_counter;
+
+	long start_pos = wanted_position_in_stack - 1;
+	if (start_pos >= number_of_particles) start_pos = number_of_particles - 1;
+
+	for ( particle_counter = start_pos; particle_counter < number_of_particles; particle_counter++)
+	{
+		if (classification_results[particle_counter].position_in_stack == wanted_position_in_stack) return classification_results[particle_counter].yshift;
+	}
+
+	// if we got here, haven't found it yet, try again..
+
+	for ( particle_counter = 0; particle_counter < start_pos; particle_counter++)
+	{
+		if (classification_results[particle_counter].position_in_stack == wanted_position_in_stack) return classification_results[particle_counter].yshift;
+	}
+
+	// if we got here, it isn't there..
+
+	return 0.0;
+}
 
 

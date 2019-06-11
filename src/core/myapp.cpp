@@ -90,6 +90,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		{
 			wxPrintf("\n\n");
 			ExitMainLoop();
+			exit(0);
 			return;
 		}
 
@@ -111,6 +112,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 			command_line_parser.Usage();
 			wxPrintf("\n\n");
 			ExitMainLoop();
+			exit(0);
 			return;
 		}
 
@@ -170,7 +172,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		{
 			active_controller_address.Hostname(possible_controller_addresses.Item(counter));
 			controller_socket->Connect(active_controller_address, false);
-			controller_socket->WaitOnConnect(20);
+			controller_socket->WaitOnConnect(30);
 
 			if (controller_socket->IsConnected() == false)
 			{
@@ -190,6 +192,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 			controller_socket->Close();
 			MyDebugPrint(" JOB : Failed ! Unable to connect\n");
 			ExitMainLoop();
+			exit(0);
 			return;
 		}
 
@@ -204,7 +207,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		i_am_a_zombie = true;
 
 		zombie_timer = new wxTimer(this, 1);
-		zombie_timer->StartOnce(10000);
+		zombie_timer->StartOnce(20000);
 		
 		// timer events
 
@@ -235,7 +238,7 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	{
 		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 		// stop monitoring the socket..
-		//StopMonitoringSocket(socket);
+		//StopMonitoringSocket(socket); stopped doing this for timings
 
 	}
 }
@@ -299,7 +302,7 @@ void MyApp::OnZombieTimer(wxTimerEvent& event)
 
 		controller_socket->Close();
 		controller_socket->Connect(active_controller_address, false);
-		controller_socket->WaitOnConnect(20);
+		controller_socket->WaitOnConnect(30);
 
 		if (controller_socket->IsConnected() == false)
 		{
@@ -319,7 +322,7 @@ void MyApp::OnZombieTimer(wxTimerEvent& event)
 		// system - if the port if valid.  So if we don't get any events from this socket within 10 seconds, we are going to try again...
 
 		zombie_timer = new wxTimer(this, 1);
-		zombie_timer->StartOnce(10000);
+		zombie_timer->StartOnce(20000);
 	}
 }
 
@@ -845,7 +848,7 @@ void MyApp::HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString ma
 	active_controller_address.Service(master_port);
 
 	controller_socket->Connect(active_controller_address, false);
-	controller_socket->WaitOnConnect(20);
+	controller_socket->WaitOnConnect(30);
 
 	controller_socket->SetFlags(SOCKET_FLAGS );
 
@@ -877,7 +880,7 @@ void MyApp::HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString ma
 
 	i_am_a_zombie = true;
 	zombie_timer = new wxTimer(this, 1);
-	zombie_timer->Start(10000, true);
+	zombie_timer->StartOnce(20000);
 	
 }
 
@@ -962,6 +965,9 @@ void MyApp::HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *r
 
 		if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == number_of_connected_slaves)
 		{
+			// if we are writing a file, close it..
+			if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
+
 			SendAllJobsFinished();
 
 			if (current_job_package.ReturnNumberOfJobsRemaining() != 0)

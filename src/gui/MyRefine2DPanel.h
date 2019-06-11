@@ -47,8 +47,7 @@ public:
 	float active_percent_used;
 	float active_mask_radius;
 	float active_angular_search_step;
-	float active_search_range_x;
-	float active_search_range_y;
+	float active_max_search_range;
 	float active_smoothing_factor;
 	bool active_exclude_blank_edges;
 	bool active_auto_percent_used;

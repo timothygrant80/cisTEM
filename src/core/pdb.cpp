@@ -4,9 +4,17 @@ WX_DEFINE_OBJARRAY(ArrayOfAtoms);
 WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 //WX_DEFINE_OBJARRAY(ArrayOfParticleInstances);
 
+const double MIN_THICKNESS = 500;
+
+const double MIN_PADDING_Z    = 16;
+const int MIN_PADDING_XY   =  512; // nice for small volumes, may be too big for larger
+const int MAX_XY_DIMENSION = 4096;
+
 // Define fixed width limits for PDB reading
 #define NAMESTART	12  //Char
 #define NAMELENGTH	 4
+#define RESIDUESTART 16
+#define RESIDUELENGTH 5
 #define XSTART 		30  // Float
 #define YSTART		38
 #define ZSTART		46
@@ -52,9 +60,18 @@ const float vdw_Mg = powf(2.2,3) * 4/3 * PI;
 const float vdw_Mn = powf(2,3) * 4/3 * PI;
 const float vdw_Ca = powf(2.6,3) * 4/3 * PI;
 
-const double MIN_PADDING_Z    = 16;
-const int MIN_PADDING_XY   = 256; // 256 nice for small volumes, may be too big for larger
-const int MAX_XY_DIMENSION = 4096;
+
+
+//                                { backbone, Ala,   Arg,  Asn,  Asp, Cys,  Gln, Glu,  His,  Ile, Leu, Lys,  Met,  Phe, Pro,  Ser, Thr,   Trp, Tyr, Val}
+//const float relative_bfactor_list[21] = {1.0, 1.75, 1.75, 1.85, 2.25, 2.1, 1.75, 2, 1.9, 1.5, 1.75, 1.75, 1.9, 1.8, 2.0, 1.9, 1.75, 1.0, 1.6, 1.6 };
+// Model1
+//const float relative_bfactor_list[21] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+// Model2 xtallography paper
+const float relative_bfactor_list[21] = {0.5, 0.84, 0.99, 0.84, 1.62, 2.23, 1.0, 1.54, 0.8, 0.62, 0.6, 0.92, 1.23, 0.62, 0.87, 0.82, 0.64, 0.5, 0.5, 0.86 };
+// Model3 smoothed vs of 2
+//const float relative_bfactor_list[21] = {0.5, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0 };
+
+//const float relative_bfactor_list[21] = {1.0, 0.84, 0.69, 0.84, 1.62, 2.23, 1.0, 1.54, 1.08, 0.92, 1.08, 0.62, 1.23, 0.92, 0.77, 0.92, 0.84, 1.0, 1.0, 0.84 };
 
 
 PDB::PDB()
@@ -69,7 +86,7 @@ PDB::PDB()
 
 }
 
-PDB::PDB(long number_of_non_water_atoms)
+PDB::PDB(long number_of_non_water_atoms, float cubic_size)
 {
 
 	input_file_stream = NULL;
@@ -78,11 +95,9 @@ PDB::PDB(long number_of_non_water_atoms)
 	output_text_stream = NULL;
 	// Create a total PDB object to hold all the atoms in a specimen at a given time in the trajectory
 	Atom dummy_atom;
-	wxPrintf("In the constructor there are %ld non-water-atoms\n",number_of_non_water_atoms);
 	my_atoms.Alloc(number_of_non_water_atoms);
 	my_atoms.Add(dummy_atom,number_of_non_water_atoms);
-
-
+	this->cubic_size = cubic_size;
 
 
 
@@ -192,6 +207,11 @@ void PDB::Init()
 	this->vol_angZ = 0;
 	this->atomic_volume = 0;
 	this->number_of_particles_initialized = 0;
+	this->center_of_mass[0] = 0;
+	this->center_of_mass[1] = 0;
+	this->center_of_mass[2] = 0;
+
+
 
 
 
@@ -270,7 +290,35 @@ void PDB::Init()
 			if (current_line.StartsWith("ATOM") == true && current_line.Length() > 0)
 			{
 
-				my_atoms.Item(current_atom_number).name =  current_line.Mid(NAMESTART,NAMELENGTH);
+
+				wxString residue_name = current_line.Mid(RESIDUESTART,RESIDUELENGTH).Trim(true).Trim(false);
+
+				my_atoms.Item(current_atom_number).name =  current_line.Mid(NAMESTART,NAMELENGTH).Trim(true).Trim(false);
+
+				// Set all charge to zero - only override for Asp/Glu O that may be charged. Neutral at first in the simulation
+				my_atoms.Item(current_atom_number).charge = 0;
+				if ( this->IsNonAminoAcid(residue_name))
+				{
+					my_atoms.Item(current_atom_number).relative_bfactor = relative_bfactor_list[0];
+				}
+				else
+				{
+					if (this->IsAcidicOxygen(my_atoms.Item(current_atom_number).name))
+					{
+						my_atoms.Item(current_atom_number).charge = 1;
+					}
+
+					// Set the relative bFactor
+					if (this->IsBackbone(my_atoms.Item(current_atom_number).name))
+					{
+						my_atoms.Item(current_atom_number).relative_bfactor = relative_bfactor_list[0];
+					}
+					else
+					{
+						my_atoms.Item(current_atom_number).relative_bfactor = this->ReturnRelativeBFactor(residue_name);
+					}
+				}
+//				wxPrintf("%2.2f\n",my_atoms.Item(current_atom_number).relative_bfactor);
 
 				if (current_line.Mid(XSTART,XYZLENGTH).Trim(true).Trim(false).ToDouble(&temp_double) == false)
 				{
@@ -316,6 +364,7 @@ void PDB::Init()
 				wxString temp_name;
 				temp_name = my_atoms.Item(current_atom_number).name;
 				temp_name.Trim(true).Trim(false);
+
 //				temp_name = current_line.Mid(WATERSTART,WATERLENGTH).Trim(true).Trim(false);
 				// First, check to see if it is a water, if not check to see if the element name exists.
 				if (temp_name.StartsWith("WTAA"))
@@ -333,12 +382,11 @@ void PDB::Init()
 //						DEBUG_ABORT;
 //					}
 
+
 					// Maybe this should be a switch statement
 					if (temp_name.StartsWith("O") ) {
-
 						my_atoms.Item(current_atom_number).element_name = 3;
 						this->atomic_volume += vdw_O;
-
 					} else if (temp_name.StartsWith("C")  ) {
 						my_atoms.Item(current_atom_number).element_name = 1;
 						this->atomic_volume += vdw_C;
@@ -355,6 +403,9 @@ void PDB::Init()
 						my_atoms.Item(current_atom_number).element_name = 5;
 						this->atomic_volume += vdw_Na;
 					} else if (temp_name.StartsWith("Mg")  ) {
+						my_atoms.Item(current_atom_number).element_name = 6;
+						this->atomic_volume += vdw_Mg;
+					} else if (temp_name.StartsWith("MG")  ) {
 						my_atoms.Item(current_atom_number).element_name = 6;
 						this->atomic_volume += vdw_Mg;
 					} else if (temp_name.StartsWith("P")  ) {
@@ -394,28 +445,28 @@ void PDB::Init()
 
 
 
-					// Check for charge
-					if (current_line.Length() < CHARGESTART+CHARGELENGTH-1)
-					{
-						// Set a default value of zero
-						my_atoms.Item(current_atom_number).charge = 0;
-					}
-					else
-					{
-						if (current_line.Mid(CHARGESTART+CHARGELENGTH-1).Cmp("+") && current_line.Mid(CHARGESTART,1).ToDouble(&temp_double) == true)
-						{
-							my_atoms.Item(current_atom_number).charge = temp_double;
-						}
-						else if (current_line.Mid(CHARGESTART+CHARGELENGTH-1).Cmp("-") && current_line.Mid(CHARGESTART,1).ToDouble(&temp_double) == true)
-						{
-							my_atoms.Item(current_atom_number).charge = -1.0 * temp_double;
-						}
-						else
-						{
-							// This could be glossing over a potential ERROR and just setting to zero THINK about it.
-							my_atoms.Item(current_atom_number).charge = 0.0;
-						}
-					}
+//					// Assign charge only to the Asp/Glu Oxygen. It will only be used as a function of radiation damage, i.e. not initially.
+//					if (current_line.Length() < CHARGESTART+CHARGELENGTH-1)
+//					{
+//						// Set a default value of zero
+//						my_atoms.Item(current_atom_number).charge = 0;
+//					}
+//					else
+//					{
+//						if (current_line.Mid(CHARGESTART+CHARGELENGTH-1).Cmp("+") && current_line.Mid(CHARGESTART,1).ToDouble(&temp_double) == true)
+//						{
+//							my_atoms.Item(current_atom_number).charge = temp_double;
+//						}
+//						else if (current_line.Mid(CHARGESTART+CHARGELENGTH-1).Cmp("-") && current_line.Mid(CHARGESTART,1).ToDouble(&temp_double) == true)
+//						{
+//							my_atoms.Item(current_atom_number).charge = -1.0 * temp_double;
+//						}
+//						else
+//						{
+//							// This could be glossing over a potential ERROR and just setting to zero THINK about it.
+//							my_atoms.Item(current_atom_number).charge = 0.0;
+//						}
+//					}
 
 
 
@@ -504,8 +555,7 @@ void PDB::Init()
 		if (this->number_of_particles_initialized == 0)
 		{
 			// Set up the initial trajectory for this particle instance.
-			wxPrintf("\n\nInitializing with zero shift or rotation\n\n");
-							this->TransformBaseCoordinates(0,0,0,0,0,0);
+			this->TransformBaseCoordinates(0,0,0,0,0,0);
 		}
 
 		// rewind the file..
@@ -515,17 +565,25 @@ void PDB::Init()
 		// Finally, calculate the center of mass of the PDB object.
 		for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
 		{
+
 			center_of_mass[0] += my_atoms.Item(current_atom_number).x_coordinate;
 			center_of_mass[1] += my_atoms.Item(current_atom_number).y_coordinate;
 			center_of_mass[2] += my_atoms.Item(current_atom_number).z_coordinate;
+
+
 		}
 
 		for (current_atom_number = 0; current_atom_number < 3; current_atom_number++)
 		{
 			center_of_mass[current_atom_number] /= number_of_atoms;
+			if (std::isnan(center_of_mass[current_atom_number]))
+			{
+				wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z",current_atom_number);
+				throw;
+			}
 		}
 
-		wxPrintf("PDB center of mass at %f %f %f\nSetting origin there.\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]);
+		wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]);
 
 		// Set the coordinate origin to the center of mass
 		for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
@@ -728,10 +786,10 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,f
 
 	// Now that a new member is added to the ensemble, increment the counter
 	this->number_of_particles_initialized++;
-	wxPrintf("\nNumber initialized %d\n",this->number_of_particles_initialized);
+	wxPrintf("\n\nNumber of particles initialized %d\n",this->number_of_particles_initialized);
 }
 
-void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms, float wanted_pixel_size, int time_step, RotationMatrix particle_rot)
+void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms, float wanted_pixel_size, int time_step, RotationMatrix particle_rot, float shift_z)
 {
 	/*
 	 * Take an array of PDB objects and create a single array of atoms transformed according to the timestep
@@ -841,10 +899,10 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 				this->my_atoms.Item(current_total_atom).bfactor		= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).bfactor;
 				this->my_atoms.Item(current_total_atom).charge		= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).charge;
 				this->my_atoms.Item(current_total_atom).element_name	= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).element_name;
-
+			    this->my_atoms.Item(current_total_atom).relative_bfactor = pdb_ensemble[current_pdb].my_atoms.Item(current_atom).relative_bfactor;
 
 				this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).element_name]++;
-				this->average_bFactor += this->my_atoms.Item(current_total_atom).bfactor;
+				this->average_bFactor += this->my_atoms.Item(current_total_atom).relative_bfactor;
 				current_total_atom++;
 
 
@@ -884,12 +942,22 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max((double)300,(2*MIN_PADDING_Z + abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.15*abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
-	this->vol_nX = myroundint(this->vol_angX / wanted_pixel_size);
-	this->vol_nY = myroundint(this->vol_angY / wanted_pixel_size);
-	this->vol_nZ = myroundint(this->vol_angZ / wanted_pixel_size);
-	if (IsEven(this->vol_nZ) == false) this->vol_nZ += 1;
+	if (this->cubic_size > 1)
+	{
+		// Override the dimensions
+		this->vol_nX = cubic_size;
+		this->vol_nY = cubic_size;
+		this->vol_nZ = cubic_size;
+	}
+	else
+	{
+		this->vol_nX = myroundint(this->vol_angX / wanted_pixel_size);
+		this->vol_nY = myroundint(this->vol_angY / wanted_pixel_size);
+		this->vol_nZ = myroundint(this->vol_angZ / wanted_pixel_size);
+		if (IsEven(this->vol_nZ) == false) this->vol_nZ += 1;
+	}
 
 	// Adjust the angstrom dimension to match the extended values
 	this->vol_angX = this->vol_nX * wanted_pixel_size;
@@ -957,6 +1025,108 @@ void PDB::TransformGlobalAndSortOnZ(long number_of_non_water_atoms, float shift_
 
 	return ;
 
+}
+
+float PDB::ReturnRelativeBFactor(wxString residue_name)
+{
+
+	float relative_bfactor = 0;
+	//                                { backbone, Ala,  Arg,  Asn,   Asp, Cys,  Gln, Glu,  His,  Ile,   Leu, Lys,   Met,  Phe, Pro,  Ser,  Thr,  Trp, Tyr, Val}
+
+//	const float relative_bfactor_list = {0.1, 0.84, 0.69, 0.84, 1.62, 2.23, 1.0, 1.54, 1.08, 0.92, 1.08, 0.62, 1.23, 0.92, 0.77, 0.92, 0.84, 1.0, 1.0, 0.84 };
+	if (residue_name == "ALA")
+	{
+		relative_bfactor = relative_bfactor_list[1];
+	}
+	else if (residue_name == "ARG")
+	{
+		relative_bfactor = relative_bfactor_list[2];
+	}
+	else if (residue_name == "ASN")
+	{
+		relative_bfactor = relative_bfactor_list[3];
+	}
+	else if (residue_name == "ASP")
+	{
+		relative_bfactor = relative_bfactor_list[4];
+	}
+	else if (residue_name == "CYS")
+	{
+		relative_bfactor = relative_bfactor_list[5];
+	}
+	else if (residue_name == "GLN")
+	{
+		relative_bfactor = relative_bfactor_list[6];
+	}
+	else if (residue_name == "GLU")
+	{
+		relative_bfactor = relative_bfactor_list[7];
+	}
+	else if (residue_name == "HIS")
+	{
+		relative_bfactor = relative_bfactor_list[8];
+
+	}
+	else if (residue_name == "ILE")
+	{
+		relative_bfactor = relative_bfactor_list[9];
+	}
+	else if (residue_name == "LEU")
+	{
+		relative_bfactor = relative_bfactor_list[10];
+	}
+	else if (residue_name == "LYS")
+	{
+		relative_bfactor = relative_bfactor_list[11];
+	}
+	else if (residue_name == "MET")
+	{
+		relative_bfactor = relative_bfactor_list[12];
+	}
+	else if (residue_name == "PHE")
+	{
+		relative_bfactor = relative_bfactor_list[13];
+	}
+	else if (residue_name == "PRO")
+	{
+		relative_bfactor = relative_bfactor_list[14];
+	}
+	else if (residue_name == "SER")
+	{
+		relative_bfactor = relative_bfactor_list[15];
+	}
+	else if (residue_name == "THR")
+	{
+		relative_bfactor = relative_bfactor_list[16];
+	}
+	else if (residue_name == "TRP")
+	{
+		relative_bfactor = relative_bfactor_list[17];
+	}
+	else if (residue_name == "TYR")
+	{
+		relative_bfactor = relative_bfactor_list[18];
+	}
+	else if (residue_name == "VAL")
+	{
+		relative_bfactor = relative_bfactor_list[19];
+	}
+	else if (residue_name == "GLY")
+	{
+		relative_bfactor = 1.0; // all backbone, will be scaled as backbone in the per atom checks
+	}
+	//TODO look into DNA/RNA damage.
+	else if (residue_name == "A" || residue_name == "C" || residue_name == "T" || residue_name == "G" || residue_name == "U")
+	{
+		relative_bfactor = 1.0;
+	}
+	else
+	{
+		wxPrintf("\n\tDid not find a matching residue identifier for %s\n\n",residue_name);
+		exit(-1);
+	}
+
+	return relative_bfactor;
 }
 
 

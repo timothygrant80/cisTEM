@@ -11,12 +11,14 @@ class Atom {
 	public:
 
 		wxString name;
-		float x_coordinate;
-		float y_coordinate;
-		float z_coordinate;
+		wxString atom_type;
+		float x_coordinate;  // Angstrom
+		float y_coordinate;  // Angstrom
+		float z_coordinate;  // Angstrom
 		float occupancy;
 		float bfactor;
 		float charge;
+		float relative_bfactor; // Meik et al.
 		int element_name;
 
 
@@ -64,7 +66,7 @@ class PDB {
 
 		// Constructors
 		PDB();
-		PDB(long number_of_non_water_atoms);
+		PDB(long number_of_non_water_atoms, float cubic_size);
 		PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
 		~PDB();
 
@@ -81,6 +83,7 @@ class PDB {
 		float vol_angX, vol_angY, vol_angZ;
 		long vol_nX, vol_nY, vol_nZ;
 		long vol_oX, vol_oY, vol_oZ;
+		float cubic_size;
 		float offset_z;
 		float min_z;
 		float max_z;
@@ -101,7 +104,32 @@ class PDB {
         void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
         void TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3);
-        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms,float wanted_pixel_size, int time_step, RotationMatrix particle_rot);
+        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms,float wanted_pixel_size, int time_step, RotationMatrix particle_rot, float shift_z);
         void TransformGlobalAndSortOnZ(long number_of_non_water_atoms,float shift_x, float shift_y, float shift_z,  RotationMatrix rotate_waters);
+        float ReturnRelativeBFactor(wxString residue_name);
+
+        inline bool IsNonAminoAcid(wxString atom_name)
+        {
+        	// TODO make sure this is a valid way to check
+        	bool isNonAminoAcid = true;
+        	if (atom_name.length() == 3) { isNonAminoAcid = false ;}
+        	return isNonAminoAcid;
+        }
+        inline bool IsBackbone(wxString atom_name)
+        {
+        	// Assuming I'm not going to run it any parsing problems with case sensitivity. This might be a bad assumption FIXME
+        	bool isBackbone = false;
+        	if (atom_name == "C" || atom_name == "CA" || atom_name == "N" || atom_name == "O") { isBackbone = true; }
+        	return isBackbone;
+
+        }
+        inline bool  IsAcidicOxygen(wxString atom_name)
+        {
+        	// Assuming I'm not going to run it any parsing problems with case sensitivity. This might be a bad assumption FIXME
+        	bool isAcidicOxygen = false; //Asp Glu C-term
+        	if (atom_name == "OD2" || atom_name == "OE2" || atom_name == "OXT" ) { isAcidicOxygen = true; }
+        	return isAcidicOxygen;
+        }
+
 
 };

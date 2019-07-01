@@ -12,8 +12,8 @@ class Water : Image {
 
 
 		// Constructors
-		Water();
-		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt);
+		Water(bool do_carbon = false);
+		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, bool do_carbon = false);
 		~Water();
 
 		// data
@@ -24,6 +24,7 @@ class Water : Image {
 		float dose_per_frame;
 		int records_per_line;
 		int number_of_time_steps;
+		bool simulate_phase_plate;
 		bool keep_time_steps;
 		double center_of_mass[3];
 		long number_of_each_atom[NUMBER_OF_ATOM_TYPES];

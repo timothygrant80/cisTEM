@@ -2,20 +2,24 @@
 
 
 const double SOLVENT_DENSITY = 0.94; // 0.94 +/- 0.02 Ghormley JA, Hochanadel CJ. 1971
+const double CARBON_DENSITY  = 1.75; // 2.0; // NIST and Holography paper TODO add cite (using the lower density to match the Holography paper)
+const double MW_WATER        = 18.01528;
+const double MW_CARBON       = 12.0107;
+const double CARBON_X_ANG    = 2000.0;
+const double CARBON_Y_ANG    = 2000.0;
 
-Water::Water()
+Water::Water(bool do_carbon)
 {
+	this->simulate_phase_plate = do_carbon;
 
 }
 
-Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt)
+Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, bool do_carbon)
 {
 
 	//
-
-
+	this->simulate_phase_plate = do_carbon;
 	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_tilt);
-
 
 
 }
@@ -33,14 +37,30 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 	this->pixel_size = wanted_pixel_size;
 	this->dose_per_frame = wanted_dose_per_frame;
 
-	// Copy over some values from the current specimen
-	this->vol_angX = current_specimen->vol_angX;
-	this->vol_angY = current_specimen->vol_angY;
-	this->vol_angZ = current_specimen->vol_angZ;
+	if (this->simulate_phase_plate)
+	{
+		this->vol_angX = CARBON_X_ANG;
+		this->vol_angY = CARBON_Y_ANG;
+		this->vol_angZ = max_tilt;
 
-	this->vol_nX = ReturnPaddingForTilt(max_tilt, current_specimen->vol_nX);
-	this->vol_nY = current_specimen->vol_nY;
-	this->vol_nZ = current_specimen->vol_nZ;
+		this->vol_nX = myroundint(this->vol_angX / wanted_pixel_size);
+		this->vol_nY = myroundint(this->vol_angY / wanted_pixel_size);
+		this->vol_nZ = myroundint(this->vol_angZ / wanted_pixel_size);
+		if (IsEven(this->vol_nZ) == false) this->vol_nZ += 1;
+	}
+	else
+	{
+
+		// Copy over some values from the current specimen
+		this->vol_angX = current_specimen->vol_angX;
+		this->vol_angY = current_specimen->vol_angY;
+		this->vol_angZ = current_specimen->vol_angZ;
+
+		this->vol_nX = ReturnPaddingForTilt(max_tilt, current_specimen->vol_nX); // This assums the tilting is only around the Y-Axis which isn't correct FIXME
+		this->vol_nY = current_specimen->vol_nY;
+		this->vol_nZ = current_specimen->vol_nZ;
+
+	}
 
 
 	this->vol_oX = floor(this->vol_nX / 2);
@@ -53,7 +73,18 @@ void Water::SeedWaters3d()
 
 	// Volume in Ang / (ang^3/nm^3 * nm^3/nWaters) buffer by 10%
 
-	double waters_per_angstrom_cubed = SOLVENT_DENSITY * 602.2140857 / (18.01528 * 1000);
+	double waters_per_angstrom_cubed;
+	if (this->simulate_phase_plate)
+	{
+		// g/cm^3 * molecules/mole * mole/grams * 1cm^3/10^24 angstrom^3
+		waters_per_angstrom_cubed = CARBON_DENSITY * 0.6022140857 / MW_CARBON;
+	}
+	else
+	{
+		waters_per_angstrom_cubed = SOLVENT_DENSITY * 0.6022140857 / MW_WATER;
+	}
+
+	wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n",waters_per_angstrom_cubed*1000,this->vol_angX , this->vol_angY , this->vol_angZ);
 	double n_waters_lower_bound = waters_per_angstrom_cubed*(this->vol_angX * this->vol_angY * this->vol_angZ);
 	long n_waters_possible = (long)floor(1.05*n_waters_lower_bound);
 	wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n",(this->vol_angX * this->vol_angY * this->vol_angZ)/1000,n_waters_lower_bound);
@@ -218,7 +249,7 @@ int Water::ReturnPaddingForTilt(float max_tilt, int current_nX)
 	// Assuming tilting only along the Y-axis
 	// TODO consider rotations of the projection which will also bring new water into view
 
-	MyDebugAssertTrue(max_tilt < 70.0,"maximum tilt angle supported is 70 degress")
+	MyDebugAssertTrue(max_tilt < 70.01,"maximum tilt angle supported is 70 degress")
     if (fabsf(max_tilt) < 1e-1) { return current_nX ;}
 
 	int padded_nX;

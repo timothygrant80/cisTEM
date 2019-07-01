@@ -64,11 +64,11 @@ float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, fl
 
 }
 
-float ConjugateGradient::Run()
+float ConjugateGradient::Run(int maxit)
 {
 	int iprint = 0;
 	int icon = 1;
-	int maxit = 500;
+//	int maxit = 50;
 	int va04_success = 0;
 
 	va04_success = va04a_(&n,e,&escale,&num_function_calls,target_function,parameters,&best_score,&iprint,&icon,&maxit,best_values);

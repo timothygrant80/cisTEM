@@ -62,9 +62,9 @@ int va04a_(int *n, float *e, float *escale, int *num_function_calls, float (*tar
 {
 
     /* Format strings */
-    static char fmt_19[] = "(5x,\002VA04A MAXIMUM CHANGE DOES NOT ALTER FUNCTION\002)";
-    static char fmt_52[] = "(/1x,\002ITERATION\002,i5,i15,\002 FUNCTION VALUES\002,10x,\002F =\002,e21.14/(5e24.14))";
-    static char fmt_80[] = "(5x,\002VA04A ACCURACY LIMITED BY ERRORS IN F\002)";
+    char fmt_19[] = "(5x,\002VA04A MAXIMUM CHANGE DOES NOT ALTER FUNCTION\002)";
+    char fmt_52[] = "(/1x,\002ITERATION\002,i5,i15,\002 FUNCTION VALUES\002,10x,\002F =\002,e21.14/(5e24.14))";
+    char fmt_80[] = "(5x,\002VA04A ACCURACY LIMITED BY ERRORS IN F\002)";
 
     /* System generated locals */
     int i__1, i__2, maxx = 100 * *maxit;
@@ -77,29 +77,29 @@ int va04a_(int *n, float *e, float *escale, int *num_function_calls, float (*tar
 
     /* Local variables */
     int icnt = 0;
-    static double a, b, d__, xs[11];
-    static int i__, j, k;
+    double a, b, d__, xs[11];
+    int i__, j, k;
 // work array w must have at least dimension n * (n + 3)
-    static double w[154], da, db, fa, dd, fb, fc, dc, di, fi, dl;
-    static int jj;
-    static double fp;
-    static int is;
-    static double aaa;
-    static int ind, jjj, jil, inn, ixp;
-    static double tmp, sum, dacc, dmag;
-    static int nfcc;
-    static double dmax__, scer, ddmag, fkeep, fhold, ddmax;
-    static int iline, idirn, iterc, itone;
-    static double fprev;
+    double w[154], da, db, fa, dd, fb, fc, dc, di, fi, dl;
+    int jj;
+    double fp;
+    int is;
+    double aaa;
+    int ind, jjj, jil, inn, ixp;
+    double tmp, sum, dacc, dmag;
+    int nfcc;
+    double dmax__, scer, ddmag, fkeep, fhold, ddmax;
+    int iline, idirn, iterc, itone;
+    double fprev;
     extern /* Subroutine */ int calcfx_(int *, float *, float *, float *,
 	    float *, float *, float *, float *, float *, float *, float *, int *,
 	     float *, float *);
-    static int isgrad;
+    int isgrad;
 
     /* Fortran I/O blocks */
-    static cilist io___32 = { 0, 6, 0, fmt_19, 0 };
-    static cilist io___42 = { 0, 6, 0, fmt_52, 0 };
-    static cilist io___45 = { 0, 6, 0, fmt_80, 0 };
+    cilist io___32 = { 0, 6, 0, fmt_19, 0 };
+    cilist io___42 = { 0, 6, 0, fmt_52, 0 };
+    cilist io___45 = { 0, 6, 0, fmt_80, 0 };
 
 
 /* ************************************************************************** */

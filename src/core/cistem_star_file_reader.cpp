@@ -30,9 +30,11 @@ cisTEMStarFileReader::cisTEMStarFileReader()
 	pixel_size_column = -1;
 	microscope_voltage_kv_column = -1;
 	microscope_spherical_aberration_mm_column = -1;
+	amplitude_contrast_column = -1;
 	beam_tilt_x_column = -1;
 	beam_tilt_y_column = -1;
-
+	image_shift_x_column = -1;
+	image_shift_y_column = -1;
 }
 
 cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
@@ -64,8 +66,11 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 	pixel_size_column = -1;
 	microscope_voltage_kv_column = -1;
 	microscope_spherical_aberration_mm_column = -1;
+	amplitude_contrast_column = -1;
 	beam_tilt_x_column = -1;
 	beam_tilt_y_column = -1;
+	image_shift_x_column = -1;
+	image_shift_y_column = -1;
 
 	if (alternate_cached_parameters_pointer == NULL)
 	{
@@ -400,7 +405,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 
 	// Cs
 
-	if ( microscope_spherical_aberration_mm_column == -1) temp_parameters.microscope_spherical_aberration_mm = 0.0f;
+	if ( microscope_spherical_aberration_mm_column == -1) temp_parameters.microscope_spherical_aberration_mm = 2.7f;
 	else
 	{
 		if (all_tokens[microscope_spherical_aberration_mm_column].ToDouble(&temp_double) == false)
@@ -411,6 +416,21 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		}
 
 		temp_parameters.microscope_spherical_aberration_mm = float(temp_double);
+	}
+
+	// amplitude_contrast
+
+	if ( amplitude_contrast_column == -1) temp_parameters.amplitude_contrast = 0.07f;
+	else
+	{
+		if (all_tokens[amplitude_contrast_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[amplitude_contrast_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[amplitude_contrast_column]);
+			return false;
+		}
+
+		temp_parameters.amplitude_contrast = float(temp_double);
 	}
 
 	// beam_tilt_x
@@ -593,6 +613,8 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		if (current_line.StartsWith("_cisTEMMicroscopeVoltagekV ") == true) microscope_voltage_kv_column = current_column;
 		else
 		if (current_line.StartsWith("_cisTEMMicroscopeCsMM ") == true) microscope_spherical_aberration_mm_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMAmplitudeContrast ") == true) amplitude_contrast_column = current_column;
 		else
 		if (current_line.StartsWith("_cisTEMBeamTiltX ") == true) beam_tilt_x_column = current_column;
 		else

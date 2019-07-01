@@ -23,6 +23,7 @@ public:
 	float			pixel_size;
 	float			microscope_voltage_kv;
 	float			microscope_spherical_aberration_mm;
+	float			amplitude_contrast;
 	float			beam_tilt_x;
 	float			beam_tilt_y;
 	float			image_shift_x;
@@ -64,10 +65,10 @@ public :
 	~cisTEMParameters();
 
 	void ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers = false );
-	void ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size = 0.0f, float wanted_microscope_voltage = 0.0f, float wanted_microscope_cs = 0.0f, float wanted_beam_tilt_x = 0.0f, float wanted_beam_tilt_y = 0.0f, float wanted_image_shift_x = 0.0f, float wanted_image_shift_y = 0.0f);
+	void ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size = 0.0f, float wanted_microscope_voltage = 0.0f, float wanted_microscope_cs = 0.0f, float wanted_amplitude_contrast = 0.0f, float wanted_beam_tilt_x = 0.0f, float wanted_beam_tilt_y = 0.0f, float wanted_image_shift_x = 0.0f, float wanted_image_shift_y = 0.0f);
 
 	void AddCommentToHeader(wxString comment_to_add);
-	void WriteTocisTEMStarFile(wxString wanted_filename);
+	void WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write = -1, int last_line_to_write = -1, int first_image_to_write = -1, int last_image_to_write = -1);
 
 	void ClearAll();
 
@@ -95,13 +96,15 @@ public :
 	inline float ReturnPixelSize(int line_number) { return all_parameters.Item(line_number).pixel_size;}
 	inline float ReturnMicroscopekV(int line_number) { return all_parameters.Item(line_number).microscope_voltage_kv;}
 	inline float ReturnMicroscopeCs(int line_number) { return all_parameters.Item(line_number).microscope_spherical_aberration_mm;}
+	inline float ReturnAmplitudeContrast(int line_number) { return all_parameters.Item(line_number).amplitude_contrast;}
 	inline float ReturnBeamTiltX(int line_number) { return all_parameters.Item(line_number).beam_tilt_x;}
 	inline float ReturnBeamTiltY(int line_number) { return all_parameters.Item(line_number).beam_tilt_y;}
 	inline float ReturnImageShiftX(int line_number) { return all_parameters.Item(line_number).image_shift_x;}
 	inline float ReturnImageShiftY(int line_number) { return all_parameters.Item(line_number).image_shift_y;}
 
-	double ReturnAverageSigma(bool exclude_negative_film_numbers = false);
-	double ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);
+	float ReturnAverageSigma(bool exclude_negative_film_numbers = false);
+	float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);
+	float ReturnAverageScore(bool exclude_negative_film_numbers = false);
 
 	void RemoveSigmaOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers = false, bool reciprocal_square = false);
 	void RemoveScoreOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers = false, bool reciprocal_square = false);

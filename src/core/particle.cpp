@@ -54,6 +54,71 @@ Particle::~Particle()
 	}
 }
 
+void Particle::CopyAllButImages(const Particle *other_particle)
+{
+   // Check for self assignment
+   if(this != other_particle)
+   {
+	   origin_micrograph = other_particle->origin_micrograph;
+	   origin_x_coordinate = other_particle->origin_x_coordinate;
+	   origin_y_coordinate = other_particle->origin_y_coordinate;
+	   location_in_stack = other_particle->location_in_stack;
+	   pixel_size = other_particle->pixel_size;
+	   sigma_signal = other_particle->sigma_signal;
+	   sigma_noise = other_particle->sigma_noise;
+	   snr = other_particle->snr;
+	   logp = other_particle->logp;
+	   particle_occupancy = other_particle->particle_occupancy;
+	   particle_score = other_particle->particle_score;
+	   alignment_parameters = other_particle->alignment_parameters;
+	   scaled_noise_variance = other_particle->scaled_noise_variance;
+	   parameter_constraints = other_particle->parameter_constraints;
+	   ctf_parameters = other_particle->ctf_parameters;
+	   current_ctf = other_particle->current_ctf;
+	   ctf_is_initialized = other_particle->ctf_is_initialized;
+	   ctf_image_calculated = false;
+	   beamtilt_image_calculated = false;
+	   includes_reference_ssnr_weighting = false;
+	   is_normalized = false;
+	   is_phase_flipped = false;
+	   is_masked = false;
+	   mask_radius = other_particle->mask_radius;
+	   mask_falloff = other_particle->mask_falloff;
+	   mask_volume = other_particle->mask_volume;
+	   molecular_mass_kDa = other_particle->molecular_mass_kDa;
+	   is_filtered = false;
+	   filter_radius_low = other_particle->filter_radius_low;
+	   filter_radius_high = other_particle->filter_radius_high;
+	   filter_falloff = other_particle->filter_falloff;
+	   filter_volume = other_particle->filter_volume;
+	   signed_CC_limit = other_particle->signed_CC_limit;
+	   is_ssnr_filtered = false;
+	   is_centered_in_box = true;
+	   shift_counter = 0;
+	   insert_even = other_particle->insert_even;
+	   target_phase_error = other_particle->target_phase_error;
+	   current_parameters = other_particle->current_parameters;
+	   temp_parameters = other_particle->temp_parameters;
+	   parameter_average = other_particle->parameter_average;
+	   parameter_variance = other_particle->parameter_variance;
+	   parameter_map = other_particle->parameter_map;
+	   constraints_used = other_particle->constraints_used;
+	   number_of_search_dimensions = other_particle->number_of_search_dimensions;
+	   mask_center_2d_x = other_particle->mask_center_2d_x;
+	   mask_center_2d_y = other_particle->mask_center_2d_y;
+	   mask_center_2d_z = other_particle->mask_center_2d_z;
+	   mask_radius_2d = other_particle->mask_radius_2d;
+	   apply_2D_masking = other_particle->apply_2D_masking;
+	   no_ctf_weighting = false;
+	   complex_ctf = other_particle->complex_ctf;
+
+	   if (particle_image != NULL) {delete particle_image; particle_image = NULL;}
+	   if (ctf_image != NULL) {delete ctf_image; ctf_image = NULL;}
+	   if (beamtilt_image != NULL) {delete beamtilt_image; beamtilt_image = NULL;}
+	   if (bin_index != NULL) {delete [] bin_index; bin_index = NULL;}
+   }
+}
+
 void Particle::Init()
 {
 	target_phase_error = 45.0;
@@ -69,18 +134,6 @@ void Particle::Init()
 	particle_occupancy = 0.0;
 	particle_score = 0.0;
 	particle_image = NULL;
-	euler_matrix = &alignment_parameters.euler_matrix;
-/*	phi_average = 0.0;
-	theta_average = 0.0;
-	psi_average = 0.0;
-	shift_x_average = 0.0;
-	shift_y_average = 0.0;
-	phi_variance = 0.0;
-	theta_variance = 0.0;
-	psi_variance = 0.0;
-	shift_x_variance = 0.0;
-	shift_y_variance = 0.0;
-*/
 	scaled_noise_variance = 0.0;
 	ctf_is_initialized = false;
 	ctf_image = NULL;
@@ -89,7 +142,6 @@ void Particle::Init()
 	beamtilt_image_calculated = false;
 	includes_reference_ssnr_weighting = false;
 	is_normalized = false;
-	normalized_sigma = 0.0;
 	is_phase_flipped = false;
 	is_masked = false;
 	mask_radius = 0.0;
@@ -149,9 +201,9 @@ void Particle::Allocate(int wanted_logical_x_dimension, int wanted_logical_y_dim
 
 void Particle::Deallocate()
 {
-	if (particle_image != NULL) particle_image->Deallocate();
-	if (ctf_image != NULL) ctf_image->Deallocate();
-	if (beamtilt_image != NULL) beamtilt_image->Deallocate();
+	if (particle_image != NULL) {delete particle_image; particle_image = NULL;}
+	if (ctf_image != NULL) {delete ctf_image; ctf_image = NULL;}
+	if (beamtilt_image != NULL) {delete beamtilt_image; beamtilt_image = NULL;}
 }
 
 void Particle::ResetImageFlags()
@@ -320,7 +372,7 @@ void Particle::BeamTiltMultiplyImage()
 	MyDebugAssertTrue(beamtilt_image_calculated, "Beamtilt image not calculated");
 
 	if (particle_image->is_in_real_space) particle_image->ForwardFFT();
-	particle_image->ConjugateMultiplyPixelWise(*beamtilt_image);
+	particle_image->MultiplyPixelWise(*beamtilt_image);
 }
 
 void Particle::SetIndexForWeightedCorrelation(bool limit_resolution)
@@ -442,12 +494,12 @@ void Particle::WeightBySSNR(Curve &SSNR, Image &projection_image, bool weight_pa
 void Particle::CalculateProjection(Image &projection_image, ReconstructedVolume &input_3d)
 {
 	MyDebugAssertTrue(projection_image.is_in_memory, "Projection image memory not allocated");
-	MyDebugAssertTrue(input_3d.density_map.is_in_memory, "3D reconstruction memory not allocated");
+	MyDebugAssertTrue(input_3d.density_map->is_in_memory, "3D reconstruction memory not allocated");
 	MyDebugAssertTrue(ctf_image->is_in_memory, "CTF image memory not allocated");
 	MyDebugAssertTrue(ctf_image_calculated, "CTF image not initialized");
 
 	input_3d.CalculateProjection(projection_image, *ctf_image, alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
-	if (current_ctf.GetBeamTiltX() != 0.0f || current_ctf.GetBeamTiltY() != 0.0f) projection_image.MultiplyPixelWise(*beamtilt_image);
+	if (current_ctf.GetBeamTiltX() != 0.0f || current_ctf.GetBeamTiltY() != 0.0f) projection_image.ConjugateMultiplyPixelWise(*beamtilt_image);
 }
 
 void Particle::GetParameters(cisTEMParameterLine &output_parameters)
@@ -692,7 +744,7 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar)
+float Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar)
 {
 	int i;
 	int beamtilt_i;
@@ -725,6 +777,8 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	float particle_shift_azimuth_offset;
 	float best_particle_shift_azimuth;
 	float score;
+	float score_average = 0.0f;
+	float score_variance = 0.0f;
 	float best_score;
 	float mask_radius_local;
 
@@ -826,7 +880,7 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 //	counter += 7 * 625;
 	// delete 1
 //	wxPrintf("counter = %i\n", counter);
-	if (progress_bar) {wxPrintf("\nFitting beam tilt...\n\n"); my_progress = new ProgressBar(counter);}
+	if (progress_bar) {wxPrintf("\nEstimating beamtilt...\n\n"); my_progress = new ProgressBar(counter);}
 
 	counter = 0;
 	for (i = 0; i < 10; i++)
@@ -869,6 +923,8 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 //						score = beamtilt_spectrum->ReturnSumOfSquares(0.45f * beamtilt_spectrum->logical_x_dimension);
 //						beamtilt_spectrum->CosineMask(0.0f, pixel_size / high_resolution_limit * beamtilt_spectrum->logical_x_dimension);
 						score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius_local);
+						score_average += score;
+						score_variance += powf(score, 2);
 						if (score < best_score)
 						{
 							best_score = score;
@@ -922,6 +978,10 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 		if (i == 1) best_score = std::numeric_limits<float>::max();
 	}
 
+	score_average /= counter;
+	score_variance = score_variance / counter - powf(score_average, 2);
+//	wxPrintf("score, score_average, score_sigma, npix = %g %g %g %g\n", best_score, score_average, sqrtf(score_variance), PI * mask_radius_local * mask_radius_local);
+
 	temp_image->CopyFrom(&beamtilt_output);
 	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
 	difference_image.InvertRealValues();
@@ -930,9 +990,11 @@ void Particle::FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, flo
 	delete beamtilt_spectrum;
 	delete temp_image;
 	if (progress_bar) delete my_progress;
+
+	return 0.5f * PI * powf((0.5f - best_score) * mask_radius_local, 2);
 }
 
-float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference)
+float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 
@@ -946,7 +1008,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float rotated_center_z;
 	float alpha;
 	float sigma;
-	float original_pixel_size = pixel_size * float(input_3d.density_map.logical_x_dimension) / float(padded_unbinned_image.logical_x_dimension);
+	float original_pixel_size = pixel_size * float(input_3d.density_map->logical_x_dimension) / float(padded_unbinned_image.logical_x_dimension);
 //	float effective_bfactor;
 
 	float pixel_center_2d_x = mask_center_2d_x / original_pixel_size - input_image.physical_address_of_box_center_x;
@@ -956,9 +1018,9 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float pixel_radius_2d = mask_radius_2d / original_pixel_size;
 
 	Image *temp_image1 = new Image;
-	temp_image1->Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	temp_image1->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	Image *temp_image2 = new Image;
-	temp_image2->Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	Image *projection_image = new Image;
 	projection_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 	Image *temp_projection = new Image;
@@ -985,7 +1047,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	is_centered_in_box = true;
 //	CenterInCorner();
 //	input_3d.CalculateProjection(*projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, original_pixel_size / filter_radius_high, false, true);
-	input_3d.density_map.ExtractSlice(*temp_image1, alignment_parameters, pixel_size / filter_radius_high);
+	input_3d.density_map->ExtractSlice(*temp_image1, alignment_parameters, pixel_size / filter_radius_high);
 	temp_image1->SwapRealSpaceQuadrants();
 	temp_image1->BackwardFFT();
 	temp_image1->AddConstant(- temp_image1->ReturnAverageOfRealValues(mask_radius / pixel_size, true));
@@ -997,8 +1059,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	beamtilt_input_image->CalculateBeamTiltImage(input_ctf);
 	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
 //	temp_image1->PhaseFlipPixelWise(*ctf_image);
-//	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
-	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45, 0.1);
+//	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45, 0.1);
 	temp_image1->ClipInto(&padded_unbinned_image);
 	padded_unbinned_image.BackwardFFT();
 	padded_unbinned_image.ClipInto(projection_image);
@@ -1007,8 +1069,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	projection_image->MultiplyPixelWise(*beamtilt_input_image);
 
 //	temp_image2->MultiplyPixelWiseReal(*ctf_image);
-//	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
-	if (input_3d.density_map.logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.45, 0.1);
+//	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
+	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.45, 0.1);
 	temp_image2->ClipInto(&padded_unbinned_image);
 	padded_unbinned_image.BackwardFFT();
 	padded_unbinned_image.ClipInto(temp_projection);
@@ -1069,20 +1131,8 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	{
 //		variance_masked = particle_image->ReturnVarianceOfRealValues(mask_radius / pixel_size);
 //	}
-	if (phase_difference != NULL)
-	{
-		phase_difference->CopyFrom(temp_particle);
-		phase_difference->ConjugateMultiplyPixelWise(*temp_projection);
-		phase_difference->CosineMask(original_pixel_size / filter_radius_high, 2.0f / phase_difference->logical_x_dimension);
-	}
 	temp_particle->BackwardFFT();
 	temp_projection->BackwardFFT();
-	if (phase_difference != NULL)
-	{
-		variance_particle = temp_particle->ReturnVarianceOfRealValues();
-		variance_projection = temp_projection->ReturnVarianceOfRealValues();
-		phase_difference->DivideByConstant(sqrtf(variance_particle * variance_projection));
-	}
 //	temp_particle->QuickAndDirtyWriteSlice("temp_particle.mrc", 1);
 //	temp_projection->QuickAndDirtyWriteSlice("temp_projection.mrc", 1);
 //	phase_difference->QuickAndDirtyWriteSlice("phase_difference.mrc", 1);
@@ -1299,7 +1349,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 	Image *sum_image = new Image;
 	sum_image->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, true);
 
-	wxPrintf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
+//	wxPrintf("Max shift in angstoms = %f\n", max_shift_in_angstroms);
 	float max_radius_squared = powf(max_shift_in_angstroms / pixel_size, 2);
 	float current_squared_radius;
 

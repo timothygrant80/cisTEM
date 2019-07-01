@@ -13,7 +13,7 @@ public:
 	float						mask_radius;
 	wxString 					symmetry_symbol;
 	SymmetryMatrix				symmetry_matrices;
-	Image						density_map;
+	Image						*density_map;
 	Image						current_projection;
 //	ResolutionStatistics		statistics;
 	float						current_resolution_limit;
@@ -28,7 +28,8 @@ public:
 	bool						current_whitening;
 	bool						current_swap_quadrants;
 
-	bool						has_been_initialized;
+	bool						volume_initialized;
+	bool						projection_initialized;
 	bool						has_masked_applied;
 	bool						was_corrected;
 //	bool						has_statistics;
@@ -41,6 +42,7 @@ public:
 	ReconstructedVolume & operator = (const ReconstructedVolume &t);
 	ReconstructedVolume & operator = (const ReconstructedVolume *t);
 
+	void CopyAllButVolume(const ReconstructedVolume *other_volume);
 	void Deallocate();
 	void InitWithReconstruct3D(Reconstruct3D &image_reconstruction, float wanted_pixel_size);
 	void InitWithDimensions(int wanted_logical_x_dimension, int wanted_logical_y_dimension, int wanted_logical_z_dimension, float wanted_pixel_size, wxString = "C1");
@@ -56,10 +58,10 @@ public:
 	void OptimalFilter(ResolutionStatistics &statistics);
 	void FinalizeSimple(Reconstruct3D &reconstruction, int &original_box_size, float &original_pixel_size, float &pixel_size,
 			float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff, wxString &output_volume);
-	void FinalizeOptimal(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
+	void FinalizeOptimal(Reconstruct3D &reconstruction, Image *density_map_1, Image *density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			bool center_mass, wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL, float weiner_filter_nominator = 1.0f);
-	void FinalizeML(Reconstruct3D &reconstruction, Image &density_map_1, Image &density_map_2,
+	void FinalizeML(Reconstruct3D &reconstruction, Image *density_map_1, Image *density_map_2,
 			float &original_pixel_size, float &pixel_size, float &inner_mask_radius, float &outer_mask_radius, float &mask_falloff,
 			wxString &output_volume, NumericTextFile &output_statistics, ResolutionStatistics *copy_of_statistics = NULL);
 	void Calculate3DML(Reconstruct3D &reconstruction);

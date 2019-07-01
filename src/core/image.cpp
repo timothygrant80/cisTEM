@@ -8201,6 +8201,97 @@ void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_w
 
 }
 
+void Image::ChangePixelSize(Image *other_image, float wanted_factor, float wanted_tolerance, bool return_fft)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+	if (wanted_factor == 1.0f && return_fft)
+	{
+		if (other_image == this) ForwardFFT();
+		else
+		{
+			this->ClipInto(other_image);
+			other_image->ForwardFFT();
+		}
+		return;
+	}
+	if (wanted_factor == 1.0f)
+	{
+		if (other_image != this) this->ClipInto(other_image);
+		return;
+	}
+
+	int old_x_dimension, old_y_dimension, old_z_dimension = 1;
+	int new_x_dimension, new_y_dimension, new_z_dimension = 1;
+	int pad_x_dimension, pad_y_dimension, pad_z_dimension = 1;
+	int min_dimension;
+	float intermediate_factor;
+	float padding_value = 0.0f;
+	Image temp_image;
+
+	old_x_dimension = logical_x_dimension;
+	old_y_dimension = logical_y_dimension;
+	old_z_dimension = logical_z_dimension;
+
+	min_dimension = std::min(logical_x_dimension, logical_y_dimension);
+	if (logical_z_dimension > 1) min_dimension = std::min(min_dimension, logical_z_dimension);
+
+	if (wanted_tolerance < 1.0f / (min_dimension * wanted_factor))
+	{
+		intermediate_factor = 1.0f / (wanted_tolerance * min_dimension);
+		pad_x_dimension = old_x_dimension * intermediate_factor;
+		if (IsEven(old_x_dimension) != IsEven(pad_x_dimension)) pad_x_dimension++;
+		new_x_dimension = int(pad_x_dimension / wanted_factor);
+		if (IsEven(old_x_dimension) != IsEven(new_x_dimension)) new_x_dimension++;
+		pad_y_dimension = old_y_dimension * intermediate_factor;
+		if (IsEven(old_y_dimension) != IsEven(pad_y_dimension)) pad_y_dimension++;
+		new_y_dimension = int(pad_y_dimension / wanted_factor);
+		if (IsEven(old_y_dimension) != IsEven(new_y_dimension)) new_y_dimension++;
+		if (logical_z_dimension > 1)
+		{
+			pad_z_dimension = old_z_dimension * intermediate_factor;
+			if (IsEven(old_z_dimension) != IsEven(pad_z_dimension)) pad_z_dimension++;
+			new_z_dimension = int(pad_z_dimension / wanted_factor);
+			if (IsEven(old_z_dimension) != IsEven(new_z_dimension)) new_z_dimension++;
+		}
+	}
+	else
+	{
+		intermediate_factor = wanted_factor;
+		pad_x_dimension = old_x_dimension * intermediate_factor;
+		if (IsEven(old_x_dimension) != IsEven(pad_x_dimension)) pad_x_dimension++;
+		new_x_dimension = old_x_dimension;
+		pad_y_dimension = old_y_dimension * intermediate_factor;
+		if (IsEven(old_y_dimension) != IsEven(pad_y_dimension)) pad_y_dimension++;
+		new_y_dimension = old_y_dimension;
+		if (logical_z_dimension > 1)
+		{
+			pad_z_dimension = old_z_dimension * intermediate_factor;
+			if (IsEven(old_z_dimension) != IsEven(pad_z_dimension)) pad_z_dimension++;
+			new_z_dimension = old_z_dimension;
+		}
+	}
+
+	temp_image.CopyFrom(this);
+	if (pad_x_dimension > old_x_dimension || pad_y_dimension > old_y_dimension || pad_z_dimension > old_z_dimension) padding_value = temp_image.ReturnAverageOfRealValues(0.45f * min_dimension);
+	temp_image.Resize(pad_x_dimension, pad_y_dimension, pad_z_dimension, padding_value);
+	temp_image.ForwardFFT();
+	temp_image.Resize(new_x_dimension, new_y_dimension, new_z_dimension);
+
+	if (new_x_dimension == other_image->logical_x_dimension && new_y_dimension == other_image->logical_y_dimension && new_z_dimension == other_image->logical_z_dimension)
+	{
+		other_image->CopyFrom(&temp_image);
+		if (! return_fft) other_image->BackwardFFT();
+		return;
+	}
+
+	temp_image.BackwardFFT();
+	temp_image.ClipInto(other_image, padding_value);
+
+	if (return_fft) other_image->ForwardFFT();
+}
 
 // Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)
 void Image::GetRealValueByLinearInterpolationNoBoundsCheckImage(float &x, float &y, float &interpolated_value)

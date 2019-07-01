@@ -164,7 +164,7 @@ class ScatteringPotentialApp : public MyApp
 	Image *correlation_check;
 
 
-	float probability_density_2d(PDB *pdb_ensemble, int time_step);
+	void probability_density_2d(PDB *pdb_ensemble, int time_step);
 	// Note the water does not take the dose as an argument.
 	void  calc_scattering_potential(const PDB * current_specimen,Image *scattering_slab,  RotationMatrix rotate_waters,
 			                        float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
@@ -404,7 +404,7 @@ Leave this in until convinced it works ok.
 
 
 
-float ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
+void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 {
 
 

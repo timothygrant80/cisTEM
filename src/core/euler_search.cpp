@@ -28,12 +28,78 @@ EulerSearch::EulerSearch()
 	max_search_y = 0.0;
 }
 
+EulerSearch::EulerSearch(const EulerSearch &other_search) // copy constructor
+{
+	*this = other_search;
+}
+
 EulerSearch::~EulerSearch()
 {
 //	if (best_values != NULL) delete [] best_values;
 //	if (parameter_map != NULL) delete [] parameter_map;
 	if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
 	if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
+}
+
+EulerSearch & EulerSearch::operator = (const EulerSearch &other_search)
+{
+	*this = &other_search;
+	return *this;
+}
+
+EulerSearch & EulerSearch::operator = (const EulerSearch *other_search)
+{
+	int i;
+
+	// Check for self assignment
+	if(this != other_search)
+	{
+		number_of_search_dimensions = other_search->number_of_search_dimensions;
+		refine_top_N = other_search->refine_top_N;
+		number_of_search_positions = other_search->number_of_search_positions;
+		best_parameters_to_keep = other_search->best_parameters_to_keep;
+		angular_step_size = other_search->angular_step_size;
+		max_search_x = other_search->max_search_x;
+		max_search_y = other_search->max_search_y;
+		phi_max = other_search->phi_max;
+		phi_start = other_search->phi_start;
+		theta_max = other_search->theta_max;
+		theta_start = other_search->theta_start;
+		psi_max = other_search->psi_max;
+		psi_step = other_search->psi_step;
+		psi_start = other_search->psi_start;
+		resolution_limit = other_search->resolution_limit;
+		parameter_map = other_search->parameter_map;
+		test_mirror = other_search->test_mirror;
+		symmetry_symbol = other_search->symmetry_symbol;
+
+		if (list_of_search_parameters != NULL) Deallocate2DFloatArray(list_of_search_parameters, number_of_search_positions);
+		if (other_search->list_of_search_parameters != NULL)
+		{
+			Allocate2DFloatArray(list_of_search_parameters, number_of_search_positions, 2);
+			for (i = 0; i < number_of_search_positions; i++)
+			{
+				list_of_search_parameters[i][0] = other_search->list_of_search_parameters[i][0];
+				list_of_search_parameters[i][1] = other_search->list_of_search_parameters[i][1];
+			}
+		}
+
+		if (list_of_best_parameters != NULL) Deallocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1);
+		if (other_search->list_of_best_parameters != NULL)
+		{
+			Allocate2DFloatArray(list_of_best_parameters, best_parameters_to_keep + 1, 6);
+			for (i = 0; i <= best_parameters_to_keep; i++)
+			{
+				list_of_best_parameters[i][0] = other_search->list_of_best_parameters[i][0];
+				list_of_best_parameters[i][1] = other_search->list_of_best_parameters[i][1];
+				list_of_best_parameters[i][2] = other_search->list_of_best_parameters[i][2];
+				list_of_best_parameters[i][3] = other_search->list_of_best_parameters[i][3];
+				list_of_best_parameters[i][4] = other_search->list_of_best_parameters[i][4];
+				list_of_best_parameters[i][5] = other_search->list_of_best_parameters[i][5];
+			}
+		}
+	}
+	return *this;
 }
 
 void EulerSearch::Init(float wanted_resolution_limit, ParameterMap &wanted_parameter_map, int wanted_parameters_to_keep)

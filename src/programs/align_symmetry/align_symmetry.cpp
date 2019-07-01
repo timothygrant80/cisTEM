@@ -142,14 +142,14 @@ bool AlignSymmetryApp::DoCalculation()
 	input_pixel_size = input_file->ReturnPixelSize();
 
 	input_3d.InitWithDimensions(input_file->ReturnXSize(), input_file->ReturnYSize(), input_file->ReturnZSize(), 1, wanted_symmetry);
-	input_3d.density_map.ReadSlices(input_file, 1, input_3d.density_map.logical_z_dimension);
+	input_3d.density_map->ReadSlices(input_file, 1, input_3d.density_map->logical_z_dimension);
 	input_3d.PrepareForProjections(0.0, 0.5, false, false);
-	original_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	current_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	check1_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	current_check1_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	check2_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	current_check2_projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	original_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	current_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	check1_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	current_check1_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	check2_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	current_check2_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 
 
 
@@ -259,13 +259,13 @@ bool AlignSymmetryApp::DoCalculation()
 					current_sum_score = 0.0f;
 					current_matrix.SetToRotation(current_x_angle, current_y_angle, current_z_angle);
 
-					input_3d.density_map.ExtractSliceByRotMatrix(original_projection_image, current_matrix);
+					input_3d.density_map->ExtractSliceByRotMatrix(original_projection_image, current_matrix);
 
 					temp_matrix = current_matrix * check_matrix1;
-					input_3d.density_map.ExtractSliceByRotMatrix(check1_projection_image, temp_matrix);
+					input_3d.density_map->ExtractSliceByRotMatrix(check1_projection_image, temp_matrix);
 
 					temp_matrix = current_matrix * check_matrix2;
-					input_3d.density_map.ExtractSliceByRotMatrix(check2_projection_image, temp_matrix);
+					input_3d.density_map->ExtractSliceByRotMatrix(check2_projection_image, temp_matrix);
 
 					original_projection_image.ZeroCentralPixel();
 					original_projection_image.DivideByConstant(sqrt(original_projection_image.ReturnSumOfSquares()));
@@ -279,7 +279,7 @@ bool AlignSymmetryApp::DoCalculation()
 					for (symmetry_counter = 1; symmetry_counter < symmetry_matrices.number_of_matrices; symmetry_counter ++ )
 					{
 						temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
-						input_3d.density_map.ExtractSliceByRotMatrix(current_projection_image, temp_matrix);
+						input_3d.density_map->ExtractSliceByRotMatrix(current_projection_image, temp_matrix);
 
 						current_projection_image.ZeroCentralPixel();
 						current_projection_image.DivideByConstant(sqrt(current_projection_image.ReturnSumOfSquares()));
@@ -290,7 +290,7 @@ bool AlignSymmetryApp::DoCalculation()
 
 						temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
 						temp_matrix = temp_matrix * check_matrix1;
-						input_3d.density_map.ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
+						input_3d.density_map->ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
 
 						current_check1_projection_image.ZeroCentralPixel();
 						current_check1_projection_image.DivideByConstant(sqrt(current_check1_projection_image.ReturnSumOfSquares()));
@@ -301,7 +301,7 @@ bool AlignSymmetryApp::DoCalculation()
 
 						temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
 						temp_matrix = temp_matrix * check_matrix2;
-						input_3d.density_map.ExtractSliceByRotMatrix(current_check2_projection_image, temp_matrix);
+						input_3d.density_map->ExtractSliceByRotMatrix(current_check2_projection_image, temp_matrix);
 
 						current_check2_projection_image.ZeroCentralPixel();
 						current_check2_projection_image.DivideByConstant(sqrt(current_check2_projection_image.ReturnSumOfSquares()));
@@ -390,7 +390,7 @@ bool AlignSymmetryApp::DoCalculation()
 
 	current_matrix.SetToRotation(best_x, best_y, best_z);
 	inverse_matrix = current_matrix.ReturnTransposed();
-	input_3d.density_map.ExtractSliceByRotMatrix(original_projection_image, current_matrix);
+	input_3d.density_map->ExtractSliceByRotMatrix(original_projection_image, current_matrix);
 
 	average_x_shift = 0.0f;
 	average_y_shift = 0.0f;
@@ -399,7 +399,7 @@ bool AlignSymmetryApp::DoCalculation()
 	for (symmetry_counter = 1; symmetry_counter < symmetry_matrices.number_of_matrices; symmetry_counter ++ )
 	{
 		temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
-		input_3d.density_map.ExtractSliceByRotMatrix(current_projection_image, temp_matrix);
+		input_3d.density_map->ExtractSliceByRotMatrix(current_projection_image, temp_matrix);
 
 		current_projection_image.ZeroCentralPixel();
 		current_projection_image.DivideByConstant(sqrt(current_projection_image.ReturnSumOfSquares()));
@@ -432,7 +432,7 @@ bool AlignSymmetryApp::DoCalculation()
 		combined_matrix = current_matrix * check_matrix1;
 		inverse_matrix = combined_matrix.ReturnTransposed();
 
-		input_3d.density_map.ExtractSliceByRotMatrix(check1_projection_image, combined_matrix);
+		input_3d.density_map->ExtractSliceByRotMatrix(check1_projection_image, combined_matrix);
 		check1_projection_image.ZeroCentralPixel();
 		check1_projection_image.DivideByConstant(sqrt(check1_projection_image.ReturnSumOfSquares()));
 
@@ -444,7 +444,7 @@ bool AlignSymmetryApp::DoCalculation()
 		{
 			temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
 			temp_matrix = temp_matrix * check_matrix1;
-			input_3d.density_map.ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
+			input_3d.density_map->ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
 
 			current_check1_projection_image.ZeroCentralPixel();
 			current_check1_projection_image.DivideByConstant(sqrt(current_check1_projection_image.ReturnSumOfSquares()));
@@ -474,7 +474,7 @@ bool AlignSymmetryApp::DoCalculation()
 		combined_matrix = current_matrix * check_matrix1;
 		inverse_matrix = combined_matrix.ReturnTransposed();
 
-		input_3d.density_map.ExtractSliceByRotMatrix(check1_projection_image, combined_matrix);
+		input_3d.density_map->ExtractSliceByRotMatrix(check1_projection_image, combined_matrix);
 		check1_projection_image.ZeroCentralPixel();
 		check1_projection_image.DivideByConstant(sqrt(check1_projection_image.ReturnSumOfSquares()));
 
@@ -486,7 +486,7 @@ bool AlignSymmetryApp::DoCalculation()
 		{
 			temp_matrix = current_matrix * symmetry_matrices.rot_mat[symmetry_counter];
 			temp_matrix = temp_matrix * check_matrix1;
-			input_3d.density_map.ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
+			input_3d.density_map->ExtractSliceByRotMatrix(current_check1_projection_image, temp_matrix);
 
 			current_check1_projection_image.ZeroCentralPixel();
 			current_check1_projection_image.DivideByConstant(sqrt(current_check1_projection_image.ReturnSumOfSquares()));

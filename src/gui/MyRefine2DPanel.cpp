@@ -832,7 +832,7 @@ void ClassificationManager::RunInitialStartJob()
 	bool auto_centre = false;
 
 
-	my_parent->current_job_package.AddJob("tttttiiifffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+	my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																	input_parameter_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	output_parameter_file.ToUTF8().data(),
@@ -842,9 +842,9 @@ void ClassificationManager::RunInitialStartJob()
 																	last_particle,
 																	percent_used,
 																	pixel_size,
-																	voltage_kV,
-																	spherical_aberration_mm,
-																	amplitude_contrast,
+//																	voltage_kV,
+//																	spherical_aberration_mm,
+//																	amplitude_contrast,
 																	mask_radius,
 																	low_resolution_limit,
 																	high_resolution_limit,
@@ -1070,7 +1070,7 @@ void ClassificationManager::RunRefinementJob()
 		bool auto_mask = my_parent->AutoMaskRadioYes->GetValue();
 		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
 
-		my_parent->current_job_package.AddJob("tttttiiifffffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),
 																		output_parameter_file.ToUTF8().data(),
@@ -1080,9 +1080,9 @@ void ClassificationManager::RunRefinementJob()
 																		last_particle,
 																		percent_used,
 																		pixel_size,
-																		voltage_kV,
-																		spherical_aberration_mm,
-																		amplitude_contrast,
+//																		voltage_kV,
+//																		spherical_aberration_mm,
+//																		amplitude_contrast,
 																		mask_radius,
 																		low_resolution_limit,
 																		high_resolution_limit,
@@ -1272,7 +1272,7 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 	else
 	if (running_job_type == REFINEMENT)
 	{
-		long current_image = long(result_to_process->result_data[0] + 0.5) - 1;
+		long current_image = long(result_to_process->result_data[0] + 0.5);
 
 		output_classification->classification_results[current_image].psi = result_to_process->result_data[1];
 		output_classification->classification_results[current_image].xshift = result_to_process->result_data[2];

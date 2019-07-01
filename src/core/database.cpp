@@ -1709,7 +1709,7 @@ VolumeAsset Database::GetNextVolumeAsset()
 }
 
 
-bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
+void Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 {
 
 	BeginCommitLocker active_locker(this);
@@ -1723,7 +1723,7 @@ bool Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 	}
 }
 
-bool Database::DeleteRunProfile(int wanted_id)
+void Database::DeleteRunProfile(int wanted_id)
 {
 	BeginCommitLocker active_locker(this);
 	ExecuteSQL(wxString::Format("DELETE FROM RUN_PROFILES WHERE RUN_PROFILE_ID=%i", wanted_id).ToUTF8().data());

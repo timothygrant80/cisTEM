@@ -125,8 +125,8 @@ public :
 
 	//void AddSingleMovieAsset(int movie_asset_id,  wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration);
 
-	bool AddOrReplaceRunProfile(RunProfile *profile_to_add);
-	bool DeleteRunProfile(int wanted_id);
+	void AddOrReplaceRunProfile(RunProfile *profile_to_add);
+	void DeleteRunProfile(int wanted_id);
 
 	void BeginMovieAssetInsert();
 	void AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_reference, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white);

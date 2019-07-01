@@ -4,8 +4,38 @@ SymmetryMatrix::SymmetryMatrix()
 {
 	rot_mat = NULL;
 	number_of_matrices = 0;
+	symmetry_symbol = "C";
 //	MyPrintWithDetails("Error: Constructor must be called with symmetry symbol\n");
 //	DEBUG_ABORT;
+}
+
+SymmetryMatrix & SymmetryMatrix::operator = (const SymmetryMatrix &other_matrix)
+{
+	*this = &other_matrix;
+	return *this;
+}
+
+SymmetryMatrix & SymmetryMatrix::operator = (const SymmetryMatrix *other_matrix)
+{
+	if(this != other_matrix)
+	{
+		number_of_matrices = other_matrix->number_of_matrices;
+		symmetry_symbol = other_matrix->symmetry_symbol;
+		if (rot_mat != NULL)
+		{
+			delete [] rot_mat;
+			rot_mat = NULL;
+		}
+		if (number_of_matrices > 0)
+		{
+			rot_mat = new RotationMatrix[number_of_matrices];
+			for (int i = 0; i < number_of_matrices; i++)
+			{
+				rot_mat[i] = other_matrix->rot_mat[i];
+			}
+		}
+	}
+	return *this;
 }
 
 SymmetryMatrix::SymmetryMatrix(wxString wanted_symmetry_symbol)
@@ -507,6 +537,7 @@ SymmetryMatrix::~SymmetryMatrix()
 	if (rot_mat != NULL)
 	{
 		delete [] rot_mat;
+		rot_mat = NULL;
 	}
 }
 

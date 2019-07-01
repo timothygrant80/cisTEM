@@ -22,6 +22,7 @@ class  cisTEMStarFileReader {
 	int		pixel_size_column;
 	int		microscope_voltage_kv_column;
 	int		microscope_spherical_aberration_mm_column;
+	int		amplitude_contrast_column;
 	int		beam_tilt_x_column;
 	int		beam_tilt_y_column;
 	int		image_shift_x_column;
@@ -65,6 +66,7 @@ public:
 	inline float ReturnPixelSize(int line_number) { return cached_parameters->Item(line_number).pixel_size;}
 	inline float ReturnMicroscopekV(int line_number) { return cached_parameters->Item(line_number).microscope_voltage_kv;}
 	inline float ReturnMicroscopeCs(int line_number) { return cached_parameters->Item(line_number).microscope_spherical_aberration_mm;}
+	inline float ReturnAmplitudeContrast(int line_number) { return cached_parameters->Item(line_number).amplitude_contrast;}
 	inline float ReturnBeamTiltX(int line_number) { return cached_parameters->Item(line_number).beam_tilt_x;}
 	inline float ReturnBeamTiltY(int line_number) { return cached_parameters->Item(line_number).beam_tilt_y;}
 	inline float ReturnImageShiftX(int line_number) { return cached_parameters->Item(line_number).image_shift_x;}

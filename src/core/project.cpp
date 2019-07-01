@@ -237,7 +237,7 @@ bool Project::ReadMasterSettings()
 	return success;
 }
 
-bool Project::WriteProjectStatisticsToDatabase()
+void Project::WriteProjectStatisticsToDatabase()
 {
 	database.SetProjectStatistics(total_cpu_hours,total_jobs_run);
 }

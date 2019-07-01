@@ -36,6 +36,7 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	pixel_size += line_to_add.pixel_size;
 	microscope_voltage_kv += line_to_add.microscope_voltage_kv;
 	microscope_spherical_aberration_mm += line_to_add.microscope_spherical_aberration_mm;
+	amplitude_contrast += line_to_add.amplitude_contrast;
 	beam_tilt_x += line_to_add.beam_tilt_x;
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
@@ -63,6 +64,7 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	pixel_size -= line_to_add.pixel_size;
 	microscope_voltage_kv -= line_to_add.microscope_voltage_kv;
 	microscope_spherical_aberration_mm -= line_to_add.microscope_spherical_aberration_mm;
+	amplitude_contrast -= line_to_add.amplitude_contrast;
 	beam_tilt_x -= line_to_add.beam_tilt_x;
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
@@ -90,6 +92,7 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	pixel_size += powf(line_to_add.pixel_size, 2);
 	microscope_voltage_kv += powf(line_to_add.microscope_voltage_kv, 2);
 	microscope_spherical_aberration_mm += powf(line_to_add.microscope_spherical_aberration_mm, 2);
+	amplitude_contrast += powf(line_to_add.amplitude_contrast, 2);
 	beam_tilt_x += powf(line_to_add.beam_tilt_x, 2);
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
@@ -118,6 +121,7 @@ void cisTEMParameterLine::SetAllToZero()
 	pixel_size = 0.0f;
 	microscope_voltage_kv = 0.0f;
 	microscope_spherical_aberration_mm = 0.0f;
+	amplitude_contrast = 0.0f;
 	beam_tilt_x = 0.0f;
 	beam_tilt_y = 0.0f;
 	image_shift_x = 0.0f;
@@ -143,6 +147,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(pixel_size) || isinf(pixel_size)) pixel_size = other_params.pixel_size;
 	if (isnan(microscope_voltage_kv) || isinf(microscope_voltage_kv)) microscope_voltage_kv = other_params.microscope_voltage_kv;
 	if (isnan(microscope_spherical_aberration_mm) || isinf(microscope_spherical_aberration_mm)) microscope_spherical_aberration_mm = other_params.microscope_spherical_aberration_mm;
+	if (isnan(amplitude_contrast) || isinf(amplitude_contrast)) amplitude_contrast = other_params.amplitude_contrast;
 	if (isnan(beam_tilt_x) || isinf(beam_tilt_x)) beam_tilt_x = other_params.beam_tilt_x;
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
@@ -173,7 +178,7 @@ void cisTEMParameters::PreallocateMemoryAndBlank(int number_to_allocate)
 	all_parameters.Add(temp_line, number_to_allocate);
 }
 
-void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size, float wanted_microscope_voltage, float wanted_microscope_cs, float wanted_beam_tilt_x, float wanted_beam_tilt_y, float wanted_image_shift_x, float wanted_image_shift_y)
+void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size, float wanted_microscope_voltage, float wanted_microscope_cs, float wanted_amplitude_contrast, float wanted_beam_tilt_x, float wanted_beam_tilt_y, float wanted_image_shift_x, float wanted_image_shift_y)
 {
 	ClearAll();
 	float input_parameters[17];
@@ -210,6 +215,7 @@ void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float w
 		all_parameters[counter].pixel_size = wanted_pixel_size; // not there
 		all_parameters[counter].microscope_voltage_kv = wanted_microscope_voltage; // not there
 		all_parameters[counter].microscope_spherical_aberration_mm = wanted_microscope_cs; // not there
+		all_parameters[counter].amplitude_contrast = wanted_amplitude_contrast; // not there
 		all_parameters[counter].beam_tilt_x = wanted_beam_tilt_x; // not there
 		all_parameters[counter].beam_tilt_y = wanted_beam_tilt_y; // not there
 		all_parameters[counter].image_shift_x = wanted_image_shift_x; // not there
@@ -241,7 +247,7 @@ void cisTEMParameters::ClearAll()
 	all_parameters.Clear();
 }
 
-void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename)
+void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
 {
 
 	wxFileName cisTEM_star_filename = wanted_filename;
@@ -249,6 +255,14 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename)
 	long particle_counter;
 
 	wxTextFile *cisTEM_star_file = new wxTextFile(cisTEM_star_filename.GetFullPath());
+
+	if (first_line_to_write == -1) first_line_to_write = 0;
+	else
+	if (first_line_to_write < 0 || first_line_to_write >= all_parameters.GetCount()) first_line_to_write = 0;
+
+	if (last_line_to_write == -1) last_line_to_write = all_parameters.GetCount() - 1;
+	else
+	if (last_line_to_write < 0 || last_line_to_write >= all_parameters.GetCount()) last_line_to_write = all_parameters.GetCount() - 1;
 
 	if (cisTEM_star_file->Exists())
 	{
@@ -266,7 +280,8 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename)
 	{
 		cisTEM_star_file->AddLine(header_comments[counter]);
 	}
-
+	if (first_image_to_write == -1) first_image_to_write = 1;
+	if (last_image_to_write == -1) last_image_to_write = INT_MAX;
 
 	// Write headers
 	cisTEM_star_file->AddLine(wxString(" "));
@@ -292,18 +307,21 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename)
 	cisTEM_star_file->AddLine(wxString("_cisTEMPixelSize #17"));
 	cisTEM_star_file->AddLine(wxString("_cisTEMMicroscopeVoltagekV #18"));
 	cisTEM_star_file->AddLine(wxString("_cisTEMMicroscopeCsMM #19"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltX #20"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltY #21"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftX #22"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftY #23"));
+	cisTEM_star_file->AddLine(wxString("_cisTEMAmplitudeContrast #20"));
+	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltX #21"));
+	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltY #22"));
+	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftX #23"));
+	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftY #24"));
 
 
-	cisTEM_star_file->AddLine("#            PSI   THETA     PHI       SHX       SHY      DF1      DF2  ANGAST  PSHIFT  STAT     OCC      LogP      SIGMA   SCORE  CHANGE    PSIZE    VOLT      CS  BTILTX  BTILTY  ISHFTX  ISHFTY");
+	cisTEM_star_file->AddLine("#            PSI   THETA     PHI       SHX       SHY      DF1      DF2  ANGAST  PSHIFT  STAT     OCC      LogP      SIGMA   SCORE  CHANGE    PSIZE    VOLT      CS    AmpC  BTILTX  BTILTY  ISHFTX  ISHFTY");
 
 
-	for (particle_counter = 0; particle_counter < all_parameters.GetCount(); particle_counter ++ )
+	for (particle_counter = first_line_to_write; particle_counter <= last_line_to_write; particle_counter ++ )
 	{
-		cisTEM_star_file->AddLine(wxString::Format("%8u %7.2f %7.2f %7.2f %9.2f %9.2f %8.1f %8.1f %7.2f %7.2f %5i %7.2f %9i %10.4f %7.2f %7.2f %8.5f %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f",	all_parameters[particle_counter].position_in_stack,
+		if (all_parameters[particle_counter].position_in_stack < first_image_to_write || all_parameters[particle_counter].position_in_stack > last_image_to_write) continue;
+		cisTEM_star_file->AddLine(wxString::Format("%8u %7.2f %7.2f %7.2f %9.2f %9.2f %8.1f %8.1f %7.2f %7.2f %5i %7.2f %9i %10.4f %7.2f %7.2f %8.5f %7.2f %7.2f %7.2f %7.3f %7.3f %7.3f %7.3f",
+																														all_parameters[particle_counter].position_in_stack,
 																														all_parameters[particle_counter].psi,
 																														all_parameters[particle_counter].theta,
 																														all_parameters[particle_counter].phi,
@@ -322,6 +340,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename)
 																														all_parameters[particle_counter].pixel_size,
 																														all_parameters[particle_counter].microscope_voltage_kv,
 																														all_parameters[particle_counter].microscope_spherical_aberration_mm,
+																														all_parameters[particle_counter].amplitude_contrast,
 																														all_parameters[particle_counter].beam_tilt_x,
 																														all_parameters[particle_counter].beam_tilt_y,
 																														all_parameters[particle_counter].image_shift_x,
@@ -361,6 +380,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_
 	double			average_pixel_size = 0.0;
 	double			average_microscope_voltage_kv = 0.0;
 	double			average_microscope_spherical_aberration_mm = 0.0;
+	double			average_amplitude_contrast = 0.0;
 	double			average_beam_tilt_x = 0.0;
 	double			average_beam_tilt_y = 0.0;
 	double			average_image_shift_x = 0.0;
@@ -391,6 +411,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_
 			average_pixel_size += ReturnPixelSize(counter);
 			average_microscope_voltage_kv += ReturnMicroscopekV(counter);
 			average_microscope_spherical_aberration_mm += ReturnMicroscopeCs(counter);
+			average_amplitude_contrast += ReturnAmplitudeContrast(counter);
 			average_beam_tilt_x += ReturnBeamTiltX(counter);
 			average_beam_tilt_y += ReturnBeamTiltY(counter);
 			average_image_shift_x += ReturnImageShiftX(counter);
@@ -424,6 +445,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_
 		average_values.pixel_size = average_pixel_size  / double(number_summed);
 		average_values.microscope_voltage_kv = average_microscope_voltage_kv  / double(number_summed);
 		average_values.microscope_spherical_aberration_mm = average_microscope_spherical_aberration_mm  / double(number_summed);
+		average_values.amplitude_contrast = average_amplitude_contrast  / double(number_summed);
 		average_values.beam_tilt_x = average_beam_tilt_x  / double(number_summed);
 		average_values.beam_tilt_y = average_beam_tilt_y  / double(number_summed);
 		average_values.image_shift_x = average_image_shift_x  / double(number_summed);
@@ -460,6 +482,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterVariances(bool only_average
 	double			variance_pixel_size = 0.0;
 	double			variance_microscope_voltage_kv = 0.0;
 	double			variance_microscope_spherical_aberration_mm = 0.0;
+	double			variance_amplitude_contrast = 0.0;
 	double			variance_beam_tilt_x = 0.0;
 	double			variance_beam_tilt_y = 0.0;
 	double			variance_image_shift_x = 0.0;
@@ -490,6 +513,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterVariances(bool only_average
 			variance_pixel_size += powf(ReturnPixelSize(counter), 2);
 			variance_microscope_voltage_kv += powf(ReturnMicroscopekV(counter), 2);
 			variance_microscope_spherical_aberration_mm += powf(ReturnMicroscopeCs(counter), 2);
+			variance_amplitude_contrast += powf(ReturnAmplitudeContrast(counter), 2);
 			variance_beam_tilt_x += powf(ReturnBeamTiltX(counter), 2);
 			variance_beam_tilt_y += powf(ReturnBeamTiltY(counter), 2);
 			variance_image_shift_x += powf(ReturnImageShiftX(counter), 2);
@@ -523,6 +547,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterVariances(bool only_average
 		variance_values.pixel_size = variance_pixel_size  / double(number_summed);
 		variance_values.microscope_voltage_kv = variance_microscope_voltage_kv  / double(number_summed);
 		variance_values.microscope_spherical_aberration_mm = variance_microscope_spherical_aberration_mm  / double(number_summed);
+		variance_values.amplitude_contrast = variance_amplitude_contrast  / double(number_summed);
 		variance_values.beam_tilt_x = variance_beam_tilt_x  / double(number_summed);
 		variance_values.beam_tilt_y = variance_beam_tilt_y  / double(number_summed);
 		variance_values.image_shift_x = variance_image_shift_x  / double(number_summed);
@@ -548,6 +573,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterVariances(bool only_average
 	variance_values.pixel_size -= powf(average_values.pixel_size, 2);
 	variance_values.microscope_voltage_kv -= powf(average_values.microscope_voltage_kv, 2);
 	variance_values.microscope_spherical_aberration_mm -= powf(average_values.microscope_spherical_aberration_mm, 2);
+	variance_values.amplitude_contrast -= powf(average_values.amplitude_contrast, 2);
 	variance_values.beam_tilt_x -= powf(average_values.beam_tilt_x, 2);
 	variance_values.beam_tilt_y -= powf(average_values.beam_tilt_y, 2);
 	variance_values.image_shift_x -= powf(average_values.image_shift_x, 2);
@@ -556,7 +582,7 @@ cisTEMParameterLine cisTEMParameters::ReturnParameterVariances(bool only_average
 	return variance_values;
 }
 
-double cisTEMParameters::ReturnAverageSigma(bool exclude_negative_film_numbers)
+float cisTEMParameters::ReturnAverageSigma(bool exclude_negative_film_numbers)
 {
 	double sum = 0;
 	long number_summed = 0;
@@ -575,7 +601,7 @@ double cisTEMParameters::ReturnAverageSigma(bool exclude_negative_film_numbers)
 
 }
 
-double cisTEMParameters::ReturnAverageOccupancy(bool exclude_negative_film_numbers)
+float cisTEMParameters::ReturnAverageOccupancy(bool exclude_negative_film_numbers)
 {
 	double sum = 0;
 	long number_summed = 0;
@@ -585,6 +611,25 @@ double cisTEMParameters::ReturnAverageOccupancy(bool exclude_negative_film_numbe
 		if (ReturnImageIsActive(counter) >= 0 || ! exclude_negative_film_numbers)
 		{
 			sum += ReturnOccupancy(counter);
+			number_summed++;
+		}
+	}
+
+	if (number_summed > 0) return float(sum / double(number_summed));
+	else return 0.0f;
+
+}
+
+float cisTEMParameters::ReturnAverageScore(bool exclude_negative_film_numbers)
+{
+	double sum = 0;
+	long number_summed = 0;
+
+	for (long counter = 0; counter < all_parameters.GetCount(); counter++)
+	{
+		if (ReturnImageIsActive(counter) >= 0 || ! exclude_negative_film_numbers)
+		{
+			sum += ReturnScore(counter);
 			number_summed++;
 		}
 	}

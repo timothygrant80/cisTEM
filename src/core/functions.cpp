@@ -427,6 +427,7 @@ void Deallocate2DFloatArray(float **&array, int dim1)
 		delete [] array[i];				// each i-th pointer must be deleted first
 	}
 	delete [] array;					// now delete pointer array
+	array = NULL;
 }
 
 long ReturnFileSizeInBytes(wxString filename)

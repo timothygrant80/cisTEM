@@ -596,56 +596,56 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 		input_3d.InitWithDimensions(input_3d_file->ReturnXSize(), input_3d_file->ReturnYSize(), input_3d_file->ReturnZSize(), pixel_size, "C1");
 		input_3d_masked.InitWithDimensions(input_3d_file->ReturnXSize(), input_3d_file->ReturnYSize(), input_3d_file->ReturnZSize(), pixel_size, "C1");
 
-		input_3d.density_map.ReadSlices(input_3d_file,1,input_3d.density_map.logical_z_dimension);
+		input_3d.density_map->ReadSlices(input_3d_file,1,input_3d.density_map->logical_z_dimension);
 		//
-//		input_3d.density_map.AddConstant(0.1f);
+//		input_3d.density_map->AddConstant(0.1f);
 
 		input_3d.mask_radius = FLT_MAX;
-//		input_3d.density_map.QuickAndDirtyWriteSlices("/tmp/original_3d.mrc", 1, input_3d.density_map.logical_z_dimension);
-		input_3d.density_map.CorrectSinc(900000000,1.0,true, 0.0);
-	//	input_3d.density_map.CorrectSinc(900000000,1.0,false);
-	//	input_3d.density_map.QuickAndDirtyWriteSlices("/tmp/scaled_3d.mrc", 1, input_3d.density_map.logical_z_dimension);
+//		input_3d.density_map->QuickAndDirtyWriteSlices("/tmp/original_3d.mrc", 1, input_3d.density_map->logical_z_dimension);
+		input_3d.density_map->CorrectSinc(900000000,1.0,true, 0.0);
+	//	input_3d.density_map->CorrectSinc(900000000,1.0,false);
+	//	input_3d.density_map->QuickAndDirtyWriteSlices("/tmp/scaled_3d.mrc", 1, input_3d.density_map->logical_z_dimension);
 
-		wxPrintf("Adding %f\n", -input_3d.density_map.ReturnAverageOfRealValuesAtRadius(input_3d.density_map.physical_address_of_box_center_x * 0.9));
+		wxPrintf("Adding %f\n", -input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
 		//offset
-		//input_3d.density_map.AddConstant(-input_3d.density_map.ReturnAverageOfRealValues(input_3d.density_map.physical_address_of_box_center_x - (10.0f / pixel_size), true));
-		input_3d.density_map.AddConstant(-input_3d.density_map.ReturnAverageOfRealValuesAtRadius(input_3d.density_map.physical_address_of_box_center_x * 0.9));
-		input_3d.density_map.CorrectSinc(9000000000,1.0,true, 0.0);
-		//input_3d.density_map.AddConstant(0.5f);
+		//input_3d.density_map->AddConstant(-input_3d.density_map->ReturnAverageOfRealValues(input_3d.density_map->physical_address_of_box_center_x - (10.0f / pixel_size), true));
+		input_3d.density_map->AddConstant(-input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
+		input_3d.density_map->CorrectSinc(9000000000,1.0,true, 0.0);
+		//input_3d.density_map->AddConstant(0.5f);
 		//scaling
-		//input_3d.density_map.MultiplyByConstant(sqrtf(input_3d.density_map.ReturnVarianceOfRealValues(input_3d.density_map.physical_address_of_box_center_x , 0.0, 0.0, 0.0, true)));
+		//input_3d.density_map->MultiplyByConstant(sqrtf(input_3d.density_map->ReturnVarianceOfRealValues(input_3d.density_map->physical_address_of_box_center_x , 0.0, 0.0, 0.0, true)));
 		// apply curve filter
 	
-		//input_3d.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
-		//input_3d.density_map.ApplyCurveFilter(&noise_power_spectrum);
+		//input_3d.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		//input_3d.density_map->ApplyCurveFilter(&noise_power_spectrum);
 		
 
 
 		input_mask.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
 
-		input_3d_masked.density_map.CopyFrom(&input_3d.density_map);
-		//input_3d_masked.density_map.SwapRealSpaceQuadrants();
-		//input_3d_masked.density_map.BackwardFFT();
-		//input_3d_masked.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
-		//input_3d_masked.density_map.ApplyMask(input_mask, 10.0f, 0.0f, 0.0f, 0.0f, input_3d_masked.density_map.ReturnAverageOfRealValues(), true);
-		input_3d_masked.density_map.MultiplyPixelWise(input_mask);
+		input_3d_masked.density_map->CopyFrom(input_3d.density_map);
+		//input_3d_masked.density_map->SwapRealSpaceQuadrants();
+		//input_3d_masked.density_map->BackwardFFT();
+		//input_3d_masked.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		//input_3d_masked.density_map->ApplyMask(input_mask, 10.0f, 0.0f, 0.0f, 0.0f, input_3d_masked.density_map->ReturnAverageOfRealValues(), true);
+		input_3d_masked.density_map->MultiplyPixelWise(input_mask);
 
 		///nput_3d_masked.PrepareForProjections(0.0, 2.0 * pixel_size);
-		input_3d_masked.density_map.ForwardFFT();
-		input_3d_masked.density_map.SwapRealSpaceQuadrants();
+		input_3d_masked.density_map->ForwardFFT();
+		input_3d_masked.density_map->SwapRealSpaceQuadrants();
 		
-		input_3d.density_map.ForwardFFT();
-		input_3d.density_map.SwapRealSpaceQuadrants();
-		//input_3d_masked.density_map.DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		input_3d.density_map->ForwardFFT();
+		input_3d.density_map->SwapRealSpaceQuadrants();
+		//input_3d_masked.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
 
-		//input_3d_masked.density_map.MultiplyByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
+		//input_3d_masked.density_map->MultiplyByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
 
 		input_3d_masked.mask_radius = FLT_MAX;
-		//input_3d_masked.density_map.QuickAndDirtyWriteSlices("/tmp/masked_3d.mrc", 1, input_3d_masked.density_map.logical_z_dimension);
+		//input_3d_masked.density_map->QuickAndDirtyWriteSlices("/tmp/masked_3d.mrc", 1, input_3d_masked.density_map->logical_z_dimension);
 
-		original_x_coord = centre_x_coord - input_3d.density_map.physical_address_of_box_center_x;
-		original_y_coord = centre_y_coord - input_3d.density_map.physical_address_of_box_center_y;
-		original_z_coord = centre_z_coord - input_3d.density_map.physical_address_of_box_center_z;
+		original_x_coord = centre_x_coord - input_3d.density_map->physical_address_of_box_center_x;
+		original_y_coord = centre_y_coord - input_3d.density_map->physical_address_of_box_center_y;
+		original_z_coord = centre_z_coord - input_3d.density_map->physical_address_of_box_center_z;
 
 
 
@@ -705,8 +705,8 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
 				my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11]);
 
-				input_3d_masked.density_map.ExtractSlice(projection_image, my_parameters);
-				projection_image.complex_values[0] = input_3d_masked.density_map.complex_values[0]; // cos extract slice sets central pixel to zero.
+				input_3d_masked.density_map->ExtractSlice(projection_image, my_parameters);
+				projection_image.complex_values[0] = input_3d_masked.density_map->complex_values[0]; // cos extract slice sets central pixel to zero.
 
 				projection_image.ApplyCTF(my_ctf);
 				projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
@@ -721,8 +721,8 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				{
 					// work out a frequency dependent scaling based on the unmasked projection
 
-					input_3d.density_map.ExtractSlice(unmasked_projection_image, my_parameters);
-					unmasked_projection_image.complex_values[0] = input_3d.density_map.complex_values[0]; // cos extract slice sets central pixel to zero.
+					input_3d.density_map->ExtractSlice(unmasked_projection_image, my_parameters);
+					unmasked_projection_image.complex_values[0] = input_3d.density_map->complex_values[0]; // cos extract slice sets central pixel to zero.
 
 					unmasked_projection_image.ApplyCTF(my_ctf);
 					unmasked_projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);

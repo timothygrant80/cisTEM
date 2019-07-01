@@ -14,6 +14,9 @@ public:
 	SymmetryMatrix(wxString wanted_symmetry_symbol);
 	~SymmetryMatrix();
 
+	SymmetryMatrix & operator = (const SymmetryMatrix &other_matrix);
+	SymmetryMatrix & operator = (const SymmetryMatrix *other_matrix);
+
 	void Init(wxString wanted_symmetry_symbol);
 
 	void PrintMatrices();

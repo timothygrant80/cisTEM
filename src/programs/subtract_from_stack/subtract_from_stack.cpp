@@ -145,12 +145,12 @@ bool SubtractFromStackApp::DoCalculation()
 
 
 	input_3d.InitWithDimensions(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), pixel_size, "C1");
-	input_3d.density_map.ReadSlices(&input_file,1,input_3d.density_map.logical_z_dimension);
+	input_3d.density_map->ReadSlices(&input_file,1,input_3d.density_map->logical_z_dimension);
 	input_3d.mask_radius = FLT_MAX;
 	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size);
 
-	projection_image.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
-	sum_power.Allocate(input_3d.density_map.logical_x_dimension, input_3d.density_map.logical_y_dimension, false);
+	projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	sum_power.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	particle_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 
 	number_of_pixels_in_image = long(input_stack.ReturnXSize()) * long(input_stack.ReturnYSize());
@@ -219,7 +219,7 @@ bool SubtractFromStackApp::DoCalculation()
 		my_parameters.Init(temp_float[3], temp_float[2], temp_float[1], temp_float[4], temp_float[5]);
 		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11]);
 
-		input_3d.density_map.ExtractSlice(projection_image, my_parameters);
+		input_3d.density_map->ExtractSlice(projection_image, my_parameters);
 		projection_image.ApplyCTF(my_ctf);
 		projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
 		projection_image.SwapRealSpaceQuadrants();

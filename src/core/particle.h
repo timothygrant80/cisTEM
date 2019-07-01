@@ -61,18 +61,7 @@ public:
 	float						particle_occupancy;		// Particle occupancy within a class
 	float						particle_score;
 	AnglesAndShifts				alignment_parameters;
-	RotationMatrix				*euler_matrix;
-/*	float						phi_average;			// In deg
-	float						theta_average;			// In deg
-	float						psi_average;			// In deg
-	float						shift_x_average;		// In A
-	float						shift_y_average;		// In A
-	float						phi_variance;			// In deg^2
-	float						theta_variance;			// In deg^2
-	float						psi_variance;			// In deg^2
-	float						shift_x_variance;		// In A^2
-	float						shift_y_variance;		// In A^2
-*/
+//	RotationMatrix				*euler_matrix;
 	float						scaled_noise_variance;
 	ParameterConstraints		parameter_constraints;
 	CTF							ctf_parameters;
@@ -85,7 +74,6 @@ public:
 	Image						*particle_image;
 	bool						includes_reference_ssnr_weighting;
 	bool						is_normalized;
-	float						normalized_sigma;
 	bool						is_phase_flipped;
 	bool						is_masked;
 	float						mask_radius;			// In A
@@ -102,9 +90,7 @@ public:
 	bool						is_centered_in_box;
 	int							shift_counter;
 	bool						insert_even;
-	//int							number_of_parameters;
 	float						target_phase_error;
-	//float						*temp_float;
 	cisTEMParameterLine			current_parameters;
 	cisTEMParameterLine			temp_parameters;
 	cisTEMParameterLine			parameter_average;
@@ -125,6 +111,7 @@ public:
 	Particle(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
 	~Particle();
 
+	void CopyAllButImages(const Particle *other_particle);
 	void Init();
 	void AllocateImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
 	void AllocateCTFImage(int wanted_logical_x_dimension, int wanted_logical_y_dimension);
@@ -163,8 +150,8 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(cisTEMParameterLine &output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	void FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier = 20.0f, bool progress_bar = false);
-	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, Image *phase_difference = NULL);
+	float FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier = 20.0f, bool progress_bar = false);
+	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit);
 	void CalculateMaskedLogLikelihood(Image &projection_image, ReconstructedVolume &input_3d, float classification_resolution_limit);
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
 			int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,

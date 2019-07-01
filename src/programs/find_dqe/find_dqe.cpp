@@ -881,12 +881,12 @@ bool FindDQE::DoCalculation()
 		for (i = 1; i < 7; i++) cg_starting_point[i] = 0.0f;
 		for (i = 1; i < 7; i++) cg_accuracy[i] = 0.01f;
 		conjugate_gradient_minimizer.Init(&RampFit, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
-		conjugate_gradient_minimizer.Run();
+		conjugate_gradient_minimizer.Run(500);
 		fitted_parameters = conjugate_gradient_minimizer.GetPointerToBestValues();
 		for (i = 0; i < comparison_object.parameters_to_fit; i++) cg_starting_point[i] = fitted_parameters[i];
 		for (i = 1; i < comparison_object.parameters_to_fit; i++) cg_accuracy[i] = 1000.0f * fitted_parameters[i];
 		conjugate_gradient_minimizer.Init(&RampFit, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
-		conjugate_gradient_minimizer.Run();
+		conjugate_gradient_minimizer.Run(500);
 		fitted_parameters = conjugate_gradient_minimizer.GetPointerToBestValues();
 		pointer = 0;
 		for (j = 0; j < background_image.logical_y_dimension; j++)
@@ -1099,7 +1099,7 @@ bool FindDQE::DoCalculation()
 //		}
 //		conjugate_gradient_minimizer.Init(&MTFFitSinc, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
 		conjugate_gradient_minimizer.Init(&MTFFit, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
-		conjugate_gradient_minimizer.Run();
+		conjugate_gradient_minimizer.Run(500);
 		fitted_parameters = conjugate_gradient_minimizer.GetPointerToBestValues();
 		if (j == 0)
 		{

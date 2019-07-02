@@ -5,92 +5,48 @@
 
 
 #define NARGSEXPECTED 4 // number of arguments passed to the app.
-#define MAX_NUMBER_PDBS 13
+#define MAX_NUMBER_PDBS 13 // This probably doesn't need to be limited - check use TODO.
 typedef float WANTED_PRECISION;
 
 
-const float SOLVENT_CUTOFF[4] = {2.8,0.5,2.0,3.3};//powf(3.2,2); // Angstrom from a non-water scattering center (squared radius)
+const float SOLVENT_CUTOFF[4] = {2.8f,0.5f,2.0f,3.3f};  // Angstrom from a non-water scattering center (squared radius)
 // From Shang and Sigworth, average of polar and non-polar from table 1 (with correction to polar radius 3, 1.7-->3.0);
 // terms 3-5 have the average atomic radius of C,N,O,P added to shift the curve to be relative to atomic center.
 float xtra_shift = -0.5f;
 const float HYDRATION_VALS[8] = {0.1750f,   -0.1352560f,    2.5125f+xtra_shift,    3.7125f+xtra_shift,    5.0625f+xtra_shift,    1.0000f,    1.7700f,    0.9550f};
 const int N_WATER_TERMS = 20;
-const float SOLVENT_BFACTOR = 20; // times dose 8pi^2*msd(Ang) (defined) and sqrt(dose) ~ rmsd(Ang) , note no sqrt in the def for bfactor. latter is from Henderson, thon rings amorphous ice
-const float CARBON_BFACTOR = 20;
-//const float  SOLVENT_RATIO = 0.85 ; // ratio to convert total cross-section of oxygen --> water Ianik Plante1,2 and Francis A Cucinotta1 2009const int SUB_PIXEL_NeL = (SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1);
+
+// These could probably all just be MIN_BFACTOR
+const float SOLVENT_BFACTOR = 20.0f; // times dose 8pi^2*msd(Ang) (defined) and sqrtf(dose) ~ rmsd(Ang) , note no sqrtf in the def for bfactor. latter is from Henderson, thon rings amorphous ice
+const float CARBON_BFACTOR = 20.0f;
+const float MIN_BFACTOR = 20.0f;// Used if supplied is -1 (for random perturb) //16*0.965*0.965/2/PI; // 85 matches the Phase grating to JPR pretty close
+
+// Parameters for calculating water. Because all waters are the same, except a sub-pixel origin offset. A SUB_PIXEL_NeL stack of projected potentials is pre-calculated with given offsets.
 const int SOLVENT_TYPE = 15; // 2 N, 3 ) 15, fit water
 const int SUB_PIXEL_NEIGHBORHOOD = 11;
 const int SUB_PIXEL_NeL = (SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1);
 
-const float  MEAN_FREE_PATH = 4000;// Angstrom, newer paper by bridgett (2018) and a couple older TODO add ref. Use to reduce total probability (https://doi.org/10.1016/j.jsb.2018.06.007)
-const bool adjust_mean_free_path_for_protein_concentration = false;
-const float mean_free_path_water = 4000;
-const float mean_free_path_protein = 3300;
-const bool make_inelastic_image = true;
-const float INELASTIC_OFFSET = 0.06;
 
-// Note that the first two errors here are just used in matching amorphous carbon for validation. The third is used in simulations.
-// The surface phase error (Wanner & Tesche 2005) quantified by holography accounts for a bias due to surface effects not included in the simple model here
-const float  SURFACE_PHASE_ERROR = 0.497;
-// The bond phase error is used to account for the remaining phase shift that is missing, due to all remaining scattering. The assumption is that amorphous water has >= the scattering due to delocalized electrons
-const float  BOND_PHASE_ERROR = 0.098;
-// To account for the bond phase error in practice, a small scaling factor is applied to the atomic potentials
-const float  BOND_SCALING_FACTOR = 1.0475;
-const std::complex<float>  i2pi2(0.0,19.7392088021787);
-/*
- *  A note on the amplitude contrast. Using a weighted projection of the specimen potential creates a spatially variable reduction in probability, where regions of higher prob are damped more severely.
- *  As a range of numbers are reported in the literature, I compared the "contrast" defined by Yonukura/Agard (doi:10.1016/j.jsb.2006.07.016)Ca = |<I prot> - <I ice>| / std(Ice) to their table 1
- *  For apoferrtin (~ 120 Ang Diam) in ~ 300 Angstrom ice, an amplitude contrast ratio of 0.14 produces a "Ca" of ~ 0.175 when using comparable defocus (19000Ang)
- *
- *
- */
+const std::complex<float>  i2pi2(0.0f,19.7392088021787f);
+
+
 const int TAPERWIDTH = 29; // TODO this should be set to 12 with zeros padded out by size neighborhood and calculated by taper = 0.5+0.5.*cos((((1:pixelFallOff)).*pi)./(length((1:pixelFallOff+1))));
 const float TAPER[29] = {0,0,0,0,0,
 						 0.003943, 0.015708, 0.035112, 0.061847, 0.095492, 0.135516, 0.181288, 0.232087,
 						 0.287110, 0.345492, 0.406309, 0.468605, 0.531395, 0.593691, 0.654508, 0.712890,
 						 0.767913, 0.818712, 0.864484, 0.904508, 0.938153, 0.964888, 0.984292, 0.996057};
 
-const int IMAGEPADDING =  256; // Padding applied for the Fourier operations in the propagation steps
+const int IMAGEPADDING =  256; // Padding applied for the Fourier operations in the propagation steps. Removed prior to writing out.
 const int IMAGETRIMVAL = IMAGEPADDING + 2*TAPERWIDTH;
-const float MIN_BFACTOR = 20;// Used if supplied is -1 (for random perturb) //16*0.965*0.965/2/PI; // 85 matches the Phase grating to JPR pretty close
 
 
 
-const float MEAN_INNER_POTENTIAL = 9.09; // 10.7; //Volts (The smaller is for 1.75 g/cm^3 amC)
-const float MEAN_INNER_POTENTIAL_WATER = 4.871; //Volts
-const bool  DO_PHASE_PLATE = false;
-
-// CONTROL FOR DEBUGGING AND VALIDATION
-const bool do_complexCTF = true;
-const bool ignore_thickness = true;
-const bool add_mean_water_potential  = false; // For comparing to published results - only applies to a 3d potential
-
-
-// Control for trouble shooting, propagation. Might be nice to have something similar on a global context
-const bool DO_PARALLEL = true;
-const bool DO_SINC_BLUR = false; // TODO add me back in
-const bool DO_PRINT = false;
-//
-const bool DO_SOLVENT = true; // 0 none, 2 add 2d layer, 3 add in 3d rand gaussian no correlation, ?
-const bool CALC_WATER_NO_HOLE = false;
-const bool CALC_HOLES_ONLY = false;
-#define DEBUG_POISSON true // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
-
-
-const bool DO_SPATIAL_COHERENCE_ENVELOPE = true;// These do nothing~! FIXME
-const bool DO_TEMPORAL_COHERENCE_ENVELOPE = true; // These do nothing~! FIXME
+const float DELTA_E = 1.1f; // eV
 const float BEAM_BRIGHTNESS = 12e7; // 2 to 4 e7 10 to 14 e7 A/m2/sr/V SFEC, XFEG via Wim Hagen personal communcation
-const float DELTA_E = 1.1; // eV
+// For experiments where a perfect reference is desired.
 
 
-#define DEBUG_NAN true
-#define DEBUG_MSG false
-
-#define WHITEN_IMG false
-#define SAVE_REF false
-#define CORRECT_CTF false // only affects the image if Whiten_img is also true
-#define EXPOSURE_FILTER_REF false
-
+// Intermediate images that may be useful for diagnostics.
 #define SAVE_WATER_AND_OTHER false
 #define SAVE_PROJECTED_WATER false
 #define SAVE_PHASE_GRATING false
@@ -103,17 +59,9 @@ const float DELTA_E = 1.1; // eV
 #define SAVE_WITH_NORMALIZED_DOSE false
 #define SAVE_POISSON_PRE_NTF false
 #define SAVE_POISSON_WITH_NTF false
-#define DO_EXPOSURE_FILTER_FINAL_IMG false
-const int DO_EXPOSURE_FILTER = 3;  /////
-#define DO_EXPOSURE_COMPLEMENT_PHASE_RANDOMIZE false // maintain the Energy of the protein (since no mass is actually lost) by randomizing the phases with weights that complement the exposure filter
-#define DO_COMPEX_AMPLITUDE_TERM true
-#define DO_APPLY_DQE false
-#define DO_NORMALIZE_SET_DOSE false
-#define DO_APPLY_NTF false
+//
 
-const bool flip_phase_grating  = false;
-const bool flip_fresnel_propagator = true;
-const bool flip_ctf = false;
+
 
 //const int n_tilt_angles = 101;
 //const float SET_TILT_ANGLES[n_tilt_angles] = {-70.000, -68.600, -67.200, -65.800, -64.400, -63.000, -61.600, -60.200, -58.800, -57.400, -56.000, -54.600, -53.200, -51.800, -50.400, -49.000, -47.600, -46.200, -44.800, -43.400, -42.000, -40.600, -39.200, -37.800, -36.400, -35.000, -33.600, -32.200, -30.800, -29.400, -28.000, -26.600, -25.200, -23.800, -22.400, -21.000, -19.600, -18.200, -16.800, -15.400, -14.000, -12.600, -11.200, -9.800, -8.400, -7.000, -5.600, -4.200, -2.800, -1.400, 0.000, 1.400, 2.800, 4.200, 5.600, 7.000, 8.400, 9.800, 11.200, 12.600, 14.000, 15.400, 16.800, 18.200, 19.600, 21.000, 22.400, 23.800, 25.200, 26.600, 28.000, 29.400, 30.800, 32.200, 33.600, 35.000, 36.400, 37.800, 39.200, 40.600, 42.000, 43.400, 44.800, 46.200, 47.600, 49.000, 50.400, 51.800, 53.200, 54.600, 56.000, 57.400, 58.800, 60.200, 61.600, 63.000, 64.400, 65.800, 67.200, 68.600, 70.000};
@@ -180,7 +128,8 @@ const WANTED_PRECISION SCATTERING_PARAMETERS_B[17][5] = {
 // 1 = k2, Counting, 300 KeV, 10 eps
 // 2 = F416, Int, 200 KeV
 // TODO add in 200 KeV K2 curves and adjust accordingly, for now just print a warning if 200 KeV is selected.
-const int CAMERA_MODEL=0;
+// TODO any other generic info?
+
 const WANTED_PRECISION DQE_PARAMETERS_A[3][3] = {
 		{0.8703, 0.0, 0.0},
 		{0.7949,0.0,0.0 },
@@ -244,6 +193,7 @@ class ScatteringPotentialApp : public MyApp
     float 	 	do3d;
     int			bin3d = 1;
     bool 		doExpertOptions;
+    bool 		get_devel_options;
     float		stdErr;
     float		extra_phase_shift;
     float 		kV = 300;
@@ -264,6 +214,21 @@ class ScatteringPotentialApp : public MyApp
 	float 		temporal_envelope_halfwidth = 0;
 	float 		illumination_aperture = 0;
 	float 		chromatic_aberration = 3.49;
+	float       set_real_part_wave_function_in = 1.0f;
+	int 		minimum_paddeding_x_and_y = 64;
+	float  		propagation_distance = 20;
+
+	bool ONLY_SAVE_SUMS = true;
+	// To add error to the global alignment
+	float tilt_axis = 0; // degrees from Y-axis FIXME thickness calc, water padding, a few others are only valid for 0* tilt axis.
+	float in_plane_sigma = 2; // spread in-plane angles based on neighbors
+	float tilt_angle_sigma = 0.1; //;
+	float magnification_sigma = 0.0001;//;
+	float beam_tilt_x = 0.0f;//0.6f;
+	float beam_tilt_y = 0.0f;//-0.2f;
+	float particle_shift_x = 0.0f;
+	float particle_shift_y =0.0f;
+
 	Image number_of_pixels_averaged;
 	Image number_of_non_waters_averaged;
 
@@ -324,6 +289,59 @@ class ScatteringPotentialApp : public MyApp
 	wxTimeSpan	span_propagate;
 	wxDateTime 	overall_finish;
 
+
+	//////////////////////////////////////////
+	////////////
+	// For development
+	//
+	//const float  MEAN_FREE_PATH = 4000;// Angstrom, newer paper by bridgett (2018) and a couple older TODO add ref. Use to reduce total probability (https://doi.org/10.1016/j.jsb.2018.06.007)
+	bool adjust_mean_free_path_for_protein_concentration = false;
+	float mean_free_path_water = 4000;
+	float mean_free_path_protein = 3300;
+	bool make_inelastic_image = false;
+	float INELASTIC_OFFSET = 0.06;
+
+	// Note that the first two errors here are just used in matching amorphous carbon for validation. The third is used in simulations.
+	// The surface phase error (Wanner & Tesche 2005) quantified by holography accounts for a bias due to surface effects not included in the simple model here
+	float  SURFACE_PHASE_ERROR = 0.497;
+	// The bond phase error is used to account for the remaining phase shift that is missing, due to all remaining scattering. The assumption is that amorphous water has >= the scattering due to delocalized electrons
+	float  BOND_PHASE_ERROR = 0.098;
+	// To account for the bond phase error in practice, a small scaling factor is applied to the atomic potentials
+	float  BOND_SCALING_FACTOR = 1.0475;
+	float MEAN_INNER_POTENTIAL = 9.09; // for 1.75 g/cm^3 amorphous carbon as in Wanner & Tesche
+	bool  DO_PHASE_PLATE = false;
+
+	// CONTROL FOR DEBUGGING AND VALIDATION
+	bool ignore_thickness = false; // Don't use the mean-free path to reduce expected counts. make_inelastic_image implies this is t
+	bool add_mean_water_potential  = false; // For comparing to published results - only applies to a 3d potential
+
+
+	bool DO_SINC_BLUR = false; // TODO add me back in. This is to blur the image due to intra-frame motion. Apply to projected specimen not waters
+	bool DO_PRINT = false;
+	//
+	bool DO_SOLVENT = true; // False to skip adding any solvent
+	bool CALC_WATER_NO_HOLE = false; // Makes the solvent cutoff so large that water is added on top of the protein. This is to mimick Rullgard/Vulovic
+	bool CALC_HOLES_ONLY = false; // This should calculate the atoms so the water is properly excluded, but not include these in the propagation. TODO checkme
+	bool DEBUG_POISSON = false; // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
+
+
+	bool DO_SPATIAL_COHERENCE_ENVELOPE = false;// These do nothing~! FIXME
+	bool DO_TEMPORAL_COHERENCE_ENVELOPE = false; // These do nothing~! FIXME
+
+	bool WHITEN_IMG = false; // if SAVE_REF then it will also be whitened when this option is enabled TODO checkme
+	bool SAVE_REF   = false;
+	bool CORRECT_CTF= false; // only affects the image if Whiten_img is also true
+	bool EXPOSURE_FILTER_REF = false;
+	bool DO_EXPOSURE_FILTER_FINAL_IMG = false;
+	int DO_EXPOSURE_FILTER = 3;  ///// In 2d or 3d - or 0 to turn of. 2d does not appear to produce the expected results.
+	bool DO_EXPOSURE_COMPLEMENT_PHASE_RANDOMIZE = false; // maintain the Energy of the protein (since no mass is actually lost) by randomizing the phases with weights that complement the exposure filter
+	bool DO_COMPEX_AMPLITUDE_TERM = true;
+	bool DO_APPLY_DQE = true;
+	bool DO_NORMALIZE_SET_DOSE = true;
+	bool DO_APPLY_NTF = true;
+	int CAMERA_MODEL=0;
+	///////////
+	/////////////////////////////////////////
 
 	private:
 
@@ -499,6 +517,85 @@ void ScatteringPotentialApp::DoInteractiveUserInput()
 
 	}
 
+	this->doExpertOptions			= my_input->GetYesNoFromUser("Set development options?","","no");
+
+	if (this->get_devel_options)
+	{
+		//////////////////////////////////////////
+		////////////
+		// For development
+		//
+		//const float  MEAN_FREE_PATH = 4000;// Angstrom, newer paper by bridgett (2018) and a couple older TODO add ref. Use to reduce total probability (https://doi.org/10.1016/j.jsb.2018.06.007)
+		this->adjust_mean_free_path_for_protein_concentration = my_input->GetYesNoFromUser("Adjust mean free path for protein concentration?","","no");
+		this->mean_free_path_water =  my_input->GetFloatFromUser("Inelastic mean free path for water","probably won't remain in use","4000",0,10000);
+		this->mean_free_path_protein = my_input->GetFloatFromUser("Inelastic mean free path for protein+water","probably won't remain in use","3300",0,10000);
+		this->make_inelastic_image = my_input->GetYesNoFromUser("Make the inelastic image?","","no");
+		this->INELASTIC_OFFSET = my_input->GetFloatFromUser("Fractional inelastic scattering offset","I do not remember what this is supposed to be","0.06",0,1);
+
+		// Note that the first two errors here are just used in matching amorphous carbon for validation. The third is used in simulations.
+		// The surface phase error (Wanner & Tesche 2005) quantified by holography accounts for a bias due to surface effects not included in the simple model here
+		this->SURFACE_PHASE_ERROR = my_input->GetFloatFromUser("Surface phase error (radian)","From Wanner & Tesche","0.497",0,3.121593);
+		// The bond phase error is used to account for the remaining phase shift that is missing, due to all remaining scattering. The assumption is that amorphous water has >= the scattering due to delocalized electrons
+		this->BOND_PHASE_ERROR = my_input->GetFloatFromUser("Bond phase error (radian)","Calibrated from experiment, may need to be updated","0.098",0,3.121593);
+		// To account for the bond phase error in practice, a small scaling factor is applied to the atomic potentials
+		this->BOND_SCALING_FACTOR = my_input->GetFloatFromUser("Compensate for bond phase error by scaling the interaction potential","Calibrated from experiment, may need to be updated","1.0475",0,10);
+		this->MEAN_INNER_POTENTIAL = my_input->GetFloatFromUser("Amorphous carbon MIP","From Wanner & Tesche for 1.75 g/cm^3 carbon","9.09",0,100); // for 1.75 g/cm^3 amorphous carbon as in Wanner & Tesche
+		this->DO_PHASE_PLATE = my_input->GetYesNoFromUser("So a phase plate simulation?","","no");
+
+		// CONTROL FOR DEBUGGING AND VALIDATION
+		this->ignore_thickness = my_input->GetYesNoFromUser("Ignore the thickness adjustment via inelastic mean-free path?","","no"); // Don't use the mean-free path to reduce expected counts. make_inelastic_image implies this is t
+		this->add_mean_water_potential  = my_input->GetYesNoFromUser("Add a constant potential for the mean water?","","no"); // For comparing to published results - only applies to a 3d potential
+
+
+		this->DO_SINC_BLUR = my_input->GetYesNoFromUser("Intra-frame sinc blur on protein?","Currently this does nothing","no"); // TODO add me back in. This is to blur the image due to intra-frame motion. Apply to projected specimen not waters
+		this->DO_PRINT = my_input->GetYesNoFromUser("Print out a bunch of extra diagnostic information?","","no");
+		//
+		this->DO_SOLVENT = my_input->GetYesNoFromUser("Add potential, constant or atom-wise for solvent?","","yes"); // False to skip adding any solvent
+		this->CALC_WATER_NO_HOLE = my_input->GetYesNoFromUser("Ignore protein envelope and add solvent everywhere?","","no"); // Makes the solvent cutoff so large that water is added on top of the protein. This is to mimick Rullgard/Vulovic
+		this->CALC_HOLES_ONLY = my_input->GetYesNoFromUser("Use protein envelope, but don't add it in (holes only)?","","no");// This should calculate the atoms so the water is properly excluded, but not include these in the propagation. TODO checkme
+		this->DEBUG_POISSON = my_input->GetYesNoFromUser("Save the detector wave function directly?","Skip Poisson draw","no"); // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
+
+
+		this->DO_SPATIAL_COHERENCE_ENVELOPE = my_input->GetYesNoFromUser("Apply spatial coherence envelope?","This currently doesn't do anything","yes");// These do nothing~! FIXME
+		this->DO_TEMPORAL_COHERENCE_ENVELOPE = my_input->GetYesNoFromUser("Apply temporal coherence envelope?","This currently doesn't do anything","yes");// These do nothing~! FIXME
+
+		this->WHITEN_IMG = my_input->GetYesNoFromUser("Whiten the image?","","no"); // if SAVE_REF then it will also be whitened when this option is enabled TODO checkme
+		this->SAVE_REF   = my_input->GetYesNoFromUser("Save a perfect reference","","no");
+		this->CORRECT_CTF= my_input->GetYesNoFromUser("Multiply by average CTF?","","no");// only affects the image if Whiten_img is also true
+		this->EXPOSURE_FILTER_REF = my_input->GetYesNoFromUser("Exposure filter the perfect reference?","","no");
+		this->DO_EXPOSURE_FILTER_FINAL_IMG = my_input->GetYesNoFromUser("Exposure filter the final movie/image?","","no");
+		this->DO_EXPOSURE_FILTER = my_input->GetIntFromUser("Do exposure filter", "0 off, 2 2d (broken), 3 3d", "3", 3);  ///// In 2d or 3d - or 0 to turn of. 2d does not appear to produce the expected results.
+		this->DO_EXPOSURE_COMPLEMENT_PHASE_RANDOMIZE =my_input->GetYesNoFromUser("Maintain power with random phases in exposure filter?","","no");// maintain the Energy of the protein (since no mass is actually lost) by randomizing the phases with weights that complement the exposure filter
+		this->DO_COMPEX_AMPLITUDE_TERM = my_input->GetYesNoFromUser("Use the complex amplitude term?","(optical potential)","yes");
+		this->DO_APPLY_DQE = my_input->GetYesNoFromUser("Apply the DQE?","depends on camera model","yes");
+		this->DO_APPLY_NTF = my_input->GetYesNoFromUser("Apply NTF?","depends on camera model","yes");
+		this->DO_NORMALIZE_SET_DOSE = my_input->GetYesNoFromUser("Normalize and set dose","(optical potential)","yes");
+		this->CAMERA_MODEL=my_input->GetIntFromUser("Camera model", "0 300 KeV K2, 3eps; 1 300 KeV K2, 10eps; 3 200 KeV f416", "0", 3);
+
+		this->minimum_paddeding_x_and_y = my_input->GetIntFromUser("minimum padding of images with solvent", "", "64", 32,4096);
+		this->propagation_distance = my_input->GetFloatFromUser("Propagation distance in angstrom","Also used as minimum thickness","20",2,1e6);
+
+		this->ONLY_SAVE_SUMS = my_input->GetYesNoFromUser("Only save sums","don't save movies for particle stacks","yes"); // TODO check me
+		// To add error to the global alignment
+		this->tilt_axis = my_input->GetFloatFromUser("Rotation of tilt-axis from Y (degrees)","","0.0",0,180); // TODO does this apply everywhere it should
+		this->in_plane_sigma = my_input->GetFloatFromUser("Standard deviation on angles in plane (degrees)","","2",0,100); // spread in-plane angles based on neighbors
+		this->tilt_angle_sigma = my_input->GetFloatFromUser("Standard deviation on tilt-angles (degrees)","","0.1",0,10);; //;
+		this->magnification_sigma = my_input->GetFloatFromUser("Standard deviation on magnification (fraction)","","0.0001",0,1);//;
+		this->beam_tilt_x = my_input->GetFloatFromUser("Beam-tilt in X (milli radian)","","0.0",0,100);//0.6f;
+		this->beam_tilt_y = my_input->GetFloatFromUser("Beam-tilt in Y (milli radian)","","0.0",0,100);//-0.2f;
+		this->particle_shift_x =  my_input->GetFloatFromUser("Beam-tilt particle shift in X (Angstrom)","","0.0",0,100);
+		this->particle_shift_y =  my_input->GetFloatFromUser("Beam-tilt particle shift in Y (Angstrom)","","0.0",0,100);;
+
+		if (! this->DO_NORMALIZE_SET_DOSE)
+		{
+			// Set the expected dose by setting the amplitude of the incoming plane wave
+			set_real_part_wave_function_in = sqrtf(this->dose_per_frame);
+			wxPrintf("Setting the real part of the object wavefunction to %f to start\n",set_real_part_wave_function_in);
+		}
+		///////////
+		/////////////////////////////////////////
+	}
+
 	delete my_input;
 
 
@@ -558,7 +655,7 @@ bool ScatteringPotentialApp::DoCalculation()
 	for (int iPDB = 0; iPDB < number_of_pdbs ; iPDB++)
 	{
 
-		pdb_ensemble[iPDB] = PDB(pdb_file_names[iPDB],access_type_read,records_per_line);
+		pdb_ensemble[iPDB] = PDB(pdb_file_names[iPDB],access_type_read,records_per_line, this->minimum_paddeding_x_and_y, this->propagation_distance);
 
 
 	}
@@ -666,7 +763,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 		for (int iImg = 0; iImg < n_sizes; iImg ++)
 		{
-			exp_span[iImg] = 0.0;
+			exp_span[iImg] = 0.0f;
 
 //			test_image.Allocate(test_size[iImg],test_size[iImg],false);
 			for (int iIter = 0; iIter < n_iters; iIter++)
@@ -724,18 +821,13 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 	float astigmatism_angle_randomizer = 0.0; //
 	float defocus_randomizer = 0.0;
 	float wanted_additional_phase_shift_in_radians  = this->extra_phase_shift*PI;
-    float defocus_tolerance =  20; // in Angstrom, allowed thickness per slab
     float *propagator_distance; // in Angstom, <= defocus tolerance.
     float defocus_offset = 0;
 
-	float beam_tilt_x = 0.0f;//0.6f;
-	float beam_tilt_y = 0.0f;//-0.2f;
-	float particle_shift_x = 0.0f;
-	float particle_shift_y =0.0f;
 
 
-	beam_tilt_x /= 1000;
-	beam_tilt_y /= 1000;
+	beam_tilt_x /= 1000.0f;
+	beam_tilt_y /= 1000.0f;
 
     wxPrintf("Using extra phase shift of %f radians\n",wanted_additional_phase_shift_in_radians);
 
@@ -755,21 +847,9 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 //    wxPrintf("Timings: FFT: %s\n",(wxDateTime::Now()-startFFT).Format());
 //    throw;
 
-	// To add error to the global alignment
-	float tilt_axis = 0; // degrees from Y-axis FIXME thickness calc, water padding, a few others are only valid for 0* tilt axis.
-	float in_plane_sigma = 2; // spread in-plane angles based on neighbors
-	float tilt_angle_sigma = 0.1; //;
-	float magnification_sigma = 0.0001;//;
 
 
 
-	float pg_sign;
-	float fp_sign;
-	float ctf_sign;
-
-	if (flip_phase_grating) { pg_sign = -1; } else { pg_sign = 1;}
-	if (flip_fresnel_propagator) {fp_sign = 0; } else {fp_sign = PI;}
-	if (flip_ctf) { ctf_sign = PI ;} else {ctf_sign = 0;}
 
 
 	if (use_existing_params)
@@ -825,7 +905,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<float> uniform_dist(0.000000001, 1.0);
+    std::uniform_real_distribution<float> uniform_dist(0.000000001f, 1.0f);
 
 
 
@@ -838,10 +918,10 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 			wxPrintf("\n\nUsing an existing parameter file only supported on a particle stack\n\n");
 			throw;
 		}
-//    	max_tilt  = 60.0;
+//    	max_tilt  = 60.0f;
 //    	float tilt_range = max_tilt;
-//    	float tilt_inc = 3.0;
-    	max_tilt  = 0.0;
+//    	float tilt_inc = 3.0f;
+    	max_tilt  = 0.0f;
     	for (int iTilt = 0; iTilt < nTilts; iTilt++)
     	{
     		if (fabsf(SET_TILT_ANGLES[iTilt]) > max_tilt) { max_tilt = fabsf(SET_TILT_ANGLES[iTilt]) ; }
@@ -859,9 +939,9 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 
 
-    	std::normal_distribution<float>  norm_dist_inplane(0.0,in_plane_sigma);
-    	std::normal_distribution<float>  norm_dist_tiltangle(0.0,tilt_angle_sigma);
-    	std::normal_distribution<float>  norm_dist_mag(0.0,magnification_sigma);
+    	std::normal_distribution<float>  norm_dist_inplane(0.0f,in_plane_sigma);
+    	std::normal_distribution<float>  norm_dist_tiltangle(0.0f,tilt_angle_sigma);
+    	std::normal_distribution<float>  norm_dist_mag(0.0f,magnification_sigma);
 
     	for (int iTilt=0; iTilt < nTilts; iTilt++)
     	{
@@ -871,11 +951,11 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 //    		tilt_theta[iTilt] = -((tilt_range - (float)iTilt*tilt_inc) + this->stdErr * norm_dist_tiltangle(gen));
     		tilt_theta[iTilt] = SET_TILT_ANGLES[iTilt];
     		wxPrintf("%f\n",SET_TILT_ANGLES[iTilt]);
-    		tilt_phi[iTilt] = 0;
+    		tilt_phi[iTilt] = 0.0f;
     		shift_x[iTilt] = this->stdErr * 8*uniform_dist(gen) ;
     		shift_y[iTilt] = this->stdErr * 8*uniform_dist(gen);
-    		shift_z[iTilt] = 0;
-    		mag_diff[iTilt] = 1.0 + (this->stdErr*norm_dist_mag(gen));
+    		shift_z[iTilt] = 0.0f;
+    		mag_diff[iTilt] = 1.0f + (this->stdErr*norm_dist_mag(gen));
 
 
 
@@ -884,7 +964,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
     }
     else if ( this->doParticleStack > 0)
     {
-    	max_tilt = 0.0;
+    	max_tilt = 0.0f;
     	nTilts = this->doParticleStack;
     	tilt_psi   = new float[nTilts];
     	tilt_theta = new float[nTilts];
@@ -894,7 +974,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
     	shift_z    = new float[nTilts];
     	mag_diff   = new float[nTilts];
 
-    	std::normal_distribution<float> normal_dist(0.0,1.0);
+    	std::normal_distribution<float> normal_dist(0.0f,1.0f);
 
     	for (int iTilt=0; iTilt < nTilts; iTilt++)
     	{
@@ -914,7 +994,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
     		else
     		{
         		tilt_psi[iTilt] = uniform_dist(gen)*360.0f; // *(2*PI);
-        		tilt_theta[iTilt] = std::acos(2*uniform_dist(gen)-1) * 180.0f/(float)PI;
+        		tilt_theta[iTilt] = std::acos(2.0f*uniform_dist(gen)-1.0f) * 180.0f/(float)PI;
         		tilt_phi[iTilt] = -1*tilt_psi[iTilt] + uniform_dist(gen)*360.0f; //*(2*PI);
 
         		shift_x[iTilt]  = this->stdErr * normal_dist(gen); // should be in the low tens of Angstroms
@@ -960,7 +1040,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 	RotationMatrix particle_rot;
 	Image *reference_stack;
 
-	bool ONLY_SAVE_SUMS = true;
+
 	// TODO Set allocation to save all frames _ edit needed spots down the road
 	if (this->doParticleStack > 0 && ONLY_SAVE_SUMS)
 	{
@@ -988,7 +1068,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 	// We only want one water box for a tilt series. For a particle stack, re-initialize for each particle.
 	Water water_box(DO_PHASE_PLATE);
 	// Create a new PDB object that represents the current state of the specimen, with each local motion applied.
-	PDB current_specimen(this->number_of_non_water_atoms, this->do3d);
+	PDB current_specimen(this->number_of_non_water_atoms, this->do3d, this->minimum_paddeding_x_and_y, this->propagation_distance);
 
 	// Keep a copy of the unscaled pixel size to handle magnification changes.
 	this->unscaled_pixel_size = this->wanted_pixel_size;
@@ -1044,7 +1124,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 		    	wxPrintf("For the particle stack, stretching the defocus by %3.2f percent and randmozing the astigmatism angle -90,90",100*defocus_randomizer);
 		    	wanted_defocus_1_in_angstroms = this->defocus*(1+defocus_randomizer) + shift_z[iTilt]; // A
 		    	wanted_defocus_2_in_angstroms = this->defocus*(1-defocus_randomizer) + shift_z[iTilt]; //A
-				wanted_astigmatism_azimuth = (uniform_dist(gen)-0.5)*179.99;
+				wanted_astigmatism_azimuth = (uniform_dist(gen)-0.5f)*179.99f;
 			}
 
 
@@ -1058,7 +1138,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 		if (SCALE_DEFOCUS_TO_MATCH_300)
 		{
-			scale_defocus = (0.0196869700756145 / this->wavelength);
+			scale_defocus = (0.0196869700756145f / this->wavelength);
 			wanted_defocus_1_in_angstroms *= scale_defocus;
 			wanted_defocus_2_in_angstroms *= scale_defocus;
 			wxPrintf("Scaling the defocus by %6.6f to match the def at 300 KeV\n", scale_defocus);
@@ -1102,7 +1182,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
     	float slab_oZ;
 	    int nSlabs;
 		int nS;
-		double full_tilt_radians = 0;
+		float full_tilt_radians = 0;
 
 		// Exposure filter TODO add check that it is wanted
 		float *dose_filter;
@@ -1113,28 +1193,28 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 		Image jpr_sum_detector;
 
 		// Create a new PDB object that represents the current state of the specimen, with each local motion applied.
-		PDB current_specimen(this->number_of_non_water_atoms, this->do3d);
+		PDB current_specimen(this->number_of_non_water_atoms, this->do3d, this->minimum_paddeding_x_and_y, this->propagation_distance);
 		// Include the max rand shift in z for thickness
-		current_specimen.TransformLocalAndCombine(pdb_ensemble,this->number_of_pdbs,this->number_of_non_water_atoms,this->wanted_pixel_size, time_step, particle_rot, 0.0); // Shift just defocus shift_z[iTilt]);
+		current_specimen.TransformLocalAndCombine(pdb_ensemble,this->number_of_pdbs,this->number_of_non_water_atoms,this->wanted_pixel_size, time_step, particle_rot, 0.0f); // Shift just defocus shift_z[iTilt]);
 
 		// Calculated cutoffs to include > 99.5% of the potential for water at the given bFactor
-		if (fabsf(this->min_bFactor + 1) < 1e-3)
+		if (fabsf(this->min_bFactor + 1.0f) < 1e-3)
 		{
 			float BF = MIN_BFACTOR;
-		    this->size_neighborhood 	  =  1 + myroundint( (0.4 *sqrtf(0.6*BF) + 0.2) / this->wanted_pixel_size);
+		    this->size_neighborhood 	  =  1 + myroundint( (0.4f *sqrtf(0.6f*BF) + 0.2f) / this->wanted_pixel_size);
 		    wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
 		}
 		else
 		{
 			float BF = return_bfactor_given_dose(current_specimen.average_bFactor);
-		    this->size_neighborhood 	  =  1 + myroundint( (0.4 *sqrtf(0.6*BF) + 0.2) / this->wanted_pixel_size);
+		    this->size_neighborhood 	  =  1 + myroundint( (0.4f *sqrtf(0.6f*BF) + 0.2f) / this->wanted_pixel_size);
 		    wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
 		}
 
 
 
 
-		this->size_neighborhood_water = myroundint(ceilf(1.0 / this->wanted_pixel_size));
+		this->size_neighborhood_water = myroundint(ceilf(1.0f / this->wanted_pixel_size));
 //	    this->size_neighborhood 	  = myroundint(ceilf(powf(CALC_DIST_OTHER,0.5)/ this->wanted_pixel_size));
 //	    this->size_neighborhood_water = myroundint(ceilf(powf(CALC_DIST_WATER,0.5)/ this->wanted_pixel_size));
 	    wxPrintf("using neighboorhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n",powf(this->size_neighborhood_water*2+1,3),powf(this->size_neighborhood*2+1,3));
@@ -1147,7 +1227,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 	        for (int iWater = 0 ; iWater < SUB_PIXEL_NeL; iWater++)
 	        {
 	            projected_water[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
-	            projected_water[iWater].SetToConstant(0.0);
+	            projected_water[iWater].SetToConstant(0.0f);
 	        }
 
 			wxPrintf("Starting projected water calc with sizeN %d, %d\n",this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1);
@@ -1183,34 +1263,35 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 
 				jpr_sum_phase.Allocate(water_box.vol_nX,water_box.vol_nY,true);
-				jpr_sum_phase.SetToConstant(0.0);
+				jpr_sum_phase.SetToConstant(0.0f);
 
 				jpr_sum_detector.Allocate(water_box.vol_nX,water_box.vol_nY,true);
-				jpr_sum_detector.SetToConstant(0.0);
+				jpr_sum_detector.SetToConstant(0.0f);
 
 			}
 			else
 			{
 				jpr_sum_phase.Allocate(JPR_SIZE,JPR_SIZE,true);
-				jpr_sum_phase.SetToConstant(0.0);
+				jpr_sum_phase.SetToConstant(0.0f);
 
 				jpr_sum_detector.Allocate(JPR_SIZE,JPR_SIZE,true);
-				jpr_sum_detector.SetToConstant(0.0);
+				jpr_sum_detector.SetToConstant(0.0f);
 			}
 
 		}
 
 		// For the tilt pair experiment, add additional drift to the specimen. This is a rough fit to the mean abs shifts measured over 0.33 elec/A^2 frames on my ribo data
 		// The tilted is roughly 4x worse than the untilted.
-		float iDrift = 1.75 * (4.684 * expf(-1.0f*powf((iFrame*dose_per_frame-0.2842)/0.994,2)) +
-					          0.514 * expf(-1.0f*powf((iFrame*dose_per_frame-3.21  )/7.214,2))) * (0.25 + 0.75*iTilt);
+		float iDrift = 1.75f * (4.684f * expf(-1.0f*powf((iFrame*dose_per_frame-0.2842f)/0.994f,2)) +
+					            0.514f * expf(-1.0f*powf((iFrame*dose_per_frame-3.21f  )/7.214f,2))) * (0.25f + 0.75f*iTilt);
 
 		total_drift += 0.0f;//iDrift/sqrt(2);
+
 		// Apply acurrent_specimen.vol_nY global shifts and rotations
 //		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, shift_x[iTilt], shift_y[iTilt], shift_z[iTilt], rotate_waters);
 		wxPrintf("\n\tDrift for iTilt %d, iFrame %d is %4.4f Ang\n",iTilt,iFrame,total_drift);
 
-		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0, rotate_waters);
+		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0f, rotate_waters);
 
 		// Compute the solvent fraction, with ratio of protein/ water density.
 		// Assuming an average 2.2Ang vanderwaal radius ~50 cubic ang, 33.33 waters / cubic nanometer.
@@ -1277,22 +1358,22 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 		// TODO with new solvent add, the edges should not need to be tapered or padded
 		sum_image[iTilt_IDX].Allocate(padded_x_dim,padded_y_dim,true);
-		sum_image[iTilt_IDX].SetToConstant(0.0);
+		sum_image[iTilt_IDX].SetToConstant(0.0f);
 
 
 		number_of_pixels_averaged.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,true);
-		number_of_pixels_averaged.SetToConstant(0.0);
+		number_of_pixels_averaged.SetToConstant(0.0f);
 		number_of_non_waters_averaged.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,true);
-		number_of_non_waters_averaged.SetToConstant(0.0);
+		number_of_non_waters_averaged.SetToConstant(0.0f);
 
 
 		if (this->tilt_series)
 		{
-			full_tilt_radians = PI/180*(tilt_theta[iTilt]);
+			full_tilt_radians = PI/180.0f*(tilt_theta[iTilt]);
 		}
 		else
 		{
-			full_tilt_radians = PI/180*(euler2);
+			full_tilt_radians = PI/180.0f*(euler2);
 		}
 		if (DO_PRINT) {wxPrintf("tilt angle in radians/deg %2.2e/%2.2e iFrame %d/%f\n",full_tilt_radians,tilt_theta[iTilt],iFrame,this->number_of_frames);}
 
@@ -1306,17 +1387,14 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 		wxPrintf("\nWorking on iTilt %d at %f degrees for frame %d\n",iTilt,tilt_theta[iTilt],iFrame);
 
 		//  TODO Should separate the mimimal slab thickness, which is a smaller to preserve memory from the minimal prop distance (ie. project sub regions of a slab)
-		if (defocus_tolerance < 0 ) {nSlabs  = 1;}  else { nSlabs = ceilf( (float)rotated_Z * this->wanted_pixel_size/ defocus_tolerance);}
-		if (DEBUG_MSG) {wxPrintf("Calc N Slabs %d nSlabs %d rotZ %f \n",nSlabs,rotated_Z,this->wanted_pixel_size/ defocus_tolerance);}
+		if ( this->propagation_distance < 0 ) {nSlabs  = 1;}  else { nSlabs = ceilf( (float)rotated_Z * this->wanted_pixel_size/  this->propagation_distance);}
 		Image *scattering_potential = new Image[nSlabs];
 		Image *ref_potential;
 		if (SAVE_REF) { ref_potential = new Image[nSlabs] ;}
 
 
-		if (DEBUG_MSG) {wxPrintf("Declare scattering potential\n");}
 		nS = ceil((float)rotated_Z / (float)nSlabs);
 		wxPrintf("rotated_Z %d nSlabs %d nS %d\n",rotated_Z,nSlabs,nS);
-		if (DEBUG_MSG) {wxPrintf("Calc NS\n");}
 
 		int slabIDX_start[nSlabs];
 		int slabIDX_end[nSlabs];
@@ -1770,7 +1848,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 		}
 		average_propagator /= nSlabs;
 		defocus_offset -= average_propagator/2.0f;
-		defocus_offset = ((float)rotated_Z*this->wanted_pixel_size + defocus_tolerance)/2;
+		defocus_offset = ((float)rotated_Z*this->wanted_pixel_size +  this->propagation_distance)/2;
 
 		wxPrintf("Propagator distance is %3.3e Angstroms, with offset for CTF of %3.3e Angstroms for the specimen.\n",propagator_distance[0],defocus_offset);
 
@@ -1779,112 +1857,111 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 //		#pragma omp parallel num_threads(4)
 //		{
-		if (do_complexCTF == true) // this should be do_multi_slice
+
+		int nLoops = 1;
+		if (SAVE_REF) { nLoops = 2; }
+
+		for (int iLoop = 0; iLoop < nLoops; iLoop ++)
 		{
-			int nLoops = 1;
-			if (SAVE_REF) { nLoops = 2; }
-
-			for (int iLoop = 0; iLoop < nLoops; iLoop ++)
-			{
 
 
-			int iPar;
-			int iSeq;
+		int iPar;
+		int iSeq;
 
-			Image *temp_img = new Image[4];
-			Image *t_N = new Image[4];
-			Image *wave_function = new Image[2];
-			Image *phase_grating = new Image[2];
-			CTF *ctf = new CTF[2];
-			CTF *propagator = new CTF[2];
+		Image *temp_img = new Image[4];
+		Image *t_N = new Image[4];
+		Image *wave_function = new Image[2];
+		Image *phase_grating = new Image[2];
+		CTF *ctf = new CTF[2];
+		CTF *propagator = new CTF[2];
 
 
 
-			// Values to use in parallel sections
-			const float set_wave_func[2] = {sqrtf(this->dose_per_frame),0.0f};
-			const int	copy_from_1[4] 	 = {0,1,1,0};
-			const int	copy_from_2[4]	 = {0,1,1,0};
-			const int  	mult_by[4]		 = {0,1,0,1};
-			const int 	prop_apply_real[4] = {0,0,1,1};
-			const int 	prop_apply_imag[4] = {1,1,0,0};
-			const int  	ctf_apply[4]	   = {0,1,0,1};
+		// Values to use in parallel sections
+		const float set_wave_func[2] = {this->set_real_part_wave_function_in,0.0f};
+		const int	copy_from_1[4] 	 = {0,1,1,0};
+		const int	copy_from_2[4]	 = {0,1,1,0};
+		const int  	mult_by[4]		 = {0,1,0,1};
+		const int 	prop_apply_real[4] = {0,0,1,1};
+		const int 	prop_apply_imag[4] = {1,1,0,0};
+		const int  	ctf_apply[4]	   = {0,1,0,1};
 
-		    wxPrintf("%f %f %f %f %f %f\n",wanted_additional_phase_shift_in_radians,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth, wanted_spherical_aberration,propagator_distance[iSlab]);
-			// get values for just sin or cos of the ctf by manipulating the amplitude term
-			ctf[0].Init(wanted_acceleration_voltage,
-						  wanted_spherical_aberration,
-						  1.0,
-						  wanted_defocus_1_in_angstroms+defocus_offset,
-						  wanted_defocus_2_in_angstroms+defocus_offset,
-						  wanted_astigmatism_azimuth,
-						  this->wanted_pixel_size,
-						  wanted_additional_phase_shift_in_radians+PI);
-			ctf[1].Init(wanted_acceleration_voltage,
-						  wanted_spherical_aberration,
-						  0.0,
-						  wanted_defocus_1_in_angstroms+defocus_offset,
-						  wanted_defocus_2_in_angstroms+defocus_offset,
-						  wanted_astigmatism_azimuth,
-						  this->wanted_pixel_size,
-						  wanted_additional_phase_shift_in_radians+PI);
+		wxPrintf("%f %f %f %f %f %f\n",wanted_additional_phase_shift_in_radians,wanted_defocus_1_in_angstroms,wanted_defocus_2_in_angstroms,wanted_astigmatism_azimuth, wanted_spherical_aberration,propagator_distance[iSlab]);
+		// get values for just sin or cos of the ctf by manipulating the amplitude term
+		ctf[0].Init(wanted_acceleration_voltage,
+					  wanted_spherical_aberration,
+					  1.0,
+					  wanted_defocus_1_in_angstroms+defocus_offset,
+					  wanted_defocus_2_in_angstroms+defocus_offset,
+					  wanted_astigmatism_azimuth,
+					  this->wanted_pixel_size,
+					  wanted_additional_phase_shift_in_radians+PI);
+		ctf[1].Init(wanted_acceleration_voltage,
+					  wanted_spherical_aberration,
+					  0.0,
+					  wanted_defocus_1_in_angstroms+defocus_offset,
+					  wanted_defocus_2_in_angstroms+defocus_offset,
+					  wanted_astigmatism_azimuth,
+					  this->wanted_pixel_size,
+					  wanted_additional_phase_shift_in_radians+PI);
 
-			if (DO_PRINT) {wxPrintf("Propdist %f\n",propagator_distance[iSlab]);}
-			// get values for just sin or cos of the ctf by manipulating the amplitude term
-			// For the fresnel prop, set Cs = 0 and def = dz
+		if (DO_PRINT) {wxPrintf("Propdist %f\n",propagator_distance[iSlab]);}
+		// get values for just sin or cos of the ctf by manipulating the amplitude term
+		// For the fresnel prop, set Cs = 0 and def = dz
 
-			propagator[0].Init(wanted_acceleration_voltage,
-							   0.0,
-							   1.0,
-							   -defocus_tolerance,
-							   -defocus_tolerance,
-							   0.0,
-							   this->wanted_pixel_size,
-							   0.0 + PI);
-							// Shift of PI puts the image farther from focus, shift of zero puts it closer
-			propagator[1].Init(wanted_acceleration_voltage,
-							   0.0,
-							   0.0,
-							   -defocus_tolerance,
-							   -defocus_tolerance,
-							   0.0,
-							   this->wanted_pixel_size,
-							   0.0+PI);
+		propagator[0].Init(wanted_acceleration_voltage,
+						   0.0,
+						   1.0,
+						   - this->propagation_distance,
+						   - this->propagation_distance,
+						   0.0,
+						   this->wanted_pixel_size,
+						   0.0 + PI);
+						// Shift of PI puts the image farther from focus, shift of zero puts it closer
+		propagator[1].Init(wanted_acceleration_voltage,
+						   0.0,
+						   0.0,
+						   - this->propagation_distance,
+						   - this->propagation_distance,
+						   0.0,
+						   this->wanted_pixel_size,
+						   0.0+PI);
 
 
 
 
-			#pragma omp parallel for num_threads(propagate_threads_2) if (DO_PARALLEL)
-			for (iPar = 0; iPar < 2; iPar++)
-			{
-				wave_function[iPar].Allocate(padded_x_dim,padded_y_dim,1);
-				wave_function[iPar].SetToConstant(set_wave_func[iPar]);
-				phase_grating[iPar].Allocate(padded_x_dim,padded_y_dim,1);
-			}
+		#pragma omp parallel for num_threads(propagate_threads_2)
+		for (iPar = 0; iPar < 2; iPar++)
+		{
+			wave_function[iPar].Allocate(padded_x_dim,padded_y_dim,1);
+			wave_function[iPar].SetToConstant(set_wave_func[iPar]);
+			phase_grating[iPar].Allocate(padded_x_dim,padded_y_dim,1);
+		}
 
-			#pragma omp parallel for num_threads(propagate_threads_4) if (DO_PARALLEL)
-			for (iPar = 0; iPar < 4; iPar++)
-			{
-				t_N[iPar].Allocate(padded_x_dim,padded_y_dim,1);
-				if (DO_PRINT) {wxPrintf("Allocating t_N %d\n",iPar);}
-				t_N[iPar].SetToConstant(0.0);
-				temp_img[iPar].Allocate(padded_x_dim,padded_y_dim,1);
-			}
+		#pragma omp parallel for num_threads(propagate_threads_4)
+		for (iPar = 0; iPar < 4; iPar++)
+		{
+			t_N[iPar].Allocate(padded_x_dim,padded_y_dim,1);
+			if (DO_PRINT) {wxPrintf("Allocating t_N %d\n",iPar);}
+			t_N[iPar].SetToConstant(0.0);
+			temp_img[iPar].Allocate(padded_x_dim,padded_y_dim,1);
+		}
 
 
-			for (int iSlab = 0; iSlab < nSlabs; iSlab++)
-			{
+		for (int iSlab = 0; iSlab < nSlabs; iSlab++)
+		{
 
-				// Taper here?
-				this->taper_edges(scattering_potential, iSlab);
+			// Taper here?
+			this->taper_edges(scattering_potential, iSlab);
 
 //				// Zero specimen = constant potential
 //				phase_grating[0].SetToConstant(1.0);
 //				phase_grating[1].SetToConstant(1.0);
-				// Convert the potential to the arguments of the complex phase grating (exp(-1i*interactionConst*ProjectedPotential))
-				phase_grating[0].SetToConstant(0.0);
-				phase_grating[1].SetToConstant(0.0);
-				scattering_potential[iSlab].ClipInto(&phase_grating[0],this->image_mean[iSlab]);
-				scattering_potential[iSlab].ClipInto(&phase_grating[1],this->image_mean[iSlab]);
+			// Convert the potential to the arguments of the complex phase grating (exp(-1i*interactionConst*ProjectedPotential))
+			phase_grating[0].SetToConstant(0.0);
+			phase_grating[1].SetToConstant(0.0);
+			scattering_potential[iSlab].ClipInto(&phase_grating[0],this->image_mean[iSlab]);
+			scattering_potential[iSlab].ClipInto(&phase_grating[1],this->image_mean[iSlab]);
 
 //				if (make_inelastic_image)
 //				{
@@ -1892,171 +1969,171 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 //					phase_grating[1].MultiplyByConstant(3.3);
 //
 //				}
-				if (make_inelastic_image)
+			if (make_inelastic_image)
+			{
+				// REMOVE ME - blur by energy spread of plasmon peak (approx by gauss2 to start)
+				for (int iPG = 0; iPG < 2 ; iPG++)
 				{
-					// REMOVE ME - blur by energy spread of plasmon peak (approx by gauss2 to start)
-					for (int iPG = 0; iPG < 2 ; iPG++)
+
+
+					float starting_sum = phase_grating[iPG].ReturnSumOfSquares(0,0,0,0);
+					if (starting_sum > 1e-6)
 					{
 
+					phase_grating[iPG].MultiplyByConstant(3.3);
+					phase_grating[iPG].ForwardFFT(true);
+					int i;
+					int j;
 
-						float starting_sum = phase_grating[iPG].ReturnSumOfSquares(0,0,0,0);
-						if (starting_sum > 1e-6)
+					float x;
+					float y;
+
+					long pixel_counter = 0;
+					float frequency_squared;
+
+					for (j = 0; j <= phase_grating[iPG].physical_upper_bound_complex_y; j++)
+					{
+						y = powf(phase_grating[iPG].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * phase_grating[iPG].fourier_voxel_size_y, 2);
+						//#pragma omp simd simdlen(16)
+						for (i = 0; i <= phase_grating[iPG].physical_upper_bound_complex_x; i++)
 						{
+							x = powf(i * phase_grating[iPG].fourier_voxel_size_x, 2);
 
-						phase_grating[iPG].MultiplyByConstant(3.3);
-						phase_grating[iPG].ForwardFFT(true);
-						int i;
-						int j;
+							// compute squared radius, in units of reciprocal pixels angstroms
+							frequency_squared = (x + y) / this->wanted_pixel_size_sq ;
+							phase_grating[iPG].complex_values[pixel_counter] *= expf(-50*frequency_squared);// (INELASTIC_OFFSET+expf(-2500*powf(frequency_squared,2)))/(1+INELASTIC_OFFSET);
+							pixel_counter++;
 
-						float x;
-						float y;
-
-						long pixel_counter = 0;
-						float frequency_squared;
-
-						for (j = 0; j <= phase_grating[iPG].physical_upper_bound_complex_y; j++)
-						{
-							y = powf(phase_grating[iPG].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * phase_grating[iPG].fourier_voxel_size_y, 2);
-							//#pragma omp simd simdlen(16)
-							for (i = 0; i <= phase_grating[iPG].physical_upper_bound_complex_x; i++)
-							{
-								x = powf(i * phase_grating[iPG].fourier_voxel_size_x, 2);
-
-								// compute squared radius, in units of reciprocal pixels angstroms
-								frequency_squared = (x + y) / this->wanted_pixel_size_sq ;
-								phase_grating[iPG].complex_values[pixel_counter] *= expf(-50*frequency_squared);// (INELASTIC_OFFSET+expf(-2500*powf(frequency_squared,2)))/(1+INELASTIC_OFFSET);
-								pixel_counter++;
-
-							}
 						}
-						phase_grating[iPG].BackwardFFT();
-						}
-
-
 					}
+					phase_grating[iPG].BackwardFFT();
+					}
+
+
+				}
+			}
+
+
+			  MyDebugAssertFalse(scattering_potential[iSlab].HasNan(),"There is a NAN 1");
+			  MyDebugAssertFalse(phase_grating[0].HasNan(),"There is a NAN 2");
+			  MyDebugAssertFalse(phase_grating[1].HasNan(),"There is a NAN 3");
+
+
+
+			if (DO_COMPEX_AMPLITUDE_TERM)
+			{
+				#pragma omp simd
+				for ( long iPixel = 0; iPixel < phase_grating[0].real_memory_allocated; iPixel++)
+				{
+					phase_grating[0].real_values[iPixel] = expf(-1*wanted_amplitude_contrast*phase_grating[0].real_values[iPixel]) * std::cos(phase_grating[0].real_values[iPixel]);
 				}
 
-
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(scattering_potential[iSlab].HasNan(),"There is a NAN 1");
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(phase_grating[0].HasNan(),"There is a NAN 2");
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(phase_grating[1].HasNan(),"There is a NAN 3");
-
-
-
-				if (DO_COMPEX_AMPLITUDE_TERM)
+				#pragma omp simd
+				for ( long iPixel = 0; iPixel < phase_grating[1].real_memory_allocated; iPixel++)
 				{
-					#pragma omp simd
-					for ( long iPixel = 0; iPixel < phase_grating[0].real_memory_allocated; iPixel++)
-					{
-						phase_grating[0].real_values[iPixel] = exp(-1*wanted_amplitude_contrast*phase_grating[0].real_values[iPixel]) * std::cos(phase_grating[0].real_values[iPixel]);
-					}
+					phase_grating[1].real_values[iPixel] = expf(-1*wanted_amplitude_contrast*phase_grating[1].real_values[iPixel]) * std::sin(phase_grating[1].real_values[iPixel]);
+				}
+			}
+			else
+			{
+				#pragma omp simd
+				// Could make this a sub-routine and use c++ threads or a logical arg to handle both cases (sin/cos)
+				for ( long iPixel = 0; iPixel < phase_grating[0].real_memory_allocated; iPixel++)
+				{
+					phase_grating[0].real_values[iPixel] = std::cos(phase_grating[0].real_values[iPixel]);
+				}
+				#pragma omp simd
+				for ( long iPixel = 0; iPixel < phase_grating[1].real_memory_allocated; iPixel++)
+				{
+					phase_grating[1].real_values[iPixel] = std::sin(phase_grating[1].real_values[iPixel]);
+				}
+			}
 
-					#pragma omp simd
-					for ( long iPixel = 0; iPixel < phase_grating[1].real_memory_allocated; iPixel++)
-					{
-						phase_grating[1].real_values[iPixel] = exp(-1*wanted_amplitude_contrast*phase_grating[1].real_values[iPixel]) * std::sin(phase_grating[1].real_values[iPixel]);
-					}
+
+			  MyDebugAssertFalse(phase_grating[0].HasNan(),"There is a NAN 2a");
+			  MyDebugAssertFalse(phase_grating[1].HasNan(),"There is a NAN 3a");
+
+			#pragma omp parallel for num_threads(propagate_threads_4)
+			for (iPar = 0; iPar < 4; iPar++)
+			{
+				t_N[iPar].CopyFrom(&wave_function[copy_from_1[iPar]]);
+				t_N[iPar].MultiplyPixelWise(phase_grating[mult_by[iPar]]);
+
+				  MyDebugAssertFalse(t_N[iPar].HasNan(),"There is a NAN t11");
+				t_N[iPar].ForwardFFT(true);
+				  MyDebugAssertFalse(t_N[iPar].HasNan(),"There is a NAN t11F");
+
+			}
+
+			// Reset the wave function to zero to store the update results
+			wave_function[0].SetToConstant(0.0);
+			wave_function[1].SetToConstant(0.0);
+
+			#pragma omp parallel for num_threads(propagate_threads_4)
+			for (iPar = 0; iPar < 4; iPar++)
+			{
+
+
+				// Get the real part of the new exit wave
+				temp_img[iPar].CopyFrom(&t_N[iPar]);
+				  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1");
+
+
+				temp_img[iPar].ApplyCTF(propagator[prop_apply_real[iPar]],false);
+				  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1CTF");
+				temp_img[iPar].BackwardFFT();
+				  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1BFFT");
+
+			}
+
+			for (iSeq = 0; iSeq < 4; iSeq++)
+			{
+				if (iSeq == 0)
+				{
+					wave_function[0].AddImage(&temp_img[iSeq]);
 				}
 				else
 				{
-					#pragma omp simd
-					// Could make this a sub-routine and use c++ threads or a logical arg to handle both cases (sin/cos)
-					for ( long iPixel = 0; iPixel < phase_grating[0].real_memory_allocated; iPixel++)
-					{
-						phase_grating[0].real_values[iPixel] = std::cos(phase_grating[0].real_values[iPixel]);
-					}
-					#pragma omp simd
-					for ( long iPixel = 0; iPixel < phase_grating[1].real_memory_allocated; iPixel++)
-					{
-						phase_grating[1].real_values[iPixel] = std::sin(phase_grating[1].real_values[iPixel]);
-					}
+					wave_function[0].SubtractImage(&temp_img[iSeq]);
 				}
+			}
 
 
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(phase_grating[0].HasNan(),"There is a NAN 2a");
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(phase_grating[1].HasNan(),"There is a NAN 3a");
+			#pragma omp parallel for num_threads(propagate_threads_4)
+			for (iPar = 0; iPar < 4; iPar++)
+			{
 
-				#pragma omp parallel for num_threads(propagate_threads_4) if (DO_PARALLEL)
-				for (iPar = 0; iPar < 4; iPar++)
+
+				// Get the real part of the new exit wave
+				temp_img[iPar].CopyFrom(&t_N[iPar]);
+				  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1");
+
+
+				temp_img[iPar].ApplyCTF(propagator[prop_apply_imag[iPar]],false);
+				MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1CTF");
+				temp_img[iPar].BackwardFFT();
+				  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1BFFT");
+
+			}
+
+			for (iSeq = 0; iSeq < 4; iSeq++)
+			{
+				if (iSeq == 1)
 				{
-					t_N[iPar].CopyFrom(&wave_function[copy_from_1[iPar]]);
-					t_N[iPar].MultiplyPixelWise(phase_grating[mult_by[iPar]]);
-
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(t_N[iPar].HasNan(),"There is a NAN t11");
-					t_N[iPar].ForwardFFT(true);
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(t_N[iPar].HasNan(),"There is a NAN t11F");
-
+					wave_function[1].SubtractImage(&temp_img[iSeq]);
 				}
-
-				// Reset the wave function to zero to store the update results
-				wave_function[0].SetToConstant(0.0);
-				wave_function[1].SetToConstant(0.0);
-
-				#pragma omp parallel for num_threads(propagate_threads_4) if (DO_PARALLEL)
-				for (iPar = 0; iPar < 4; iPar++)
+				else
 				{
-
-
-					// Get the real part of the new exit wave
-					temp_img[iPar].CopyFrom(&t_N[iPar]);
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1");
-
-
-					temp_img[iPar].ApplyCTF(propagator[prop_apply_real[iPar]],false);
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1CTF");
-					temp_img[iPar].BackwardFFT();
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1BFFT");
-
+					wave_function[1].AddImage(&temp_img[iSeq]);
 				}
-
-				for (iSeq = 0; iSeq < 4; iSeq++)
-				{
-					if (iSeq == 0)
-					{
-						wave_function[0].AddImage(&temp_img[iSeq]);
-					}
-					else
-					{
-						wave_function[0].SubtractImage(&temp_img[iSeq]);
-					}
-				}
-
-
-				#pragma omp parallel for num_threads(propagate_threads_4) if (DO_PARALLEL)
-				for (iPar = 0; iPar < 4; iPar++)
-				{
-
-
-					// Get the real part of the new exit wave
-					temp_img[iPar].CopyFrom(&t_N[iPar]);
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1");
-
-
-					temp_img[iPar].ApplyCTF(propagator[prop_apply_imag[iPar]],false);
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1CTF");
-					temp_img[iPar].BackwardFFT();
-					if (DEBUG_NAN == true)  MyDebugAssertFalse(temp_img[iPar].HasNan(),"There is a NAN temp1BFFT");
-
-				}
-
-				for (iSeq = 0; iSeq < 4; iSeq++)
-				{
-					if (iSeq == 1)
-					{
-						wave_function[1].SubtractImage(&temp_img[iSeq]);
-					}
-					else
-					{
-						wave_function[1].AddImage(&temp_img[iSeq]);
-					}
-				}
+			}
 
 
 
-			} // end of loop over slabs
+		} // end of loop over slabs
 
 
-//				#pragma omp parallel for num_threads(propagate_threads_2) if (DO_PARALLEL)
+//				#pragma omp parallel for num_threads(propagate_threads_2)
 //				for (iPar = 0; iPar < 2; iPar++)
 //				{
 //					// Now we need to add the CTF (F(w_Real +i*w_Image)*(exp(-1i*X))
@@ -2064,236 +2141,251 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 //
 //				}
 
-				#pragma omp parallel for num_threads(propagate_threads_4) if (DO_PARALLEL)
-				for (iPar = 0; iPar < 4; iPar++)
+			#pragma omp parallel for num_threads(propagate_threads_4)
+			for (iPar = 0; iPar < 4; iPar++)
+			{
+
+				// Re-use t_N[0] through t_N[3]
+				t_N[iPar].CopyFrom(&wave_function[copy_from_2[iPar]]);
+				t_N[iPar].ForwardFFT(true);
+				t_N[iPar].ApplyCTF(ctf[ctf_apply[iPar]],false);
+				t_N[iPar].BackwardFFT();
+
+			}
+
+			wave_function[0].SetToConstant(0.0);
+			wave_function[1].SetToConstant(0.0);
+
+			wave_function[0].AddImage(&t_N[0]);
+			wave_function[0].SubtractImage(&t_N[1]);
+			wave_function[1].AddImage(&t_N[2]);
+			wave_function[1].AddImage(&t_N[3]);
+
+			 MyDebugAssertFalse(wave_function[0].HasNan(),"There is a NAN 6");
+			  MyDebugAssertFalse(wave_function[1].HasNan(),"There is a NAN 7");
+
+			if (beam_tilt_x != 0.0 || beam_tilt_y != 0.0)
+			{
+
+				wave_function[0].ForwardFFT(true);
+				wave_function[1].ForwardFFT(true);
+
+				float beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
+				float beam_tilt = sqrtf(powf(beam_tilt_x, 2) + powf(beam_tilt_y, 2)); // * cosf( azimuth - beam_tilt_azimuth );
+				float spherical_aberration_in_angstrom = spherical_aberration * 1e7;
+				float y_fourier_voxel_size_angstrom =  wave_function[0].fourier_voxel_size_y / wanted_pixel_size;
+				float x_fourier_voxel_size_angstrom =  wave_function[0].fourier_voxel_size_y / wanted_pixel_size;
+				float wavelength_squared = powf(wavelength,2);
+
+				float phase_shift;
+				float phase_shift_real;
+				float phase_shift_imag;
+				std::complex<float> tmp_real;
+				std::complex<float> tmp_imag;
+
+				int j;
+				int i;
+
+				long pixel_counter = 0;
+
+				float y_coord_sq;
+				float x_coord_sq;
+
+				float y_coord;
+				float x_coord;
+
+				float frequency_squared;
+				float frequency;
+				float azimuth;
+
+
+				for (j = 0; j <= wave_function[0].physical_upper_bound_complex_y; j++)
 				{
-
-					// Re-use t_N[0] through t_N[3]
-					t_N[iPar].CopyFrom(&wave_function[copy_from_2[iPar]]);
-					t_N[iPar].ForwardFFT(true);
-					t_N[iPar].ApplyCTF(ctf[ctf_apply[iPar]],false);
-					t_N[iPar].BackwardFFT();
-
-				}
-
-				wave_function[0].SetToConstant(0.0);
-				wave_function[1].SetToConstant(0.0);
-
-				wave_function[0].AddImage(&t_N[0]);
-				wave_function[0].SubtractImage(&t_N[1]);
-				wave_function[1].AddImage(&t_N[2]);
-				wave_function[1].AddImage(&t_N[3]);
-
-				if (DEBUG_NAN == true) MyDebugAssertFalse(wave_function[0].HasNan(),"There is a NAN 6");
-				if (DEBUG_NAN == true)  MyDebugAssertFalse(wave_function[1].HasNan(),"There is a NAN 7");
-
-				if (beam_tilt_x != 0.0 || beam_tilt_y != 0.0)
-				{
-
-					wave_function[0].ForwardFFT(true);
-					wave_function[1].ForwardFFT(true);
-
-					float beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
-					float beam_tilt = sqrtf(powf(beam_tilt_x, 2) + powf(beam_tilt_y, 2)); // * cosf( azimuth - beam_tilt_azimuth );
-					float spherical_aberration_in_angstrom = spherical_aberration * 1e7;
-					float y_fourier_voxel_size_angstrom =  wave_function[0].fourier_voxel_size_y / wanted_pixel_size;
-					float x_fourier_voxel_size_angstrom =  wave_function[0].fourier_voxel_size_y / wanted_pixel_size;
-					float wavelength_squared = powf(wavelength,2);
-
-					float phase_shift;
-					float phase_shift_real;
-					float phase_shift_imag;
-					std::complex<float> tmp_real;
-					std::complex<float> tmp_imag;
-
-					int j;
-					int i;
-
-					long pixel_counter = 0;
-
-					float y_coord_sq;
-					float x_coord_sq;
-
-					float y_coord;
-					float x_coord;
-
-					float frequency_squared;
-					float frequency;
-					float azimuth;
+					y_coord = wave_function[0].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * y_fourier_voxel_size_angstrom;
+					y_coord_sq = powf(y_coord, 2.0);
 
 
-					for (j = 0; j <= wave_function[0].physical_upper_bound_complex_y; j++)
+					for (i = 0; i <= wave_function[0].physical_upper_bound_complex_x; i++)
 					{
-						y_coord = wave_function[0].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * y_fourier_voxel_size_angstrom;
-						y_coord_sq = powf(y_coord, 2.0);
+						x_coord = i * x_fourier_voxel_size_angstrom;
+						x_coord_sq = powf(x_coord, 2);
+
+						// Compute the azimuth
+						if ( i == 0 && j == 0 ) {
+							azimuth = 0.0;
+						} else {
+							azimuth = atan2f(y_coord,x_coord);
+						}
 
 
-						for (i = 0; i <= wave_function[0].physical_upper_bound_complex_x; i++)
-						{
-							x_coord = i * x_fourier_voxel_size_angstrom;
-							x_coord_sq = powf(x_coord, 2);
+						// Compute the square of the frequency
+						frequency_squared = x_coord_sq + y_coord_sq;
+						frequency = sqrtf(frequency_squared);
 
-							// Compute the azimuth
-							if ( i == 0 && j == 0 ) {
-								azimuth = 0.0;
-							} else {
-								azimuth = atan2f(y_coord,x_coord);
-							}
-
-
-							// Compute the square of the frequency
-							frequency_squared = x_coord_sq + y_coord_sq;
-							frequency = sqrtf(frequency_squared);
-
-							// First term
-							phase_shift = 2.0f * PI * spherical_aberration_in_angstrom * wavelength_squared  * frequency_squared * frequency * beam_tilt * cosf( azimuth - beam_tilt_azimuth );
-							// Second term
+						// First term
+						phase_shift = 2.0f * PI * spherical_aberration_in_angstrom * wavelength_squared  * frequency_squared * frequency * beam_tilt * cosf( azimuth - beam_tilt_azimuth );
+						// Second term
 //							phase_shift -= 2.0f * PI * spatial_frequency * particle_shift;
 //							phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
 //							if (phase_shift > PI) phase_shift -= 2.0f * PI;
 //							if (phase_shift <= -PI) phase_shift += 2.0f * PI;
 
-							sincosf(phase_shift,&phase_shift_imag, &phase_shift_real);
+						sincosf(phase_shift,&phase_shift_imag, &phase_shift_real);
 
-							tmp_real = wave_function[0].complex_values[pixel_counter] * phase_shift_real -  wave_function[1].complex_values[pixel_counter] * phase_shift_imag;
-							tmp_imag = wave_function[0].complex_values[pixel_counter] * phase_shift_imag +  wave_function[1].complex_values[pixel_counter] * phase_shift_real;
+						tmp_real = wave_function[0].complex_values[pixel_counter] * phase_shift_real -  wave_function[1].complex_values[pixel_counter] * phase_shift_imag;
+						tmp_imag = wave_function[0].complex_values[pixel_counter] * phase_shift_imag +  wave_function[1].complex_values[pixel_counter] * phase_shift_real;
 
-							wave_function[0].complex_values[pixel_counter] = tmp_real;
-							wave_function[1].complex_values[pixel_counter] = tmp_imag;
+						wave_function[0].complex_values[pixel_counter] = tmp_real;
+						wave_function[1].complex_values[pixel_counter] = tmp_imag;
 
-							pixel_counter++;
-						}
+						pixel_counter++;
 					}
-
-					wave_function[0].BackwardFFT();
-								    wave_function[1].BackwardFFT();
-				}
-				#pragma omp simd
-				// Now get the square modulus of the wavefunction
-				for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++)
-				{
-					 sum_image[iTilt_IDX].real_values[iPixel] = (powf(wave_function[0].real_values[iPixel],2) + powf(wave_function[1].real_values[iPixel],2));
 				}
 
-
-			if (SAVE_PROBABILITY_WAVE && iLoop < 1)
+				wave_function[0].BackwardFFT();
+								wave_function[1].BackwardFFT();
+			}
+			#pragma omp simd
+			// Now get the square modulus of the wavefunction
+			for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++)
 			{
-				std::string fileNameOUT = "withProbabilityWave_" + std::to_string(iTilt_IDX) + this->output_filename;
+				 sum_image[iTilt_IDX].real_values[iPixel] = (powf(wave_function[0].real_values[iPixel],2) + powf(wave_function[1].real_values[iPixel],2));
+			}
+
+
+		if (SAVE_PROBABILITY_WAVE && iLoop < 1)
+		{
+			std::string fileNameOUT = "withProbabilityWave_" + std::to_string(iTilt_IDX) + this->output_filename;
+				MRCFile mrc_out(fileNameOUT,true);
+				sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
+				mrc_out.SetPixelSize(this->wanted_pixel_size);
+				mrc_out.CloseFile();
+
+
+
+		}
+
+
+
+
+
+		if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE && iLoop < 1)
+		{
+			// For comparing to JPR @ 0.965
+			Image binImage;
+			binImage.CopyFrom(&sum_image[iTilt_IDX]);
+			if (! DO_PHASE_PLATE)
+			{
+				binImage.Resize(JPR_SIZE,JPR_SIZE,1);
+			}
+			jpr_sum_detector.AddImage(&binImage);
+
+		}
+
+
+
+		if (DO_APPLY_DQE && iLoop < 1)
+		{
+			if (SAVE_WITH_DQE)
+			{
+				std::string fileNameOUT = "withOUT_DQE_" + std::to_string(iTilt_IDX) + this->output_filename;
 					MRCFile mrc_out(fileNameOUT,true);
 					sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
 					mrc_out.SetPixelSize(this->wanted_pixel_size);
 					mrc_out.CloseFile();
-
-
-
 			}
-
-
-
-
-
-			if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE && iLoop < 1)
+			// Now apply Square root of the DQE fit with Fourier series, 1 term. Values now for 300kV @ 3e-/physical pixel*s TODO consider other rates, and actually convert physical pixel size etc.
+			// ONLY VALID UP TO PHYSICAL NYQUIST WHICH SHOULD BE SET TO 1.0
+			this->apply_sqrt_DQE_or_NTF(sum_image,  iTilt_IDX, true);
+			if (SAVE_WITH_DQE)
 			{
-				// For comparing to JPR @ 0.965
-				Image binImage;
-				binImage.CopyFrom(&sum_image[iTilt_IDX]);
-				if (! DO_PHASE_PLATE)
-				{
-					binImage.Resize(JPR_SIZE,JPR_SIZE,1);
-				}
-				jpr_sum_detector.AddImage(&binImage);
-
+				std::string fileNameOUT = "withDQE_" + std::to_string(iTilt_IDX) + this->output_filename;
+					MRCFile mrc_out(fileNameOUT,true);
+					sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
+					mrc_out.SetPixelSize(this->wanted_pixel_size);
+					mrc_out.CloseFile();
 			}
+		}
 
 
 
-			if (DO_APPLY_DQE && iLoop < 1)
+		if (DO_NORMALIZE_SET_DOSE && iLoop < 1)
+		{
+			///sum_image[iTilt_IDX].MultiplyByConstant(DOSE_PER_FRAME);
+			// FIXME this thickness is only valid for a fixed Y-tilt axis
+			float current_thickness = std::min(1.414f*current_specimen.vol_angZ,current_specimen.vol_angZ / fabsf(std::cos(tilt_theta[iTilt]*PI/180.0f)));
+			this->normalize_set_dose_expectation(sum_image, iTilt_IDX, current_thickness);
+			if (SAVE_WITH_NORMALIZED_DOSE)
 			{
-				if (SAVE_WITH_DQE)
-				{
-					std::string fileNameOUT = "withOUT_DQE_" + std::to_string(iTilt_IDX) + this->output_filename;
-						MRCFile mrc_out(fileNameOUT,true);
-						sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
-						mrc_out.SetPixelSize(this->wanted_pixel_size);
-						mrc_out.CloseFile();
-				}
-				// Now apply Square root of the DQE fit with Fourier series, 1 term. Values now for 300kV @ 3e-/physical pixel*s TODO consider other rates, and actually convert physical pixel size etc.
-				// ONLY VALID UP TO PHYSICAL NYQUIST WHICH SHOULD BE SET TO 1.0
-				this->apply_sqrt_DQE_or_NTF(sum_image,  iTilt_IDX, true);
-				if (SAVE_WITH_DQE)
-				{
-					std::string fileNameOUT = "withDQE_" + std::to_string(iTilt_IDX) + this->output_filename;
-						MRCFile mrc_out(fileNameOUT,true);
-						sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
-						mrc_out.SetPixelSize(this->wanted_pixel_size);
-						mrc_out.CloseFile();
-				}
+				std::string fileNameOUT = "withNORMALIZED_DOSE_" + std::to_string(iTilt_IDX) + this->output_filename;
+					MRCFile mrc_out(fileNameOUT,true);
+					sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
+					mrc_out.SetPixelSize(this->wanted_pixel_size);
+					mrc_out.CloseFile();
 			}
+		}
+
+		if (DEBUG_POISSON == false && iLoop < 1 && DO_PHASE_PLATE == false)
+		{
+
+
+			// Next we draw from a poisson distribution and then finally apply the NTF
+			Image cpp_poisson;
+			cpp_poisson.Allocate(sum_image[iTilt_IDX].logical_x_dimension,sum_image[iTilt_IDX].logical_y_dimension,1,true);
+			cpp_poisson.SetToConstant(0.0);
+
+
+			std::default_random_engine generator;
+
+			std::random_device rd;  //Will be used to obtain a seed for the random number engine
+			std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+			std::uniform_real_distribution<> dis(0.000000001, 1.0);
 
 
 
-			if (DO_NORMALIZE_SET_DOSE && iLoop < 1)
+			for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++ )
 			{
-				///sum_image[iTilt_IDX].MultiplyByConstant(DOSE_PER_FRAME);
-				// FIXME this thickness is only valid for a fixed Y-tilt axis
-				float current_thickness = std::min(1.414f*current_specimen.vol_angZ,current_specimen.vol_angZ / fabsf(std::cos(tilt_theta[iTilt]*PI/180.0f)));
-				this->normalize_set_dose_expectation(sum_image, iTilt_IDX, current_thickness);
-				if (SAVE_WITH_NORMALIZED_DOSE)
-				{
-					std::string fileNameOUT = "withNORMALIZED_DOSE_" + std::to_string(iTilt_IDX) + this->output_filename;
-						MRCFile mrc_out(fileNameOUT,true);
-						sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
-						mrc_out.SetPixelSize(this->wanted_pixel_size);
-						mrc_out.CloseFile();
-				}
-			}
-
-			if (DEBUG_POISSON == false && iLoop < 1 && DO_PHASE_PLATE == false)
-			{
-
-
-				// Next we draw from a poisson distribution and then finally apply the NTF
-				Image cpp_poisson;
-				cpp_poisson.Allocate(sum_image[iTilt_IDX].logical_x_dimension,sum_image[iTilt_IDX].logical_y_dimension,1,true);
-				cpp_poisson.SetToConstant(0.0);
-
-
-				std::default_random_engine generator;
-
-			    std::random_device rd;  //Will be used to obtain a seed for the random number engine
-			    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-			    std::uniform_real_distribution<> dis(0.000000001, 1.0);
-
-
-
-				for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++ )
-				{
-					std::poisson_distribution<int> distribution(sum_image[iTilt_IDX].real_values[iPixel]);
+				std::poisson_distribution<int> distribution(sum_image[iTilt_IDX].real_values[iPixel]);
 //					sum_image[iTilt_IDX].real_values[iPixel] = global_random_number_generator.GetPoissonRandom(sum_image[iTilt_IDX].real_values[iPixel]);
-					//sum_image[iTilt_IDX].real_values[iPixel] = distribution(generator);
+				//sum_image[iTilt_IDX].real_values[iPixel] = distribution(generator);
 //						pre_poisson.real_values[iPixel] += global_random_number_generator.GetPoissonRandom(sum_image[iTilt_IDX].real_values[iPixel],dis(gen));
-					// Only observed in large images (4-6K) so far, the frames from these movies show strong ripples in X in CTFFIND spectrum but not unBlur.
-					// Using the probdist to generate in matlab seems to largely alleviate this, as does using the cpp generator. This should be looked at, to see if it is
-					// a problem with my poisson rng, or with the underlying uniform_distribution. For progress sake, just using CPP right now. TODO
-					cpp_poisson.real_values[iPixel] += distribution(gen);
+				// Only observed in large images (4-6K) so far, the frames from these movies show strong ripples in X in CTFFIND spectrum but not unBlur.
+				// Using the probdist to generate in matlab seems to largely alleviate this, as does using the cpp generator. This should be looked at, to see if it is
+				// a problem with my poisson rng, or with the underlying uniform_distribution. For progress sake, just using CPP right now. TODO
+				cpp_poisson.real_values[iPixel] += distribution(gen);
 
-				}
+			}
 
 
-				sum_image[iTilt_IDX].CopyFrom(&cpp_poisson);
+			sum_image[iTilt_IDX].CopyFrom(&cpp_poisson);
 
-				// Trouble shooting poisson vs ripples
+			// Trouble shooting poisson vs ripples
 //				cpp_poisson.QuickAndDirtyWriteSlice("banding_cppPoisson.mrc",1);
 //				pre_poisson.QuickAndDirtyWriteSlice("banding_bahPoisson.mrc",1);
 
-			}
+		}
 
 
 
-			if (SAVE_POISSON_PRE_NTF && iLoop < 1)
+		if (SAVE_POISSON_PRE_NTF && iLoop < 1)
+		{
+
+			std::string fileNameOUT = "withPoisson_noNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
+				MRCFile mrc_out(fileNameOUT,true);
+				sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
+				mrc_out.SetPixelSize(this->wanted_pixel_size);
+				mrc_out.CloseFile();
+
+		}
+
+
+		if (DO_APPLY_NTF && DEBUG_POISSON == false && iLoop < 1)
+		{
+
+			if (SAVE_POISSON_WITH_NTF)
 			{
 
-				std::string fileNameOUT = "withPoisson_noNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
+				std::string fileNameOUT = "withOUT_Poisson_withNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
 					MRCFile mrc_out(fileNameOUT,true);
 					sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
 					mrc_out.SetPixelSize(this->wanted_pixel_size);
@@ -2301,96 +2393,68 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 			}
 
-
-			if (DO_APPLY_NTF && DEBUG_POISSON == false && iLoop < 1)
-			{
-
-				if (SAVE_POISSON_WITH_NTF)
-				{
-
-					std::string fileNameOUT = "withOUT_Poisson_withNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
-						MRCFile mrc_out(fileNameOUT,true);
-						sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
-						mrc_out.SetPixelSize(this->wanted_pixel_size);
-						mrc_out.CloseFile();
-
-				}
-
-				// Now apply NTF fit with Fourier series, 1 term. Values now for 300kV @ 3e-/physical pixel*s TODO consider other rates, and actually convert physical pixel size etc.
-				// ONLY VALID UP TO PHYSICAL NYQUIST WHICH SHOULD BE SET TO 1.0
-				this->apply_sqrt_DQE_or_NTF(sum_image, iTilt_IDX,false);
+			// Now apply NTF fit with Fourier series, 1 term. Values now for 300kV @ 3e-/physical pixel*s TODO consider other rates, and actually convert physical pixel size etc.
+			// ONLY VALID UP TO PHYSICAL NYQUIST WHICH SHOULD BE SET TO 1.0
+			this->apply_sqrt_DQE_or_NTF(sum_image, iTilt_IDX,false);
 
 //				std::string fileNameOUT = "with_DQE_BTF_poisson_" + std::to_string(iTilt_IDX) + this->output_filename;
 //				sum_image[iTilt_IDX].QuickAndDirtyWriteSlice("withDQE_NTF_poisson.mrc",1);
 
-				// Now round as threshold for counting mode (since NTF spreads poisson counts a bit)
-				for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++ )
-				{
-					sum_image[iTilt_IDX].real_values[iPixel] = myround(sum_image[iTilt_IDX].real_values[iPixel]);
-				}//
-
-				if (SAVE_POISSON_WITH_NTF)
-				{
-
-					std::string fileNameOUT = "withPoisson_withNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
-						MRCFile mrc_out(fileNameOUT,true);
-						sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
-						mrc_out.SetPixelSize(this->wanted_pixel_size);
-						mrc_out.CloseFile();
-
-				}
-			}
-
-			delete [] temp_img;
-			delete [] t_N;
-			delete [] wave_function;
-			delete [] phase_grating;
-			delete [] ctf;
-			delete [] propagator;
-
-
-			if (SAVE_REF)
+			// Now round as threshold for counting mode (since NTF spreads poisson counts a bit)
+			for (long iPixel = 0; iPixel < sum_image[iTilt_IDX].real_memory_allocated; iPixel++ )
 			{
-				if (iLoop == 0)
-				{
-					// Copy the sum_image into the reference for storage
-					ref_image[iTilt_IDX].CopyFrom(&sum_image[iTilt_IDX]);
-					for (int iSlab = 0; iSlab < nSlabs; iSlab ++)
-					{
-						// Copy the ref potential into scattering potential
-						scattering_potential[iSlab].CopyFrom(&ref_potential[iSlab]);
-					}
-				}
-				else
-				{
-					Image bufferImg;
-					// Second loop so sum image is actually the ref image
-					// This is stupid.
-					bufferImg.CopyFrom(&sum_image[iTilt_IDX]);
-					sum_image[iTilt_IDX].CopyFrom(&ref_image[iTilt_IDX]);
-					ref_image[iTilt_IDX].CopyFrom(&bufferImg);
+				sum_image[iTilt_IDX].real_values[iPixel] = myround(sum_image[iTilt_IDX].real_values[iPixel]);
+			}//
 
+			if (SAVE_POISSON_WITH_NTF)
+			{
+
+				std::string fileNameOUT = "withPoisson_withNTF_" + std::to_string(iTilt_IDX) + this->output_filename;
+					MRCFile mrc_out(fileNameOUT,true);
+					sum_image[iTilt_IDX].WriteSlices(&mrc_out,1,1);
+					mrc_out.SetPixelSize(this->wanted_pixel_size);
+					mrc_out.CloseFile();
+
+			}
+		}
+
+		delete [] temp_img;
+		delete [] t_N;
+		delete [] wave_function;
+		delete [] phase_grating;
+		delete [] ctf;
+		delete [] propagator;
+
+
+		if (SAVE_REF)
+		{
+			if (iLoop == 0)
+			{
+				// Copy the sum_image into the reference for storage
+				ref_image[iTilt_IDX].CopyFrom(&sum_image[iTilt_IDX]);
+				for (int iSlab = 0; iSlab < nSlabs; iSlab ++)
+				{
+					// Copy the ref potential into scattering potential
+					scattering_potential[iSlab].CopyFrom(&ref_potential[iSlab]);
 				}
 			}
+			else
+			{
+				Image bufferImg;
+				// Second loop so sum image is actually the ref image
+				// This is stupid.
+				bufferImg.CopyFrom(&sum_image[iTilt_IDX]);
+				sum_image[iTilt_IDX].CopyFrom(&ref_image[iTilt_IDX]);
+				ref_image[iTilt_IDX].CopyFrom(&bufferImg);
+
+			}
+		}
 
 
 		} // loop over perfect reference
 
-		} // end of complex CTF block
 
 
-		else
-		{
-			MRCFile mrc_out("test_Potential.mrc",true);
-			for (int iSlab = 0; iSlab < nSlabs; iSlab++)
-			{
-				wxPrintf("writing slab %d without ctf\n",iSlab+1);
-				scattering_potential[iSlab].WriteSlices(&mrc_out,iSlab+1,iSlab+1);
-
-			}
-			mrc_out.SetPixelSize(this->wanted_pixel_size);
-			mrc_out.CloseFile();
-		}
 
 //		} // end fft push omp block
 
@@ -2728,7 +2792,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 					if (CORRECT_CTF) { particle_stack[iTilt].ApplyCTF(my_ctf,false,false) ;} // TODO is this the right spot to put this?
 
-					particle_stack[iTilt].DivideByConstant(sqrt(particle_stack[iTilt].ReturnSumOfSquares()));
+					particle_stack[iTilt].DivideByConstant(sqrtf(particle_stack[iTilt].ReturnSumOfSquares()));
 					particle_stack[iTilt].BackwardFFT();
 
 					if (SAVE_REF)
@@ -3026,7 +3090,7 @@ void ScatteringPotentialApp::calc_scattering_potential(const PDB * current_speci
 										{
 //											bPlusB = 2*PI/sqrt(bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian]);
 											temp_potential[iGaussian]  += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
-															   fabs((erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
+															   fabsf((erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
 																	(erff(bPlusB[iGaussian]*yTop)-erff(bPlusB[iGaussian]*yLow)) *
 																	(erff(bPlusB[iGaussian]*zTop)-erff(bPlusB[iGaussian]*zLow))));
 
@@ -3062,7 +3126,7 @@ void ScatteringPotentialApp::calc_scattering_potential(const PDB * current_speci
 //								bPlusB = 2*PI/sqrt(bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian]);
 
 								temp_potential[iGaussian] = (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
-												  fabs( (erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
+												  fabsf( (erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
 												   (erff(bPlusB[iGaussian]*yTop)-erff(bPlusB[iGaussian]*yLow)) *
 												   (erff(bPlusB[iGaussian]*zTop)-erff(bPlusB[iGaussian]*zLow))));
 
@@ -3181,7 +3245,7 @@ void ScatteringPotentialApp::calc_water_potential(Image *projected_water)
 
 	for (iGaussian = 0; iGaussian < 5; iGaussian++)
 	{
-		bPlusB[iGaussian] = 2*PI/sqrt(bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian]);
+		bPlusB[iGaussian] = 2*PI/sqrtf(bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian]);
 	}
 
 
@@ -3240,7 +3304,7 @@ void ScatteringPotentialApp::calc_water_potential(Image *projected_water)
 											{
 
 												temp_potential += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
-															   fabs( (erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
+															   fabsf( (erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
 																	 (erff(bPlusB[iGaussian]*yTop)-erff(bPlusB[iGaussian]*yLow)) *
 																	 (erff(bPlusB[iGaussian]*zTop)-erff(bPlusB[iGaussian]*zLow))) );
 
@@ -3270,7 +3334,7 @@ void ScatteringPotentialApp::calc_water_potential(Image *projected_water)
 								{
 
 									temp_potential += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
-												   fabs((erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
+												   fabsf((erff(bPlusB[iGaussian]*xTop)-erff(bPlusB[iGaussian]*xLow)) *
 														(erff(bPlusB[iGaussian]*yTop)-erff(bPlusB[iGaussian]*yLow)) *
 														(erff(bPlusB[iGaussian]*zTop)-erff(bPlusB[iGaussian]*zLow))));
 
@@ -3709,7 +3773,7 @@ void ScatteringPotentialApp::apply_sqrt_DQE_or_NTF(Image *image_in, int iTilt_ID
 
 			// compute squared radius, in units of reciprocal pixels
 
-			spatial_frequency = sqrt(x_coord_sq + y_coord_sq);
+			spatial_frequency = sqrtf(x_coord_sq + y_coord_sq);
 
 			if (do_root_DQE)
 			{
@@ -3811,7 +3875,7 @@ void ScatteringPotentialApp::normalize_set_dose_expectation(Image *sum_image, in
 		{
 	//    	this->total_waters_incorporated += nWatersAdded;
 	//    	wxPrintf("Water occupies %2.2f percent of the 3d, total added = %2.2f\n",100*nWatersAdded/((double)n_voxels),this->total_waters_incorporated/(double)(n_voxels));
-			loss_due_to_thickness = expf(wavelength_scaling*current_thickness/MEAN_FREE_PATH);
+			loss_due_to_thickness = expf(wavelength_scaling*current_thickness/mean_free_path_protein);
 		}
 		//if (DO_PRINT)
 		{wxPrintf("\nWith a rotated thickness of %3.4e Angstrom calculated a probability of NOT scattering inelastically of %3.3f, total scaling %3.3f\n",current_thickness,loss_due_to_thickness,
@@ -3899,17 +3963,17 @@ void ScatteringPotentialApp::calc_average_intensity_at_solvent_cutoff(float aver
 				{
 	//				bPlusB = 2*PI/sqrt(bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian]);
 	//				temp_potential += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
-	//								  powf((erf(bPlusB*xTop)-erf(bPlusB*xLow)),3));
+	//								  powf((erff(bPlusB*xTop)-erff(bPlusB*xLow)),3));
 				bPlusB = bFactor+SCATTERING_PARAMETERS_B[element_id][iGaussian];
 
 //				Changing the fixed values I used to adopt the hydration shell framework
 //				temp_potential += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
 //								   powf(4*PI/bPlusB,3/2) *
-//								   exp(-4*PI*PI*powf(SOLVENT_CUTOFF[iCutoff],2)/bPlusB));
+//								   expf(-4*PI*PI*powf(SOLVENT_CUTOFF[iCutoff],2)/bPlusB));
 				// FIXME the 0.5 is the assumed step for sampling the hydration curve, maybe this should depend on the output sampling rate?
 				temp_potential += (SCATTERING_PARAMETERS_A[element_id][iGaussian] *
 								   powf(4*PI/bPlusB,3/2) *
-								   exp(-4*PI*PI*radius_sq/bPlusB));
+								   expf(-4*PI*PI*radius_sq/bPlusB));
 
 
 
@@ -3929,9 +3993,9 @@ void ScatteringPotentialApp::calc_average_intensity_at_solvent_cutoff(float aver
 		this->average_at_cutoff[iCutoff] /= number_at_cutoff;
 
 
-		this->water_weight[iCutoff] =  0.5 + 0.5 *    std::erf(      radius-HYDRATION_VALS[2] / (sqrt(2)*HYDRATION_VALS[5])) +
-									   HYDRATION_VALS[0] * exp(-powf(radius-HYDRATION_VALS[3],2)/(2*powf(HYDRATION_VALS[6],2))) +
-									   HYDRATION_VALS[1] * exp(-powf(radius-HYDRATION_VALS[4],2)/(2*powf(HYDRATION_VALS[7],2)));
+		this->water_weight[iCutoff] =  0.5 + 0.5 *    std::erff(      radius-HYDRATION_VALS[2] / (sqrtf(2)*HYDRATION_VALS[5])) +
+									   HYDRATION_VALS[0] * expf(-powf(radius-HYDRATION_VALS[3],2)/(2*powf(HYDRATION_VALS[6],2))) +
+									   HYDRATION_VALS[1] * expf(-powf(radius-HYDRATION_VALS[4],2)/(2*powf(HYDRATION_VALS[7],2)));
 
 		if (add_mean_water_potential && this->do3d)
 		{
@@ -3977,7 +4041,7 @@ float ScatteringPotentialApp::return_bfactor_given_dose(float relative_bfactor)
 		}
 		else
 		{
-		bFactor     =  0.25 * (std::max(0.0,(termA*powf(this->current_total_exposure, 1.665) - sqrt(this->current_total_exposure) )* this->bFactor_scaling) + MIN_BFACTOR);
+		bFactor     =  0.25 * (std::max(0.0f,(termA*powf(this->current_total_exposure, 1.665) - sqrtf(this->current_total_exposure) )* this->bFactor_scaling) + MIN_BFACTOR);
 		}
 	}
 

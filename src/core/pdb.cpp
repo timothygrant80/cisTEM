@@ -4,10 +4,10 @@ WX_DEFINE_OBJARRAY(ArrayOfAtoms);
 WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 //WX_DEFINE_OBJARRAY(ArrayOfParticleInstances);
 
-const double MIN_THICKNESS = 500;
+
 
 const double MIN_PADDING_Z    = 16;
-const int MIN_PADDING_XY   =  512; // nice for small volumes, may be too big for larger
+
 const int MAX_XY_DIMENSION = 4096;
 
 // Define fixed width limits for PDB reading
@@ -86,7 +86,7 @@ PDB::PDB()
 
 }
 
-PDB::PDB(long number_of_non_water_atoms, float cubic_size)
+PDB::PDB(long number_of_non_water_atoms, float cubic_sizeint, int minimum_paddeding_x_and_y, double minimum_thickness_z)
 {
 
 	input_file_stream = NULL;
@@ -99,16 +99,22 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size)
 	my_atoms.Add(dummy_atom,number_of_non_water_atoms);
 	this->cubic_size = cubic_size;
 
+	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
+	this->MIN_THICKNESS  = minimum_thickness_z;
+
 
 
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line)
+PDB::PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
 	output_file_stream = NULL;
 	output_text_stream = NULL;
+
+	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
+	this->MIN_THICKNESS  = minimum_thickness_z;
 
 
 
@@ -210,6 +216,8 @@ void PDB::Init()
 	this->center_of_mass[0] = 0;
 	this->center_of_mass[1] = 0;
 	this->center_of_mass[2] = 0;
+
+
 
 
 
@@ -942,7 +950,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.15*abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.15*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
 	if (this->cubic_size > 1)
 	{

@@ -56,7 +56,7 @@ Refine3DPanel( parent )
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine3DPanel::OnRefinementPackageComboBox, this);
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &MyRefine3DPanel::OnOrthThreadComplete, this);
-	Bind(wxEVT_COMMAND_MYTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
@@ -1577,10 +1577,10 @@ void RefinementManager::SetupReconstructionJob()
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
 
-			float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
-			float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
+			//float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
+			//float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
+			//float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
+			//float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= active_inner_mask_radius;
 			float    outer_mask_radius					= active_mask_radius;
@@ -1596,7 +1596,7 @@ void RefinementManager::SetupReconstructionJob()
 
 			wxString input_reconstruction;
 			bool	 use_input_reconstruction;
-
+			float pixel_size_of_reference = active_refinement_package->output_pixel_size;
 
 			if (active_should_apply_blurring == true)
 			{
@@ -1628,10 +1628,13 @@ void RefinementManager::SetupReconstructionJob()
 			bool	 exclude_blank_edges				= false;
 			bool	 split_even_odd						= false;
 			bool     centre_mass                        = active_centre_mass;
+			int		 max_threads						= 1;
+
+
 
 			bool threshold_input_3d = true;
 
-			my_parent->current_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1642,10 +1645,7 @@ void RefinementManager::SetupReconstructionJob()
 																		my_symmetry.ToUTF8().data(),
 																		first_particle,
 																		last_particle,
-																		pixel_size,
-																		voltage_kV,
-																		spherical_aberration_mm,
-																		amplitude_contrast,
+																		pixel_size_of_reference,
 																		molecular_mass_kDa,
 																		inner_mask_radius,
 																		outer_mask_radius,
@@ -1666,7 +1666,8 @@ void RefinementManager::SetupReconstructionJob()
 																		threshold_input_3d,
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
-																		dump_file_2.ToUTF8().data());
+																		dump_file_2.ToUTF8().data(),
+																		max_threads);
 
 
 
@@ -1814,12 +1815,7 @@ void RefinementManager::SetupRefinementJob()
 			wxString output_parameter_file = "/dev/null";
 #endif
 
-			// for now we take the paramters of the first image!!!!
-
-			float 	 pixel_size								= active_refinement_package->contained_particles[0].pixel_size;
-			float    voltage_kV								= active_refinement_package->contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm				= active_refinement_package->contained_particles[0].spherical_aberration;
-			float    amplitude_contrast						= active_refinement_package->contained_particles[0].amplitude_contrast;
+			float 	 output_pixel_size						= active_refinement_package->output_pixel_size;
 			float	 molecular_mass_kDa						= active_refinement_package->estimated_particle_weight_in_kda;
 			float    mask_radius							= active_mask_radius;
 			float    inner_mask_radius                      = active_inner_mask_radius;
@@ -1879,7 +1875,10 @@ void RefinementManager::SetupRefinementJob()
 
 			bool threshold_input_3d = true;
 			bool defocus_bias = false;
-			my_parent->current_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
+
+			int max_threads = 1;
+
+			my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1892,10 +1891,7 @@ void RefinementManager::SetupRefinementJob()
 																											first_particle,
 																											last_particle,
 																											percent_used,
-																											pixel_size,
-																											voltage_kV,
-																											spherical_aberration_mm,
-																											amplitude_contrast,
+																											output_pixel_size,
 																											molecular_mass_kDa,
 																											inner_mask_radius,
 																											mask_radius,
@@ -1931,6 +1927,7 @@ void RefinementManager::SetupRefinementJob()
 																											exclude_blank_edges,
 																											normalize_input_3d,
 																											threshold_input_3d,
+																											max_threads,
 																											global_local_refinemnent,
 																											class_counter,
 																											ignore_input_parameters,
@@ -2154,6 +2151,7 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_y = result_to_process->result_data[21];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_x = result_to_process->result_data[22];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y = result_to_process->result_data[23];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast = result_to_process->result_data[24];
 
 	/*	wxPrintf("Recieved a result for particle %li, x_shift = %f, y_shift = %f, psi = %f, theta = %f, phi = %f\n",		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift,
@@ -2573,7 +2571,7 @@ void RefinementManager::DoMasking()
 		my_parent->active_mask_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
 
-		Refine3DMaskerThread *mask_thread = new Refine3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
+		Multiply3DMaskerThread *mask_thread = new Multiply3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2703,47 +2701,4 @@ void RefinementManager::OnMaskerThreadComplete()
 	SetupRefinementJob();
 	RunRefinementJob();
 }
-
-wxThread::ExitCode Refine3DMaskerThread::Entry()
-{
-	//  Read in the files and mask, mask, then write out
-
-	Image input_image;
-	Image mask_image;
-
-	ImageFile input_file;
-	MRCFile output_file;
-
-	// read the mask
-	input_file.OpenFile(mask_filename.ToStdString(), false);
-	mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-	input_file.CloseFile();
-
-
-	// loop through and mask
-
-	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
-	{
-		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
-		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
-		input_file.CloseFile();
-
-		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
-
-		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
-		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
-		output_file.CloseFile();
-	}
-
-
-	// send finished event..
-
-	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
-	my_thread_event->SetInt(thread_id);
-	wxQueueEvent(main_thread_pointer, my_thread_event);
-
-
-	return (wxThread::ExitCode)0;     // success
-}
-
 

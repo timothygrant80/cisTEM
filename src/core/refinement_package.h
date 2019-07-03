@@ -35,6 +35,7 @@ class RefinementPackage {
 	wxString stack_filename;
 	wxString name;
 	int stack_box_size;
+	float output_pixel_size;
 
 	int number_of_classes;
 

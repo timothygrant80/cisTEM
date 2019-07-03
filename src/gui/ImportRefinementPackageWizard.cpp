@@ -183,6 +183,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		temp_refinement_package->number_of_classes = 1;
 		temp_refinement_package->number_of_run_refinments = 0;
 		temp_refinement_package->stack_has_white_protein = WhiteProteinRadioButton->GetValue();
+		temp_refinement_package->output_pixel_size = PixelSizeTextCtrl->ReturnValue();
 
 		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
 		temp_refinement.number_of_particles = stack_number_of_images;
@@ -248,6 +249,12 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active = int(input_parameters[7]);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma = input_parameters[14];
 
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pixel_size = PixelSizeTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv = MicroscopeVoltageTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = SphericalAberrationTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
+
+
 			my_dialog->Update(particle_counter + 1);
 		}
 
@@ -303,6 +310,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		temp_refinement_package->number_of_classes = 1;
 		temp_refinement_package->number_of_run_refinments = 0;
 		temp_refinement_package->stack_has_white_protein = WhiteProteinRadioButton->GetValue();
+		temp_refinement_package->output_pixel_size = PixelSizeTextCtrl->ReturnValue();
 
 		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
 		temp_refinement.number_of_particles = stack_number_of_images;
@@ -365,6 +373,11 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].score = 0.0;
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active = 1;
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma = 10.0;
+
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pixel_size = PixelSizeTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv = MicroscopeVoltageTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = SphericalAberrationTextCtrl->ReturnValue();
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
 
 			my_dialog->Update(particle_counter + 1);
 		}

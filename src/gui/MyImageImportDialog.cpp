@@ -183,7 +183,14 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 	double pixel_size;
 	double spherical_aberration;
 
+	int largest_dimension;
+	float scale_factor;
+
 	bool have_errors = false;
+	Image buffer_image;
+	Image scaled_image;
+
+	wxString small_sum_image_filename;
 
 	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
 	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
@@ -229,6 +236,27 @@ void MyImageImportDialog::ImportClick( wxCommandEvent& event )
 						image_asset_panel->AddAsset(&temp_asset);
 
 						main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, -1, -1, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
+
+						if (SaveScaledSumCheckbox->GetValue() == true)
+						{
+							// create a scaled sum.
+							buffer_image.QuickAndDirtyReadSlice( temp_asset.filename.GetFullPath().ToStdString(), 1);
+
+							small_sum_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();
+							small_sum_image_filename += wxString::Format("/Scaled/%s", temp_asset.filename.GetFullName());
+							// work out a good size..
+							int largest_dimension =  std::max(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension);
+							float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+
+							if (scale_factor < 1.0)
+							{
+								scaled_image.Allocate(myroundint(buffer_image.logical_x_dimension * scale_factor), myroundint(buffer_image.logical_y_dimension * scale_factor), 1, false);
+								buffer_image.ForwardFFT();
+								buffer_image.ClipInto(&scaled_image);
+								scaled_image.QuickAndDirtyWriteSlice(small_sum_image_filename.ToStdString(), 1,true);
+							}
+
+						}
 
 					}
 					else

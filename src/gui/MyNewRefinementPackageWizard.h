@@ -315,6 +315,21 @@ class RemoveDuplicateThresholdWizardPage : public wxWizardPage
 	 wxWizardPage * GetPrev () const;
 };
 
+class OutputPixelSizeWizardPage : public wxWizardPage
+{
+	MyNewRefinementPackageWizard *wizard_pointer;
+
+	public:
+
+	OutputPixelSizeWizardPanel *my_panel;
+
+	OutputPixelSizeWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+
+
+ 	 wxWizardPage * GetNext () const;
+	 wxWizardPage * GetPrev () const;
+};
+
 
 
 class MyNewRefinementPackageWizard : public NewRefinementPackageWizard
@@ -334,6 +349,7 @@ public:
 		MolecularWeightWizardPage *molecular_weight_page;
 		LargestDimensionWizardPage *largest_dimension_page;
 		ClassSelectionWizardPage *class_selection_page;
+		OutputPixelSizeWizardPage *output_pixel_size_page;
 
 		RecentrePicksWizardPage *recentre_picks_page;
 		RemoveDuplicatesWizardPage *remove_duplicate_picks_page;

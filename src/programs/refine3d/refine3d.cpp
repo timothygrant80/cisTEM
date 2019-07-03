@@ -421,7 +421,7 @@ bool Refine3DApp::DoCalculation()
 	refine_particle.constraints_used.x_shift = true;
 	refine_particle.constraints_used.y_shift = true;
 
-//	Image input_image;
+	//	Image input_image;
 	Image input_image_local;
 //	Image ctf_input_image;
 	Image projection_image_local;
@@ -478,7 +478,7 @@ bool Refine3DApp::DoCalculation()
 
 	float cg_starting_point[17];
 	float cg_accuracy[17];
-	float gui_result_parameters[24];
+	float gui_result_parameters[25];
 
 	float binning_factor_refine;
 	float binning_factor_search;
@@ -1053,8 +1053,9 @@ bool Refine3DApp::DoCalculation()
 				gui_result_parameters[21] = input_parameters.beam_tilt_y;
 				gui_result_parameters[22] = input_parameters.image_shift_x;
 				gui_result_parameters[23] = input_parameters.image_shift_y;
+				gui_result_parameters[24] = input_parameters.amplitude_contrast;
 
-				intermediate_result->SetResult(24, gui_result_parameters);
+				intermediate_result->SetResult(25, gui_result_parameters);
 				AddJobToResultQueue(intermediate_result);
 			}
 
@@ -1558,8 +1559,9 @@ bool Refine3DApp::DoCalculation()
 			gui_result_parameters[21] = output_parameters.beam_tilt_y;
 			gui_result_parameters[22] = output_parameters.image_shift_x;
 			gui_result_parameters[23] = output_parameters.image_shift_y;
+			gui_result_parameters[24] = output_parameters.amplitude_contrast;
 
-			intermediate_result->SetResult(24, gui_result_parameters);
+			intermediate_result->SetResult(25, gui_result_parameters);
 			AddJobToResultQueue(intermediate_result);
 		}
 

@@ -11,6 +11,18 @@ public:
 	int best_class;
 	float sigma;
 	float logp;
+	float amplitude_contrast;
+	float pixel_size;
+	float microscope_voltage_kv;
+	float microscope_spherical_aberration_mm;
+	float beam_tilt_x;
+	float beam_tilt_y;
+	float image_shift_x;
+	float image_shift_y;
+	float defocus_1;
+	float defocus_2;
+	float defocus_angle;
+	float phase_shift;
 };
 
 WX_DECLARE_OBJARRAY(ClassificationResult, ArrayofClassificationResults);
@@ -49,6 +61,7 @@ public :
 
 	ArrayofClassificationResults classification_results;
 	wxString WriteFrealignParameterFiles(wxString base_filename, RefinementPackage *parent_refinement_package);
+	wxString WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package);
 };
 
 WX_DECLARE_OBJARRAY(Classification, ArrayofClassifications);

@@ -1126,7 +1126,7 @@ void Refine2DApp::SendRefineResult(cisTEMParameterLine *current_params)
 {
 	if (is_running_locally == false) // send results back to the gui..
 	{
-		float gui_result_params[7];
+		float gui_result_params[19];
 
 		JobResult *intermediate_result = new JobResult;
 		intermediate_result->job_number = my_current_job.job_number;
@@ -1138,8 +1138,22 @@ void Refine2DApp::SendRefineResult(cisTEMParameterLine *current_params)
 		gui_result_params[4] = current_params->image_is_active;
 		gui_result_params[5] = current_params->sigma;
 		gui_result_params[6] = current_params->logp;
+		gui_result_params[7] = current_params->amplitude_contrast;
+		gui_result_params[8] = current_params->pixel_size;
+		gui_result_params[9] = current_params->microscope_voltage_kv;
+		gui_result_params[10] = current_params->microscope_spherical_aberration_mm;
+		gui_result_params[11] = current_params->beam_tilt_x;
+		gui_result_params[12] = current_params->beam_tilt_y;
+		gui_result_params[13] = current_params->image_shift_x;
+		gui_result_params[14] = current_params->image_shift_y;
+		gui_result_params[15] = current_params->defocus_1;
+		gui_result_params[16] = current_params->defocus_2;
+		gui_result_params[17] = current_params->defocus_angle;
+		gui_result_params[18] = current_params->phase_shift;
 
-		intermediate_result->SetResult(7, gui_result_params);
+
+
+		intermediate_result->SetResult(19, gui_result_params);
 		AddJobToResultQueue(intermediate_result);
 	}
 }

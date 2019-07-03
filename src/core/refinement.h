@@ -22,6 +22,7 @@ public:
 	float pixel_size;
 	float microscope_voltage_kv;
 	float microscope_spherical_aberration_mm;
+	float amplitude_contrast;
 	float beam_tilt_x;
 	float beam_tilt_y;
 	float image_shift_x;
@@ -29,8 +30,6 @@ public:
 };
 
 WX_DECLARE_OBJARRAY(RefinementResult, ArrayofRefinementResults);
-
-
 
 class ClassRefinementResults {
 public :
@@ -126,6 +125,11 @@ public :
 	int ReturnClassWithHighestOccupanyForGivenParticle(long wanted_particle);
 	ArrayofAngularDistributionHistograms ReturnAngularDistributions(wxString desired_symmetry);
 	void FillAngularDistributionHistogram(wxString wanted_symmetry, int wanted_class, int number_of_theta_bins, int number_of_phi_bins, AngularDistributionHistogram &histogram_to_fill);
+
+	void SetAllPixelSizes(float wanted_pixel_size);
+	void SetAllVoltages(float wanted_voltage_in_kV);
+	void SetAllCs(float wanted_Cs_in_mm);
+	void SetAllAmplitudeContrast(float wanted_amplitude_contrast);
 
 
 };

@@ -616,10 +616,7 @@ void Generate3DPanel::SetupReconstructionJob()
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
 
-			float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
-			float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
+			float 	 output_pixel_size							= active_refinement_package->output_pixel_size;
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= active_inner_mask_radius;
 			float    outer_mask_radius					= active_mask_radius;
@@ -669,8 +666,9 @@ void Generate3DPanel::SetupReconstructionJob()
 			bool     centre_mass                        = false;
 
 			bool threshold_input_3d = true;
+			int max_threads;
 
-			current_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
+			current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -681,10 +679,7 @@ void Generate3DPanel::SetupReconstructionJob()
 																		my_symmetry.ToUTF8().data(),
 																		first_particle,
 																		last_particle,
-																		pixel_size,
-																		voltage_kV,
-																		spherical_aberration_mm,
-																		amplitude_contrast,
+																		output_pixel_size,
 																		molecular_mass_kDa,
 																		inner_mask_radius,
 																		outer_mask_radius,
@@ -705,7 +700,8 @@ void Generate3DPanel::SetupReconstructionJob()
 																		threshold_input_3d,
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
-																		dump_file_2.ToUTF8().data());
+																		dump_file_2.ToUTF8().data(),
+																		max_threads);
 
 
 

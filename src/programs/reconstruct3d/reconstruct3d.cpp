@@ -15,7 +15,7 @@ Reconstruct3DApp : public MyApp
 //float		beam_tilt_y = 0.0f;
 //float		particle_shift_x = 0.0f;
 //float		particle_shift_y = 0.0f;
-int			max_threads = 1;
+
 
 IMPLEMENT_APP(Reconstruct3DApp)
 
@@ -59,6 +59,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	bool		dump_arrays = false;
 	wxString	dump_file_1;
 	wxString	dump_file_2;
+	int			max_threads = 1;
 
 	UserInput *my_input = new UserInput("Reconstruct3D", 1.05);
 
@@ -111,9 +112,9 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(32);
+	my_current_job.Reset(33);
 //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
-	my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbtt",	input_particle_stack.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbtti",	input_particle_stack.ToUTF8().data(),
 																				input_star_filename.ToUTF8().data(),
 																				input_reconstruction.ToUTF8().data(),
 																				output_reconstruction_1.ToUTF8().data(),
@@ -129,7 +130,8 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 //																				use_input_reconstruction, threshold_input_3d, correct_ewald_sphere, dump_arrays,
 																				use_input_reconstruction, threshold_input_3d, dump_arrays,
 																				dump_file_1.ToUTF8().data(),
-																				dump_file_2.ToUTF8().data());
+																				dump_file_2.ToUTF8().data(),
+																				max_threads);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -147,9 +149,6 @@ bool Reconstruct3DApp::DoCalculation()
 	int		 first_particle						= my_current_job.arguments[8].ReturnIntegerArgument();
 	int		 last_particle						= my_current_job.arguments[9].ReturnIntegerArgument();
 	float 	 pixel_size							= my_current_job.arguments[10].ReturnFloatArgument();
-//	float    voltage_kV							= my_current_job.arguments[11].ReturnFloatArgument();
-//	float 	 spherical_aberration_mm			= my_current_job.arguments[12].ReturnFloatArgument();
-//	float    amplitude_contrast					= my_current_job.arguments[13].ReturnFloatArgument();
 	float 	 molecular_mass_kDa					= my_current_job.arguments[11].ReturnFloatArgument();
 	float    inner_mask_radius					= my_current_job.arguments[12].ReturnFloatArgument();
 	float    outer_mask_radius					= my_current_job.arguments[13].ReturnFloatArgument();
@@ -173,6 +172,7 @@ bool Reconstruct3DApp::DoCalculation()
 	bool	 dump_arrays						= my_current_job.arguments[29].ReturnBoolArgument();
 	wxString dump_file_1 						= my_current_job.arguments[30].ReturnStringArgument();
 	wxString dump_file_2 						= my_current_job.arguments[31].ReturnStringArgument();
+	int 	 max_threads 						= my_current_job.arguments[32].ReturnIntegerArgument();
 
 	ReconstructedVolume input_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d(molecular_mass_kDa);

@@ -1333,6 +1333,7 @@ class ImageImportDialog : public wxDialog
 		wxTextCtrl* CsText;
 		wxStaticText* m_staticText20;
 		wxTextCtrl* PixelSizeText;
+		wxCheckBox* SaveScaledSumCheckbox;
 		wxCheckBox* ImagesHaveInvertedContrast;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
@@ -1761,6 +1762,124 @@ class Refine3DPanel : public JobPanel
 		
 		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
 		~Refine3DPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RefineCTFParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class RefineCTFParentPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline12;
+		wxPanel* InputParamsPanel;
+		wxStaticText* m_staticText262;
+		wxStaticText* m_staticText263;
+		wxCheckBox* UseMaskCheckBox;
+		VolumeAssetPickerComboPanel* MaskSelectPanel;
+		wxStaticLine* m_staticline52;
+		wxCheckBox* m_checkBox56;
+		wxCheckBox* m_checkBox57;
+		wxStaticText* HiResLimitStaticText;
+		NumericTextCtrl* HighResolutionLimitTextCtrl;
+		wxToggleButton* ExpertToggleButton;
+		wxStaticLine* m_staticline101;
+		ReferenceVolumesListControlRefinement* Active3DReferencesListCtrl;
+		wxStaticText* PleaseCreateRefinementPackageText;
+		wxStaticLine* m_staticline10;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxButton* ResetAllDefaultsButton;
+		wxStaticText* m_staticText202;
+		wxStaticText* NoMovieFramesStaticText;
+		NumericTextCtrl* LowResolutionLimitTextCtrl;
+		wxStaticText* m_staticText196;
+		NumericTextCtrl* MaskRadiusTextCtrl;
+		wxStaticText* m_staticText331;
+		NumericTextCtrl* InnerMaskRadiusTextCtrl;
+		wxStaticText* m_staticText317;
+		NumericTextCtrl* SignedCCResolutionTextCtrl;
+		wxStaticText* m_staticText323;
+		wxStaticText* DefocusSearchRangeStaticText;
+		NumericTextCtrl* DefocusSearchRangeTextCtrl;
+		wxStaticText* DefocusSearchStepStaticText;
+		NumericTextCtrl* DefocusSearchStepTextCtrl;
+		wxStaticText* m_staticText329;
+		wxStaticText* m_staticText332;
+		NumericTextCtrl* ScoreToWeightConstantTextCtrl;
+		wxStaticText* m_staticText335;
+		wxRadioButton* AdjustScoreForDefocusYesRadio;
+		wxRadioButton* AdjustScoreForDefocusNoRadio;
+		wxStaticText* m_staticText333;
+		NumericTextCtrl* ReconstructionScoreThreshold;
+		wxStaticText* m_staticText334;
+		NumericTextCtrl* ReconstructionResolutionLimitTextCtrl;
+		wxStaticText* m_staticText336;
+		wxRadioButton* AutoCropYesRadioButton;
+		wxRadioButton* AutoCropNoRadioButton;
+		wxStaticText* m_staticText363;
+		wxRadioButton* ApplyBlurringYesRadioButton;
+		wxRadioButton* ApplyBlurringNoRadioButton;
+		wxStaticText* SmoothingFactorStaticText;
+		NumericTextCtrl* SmoothingFactorTextCtrl;
+		wxStaticText* AutoCenterStaticText;
+		wxRadioButton* AutoCenterYesRadioButton;
+		wxRadioButton* AutoCenterNoRadioButton;
+		wxStaticText* m_staticText405;
+		wxStaticText* AutoMaskStaticText;
+		wxRadioButton* AutoMaskYesRadioButton;
+		wxRadioButton* AutoMaskNoRadioButton;
+		wxStaticText* MaskEdgeStaticText;
+		NumericTextCtrl* MaskEdgeTextCtrl;
+		wxStaticText* MaskWeightStaticText;
+		NumericTextCtrl* MaskWeightTextCtrl;
+		wxStaticText* LowPassYesNoStaticText;
+		wxRadioButton* LowPassMaskYesRadio;
+		wxRadioButton* LowPassMaskNoRadio;
+		wxStaticText* FilterResolutionStaticText;
+		NumericTextCtrl* MaskFilterResolutionText;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RefinementRunProfileComboBox;
+		wxStaticText* RunProfileText1;
+		MemoryComboBox* ReconstructionRunProfileComboBox;
+		wxButton* StartRefinementButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHighResLimitChange( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
+		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
+		RefinementPickerComboPanel* InputParametersComboBox;
+		DisplayRefinementResultsPanel* ShowRefinementResultsPanel;
+		
+		RefineCTFParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
+		~RefineCTFParentPanel();
 	
 };
 
@@ -2817,6 +2936,25 @@ class LargestDimensionWizardPanel : public wxPanel
 		
 		LargestDimensionWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
 		~LargestDimensionWizardPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class OutputPixelSizeWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class OutputPixelSizeWizardPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText214;
+	
+	public:
+		NumericTextCtrl* OutputPixelSizeTextCtrl;
+		AutoWrapStaticText* InfoText;
+		
+		OutputPixelSizeWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+		~OutputPixelSizeWizardPanel();
 	
 };
 

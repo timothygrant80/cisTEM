@@ -36,6 +36,7 @@ RefinementPackage::RefinementPackage()
 	stack_filename = "";
 	name = "";
 	stack_box_size = -1;
+	output_pixel_size = -1;
 
 	number_of_classes = -1;
 	number_of_run_refinments = -1;

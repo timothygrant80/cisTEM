@@ -1213,7 +1213,7 @@ void AbInitioManager::BeginRefinementCycle()
 
 	// are we pre-preparing the stack?
 
-	if (active_end_res > active_refinement_package->contained_particles[0].pixel_size * 3.0f || active_use_classums == true)
+	if (active_end_res > active_refinement_package->output_pixel_size * 3.0f || active_use_classums == true)
 	{
 		SetupPrepareStackJob();
 		RunPrepareStackJob();
@@ -1221,7 +1221,7 @@ void AbInitioManager::BeginRefinementCycle()
 	else // just start the reconstruction job
 	{
 		stack_has_been_precomputed = false;
-		active_pixel_size = active_refinement_package->contained_particles[0].pixel_size;
+		active_pixel_size = active_refinement_package->output_pixel_size;
 		active_stack_filename = active_refinement_package->stack_filename;
 		stack_bin_factor = 1.0f;
 
@@ -1465,10 +1465,6 @@ void AbInitioManager::SetupReconstructionJob()
 			long	 last_particle						= myroundint(current_particle_counter);
 			current_particle_counter+=1.0;
 
-			float 	 pixel_size							= active_pixel_size;//active_refinement_package->contained_particles[0].pixel_size;
-			float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
-			float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= active_inner_mask_radius;
 			float    outer_mask_radius					= active_global_mask_radius;
@@ -1544,7 +1540,10 @@ void AbInitioManager::SetupReconstructionJob()
 
 			bool threshold_input_3d = false;
 
-			my_parent->current_job_package.AddJob("ttttttttiifffffffffffffbbbbbbbbbbtt",
+			int max_threads = 1;
+			float pixel_size_of_reference = active_pixel_size;
+
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1555,10 +1554,7 @@ void AbInitioManager::SetupReconstructionJob()
 																		my_symmetry.ToUTF8().data(),
 																		first_particle,
 																		last_particle,
-																		pixel_size,
-																		voltage_kV,
-																		spherical_aberration_mm,
-																		amplitude_contrast,
+																		pixel_size_of_reference,
 																		molecular_mass_kDa,
 																		inner_mask_radius,
 																		outer_mask_radius,
@@ -1579,7 +1575,8 @@ void AbInitioManager::SetupReconstructionJob()
 																		threshold_input_3d,
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
-																		dump_file_2.ToUTF8().data());
+																		dump_file_2.ToUTF8().data(),
+																		max_threads);
 		}
 
 	}
@@ -1845,10 +1842,7 @@ void AbInitioManager::SetupRefinementJob()
 
 			// for now we take the paramters of the first image!!!!
 
-			float 	 pixel_size								= active_pixel_size;//active_refinement_package->contained_particles[0].pixel_size;
-			float    voltage_kV								= active_refinement_package->contained_particles[0].microscope_voltage;
-			float 	 spherical_aberration_mm				= active_refinement_package->contained_particles[0].spherical_aberration;
-			float    amplitude_contrast						= active_refinement_package->contained_particles[0].amplitude_contrast;
+			float 	 output_pixel_size						= active_pixel_size;//active_refinement_package->contained_particles[0].pixel_size;
 			float	 molecular_mass_kDa						= active_refinement_package->estimated_particle_weight_in_kda;
 
 			float    mask_radius							= active_global_mask_radius;
@@ -1931,7 +1925,9 @@ void AbInitioManager::SetupRefinementJob()
 			bool threshold_input_3d = false;
 			bool ignore_input_parameters = false;
 			bool defocus_bias = false;
-			my_parent->current_job_package.AddJob("ttttbttttiifffffffffffffffifffffffffbbbbbbbbbbbbbbbbibb",
+			int max_threads = 1;
+
+			my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb",
 																											input_particle_images.ToUTF8().data(),
 																											input_parameter_file.ToUTF8().data(),
 																											input_reconstruction.ToUTF8().data(),
@@ -1944,10 +1940,7 @@ void AbInitioManager::SetupRefinementJob()
 																											first_particle,
 																											last_particle,
 																											percent_used,
-																											pixel_size,
-																											voltage_kV,
-																											spherical_aberration_mm,
-																											amplitude_contrast,
+																											output_pixel_size,
 																											molecular_mass_kDa,
 																											inner_mask_radius,
 																											mask_radius,
@@ -1983,6 +1976,7 @@ void AbInitioManager::SetupRefinementJob()
 																											exclude_blank_edges,
 																											normalize_input_3d,
 																											threshold_input_3d,
+																											max_threads,
 																											local_global_refine,
 																											class_counter,
 																											ignore_input_parameters,
@@ -2048,7 +2042,7 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		RefinementPackage *classification_package = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(active_classification_selection.refinement_package_asset_id));
 		Classification *input_classification = main_frame->current_project.database.GetClassificationByID(active_classification_selection.classification_id);
-		wxString input_parameter_file = input_classification->WriteFrealignParameterFiles(main_frame->ReturnStartupScratchDirectory() + "/classification_par", classification_package);
+		wxString input_parameter_file = input_classification->WritecisTEMStarFile(main_frame->ReturnStartupScratchDirectory() + "/classification_star", classification_package);
 		delete input_classification;
 
 		// setup the job
@@ -2066,7 +2060,7 @@ void AbInitioManager::SetupPrepareStackJob()
 		if (number_of_refinement_jobs > active_classification_selection.selections.GetCount() + 1) number_of_refinement_jobs = active_classification_selection.selections.GetCount() + 1;
 		my_parent->current_job_package.Reset(active_refinement_run_profile, "prepare_stack_classaverage", number_of_refinement_jobs);
 
-		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
+		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->output_pixel_size;
 		float current_classaverage_counter = 0.0f;
 
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
@@ -2075,15 +2069,11 @@ void AbInitioManager::SetupPrepareStackJob()
 			wxString output_classaverage_images 		= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
 
 			wxString input_selection_file 				= main_frame->ReturnStartupScratchDirectory() + "/class_average_selection.txt";
-			float pixel_size				          	= classification_package->contained_particles[0].pixel_size;
+			float output_pixel_size				       	= classification_package->output_pixel_size;
 			float  mask_radius                          = classification_package->estimated_particle_size_in_angstroms * 0.6;
 			bool resample_box = false;
 			if (ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(classification_package->stack_box_size, binning_factor), 3, true) < classification_package->stack_box_size) resample_box = true;
 			int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(classification_package->stack_box_size, binning_factor), 3, true);
-
-			float  microscope_voltage					= classification_package->contained_particles[0].microscope_voltage;
-			float microscope_cs 						= classification_package->contained_particles[0].spherical_aberration;
-			float amplitude_contrast 					= classification_package->contained_particles[0].amplitude_contrast;
 			bool process_a_subset						= true;
 			int  first_classaverage					    = myroundint(current_classaverage_counter);
 
@@ -2098,19 +2088,16 @@ void AbInitioManager::SetupPrepareStackJob()
 			int number_of_classes = active_number_of_2d_classes;
 			int images_per_class = active_images_per_class;
 
-			my_parent->current_job_package.AddJob("ttttffbiiifffbbii",	input_particle_images.ToUTF8().data(),
+			my_parent->current_job_package.AddJob("ttttffbiiibbii",	input_particle_images.ToUTF8().data(),
 																		output_classaverage_images.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_selection_file.ToUTF8().data(),
-																		pixel_size,
+																		output_pixel_size,
 																		mask_radius,
 																		resample_box,
 																		wanted_output_box_size,
 																		number_of_classes,
 																		images_per_class,
-																		microscope_voltage,
-																		microscope_cs,
-																		amplitude_contrast,
 																		invert_contrast,
 																		process_a_subset,
 																		first_classaverage,
@@ -2148,15 +2135,21 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		my_parent->current_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
 
-		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->contained_particles[0].pixel_size;
+		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->output_pixel_size;
 		float current_particle_counter = 1.0f;
+
+		// ONLY WRITING FIRST CLASS FOR PIXEL SIZES..
+
+		wxString written_star_file = main_frame->current_project.parameter_file_directory.GetFullPath() + "/prepare_stack_output_star.star";
+		input_refinement->WriteSingleClasscisTEMStarFile(written_star_file, 0);
+
 
 		for (int counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
 
 			wxString input_particle_images 				= active_refinement_package->stack_filename;
 			wxString output_particle_images 			= main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
-			float pixel_size				          	= active_refinement_package->contained_particles[0].pixel_size;;
+			float output_pixel_size				       	= active_refinement_package->output_pixel_size;
 			float  mask_radius                          = active_global_mask_radius;
 			bool resample_box							= true;
 			int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
@@ -2171,9 +2164,10 @@ void AbInitioManager::SetupPrepareStackJob()
 
 			//wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
 
-			my_parent->current_job_package.AddJob("ttffbibii",	input_particle_images.ToUTF8().data(),
+			my_parent->current_job_package.AddJob("tttffbibii",	input_particle_images.ToUTF8().data(),
+																written_star_file.ToUTF8().data(),
 																output_particle_images.ToUTF8().data(),
-																pixel_size,
+																output_pixel_size,
 																mask_radius,
 																resample_box,
 																wanted_output_box_size,
@@ -2372,8 +2366,9 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 
 		MyDebugAssertTrue(current_particle != -1 && current_class != -1, "Current Particle (%li) or Current Class(%i) = -1!", current_particle, current_class);
 
-		//wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
+	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
 		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
+
 
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack = long(result_to_process->result_data[1] + 0.5);
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[2]);
@@ -2397,6 +2392,7 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_y = result_to_process->result_data[21];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_x = result_to_process->result_data[22];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y = result_to_process->result_data[23];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast = result_to_process->result_data[24];
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");
@@ -2676,12 +2672,17 @@ void AbInitioManager::ProcessAllJobsFinished()
 		MRCFile check_file(new_stack_file.ToStdString(), false, true);
 
 		stack_bin_factor = float(active_refinement_package->stack_box_size) / float(check_file.ReturnXSize());
-		active_pixel_size = active_refinement_package->contained_particles[0].pixel_size * stack_bin_factor;
+		active_pixel_size = active_refinement_package->output_pixel_size * stack_bin_factor;
 		active_stack_filename = new_stack_file;
 		stack_has_been_precomputed = true;
 
 		input_refinement->resolution_statistics_pixel_size = active_pixel_size;
 		input_refinement->resolution_statistics_box_size = check_file.ReturnXSize();
+		input_refinement->SetAllPixelSizes(active_pixel_size);
+		input_refinement->SetAllVoltages(300);
+		input_refinement->SetAllCs(2.7);
+		input_refinement->SetAllAmplitudeContrast(0.07);
+
 
 		SetupReconstructionJob();
 		RunReconstructionJob();

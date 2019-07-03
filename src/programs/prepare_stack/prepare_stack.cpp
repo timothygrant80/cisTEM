@@ -22,6 +22,8 @@ void PrepareStackApp::DoInteractiveUserInput()
 {
 	wxString	input_particle_images;
 	wxString	output_particle_images;
+	wxString 	input_star_file;
+
 	int	 wanted_output_box_size;
 
 	bool resample_box;
@@ -34,8 +36,9 @@ void PrepareStackApp::DoInteractiveUserInput()
 	UserInput *my_input = new UserInput("PrepareStack", 1.00);
 
 	input_particle_images = my_input->GetFilenameFromUser("Input particle stack", "The input image stack, containing the experimental particle images", "my_image_stack.mrc", true);
+	input_star_file = my_input->GetFilenameFromUser("Input cisTEM star file", "The input parameter file, containing your particle parameters", "my_parameters.star", true);
 	output_particle_images = my_input->GetFilenameFromUser("Output particle stack", "The output image stack, containing the prepared particle images", "my_image_stack_prep.mrc", false);
-	pixel_size = my_input->GetFloatFromUser("Pixel Size (Angstroms)", "Pixel Size of the images", "1", 0.0);
+	pixel_size = my_input->GetFloatFromUser("Wanted Output Pixel Size (Angstroms)", "Wanted pixel size of the images", "1", 0.0);
 	mask_radius = my_input->GetFloatFromUser("Mask radius (Angstroms)", "For calculating noise statistics", "100", 0.0);
 	resample_box = my_input->GetYesNoFromUser("Resample output?","If yes you can resample the output image to a specified size", "NO");
 
@@ -45,8 +48,8 @@ void PrepareStackApp::DoInteractiveUserInput()
 	delete my_input;
 
 
-	my_current_job.Reset(9);
-	my_current_job.ManualSetArguments("ttffbibii",	input_particle_images.ToUTF8().data(),
+	my_current_job.ManualSetArguments("tttffbibii",	input_particle_images.ToUTF8().data(),
+												input_star_file.ToUTF8().data(),
 												output_particle_images.ToUTF8().data(),
 												pixel_size,
 												mask_radius,
@@ -64,20 +67,21 @@ bool PrepareStackApp::DoCalculation()
 
 
 	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument();
-	wxString output_particle_images 			= my_current_job.arguments[1].ReturnStringArgument();
-	float pixel_size				          	= my_current_job.arguments[2].ReturnFloatArgument();
-	float  mask_radius                          = my_current_job.arguments[3].ReturnFloatArgument();
-	bool resample_box							= my_current_job.arguments[4].ReturnBoolArgument();
-	int	 wanted_output_box_size 				= my_current_job.arguments[5].ReturnIntegerArgument();
-	bool process_a_subset						= my_current_job.arguments[6].ReturnBoolArgument();
-	int  first_particle						    = my_current_job.arguments[7].ReturnIntegerArgument();
-	int  last_particle						    = my_current_job.arguments[8].ReturnIntegerArgument();
+	wxString input_star_filename				= my_current_job.arguments[1].ReturnStringArgument();
+	wxString output_particle_images 			= my_current_job.arguments[2].ReturnStringArgument();
+	float output_pixel_size				       	= my_current_job.arguments[3].ReturnFloatArgument();
+	float  mask_radius                          = my_current_job.arguments[4].ReturnFloatArgument();
+	bool resample_box							= my_current_job.arguments[5].ReturnBoolArgument();
+	int	 wanted_output_box_size 				= my_current_job.arguments[6].ReturnIntegerArgument();
+	bool process_a_subset						= my_current_job.arguments[7].ReturnBoolArgument();
+	int  first_particle						    = my_current_job.arguments[8].ReturnIntegerArgument();
+	int  last_particle						    = my_current_job.arguments[9].ReturnIntegerArgument();
 
 	ProgressBar *my_progress;
 	int max_samples = 2000;
 	int images_to_process = last_particle - first_particle;
 	long current_image;
-	float mask_radius_for_noise = mask_radius / pixel_size;
+	float mask_radius_for_noise = mask_radius / output_pixel_size;
 	float mask_falloff = 10.0f;
 	float variance;
 	float average;
@@ -106,6 +110,9 @@ bool PrepareStackApp::DoCalculation()
 	sum_power.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), 1, false);
 	sum_power.SetToConstant(0.0);
 
+	cisTEMParameters input_star_file;
+	input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+
 	if (process_a_subset == false)
 	{
 		first_particle = 1;
@@ -117,9 +124,9 @@ bool PrepareStackApp::DoCalculation()
 	float percentage = float(max_samples) / float(images_to_process);
 	sum_power.SetToConstant(0.0);
 
-	if (2.0 * mask_radius_for_noise + mask_falloff / pixel_size > 0.95 * input_image.logical_x_dimension)
+	if (2.0 * mask_radius_for_noise + mask_falloff / output_pixel_size > 0.95 * input_image.logical_x_dimension)
 	{
-		mask_radius_for_noise = 0.95 * input_image.logical_x_dimension / 2.0 - mask_falloff / 2.0 / pixel_size;
+		mask_radius_for_noise = 0.95 * input_image.logical_x_dimension / 2.0 - mask_falloff / 2.0 / output_pixel_size;
 	}
 
 	noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
@@ -133,11 +140,12 @@ bool PrepareStackApp::DoCalculation()
 		if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * percentage)) continue;
 
 		input_image.ReadSlice(&input_file, current_image);
+		input_image.ChangePixelSize(&input_image, output_pixel_size / input_star_file.ReturnPixelSize(current_image - 1), 0.001f);
 		variance = input_image.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0, 0.0, 0.0, true);
 		if (variance == 0.0) continue;
 
 		input_image.MultiplyByConstant(1.0 / sqrtf(variance));
-		input_image.CosineMask(mask_radius_for_noise, mask_falloff / pixel_size, true);
+		input_image.CosineMask(mask_radius_for_noise, mask_falloff / output_pixel_size, true);
 		input_image.ForwardFFT();
 		temp_image.CopyFrom(&input_image);
 		temp_image.ConjugateMultiplyPixelWise(input_image);
@@ -160,6 +168,7 @@ bool PrepareStackApp::DoCalculation()
 		if (current_image < first_particle || current_image > last_particle) continue;
 
 		input_image.ReadSlice(&input_file, current_image);
+		input_image.ChangePixelSize(&input_image, output_pixel_size / input_star_file.ReturnPixelSize(current_image - 1), 0.001f);
 		input_image.ForwardFFT();
 		input_image.ApplyCurveFilter(&noise_power_spectrum);
 
@@ -169,8 +178,8 @@ bool PrepareStackApp::DoCalculation()
 		}
 
 		input_image.BackwardFFT();
-		variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
-		average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
+		variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / output_pixel_size, 0.0, 0.0, 0.0, true);
+		average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / output_pixel_size, true);
 		input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 
 		if (is_running_locally == true)

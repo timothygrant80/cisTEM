@@ -13,6 +13,18 @@ ClassificationResult::ClassificationResult()
 	best_class = 0;
 	sigma = 10.0;
 	logp = 0.0;
+	defocus_1 = 0.0f;
+	defocus_2 = 0.0f;
+	defocus_angle = 0.0f;
+	phase_shift = 0.0f;
+	beam_tilt_x = 0.0f;
+	beam_tilt_y = 0.0f;
+	image_shift_x = 0.0f;
+	image_shift_y = 0.0f;
+	pixel_size = 0.0f;
+	microscope_voltage_kv = 0.0f;
+	microscope_spherical_aberration_mm = 0.0f;
+	amplitude_contrast = 0.0f;
 }
 
 ClassificationResult::~ClassificationResult()
@@ -92,6 +104,50 @@ void Classification::SizeAndFillWithEmpty(long wanted_number_of_particles)
 	classification_results.Add(junk_result, number_of_particles);
 }
 
+wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package)
+{
+	wxString output_filename;
+	output_filename = base_filename + wxString::Format("_%li.star", classification_id);
+
+	long particle_counter;
+
+
+
+	cisTEMParameters output_params;
+	output_params.PreallocateMemoryAndBlank(number_of_particles);
+
+	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
+	{
+		output_params.all_parameters[particle_counter].position_in_stack = classification_results[particle_counter].position_in_stack;
+		output_params.all_parameters[particle_counter].image_is_active = classification_results[particle_counter].best_class;
+		output_params.all_parameters[particle_counter].psi = classification_results[particle_counter].psi;
+		output_params.all_parameters[particle_counter].theta = 0.0f;
+		output_params.all_parameters[particle_counter].phi = 0.0f;
+		output_params.all_parameters[particle_counter].x_shift = classification_results[particle_counter].xshift;
+		output_params.all_parameters[particle_counter].y_shift = classification_results[particle_counter].yshift;
+		output_params.all_parameters[particle_counter].defocus_1 = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_1;
+		output_params.all_parameters[particle_counter].defocus_2 = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_2;
+		output_params.all_parameters[particle_counter].defocus_angle = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_angle;
+		output_params.all_parameters[particle_counter].phase_shift = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).phase_shift;
+		output_params.all_parameters[particle_counter].occupancy = 100.0f;
+		output_params.all_parameters[particle_counter].logp = classification_results[particle_counter].logp;
+		output_params.all_parameters[particle_counter].sigma = classification_results[particle_counter].sigma;
+		output_params.all_parameters[particle_counter].score = 0.0f;
+		output_params.all_parameters[particle_counter].score_change = 0.0f;
+		output_params.all_parameters[particle_counter].pixel_size = classification_results[particle_counter].pixel_size;
+		output_params.all_parameters[particle_counter].microscope_voltage_kv = classification_results[particle_counter].microscope_voltage_kv;
+		output_params.all_parameters[particle_counter].microscope_spherical_aberration_mm = classification_results[particle_counter].microscope_spherical_aberration_mm;
+		output_params.all_parameters[particle_counter].amplitude_contrast = classification_results[particle_counter].amplitude_contrast;
+		output_params.all_parameters[particle_counter].beam_tilt_x = classification_results[particle_counter].beam_tilt_x;
+		output_params.all_parameters[particle_counter].beam_tilt_y = classification_results[particle_counter].beam_tilt_y;
+		output_params.all_parameters[particle_counter].image_shift_x = classification_results[particle_counter].image_shift_x;
+		output_params.all_parameters[particle_counter].image_shift_y = classification_results[particle_counter].image_shift_y;
+	}
+
+	output_params.WriteTocisTEMStarFile(output_filename);
+
+	return output_filename;
+}
 
 wxString Classification::WriteFrealignParameterFiles(wxString base_filename, RefinementPackage *parent_refinement_package)
 {

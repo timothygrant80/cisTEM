@@ -794,26 +794,35 @@ void ClassificationManager::RunInitialStartJob()
 
 	output_classification->SizeAndFillWithEmpty(output_classification->number_of_particles);
 
-	for (long counter = 0; counter < output_classification->number_of_particles; counter++)
+	for (long counter = 1; counter <= output_classification->number_of_particles; counter++)
 	{
-		output_classification->classification_results[counter].position_in_stack = counter + 1;
+		output_classification->classification_results[counter - 1].position_in_stack = counter;
+		output_classification->classification_results[counter - 1].amplitude_contrast = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).amplitude_contrast;
+		output_classification->classification_results[counter - 1].pixel_size = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).pixel_size;
+		output_classification->classification_results[counter - 1].microscope_voltage_kv = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).microscope_voltage;
+		output_classification->classification_results[counter - 1].microscope_spherical_aberration_mm = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).spherical_aberration;
+		output_classification->classification_results[counter - 1].beam_tilt_x = 0.0f;
+		output_classification->classification_results[counter - 1].beam_tilt_y = 0.0f;
+		output_classification->classification_results[counter - 1].image_shift_x = 0.0f;
+		output_classification->classification_results[counter - 1].image_shift_y = 0.0f;
+		output_classification->classification_results[counter - 1].defocus_1 = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).defocus_1;
+		output_classification->classification_results[counter - 1].defocus_2 = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).defocus_2;
+		output_classification->classification_results[counter - 1].defocus_angle = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).defocus_angle;
+		output_classification->classification_results[counter - 1].phase_shift = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).phase_shift;
 	}
 
-	wxString input_parameter_file = output_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", active_refinement_package);
+	wxString input_star_file = output_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
 	my_parent->current_job_package.Reset(active_run_profile, "refine2d", 1);
 
 	wxString input_particle_images =  active_refinement_package->stack_filename;
 	wxString input_class_averages = "/dev/null";
-	wxString output_parameter_file = "/dev/null";
+	wxString output_star_file = "/dev/null";
 	wxString output_class_averages = output_classification->class_average_file;
 	int number_of_classes = output_classification->number_of_classes;
 	int first_particle = 1;
 	int last_particle = output_classification->number_of_particles;
 	float percent_used = output_classification->percent_used / 100.00;
-	float pixel_size = active_refinement_package->contained_particles[0].pixel_size;
-	float voltage_kV = active_refinement_package->contained_particles[0].microscope_voltage;
-	float spherical_aberration_mm = active_refinement_package->contained_particles[0].spherical_aberration;
-	float amplitude_contrast = active_refinement_package->contained_particles[0].amplitude_contrast;
+	float output_pixel_size = active_refinement_package->output_pixel_size;
 	float mask_radius = active_mask_radius;
 	float low_resolution_limit =output_classification->low_resolution_limit;
 	float high_resolution_limit = output_classification->high_resolution_limit;
@@ -833,18 +842,15 @@ void ClassificationManager::RunInitialStartJob()
 
 
 	my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
-																	input_parameter_file.ToUTF8().data(),
+																	input_star_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
-																	output_parameter_file.ToUTF8().data(),
+																	output_star_file.ToUTF8().data(),
 																	output_class_averages.ToUTF8().data(),
 																	number_of_classes,
 																	first_particle,
 																	last_particle,
 																	percent_used,
-																	pixel_size,
-//																	voltage_kV,
-//																	spherical_aberration_mm,
-//																	amplitude_contrast,
+																	output_pixel_size,
 																	mask_radius,
 																	low_resolution_limit,
 																	high_resolution_limit,
@@ -859,7 +865,6 @@ void ClassificationManager::RunInitialStartJob()
 																	dump_file.ToUTF8().data(),
 																	auto_mask,
 																	auto_centre);
-
 
 	my_parent->WriteBlueText("Creating Initial References...");
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
@@ -1019,7 +1024,7 @@ void ClassificationManager::RunRefinementJob()
 		output_classification->classification_results[counter].position_in_stack = counter + 1;
 	}
 
-	wxString input_parameter_file = input_classification->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_par", active_refinement_package);
+	wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
 
 	number_of_refinement_processes = active_run_profile.ReturnTotalJobs();
 	number_of_refinement_jobs = number_of_refinement_processes - 1;
@@ -1037,7 +1042,7 @@ void ClassificationManager::RunRefinementJob()
 		wxString input_particle_images =  active_refinement_package->stack_filename;
 		wxString input_class_averages = input_classification->class_average_file;
 
-		wxString output_parameter_file = "/dev/null";
+		wxString output_star_file = "/dev/null";
 		wxString output_class_averages = main_frame->current_project.class_average_directory.GetFullPath() + wxString::Format("/class_averages_%li.mrc", output_classification->classification_id);
 		int number_of_classes = 0;
 
@@ -1048,13 +1053,9 @@ void ClassificationManager::RunRefinementJob()
 		current_particle_counter++;
 
 		//output_parameter_file = wxString::Format("/tmp/out_%li_%li.par", first_particle, last_particle);
-		output_parameter_file = "/dev/null";
 
 		float percent_used = output_classification->percent_used / 100.00;
-		float pixel_size = active_refinement_package->contained_particles[0].pixel_size;
-		float voltage_kV = active_refinement_package->contained_particles[0].microscope_voltage;
-		float spherical_aberration_mm = active_refinement_package->contained_particles[0].spherical_aberration;
-		float amplitude_contrast = active_refinement_package->contained_particles[0].amplitude_contrast;
+		float output_pixel_size = active_refinement_package->output_pixel_size;
 		float mask_radius = active_mask_radius;
 		float low_resolution_limit =output_classification->low_resolution_limit;
 		float high_resolution_limit = output_classification->high_resolution_limit;
@@ -1071,18 +1072,15 @@ void ClassificationManager::RunRefinementJob()
 		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
 
 		my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
-																		input_parameter_file.ToUTF8().data(),
+																		input_star_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),
-																		output_parameter_file.ToUTF8().data(),
+																		output_star_file.ToUTF8().data(),
 																		output_class_averages.ToUTF8().data(),
 																		number_of_classes,
 																		first_particle,
 																		last_particle,
 																		percent_used,
-																		pixel_size,
-//																		voltage_kV,
-//																		spherical_aberration_mm,
-//																		amplitude_contrast,
+																		output_pixel_size,
 																		mask_radius,
 																		low_resolution_limit,
 																		high_resolution_limit,
@@ -1272,7 +1270,7 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 	else
 	if (running_job_type == REFINEMENT)
 	{
-		long current_image = long(result_to_process->result_data[0] + 0.5);
+		long current_image = long(result_to_process->result_data[0] + 0.5) - 1;
 
 		output_classification->classification_results[current_image].psi = result_to_process->result_data[1];
 		output_classification->classification_results[current_image].xshift = result_to_process->result_data[2];
@@ -1280,6 +1278,18 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 		output_classification->classification_results[current_image].best_class = int(result_to_process->result_data[4] + 0.5);
 		output_classification->classification_results[current_image].sigma = result_to_process->result_data[5];
 		output_classification->classification_results[current_image].logp = result_to_process->result_data[6];
+		output_classification->classification_results[current_image].amplitude_contrast = result_to_process->result_data[7];
+		output_classification->classification_results[current_image].pixel_size = result_to_process->result_data[8];
+		output_classification->classification_results[current_image].microscope_voltage_kv = result_to_process->result_data[9];
+		output_classification->classification_results[current_image].microscope_spherical_aberration_mm = result_to_process->result_data[10];
+		output_classification->classification_results[current_image].beam_tilt_x = result_to_process->result_data[11];
+		output_classification->classification_results[current_image].beam_tilt_y = result_to_process->result_data[12];
+		output_classification->classification_results[current_image].image_shift_x = result_to_process->result_data[13];
+		output_classification->classification_results[current_image].image_shift_y = result_to_process->result_data[14];
+		output_classification->classification_results[current_image].defocus_1 = result_to_process->result_data[15];
+		output_classification->classification_results[current_image].defocus_2 = result_to_process->result_data[16];
+		output_classification->classification_results[current_image].defocus_angle = result_to_process->result_data[17];
+		output_classification->classification_results[current_image].phase_shift = result_to_process->result_data[18];
 
 		//wxPrintf("Received Result (%f,%f,%f,%f,%f,%f,%f)\n", result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3] ,result_to_process->result_data[4] ,result_to_process->result_data[5],result_to_process->result_data[6]);
 		number_of_received_particle_results++;

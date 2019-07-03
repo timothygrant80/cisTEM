@@ -23,8 +23,9 @@ RefinementResult::RefinementResult()
 	score = 1.0f;
 	image_is_active = 1;
 	pixel_size = 0;
-	microscope_voltage_kv = 0;
-	microscope_spherical_aberration_mm = 0;
+	microscope_voltage_kv = 0.0f;
+	microscope_spherical_aberration_mm = 0.0f;
+	amplitude_contrast = 0.0f;
 	beam_tilt_x = 0.0f;
 	beam_tilt_y = 0.0f;
 	image_shift_x = 0.0f;
@@ -390,6 +391,7 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_cla
 		output_params.all_parameters[particle_counter].pixel_size = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].pixel_size;
 		output_params.all_parameters[particle_counter].microscope_voltage_kv = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].microscope_voltage_kv;
 		output_params.all_parameters[particle_counter].microscope_spherical_aberration_mm = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm;
+		output_params.all_parameters[particle_counter].amplitude_contrast = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].amplitude_contrast;
 		output_params.all_parameters[particle_counter].beam_tilt_x = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_x;
 		output_params.all_parameters[particle_counter].beam_tilt_y = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_y;
 		output_params.all_parameters[particle_counter].image_shift_x = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_shift_x;
@@ -670,6 +672,74 @@ void Refinement::UpdateAverageOccupancy()
 		}
 
 		if (number_of_active_images > 0) this->class_refinement_results[class_counter].average_occupancy /= float(number_of_active_images);
+	}
+
+}
+
+void Refinement::SetAllPixelSizes(float wanted_pixel_size)
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].pixel_size = wanted_pixel_size;
+		}
+	}
+
+}
+
+void Refinement::SetAllVoltages(float wanted_voltage_in_kV)
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_voltage_kv = wanted_voltage_in_kV;
+		}
+	}
+
+}
+
+void Refinement::SetAllCs(float wanted_Cs_in_mm)
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = wanted_Cs_in_mm;
+		}
+	}
+
+}
+
+void Refinement::SetAllAmplitudeContrast(float wanted_amplitude_contrast)
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].amplitude_contrast = wanted_amplitude_contrast;
+		}
 	}
 
 }

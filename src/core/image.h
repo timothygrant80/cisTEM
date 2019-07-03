@@ -147,6 +147,7 @@ public:
 	Kernel2D ReturnLinearInterpolatedFourierKernel2D(float &x, float &y);
 	void RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float resolution_limit_in_reciprocal_pixels = 1.0, bool use_nearest_neighbor = false);
 	void Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
+	void Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels = 0.0);
 	void Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);

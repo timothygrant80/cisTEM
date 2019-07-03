@@ -6,6 +6,7 @@ extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
 wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
@@ -1843,3 +1844,46 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 
 
 }
+
+wxThread::ExitCode Multiply3DMaskerThread::Entry()
+{
+	//  Read in the files and mask, mask, then write out
+
+	Image input_image;
+	Image mask_image;
+
+	ImageFile input_file;
+	MRCFile output_file;
+
+	// read the mask
+	input_file.OpenFile(mask_filename.ToStdString(), false);
+	mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+	input_file.CloseFile();
+
+
+	// loop through and mask
+
+	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
+	{
+		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
+		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+		input_file.CloseFile();
+
+		input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
+
+		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
+		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
+		output_file.CloseFile();
+	}
+
+
+	// send finished event..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+
+	return (wxThread::ExitCode)0;     // success
+}
+

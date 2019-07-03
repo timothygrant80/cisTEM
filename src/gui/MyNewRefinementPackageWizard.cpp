@@ -44,6 +44,8 @@ NewRefinementPackageWizard( parent )
 	remove_duplicate_picks_page = new RemoveDuplicatesWizardPage(this);
 	remove_duplicate_picks_threshold_page = new RemoveDuplicateThresholdWizardPage(this);
 
+	output_pixel_size_page = new OutputPixelSizeWizardPage(this);
+
 	class_setup_pageA = new ClassesSetupWizardPageA(this);
 	class_setup_pageB = new ClassesSetupWizardPageB(this);
 	class_setup_pageC = new ClassesSetupWizardPageC(this);
@@ -274,6 +276,52 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
 
 				box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].stack_box_size);
+			}
+		}
+	}
+	else
+	if (event.GetPage() == output_pixel_size_page)
+	{
+		if (output_pixel_size_page->my_panel->InfoText->has_autowrapped == false)
+		{
+			output_pixel_size_page->Freeze();
+			output_pixel_size_page->my_panel->InfoText->AutoWrap();
+			output_pixel_size_page->Layout();
+			output_pixel_size_page->Thaw();
+		}
+
+		if (template_page->my_panel->GroupComboBox->GetSelection() > 1 && box_size_page->my_panel->BoxSizeSpinCtrl->GetValue() == 1)
+		{
+			RefinementPackage *template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection() - 3);
+			output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(template_package->output_pixel_size);
+		}
+		else
+		if (output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue() == 0.0f)
+		{
+			// do an intelligent default..
+
+			if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // new, we should do largest_dimension * 2, scaled up to factorizable.
+			{
+				// i need to know the pixel size, which is not a simple thing really. For now, lets just make a guess.
+				// lets just take the pixel size of the first included particle..
+
+				float pixel_size_guess;
+				float current_largest_dimension = largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue();
+
+				ParticlePositionAsset *first_particle = particle_position_asset_panel->ReturnAssetPointer(particle_position_asset_panel->ReturnGroupMember(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection(), 0));
+				ImageAsset *first_particle_image = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(first_particle->parent_id));
+
+				output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(first_particle_image->pixel_size);
+			}
+			else // from class selection
+			{				// take the stack size of the refinement package of the first selected class selection
+
+				long item = class_selection_page->my_panel->SelectionListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+				MyDebugAssertTrue(item != -1, "Ooops, there is no selected classification selection - that shouldn't be possible?")
+				long parent_refinement_package_id = refinement_package_asset_panel->all_classification_selections.Item(item).refinement_package_asset_id;
+				long parent_refinement_array_position = refinement_package_asset_panel->ReturnArrayPositionFromAssetID(parent_refinement_package_id);
+
+				output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(refinement_package_asset_panel->all_refinement_packages[parent_refinement_array_position].output_pixel_size);
 			}
 		}
 	}
@@ -612,6 +660,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		temp_refinement.number_of_particles = number_of_particles;
 		temp_refinement.name = "Random Parameters";
 		temp_refinement.resolution_statistics_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement.resolution_statistics_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
 
 
@@ -640,6 +689,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		// specific package setup..
 
 		temp_refinement_package->stack_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement_package->output_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 		temp_refinement_package->stack_filename = output_stack_filename.GetFullPath();
 		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
 		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
@@ -774,6 +824,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = current_image_asset->pixel_size;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = current_image_asset->microscope_voltage;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = current_image_asset->spherical_aberration;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].amplitude_contrast = image_amplitude_contrast;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
@@ -978,10 +1029,12 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		temp_refinement_package->stack_has_white_protein = false;
 		temp_refinement_package->number_of_run_refinments = 0;
 
+
 		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
 		temp_refinement.number_of_particles = number_of_particles;
 		temp_refinement.name = "Random Parameters";
 		temp_refinement.resolution_statistics_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement.resolution_statistics_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
 
 		long current_particle_parent_image_id = 0;
@@ -1013,6 +1066,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		// specific package setup..
 
 		temp_refinement_package->stack_box_size = box_size_page->my_panel->BoxSizeSpinCtrl->GetValue();
+		temp_refinement_package->output_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 		temp_refinement_package->stack_filename = output_stack_filename.GetFullPath();
 		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();;
 		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
@@ -1127,6 +1181,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = class_average_particle_infos[counter].pixel_size;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = class_average_particle_infos[counter].microscope_voltage;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = class_average_particle_infos[counter].spherical_aberration;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].amplitude_contrast = class_average_particle_infos[counter].amplitude_contrast;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
@@ -1196,6 +1251,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = current_image_asset->pixel_size;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = current_image_asset->microscope_voltage;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = current_image_asset->spherical_aberration;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].amplitude_contrast = image_amplitude_contrast;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
@@ -1235,8 +1291,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
 		temp_refinement_package->number_of_run_refinments = 0;
 		temp_refinement.resolution_statistics_box_size = template_refinement_package->stack_box_size;
+		temp_refinement.resolution_statistics_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 
 		temp_refinement_package->stack_box_size = template_refinement_package->stack_box_size;
+		temp_refinement_package->output_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue();
 		temp_refinement_package->stack_has_white_protein = template_refinement_package->stack_has_white_protein;
 		temp_refinement_package->symmetry = symmetry_page->my_panel->SymmetryComboBox->GetValue().Upper();
 		temp_refinement_package->estimated_particle_weight_in_kda = molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue();
@@ -1434,6 +1492,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size = active_result.pixel_size;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv = active_result.microscope_voltage_kv;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = active_result.microscope_spherical_aberration_mm;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = active_result.amplitude_contrast;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x = active_result.beam_tilt_x;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = active_result.beam_tilt_y;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = active_result.image_shift_x;
@@ -1457,11 +1516,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	main_frame->current_project.database.Begin();
 	refinement_package_asset_panel->AddAsset(temp_refinement_package);
-	temp_refinement.resolution_statistics_pixel_size = temp_particle_info.pixel_size;
 
 	for (class_counter = 0; class_counter < temp_refinement.number_of_classes; class_counter++)
 	{
-		temp_refinement.class_refinement_results[class_counter].class_resolution_statistics.Init(temp_particle_info.pixel_size, temp_refinement.resolution_statistics_box_size);
+		temp_refinement.class_refinement_results[class_counter].class_resolution_statistics.Init(temp_refinement_package->output_pixel_size, temp_refinement.resolution_statistics_box_size);
 		temp_refinement.class_refinement_results[class_counter].class_resolution_statistics.GenerateDefaultStatistics(temp_refinement_package->estimated_particle_weight_in_kda);
 
 	}
@@ -1671,12 +1729,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	  //else
 	  //return wizard_pointer->class_selection_page;
 
-	  if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() != 1) return wizard_pointer->largest_dimension_page;
-	  else
-	  if (wizard_pointer->recentre_picks_page->my_panel->ReCentreYesButton->GetValue() == false) return wizard_pointer->recentre_picks_page;
-	  else
-	  if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
-	  else return wizard_pointer->remove_duplicate_picks_threshold_page;
+	 // if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() != 1) return wizard_pointer->largest_dimension_page;
+	  //else
+	  //if (wizard_pointer->recentre_picks_page->my_panel->ReCentreYesButton->GetValue() == false) return wizard_pointer->recentre_picks_page;
+	  //else
+	  //if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
+	  //else return wizard_pointer->remove_duplicate_picks_threshold_page;
+
+	  return wizard_pointer->output_pixel_size_page;
 
 
 
@@ -1688,6 +1748,48 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
   	 return wizard_pointer->symmetry_page;
   }
 
+  //////////////////////////
+
+  // Output pixel size page
+
+  ////////////////////////////
+
+  OutputPixelSizeWizardPage::OutputPixelSizeWizardPage (MyNewRefinementPackageWizard *parent, const wxBitmap &bitmap)
+   : wxWizardPage(parent, bitmap)
+   {
+  	wizard_pointer = parent;
+  	wxBoxSizer* main_sizer;
+  	my_panel = new OutputPixelSizeWizardPanel(this);
+
+  	main_sizer = new wxBoxSizer( wxVERTICAL );
+ 	this->SetSizer(main_sizer);
+ 	main_sizer->Fit(this);
+  	main_sizer->Add(my_panel);
+ 	//my_panel->InfoText->AutoWrap();
+   }
+
+   wxWizardPage *  OutputPixelSizeWizardPage::GetPrev () const
+   {
+ 	  //if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 0) return wizard_pointer->particle_group_page;
+ 	  //else
+ 	  //return wizard_pointer->class_selection_page;
+
+ 	  if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() != 1) return wizard_pointer->largest_dimension_page;
+ 	  else
+ 	  if (wizard_pointer->recentre_picks_page->my_panel->ReCentreYesButton->GetValue() == false) return wizard_pointer->recentre_picks_page;
+ 	  else
+ 	  if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
+ 	  else return wizard_pointer->remove_duplicate_picks_threshold_page;
+
+
+
+   }
+
+   wxWizardPage *  OutputPixelSizeWizardPage::GetNext () const
+   {
+	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
+	   else return wizard_pointer->box_size_page;
+   }
   //////////////////////////
 
   // Molecular weight PAGE
@@ -1755,7 +1857,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
     	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1) return wizard_pointer->recentre_picks_page;
     	else
   	   	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
-    	else return wizard_pointer->box_size_page;
+    	else return wizard_pointer->output_pixel_size_page;
 
     }
 
@@ -2425,7 +2527,7 @@ int ClassesSetupWizardPageC::ReturnSelectedNewClass()
  {
 	 if (my_panel->ReCentreYesButton->GetValue() == false)
 	 {
-			return wizard_pointer->box_size_page;
+			return wizard_pointer->output_pixel_size_page;
 	 }
 	 else return wizard_pointer->remove_duplicate_picks_page;
  }
@@ -2467,7 +2569,7 @@ int ClassesSetupWizardPageC::ReturnSelectedNewClass()
  {
 	 if (my_panel->RemoveDuplicateYesButton->GetValue() == false)
 	 {
-		 return wizard_pointer->box_size_page;
+		 return wizard_pointer->output_pixel_size_page;
 	 }
 	 else return wizard_pointer->remove_duplicate_picks_threshold_page;
  }

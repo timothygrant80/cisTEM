@@ -3795,7 +3795,8 @@ void Image::RandomisePhases(float wanted_radius_in_reciprocal_pixels)
 float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value)
 {
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
-	if (is_in_real_space)
+
+	/*if (is_in_real_space)
 	{
 		MyDebugAssertTrue(wanted_mask_edge >= 1.0, "Edge width too small");
 	}
@@ -3803,7 +3804,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 	{
 		MyDebugAssertTrue(wanted_mask_edge > 0.0, "Edge width too small");
 	}
-
+*/
 	int i;
 	int j;
 	int k;
@@ -10087,13 +10088,23 @@ void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, fl
 
 }
 
+void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels)
+{
+	Image buffer_image;
+	buffer_image.Allocate(logical_x_dimension, logical_y_dimension, true);
+	AnglesAndShifts rotation;
+	rotation.GenerateRotationMatrix2D(rotation_in_degrees);
+	Rotate2D(buffer_image, rotation, mask_radius_in_pixels);
+	Consume(&buffer_image);
+}
+
 void Image::Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels)
 {
 	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
 	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
 	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(is_in_real_space, "Image is in Fourier space");
-	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
+//	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
 	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(object_is_centred_in_box, "Image not centered in box");
 
@@ -10112,7 +10123,7 @@ void Image::Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, floa
 	float y_rad_sq;
 
 //	float edge_value = ReturnAverageOfRealValuesOnEdges();
-	float edge_value = ReturnAverageOfRealValues(physical_address_of_box_center_x - 2.0, true);
+	float edge_value = ReturnAverageOfRealValues(std::min(physical_address_of_box_center_x - 2, physical_address_of_box_center_y - 2), true);
 
 	if (mask_radius_in_pixels == 0.0)
 	{

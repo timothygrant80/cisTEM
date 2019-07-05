@@ -90,8 +90,8 @@ void Refine2DApp::DoInteractiveUserInput()
 	normalize_particles = my_input->GetYesNoFromUser("Normalize particles", "The input particle images should always be normalized unless they were pre-processed", "Yes");
 	invert_contrast = my_input->GetYesNoFromUser("Invert particle contrast", "Should the contrast in the particle images be inverted?", "No");
 	exclude_blank_edges = my_input->GetYesNoFromUser("Exclude images with blank edges", "Should particle images with blank edges be excluded from processing?", "Yes");
-	auto_mask = my_input->GetYesNoFromUser("Automatically mask particles", "Should automatic masking be applied in addition to the user-defined mask radius?", "No");
-	auto_centre = my_input->GetYesNoFromUser("Automatically center particles", "Should particles be centered to their center of mass automatically?", "No");
+	auto_mask = my_input->GetYesNoFromUser("Automatically mask class averages", "Should automatic masking be applied to class averages?", "No");
+	auto_centre = my_input->GetYesNoFromUser("Automatically center class averages", "Should class averages be centered to their center of mass automatically?", "No");
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the intermediate 2D class sums be dumped to a file for later merging with other jobs", "No");
 	dump_file = my_input->GetFilenameFromUser("Output dump filename for intermediate arrays", "The name of the dump file with the intermediate 2D class sums", "dump_file.dat", false);
 	

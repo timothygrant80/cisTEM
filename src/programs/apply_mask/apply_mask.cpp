@@ -34,7 +34,7 @@ void ApplyMask::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(9);
+//	my_current_job.Reset(9);
 	my_current_job.ManualSetArguments("tttfffffb", input_volume.ToUTF8().data(), input_mask.ToUTF8().data(), output_volume.ToUTF8().data(), pixel_size, cosine_edge, outside_weight, filter_radius, outside_value, use_outside_value);
 }
 

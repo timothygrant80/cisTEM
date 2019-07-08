@@ -206,7 +206,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(35);
+//	my_current_job.Reset(35);
 	my_current_job.ManualSetArguments("ttffffffffffifffbffttttttttftiiiitt",	input_search_images.ToUTF8().data(),
 															input_reconstruction.ToUTF8().data(),
 															pixel_size,

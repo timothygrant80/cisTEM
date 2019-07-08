@@ -414,7 +414,7 @@ void FindDQE::DoInteractiveUserInput()
 
 //	my_current_job.Reset(5);
 //	my_current_job.ManualSetArguments("ttbff", input_pointer_image.c_str(), output_diagnostic_image.c_str(), is_a_counting_detector, counts_multiplier, exposure);
-	my_current_job.Reset(6);
+//	my_current_job.Reset(6);
 	my_current_job.ManualSetArguments("ttbttf", input_pointer_image.c_str(), input_pointer_image2.c_str(), use_both_images, output_table.c_str(), output_diagnostic_image.c_str(), exposure);
 }
 

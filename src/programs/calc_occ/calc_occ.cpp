@@ -31,7 +31,7 @@ void CalcOccApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(4);
+//	my_current_job.Reset(4);
 	my_current_job.ManualSetArguments("iftt",	number_of_parameter_files,
 												occupancy_change_multiplier,
 												input_file_seed.ToUTF8().data(),

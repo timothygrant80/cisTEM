@@ -141,7 +141,7 @@ void RefineCTFApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(32);
+//	my_current_job.Reset(32);
 	my_current_job.ManualSetArguments("ttttbtttttiifffffffffbbbbbbbiiit",
 		input_particle_images.ToUTF8().data(),
 		input_star_filename.ToUTF8().data(),

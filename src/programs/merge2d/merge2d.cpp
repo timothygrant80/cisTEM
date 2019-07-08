@@ -53,7 +53,7 @@ void Merge2DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(3);
+//	my_current_job.Reset(3);
 	my_current_job.ManualSetArguments("tti",	ouput_class_averages.ToUTF8().data(),
 												dump_file_seed.ToUTF8().data(),
 												number_of_dump_files);

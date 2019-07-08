@@ -112,7 +112,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(33);
+//	my_current_job.Reset(33);
 //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
 	my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbtti",	input_particle_stack.ToUTF8().data(),
 																				input_star_filename.ToUTF8().data(),
@@ -402,7 +402,7 @@ bool Reconstruct3DApp::DoCalculation()
 		binning_factor = float(original_box_size) / float(intermediate_box_size);
 		pixel_size *= binning_factor;
 
-		wxPrintf("After : binning_factor = %f, pixel_size = %f\n", binning_factor, pixel_size);
+//		wxPrintf("After : binning_factor = %f, pixel_size = %f\n", binning_factor, pixel_size);
 		if (crop_images)
 		{
 			box_size = ReturnClosestFactorizedUpper(myroundint(3.0 * outer_mask_radius / pixel_size), 3, true);
@@ -646,7 +646,7 @@ bool Reconstruct3DApp::DoCalculation()
 //			padded_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 		}
 		input_3d.mask_radius = outer_mask_radius;
-		if (input_3d.mask_radius > input_3d.density_map->physical_address_of_box_center_x * pixel_size - mask_falloff) input_3d.mask_radius = input_3d.density_map->physical_address_of_box_center_x * pixel_size- mask_falloff;
+		if (input_3d.mask_radius > input_3d.density_map->physical_address_of_box_center_x * pixel_size - mask_falloff) input_3d.mask_radius = input_3d.density_map->physical_address_of_box_center_x * pixel_size - mask_falloff;
 		input_3d.PrepareForProjections(0.0, resolution_limit_ref, false, false);
 		// Multiply by binning_factor to scale reference to be compatible with scaled binned image (see below)
 		if (binning_factor != 1.0) input_3d.density_map->MultiplyByConstant(binning_factor);
@@ -693,11 +693,8 @@ bool Reconstruct3DApp::DoCalculation()
 	projection_image.Allocate(original_box_size, original_box_size, false);
 	temp3_image_local.Allocate(original_box_size, original_box_size, false);
 	temp_image_local.Allocate(original_box_size, original_box_size, true);
-	if (resolution_limit_rec != 0.0 || crop_images)
-	{
-		cropped_projection_image.Allocate(box_size, box_size, false);
-		temp2_image_local.Allocate(intermediate_box_size, intermediate_box_size, true);
-	}
+	if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Allocate(box_size, box_size, false);
+	if (resolution_limit_rec != 0.0 && crop_images) temp2_image_local.Allocate(intermediate_box_size, intermediate_box_size, true);
 	if (padding != 1.0) padded_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	if (rotational_blurring && use_input_reconstruction)
 	{
@@ -730,7 +727,7 @@ bool Reconstruct3DApp::DoCalculation()
 
 	image_counter = 0;
 
-	#pragma omp for schedule(static,1)
+	#pragma omp for schedule(dynamic,1)
 	for (current_image_local = 0; current_image_local < input_star_file.ReturnNumberofLines(); current_image_local++)
 	{
 		#pragma omp critical
@@ -741,7 +738,7 @@ bool Reconstruct3DApp::DoCalculation()
 			if (input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle)
 			{
 				input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-				input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
+				input_image_local.ChangePixelSize(&input_image_local, original_pixel_size / input_parameters.pixel_size, 0.001f);
 			}
 		}
 
@@ -798,7 +795,7 @@ bool Reconstruct3DApp::DoCalculation()
 		{
 			input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, original_pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
 
-			if (input_ctf.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false)
+			if (input_ctf.IsAlmostEqualTo(&current_ctf, 40.0 / original_pixel_size) == false)
 			// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 			{
 				current_ctf = input_ctf;
@@ -1063,7 +1060,7 @@ bool Reconstruct3DApp::DoCalculation()
 					input_particle.particle_image->ApplyCurveFilter(&noise_power_spectrum);
 					if (use_input_reconstruction)
 					{
-						input_particle.particle_image->PhaseShift(- input_parameters.x_shift / pixel_size, - input_parameters.y_shift / pixel_size);
+						input_particle.particle_image->PhaseShift(- input_parameters.x_shift / original_pixel_size, - input_parameters.y_shift / original_pixel_size);
 						input_particle.PhaseFlipImage();
 						input_particle.BeamTiltMultiplyImage();
 					}
@@ -1077,7 +1074,7 @@ bool Reconstruct3DApp::DoCalculation()
 				if (use_input_reconstruction)
 				{
 					input_particle.ForwardFFT();
-					input_particle.particle_image->PhaseShift(- input_parameters.x_shift / pixel_size, - input_parameters.y_shift / pixel_size);
+					input_particle.particle_image->PhaseShift(- input_parameters.x_shift / original_pixel_size, - input_parameters.y_shift / original_pixel_size);
 					input_particle.PhaseFlipImage();
 					input_particle.BeamTiltMultiplyImage();
 					input_particle.BackwardFFT();
@@ -1191,11 +1188,8 @@ bool Reconstruct3DApp::DoCalculation()
 	projection_image.Deallocate();
 	temp3_image_local.Deallocate();
 	temp_image_local.Deallocate();
-	if (resolution_limit_rec != 0.0 || crop_images)
-	{
-		cropped_projection_image.Deallocate();
-		temp2_image_local.Deallocate();
-	}
+	if (resolution_limit_rec != 0.0 || crop_images) cropped_projection_image.Deallocate();
+	if (resolution_limit_rec != 0.0 && crop_images) temp2_image_local.Deallocate();
 	if (padding != 1.0) padded_projection_image.Deallocate();
 	if (rotational_blurring && use_input_reconstruction)
 	{

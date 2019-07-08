@@ -37,7 +37,7 @@ void AlignCoordinatesApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(12);
+//	my_current_job.Reset(12);
 	my_current_job.ManualSetArguments("tttffffffffb", input_ref_coordinates.c_str(), input_align_coordinates.c_str(), outut_chimera_cmd.c_str(), tolerance, margin,
 			x_dimension, y_dimension, initial_x, initial_y, initial_z, initial_angle, perform_search);
 }

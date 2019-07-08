@@ -42,7 +42,7 @@ void SharpenMap::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(16);
+//	my_current_job.Reset(16);
 	my_current_job.ManualSetArguments("ttttbfffffffffbb", input_volume.ToUTF8().data(), output_volume.ToUTF8().data(), input_mask.ToUTF8().data(), res_statistics.ToUTF8().data(),
 			use_statistics, pixel_size, inner_mask_radius, outer_mask_radius, bfactor_low, bfactor_high, bfactor_res_limit, resolution_limit, filter_edge, fudge_SSNR, use_mask, invert_hand);
 }

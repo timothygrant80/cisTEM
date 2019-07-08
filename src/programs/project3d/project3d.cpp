@@ -66,7 +66,7 @@ void Project3DApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(14);
+//	my_current_job.Reset(14);
 	my_current_job.ManualSetArguments("tttiifffftbbbb",	input_star_filename.ToUTF8().data(),
 														input_reconstruction.ToUTF8().data(),
 														ouput_projection_stack.ToUTF8().data(),

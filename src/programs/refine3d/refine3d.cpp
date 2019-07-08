@@ -323,7 +323,7 @@ void Refine3DApp::DoInteractiveUserInput()
 	int current_class = 0;
 	bool ignore_input_angles = false;
 	bool defocus_bias = false;
-	my_current_job.Reset(53);
+//	my_current_job.Reset(53);
 	my_current_job.ManualSetArguments("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb",	input_particle_images.ToUTF8().data(),
 																								input_star_filename.ToUTF8().data(),
 																								input_reconstruction.ToUTF8().data(),

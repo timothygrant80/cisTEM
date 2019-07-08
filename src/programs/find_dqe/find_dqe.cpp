@@ -12,8 +12,10 @@ FindDQE : public MyApp
 	private:
 };
 
-int 	padding = 3; // Amount of super-sampling to simulate detector before pixel binning
-int 	margin = 200; // Margin in pixels used to taper the edges of the images
+int 	padding = 3;			// Amount of super-sampling to simulate detector before pixel binning
+int 	margin = 200;			// Margin in pixels used to taper the edges of the images
+bool	two_sided_mtf = true;	// Determine the MTF on both sides of the edge and take the average
+bool	debug = false;			// Output additional images and fitted parameters for debugging
 
 class CurveComparison
 {
@@ -23,12 +25,18 @@ public:
 	Curve	*nps_fit;
 	Image	*experimental_image;
 	Image	*model_image;
+	Image	*model_image_fft;
+//	Image	*model_image_real;
 	Image	*difference_image;
+	Image	*edge_mask;
 	int		parameters_to_fit;
-	float	average_background;
 	float	best_score;
 	int		busy_state;
-	bool	is_a_counting_detector;
+//	bool	is_a_counting_detector;
+	bool	reset_shadow;
+	bool	reset_background;
+	double	average_shadow;
+	double	average_background;
 };
 /*
 float ThreeGaussianSincFit(void *scoring_parameters, float *array_of_values)
@@ -86,18 +94,26 @@ float MTFFit(void *scoring_parameters, float *array_of_values)
 {
 	CurveComparison *comparison_object = reinterpret_cast < CurveComparison *> (scoring_parameters);
 
-	MyDebugAssertTrue(comparison_object->model_image->is_in_real_space == false, "Model image not in Fourier space");
+	MyDebugAssertTrue(comparison_object->model_image_fft->is_in_real_space == false, "model_image_fft not in Fourier space");
+//	MyDebugAssertTrue(comparison_object->model_image_real->is_in_real_space == true, "model_image_real not in real space");
+	MyDebugAssertTrue(comparison_object->model_image->is_in_real_space == true, "model_image not in real space");
 
 //	Image binned_model_image;
 	Curve mtf_curve;
 	int i, j;
+	int pointer;
+	int pixels_shadow, pixels_background;
 	double residual;
 	float sum_of_gaussians;
 	float sum_of_coefficients;
 	float function_max = -FLT_MAX;
 	float scale;
+//	float threshold = 0.5f * (comparison_object->average_background + comparison_object->average_shadow);
+	float threshold = comparison_object->average_shadow + (comparison_object->average_background - comparison_object->average_shadow) / 2.0f;
+	double average_shadow_model, average_background_model;
+	double average_shadow_image, average_background_image;
 
-	mtf_curve.SetupXAxis(0.0f, 0.5f * sqrtf(2.0f), int((comparison_object->model_image->logical_x_dimension / 2.0f + 1.0f) * sqrtf(2.0f) + 1.0f));
+	mtf_curve.SetupXAxis(0.0f, 0.5f * sqrtf(2.0f), int((comparison_object->model_image_fft->logical_x_dimension / 2.0f + 1.0f) * sqrtf(2.0f) + 1.0f));
 //	mtf_curve.SetupXAxis(0.0, 0.5f / 1000.0f * 1415.0f, 1416);
 
 	sum_of_coefficients = 0.0f;
@@ -121,17 +137,79 @@ float MTFFit(void *scoring_parameters, float *array_of_values)
 	}
 //	for (i = 0; i < mtf_curve.number_of_points; i++) {mtf_curve.data_y[i] *= sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(mtf_curve.data_x[i]) / comparison_object->nps_fit->data_y[0]);}
 
-	comparison_object->difference_image->CopyFrom(comparison_object->model_image);
+	comparison_object->difference_image->CopyFrom(comparison_object->model_image_fft);
 	comparison_object->difference_image->ApplyCurveFilterUninterpolated(&mtf_curve);
 	comparison_object->difference_image->BackwardFFT();
+
 	if (padding != 1) comparison_object->difference_image->RealSpaceBinning(padding, padding, 1, true);
-//	comparison_object->difference_image->QuickAndDirtyWriteSlice("model.mrc", 1);
-//	comparison_object->experimental_image->QuickAndDirtyWriteSlice("experimental.mrc", 1);
-	comparison_object->difference_image->CosineRectangularMask(comparison_object->difference_image->physical_address_of_box_center_x - 0.5f * margin, comparison_object->difference_image->physical_address_of_box_center_y - 0.5f * margin, 0.0f, margin, false, true, comparison_object->average_background);
+//	comparison_object->difference_image->CosineRectangularMask(comparison_object->difference_image->physical_address_of_box_center_x - 0.5f * margin, comparison_object->difference_image->physical_address_of_box_center_y - 0.5f * margin, 0.0f, margin, false, true, comparison_object->average_background);
+
+	if (comparison_object->reset_shadow)
+	{
+		// Replace shadow with unblurred version
+		for (i = 0; i < comparison_object->difference_image->real_memory_allocated; i++) {if (comparison_object->model_image->real_values[i] < threshold) comparison_object->difference_image->real_values[i] = comparison_object->model_image->real_values[i];}
+	}
+	if (comparison_object->reset_background)
+	{
+		// Replace background with unblurred version
+		for (i = 0; i < comparison_object->difference_image->real_memory_allocated; i++) {if (comparison_object->model_image->real_values[i] > threshold) comparison_object->difference_image->real_values[i] = comparison_object->model_image->real_values[i];}
+	}
+	if (comparison_object->busy_state < 0) {return 0.0f;}
+
+	// Recalculate averages in background and shadow
+	average_shadow_model = 0.0;
+	average_shadow_image = 0.0;
+	pixels_shadow = 0;
+	average_background_model = 0.0;
+	average_background_image = 0.0;
+	pixels_background = 0;
+	pointer = 0;
+	for (j = 0; j < comparison_object->difference_image->logical_y_dimension; j++)
+	{
+		for (i = 0; i < comparison_object->difference_image->logical_x_dimension; i++)
+		{
+			if (i >= margin && i <= comparison_object->difference_image->logical_x_dimension - margin && j >= margin && j <= comparison_object->difference_image->logical_y_dimension - margin)
+			{
+				if (comparison_object->edge_mask->real_values[pointer] == 0.0f)
+				{
+					if (comparison_object->difference_image->real_values[pointer] <= threshold)
+					{
+						average_shadow_model += comparison_object->difference_image->real_values[pointer];
+						average_shadow_image += comparison_object->experimental_image->real_values[pointer];
+						pixels_shadow++;
+					}
+					else
+					{
+						average_background_model += comparison_object->difference_image->real_values[pointer];
+						average_background_image += comparison_object->experimental_image->real_values[pointer];
+						pixels_background++;
+					}
+				}
+			}
+			pointer++;
+		}
+		pointer += comparison_object->difference_image->padding_jump_value;
+	}
+	average_shadow_model /= pixels_shadow;
+	average_background_model /= pixels_background;
+	average_shadow_image /= pixels_shadow;
+	average_background_image /= pixels_background;
+//	average_background_image = comparison_object->average_background;
+//	average_shadow_image = comparison_object->average_shadow;
+//	wxPrintf("back, shad model, back, shad image = %g %g %g %g\n", average_background_model, average_shadow_model, average_background_image, average_shadow_image);
+	comparison_object->difference_image->AddMultiplyAddConstant(-average_shadow_model, (average_background_image - average_shadow_image) / (average_background_model - average_shadow_model), average_shadow_image);
+
+	if (debug)
+	{
+		comparison_object->difference_image->QuickAndDirtyWriteSlice("model.mrc", 1);
+		comparison_object->experimental_image->QuickAndDirtyWriteSlice("experimental.mrc", 1);
+		comparison_object->edge_mask->QuickAndDirtyWriteSlice("edge_mask.mrc", 1);
+	}
+//	comparison_object->difference_image->CosineRectangularMask(comparison_object->difference_image->physical_address_of_box_center_x - 0.5f * margin, comparison_object->difference_image->physical_address_of_box_center_y - 0.5f * margin, 0.0f, margin, false, true, comparison_object->average_background);
 
 	comparison_object->difference_image->SubtractImage(comparison_object->experimental_image);
 	residual = comparison_object->difference_image->ReturnSumOfSquares();
-//	comparison_object->difference_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
+	if (debug) comparison_object->difference_image->QuickAndDirtyWriteSlice("difference.mrc", 1);
 //	exit(0);
 //	if (comparison_object->parameters_to_fit < 3) wxPrintf("a0-1, residual = %g %20.6f\n", fabsf(array_of_values[0]), residual);
 //	else if (comparison_object->parameters_to_fit < 5) wxPrintf("a0-3, residual = %g %g %g %g %20.6f\n", fabsf(array_of_values[0]), \
@@ -223,6 +301,7 @@ float RampFit(void *scoring_parameters, float *array_of_values)
 	CurveComparison *comparison_object = reinterpret_cast < CurveComparison *> (scoring_parameters);
 
 	MyDebugAssertTrue(comparison_object->experimental_image->is_in_real_space, "Experimental image not in real space");
+	MyDebugAssertTrue(comparison_object->model_image->is_in_real_space == true, "Model image not in real space");
 
 	int i, j;
 	int ix, iy;
@@ -269,7 +348,8 @@ void FindThreshold(Image &input_image, float &threshold, double &average_backgro
 	int i, j, k;
 	int pointer;
 
-	threshold = 0.5f * input_image.ReturnAverageOfMaxN(10000);
+//	threshold = 0.5f * input_image.ReturnAverageOfMaxN(10000);
+	threshold = 0.5f * input_image.ReturnAverageOfRealValues();
 	for (k = 0; k < 3; k++)
 	{
 		pointer = 0;
@@ -305,6 +385,9 @@ void FindThreshold(Image &input_image, float &threshold, double &average_backgro
 	}
 	sigma_background = sigma_background - average_background * average_background;
 	sigma_shadow = sigma_shadow - average_shadow * average_shadow;
+
+	// Increase threshold a little to move edge slightly further outside the shadow to make CCD MTFs symmerical
+//	threshold = average_shadow + 1.1f * (average_background - average_shadow) / 2.0f;
 
 	return;
 }
@@ -345,7 +428,7 @@ bool FindDQE::DoCalculation()
 	bool use_both_images				= my_current_job.arguments[2].ReturnBoolArgument();
 	std::string output_table				= my_current_job.arguments[3].ReturnStringArgument();
 	std::string	output_diagnostic_image = my_current_job.arguments[4].ReturnStringArgument();
-//	bool is_a_counting_detector			= my_current_job.arguments[2].ReturnBoolArgument();
+//	bool is_a_counting_detector			= my_current_job.arguments[5].ReturnBoolArgument();
 //	float counts_multiplier				= my_current_job.arguments[3].ReturnFloatArgument();
 	float exposure						= my_current_job.arguments[5].ReturnFloatArgument();
 
@@ -357,6 +440,7 @@ bool FindDQE::DoCalculation()
 	int pixels_background2;
 	int pixels_shadow2;
 	int discrepancy_pixels = 0;
+	int cycle;
 	long counter1;
 	int outliers;
 	int edge_pixels = 0;
@@ -385,6 +469,7 @@ bool FindDQE::DoCalculation()
 	float sum_of_coefficients;
 	float variance;
 	float sizing_threshold = 1000.0f;
+	float score;
 	double average_background;
 	double sigma_background;
 	double average_shadow;
@@ -393,7 +478,7 @@ bool FindDQE::DoCalculation()
 	double sigma_background2;
 	double average_shadow2;
 	double sigma_shadow2;
-	bool is_a_counting_detector = false;
+//	bool is_a_counting_detector = false;
 
 	ImageFile input_file(input_pointer_image,false);
 	if (input_file.ReturnZSize() > 1)
@@ -420,7 +505,9 @@ bool FindDQE::DoCalculation()
 	Image input_image1, input_image2, difference_image;
 	Image input_image, temp_image;
 	Image threshold_image;
+	Image threshold_image_fft;
 	Image threshold_image_small;
+//	Image threshold_image_real;
 	Image mask_image;
 //	Image outlier_image;
 	Image background_image;
@@ -434,6 +521,7 @@ bool FindDQE::DoCalculation()
 	rle3d runlenth3d;
 	float cg_starting_point[11];
 	float cg_accuracy[11];
+	float saved_parameters[11];
 	float *fitted_parameters;
 
 	threshold_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
@@ -697,7 +785,7 @@ bool FindDQE::DoCalculation()
 	threshold3 /= edge_pixels;
 
 	counter1 = 0;
-	temp_float = 0.01f * threshold3;
+	temp_float = 0.002f * threshold3;
 	pointer = 0;
 	for (j = 0; j < mask_image.logical_y_dimension; j++)
 	{
@@ -791,25 +879,34 @@ bool FindDQE::DoCalculation()
 	if (y_mid < (box_size_y - input_image.logical_y_dimension) / 2) y_mid = (box_size_y - input_image.logical_y_dimension) / 2;
 
 	// Recalculate averages excluding edge
-	average_shadow = 0.0f;
+	average_shadow = 0.0;
 	pixels_shadow = 0;
-	average_background = 0.0f;
+	average_background = 0.0;
 	pixels_background = 0;
-	for (i = 0; i < input_image.real_memory_allocated; i++)
+	pointer = 0;
+	for (j = 0; j < input_image.logical_y_dimension; j++)
 	{
-		if (mask_image.real_values[i] == 0.0f)
+		for (i = 0; i < input_image.logical_x_dimension; i++)
 		{
-			if (threshold_image_small.real_values[i] <= threshold)
+			if (i >= margin && i <= input_image.logical_x_dimension - margin && j >= margin && j <= input_image.logical_y_dimension - margin)
 			{
-				average_shadow += input_image.real_values[i];
-				pixels_shadow++;
+				if (mask_image.real_values[pointer] == 0.0f)
+				{
+					if (threshold_image_small.real_values[pointer] <= threshold)
+					{
+						average_shadow += input_image.real_values[pointer];
+						pixels_shadow++;
+					}
+					else
+					{
+						average_background += input_image.real_values[pointer];
+						pixels_background++;
+					}
+				}
 			}
-			else
-			{
-				average_background += input_image.real_values[i];
-				pixels_background++;
-			}
+			pointer++;
 		}
+		pointer += input_image.padding_jump_value;
 	}
 	average_shadow /= pixels_shadow;
 	average_background /= pixels_background;
@@ -860,6 +957,9 @@ bool FindDQE::DoCalculation()
 	temp_image.CopyFrom(&input_image);
 	input_image.Resize(box_size_x, box_size_y, 1);
 	temp_image.ClipInto(&input_image, 0.0f, false, 0.0f, x_mid, y_mid);
+	temp_image.CopyFrom(&mask_image);
+	mask_image.Resize(box_size_x, box_size_y, 1);
+	temp_image.ClipInto(&mask_image, 0.0f, false, 0.0f, x_mid, y_mid);
 //	temp_image.CopyFrom(&outlier_image);
 //	outlier_image.Resize(box_size_x, box_size_y, 1);
 //	temp_image.ClipInto(&outlier_image, 0.0f, false, 0.0f, x_mid, y_mid);
@@ -922,7 +1022,7 @@ bool FindDQE::DoCalculation()
 		pointer += background_mask_image.padding_jump_value;
 	}
 	mask_volume /= background_image.number_of_real_space_pixels;
-//	background_image.QuickAndDirtyWriteSlice("background_image.mrc", 1);
+	if (debug) background_image.QuickAndDirtyWriteSlice("background_image.mrc", 1);
 
 	nps0 = 0.0f;
 	for (i = bin_size - 5; i <= bin_size + 5; i++)
@@ -997,13 +1097,14 @@ bool FindDQE::DoCalculation()
 	nps02 /= 51.0f;
 	for (i = 875; i < 925; i++) nps09 += nps.data_y[i];
 	nps09 /= 51.0f;
-	if (nps02 / nps09 < 2.0f)
-	{
+//	if (nps02 / nps09 < 2.0f)
+//	{
 		// This is currently not used
 //		wxPrintf("\nUsing NPS scaling for counting detector\n");
+//		wxPrintf("\nThis is a counting detector: MTFs will be fitted independently on both sides of the edge.\n");
 //		is_a_counting_detector = true;
 ////		nps.MultiplyByConstant(1.0f / nps09);
-	}
+//	}
 //	else nps.MultiplyByConstant(float(background_image.number_of_real_space_pixels) / mask_volume / nps0);
 
 	// Spectrum always has huge peak at origin. Reset to value at [1]
@@ -1052,67 +1153,173 @@ bool FindDQE::DoCalculation()
 //		else threshold_image.real_values[i] = average_shadow;
 //	}
 
+	// Dilate shadow
+//	threshold_image.ForwardFFT();
+//	threshold_image.GaussianLowPassFilter(0.01f);
+//	threshold_image.BackwardFFT();
+//	for (i = 0; i < threshold_image.real_memory_allocated; i++)
+//	{
+//		if (threshold_image.real_values[i] > 1.0f * threshold) threshold_image.real_values[i] = average_background;
+//		else threshold_image.real_values[i] = average_shadow;
+//	}
+
 	temp_image.CopyFrom(&input_image);
 	temp_image.CosineRectangularMask(temp_image.physical_address_of_box_center_x - 0.5f * margin, temp_image.physical_address_of_box_center_y - 0.5f * margin, 0.0f, margin, false, true, average_background);
-	threshold_image.ForwardFFT();
+	threshold_image.CosineRectangularMask(threshold_image.physical_address_of_box_center_x - 0.5f * padding * margin, threshold_image.physical_address_of_box_center_y - 0.5f * padding * margin, 0.0f, padding * margin, false, true, average_background);
+//	threshold_image_real.CopyFrom(&threshold_image);
+	threshold_image_fft.CopyFrom(&threshold_image);
+	threshold_image_fft.ForwardFFT();
+	if (padding != 1) threshold_image.RealSpaceBinning(padding, padding, 1, true);
 
-	wxPrintf("\nFitting MTF...\n");
-	wxPrintf("Min,max x,y coordinates for shadow   = %8i %8i %8i %8i\n", x_min + 1, x_max + 1, y_min + 1, y_max + 1);
+//	wxPrintf("\nFitting MTF\n");
+	wxPrintf("\nMin,max x,y coordinates for shadow   = %8i %8i %8i %8i\n", x_min + 1, x_max + 1, y_min + 1, y_max + 1);
 	wxPrintf("Using box size %8i x %8i\n\n", box_size_x, box_size_y);
 
-	for (i = 0; i < 10; i += 2) cg_accuracy[i] = 0.1f;
-	for (i = 1; i < 10; i += 2) cg_accuracy[i] = 0.01f;
-	cg_accuracy[10] = 0.1f;
-
-	comparison_object.experimental_image = &temp_image;
 	comparison_object.model_image = &threshold_image;
+	comparison_object.experimental_image = &temp_image;
+//	comparison_object.model_image_real = &threshold_image_real;
+	comparison_object.model_image_fft = &threshold_image_fft;
 	comparison_object.difference_image = &difference_image;
-//	comparison_object.parameters_to_fit = 11;
+	comparison_object.edge_mask = &mask_image;
 	comparison_object.average_background = average_background;
-	comparison_object.best_score = FLT_MAX;
-	comparison_object.busy_state = 0;
-	comparison_object.is_a_counting_detector = is_a_counting_detector;
+	comparison_object.average_shadow = average_shadow;
+//	comparison_object.is_a_counting_detector = is_a_counting_detector;
 	comparison_object.nps_fit = &nps_fit;
 
-	for (j = 0; j < 5; j++)
+	for (cycle = 0; cycle < 2; cycle++)
 	{
-		if (j == 0) comparison_object.parameters_to_fit = 1;
-		else comparison_object.parameters_to_fit = 2 * j + 2;
-//		cg_starting_point[0] = 10.0f + 200.0f * j;
-		cg_starting_point[0] = 1.0f + 10.0f * j;
-//		sum_of_coefficients = 0.0f;
-//		for (i = 1; i < 2 * j; i += 2) sum_of_coefficients += fabsf(fitted_parameters[i]);
-//		if (j > 0) cg_starting_point[1] = 0.1f * sum_of_coefficients;
-//		else cg_starting_point[1] = 1.0f;
-		if (j > 0)
+		if (! two_sided_mtf)
 		{
-			cg_starting_point[1] = 0.1f;
-			sum_of_coefficients = 0.0f;
-			for (i = 1; i < 2 * j + 2; i += 2) sum_of_coefficients += fabsf(cg_starting_point[i]);
-			for (i = 1; i < 2 * j + 2; i += 2) cg_starting_point[i] /= sum_of_coefficients;
+			wxPrintf("Fitting MTF...\n\n");
+			comparison_object.reset_shadow = false;
+			comparison_object.reset_background = false;
+//			comparison_object.model_image = &threshold_image;
 		}
-		else cg_starting_point[1] = 1.0f;
-//		if (j == 4)
-//		{
-//			comparison_object.parameters_to_fit++;
-//			cg_starting_point[10] = 1.0f;
-//		}
-//		conjugate_gradient_minimizer.Init(&MTFFitSinc, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
-		conjugate_gradient_minimizer.Init(&MTFFit, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
-		conjugate_gradient_minimizer.Run(500);
-		fitted_parameters = conjugate_gradient_minimizer.GetPointerToBestValues();
-		if (j == 0)
+		else if (cycle == 0)
 		{
-			cg_starting_point[2 * j + 2] = fitted_parameters[2 * j];
-			cg_starting_point[2 * j + 3] = 1.0f;
+			wxPrintf("Fitting MTF inside shadow...\n\n");
+//			comparison_object.reset_shadow = true;
+//			comparison_object.reset_background = false;
+			comparison_object.reset_shadow = false;
+			comparison_object.reset_background = true;
+//			comparison_object.model_image = &threshold_image;
 		}
-		else if (j < 4)
+		else
 		{
-			cg_starting_point[2 * j + 2] = fitted_parameters[2 * j];
-			cg_starting_point[2 * j + 3] = fitted_parameters[2 * j + 1];
+			wxPrintf("\n\nFitting MTF outside shadow...\n\n");
+//			comparison_object.reset_shadow = false;
+//			comparison_object.reset_background = true;
+			comparison_object.reset_shadow = true;
+			comparison_object.reset_background = false;
 		}
-//		for (i = 0; i < comparison_object.parameters_to_fit; i++) wxPrintf("Cycle %i: fitted_parameters[%1i] = %g;\n", j, i, fitted_parameters[i]);
-    }
+
+		for (i = 0; i < 10; i += 2) cg_accuracy[i] = 0.1f;
+		for (i = 1; i < 10; i += 2) cg_accuracy[i] = 0.01f;
+		cg_accuracy[10] = 0.1f;
+
+//		comparison_object.experimental_image = &temp_image;
+//		comparison_object.model_image_real = &threshold_image_real;
+//		comparison_object.model_image_fft = &threshold_image_fft;
+//		comparison_object.difference_image = &difference_image;
+//		comparison_object.edge_mask = &mask_image;
+//		comparison_object.parameters_to_fit = 11;
+//		comparison_object.average_background = average_background;
+//		comparison_object.average_shadow = average_shadow;
+		comparison_object.best_score = FLT_MAX;
+		comparison_object.busy_state = 0;
+//		comparison_object.is_a_counting_detector = is_a_counting_detector;
+//		comparison_object.nps_fit = &nps_fit;
+
+		// F416 200 kV
+//		fitted_parameters = new float [10];
+//		fitted_parameters[0] = -2.99066;
+//		fitted_parameters[1] = 14.9696;
+//		fitted_parameters[2] = 103.689;
+//		fitted_parameters[3] = 6.31202;
+//		fitted_parameters[4] = 34738.4;
+//		fitted_parameters[5] = -0.236264;
+//		fitted_parameters[6] = 41176.2;
+//		fitted_parameters[7] = -0.299999;
+//		fitted_parameters[8] = 41211.1;
+//		fitted_parameters[9] = -0.309835;
+
+		for (j = 0; j < 5; j++)
+//		for (j = 4; j < 5; j++)
+//		for (j = 0; j < 0; j++)
+		{
+			if (j == 0) comparison_object.parameters_to_fit = 1;
+			else comparison_object.parameters_to_fit = 2 * j + 2;
+//			cg_starting_point[0] = 10.0f + 200.0f * j;
+			cg_starting_point[0] = 1.0f + 10.0f * j;
+//			sum_of_coefficients = 0.0f;
+//			for (i = 1; i < 2 * j; i += 2) sum_of_coefficients += fabsf(fitted_parameters[i]);
+//			if (j > 0) cg_starting_point[1] = 0.1f * sum_of_coefficients;
+//			else cg_starting_point[1] = 1.0f;
+			if (j > 0)
+			{
+				cg_starting_point[1] = 0.1f;
+				sum_of_coefficients = 0.0f;
+				for (i = 1; i < 2 * j + 2; i += 2) sum_of_coefficients += fabsf(cg_starting_point[i]);
+				for (i = 1; i < 2 * j + 2; i += 2) cg_starting_point[i] /= sum_of_coefficients;
+			}
+			else cg_starting_point[1] = 1.0f;
+//			if (j == 4)
+//			{
+//				comparison_object.parameters_to_fit++;
+//				cg_starting_point[10] = 1.0f;
+//			}
+//			conjugate_gradient_minimizer.Init(&MTFFitSinc, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
+
+//			cg_starting_point[0] = -2.99066;
+//			cg_starting_point[1] = 14.9696;
+//			cg_starting_point[2] = 103.689;
+//			cg_starting_point[3] = 6.31202;
+//			cg_starting_point[4] = 34738.4;
+//			cg_starting_point[5] = -0.236264;
+//			cg_starting_point[6] = 41176.2;
+//			cg_starting_point[7] = -0.299999;
+//			cg_starting_point[8] = 41211.1;
+//			cg_starting_point[9] = -0.309835;
+
+			conjugate_gradient_minimizer.Init(&MTFFit, &comparison_object, comparison_object.parameters_to_fit, cg_starting_point, cg_accuracy);
+			conjugate_gradient_minimizer.Run(500);
+			fitted_parameters = conjugate_gradient_minimizer.GetPointerToBestValues();
+			if (j == 0)
+			{
+				cg_starting_point[2 * j + 2] = fitted_parameters[2 * j];
+				cg_starting_point[2 * j + 3] = 1.0f;
+			}
+			else if (j < 4)
+			{
+				cg_starting_point[2 * j + 2] = fitted_parameters[2 * j];
+				cg_starting_point[2 * j + 3] = fitted_parameters[2 * j + 1];
+			}
+//			for (i = 0; i < comparison_object.parameters_to_fit; i++) wxPrintf("Cycle %i: fitted_parameters[%1i] = %g;\n", j, i, fitted_parameters[i]);
+	    }
+
+		if (debug)
+		{
+			wxPrintf("\n");
+			for (i = 0; i < comparison_object.parameters_to_fit; i++) wxPrintf("fitted_parameters[%1i] = %g;\n", i, fitted_parameters[i]);
+		}
+		if (cycle == 0 && two_sided_mtf)
+		{
+			comparison_object.busy_state = -1;
+			score = MTFFit(&comparison_object, fitted_parameters);
+			threshold_image.CopyFrom(comparison_object.difference_image);
+//			threshold_image_fft.CopyFrom(comparison_object.difference_image);
+//			threshold_image_fft.ForwardFFT();
+			for (i = 0; i < comparison_object.parameters_to_fit; i++) saved_parameters[i] = fitted_parameters[i];
+		}
+		else
+		{
+		// calculate difference image with best parameters
+		//	MTFFitSinc(&comparison_object, fitted_parameters);
+			score = MTFFit(&comparison_object, fitted_parameters);
+			if (two_sided_mtf) wxPrintf("\n\nUsing the average MTF for DQE calculation.\n");
+		}
+		if (! two_sided_mtf) break;
+	}
 
 //	fitted_parameters = new float [11];
 	// US4000
@@ -1128,20 +1335,18 @@ bool FindDQE::DoCalculation()
 //	fitted_parameters[9] = -1.00049;
 //	fitted_parameters[10] = 10.00049;
 
-	// calculate difference image with best parameters
-//	MTFFitSinc(&comparison_object, fitted_parameters);
-	MTFFit(&comparison_object, fitted_parameters);
-
 	mtf.SetupXAxis(0.0, 0.5f / 1000.0f * 1415.0f, 1416);
 	mtf.number_of_points = 1001;
 	nps.number_of_points = mtf.number_of_points;
 	nps_fit.number_of_points = mtf.number_of_points;
 	sum_of_coefficients = 0.0f;
 	for (j = 1; j < 10; j += 2) sum_of_coefficients += fabsf(fitted_parameters[j]);
+	if (two_sided_mtf) {for (j = 1; j < 10; j += 2) sum_of_coefficients += fabsf(saved_parameters[j]);}
 	for (i = 0; i < mtf.number_of_points; i++)
 	{
 		function_value = 0.0f;
 		for (j = 0; j < 10; j += 2) function_value += fabsf(fitted_parameters[j + 1]) * exp(-fabsf(fitted_parameters[j]) * powf(mtf.data_x[i], 2));
+		if (two_sided_mtf) {for (j = 0; j < 10; j += 2) function_value += fabsf(saved_parameters[j + 1]) * exp(-fabsf(saved_parameters[j]) * powf(mtf.data_x[i], 2));}
 //		if (comparison_object.parameters_to_fit > 10) function_value += sinc(fabsf(fitted_parameters[10]) * mtf.data_x[i]) * fabsf(fitted_parameters[9]) * exp(-fabsf(fitted_parameters[8]) * powf(mtf.data_x[i], 2));
 		mtf.data_y[i] = function_value / sum_of_coefficients * sqrtf(nps_fit.data_y[i]);
 //		mtf.data_y[i] = function_value / sum_of_coefficients;

@@ -710,44 +710,40 @@ bool RefineCTFApp::DoCalculation()
 			refine_particle.filter_radius_low = 30.0;
 			refine_particle.SetIndexForWeightedCorrelation();
 			binned_image.CopyFrom(refine_particle.particle_image);
-			refine_particle.InitCTF(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift);
-			if (ctf_refinement)
+			refine_particle.InitCTF(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
+//			refine_particle.InitCTF(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift);
+
+			best_score = - std::numeric_limits<float>::max();
+			for (defocus_i = - myround(float(defocus_search_range)/float(defocus_step)); defocus_i <= myround(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 			{
-				best_score = - std::numeric_limits<float>::max();
-				for (defocus_i = - myround(float(defocus_search_range)/float(defocus_step)); defocus_i <= myround(float(defocus_search_range)/float(defocus_step)); defocus_i++)
-				{
-					refine_particle.SetDefocus(input_parameters.defocus_1 + defocus_i * defocus_step, input_parameters.defocus_2 + defocus_i * defocus_step, input_parameters.defocus_angle, input_parameters.phase_shift);
-					refine_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1 + defocus_i * defocus_step, input_parameters.defocus_2 + defocus_i * defocus_step, input_parameters.defocus_angle, input_parameters.phase_shift);
-					if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
-					// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
-					else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
-					refine_particle.PhaseFlipImage();
+				refine_particle.SetDefocus(input_parameters.defocus_1 + defocus_i * defocus_step, input_parameters.defocus_2 + defocus_i * defocus_step, input_parameters.defocus_angle, input_parameters.phase_shift);
+				refine_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1 + defocus_i * defocus_step, input_parameters.defocus_2 + defocus_i * defocus_step, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
+//					refine_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1 + defocus_i * defocus_step, input_parameters.defocus_2 + defocus_i * defocus_step, input_parameters.defocus_angle, input_parameters.phase_shift);
+				if (normalize_input_3d) refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 1);
+				// Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
+				else refine_particle.WeightBySSNR(refine_statistics.part_SSNR, 0);
+				refine_particle.PhaseFlipImage();
 //					refine_particle.CosineMask(false, true, 0.0);
-					refine_particle.CosineMask();
-					refine_particle.PhaseShift();
-					refine_particle.CenterInCorner();
+				refine_particle.CosineMask();
+				refine_particle.PhaseShift();
+				refine_particle.CenterInCorner();
 //					refine_particle.WeightBySSNR(input_3d_local.statistics.part_SSNR, 1);
 
-					score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
-					if (score > best_score)
-					{
-						best_score = score;
-						best_defocus_i = defocus_i;
-					}
-					refine_particle.particle_image->CopyFrom(&binned_image);
-					refine_particle.is_ssnr_filtered = false;
-					refine_particle.is_masked = false;
-					refine_particle.is_centered_in_box = true;
-					refine_particle.shift_counter = 1;
+				score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
+				if (score > best_score)
+				{
+					best_score = score;
+					best_defocus_i = defocus_i;
 				}
-				output_parameters.defocus_1 = input_parameters.defocus_1 + best_defocus_i * defocus_step;
-				output_parameters.defocus_2 = input_parameters.defocus_2 + best_defocus_i * defocus_step;
+				refine_particle.particle_image->CopyFrom(&binned_image);
+				refine_particle.is_ssnr_filtered = false;
+				refine_particle.is_masked = false;
+				refine_particle.is_centered_in_box = true;
+				refine_particle.shift_counter = 1;
 			}
-			else
-			{
-				output_parameters.defocus_1 = input_parameters.defocus_1;
-				output_parameters.defocus_2 = input_parameters.defocus_2;
-			}
+			output_parameters.defocus_1 = input_parameters.defocus_1 + best_defocus_i * defocus_step;
+			output_parameters.defocus_2 = input_parameters.defocus_2 + best_defocus_i * defocus_step;
+
 			refine_particle.SetDefocus(output_parameters.defocus_1, output_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift);
 			refine_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, output_parameters.defocus_1, output_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift);
 

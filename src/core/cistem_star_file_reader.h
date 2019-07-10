@@ -27,6 +27,11 @@ class  cisTEMStarFileReader {
 	int		beam_tilt_y_column;
 	int		image_shift_x_column;
 	int		image_shift_y_column;
+	int		stack_filename_column;
+	int     original_image_filename_column;
+	int     reference_3d_filename_column;
+	int     best_2d_class_column;
+	int     beam_tilt_group_column;
 
 public:
 
@@ -71,5 +76,10 @@ public:
 	inline float ReturnBeamTiltY(int line_number) { return cached_parameters->Item(line_number).beam_tilt_y;}
 	inline float ReturnImageShiftX(int line_number) { return cached_parameters->Item(line_number).image_shift_x;}
 	inline float ReturnImageShiftY(int line_number) { return cached_parameters->Item(line_number).image_shift_y;}
+	inline wxString	ReturnStackFilename(int line_number) {return cached_parameters->Item(line_number).stack_filename;}
+	inline wxString ReturnOriginalImageFilename(int line_number) {return cached_parameters->Item(line_number).original_image_filename;}
+	inline wxString ReturnReference3DFilename(int line_number) {return cached_parameters->Item(line_number).reference_3d_filename;}
+	inline int ReturnBest2DClass(int line_number) {return cached_parameters->Item(line_number).best_2d_class;}
+	inline int ReturnBeamTiltGroup(int line_number) {return cached_parameters->Item(line_number).beam_tilt_group;}
 
 };

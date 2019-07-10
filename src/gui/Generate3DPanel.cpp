@@ -666,7 +666,7 @@ void Generate3DPanel::SetupReconstructionJob()
 			bool     centre_mass                        = false;
 
 			bool threshold_input_3d = true;
-			int max_threads;
+			int max_threads = 1;
 
 			current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
 																		input_particle_stack.ToUTF8().data(),

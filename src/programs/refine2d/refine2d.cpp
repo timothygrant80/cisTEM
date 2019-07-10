@@ -365,6 +365,7 @@ bool Refine2DApp::DoCalculation()
 	// allocate memory for output files..
 
 	output_star_file.PreallocateMemoryAndBlank(input_star_file.ReturnNumberofLines());
+	output_star_file.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | BEST_2D_CLASS | PSI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | LOGP | SCORE | SCORE_CHANGE | OCCUPANCY | SIGMA | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y);
 
 	my_time_in = wxDateTime::Now();
 	output_star_file.AddCommentToHeader("# Refine2D run date and time:              " + my_time_in.FormatISOCombined(' '));
@@ -377,9 +378,6 @@ bool Refine2DApp::DoCalculation()
 	output_star_file.AddCommentToHeader("# Last particle to refine:                 " + wxString::Format("%i", last_particle));
 	output_star_file.AddCommentToHeader("# Percent of particles to use:             " + wxString::Format("%f", percent_used));
 	output_star_file.AddCommentToHeader("# Pixel size of class averages (A):        " + wxString::Format("%f", pixel_size));
-//	output_star_file.AddCommentToHeader("# Beam energy (keV):                       " + wxString::Format("%f", voltage_kV));
-//	output_star_file.AddCommentToHeader("# Spherical aberration (mm):               " + wxString::Format("%f", spherical_aberration_mm));
-//	output_star_file.AddCommentToHeader("# Amplitude contrast:                      " + wxString::Format("%f", amplitude_contrast));
 	output_star_file.AddCommentToHeader("# Mask radius for refinement (A):          " + wxString::Format("%f", mask_radius));
 	output_star_file.AddCommentToHeader("# Low resolution limit (A):                " + wxString::Format("%f", low_resolution_limit));
 	output_star_file.AddCommentToHeader("# High resolution limit (A):               " + wxString::Format("%f", high_resolution_limit));
@@ -391,6 +389,8 @@ bool Refine2DApp::DoCalculation()
 	output_star_file.AddCommentToHeader("# Invert particle contrast:                " + BoolToYesNo(invert_contrast));
 	output_star_file.AddCommentToHeader("# Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
 	output_star_file.AddCommentToHeader("# Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
+	output_star_file.AddCommentToHeader("# Automatically mask class averages:       " + BoolToYesNo(auto_mask));
+	output_star_file.AddCommentToHeader("# Automatically center class averages:     " + BoolToYesNo(auto_centre));
 	output_star_file.AddCommentToHeader("# Output dump filename:                    " + dump_file);
 	output_star_file.AddCommentToHeader("#");
 
@@ -905,7 +905,7 @@ bool Refine2DApp::DoCalculation()
 		image_counter++;
 		if ((global_random_number_generator.GetUniformRandom() < 1.0f - 2.0f * percent_used))
 		{
-			input_parameters.image_is_active = - abs(input_parameters.image_is_active);
+			input_parameters.best_2d_class = - abs(input_parameters.best_2d_class);
 			input_parameters.score_change = 0.0f;
 			output_parameters = input_parameters;
 //			output_par_file.WriteLine(input_parameters);
@@ -920,7 +920,7 @@ bool Refine2DApp::DoCalculation()
 		if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size))
 		{
 			number_of_blank_edges++;
-			input_parameters.image_is_active = - abs(input_parameters.image_is_active);
+			input_parameters.best_2d_class = - abs(input_parameters.best_2d_class);
 			input_parameters.score_change = 0.0;
 			output_parameters = input_parameters;
 			SendRefineResult(&input_parameters);
@@ -930,7 +930,7 @@ bool Refine2DApp::DoCalculation()
 		}
 		else
 		{
-			input_parameters.image_is_active = fabsf(input_parameters.image_is_active);
+			input_parameters.best_2d_class = fabsf(input_parameters.best_2d_class);
 		}
 		input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 
@@ -1022,7 +1022,7 @@ bool Refine2DApp::DoCalculation()
 		max_logp_particle = - std::numeric_limits<float>::max();
 
 		// Calculate score of previous best match, store cc map in best_correlation_map. Matching projection is in last location of projection_cache.
-		best_class = abs(input_parameters.image_is_active) - 1;
+		best_class = abs(input_parameters.best_2d_class) - 1;
 		if (best_class < 0 || best_class >= number_of_classes)
 		{
 			best_class = -1;
@@ -1082,14 +1082,14 @@ bool Refine2DApp::DoCalculation()
 					temp_image_local.MultiplyPixelWiseReal(ctf_input_image_local);
 					temp_image_local.MultiplyByConstant(temp_float / input_particle_local.current_parameters.sigma);
 					CTF_sums_local[current_class].AddImage(&temp_image_local);
-					if (current_class + 1 == input_particle_local.current_parameters.image_is_active) input_particle_local.current_parameters.occupancy = 100.0 * temp_float;
+					if (current_class + 1 == input_particle_local.current_parameters.best_2d_class) input_particle_local.current_parameters.occupancy = 100.0 * temp_float;
 				}
 			}
 		}
 
 		input_particle_local.GetParameters(output_parameters);
 
-		output_parameters.image_is_active = list_of_nozero_classes[output_parameters.image_is_active - 1] + 1;
+		output_parameters.best_2d_class = list_of_nozero_classes[output_parameters.best_2d_class - 1] + 1;
 		// Multiply measured sigma noise in binned image by binning factor to obtain sigma noise of unbinned image
 		output_parameters.sigma *= binning_factor;
 		if (output_parameters.sigma > 100.0) output_parameters.sigma = 100.0;
@@ -1289,7 +1289,8 @@ void Refine2DApp::SendRefineResult(cisTEMParameterLine *current_params)
 		gui_result_params[1] = current_params->psi;
 		gui_result_params[2] = current_params->x_shift;
 		gui_result_params[3] = current_params->y_shift;
-		gui_result_params[4] = current_params->image_is_active;
+		gui_result_params[4] = current_params->best_2d_class;
+		wxPrintf("best class = %i\n", current_params->best_2d_class);
 		gui_result_params[5] = current_params->sigma;
 		gui_result_params[6] = current_params->logp;
 		gui_result_params[7] = current_params->amplitude_contrast;

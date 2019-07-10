@@ -7,6 +7,112 @@ cisTEMParameterLine::cisTEMParameterLine()
 	SetAllToZero();
 }
 
+cisTEMParameterMask::cisTEMParameterMask()
+{
+	SetAllToTrue();
+}
+
+void cisTEMParameterMask::SetAllToTrue()
+{
+	position_in_stack = true;
+	image_is_active = true;
+	psi = true;
+	theta = true;
+	phi = true;
+	x_shift = true;
+	y_shift = true;
+	defocus_1 = true;
+	defocus_2 = true;
+	defocus_angle = true;
+	phase_shift = true;
+	occupancy = true;
+	logp = true;
+	sigma = true;
+	score = true;
+	score_change= true;
+	pixel_size = true;
+	microscope_voltage_kv = true;
+	microscope_spherical_aberration_mm = true;
+	amplitude_contrast = true;
+	beam_tilt_x = true;
+	beam_tilt_y = true;
+	image_shift_x = true;
+	image_shift_y = true;
+	stack_filename = true;
+	original_image_filename = true;
+	reference_3d_filename = true;
+	best_2d_class = true;
+	beam_tilt_group = true;
+}
+
+void cisTEMParameterMask::SetAllToFalse()
+{
+	position_in_stack = false;
+	image_is_active = false;
+	psi = false;
+	theta = false;
+	phi = false;
+	x_shift = false;
+	y_shift = false;
+	defocus_1 = false;
+	defocus_2 = false;
+	defocus_angle = false;
+	phase_shift = false;
+	occupancy = false;
+	logp = false;
+	sigma = false;
+	score = false;
+	score_change= false;
+	pixel_size = false;
+	microscope_voltage_kv = false;
+	microscope_spherical_aberration_mm = false;
+	amplitude_contrast = false;
+	beam_tilt_x = false;
+	beam_tilt_y = false;
+	image_shift_x = false;
+	image_shift_y = false;
+	stack_filename = false;
+	original_image_filename = false;
+	reference_3d_filename = false;
+	best_2d_class = false;
+	beam_tilt_group = false;
+}
+
+void cisTEMParameterMask::SetActiveParameters(long parameters_to_set)
+{
+	position_in_stack = ((parameters_to_set & POSITION_IN_STACK) == POSITION_IN_STACK);
+	image_is_active = ((parameters_to_set & IMAGE_IS_ACTIVE) == IMAGE_IS_ACTIVE);
+	psi = ((parameters_to_set & PSI) == PSI);
+	theta = ((parameters_to_set & THETA) == THETA);
+	phi = ((parameters_to_set & PHI) == PHI);
+	x_shift = ((parameters_to_set & X_SHIFT) == X_SHIFT);
+	y_shift = ((parameters_to_set & Y_SHIFT) == Y_SHIFT);
+	defocus_1 = ((parameters_to_set & DEFOCUS_1) == DEFOCUS_1);
+	defocus_2 = ((parameters_to_set & DEFOCUS_2) == DEFOCUS_2);
+	defocus_angle = ((parameters_to_set & DEFOCUS_ANGLE) == DEFOCUS_ANGLE);
+	phase_shift = ((parameters_to_set & PHASE_SHIFT) == PHASE_SHIFT);
+	occupancy = ((parameters_to_set & OCCUPANCY) == OCCUPANCY);
+	logp = ((parameters_to_set & LOGP) == LOGP);
+	sigma = ((parameters_to_set & SIGMA) == SIGMA);
+	score = ((parameters_to_set & SCORE) == SCORE);
+	score_change= ((parameters_to_set & SCORE_CHANGE) == SCORE_CHANGE);
+	pixel_size = ((parameters_to_set & PIXEL_SIZE) == PIXEL_SIZE);
+	microscope_voltage_kv = ((parameters_to_set & MICROSCOPE_VOLTAGE) == MICROSCOPE_VOLTAGE);
+	microscope_spherical_aberration_mm = ((parameters_to_set & MICROSCOPE_CS) == MICROSCOPE_CS);
+	amplitude_contrast = ((parameters_to_set & AMPLITUDE_CONTRAST) == AMPLITUDE_CONTRAST);
+	beam_tilt_x = ((parameters_to_set & BEAM_TILT_X) == BEAM_TILT_X);
+	beam_tilt_y = ((parameters_to_set & BEAM_TILT_Y) == BEAM_TILT_Y);
+	image_shift_x = ((parameters_to_set & IMAGE_SHIFT_X) == IMAGE_SHIFT_X);
+	image_shift_y = ((parameters_to_set & IMAGE_SHIFT_Y) == IMAGE_SHIFT_Y);
+	stack_filename = ((parameters_to_set & STACK_FILENAME) == STACK_FILENAME);
+	original_image_filename = ((parameters_to_set & ORIGINAL_IMAGE_FILENAME) == ORIGINAL_IMAGE_FILENAME);
+	reference_3d_filename = ((parameters_to_set & REFERENCE_3D_FILENAME) == REFERENCE_3D_FILENAME);
+	best_2d_class = ((parameters_to_set & BEST_2D_CLASS) == BEST_2D_CLASS);
+	beam_tilt_group = ((parameters_to_set & BEAM_TILT_GROUP) == BEAM_TILT_GROUP);
+}
+
+
+
 /* Should never be needed actually
 void cisTEMParameterLine::SwapPsiAndPhi()
 {
@@ -41,6 +147,8 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
+
+	// not adding filenames or groups as it doesn't make sense
 }
 
 void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
@@ -69,6 +177,8 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
+
+	// not adding filenames or groups as it doesn't make sense
 }
 
 void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
@@ -98,6 +208,8 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
 
+	// not adding filenames or groups as it doesn't make sense
+
 }
 
 void cisTEMParameterLine::SetAllToZero()
@@ -126,6 +238,12 @@ void cisTEMParameterLine::SetAllToZero()
 	beam_tilt_y = 0.0f;
 	image_shift_x = 0.0f;
 	image_shift_y = 0.0f;
+	stack_filename = wxEmptyString;
+	original_image_filename = wxEmptyString;
+	reference_3d_filename = wxEmptyString;
+	best_2d_class = 0;
+	beam_tilt_group = 0;
+
 }
 
 void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_params)
@@ -152,6 +270,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
+	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
 
 
 }
@@ -177,6 +296,8 @@ void cisTEMParameters::PreallocateMemoryAndBlank(int number_to_allocate)
 	cisTEMParameterLine temp_line;
 	all_parameters.Add(temp_line, number_to_allocate);
 }
+
+// THIS IS NOT BEING UPDATED...
 
 void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size, float wanted_microscope_voltage, float wanted_microscope_cs, float wanted_amplitude_contrast, float wanted_beam_tilt_x, float wanted_beam_tilt_y, float wanted_image_shift_x, float wanted_image_shift_y)
 {
@@ -283,70 +404,269 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (first_image_to_write == -1) first_image_to_write = 1;
 	if (last_image_to_write == -1) last_image_to_write = INT_MAX;
 
+	int column_counter = 1;
+
 	// Write headers
 	cisTEM_star_file->AddLine(wxString(" "));
 	cisTEM_star_file->AddLine(wxString("data_"));
 	cisTEM_star_file->AddLine(wxString(" "));
 	cisTEM_star_file->AddLine(wxString("loop_"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMPositionInStack #1"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMAnglePsi #2"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMAngleTheta #3"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMAnglePhi #4"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMXShift #5"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMYShift #6"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMDefocus1 #7"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMDefocus2 #8"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMDefocusAngle #9"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMPhaseShift #10"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMImageActivity #11"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMOccupancy #12"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMLogP #13"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMSigma #14"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMScore #15"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMScoreChange #16"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMPixelSize #17"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMMicroscopeVoltagekV #18"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMMicroscopeCsMM #19"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMAmplitudeContrast #20"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltX #21"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMBeamTiltY #22"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftX #23"));
-	cisTEM_star_file->AddLine(wxString("_cisTEMImageShiftY #24"));
+
+	// write headers depending on parameter mask...
+
+	if (parameters_to_write.position_in_stack == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPositionInStack #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.psi == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAnglePsi #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.theta == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAngleTheta #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.phi == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAnglePhi #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.x_shift == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMXShift #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.y_shift == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMYShift #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.defocus_1 == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocus1 #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.defocus_2 == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocus2 #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.defocus_angle == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocusAngle #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.phase_shift == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPhaseShift #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.image_is_active == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageActivity #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.occupancy == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMOccupancy #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.logp == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMLogP #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.sigma == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMSigma #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.score == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMScore #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.score_change == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMScoreChange #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.pixel_size == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPixelSize #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.microscope_voltage_kv == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMMicroscopeVoltagekV #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.microscope_spherical_aberration_mm == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMMicroscopeCsMM #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.amplitude_contrast == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAmplitudeContrast #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.beam_tilt_x == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltX #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.beam_tilt_y == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltY #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.image_shift_x == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageShiftX #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.image_shift_y == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageShiftY #%i", column_counter));
+		column_counter++;
+	}
 
 
-	cisTEM_star_file->AddLine("#            PSI   THETA     PHI       SHX       SHY      DF1      DF2  ANGAST  PSHIFT  STAT     OCC      LogP      SIGMA   SCORE  CHANGE    PSIZE    VOLT      CS    AmpC  BTILTX  BTILTY  ISHFTX  ISHFTY");
+	if (parameters_to_write.best_2d_class == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBest2DClass #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.beam_tilt_group == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltGroup #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.stack_filename == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMStackFilename #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.original_image_filename == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMOriginalImageFilename #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.reference_3d_filename == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMReference3DFilename #%i", column_counter));
+		column_counter++;
+	}
+
+	wxString data_line = "";
+
+	// header...
+
+	if (parameters_to_write.position_in_stack == true) 					data_line += "     POS ";
+	if (parameters_to_write.psi == true) 								data_line += "    PSI ";
+	if (parameters_to_write.theta == true) 								data_line += "  THETA ";
+	if (parameters_to_write.phi == true) 								data_line += "    PHI ";
+	if (parameters_to_write.x_shift == true) 							data_line += "      SHX ";
+	if (parameters_to_write.y_shift == true) 							data_line += "      SHY ";
+	if (parameters_to_write.defocus_1 == true) 							data_line += "     DF1 ";
+	if (parameters_to_write.defocus_2 == true) 							data_line += "     DF2 ";
+	if (parameters_to_write.defocus_angle == true)  					data_line += " ANGAST ";
+	if (parameters_to_write.phase_shift == true) 						data_line += " PSHIFT ";
+	if (parameters_to_write.image_is_active == true) 					data_line += " STAT ";
+	if (parameters_to_write.occupancy == true) 							data_line += "    OCC ";
+	if (parameters_to_write.logp == true) 								data_line += "     LogP ";
+	if (parameters_to_write.sigma == true)								data_line += "     SIGMA ";
+	if (parameters_to_write.score == true) 								data_line += "  SCORE ";
+	if (parameters_to_write.score_change == true)						data_line += " CHANGE ";
+	if (parameters_to_write.pixel_size == true) 						data_line += "   PSIZE ";
+	if (parameters_to_write.microscope_voltage_kv == true)  			data_line += "   VOLT ";
+	if (parameters_to_write.microscope_spherical_aberration_mm == true) data_line += "     Cs ";
+	if (parameters_to_write.amplitude_contrast == true)  				data_line += "   AmpC ";
+	if (parameters_to_write.beam_tilt_x == true) 						data_line += " BTILTX ";
+	if (parameters_to_write.beam_tilt_y == true) 						data_line += " BTILTY ";
+	if (parameters_to_write.image_shift_x == true) 						data_line += " ISHFTX ";
+	if (parameters_to_write.image_shift_y == true) 						data_line += " ISHFTY ";
+	if (parameters_to_write.best_2d_class == true) 						data_line += "2DCLS ";
+	if (parameters_to_write.beam_tilt_group == true) 					data_line += " TGRP ";
+	if (parameters_to_write.stack_filename == true)  					data_line += "                                     STACK_FILENAME ";
+	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
+	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
+
+	data_line[0] = '#';
+	cisTEM_star_file->AddLine(data_line);
+
+
+
+	// write the data..
+
 
 
 	for (particle_counter = first_line_to_write; particle_counter <= last_line_to_write; particle_counter ++ )
 	{
 		if (all_parameters[particle_counter].position_in_stack < first_image_to_write || all_parameters[particle_counter].position_in_stack > last_image_to_write) continue;
-		cisTEM_star_file->AddLine(wxString::Format("%8u %7.2f %7.2f %7.2f %9.2f %9.2f %8.1f %8.1f %7.2f %7.2f %5i %7.2f %9i %10.4f %7.2f %7.2f %8.5f %7.2f %7.2f %7.2f %7.3f %7.3f %7.3f %7.3f",
-																														all_parameters[particle_counter].position_in_stack,
-																														all_parameters[particle_counter].psi,
-																														all_parameters[particle_counter].theta,
-																														all_parameters[particle_counter].phi,
-																														all_parameters[particle_counter].x_shift,
-																														all_parameters[particle_counter].y_shift,
-																														all_parameters[particle_counter].defocus_1,
-																														all_parameters[particle_counter].defocus_2,
-																														all_parameters[particle_counter].defocus_angle,
-																														all_parameters[particle_counter].phase_shift,
-																														all_parameters[particle_counter].image_is_active,
-																														all_parameters[particle_counter].occupancy,
-																														int(all_parameters[particle_counter].logp),
-																														all_parameters[particle_counter].sigma,
-																														all_parameters[particle_counter].score,
-																														all_parameters[particle_counter].score_change,
-																														all_parameters[particle_counter].pixel_size,
-																														all_parameters[particle_counter].microscope_voltage_kv,
-																														all_parameters[particle_counter].microscope_spherical_aberration_mm,
-																														all_parameters[particle_counter].amplitude_contrast,
-																														all_parameters[particle_counter].beam_tilt_x,
-																														all_parameters[particle_counter].beam_tilt_y,
-																														all_parameters[particle_counter].image_shift_x,
-																														all_parameters[particle_counter].image_shift_y));
+		data_line = "";
 
-
+		if (parameters_to_write.position_in_stack == true) data_line += wxString::Format("%8u ", all_parameters[particle_counter].position_in_stack);
+		if (parameters_to_write.psi == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].psi);
+		if (parameters_to_write.theta == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].theta);
+		if (parameters_to_write.phi == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].phi);
+		if (parameters_to_write.x_shift == true) data_line += wxString::Format("%9.2f ", all_parameters[particle_counter].x_shift);
+		if (parameters_to_write.y_shift == true) data_line += wxString::Format("%9.2f ", all_parameters[particle_counter].y_shift);
+		if (parameters_to_write.defocus_1 == true) data_line += wxString::Format("%8.1f ", all_parameters[particle_counter].defocus_1);
+		if (parameters_to_write.defocus_2 == true) data_line += wxString::Format("%8.1f ", all_parameters[particle_counter].defocus_2);
+		if (parameters_to_write.defocus_angle == true)  data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].defocus_angle);
+		if (parameters_to_write.phase_shift == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].phase_shift);
+		if (parameters_to_write.image_is_active == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].image_is_active);
+		if (parameters_to_write.occupancy == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].occupancy);
+		if (parameters_to_write.logp == true) data_line += wxString::Format("%9i ", myroundint(all_parameters[particle_counter].logp));
+		if (parameters_to_write.sigma == true) data_line += wxString::Format("%10.4f ", all_parameters[particle_counter].sigma);
+		if (parameters_to_write.score == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].score);
+		if (parameters_to_write.score_change == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].score_change);
+		if (parameters_to_write.pixel_size == true) data_line += wxString::Format("%8.5f ", all_parameters[particle_counter].pixel_size);
+		if (parameters_to_write.microscope_voltage_kv == true)  data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].microscope_voltage_kv);
+		if (parameters_to_write.microscope_spherical_aberration_mm == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].microscope_spherical_aberration_mm);
+		if (parameters_to_write.amplitude_contrast == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].amplitude_contrast);
+		if (parameters_to_write.beam_tilt_x == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].beam_tilt_x);
+		if (parameters_to_write.beam_tilt_y == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].beam_tilt_y);
+		if (parameters_to_write.image_shift_x == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].image_shift_x);
+		if (parameters_to_write.image_shift_y == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].image_shift_y);
+		if (parameters_to_write.best_2d_class == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].best_2d_class);
+		if (parameters_to_write.beam_tilt_group == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].beam_tilt_group);
+		if (parameters_to_write.stack_filename == true)  data_line += wxString::Format("%50s ", all_parameters[particle_counter].stack_filename);
+		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", all_parameters[particle_counter].original_image_filename);
+		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", all_parameters[particle_counter].reference_3d_filename);
+		cisTEM_star_file->AddLine(data_line);
 
 	}
 

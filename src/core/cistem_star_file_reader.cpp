@@ -71,6 +71,11 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 	beam_tilt_y_column = -1;
 	image_shift_x_column = -1;
 	image_shift_y_column = -1;
+	stack_filename_column = -1;
+	original_image_filename_column = -1;
+	reference_3d_filename_column = -1;
+	best_2d_class_column = -1;
+	beam_tilt_group_column = -1;
 
 	if (alternate_cached_parameters_pointer == NULL)
 	{
@@ -493,6 +498,51 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.image_shift_y = float(temp_double);
 	}
 
+	// best 2D class
+
+	if ( best_2d_class_column == -1) temp_parameters.best_2d_class = 0;
+	else
+	{
+		if (all_tokens[best_2d_class_column].ToLong(&temp_long) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[best_2d_class_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[best_2d_class_column]);
+			return false;
+		}
+
+		temp_parameters.best_2d_class = int(temp_long);
+	}
+
+	// beam tilt group
+
+	if ( beam_tilt_group_column == -1) temp_parameters.beam_tilt_group = 0;
+	else
+	{
+		if (all_tokens[beam_tilt_group_column].ToLong(&temp_long) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_group_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[beam_tilt_group_column]);
+			return false;
+		}
+
+		temp_parameters.beam_tilt_group = int(temp_long);
+	}
+
+	// stack filename
+
+	if ( stack_filename_column == -1) temp_parameters.stack_filename = "";
+	else temp_parameters.stack_filename = all_tokens[stack_filename_column].Trim(true).Trim(false);
+
+	// original_image_filename
+
+	if ( original_image_filename_column == -1) temp_parameters.original_image_filename = "";
+	else temp_parameters.original_image_filename = all_tokens[original_image_filename_column].Trim(true).Trim(false);
+
+	// reference_3d_filename
+
+	if ( reference_3d_filename_column == -1) temp_parameters.reference_3d_filename = "";
+	else temp_parameters.reference_3d_filename = all_tokens[reference_3d_filename_column].Trim(true).Trim(false);
+
 	cached_parameters->Add(temp_parameters);
 
 	return true;
@@ -623,6 +673,19 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		if (current_line.StartsWith("_cisTEMImageShiftX ") == true) image_shift_x_column = current_column;
 		else
 		if (current_line.StartsWith("_cisTEMImageShiftY ") == true) image_shift_y_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMBest2DClass ") == true) best_2d_class_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMBeamTiltGroup ") == true) beam_tilt_group_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMStackFilename ") == true) stack_filename_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMOriginalImageFilename ") == true) original_image_filename_column = current_column;
+		else
+		if (current_line.StartsWith("_cisTEMReference3DFilename ") == true) reference_3d_filename_column = current_column;
+
+
+
 
 	    current_column++;
 	}

@@ -1,5 +1,35 @@
 /*  \brief  class for cisTEM parameters */
 
+#define POSITION_IN_STACK 			1
+#define IMAGE_IS_ACTIVE 			2
+#define PSI				 			4
+#define X_SHIFT						8
+#define Y_SHIFT						16
+#define DEFOCUS_1					32
+#define DEFOCUS_2					64
+#define DEFOCUS_ANGLE				128
+#define PHASE_SHIFT					256
+#define OCCUPANCY					512
+#define LOGP						1024
+#define SIGMA						2048
+#define SCORE						4096
+#define SCORE_CHANGE				8192
+#define PIXEL_SIZE					16384
+#define MICROSCOPE_VOLTAGE			32768
+#define	MICROSCOPE_CS				65536
+#define AMPLITUDE_CONTRAST			131072
+#define BEAM_TILT_X					262144
+#define BEAM_TILT_Y					524288
+#define IMAGE_SHIFT_X				1048576
+#define IMAGE_SHIFT_Y				2097152
+#define THETA						4194304
+#define PHI							8388608
+#define STACK_FILENAME				16777216
+#define ORIGINAL_IMAGE_FILENAME 	33554432
+#define REFERENCE_3D_FILENAME		67108864
+#define BEST_2D_CLASS				134217728
+#define BEAM_TILT_GROUP				268435456
+
 class cisTEMParameterLine {
 
 public:
@@ -28,7 +58,11 @@ public:
 	float			beam_tilt_y;
 	float			image_shift_x;
 	float			image_shift_y;
-
+	wxString		stack_filename;
+	wxString		original_image_filename;
+	wxString		reference_3d_filename;
+	int				best_2d_class;
+	int 			beam_tilt_group;
 
 	//void SwapPsiAndPhi(); shouldn't need
 	void Add(cisTEMParameterLine &line_to_add);
@@ -45,6 +79,49 @@ public:
 	~cisTEMParameterLine();
 };
 
+class cisTEMParameterMask {
+
+public:
+
+	bool position_in_stack;
+	bool image_is_active;
+	bool psi;
+	bool theta;
+	bool phi;
+	bool x_shift;
+	bool y_shift;
+	bool defocus_1;
+	bool defocus_2;
+	bool defocus_angle;
+	bool phase_shift;
+	bool occupancy;
+	bool logp;
+	bool sigma;
+	bool score;
+	bool score_change;
+	bool pixel_size;
+	bool microscope_voltage_kv;
+	bool microscope_spherical_aberration_mm;
+	bool amplitude_contrast;
+	bool beam_tilt_x;
+	bool beam_tilt_y;
+	bool image_shift_x;
+	bool image_shift_y;
+	bool stack_filename;
+	bool original_image_filename;
+	bool reference_3d_filename;
+	bool best_2d_class;
+	bool beam_tilt_group;
+
+	void SetAllToTrue();
+	void SetAllToFalse();
+	void SetActiveParameters(long parameters_to_set); // uses takes the defines above bitwise
+
+
+	cisTEMParameterMask();
+
+};
+
 WX_DECLARE_OBJARRAY(cisTEMParameterLine, ArrayOfcisTEMParameterLines);
 
 class cisTEMParameters {
@@ -52,8 +129,9 @@ class cisTEMParameters {
 
 public :
 
-	wxArrayString			     header_comments;
-	ArrayOfcisTEMParameterLines  all_parameters;
+	wxArrayString			    	header_comments;
+	ArrayOfcisTEMParameterLines 	all_parameters;
+	cisTEMParameterMask 			parameters_to_write;
 
 	// for defocus dependance
 
@@ -101,6 +179,11 @@ public :
 	inline float ReturnBeamTiltY(int line_number) { return all_parameters.Item(line_number).beam_tilt_y;}
 	inline float ReturnImageShiftX(int line_number) { return all_parameters.Item(line_number).image_shift_x;}
 	inline float ReturnImageShiftY(int line_number) { return all_parameters.Item(line_number).image_shift_y;}
+	inline wxString	ReturnStackFilename(int line_number) {return all_parameters.Item(line_number).stack_filename;}
+	inline wxString ReturnOriginalImageFilename(int line_number) {return all_parameters.Item(line_number).original_image_filename;}
+	inline wxString ReturnReference3DFilename(int line_number) {return all_parameters.Item(line_number).reference_3d_filename;}
+	inline int ReturnBest2DClass(int line_number) {return all_parameters.Item(line_number).best_2d_class;}
+	inline int ReturnBeamTiltGroup(int line_number) {return all_parameters.Item(line_number).beam_tilt_group;}
 
 	float ReturnAverageSigma(bool exclude_negative_film_numbers = false);
 	float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);

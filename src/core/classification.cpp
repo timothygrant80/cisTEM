@@ -114,26 +114,22 @@ wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementP
 
 
 	cisTEMParameters output_params;
+	output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | BEST_2D_CLASS | PSI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | LOGP | SIGMA | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y);
 	output_params.PreallocateMemoryAndBlank(number_of_particles);
 
 	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
 	{
 		output_params.all_parameters[particle_counter].position_in_stack = classification_results[particle_counter].position_in_stack;
-		output_params.all_parameters[particle_counter].image_is_active = classification_results[particle_counter].best_class;
+		output_params.all_parameters[particle_counter].best_2d_class = classification_results[particle_counter].best_class;
 		output_params.all_parameters[particle_counter].psi = classification_results[particle_counter].psi;
-		output_params.all_parameters[particle_counter].theta = 0.0f;
-		output_params.all_parameters[particle_counter].phi = 0.0f;
 		output_params.all_parameters[particle_counter].x_shift = classification_results[particle_counter].xshift;
 		output_params.all_parameters[particle_counter].y_shift = classification_results[particle_counter].yshift;
 		output_params.all_parameters[particle_counter].defocus_1 = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_1;
 		output_params.all_parameters[particle_counter].defocus_2 = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_2;
 		output_params.all_parameters[particle_counter].defocus_angle = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).defocus_angle;
 		output_params.all_parameters[particle_counter].phase_shift = parent_refinement_package->ReturnParticleInfoByPositionInStack( classification_results[particle_counter].position_in_stack).phase_shift;
-		output_params.all_parameters[particle_counter].occupancy = 100.0f;
 		output_params.all_parameters[particle_counter].logp = classification_results[particle_counter].logp;
 		output_params.all_parameters[particle_counter].sigma = classification_results[particle_counter].sigma;
-		output_params.all_parameters[particle_counter].score = 0.0f;
-		output_params.all_parameters[particle_counter].score_change = 0.0f;
 		output_params.all_parameters[particle_counter].pixel_size = classification_results[particle_counter].pixel_size;
 		output_params.all_parameters[particle_counter].microscope_voltage_kv = classification_results[particle_counter].microscope_voltage_kv;
 		output_params.all_parameters[particle_counter].microscope_spherical_aberration_mm = classification_results[particle_counter].microscope_spherical_aberration_mm;

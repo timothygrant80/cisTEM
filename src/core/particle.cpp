@@ -1475,7 +1475,7 @@ float Particle::MLBlur(Image *input_classes_cache, float ssq_X, Image &cropped_i
 					current_parameters.y_shift *= pixel_size;
 
 					current_parameters.psi = psi;
-					current_parameters.image_is_active = current_class + 1;
+					current_parameters.best_2d_class = current_class + 1;
 				}
 				pixel_counter++;
 			}

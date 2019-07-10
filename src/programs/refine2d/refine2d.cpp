@@ -64,6 +64,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	bool		dump_arrays = false;
 	bool 		auto_mask = false;
 	bool		auto_centre = false;
+	int			max_threads;
 
 	UserInput *my_input = new UserInput("Refine2D", 1.02);
 
@@ -84,7 +85,7 @@ void Refine2DApp::DoInteractiveUserInput()
 	low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
 	high_resolution_limit = my_input->GetFloatFromUser("High resolution limit (A)", "High resolution limit of the data used for alignment in Angstroms", "8.0", 0.0);
 	angular_step = my_input->GetFloatFromUser("Angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
-	max_search_range = my_input->GetFloatFromUser("Search range in X (A) (0.0 = max)", "The maximum global peak search distance along X from the particle box center", "0.0", 0.0);
+	max_search_range = my_input->GetFloatFromUser("Search range (A) (0.0 = max)", "The maximum global peak search distance along X and Y from the particle box center", "0.0", 0.0);
 	smoothing_factor = my_input->GetFloatFromUser("Tuning parameter: smoothing factor", "Factor for likelihood-weighting; values smaller than 1 will blur results more, larger values will emphasize peaks", "1.0", 0.01);
 	padding_factor = my_input->GetIntFromUser("Tuning parameter: padding factor for interpol.", "Factor determining how padding is used to improve interpolation for image rotation", "2", 1);
 	normalize_particles = my_input->GetYesNoFromUser("Normalize particles", "The input particle images should always be normalized unless they were pre-processed", "Yes");
@@ -94,13 +95,18 @@ void Refine2DApp::DoInteractiveUserInput()
 	auto_centre = my_input->GetYesNoFromUser("Automatically center class averages", "Should class averages be centered to their center of mass automatically?", "No");
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the intermediate 2D class sums be dumped to a file for later merging with other jobs", "No");
 	dump_file = my_input->GetFilenameFromUser("Output dump filename for intermediate arrays", "The name of the dump file with the intermediate 2D class sums", "dump_file.dat", false);
-	
-	
+
+#ifdef _OPENMP
+	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
+#else
+	max_threads = 1;
+#endif
+
 	delete my_input;
 
 	int current_class = 0;
-	my_current_job.Reset(24);
-	my_current_job.ManualSetArguments("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+//	my_current_job.Reset(25);
+	my_current_job.ManualSetArguments("tttttiiiffffffffibbbbtbbi",	input_particle_images.ToUTF8().data(),
 																	input_star_filename.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	output_star_filename.ToUTF8().data(),
@@ -110,7 +116,7 @@ void Refine2DApp::DoInteractiveUserInput()
 																	angular_step, max_search_range, smoothing_factor,
 																	padding_factor, normalize_particles, invert_contrast,
 																	exclude_blank_edges, dump_arrays, dump_file.ToUTF8().data(),
-																	auto_mask, auto_centre);
+																	auto_mask, auto_centre, max_threads);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -118,6 +124,7 @@ void Refine2DApp::DoInteractiveUserInput()
 bool Refine2DApp::DoCalculation()
 {
 	Particle input_particle;
+	Particle input_particle_local;
 
 	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument();
 	wxString input_star_filename 				= my_current_job.arguments[1].ReturnStringArgument();
@@ -152,15 +159,18 @@ bool Refine2DApp::DoCalculation()
 	dump_file	 								= my_current_job.arguments[21].ReturnStringArgument();
 	bool auto_mask 								= my_current_job.arguments[22].ReturnBoolArgument();
 	bool auto_centre							= my_current_job.arguments[23].ReturnBoolArgument();
+	int	 max_threads							= my_current_job.arguments[24].ReturnIntegerArgument();
 
 	input_particle.constraints_used.x_shift = true;		// Constraint for X shifts
 	input_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
 
 	Image	input_image, cropped_input_image;
+	Image	input_image_local, temp_image_local, sum_power_local;
 	Image	sum_power, ctf_input_image, padded_image;
+	Image	ctf_input_image_local, cropped_input_image_local;
 	Image	best_correlation_map, temp_image;
-	Image	*rotation_cache = NULL;
-	Image	*blurred_images = NULL;
+//	Image	*rotation_cache = NULL;
+//	Image	*blurred_images = NULL;
 	Image	*input_classes_cache = NULL;
 	CTF		input_ctf;
 	AnglesAndShifts rotation_angle;
@@ -170,11 +180,13 @@ bool Refine2DApp::DoCalculation()
 	int i, j, k;
 	int fourier_size;
 	int current_class, current_line;
+	int current_line_local;
 	int number_of_rotations;
 	int image_counter, images_to_process, pixel_counter;
 	int projection_counter;
 	int padded_box_size, cropped_box_size, binned_box_size;
 	int best_class;
+	int images_processed_local;
 //	float input_parameters[17];
 //	float output_parameters[17];
 //	float parameter_average[17];
@@ -189,6 +201,9 @@ bool Refine2DApp::DoCalculation()
 	float variance;
 	float ssq_X;
 	float sum_logp_particle;
+	float sum_logp_particle_local;
+	float sum_logp_total_local;
+	float sum_snr_local;
 	float occupancy;
 	float filter_constant;
 	float mask_radius_for_noise;
@@ -197,7 +212,13 @@ bool Refine2DApp::DoCalculation()
 	float random_shift;
 	float low_resolution_contrast = 0.5f;
 	int number_of_blank_edges;
+	int number_of_blank_edges_local;
 	int max_samples = 2000;
+	int block_size_max = 100;
+	int block_size;
+	bool keep_reading;
+	int current_block_read_size;
+	bool file_read;
 	wxDateTime my_time_in;
 
 	cisTEMParameterLine input_parameters;
@@ -269,7 +290,7 @@ bool Refine2DApp::DoCalculation()
 	images_to_process = 0;
 	mask_falloff = 20.0;
 	log_range = 20.0;
-	image_counter = 0;
+//	image_counter = 0;
 	for (current_line = 0; current_line < input_star_file.ReturnNumberofLines(); current_line++)
 	{
 		if (input_star_file.ReturnPositionInStack(current_line) >= first_particle && input_star_file.ReturnPositionInStack(current_line) <= last_particle) images_to_process++;
@@ -421,12 +442,12 @@ bool Refine2DApp::DoCalculation()
 	if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
 
 	//if (fourier_size > cropped_box_size) fourier_size = cropped_box_size;
-	best_correlation_map.Allocate(fourier_size, fourier_size, true);
+//	best_correlation_map.Allocate(fourier_size, fourier_size, true);
 	binning_factor = float(cropped_box_size) / float(fourier_size);
 	binned_pixel_size = pixel_size * binning_factor;
 	input_particle.Allocate(fourier_size, fourier_size);
 	padded_box_size = int(powf(2.0, float(padding_factor)) + 0.5) * fourier_size;
-	padded_image.Allocate(padded_box_size, padded_box_size, true);
+//	padded_image.Allocate(padded_box_size, padded_box_size, true);
 
 	if (angular_step == 0.0)
 	{
@@ -449,23 +470,23 @@ bool Refine2DApp::DoCalculation()
 	float *class_variance = new float [number_of_nonzero_classes];
 	class_averages = new Image [number_of_nonzero_classes];
 	CTF_sums = new Image [number_of_nonzero_classes];
-	blurred_images = new Image [number_of_nonzero_classes];
+//	blurred_images = new Image [number_of_nonzero_classes];
 	for (i = 0; i < number_of_nonzero_classes; i++)
 	{
 		class_averages[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 		CTF_sums[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
-		blurred_images[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+//		blurred_images[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 		class_averages[i].SetToConstant(0.0);
 		CTF_sums[i].SetToConstant(0.0);
 		class_logp[i] = - std::numeric_limits<float>::max();
 	}
-	float *logp = new float [number_of_nonzero_classes];
+//	float *logp = new float [number_of_nonzero_classes];
 
-	rotation_cache = new Image [number_of_rotations + 1];
-	for (i = 0; i <= number_of_rotations; i++)
-	{
-		rotation_cache[i].Allocate(fourier_size, fourier_size, false);
-	}
+//	rotation_cache = new Image [number_of_rotations + 1];
+//	for (i = 0; i <= number_of_rotations; i++)
+//	{
+//		rotation_cache[i].Allocate(fourier_size, fourier_size, false);
+//	}
 
 	input_classes_cache = new Image [number_of_nonzero_classes];
 	for (i = 0; i < number_of_nonzero_classes; i++)
@@ -599,21 +620,21 @@ bool Refine2DApp::DoCalculation()
 
 
 		// read in blocks to avoid seeking a lot in large files
-		int block_size = myroundint(float(images_to_process) / 100.0f);
+		block_size = myroundint(float(images_to_process) / 100.0f);
 		if (float(block_size) > float(input_star_file.ReturnNumberofLines()) * percent_used * 0.01f)
 		{
 			block_size = myroundint(float(input_star_file.ReturnNumberofLines()) * percent_used * 0.01f);
 		}
 		if (block_size < 1) block_size = 1;
 
-		bool keep_reading = false;
-		int current_block_read_size = 0;
+		keep_reading = false;
+		current_block_read_size = 0;
 
 		for (current_line = 0; current_line < input_star_file.ReturnNumberofLines(); current_line++)
 		{
 			input_parameters = input_star_file.ReturnLine(current_line);
 
-			if (input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle) continue;
+			if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
 
 			image_counter++;
 			my_progress->Update(image_counter);
@@ -683,14 +704,14 @@ bool Refine2DApp::DoCalculation()
 		}
 		delete [] list_of_nozero_classes;
 		delete [] reverse_list_of_nozero_classes;
-		delete [] rotation_cache;
+//		delete [] rotation_cache;
 		delete [] input_classes_cache;
 		delete [] class_averages;
 		delete [] CTF_sums;
-		delete [] blurred_images;
+//		delete [] blurred_images;
 		delete [] class_variance_correction;
 		delete [] class_variance;
-		delete [] logp;
+//		delete [] logp;
 		delete [] class_logp;
 		delete output_classes;
 		delete my_progress;
@@ -707,62 +728,104 @@ bool Refine2DApp::DoCalculation()
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
 		percentage = float(max_samples) / float(images_to_process);
 		sum_power.SetToConstant(0.0);
-		mask_radius_for_noise = mask_radius / pixel_size;
 		number_of_blank_edges = 0;
-		if (2.0 * mask_radius_for_noise + mask_falloff / pixel_size > 0.95 * input_image.logical_x_dimension)
-		{
-			mask_radius_for_noise = 0.95 * input_image.logical_x_dimension / 2.0 - mask_falloff / 2.0 / pixel_size;
-		}
 		noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 		number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-		image_counter = 0;
-		my_progress = new ProgressBar(images_to_process);
+//		if (is_running_locally == true) my_progress = new ProgressBar(images_to_process);
+		if (is_running_locally == true) my_progress = new ProgressBar(images_to_process / max_threads);
+//		current_line = 0;
 
 		// read in blocks to avoid seeking a lot in large files
-		int block_size = 100;
+		block_size = block_size_max;
 		if (float(block_size) > float(images_to_process) * percentage * 0.1f)
 		{
 			block_size = myroundint(float(images_to_process) * percentage * 0.1f);
 		}
 		if (block_size < 1) block_size = 1;
 
-		bool keep_reading = false;
-		int current_block_read_size = 0;
+		keep_reading = false;
+		current_block_read_size = 0;
+//		image_counter = 0;
 
-
-		for (current_line = 0; current_line < input_star_file.ReturnNumberofLines(); current_line++)
+		#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, \
+			number_of_blank_edges, sum_power, current_line, global_random_number_generator, block_size, keep_reading, current_block_read_size) \
+		private(current_line_local, input_parameters, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
+			mask_radius_for_noise, image_counter)
 		{
-			input_parameters = input_star_file.ReturnLine(current_line);
-			if (input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle) continue;
-			image_counter++;
-			my_progress->Update(image_counter);
 
-			if (keep_reading == false)
-			{
-				if ((global_random_number_generator.GetUniformRandom() < 1.0 - 2.0 * (percentage / float(block_size)))) continue;
-				else
+		image_counter = 0;
+		number_of_blank_edges_local = 0;
+		input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		temp_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		sum_power_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+		sum_power_local.SetToConstant(0.0f);
+		file_read = false;
+
+		#pragma omp for schedule(static,1)
+		for (current_line_local = 0; current_line_local < input_star_file.ReturnNumberofLines(); current_line_local++)
+		{
+//			#pragma omp critical
+//			{
+				input_parameters = input_star_file.ReturnLine(current_line_local);
+
+//				current_line++;
+//				if (input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle) continue;
+//				image_counter++;
+				if (input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle)
 				{
-					keep_reading = true;
-					current_block_read_size = 0;
+					image_counter++;
+					if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
+//					if (is_running_locally == true) my_progress->Update(image_counter);
+					file_read = false;
+					if (keep_reading == false)
+					{
+						if ((global_random_number_generator.GetUniformRandom() >= 1.0 - 2.0 * (percentage / float(block_size))))
+						{
+							keep_reading = true;
+							current_block_read_size = 0;
+						}
+					}
+
+					current_block_read_size++;
+					if (current_block_read_size == block_size) keep_reading = false;
+
+					input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+					file_read = true;
 				}
+//			}
+
+			if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
+			if (! file_read) continue;
+			mask_radius_for_noise = mask_radius / input_parameters.pixel_size;
+			if (2.0 * mask_radius_for_noise + mask_falloff / input_parameters.pixel_size > 0.95 * input_image_local.logical_x_dimension)
+			{
+				mask_radius_for_noise = 0.95 * input_image_local.logical_x_dimension / 2.0 - mask_falloff / 2.0 / input_parameters.pixel_size;
 			}
-
-			current_block_read_size++;
-			if (current_block_read_size == block_size) keep_reading = false;
-
-			input_image.ReadSlice(&input_stack, input_parameters.position_in_stack);
-			if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
-			input_image.ChangePixelSize(&input_image, pixel_size / input_parameters.pixel_size, 0.001f);
-			variance = input_image.ReturnVarianceOfRealValues(mask_radius / pixel_size, 0.0f, 0.0f, 0.0f, true);
+			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
+			input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
+			variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0f, 0.0f, 0.0f, true);
 			if (variance == 0.0f) continue;
-			input_image.MultiplyByConstant(1.0f / sqrtf(variance));
-			input_image.CosineMask(mask_radius / pixel_size, mask_falloff / pixel_size, true);
-			input_image.ForwardFFT();
-			temp_image.CopyFrom(&input_image);
-			temp_image.ConjugateMultiplyPixelWise(input_image);
-			sum_power.AddImage(&temp_image);
+			input_image_local.MultiplyByConstant(1.0f / sqrtf(variance));
+			input_image_local.CosineMask(mask_radius_for_noise, mask_falloff / input_parameters.pixel_size, true);
+			input_image_local.ForwardFFT();
+			temp_image_local.CopyFrom(&input_image_local);
+			temp_image_local.ConjugateMultiplyPixelWise(input_image_local);
+			sum_power_local.AddImage(&temp_image_local);
 		}
-		delete my_progress;
+
+		#pragma omp critical
+		{
+			number_of_blank_edges += number_of_blank_edges_local;
+			sum_power.AddImage(&sum_power_local);
+		}
+
+		input_image_local.Deallocate();
+		sum_power_local.Deallocate();
+		temp_image_local.Deallocate();
+
+		} // end omp section
+
+		if (is_running_locally == true) delete my_progress;
 //		input_par_file.Rewind();
 		sum_power.Compute1DRotationalAverage(noise_power_spectrum, number_of_terms);
 		noise_power_spectrum.SquareRoot();
@@ -775,16 +838,70 @@ bool Refine2DApp::DoCalculation()
 	}
 
 	wxPrintf("\nCalculating new class averages...\n\n");
-	image_counter = 0;
 	number_of_blank_edges = 0;
 	images_processed = 0;
 	sum_logp_total = - std::numeric_limits<float>::max();
 	sum_snr = 0.0f;
-	my_progress = new ProgressBar(images_to_process);
-	for (current_line = 0; current_line < input_star_file.ReturnNumberofLines(); current_line++)
+	sum_logp_particle = - std::numeric_limits<float>::max();
+
+	if (is_running_locally == true) my_progress = new ProgressBar(images_to_process / max_threads);
+
+	#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, \
+		number_of_blank_edges, global_random_number_generator, percent_used, cropped_box_size, low_resolution_limit, high_resolution_limit, binned_pixel_size, invert_contrast, \
+		noise_power_spectrum, padded_box_size, psi_step, psi_start, psi_max, number_of_rotations, reverse_list_of_nozero_classes, smoothing_factor, max_search_range, output_star_file, \
+		fourier_size, input_particle, binning_factor, normalize_particles, low_resolution_contrast, input_classes_cache, sum_logp_particle) \
+	private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
+		output_parameters, input_ctf, average, ctf_input_image_local, cropped_input_image_local, psi, i, rotation_angle, current_class, best_class, ssq_X, best_correlation_map, \
+		images_processed_local, padded_image, input_particle_local, sum_logp_particle_local, max_logp_particle, sum_logp_total_local, sum_snr_local)
 	{
-		input_parameters = input_star_file.ReturnLine(current_line);
-		if (input_star_file.ReturnPositionInStack(current_line) < first_particle || input_star_file.ReturnPositionInStack(current_line) > last_particle) continue;
+
+	image_counter = 0;
+	number_of_blank_edges_local = 0;
+	images_processed_local = 0;
+	sum_snr_local = 0.0f;
+	sum_logp_total_local = - std::numeric_limits<float>::max();
+	input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+	temp_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+	ctf_input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+	cropped_input_image_local.Allocate(cropped_box_size, cropped_box_size, true);
+	padded_image.Allocate(padded_box_size, padded_box_size, true);
+	best_correlation_map.Allocate(fourier_size, fourier_size, true);
+
+	input_particle_local.CopyAllButImages(&input_particle);
+	input_particle_local.Allocate(fourier_size, fourier_size);
+
+	Image	*rotation_cache = NULL;
+	rotation_cache = new Image [number_of_rotations + 1];
+	for (i = 0; i <= number_of_rotations; i++)
+	{
+		rotation_cache[i].Allocate(fourier_size, fourier_size, false);
+	}
+	float *logp = new float [number_of_nonzero_classes];
+
+	Image	*blurred_images = NULL;
+	blurred_images = new Image [number_of_nonzero_classes];
+	Image	*class_averages_local = NULL;
+	class_averages_local = new Image [number_of_nonzero_classes];
+	Image	*CTF_sums_local = NULL;
+	CTF_sums_local = new Image [number_of_nonzero_classes];
+	float *class_logp_local;
+	class_logp_local = new float [number_of_nonzero_classes];
+
+	for (i = 0; i < number_of_nonzero_classes; i++)
+	{
+		class_averages_local[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		CTF_sums_local[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+		blurred_images[i].Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
+		class_averages_local[i].SetToConstant(0.0);
+		CTF_sums_local[i].SetToConstant(0.0);
+		class_logp_local[i] = - std::numeric_limits<float>::max();
+	}
+
+	#pragma omp for schedule(dynamic,1)
+	for (current_line_local = 0; current_line_local < input_star_file.ReturnNumberofLines(); current_line_local++)
+	{
+		input_parameters = input_star_file.ReturnLine(current_line_local);
+		if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
 		image_counter++;
 		if ((global_random_number_generator.GetUniformRandom() < 1.0f - 2.0f * percent_used))
 		{
@@ -793,95 +910,97 @@ bool Refine2DApp::DoCalculation()
 			output_parameters = input_parameters;
 //			output_par_file.WriteLine(input_parameters);
 			SendRefineResult(&input_parameters);
-			my_progress->Update(image_counter);
+			output_star_file.all_parameters[current_line_local] = input_parameters;
+			if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 			continue;
 		}
 
-		input_image.ReadSlice(&input_stack, input_parameters.position_in_stack);
+		input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
 
-		if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size))
+		if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size))
 		{
 			number_of_blank_edges++;
 			input_parameters.image_is_active = - abs(input_parameters.image_is_active);
 			input_parameters.score_change = 0.0;
 			output_parameters = input_parameters;
 			SendRefineResult(&input_parameters);
-			my_progress->Update(image_counter);
+			output_star_file.all_parameters[current_line_local] = input_parameters;
+			if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 			continue;
 		}
 		else
 		{
 			input_parameters.image_is_active = fabsf(input_parameters.image_is_active);
 		}
+		input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 
 		output_parameters = input_parameters;
 
-
 // Set up Particle object
-		input_particle.ResetImageFlags();
-		input_particle.mask_radius = mask_radius;
-		input_particle.mask_falloff = mask_falloff;
-		input_particle.filter_radius_low = low_resolution_limit;
-		input_particle.filter_radius_high = high_resolution_limit;
+		input_particle_local.ResetImageFlags();
+		input_particle_local.mask_radius = mask_radius;
+		input_particle_local.mask_falloff = mask_falloff;
+		input_particle_local.filter_radius_low = low_resolution_limit;
+		input_particle_local.filter_radius_high = high_resolution_limit;
 		// The following line would allow using particles with different pixel sizes
-		input_particle.pixel_size = binned_pixel_size;
-//		input_particle.snr = average_snr * powf(binning_factor, 2);
+		input_particle_local.pixel_size = binned_pixel_size;
+//		input_particle_local.snr = average_snr * powf(binning_factor, 2);
 
-		input_particle.SetParameters(input_parameters);
-		input_particle.SetParameterConstraints(1.0 / average_snr / powf(binning_factor, 2));
+		input_particle_local.SetParameters(input_parameters);
+		input_particle_local.SetParameterConstraints(1.0 / average_snr / powf(binning_factor, 2));
 
-		input_image.ReplaceOutliersWithMean(5.0);
-		if (invert_contrast) input_image.InvertRealValues();
-		input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
-		input_particle.SetLowResolutionContrast(low_resolution_contrast);
+		input_image_local.ReplaceOutliersWithMean(5.0);
+		if (invert_contrast) input_image_local.InvertRealValues();
+		input_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
+		input_particle_local.SetLowResolutionContrast(low_resolution_contrast);
 		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
 		input_ctf.SetLowResolutionContrast(low_resolution_contrast);
-		ctf_input_image.CalculateCTFImage(input_ctf);
+		ctf_input_image_local.CalculateCTFImage(input_ctf);
 
 		if (normalize_particles)
 		{
-			input_image.ForwardFFT();
+			input_image_local.ForwardFFT();
 			// Whiten noise
-			input_image.ApplyCurveFilter(&noise_power_spectrum);
+			input_image_local.ApplyCurveFilter(&noise_power_spectrum);
 			// Apply cosine filter to reduce ringing
-			input_image.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
-			input_image.BackwardFFT();
+			input_image_local.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
+			input_image_local.BackwardFFT();
 			// Normalize background variance and average
-			variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
-			average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-			input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+			variance = input_image_local.ReturnVarianceOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
+			average = input_image_local.ReturnAverageOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
+			input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
 		// Multiply by binning_factor so variance after binning is close to 1.
-		input_image.MultiplyByConstant(binning_factor);
+		input_image_local.MultiplyByConstant(binning_factor);
 		// Determine sum of squares of corrected image and binned image for ML calculation
-		temp_image.CopyFrom(&input_image);
-//		temp_image.CosineMask(temp_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
-		temp_image.ClipInto(&cropped_input_image);
-		cropped_input_image.CosineMask(cropped_input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
-		cropped_input_image.ForwardFFT();
-		cropped_input_image.ClipInto(input_particle.particle_image);
-		ssq_X = input_particle.particle_image->ReturnSumOfSquares();
-		input_particle.CTFMultiplyImage();
-		variance = input_particle.particle_image->ReturnSumOfSquares();
+		temp_image_local.CopyFrom(&input_image_local);
+//		temp_image_local.CosineMask(temp_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
+		temp_image_local.ClipInto(&cropped_input_image_local);
+		cropped_input_image_local.CosineMask(cropped_input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+		cropped_input_image_local.ForwardFFT();
+		cropped_input_image_local.ClipInto(input_particle_local.particle_image);
+		ssq_X = input_particle_local.particle_image->ReturnSumOfSquares();
+		input_particle_local.CTFMultiplyImage();
+		variance = input_particle_local.particle_image->ReturnSumOfSquares();
 		// Apply CTF
-		input_image.ForwardFFT();
-		input_image.MultiplyPixelWiseReal(ctf_input_image);
-		input_image.BackwardFFT();
+		input_image_local.ForwardFFT();
+		input_image_local.MultiplyPixelWiseReal(ctf_input_image_local);
+		input_image_local.BackwardFFT();
 		// Calculate rotated versions of input image
-//		input_particle.mask_volume = input_image.CosineMask(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
-		input_image.ClipInto(&cropped_input_image);
-		input_particle.mask_volume = cropped_input_image.CosineMask(cropped_input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
-//		input_particle.mask_volume = cropped_input_image.number_of_real_space_pixels;
-		cropped_input_image.ForwardFFT();
+//		input_particle_local.mask_volume = input_image_local.CosineMask(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
+		input_image_local.ClipInto(&cropped_input_image_local);
+		input_particle_local.mask_volume = cropped_input_image_local.CosineMask(cropped_input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size, false, true, 0.0);
+//		input_particle_local.mask_volume = cropped_input_image_local.number_of_real_space_pixels;
+		cropped_input_image_local.ForwardFFT();
 		// This ClipInto is needed as a filtering step to set Fourier terms outside the final binned image to zero.
-		cropped_input_image.ClipInto(input_particle.particle_image);
-		input_particle.particle_image->ClipInto(&padded_image);
+		cropped_input_image_local.ClipInto(input_particle_local.particle_image);
+		input_particle_local.particle_image->ClipInto(&padded_image);
 		// Pre-correct for real-space interpolation errors
 		// Maybe this is not a good idea since this amplifies noise...
 //		padded_image.CorrectSinc();
 		padded_image.BackwardFFT();
-//???		input_particle.mask_volume = padded_image.CosineMask(padded_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
+//???		input_particle_local.mask_volume = padded_image.CosineMask(padded_image.physical_address_of_box_center_x - mask_falloff / pixel_size, mask_falloff / pixel_size);
 
 		for (i = 0; i < number_of_rotations; i++)
 		{
@@ -895,11 +1014,11 @@ bool Refine2DApp::DoCalculation()
 // *******
 //			rotation_cache[i].SwapRealSpaceQuadrants();
 		}
-		input_particle.mask_volume = rotation_cache[0].number_of_real_space_pixels * input_particle.mask_volume / cropped_input_image.number_of_real_space_pixels;
-//		wxPrintf("rot = %li, in = %li, mask = %g\n", rotation_cache[0].number_of_real_space_pixels, cropped_input_image.number_of_real_space_pixels, input_particle.mask_volume);
-		input_particle.is_masked = true;
+		input_particle_local.mask_volume = rotation_cache[0].number_of_real_space_pixels * input_particle_local.mask_volume / cropped_input_image_local.number_of_real_space_pixels;
+//		wxPrintf("rot = %li, in = %li, mask = %g\n", rotation_cache[0].number_of_real_space_pixels, cropped_input_image_local.number_of_real_space_pixels, input_particle_local.mask_volume);
+		input_particle_local.is_masked = true;
 
-		sum_logp_particle = - std::numeric_limits<float>::max();
+		sum_logp_particle_local = - std::numeric_limits<float>::max();
 		max_logp_particle = - std::numeric_limits<float>::max();
 
 		// Calculate score of previous best match, store cc map in best_correlation_map. Matching projection is in last location of projection_cache.
@@ -925,65 +1044,97 @@ bool Refine2DApp::DoCalculation()
 //			wxPrintf("best class = %i angle = %g\n", best_class, input_parameters[3]);
 //			exit(0);
 			rotation_cache[number_of_rotations].ForwardFFT();
-			temp_float = input_particle.MLBlur(input_classes_cache, ssq_X, cropped_input_image, rotation_cache,
+			temp_float = input_particle_local.MLBlur(input_classes_cache, ssq_X, cropped_input_image_local, rotation_cache,
 					blurred_images[0], best_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
-					max_logp_particle, best_class, input_parameters.psi, best_correlation_map, true, true, true, NULL, NULL,  max_search_range );
+					max_logp_particle, best_class, input_parameters.psi, best_correlation_map, true, true, true, NULL, NULL, max_search_range);
 		}
 
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 		{
 			//wxPrintf("Working on class %i\n", current_class);
-			logp[current_class] = input_particle.MLBlur(input_classes_cache, ssq_X, cropped_input_image, rotation_cache,
+			logp[current_class] = input_particle_local.MLBlur(input_classes_cache, ssq_X, cropped_input_image_local, rotation_cache,
 					blurred_images[current_class], current_class, number_of_rotations, psi_step, psi_start, smoothing_factor,
 					max_logp_particle, best_class, input_parameters.psi, best_correlation_map, false, true, true, NULL, NULL, max_search_range);
 			// Sum likelihoods of all classes
-			sum_logp_particle = ReturnSumOfLogP(sum_logp_particle, logp[current_class], log_range);
+			sum_logp_particle_local = ReturnSumOfLogP(sum_logp_particle_local, logp[current_class], log_range);
 		}
-		sum_logp_total = ReturnSumOfLogP(sum_logp_total, sum_logp_particle, log_range);
+		sum_logp_total_local = ReturnSumOfLogP(sum_logp_total_local, sum_logp_particle_local, log_range);
 
-		if (input_particle.current_parameters.sigma != 0.0) sum_snr += 1.0 / input_particle.current_parameters.sigma;
+		if (input_particle_local.current_parameters.sigma != 0.0) sum_snr_local += 1.0 / input_particle_local.current_parameters.sigma;
 		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
 		{
 			// Divide class likelihoods by summed likelihood; this is a simple subtraction of the log values
-			logp[current_class] -= sum_logp_particle;
+			logp[current_class] -= sum_logp_particle_local;
 			if (logp[current_class] >= - log_range)
 			{
 				// Sum the class likelihoods (now divided by the summed likelihood)
-				class_logp[current_class] = ReturnSumOfLogP(class_logp[current_class], logp[current_class], log_range);
+				class_logp_local[current_class] = ReturnSumOfLogP(class_logp_local[current_class], logp[current_class], log_range);
 				// Apply likelihood weight to blurred image
-				if (input_particle.current_parameters.sigma > 0.0)
+				if (input_particle_local.current_parameters.sigma > 0.0)
 				{
 					temp_float = expf(logp[current_class]);
 					// Need to divide here by sigma^2; already divided once on input, therefore divide only by sigma here.
-					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle.current_parameters.sigma);
+					blurred_images[current_class].MultiplyByConstant(temp_float / input_particle_local.current_parameters.sigma);
 					// Add weighted image to class average
-					class_averages[current_class].AddImage(&blurred_images[current_class]);
+					class_averages_local[current_class].AddImage(&blurred_images[current_class]);
 					// Copy and multiply CTF image
-					temp_image.CopyFrom(&ctf_input_image);
-					temp_image.MultiplyPixelWiseReal(ctf_input_image);
-					temp_image.MultiplyByConstant(temp_float / input_particle.current_parameters.sigma);
-					CTF_sums[current_class].AddImage(&temp_image);
-					if (current_class + 1 == input_particle.current_parameters.image_is_active) input_particle.current_parameters.occupancy = 100.0 * temp_float;
+					temp_image_local.CopyFrom(&ctf_input_image_local);
+					temp_image_local.MultiplyPixelWiseReal(ctf_input_image_local);
+					temp_image_local.MultiplyByConstant(temp_float / input_particle_local.current_parameters.sigma);
+					CTF_sums_local[current_class].AddImage(&temp_image_local);
+					if (current_class + 1 == input_particle_local.current_parameters.image_is_active) input_particle_local.current_parameters.occupancy = 100.0 * temp_float;
 				}
 			}
 		}
 
-		input_particle.GetParameters(output_parameters);
+		input_particle_local.GetParameters(output_parameters);
 
 		output_parameters.image_is_active = list_of_nozero_classes[output_parameters.image_is_active - 1] + 1;
 		// Multiply measured sigma noise in binned image by binning factor to obtain sigma noise of unbinned image
 		output_parameters.sigma *= binning_factor;
 		if (output_parameters.sigma > 100.0) output_parameters.sigma = 100.0;
 		output_parameters.score_change = output_parameters.score - input_parameters.score;
-//		output_par_file.WriteLine(output_parameters);
 		SendRefineResult(&output_parameters);
+		output_star_file.all_parameters[current_line_local] = output_parameters;
 
-		images_processed++;
+		images_processed_local++;
 
-		my_progress->Update(image_counter);
+		if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 	}
 
-	delete my_progress;
+	#pragma omp critical
+	{
+		number_of_blank_edges += number_of_blank_edges_local;
+		images_processed += images_processed_local;
+		sum_snr += sum_snr_local;
+		sum_logp_particle = ReturnSumOfLogP(sum_logp_particle, sum_logp_particle_local, log_range);
+		sum_logp_total = ReturnSumOfLogP(sum_logp_total, sum_logp_total_local, log_range);
+		for (current_class = 0; current_class < number_of_nonzero_classes; current_class++)
+		{
+			class_logp[current_class] = ReturnSumOfLogP(class_logp[current_class], class_logp_local[current_class], log_range);
+			class_averages[current_class].AddImage(&class_averages_local[current_class]);
+			CTF_sums[current_class].AddImage(&CTF_sums_local[current_class]);
+		}
+
+	}
+
+	input_image_local.Deallocate();
+	temp_image_local.Deallocate();
+	ctf_input_image_local.Deallocate();
+	cropped_input_image_local.Deallocate();
+	padded_image.Deallocate();
+	best_correlation_map.Deallocate();
+	input_particle_local.Deallocate();
+	delete [] rotation_cache;
+	delete [] logp;
+	delete [] blurred_images;
+	delete [] class_averages_local;
+	delete [] CTF_sums_local;
+	delete [] class_logp_local;
+
+	} // end omp section
+
+	if (is_running_locally == true) delete my_progress;
 
 	if (exclude_blank_edges && ! normalize_particles)
 	{
@@ -1061,14 +1212,14 @@ bool Refine2DApp::DoCalculation()
 
 	delete [] list_of_nozero_classes;
 	delete [] reverse_list_of_nozero_classes;
-	delete [] rotation_cache;
+//	delete [] rotation_cache;
 	delete [] input_classes_cache;
 	delete [] class_averages;
 	delete [] CTF_sums;
-	delete [] blurred_images;
+//	delete [] blurred_images;
 	delete [] class_variance_correction;
 	delete [] class_variance;
-	delete [] logp;
+//	delete [] logp;
 	delete [] class_logp;
 	if (input_classes != NULL) delete input_classes;
 	if (output_classes != NULL) delete output_classes;

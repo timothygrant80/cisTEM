@@ -948,7 +948,7 @@ bool Refine3DApp::DoCalculation()
 
 	current_projection = 0;
 
-	#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, parameter_variance, input_3d, input_star_file, input_stack, max_threads, search_particle, \
+	#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, input_3d, input_star_file, input_stack, max_threads, search_particle, \
 		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
 		refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, percent_used, output_shifts_file, local_refinement, \
 		binning_factor_refine, low_resolution_limit, input_statistics, output_star_file, current_projection, local_global_refine, global_search, signed_CC_limit, defocus_bias, \
@@ -968,7 +968,7 @@ bool Refine3DApp::DoCalculation()
 
 	refine_particle_local.CopyAllButImages(&refine_particle);
 	refine_particle_local.Allocate(input_3d_local.density_map->logical_x_dimension, input_3d_local.density_map->logical_y_dimension);
-	refine_particle_local.SetParameterStatistics(parameter_average, parameter_variance);
+//	refine_particle_local.SetParameterStatistics(parameter_average, parameter_variance);
 
 	input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	unbinned_image.Allocate(input_stack.ReturnXSize() * padding, input_stack.ReturnYSize() * padding, true);

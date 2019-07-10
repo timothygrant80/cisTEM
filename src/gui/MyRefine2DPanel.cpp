@@ -839,9 +839,9 @@ void ClassificationManager::RunInitialStartJob()
 
 	bool auto_mask = false;
 	bool auto_centre = false;
+	int max_threads = 1;
 
-
-	my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+	my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbbi",	input_particle_images.ToUTF8().data(),
 																	input_star_file.ToUTF8().data(),
 																	input_class_averages.ToUTF8().data(),
 																	output_star_file.ToUTF8().data(),
@@ -864,7 +864,8 @@ void ClassificationManager::RunInitialStartJob()
 																	dump_arrays,
 																	dump_file.ToUTF8().data(),
 																	auto_mask,
-																	auto_centre);
+																	auto_centre,
+																	max_threads);
 
 	my_parent->WriteBlueText("Creating Initial References...");
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
@@ -1070,8 +1071,9 @@ void ClassificationManager::RunRefinementJob()
 		wxString dump_file = main_frame->ReturnRefine2DScratchDirectory() + wxString::Format("/class_dump_file_%li_%i.dump", output_classification->classification_id, job_counter +1);
 		bool auto_mask = my_parent->AutoMaskRadioYes->GetValue();
 		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
+		int max_threads = 1;
 
-		my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbb",	input_particle_images.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbbi",	input_particle_images.ToUTF8().data(),
 																		input_star_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),
 																		output_star_file.ToUTF8().data(),
@@ -1094,7 +1096,8 @@ void ClassificationManager::RunRefinementJob()
 																		dump_arrays,
 																		dump_file.ToUTF8().data(),
 																		auto_mask,
-																		auto_centre);
+																		auto_centre,
+																		max_threads);
 	}
 
 	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));

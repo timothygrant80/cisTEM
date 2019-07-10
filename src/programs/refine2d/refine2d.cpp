@@ -94,8 +94,8 @@ void Refine2DApp::DoInteractiveUserInput()
 	auto_centre = my_input->GetYesNoFromUser("Automatically center class averages", "Should class averages be centered to their center of mass automatically?", "No");
 	dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the intermediate 2D class sums be dumped to a file for later merging with other jobs", "No");
 	dump_file = my_input->GetFilenameFromUser("Output dump filename for intermediate arrays", "The name of the dump file with the intermediate 2D class sums", "dump_file.dat", false);
-	
-	
+
+
 	delete my_input;
 
 	int current_class = 0;
@@ -369,6 +369,8 @@ bool Refine2DApp::DoCalculation()
 	output_star_file.AddCommentToHeader("# Normalize particles:                     " + BoolToYesNo(normalize_particles));
 	output_star_file.AddCommentToHeader("# Invert particle contrast:                " + BoolToYesNo(invert_contrast));
 	output_star_file.AddCommentToHeader("# Exclude images with blank edges:         " + BoolToYesNo(exclude_blank_edges));
+	output_star_file.AddCommentToHeader("# Automatically mask class averages:       " + BoolToYesNo(auto_mask));
+	output_star_file.AddCommentToHeader("# Automatically center class averages:     " + BoolToYesNo(auto_centre));
 	output_star_file.AddCommentToHeader("# Dump intermediate arrays:                " + BoolToYesNo(dump_arrays));
 	output_star_file.AddCommentToHeader("# Output dump filename:                    " + dump_file);
 	output_star_file.AddCommentToHeader("#");
@@ -792,6 +794,7 @@ bool Refine2DApp::DoCalculation()
 			input_parameters.score_change = 0.0f;
 			output_parameters = input_parameters;
 //			output_par_file.WriteLine(input_parameters);
+			output_star_file.all_parameters[current_line] = output_parameters;
 			SendRefineResult(&input_parameters);
 			my_progress->Update(image_counter);
 			continue;
@@ -805,6 +808,7 @@ bool Refine2DApp::DoCalculation()
 			input_parameters.image_is_active = - abs(input_parameters.image_is_active);
 			input_parameters.score_change = 0.0;
 			output_parameters = input_parameters;
+			output_star_file.all_parameters[current_line] = output_parameters;
 			SendRefineResult(&input_parameters);
 			my_progress->Update(image_counter);
 			continue;
@@ -976,6 +980,7 @@ bool Refine2DApp::DoCalculation()
 		if (output_parameters.sigma > 100.0) output_parameters.sigma = 100.0;
 		output_parameters.score_change = output_parameters.score - input_parameters.score;
 //		output_par_file.WriteLine(output_parameters);
+		output_star_file.all_parameters[current_line] = output_parameters;
 		SendRefineResult(&output_parameters);
 
 		images_processed++;

@@ -194,7 +194,7 @@ bool Refine2DApp::DoCalculation()
 	float binning_factor, binned_pixel_size;
 	float temp_float;
 	float psi;
-	float psi_max;
+//	float psi_max;
 	float psi_step;
 	float psi_start;
 	float average;
@@ -460,7 +460,7 @@ bool Refine2DApp::DoCalculation()
 	number_of_rotations = int(360.0 / psi_step + 0.5);
 	psi_step = 360.0 / number_of_rotations;
 	psi_start = psi_step / 2.0 * global_random_number_generator.GetUniformRandom();
-	psi_max = 360.0;
+//	psi_max = 360.0;
 
 	wxPrintf("\nNumber of classes = %i, nonzero classes = %i, box size = %i, binning factor = %f, new pixel size = %f, resolution limit = %f, angular step size = %f, percent_used = %f\n",
 			number_of_classes, number_of_nonzero_classes, fourier_size, binning_factor, binned_pixel_size, binned_pixel_size * 2.0, psi_step, percent_used);
@@ -743,18 +743,18 @@ bool Refine2DApp::DoCalculation()
 		}
 		if (block_size < 1) block_size = 1;
 
-		keep_reading = false;
-		current_block_read_size = 0;
 //		image_counter = 0;
 
 		#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, \
-			number_of_blank_edges, sum_power, current_line, global_random_number_generator, block_size, keep_reading, current_block_read_size) \
+			number_of_blank_edges, sum_power, current_line, global_random_number_generator, block_size) \
 		private(current_line_local, input_parameters, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
-			mask_radius_for_noise, image_counter)
+			mask_radius_for_noise, image_counter, keep_reading, current_block_read_size)
 		{
 
 		image_counter = 0;
 		number_of_blank_edges_local = 0;
+		keep_reading = false;
+		current_block_read_size = 0;
 		input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 		temp_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 		sum_power_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
@@ -764,8 +764,8 @@ bool Refine2DApp::DoCalculation()
 		#pragma omp for schedule(static,1)
 		for (current_line_local = 0; current_line_local < input_star_file.ReturnNumberofLines(); current_line_local++)
 		{
-//			#pragma omp critical
-//			{
+			#pragma omp critical
+			{
 				input_parameters = input_star_file.ReturnLine(current_line_local);
 
 //				current_line++;
@@ -792,7 +792,7 @@ bool Refine2DApp::DoCalculation()
 					input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
 					file_read = true;
 				}
-//			}
+			}
 
 			if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
 			if (! file_read) continue;
@@ -848,7 +848,7 @@ bool Refine2DApp::DoCalculation()
 
 	#pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack, \
 		number_of_blank_edges, global_random_number_generator, percent_used, cropped_box_size, low_resolution_limit, high_resolution_limit, binned_pixel_size, invert_contrast, \
-		noise_power_spectrum, padded_box_size, psi_step, psi_start, psi_max, number_of_rotations, reverse_list_of_nozero_classes, smoothing_factor, max_search_range, output_star_file, \
+		noise_power_spectrum, padded_box_size, psi_step, psi_start, number_of_rotations, reverse_list_of_nozero_classes, smoothing_factor, max_search_range, output_star_file, \
 		fourier_size, input_particle, binning_factor, normalize_particles, low_resolution_contrast, input_classes_cache, sum_logp_particle) \
 	private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
 		output_parameters, input_ctf, average, ctf_input_image_local, cropped_input_image_local, psi, i, rotation_angle, current_class, best_class, ssq_X, best_correlation_map, \
@@ -919,7 +919,7 @@ bool Refine2DApp::DoCalculation()
 
 		if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size))
 		{
-			number_of_blank_edges++;
+			number_of_blank_edges_local++;
 			input_parameters.best_2d_class = - abs(input_parameters.best_2d_class);
 			input_parameters.score_change = 0.0;
 			output_parameters = input_parameters;

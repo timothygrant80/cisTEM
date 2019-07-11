@@ -62,13 +62,14 @@ private:
 	long total_number_of_ticks;
 	long start_time;
 	long last_update_time;
+	bool limit_to_100_percent;
 
 public :
 
 	// Constructors
 
 	ProgressBar();
-	ProgressBar(long wanted_total_number_of_ticks);
+	ProgressBar(long wanted_total_number_of_ticks, bool wanted_limit_to_100_percent = true);
 
 	// Destructor
 

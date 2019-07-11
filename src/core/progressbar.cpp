@@ -55,7 +55,7 @@ ProgressBar::~ProgressBar(void)
 	}
 }
 
-ProgressBar::ProgressBar(long wanted_total_number_of_ticks)
+ProgressBar::ProgressBar(long wanted_total_number_of_ticks, bool wanted_limit_to_100_percent)
 {
 
 	total_number_of_ticks = wanted_total_number_of_ticks;
@@ -66,6 +66,7 @@ ProgressBar::ProgressBar(long wanted_total_number_of_ticks)
 	{
 		start_time = time(NULL);
 		last_update_time = start_time;
+		limit_to_100_percent = wanted_limit_to_100_percent;
 
 		// draw the start state...
 
@@ -87,7 +88,7 @@ void ProgressBar::Update(long current_tick)
 
 	// if there is less than 2 ticks we don't do anything..
 
-	if (total_number_of_ticks > 1)
+	if (total_number_of_ticks > 1 && (current_tick <= total_number_of_ticks || ! limit_to_100_percent))
 	{
 		long seconds_remaining;
 		long minutes_remaining;

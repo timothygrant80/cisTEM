@@ -2251,6 +2251,17 @@ class MatchTemplateParentPanel : public JobPanel
 		NumericTextCtrl* OutofPlaneStepNumericCtrl;
 		wxStaticText* m_staticText190;
 		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxStaticText* m_staticText1901;
+		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
+		wxStaticText* m_staticText19011;
+		NumericTextCtrl* DefocusSearchStepNumericCtrl;
+		wxStaticText* m_staticText1902;
+		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
+		wxStaticText* m_staticText19022;
+		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
+		wxStaticText* m_staticText19021;
+		wxStaticText* m_staticText190211;
+		NumericTextCtrl* HighResolutionLimitNumericCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -2279,71 +2290,11 @@ class MatchTemplateParentPanel : public JobPanel
 	
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
+		wxComboBox* SymmetryComboBox;
 		ShowCTFResultsPanel* CTFResultsPanel;
 		
 		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~MatchTemplateParentPanel();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class MatchTemplateMLParentPanel
-///////////////////////////////////////////////////////////////////////////////
-class MatchTemplateMLParentPanel : public JobPanel
-{
-	private:
-	
-	protected:
-		wxStaticLine* m_staticline12;
-		wxStaticText* m_staticText262;
-		wxStaticText* m_staticText478;
-		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
-		wxStaticLine* m_staticline155;
-		wxStaticText* m_staticText764;
-		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
-		wxStaticText* m_staticText7641;
-		NumericTextCtrl* RandomResTextCtrl;
-		wxToggleButton* ExpertToggleButton;
-		wxStaticLine* m_staticline10;
-		wxScrolledWindow* ExpertPanel;
-		wxBoxSizer* InputSizer;
-		wxStaticText* m_staticText201;
-		wxStaticText* m_staticText189;
-		NumericTextCtrl* OutofPlaneStepNumericCtrl;
-		wxStaticText* m_staticText190;
-		NumericTextCtrl* InPlaneStepNumericCtrl;
-		wxPanel* OutputTextPanel;
-		wxTextCtrl* output_textctrl;
-		wxPanel* InfoPanel;
-		wxRichTextCtrl* InfoText;
-		wxStaticLine* m_staticline11;
-		wxPanel* ProgressPanel;
-		wxStaticText* NumberConnectedText;
-		wxGauge* ProgressBar;
-		wxStaticText* TimeRemainingText;
-		wxStaticLine* m_staticline60;
-		wxButton* FinishButton;
-		wxButton* CancelAlignmentButton;
-		wxPanel* StartPanel;
-		wxStaticText* RunProfileText;
-		MemoryComboBox* RunProfileComboBox;
-		wxButton* StartEstimationButton;
-		
-		// Virtual event handlers, overide them in your derived class
-		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
-		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
-	public:
-		ImageGroupPickerComboPanel* GroupComboBox;
-		ShowCTFResultsPanel* CTFResultsPanel;
-		
-		MatchTemplateMLParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
-		~MatchTemplateMLParentPanel();
 	
 };
 

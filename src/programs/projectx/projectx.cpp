@@ -301,7 +301,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
-	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
+//	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
 #endif
 
 	// Setup Movie Panel

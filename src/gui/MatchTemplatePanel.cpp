@@ -42,6 +42,28 @@ MatchTemplateParentPanel( parent )
 	result_bitmap.Create(1,1, 24);
 	time_of_last_result_update = time(NULL);
 
+	DefocusSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
+	DefocusSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
+	PixelSizeSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
+	PixelSizeSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
+	HighResolutionLimitNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
+
+	SymmetryComboBox->Clear();
+  	SymmetryComboBox->Append("C1");
+  	SymmetryComboBox->Append("C2");
+  	SymmetryComboBox->Append("C3");
+  	SymmetryComboBox->Append("C4");
+  	SymmetryComboBox->Append("D2");
+  	SymmetryComboBox->Append("D3");
+  	SymmetryComboBox->Append("D4");
+  	SymmetryComboBox->Append("I");
+  	SymmetryComboBox->Append("I2");
+  	SymmetryComboBox->Append("O");
+  	SymmetryComboBox->Append("T");
+  	SymmetryComboBox->Append("T2");
+  	SymmetryComboBox->SetSelection(0);
+
+  	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MatchTemplatePanel::OnGroupComboBox, this);
 }
 
 /*
@@ -124,6 +146,32 @@ void MatchTemplatePanel::ResetDefaults()
 {
 	OutofPlaneStepNumericCtrl->ChangeValueFloat(2.5);
 	InPlaneStepNumericCtrl->ChangeValueFloat(1.5);
+	DefocusSearchRangeNumericCtrl->ChangeValueFloat(1000.0);
+	DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0);
+	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.1);
+	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.02);
+	SymmetryComboBox->SetSelection(0);
+//	AssetGroup active_group;
+	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
+	if (active_group.number_of_members > 0)
+	{
+		ImageAsset *current_image;
+		current_image = image_asset_panel->ReturnAssetPointer(GroupComboBox->GetSelection());
+		HighResolutionLimitNumericCtrl->ChangeValueFloat(2.0f * current_image->pixel_size);
+	}
+}
+
+void MatchTemplatePanel::OnGroupComboBox(wxCommandEvent &event)
+{
+//	ResetDefaults();
+//	AssetGroup active_group;
+	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
+	if (active_group.number_of_members > 0)
+	{
+		ImageAsset *current_image;
+		current_image = image_asset_panel->ReturnAssetPointer(GroupComboBox->GetSelection());
+		HighResolutionLimitNumericCtrl->ChangeValueFloat(2.0f * current_image->pixel_size);
+	}
 }
 
 void MatchTemplatePanel::SetInfo()
@@ -370,6 +418,12 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	float wanted_out_of_plane_angular_step = OutofPlaneStepNumericCtrl->ReturnValue();
 	float wanted_in_plane_angular_step = InPlaneStepNumericCtrl->ReturnValue();
+	float defocus_search_range = DefocusSearchRangeNumericCtrl->ReturnValue();
+	float defocus_step = DefocusSearchStepNumericCtrl->ReturnValue();
+	float pixel_size_search_range = PixelSizeSearchRangeNumericCtrl->ReturnValue();
+	float pixel_size_step = PixelSizeSearchStepNumericCtrl->ReturnValue();
+	wxString my_symmetry = SymmetryComboBox->GetValue();
+	float high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue();
 
 	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
 
@@ -402,8 +456,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	delete current_image_euler_search;
 
 // Some settings for testing
-	float defocus_search_range = 1200.0f;
-	float defocus_step = 200.0f;
+//	float defocus_search_range = 1200.0f;
+//	float defocus_step = 200.0f;
 
 	// number of rotations
 
@@ -472,7 +526,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift, iciness);
 
 			float low_resolution_limit = 300.0f;
-			float high_resolution_limit = resolution_limit;
+//			float high_resolution_limit = resolution_limit;
 			float angular_step = wanted_out_of_plane_angular_step;
 			int best_parameters_to_keep = 1;
 //			float defocus_search_range = 0.0f;
@@ -485,9 +539,10 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			wxString best_theta_output_file = "/dev/null";
 			wxString best_phi_output_file = "/dev/null";
 			wxString best_defocus_output_file = "/dev/null";
+			wxString best_pixel_size_output_file = "/dev/null";
 			wxString scaled_mip_output_file ="/dev/null";
 			wxString correlation_variance_output_file = "/dev/null";
-			wxString my_symmetry = "C1";
+//			wxString my_symmetry = "C1";
 			float in_plane_angular_step = wanted_in_plane_angular_step;
 			wxString output_histogram_file = "/dev/null";
 
@@ -498,13 +553,14 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			int last_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter++;
 
-			wxString directory_for_results = main_frame->ReturnScratchDirectory();
+			wxString directory_for_results = main_frame->current_project.image_asset_directory.GetFullPath();
+//			wxString directory_for_results = main_frame->ReturnScratchDirectory();
 
 
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			my_job_package.AddJob("ttffffffffffifffbffttttttttftiiiitt",	input_search_images.ToUTF8().data(),
+			my_job_package.AddJob("ttffffffffffffifffbfftttttttttftiiiitt",	input_search_images.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -519,6 +575,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_parameters_to_keep,
 																	defocus_search_range,
 																	defocus_step,
+																	pixel_size_search_range,
+																	pixel_size_step,
 																	padding,
 																	ctf_refinement,
 																	mask_radius_search,
@@ -528,6 +586,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_theta_output_file.ToUTF8().data(),
 																	best_phi_output_file.ToUTF8().data(),
 																	best_defocus_output_file.ToUTF8().data(),
+																	best_pixel_size_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
 																	correlation_variance_output_file.ToUTF8().data(),
 																	my_symmetry.ToUTF8().data(),

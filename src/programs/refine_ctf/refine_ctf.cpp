@@ -689,7 +689,7 @@ bool RefineCTFApp::DoCalculation()
 			input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
-		else input_image_local.ChangePixelSize(&input_image_local, 1.3 * pixel_size / input_parameters.pixel_size, 0.001f);
+		else input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 
 		// Option to add noise to images to get out of local optima
 //		input_image.AddGaussianNoise(sqrtf(2.0 * input_image.ReturnVarianceOfRealValues()));
@@ -846,6 +846,7 @@ bool RefineCTFApp::DoCalculation()
 //		phase_difference_sum.QuickAndDirtyReadSlice("phase_difference_sum.mrc", 1);
 //		phase_difference_sum.ForwardFFT();
 		phase_difference_sum.DivideByConstant(float(images_to_process));
+		phase_difference_sum.CosineMask(0.45f, pixel_size / mask_falloff);
 //		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift);
 		input_ctf.Init(voltage_kV, spherical_aberration_mm, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, pixel_size, 0.0f);
 		score = refine_particle.FindBeamTilt(phase_difference_sum, input_ctf, pixel_size, temp_image, beamtilt_image, sum_power, beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y, phase_multiplier, is_running_locally);

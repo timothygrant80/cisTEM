@@ -347,7 +347,8 @@ void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 
 	for (int i = 0; i < wanted_number_of_points; i++)
 	{
-		i_x = float(i * input_curve->number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
+		i_x = float(i * (input_curve->number_of_points - 1)) / float(wanted_number_of_points - 1);
+//		i_x = float(i * input_curve->number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
 		temp_curve.AddPoint(i_x, input_curve->ReturnLinearInterpolationFromI(i_x));
 	}
 
@@ -536,7 +537,7 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
 	return return_value;
 }
 
-// If it the data_x values form a linear axies (i.e. they are regularly spaced), give assume_linear_x true.
+// If the data_x values form a linear axis (i.e. they are regularly spaced), give assume_linear_x true.
 void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");

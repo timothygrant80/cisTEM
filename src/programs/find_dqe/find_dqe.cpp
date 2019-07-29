@@ -1081,7 +1081,7 @@ bool FindDQE::DoCalculation()
 //	temp_image.BackwardFFT();
 	dqe0 = pow(average_background, 2) / exposure / nps0;
 	wxPrintf("\nGain (counts/e) from exposure and background average = %10.4f\n", gain_conversion_factor);
-	wxPrintf("Sqrt of noise power at 0 frequency (√NPS0)           = %10.4f\n", sqrtf(nps0 / two_image_factor));
+	wxPrintf("Sqrt of noise power at 0 frequency (NPS0)            = %10.4f\n", sqrtf(nps0 / two_image_factor));
 	wxPrintf("DQE0 based on gain and NPS0                          = %10.4f\n", dqe0);
 
 //	nps_fit.GetYMinMax(temp_float, nps_max);

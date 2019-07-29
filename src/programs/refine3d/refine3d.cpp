@@ -1132,7 +1132,7 @@ bool Refine3DApp::DoCalculation()
 			input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image_local should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
-		else input_image_local.ChangePixelSize(&input_image_local, 1.3 * pixel_size / input_parameters.pixel_size, 0.001f);
+		else input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 
 		// Option to add noise to images to get out of local optima
 //		input_image_local.AddGaussianNoise(sqrtf(2.0 * input_image_local.ReturnVarianceOfRealValues()));

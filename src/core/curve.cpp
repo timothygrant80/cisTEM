@@ -343,13 +343,14 @@ void Curve::ResampleCurve(Curve *input_curve, int wanted_number_of_points)
 
 	Curve temp_curve;
 
-	float i_x;
+	float i_x, x;
 
 	for (int i = 0; i < wanted_number_of_points; i++)
 	{
 		i_x = float(i * (input_curve->number_of_points - 1)) / float(wanted_number_of_points - 1);
+		x = input_curve->data_x[0] + i_x / (input_curve->number_of_points - 1) * (input_curve->data_x[input_curve->number_of_points - 1] - input_curve->data_x[0]);
 //		i_x = float(i * input_curve->number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
-		temp_curve.AddPoint(i_x, input_curve->ReturnLinearInterpolationFromI(i_x));
+		temp_curve.AddPoint(x, input_curve->ReturnLinearInterpolationFromI(i_x));
 	}
 
 	CopyFrom(&temp_curve);

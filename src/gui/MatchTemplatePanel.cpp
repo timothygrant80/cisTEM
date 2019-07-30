@@ -45,7 +45,7 @@ MatchTemplateParentPanel( parent )
 	DefocusSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
 	DefocusSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
 	PixelSizeSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
-	PixelSizeSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
+	PixelSizeSearchStepNumericCtrl->SetMinMaxValue(0.01f, FLT_MAX);
 	HighResolutionLimitNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
 
 	SymmetryComboBox->Clear();
@@ -146,10 +146,11 @@ void MatchTemplatePanel::ResetDefaults()
 {
 	OutofPlaneStepNumericCtrl->ChangeValueFloat(2.5);
 	InPlaneStepNumericCtrl->ChangeValueFloat(1.5);
-	DefocusSearchRangeNumericCtrl->ChangeValueFloat(1000.0);
+	DefocusSearchRangeNumericCtrl->ChangeValueFloat(0.0);
 	DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0);
-	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.1);
-	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.02);
+	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.0);
+	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.01);
+	EstimatedParticleSizeTextCtrl->ChangeValueFloat(200.0);
 	SymmetryComboBox->SetSelection(0);
 //	AssetGroup active_group;
 	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
@@ -286,8 +287,6 @@ void MatchTemplatePanel::SetInfo()
 	InfoText->Newline();
 
 	InfoText->EndSuppressUndo();
-
-
 }
 
 void MatchTemplatePanel::FillGroupComboBox()
@@ -362,13 +361,7 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 			ReferenceSelectPanel->FillComboBox();
 			volumes_are_dirty = false;
 		}
-
-
 	}
-
-
-
-
 }
 
 void MatchTemplatePanel::OnExpertOptionsToggle(wxCommandEvent& event )
@@ -400,6 +393,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	int job_counter;
 	int number_of_rotations = 0;
 	int number_of_defocus_positions;
+	int number_of_pixel_size_positions;
 
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
@@ -466,7 +460,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		number_of_rotations++;
 	}
 
-	my_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
+	current_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
 
 	expected_number_of_results = 0;
 	number_of_received_results = 0;
@@ -499,11 +493,12 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		current_image_euler_search->CalculateGridSearchPositions(false);
 
 		number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
+		number_of_pixel_size_positions = 2 * myround(float(pixel_size_search_range)/float(pixel_size_step)) + 1;
 
 		wxPrintf("There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
-		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions);
+		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions);
 		// how many orientations will each process do for this image..
-		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions;
+		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions;
 		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_jobs_per_image_in_gui) / float(number_of_jobs_per_image_in_gui);
 
 		current_orientation_counter = 0;
@@ -560,7 +555,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			my_job_package.AddJob("ttffffffffffffifffbfftttttttttftiiiitt",	input_search_images.ToUTF8().data(),
+			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitt",	input_search_images.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -602,7 +597,6 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 		delete current_image_euler_search;
 		my_progress_dialog->Update(image_counter + 1);
-
 	}
 
 	my_progress_dialog->Destroy();
@@ -614,32 +608,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) number_of_processes = my_job_package.number_of_jobs + 1;
-		else number_of_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_processes >= 100000) length_of_process_number = 6;
-		else
-		if (number_of_processes >= 10000) length_of_process_number = 5;
-		else
-		if (number_of_processes >= 1000) length_of_process_number = 4;
-		else
-		if (number_of_processes >= 100) length_of_process_number = 3;
-		else
-		if (number_of_processes >= 10) length_of_process_number = 2;
-		else
-		length_of_process_number = 1;
-
-		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", 0, number_of_processes));
-		else
-		NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", 0, number_of_processes));
+		SetNumberConnectedTextToZeroAndStartTracking();
 
 		StartPanel->Show(false);
 		ProgressPanel->Show(true);
@@ -653,10 +622,6 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		ExpertToggleButton->Enable(false);
 		GroupComboBox->Enable(false);
 		Layout();
-
-		running_job = true;
-		my_job_tracker.StartTracking(my_job_package.number_of_jobs);
-
 	}
 
 	ProgressBar->Pulse();
@@ -684,9 +649,6 @@ void MatchTemplatePanel::FinishButtonClick( wxCommandEvent& event )
 
 	CTFResultsPanel->CTF2DResultsPanel->should_show = false;
 	CTFResultsPanel->CTF2DResultsPanel->Refresh();
-
-
-
 }
 
 void MatchTemplatePanel::TerminateButtonClick( wxCommandEvent& event )
@@ -729,6 +691,36 @@ void MatchTemplatePanel::WriteErrorText(wxString text_to_write)
 	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
 }
 
+void MatchTemplatePanel::OnSocketJobResultMsg(JobResult &received_result)
+{
+	if (received_result.result_size > 0)
+	{
+		ProcessResult(&received_result);
+	}
+}
+
+void MatchTemplatePanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue)
+{
+	for (int counter = 0; counter < received_queue.GetCount(); counter++)
+	{
+		ProcessResult(&received_queue.Item(counter));
+	}
+}
+
+void MatchTemplatePanel::SetNumberConnectedText(wxString wanted_text)
+{
+	NumberConnectedText->SetLabel(wanted_text);
+}
+
+void MatchTemplatePanel::SetTimeRemainingText(wxString wanted_text)
+{
+	TimeRemainingText->SetLabel(wanted_text);
+}
+
+void MatchTemplatePanel::OnSocketAllJobsFinished()
+{
+	ProcessAllJobsFinished();
+}
 
 void MatchTemplatePanel::OnJobSocketEvent(wxSocketEvent& event)
 {
@@ -998,14 +990,14 @@ void  MatchTemplatePanel::ProcessAllJobsFinished()
 	}
 
 	// Kill the job (in case it isn't already dead)
-	//main_frame->job_controller.KillJob(my_job_id);
+	main_frame->job_controller.KillJob(my_job_id);
 
-	//WriteInfoText("All Jobs have finished.");
-	//ProgressBar->SetValue(100);
-	//TimeRemainingText->SetLabel("Time Remaining : All Done!");
-	//CancelAlignmentButton->Show(false);
-	//FinishButton->Show(true);
-	//ProgressPanel->Layout();
+	WriteInfoText("All Jobs have finished.");
+	ProgressBar->SetValue(100);
+	TimeRemainingText->SetLabel("Time Remaining : All Done!");
+	CancelAlignmentButton->Show(false);
+	FinishButton->Show(true);
+	ProgressPanel->Layout();
 }
 
 

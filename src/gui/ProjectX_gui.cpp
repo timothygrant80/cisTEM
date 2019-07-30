@@ -9052,13 +9052,6 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer560;
 	bSizer560 = new wxBoxSizer( wxHORIZONTAL );
 	
-	m_staticText764 = new wxStaticText( this, wxID_ANY, wxT("Est. Particle Size (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText764->Wrap( -1 );
-	bSizer560->Add( m_staticText764, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	EstimatedParticleSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("100"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer560->Add( EstimatedParticleSizeTextCtrl, 0, wxALL, 5 );
-	
 	
 	bSizer559->Add( bSizer560, 0, wxEXPAND, 5 );
 	
@@ -9112,14 +9105,28 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	InPlaneStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InPlaneStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	m_staticText190211 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText190211->Wrap( -1 );
+	fgSizer1->Add( m_staticText190211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	HighResolutionLimitNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( HighResolutionLimitNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText764 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Est. Particle Size (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText764->Wrap( -1 );
+	fgSizer1->Add( m_staticText764, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	EstimatedParticleSizeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( EstimatedParticleSizeTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
 	m_staticText1901 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1901->Wrap( -1 );
 	fgSizer1->Add( m_staticText1901, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1000"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( DefocusSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText19011 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText19011 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText19011->Wrap( -1 );
 	fgSizer1->Add( m_staticText19011, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -9130,14 +9137,14 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	m_staticText1902->Wrap( -1 );
 	fgSizer1->Add( m_staticText1902, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.1"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( PixelSizeSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText19022 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pixel Size Search Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText19022->Wrap( -1 );
 	fgSizer1->Add( m_staticText19022, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	PixelSizeSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.02"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.01"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( PixelSizeSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	m_staticText19021 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pointgroup Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -9146,13 +9153,6 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	SymmetryComboBox = new wxComboBox( ExpertPanel, wxID_ANY, wxT("C1"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 ); 
 	fgSizer1->Add( SymmetryComboBox, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText190211 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText190211->Wrap( -1 );
-	fgSizer1->Add( m_staticText190211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	HighResolutionLimitNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( HighResolutionLimitNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );

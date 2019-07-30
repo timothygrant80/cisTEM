@@ -2240,8 +2240,6 @@ class MatchTemplateParentPanel : public JobPanel
 		wxStaticText* m_staticText478;
 		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
 		wxStaticLine* m_staticline155;
-		wxStaticText* m_staticText764;
-		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticLine* m_staticline10;
 		wxScrolledWindow* ExpertPanel;
@@ -2251,6 +2249,10 @@ class MatchTemplateParentPanel : public JobPanel
 		NumericTextCtrl* OutofPlaneStepNumericCtrl;
 		wxStaticText* m_staticText190;
 		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190211;
+		NumericTextCtrl* HighResolutionLimitNumericCtrl;
+		wxStaticText* m_staticText764;
+		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
 		wxStaticText* m_staticText1901;
 		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
 		wxStaticText* m_staticText19011;
@@ -2260,8 +2262,6 @@ class MatchTemplateParentPanel : public JobPanel
 		wxStaticText* m_staticText19022;
 		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
 		wxStaticText* m_staticText19021;
-		wxStaticText* m_staticText190211;
-		NumericTextCtrl* HighResolutionLimitNumericCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

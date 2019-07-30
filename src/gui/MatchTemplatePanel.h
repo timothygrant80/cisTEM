@@ -6,9 +6,7 @@ class MatchTemplatePanel : public MatchTemplateParentPanel
 {
 		long my_job_id;
 
-		int length_of_process_number;
 
-		JobPackage my_job_package;
 		JobTracker my_job_tracker;
 
 		bool running_job;
@@ -42,6 +40,13 @@ public:
 		void StartEstimationClick( wxCommandEvent& event );
 		void FinishButtonClick( wxCommandEvent& event );
 		void TerminateButtonClick( wxCommandEvent& event );
+
+		void OnSocketJobResultMsg(JobResult &received_result);
+		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+		void SetNumberConnectedText(wxString wanted_text);
+		void SetTimeRemainingText(wxString wanted_text);
+		void OnSocketAllJobsFinished();
+
 	//void Refresh();
 		void SetInfo();
 		void OnInfoURL(wxTextUrlEvent& event);

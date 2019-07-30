@@ -26,6 +26,7 @@ void MakeTemplateResult::DoInteractiveUserInput()
 	wxString    input_best_theta_filename;
 	wxString    input_best_phi_filename;
 	wxString    input_best_defocus_filename;
+	wxString    input_best_pixel_size_filename;
 	wxString    output_result_image_filename;
 	wxString    output_slab_filename;
 	wxString    output_xyz_coords_filename;
@@ -38,15 +39,16 @@ void MakeTemplateResult::DoInteractiveUserInput()
 
 	UserInput *my_input = new UserInput("MakeTemplateResult", 1.00);
 
-	input_reconstruction_filename = my_input->GetFilenameFromUser("Input template reconstruction", "The 3D reconstruction from which projections are calculated", "my_reconstruction.mrc", true);
-	input_mip_filename = my_input->GetFilenameFromUser("Input MIP file", "The file for saving the maximum intensity projection image", "my_mip.mrc", false);
-	input_best_psi_filename = my_input->GetFilenameFromUser("Input psi file", "The file containing the best psi image", "my_psi.mrc", false);
-	input_best_theta_filename = my_input->GetFilenameFromUser("Input theta file", "The file containing the best psi image", "my_theta.mrc", false);
-	input_best_phi_filename = my_input->GetFilenameFromUser("Input phi file", "The file containing the best psi image", "my_phi.mrc", false);
-	input_best_defocus_filename = my_input->GetFilenameFromUser("Input defocus file", "The file with the best defocus image", "in_defocus.mrc", true);
-	output_result_image_filename = my_input->GetFilenameFromUser("Output found result file", "The file for saving the found result", "my_result.mrc", false);
-	output_slab_filename = my_input->GetFilenameFromUser("Output slab volume file", "The file for saving the slab with the found targets", "my_slab.mrc", false);
-	output_xyz_coords_filename = my_input->GetFilenameFromUser("Output x,y,z coordinate file", "The file for saving the x,y,z coordinates of the found targets", "my_coordinates.txt", false);
+	input_reconstruction_filename = my_input->GetFilenameFromUser("Input template reconstruction", "The 3D reconstruction from which projections are calculated", "reconstruction.mrc", true);
+	input_mip_filename = my_input->GetFilenameFromUser("Input MIP file", "The file for saving the maximum intensity projection image", "mip.mrc", false);
+	input_best_psi_filename = my_input->GetFilenameFromUser("Input psi file", "The file containing the best psi image", "psi.mrc", false);
+	input_best_theta_filename = my_input->GetFilenameFromUser("Input theta file", "The file containing the best psi image", "theta.mrc", false);
+	input_best_phi_filename = my_input->GetFilenameFromUser("Input phi file", "The file containing the best psi image", "phi.mrc", false);
+	input_best_defocus_filename = my_input->GetFilenameFromUser("Input defocus file", "The file with the best defocus image", "defocus.mrc", true);
+	input_best_pixel_size_filename = my_input->GetFilenameFromUser("Input pixel size file", "The file with the best pixel size image", "pixel_size.mrc", true);
+	output_result_image_filename = my_input->GetFilenameFromUser("Output found result file", "The file for saving the found result", "result.mrc", false);
+	output_slab_filename = my_input->GetFilenameFromUser("Output slab volume file", "The file for saving the slab with the found targets", "slab.mrc", false);
+	output_xyz_coords_filename = my_input->GetFilenameFromUser("Output x,y,z coordinate file", "The file for saving the x,y,z coordinates of the found targets", "coordinates.txt", false);
 	wanted_threshold = my_input->GetFloatFromUser("Peak threshold", "Peaks over this size will be taken", "7.5", 0.0);
 	min_peak_radius = my_input->GetFloatFromUser("Min Peak Radius (px.)", "Essentially the minimum closeness for peaks", "10.0", 1.0);
 	slab_thickness = my_input->GetFloatFromUser("Sample thickness (A)", "The thickness of the sample that was searched", "2000.0", 100.0);
@@ -55,13 +57,14 @@ void MakeTemplateResult::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.Reset(14);
-	my_current_job.ManualSetArguments("tttttttttfffff",	input_reconstruction_filename.ToUTF8().data(),
+//	my_current_job.Reset(14);
+	my_current_job.ManualSetArguments("ttttttttttfffff",	input_reconstruction_filename.ToUTF8().data(),
 													input_mip_filename.ToUTF8().data(),
 													input_best_psi_filename.ToUTF8().data(),
 													input_best_theta_filename.ToUTF8().data(),
 													input_best_phi_filename.ToUTF8().data(),
 													input_best_defocus_filename.ToUTF8().data(),
+													input_best_pixel_size_filename.ToUTF8().data(),
 													output_result_image_filename.ToUTF8().data(),
 													output_slab_filename.ToUTF8().data(),
 													output_xyz_coords_filename.ToUTF8().data(),
@@ -86,14 +89,15 @@ bool MakeTemplateResult::DoCalculation()
 	wxString	input_best_theta_filename = my_current_job.arguments[3].ReturnStringArgument();
 	wxString	input_best_phi_filename = my_current_job.arguments[4].ReturnStringArgument();
 	wxString	input_best_defocus_filename = my_current_job.arguments[5].ReturnStringArgument();
-	wxString	output_result_image_filename = my_current_job.arguments[6].ReturnStringArgument();
-	wxString	output_slab_filename = my_current_job.arguments[7].ReturnStringArgument();
-	wxString	output_xyz_coords_filename = my_current_job.arguments[8].ReturnStringArgument();
-	float		wanted_threshold = my_current_job.arguments[9].ReturnFloatArgument();
-	float		min_peak_radius = my_current_job.arguments[10].ReturnFloatArgument();
-	float		slab_thickness = my_current_job.arguments[11].ReturnFloatArgument();
-	float		pixel_size = my_current_job.arguments[12].ReturnFloatArgument();
-	float		binning_factor = my_current_job.arguments[13].ReturnFloatArgument();
+	wxString	input_best_pixel_size_filename = my_current_job.arguments[6].ReturnStringArgument();
+	wxString	output_result_image_filename = my_current_job.arguments[7].ReturnStringArgument();
+	wxString	output_slab_filename = my_current_job.arguments[8].ReturnStringArgument();
+	wxString	output_xyz_coords_filename = my_current_job.arguments[9].ReturnStringArgument();
+	float		wanted_threshold = my_current_job.arguments[10].ReturnFloatArgument();
+	float		min_peak_radius = my_current_job.arguments[11].ReturnFloatArgument();
+	float		slab_thickness = my_current_job.arguments[12].ReturnFloatArgument();
+	float		pixel_size = my_current_job.arguments[13].ReturnFloatArgument();
+	float		binning_factor = my_current_job.arguments[14].ReturnFloatArgument();
 
 	float padding = 2.0f;
 
@@ -107,6 +111,7 @@ bool MakeTemplateResult::DoCalculation()
 	Image theta_image;
 	Image phi_image;
 	Image defocus_image;
+	Image pixel_size_image;
 	Image input_reconstruction;
 	Image binned_reconstruction;
 	Image rotated_reconstruction;
@@ -122,12 +127,16 @@ bool MakeTemplateResult::DoCalculation()
 	float current_theta;
 	float current_psi;
 	float current_defocus;
+	float current_pixel_size;
 
 	int number_of_peaks_found = 0;
 	int slab_thickness_in_pixels;
 	int binned_dimension_3d;
 	float binned_pixel_size;
 	float max_density;
+	float sq_dist_x, sq_dist_y;
+	long address;
+	int i,j;
 
 	float coordinates[3];
 	NumericTextFile coordinate_file(output_xyz_coords_filename, OPEN_TO_WRITE, 3);
@@ -141,6 +150,7 @@ bool MakeTemplateResult::DoCalculation()
 	theta_image.QuickAndDirtyReadSlice(input_best_theta_filename.ToStdString(), 1);
 	phi_image.QuickAndDirtyReadSlice(input_best_phi_filename.ToStdString(), 1);
 	defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename.ToStdString(), 1);
+	pixel_size_image.QuickAndDirtyReadSlice(input_best_pixel_size_filename.ToStdString(), 1);
 
 	output_image.Allocate(mip_image.logical_x_dimension, mip_image.logical_y_dimension, 1);
 	output_image.SetToConstant(0.0f);
@@ -199,10 +209,7 @@ bool MakeTemplateResult::DoCalculation()
 
 		// get angles and mask out the local area so it won't be picked again..
 
-		float sq_dist_x, sq_dist_y;
-		long address = 0;
-
-		int i,j;
+		address = 0;
 
 		current_peak.x = current_peak.x + mip_image.physical_address_of_box_center_x;
 		current_peak.y = current_peak.y + mip_image.physical_address_of_box_center_y;
@@ -228,6 +235,7 @@ bool MakeTemplateResult::DoCalculation()
 					current_theta = theta_image.real_values[address];
 					current_psi = psi_image.real_values[address];
 					current_defocus = defocus_image.real_values[address];
+					current_pixel_size = pixel_size_image.real_values[address];
 				}
 
 				address++;
@@ -235,7 +243,7 @@ bool MakeTemplateResult::DoCalculation()
 			address += mip_image.padding_jump_value;
 		}
 
-		wxPrintf("Peak %i at x, y, psi, theta, phi, defocus = %f, %f, %f, %f, %f, %f : %f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_peak.value);
+		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
 		coordinates[0] = current_peak.x * pixel_size;
 		coordinates[1] = current_peak.y * pixel_size;
 //		coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;

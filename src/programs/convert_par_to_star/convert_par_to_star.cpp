@@ -59,6 +59,7 @@ bool ConvertParToStar::DoCalculation()
 	cisTEMParameters converted_params;
 	converted_params.ReadFromFrealignParFile(input_filename_one, pixel_size, microscope_voltage, microscope_cs, amplitude_contrast, beam_tilt_x, beam_tilt_y, image_shift_x, image_shift_y);
 
+	converted_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK| IMAGE_IS_ACTIVE| PSI| THETA| PHI| X_SHIFT| Y_SHIFT| DEFOCUS_1| DEFOCUS_2| DEFOCUS_ANGLE| PHASE_SHIFT| OCCUPANCY| LOGP| SIGMA| SCORE| PIXEL_SIZE| MICROSCOPE_VOLTAGE| MICROSCOPE_CS| AMPLITUDE_CONTRAST| BEAM_TILT_X| BEAM_TILT_Y| IMAGE_SHIFT_X| IMAGE_SHIFT_Y);
 	converted_params.WriteTocisTEMStarFile(output_filename);
 	wxPrintf("\n\n");
 

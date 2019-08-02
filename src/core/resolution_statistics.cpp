@@ -668,6 +668,30 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.number_of_points);
 }
 
+void ResolutionStatistics::RestrainParticleSSNR(float low_resolution_limit)
+{
+	int i;
+	float adjustment_factor = -FLT_MAX;
+	float reciprocal_resolution_limit = 0.0f;
+
+	if (low_resolution_limit > 0.0f) reciprocal_resolution_limit = 1.0f / low_resolution_limit;
+	Curve temp_curve;
+	temp_curve = part_SSNR;
+	// part_SSNR x-axis is in A, need 1/A for fit
+	for (i = 0; i < temp_curve.number_of_points; i++) {if (temp_curve.data_x[i] != 0.0f) temp_curve.data_x[i] = 1.0f / temp_curve.data_x[i];}
+//	temp_curve.FitGaussianToData(reciprocal_resolution_limit, FLT_MAX, true);
+	temp_curve.FitGaussianToData(reciprocal_resolution_limit);
+    for (i = 0; i < part_SSNR.number_of_points; i++)
+    {
+    	if (temp_curve.data_x[i] >= reciprocal_resolution_limit)
+    	{
+    		if (adjustment_factor < -FLT_MAX / 2.0f) adjustment_factor = part_SSNR.data_y[i] / powf(temp_curve.gaussian_fit[i], 2);
+    		// Square Gaussian for additional down-weighting of high frequencies to counter over-fitting
+    		part_SSNR.data_y[i] = adjustment_factor * powf(temp_curve.gaussian_fit[i], 2);
+    	}
+    }
+}
+
 void ResolutionStatistics::ZeroToResolution(float resolution_limit)
 {
 	MyDebugAssertTrue(number_of_bins > 0, "Statistics not initialized");

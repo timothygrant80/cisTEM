@@ -36,6 +36,7 @@ void MakeTemplateResult::DoInteractiveUserInput()
 	float slab_thickness;
 	float pixel_size;
 	float binning_factor;
+	int	result_number;
 
 	UserInput *my_input = new UserInput("MakeTemplateResult", 1.00);
 
@@ -54,6 +55,7 @@ void MakeTemplateResult::DoInteractiveUserInput()
 	slab_thickness = my_input->GetFloatFromUser("Sample thickness (A)", "The thickness of the sample that was searched", "2000.0", 100.0);
 	pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
 	binning_factor = my_input->GetFloatFromUser("Binning factor for slab", "Factor to reduce size of output slab", "4.0", 0.0);
+	result_number = my_input->GetIntFromUser("Result number to process", "If input files contain results from several searches, which one should be used?", "1", 1);
 
 	delete my_input;
 
@@ -72,8 +74,8 @@ void MakeTemplateResult::DoInteractiveUserInput()
 													min_peak_radius,
 													slab_thickness,
 													pixel_size,
-													binning_factor);
-
+													binning_factor,
+													result_number);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -98,6 +100,7 @@ bool MakeTemplateResult::DoCalculation()
 	float		slab_thickness = my_current_job.arguments[12].ReturnFloatArgument();
 	float		pixel_size = my_current_job.arguments[13].ReturnFloatArgument();
 	float		binning_factor = my_current_job.arguments[14].ReturnFloatArgument();
+	int 		result_number = my_current_job.arguments[15].ReturnIntegerArgument();
 
 	float padding = 2.0f;
 
@@ -145,12 +148,12 @@ bool MakeTemplateResult::DoCalculation()
 
 	min_peak_radius = powf(min_peak_radius, 2);
 
-	mip_image.QuickAndDirtyReadSlice(input_mip_filename.ToStdString(), 1);
-	psi_image.QuickAndDirtyReadSlice(input_best_psi_filename.ToStdString(), 1);
-	theta_image.QuickAndDirtyReadSlice(input_best_theta_filename.ToStdString(), 1);
-	phi_image.QuickAndDirtyReadSlice(input_best_phi_filename.ToStdString(), 1);
-	defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename.ToStdString(), 1);
-	pixel_size_image.QuickAndDirtyReadSlice(input_best_pixel_size_filename.ToStdString(), 1);
+	mip_image.QuickAndDirtyReadSlice(input_mip_filename.ToStdString(), result_number);
+	psi_image.QuickAndDirtyReadSlice(input_best_psi_filename.ToStdString(), result_number);
+	theta_image.QuickAndDirtyReadSlice(input_best_theta_filename.ToStdString(), result_number);
+	phi_image.QuickAndDirtyReadSlice(input_best_phi_filename.ToStdString(), result_number);
+	defocus_image.QuickAndDirtyReadSlice(input_best_defocus_filename.ToStdString(), result_number);
+	pixel_size_image.QuickAndDirtyReadSlice(input_best_pixel_size_filename.ToStdString(), result_number);
 
 	output_image.Allocate(mip_image.logical_x_dimension, mip_image.logical_y_dimension, 1);
 	output_image.SetToConstant(0.0f);

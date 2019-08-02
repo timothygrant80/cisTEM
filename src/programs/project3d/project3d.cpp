@@ -39,6 +39,7 @@ void Project3DApp::DoInteractiveUserInput()
 	bool		apply_shifts;
 	bool		apply_mask;
 	bool		add_noise;
+	int 		max_threads;
 
 	UserInput *my_input = new UserInput("Project3D", 1.0);
 
@@ -64,16 +65,24 @@ void Project3DApp::DoInteractiveUserInput()
 	apply_mask = my_input->GetYesNoFromUser("Apply mask", "Should the particles be masked with the circular mask?", "No");
 	add_noise = my_input->GetYesNoFromUser("Add noise", "Should the Gaussian noise be added?", "No");
 
+
+#ifdef _OPENMP
+	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
+#else
+	max_threads = 1;
+#endif
+
+
 	delete my_input;
 
 //	my_current_job.Reset(14);
-	my_current_job.ManualSetArguments("tttiifffftbbbb",	input_star_filename.ToUTF8().data(),
+	my_current_job.ManualSetArguments("tttiifffftbbbbi",	input_star_filename.ToUTF8().data(),
 														input_reconstruction.ToUTF8().data(),
 														ouput_projection_stack.ToUTF8().data(),
 														first_particle, last_particle,
 														pixel_size, mask_radius, wanted_SNR, padding,
 														my_symmetry.ToUTF8().data(),
-														apply_CTF, apply_shifts, apply_mask, add_noise);
+														apply_CTF, apply_shifts, apply_mask, add_noise, max_threads);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -101,21 +110,20 @@ bool Project3DApp::DoCalculation()
 	bool	 apply_shifts						= my_current_job.arguments[11].ReturnBoolArgument();
 	bool	 apply_mask							= my_current_job.arguments[12].ReturnBoolArgument();
 	bool	 add_noise							= my_current_job.arguments[13].ReturnBoolArgument();
+	int		 max_threads						= my_current_job.arguments[14].ReturnIntegerArgument();
 
 	Image projection_image;
-	Image final_image;
 	ReconstructedVolume input_3d;
+	Image projection_3d;
+
+	int image_counter = 0;
 
 	int current_image;
-	int images_to_process = 0;
-	int image_counter = 0;
-	float temp_float[50];
 	float average_score = 0.0;
 	float average_sigma = 0.0;
 	float variance;
-	float binning_factor = 1.0;
-	float max_particle_number = 0;
 	float mask_falloff = 10.0;
+	wxArrayInt lines_to_process;
 
 	cisTEMParameterLine input_parameters;
 
@@ -150,61 +158,84 @@ bool Project3DApp::DoCalculation()
 	}
 	input_3d.mask_radius = mask_radius;
 	input_3d.density_map->CorrectSinc(mask_radius / pixel_size);
-	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size * binning_factor);
+	input_3d.PrepareForProjections(0.0, 2.0 * pixel_size);
 	//input_3d.density_map->ForwardFFT();
 	//input_3d.density_map->SwapRealSpaceQuadrants();
-	projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
-	final_image.Allocate(input_file.ReturnXSize() / binning_factor, input_file.ReturnYSize() / binning_factor, true);
+
+	// write first image to output file, so threads can write out of sequence..
+
+	if (max_threads > 1)
+	{
+		projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+		projection_image.WriteSlice(&output_file, 1);
+	}
+
 
 // Read whole parameter file to work out average image_sigma_noise and average score
 
 	average_sigma = input_star_file.ReturnAverageSigma();
 	average_score = input_star_file.ReturnAverageScore();
-	if (last_particle == 0) last_particle = input_star_file.ReturnMaxPositionInStack();
-	if (last_particle > max_particle_number) last_particle = max_particle_number;
-
-	wxPrintf("\nAverage sigma noise = %f, average score = %f\nNumber of projections to calculate = %i\n\n", average_sigma, average_score, images_to_process);
-//	my_input_par_file.Rewind();
-
-//	if (last_particle == 0) last_particle = my_input_par_file.number_of_lines;
 	if (first_particle == 0) first_particle = 1;
+	if (last_particle == 0) last_particle = input_star_file.ReturnMaxPositionInStack();
 
-	ProgressBar *my_progress = new ProgressBar(images_to_process);
-	for (current_image = 1; current_image <= input_star_file.ReturnNumberofLines(); current_image++)
+	for (current_image = 0; current_image < input_star_file.ReturnNumberofLines(); current_image++)
 	{
-		input_parameters = input_star_file.ReturnLine(current_image);
-		if (input_star_file.ReturnPositionInStack(current_image) < first_particle || input_star_file.ReturnPositionInStack(current_image) > last_particle) continue;
-		image_counter++;
+		if (input_star_file.ReturnPositionInStack(current_image) >= first_particle && input_star_file.ReturnPositionInStack(current_image) <= last_particle)
+		{
+			lines_to_process.Add(current_image);
+		}
+	}
+
+	wxPrintf("\nAverage sigma noise = %f, average score = %f\nNumber of projections to calculate = %li\n\n", average_sigma, average_score, lines_to_process.GetCount());
+
+	ProgressBar *my_progress = new ProgressBar(lines_to_process.GetCount());
+
+
+	projection_3d.CopyFrom(input_3d.density_map);
+
+	#pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d) \
+	private(current_image, input_parameters, my_parameters, my_ctf, projection_image, variance)
+	{
+
+
+	projection_image.Allocate(projection_3d.logical_x_dimension, projection_3d.logical_y_dimension, false);
+	RandomNumberGenerator local_random_generator(int(fabsf(global_random_number_generator.GetUniformRandom()*50000)), true);
+
+	#pragma omp for ordered schedule(static, 1)
+	for (current_image = 0; current_image < lines_to_process.GetCount(); current_image++)
+	{
+		input_parameters = input_star_file.ReturnLine(lines_to_process[current_image]);
 		my_parameters.Init(input_parameters.phi, input_parameters.theta, input_parameters.psi, input_parameters.x_shift, input_parameters.y_shift);
-//		my_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, temp_float[8], temp_float[9], temp_float[10], 0.0, 0.0, 0.0, pixel_size, temp_float[11], beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
-		my_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
 
-		input_3d.density_map->ExtractSlice(projection_image, my_parameters);
-		projection_image.complex_values[0] = input_3d.density_map->complex_values[0];
+		my_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, -input_parameters.beam_tilt_x / 1000.0f, -input_parameters.beam_tilt_y / 1000.0f, -input_parameters.image_shift_x, -input_parameters.image_shift_y);
+		projection_3d.ExtractSlice(projection_image, my_parameters);
+		projection_image.complex_values[0] = projection_3d.complex_values[0];
 
-/*		projection_image.BackwardFFT();
-		variance = projection_image.ReturnVarianceOfRealValues();
-		projection_image.AddGaussianNoise(sqrtf(variance / 0.05));
-		projection_image.ForwardFFT();
-		projection_image.ApplyBFactor(2.0);
-*/
 		if (apply_CTF) projection_image.ApplyCTF(my_ctf, false, true);
-		if (apply_shifts) projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
+		if (apply_shifts) projection_image.PhaseShift(input_parameters.x_shift / pixel_size, input_parameters.y_shift / pixel_size);
 		projection_image.SwapRealSpaceQuadrants();
 
 		projection_image.BackwardFFT();
-		projection_image.ChangePixelSize(&final_image, pixel_size / input_parameters.pixel_size, 0.001f);
-//		projection_image.ClipInto(&final_image);
+		projection_image.ChangePixelSize(&projection_image, pixel_size / input_parameters.pixel_size, 0.001f);
+
 		if (add_noise && wanted_SNR != 0.0)
 		{
-			variance = final_image.ReturnVarianceOfRealValues();
-			final_image.AddGaussianNoise(sqrtf(variance / wanted_SNR));
+			variance = projection_image.ReturnVarianceOfRealValues();
+			projection_image.AddGaussianNoise(sqrtf(variance / wanted_SNR), &local_random_generator);
 		}
-		if (apply_mask) final_image.CosineMask(mask_radius / input_parameters.pixel_size, 6.0);
-		final_image.WriteSlice(&output_file, image_counter);
 
-		my_progress->Update(image_counter);
+		if (apply_mask) projection_image.CosineMask(mask_radius / input_parameters.pixel_size, 6.0);
+
+		#pragma omp ordered
+		projection_image.WriteSlice(&output_file, current_image + 1);
+
+		#pragma omp atomic
+		image_counter++;
+
+		if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 	}
+
+	} // end omp
 	delete my_progress;
 
 	wxPrintf("\nProject3D: Normal termination\n\n");

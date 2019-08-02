@@ -113,6 +113,7 @@ bool Project3DApp::DoCalculation()
 	int		 max_threads						= my_current_job.arguments[14].ReturnIntegerArgument();
 
 	Image projection_image;
+	Image final_image;
 	ReconstructedVolume input_3d;
 	Image projection_3d;
 
@@ -164,11 +165,11 @@ bool Project3DApp::DoCalculation()
 
 	// write first image to output file, so threads can write out of sequence..
 
-	if (max_threads > 1)
-	{
-		projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
-		projection_image.WriteSlice(&output_file, 1);
-	}
+//	if (max_threads > 1)
+//	{
+//		projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+//		projection_image.WriteSlice(&output_file, 1);
+//	}
 
 
 // Read whole parameter file to work out average image_sigma_noise and average score
@@ -190,15 +191,15 @@ bool Project3DApp::DoCalculation()
 
 	ProgressBar *my_progress = new ProgressBar(lines_to_process.GetCount());
 
-
 	projection_3d.CopyFrom(input_3d.density_map);
 
-	#pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d) \
-	private(current_image, input_parameters, my_parameters, my_ctf, projection_image, variance)
+	#pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, \
+			pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file) \
+	private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
 	{
 
-
 	projection_image.Allocate(projection_3d.logical_x_dimension, projection_3d.logical_y_dimension, false);
+	final_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 	RandomNumberGenerator local_random_generator(int(fabsf(global_random_number_generator.GetUniformRandom()*50000)), true);
 
 	#pragma omp for ordered schedule(static, 1)
@@ -216,18 +217,18 @@ bool Project3DApp::DoCalculation()
 		projection_image.SwapRealSpaceQuadrants();
 
 		projection_image.BackwardFFT();
-		projection_image.ChangePixelSize(&projection_image, pixel_size / input_parameters.pixel_size, 0.001f);
+		projection_image.ChangePixelSize(&final_image, pixel_size / input_parameters.pixel_size, 0.001f);
 
 		if (add_noise && wanted_SNR != 0.0)
 		{
-			variance = projection_image.ReturnVarianceOfRealValues();
-			projection_image.AddGaussianNoise(sqrtf(variance / wanted_SNR), &local_random_generator);
+			variance = final_image.ReturnVarianceOfRealValues();
+			final_image.AddGaussianNoise(sqrtf(variance / wanted_SNR), &local_random_generator);
 		}
 
-		if (apply_mask) projection_image.CosineMask(mask_radius / input_parameters.pixel_size, 6.0);
+		if (apply_mask) final_image.CosineMask(mask_radius / input_parameters.pixel_size, 6.0);
 
 		#pragma omp ordered
-		projection_image.WriteSlice(&output_file, current_image + 1);
+		final_image.WriteSlice(&output_file, current_image + 1);
 
 		#pragma omp atomic
 		image_counter++;

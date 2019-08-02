@@ -2,80 +2,12 @@
 
 cisTEMStarFileReader::cisTEMStarFileReader()
 {
-	filename = "";
-	input_file = NULL;
-
-	current_position_in_stack = 0;
-	current_column = 0;
-
-	cached_parameters = NULL;
-	using_external_array = false;
-
-	position_in_stack_column = -1;
-	image_is_active_column = -1;
-	psi_column = -1;
-	theta_column = -1;
-	phi_column = -1;
-	x_shift_column = -1;
-	y_shift_column = -1;
-	defocus_1_column = -1;
-	defocus_2_column = -1;
-	defocus_angle_column = -1;
-	phase_shift_column = -1;
-	occupancy_column = -1;
-	logp_column = -1;
-	sigma_column = -1;
-	score_column = -1;
-	score_change_column = -1;
-	pixel_size_column = -1;
-	microscope_voltage_kv_column = -1;
-	microscope_spherical_aberration_mm_column = -1;
-	amplitude_contrast_column = -1;
-	beam_tilt_x_column = -1;
-	beam_tilt_y_column = -1;
-	image_shift_x_column = -1;
-	image_shift_y_column = -1;
+	Reset();
 }
 
 cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
 {
-	filename = "";
-	input_file = NULL;
-
-	current_position_in_stack = 0;
-	current_column = 0;
-
-	cached_parameters = NULL;
-
-	position_in_stack_column = -1;
-	image_is_active_column = -1;
-	psi_column = -1;
-	theta_column = -1;
-	phi_column = -1;
-	x_shift_column = -1;
-	y_shift_column = -1;
-	defocus_1_column = -1;
-	defocus_2_column = -1;
-	defocus_angle_column = -1;
-	phase_shift_column = -1;
-	occupancy_column = -1;
-	logp_column = -1;
-	sigma_column = -1;
-	score_column = -1;
-	score_change_column = -1;
-	pixel_size_column = -1;
-	microscope_voltage_kv_column = -1;
-	microscope_spherical_aberration_mm_column = -1;
-	amplitude_contrast_column = -1;
-	beam_tilt_x_column = -1;
-	beam_tilt_y_column = -1;
-	image_shift_x_column = -1;
-	image_shift_y_column = -1;
-	stack_filename_column = -1;
-	original_image_filename_column = -1;
-	reference_3d_filename_column = -1;
-	best_2d_class_column = -1;
-	beam_tilt_group_column = -1;
+	Reset();
 
 	if (alternate_cached_parameters_pointer == NULL)
 	{
@@ -90,6 +22,58 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 
 	ReadFile(wanted_filename, NULL, alternate_cached_parameters_pointer, exclude_negative_film_numbers);
 }
+
+void cisTEMStarFileReader::Reset()
+{
+	filename = "";
+	input_file = NULL;
+
+	current_position_in_stack = 0;
+	current_column = 0;
+
+	cached_parameters = NULL;
+	using_external_array = false;
+
+	ResetColumnPositions();
+
+	parameters_that_were_read.SetAllToFalse();
+}
+
+
+void cisTEMStarFileReader::ResetColumnPositions()
+{
+	position_in_stack_column = -1;
+	image_is_active_column = -1;
+	psi_column = -1;
+	theta_column = -1;
+	phi_column = -1;
+	x_shift_column = -1;
+	y_shift_column = -1;
+	defocus_1_column = -1;
+	defocus_2_column = -1;
+	defocus_angle_column = -1;
+	phase_shift_column = -1;
+	occupancy_column = -1;
+	logp_column = -1;
+	sigma_column = -1;
+	score_column = -1;
+	score_change_column = -1;
+	pixel_size_column = -1;
+	microscope_voltage_kv_column = -1;
+	microscope_spherical_aberration_mm_column = -1;
+	amplitude_contrast_column = -1;
+	beam_tilt_x_column = -1;
+	beam_tilt_y_column = -1;
+	image_shift_x_column = -1;
+	image_shift_y_column = -1;
+	best_2d_class_column = -1;
+	beam_tilt_group_column = -1;
+	original_image_filename_column = -1;
+	reference_3d_filename_column = -1;
+	stack_filename_column = -1;
+}
+
+
 
 cisTEMStarFileReader::~cisTEMStarFileReader()
 {
@@ -531,17 +515,44 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 	// stack filename
 
 	if ( stack_filename_column == -1) temp_parameters.stack_filename = "";
-	else temp_parameters.stack_filename = all_tokens[stack_filename_column].Trim(true).Trim(false);
+	else
+	{
+		temp_parameters.stack_filename = all_tokens[stack_filename_column].Trim(true).Trim(false);
+		if (StripEnclosingSingleQuotesFromString(temp_parameters.stack_filename) == false)
+		{
+			MyPrintfRed("Error: stack file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.stack_filename);
+			temp_parameters.stack_filename = "";
+		}
+	}
 
 	// original_image_filename
 
 	if ( original_image_filename_column == -1) temp_parameters.original_image_filename = "";
-	else temp_parameters.original_image_filename = all_tokens[original_image_filename_column].Trim(true).Trim(false);
+	else
+	{
+		temp_parameters.original_image_filename = all_tokens[original_image_filename_column].Trim(true).Trim(false);
+
+		if (StripEnclosingSingleQuotesFromString(temp_parameters.original_image_filename) == false)
+		{
+			MyPrintfRed("Error: original image file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.original_image_filename);
+			temp_parameters.original_image_filename = "";
+		}
+	}
 
 	// reference_3d_filename
 
 	if ( reference_3d_filename_column == -1) temp_parameters.reference_3d_filename = "";
-	else temp_parameters.reference_3d_filename = all_tokens[reference_3d_filename_column].Trim(true).Trim(false);
+	else
+	{
+		temp_parameters.reference_3d_filename = all_tokens[reference_3d_filename_column].Trim(true).Trim(false);
+
+		if (StripEnclosingSingleQuotesFromString(temp_parameters.reference_3d_filename) == false)
+		{
+			MyPrintfRed("Error: reference 3d file name read as %s is not enclosed in single quotes ('), replacing with blank string\n", temp_parameters.reference_3d_filename);
+			temp_parameters.reference_3d_filename = "";
+		}
+	}
+
 
 	cached_parameters->Add(temp_parameters);
 
@@ -613,6 +624,8 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 
 	// now we can get headers..
 
+	ResetColumnPositions();
+
 	//while (input_file_stream->Eof() == false)
 	while (input_file->Eof() == false)
 	{
@@ -626,66 +639,208 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 
 	    // otherwise it is a label, is it a label we want though?
 
-	    if (current_line.StartsWith("_cisTEMPositionInStack ") == true) position_in_stack_column = current_column;
+	    if (current_line.StartsWith("_cisTEMPositionInStack ") == true)
+	    {
+	    	if (position_in_stack_column != -1) wxPrintf("Warning :: _cisTEMPositionInStack occurs more than once. I will take the last occurrence\n");
+	    	position_in_stack_column = current_column;
+	    	parameters_that_were_read.position_in_stack = true;
+	    }
 	    else
-	    if (current_line.StartsWith("_cisTEMAnglePsi ") == true) psi_column = current_column;
+	    if (current_line.StartsWith("_cisTEMAnglePsi ") == true)
+	    {
+	    	if (psi_column != -1) wxPrintf("Warning :: _cisTEMAnglePsi occurs more than once. I will take the last occurrence\n");
+		   	psi_column = current_column;
+			parameters_that_were_read.psi = true;
+	    }
 	    else
-		if (current_line.StartsWith("_cisTEMAngleTheta ") == true) theta_column = current_column;
+		if (current_line.StartsWith("_cisTEMAngleTheta ") == true)
+		{
+	    	if (theta_column != -1) wxPrintf("Warning :: _cisTEMAngleTheta occurs more than once. I will take the last occurrence\n");
+			theta_column = current_column;
+			parameters_that_were_read.theta = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMAnglePhi ") == true) phi_column = current_column;
+		if (current_line.StartsWith("_cisTEMAnglePhi ") == true)
+		{
+	    	if (phi_column != -1) wxPrintf("Warning :: _cisTEMAnglePhi occurs more than once. I will take the last occurrence\n");
+		   	phi_column = current_column;
+			parameters_that_were_read.phi = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMXShift ") == true) x_shift_column = current_column;
+		if (current_line.StartsWith("_cisTEMXShift ") == true)
+		{
+	    	if (x_shift_column != -1) wxPrintf("Warning :: _cisTEMXShift occurs more than once. I will take the last occurrence\n");
+		   	x_shift_column = current_column;
+			parameters_that_were_read.x_shift = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMYShift ") == true) y_shift_column = current_column;
+		if (current_line.StartsWith("_cisTEMYShift ") == true)
+		{
+	    	if (y_shift_column != -1) wxPrintf("Warning :: _cisTEMYShift occurs more than once. I will take the last occurrence\n");
+		   	y_shift_column = current_column;
+			parameters_that_were_read.y_shift = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMDefocus1 ") == true) defocus_1_column = current_column;
+		if (current_line.StartsWith("_cisTEMDefocus1 ") == true)
+		{
+	    	if (defocus_1_column != -1) wxPrintf("Warning :: _cisTEMDefocus1 occurs more than once. I will take the last occurrence\n");
+		   	defocus_1_column = current_column;
+			parameters_that_were_read.defocus_1 = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMDefocus2 ") == true) defocus_2_column = current_column;
+		if (current_line.StartsWith("_cisTEMDefocus2 ") == true)
+		{
+	    	if (defocus_2_column != -1) wxPrintf("Warning :: _cisTEMDefocus2 occurs more than once. I will take the last occurrence\n");
+		   	defocus_2_column = current_column;
+			parameters_that_were_read.defocus_2 = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMDefocusAngle ") == true) defocus_angle_column = current_column;
+		if (current_line.StartsWith("_cisTEMDefocusAngle ") == true)
+		{
+	    	if (defocus_angle_column != -1) wxPrintf("Warning :: _cisTEMDefocusAngle occurs more than once. I will take the last occurrence\n");
+		   	defocus_angle_column = current_column;
+			parameters_that_were_read.defocus_angle = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMPhaseShift ") == true) phase_shift_column = current_column;
+		if (current_line.StartsWith("_cisTEMPhaseShift ") == true)
+		{
+	    	if (phase_shift_column != -1) wxPrintf("Warning :: _cisTEMPhaseShift occurs more than once. I will take the last occurrence\n");
+		   	phase_shift_column = current_column;
+			parameters_that_were_read.phase_shift = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMImageActivity ") == true) image_is_active_column = current_column;
+		if (current_line.StartsWith("_cisTEMImageActivity ") == true)
+		{
+	    	if (image_is_active_column != -1) wxPrintf("Warning :: _cisTEMImageActivity occurs more than once. I will take the last occurrence\n");
+		   	image_is_active_column = current_column;
+			parameters_that_were_read.image_is_active = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMOccupancy ") == true) occupancy_column = current_column;
+		if (current_line.StartsWith("_cisTEMOccupancy ") == true)
+		{
+	    	if (occupancy_column != -1) wxPrintf("Warning :: _cisTEMOccupancy occurs more than once. I will take the last occurrence\n");
+		   	occupancy_column = current_column;
+			parameters_that_were_read.occupancy = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMLogP ") == true) logp_column = current_column;
+		if (current_line.StartsWith("_cisTEMLogP ") == true)
+		{
+	    	if (logp_column != -1) wxPrintf("Warning :: _cisTEMLogP occurs more than once. I will take the last occurrence\n");
+		   	logp_column = current_column;
+			parameters_that_were_read.logp = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMSigma ") == true) sigma_column = current_column;
+		if (current_line.StartsWith("_cisTEMSigma ") == true)
+		{
+	    	if (sigma_column != -1) wxPrintf("Warning :: _cisTEMSigma occurs more than once. I will take the last occurrence\n");
+		   	sigma_column = current_column;
+		   	parameters_that_were_read.sigma = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMScore ") == true) score_column = current_column;
+		if (current_line.StartsWith("_cisTEMScore ") == true)
+		{
+	    	if (score_column != -1) wxPrintf("Warning :: _cisTEMScore occurs more than once. I will take the last occurrence\n");
+		   	score_column = current_column;
+			parameters_that_were_read.score = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMScoreChange ") == true) score_change_column = current_column;
+		if (current_line.StartsWith("_cisTEMScoreChange ") == true)
+		{
+	    	if (score_change_column != -1) wxPrintf("Warning :: _cisTEMScoreChange occurs more than once. I will take the last occurrence\n");
+		   	score_change_column = current_column;
+			parameters_that_were_read.score_change = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMPixelSize ") == true) pixel_size_column = current_column;
+		if (current_line.StartsWith("_cisTEMPixelSize ") == true)
+		{
+	    	if (pixel_size_column != -1) wxPrintf("Warning :: _cisTEMPixelSize occurs more than once. I will take the last occurrence\n");
+		   	pixel_size_column = current_column;
+			parameters_that_were_read.pixel_size = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMMicroscopeVoltagekV ") == true) microscope_voltage_kv_column = current_column;
+		if (current_line.StartsWith("_cisTEMMicroscopeVoltagekV ") == true)
+		{
+	    	if (microscope_voltage_kv_column != -1) wxPrintf("Warning :: _cisTEMMicroscopeVoltagekV occurs more than once. I will take the last occurrence\n");
+		   	microscope_voltage_kv_column = current_column;
+			parameters_that_were_read.microscope_voltage_kv = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMMicroscopeCsMM ") == true) microscope_spherical_aberration_mm_column = current_column;
+		if (current_line.StartsWith("_cisTEMMicroscopeCsMM ") == true)
+		{
+	    	if (microscope_spherical_aberration_mm_column != -1) wxPrintf("Warning :: _cisTEMMicroscopeCsMM occurs more than once. I will take the last occurrence\n");
+		   	microscope_spherical_aberration_mm_column = current_column;
+			parameters_that_were_read.microscope_spherical_aberration_mm = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMAmplitudeContrast ") == true) amplitude_contrast_column = current_column;
+		if (current_line.StartsWith("_cisTEMAmplitudeContrast ") == true)
+		{
+	    	if (amplitude_contrast_column != -1) wxPrintf("Warning :: _cisTEMAmplitudeContrast occurs more than once. I will take the last occurrence\n");
+		   	amplitude_contrast_column = current_column;
+			parameters_that_were_read.amplitude_contrast = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMBeamTiltX ") == true) beam_tilt_x_column = current_column;
+		if (current_line.StartsWith("_cisTEMBeamTiltX ") == true)
+		{
+	    	if (beam_tilt_x_column != -1) wxPrintf("Warning :: _cisTEMBeamTiltX occurs more than once. I will take the last occurrence\n");
+		   	beam_tilt_x_column = current_column;
+			parameters_that_were_read.beam_tilt_x = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMBeamTiltY ") == true) beam_tilt_y_column = current_column;
+		if (current_line.StartsWith("_cisTEMBeamTiltY ") == true)
+		{
+	    	if (beam_tilt_y_column != -1) wxPrintf("Warning :: _cisTEMBeamTiltY occurs more than once. I will take the last occurrence\n");
+		   	beam_tilt_y_column = current_column;
+			parameters_that_were_read.beam_tilt_y = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMImageShiftX ") == true) image_shift_x_column = current_column;
+		if (current_line.StartsWith("_cisTEMImageShiftX ") == true)
+		{
+	    	if (image_shift_x_column != -1) wxPrintf("Warning :: _cisTEMImageShiftX occurs more than once. I will take the last occurrence\n");
+		   	image_shift_x_column = current_column;
+			parameters_that_were_read.image_shift_x = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMImageShiftY ") == true) image_shift_y_column = current_column;
+		if (current_line.StartsWith("_cisTEMImageShiftY ") == true)
+		{
+	    	if (image_shift_y_column != -1) wxPrintf("Warning :: _cisTEMImageShiftY occurs more than once. I will take the last occurrence\n");
+		   	image_shift_y_column = current_column;
+			parameters_that_were_read.image_shift_y = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMBest2DClass ") == true) best_2d_class_column = current_column;
+		if (current_line.StartsWith("_cisTEMBest2DClass ") == true)
+		{
+	    	if (best_2d_class_column != -1) wxPrintf("Warning :: _cisTEMBest2DClass occurs more than once. I will take the last occurrence\n");
+		   	best_2d_class_column = current_column;
+			parameters_that_were_read.best_2d_class = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMBeamTiltGroup ") == true) beam_tilt_group_column = current_column;
+		if (current_line.StartsWith("_cisTEMBeamTiltGroup ") == true)
+		{
+	    	if (beam_tilt_group_column != -1) wxPrintf("Warning :: _cisTEMBeamTiltGroup occurs more than once. I will take the last occurrence\n");
+		   	beam_tilt_group_column = current_column;
+			parameters_that_were_read.beam_tilt_group = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMStackFilename ") == true) stack_filename_column = current_column;
+		if (current_line.StartsWith("_cisTEMStackFilename ") == true)
+		{
+	    	if (stack_filename_column != -1) wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
+		   	stack_filename_column = current_column;
+			parameters_that_were_read.stack_filename = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMOriginalImageFilename ") == true) original_image_filename_column = current_column;
+		if (current_line.StartsWith("_cisTEMOriginalImageFilename ") == true)
+		{
+	    	if (original_image_filename_column != -1) wxPrintf("Warning :: _cisTEMOriginalImageFilename occurs more than once. I will take the last occurrence\n");
+		   	original_image_filename_column = current_column;
+			parameters_that_were_read.original_image_filename = true;
+		}
 		else
-		if (current_line.StartsWith("_cisTEMReference3DFilename ") == true) reference_3d_filename_column = current_column;
-
-
-
+		if (current_line.StartsWith("_cisTEMReference3DFilename ") == true)
+		{
+	    	if (reference_3d_filename_column != -1) wxPrintf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
+		   	reference_3d_filename_column = current_column;
+			parameters_that_were_read.reference_3d_filename = true;
+		}
 
 	    current_column++;
 	}

@@ -41,6 +41,7 @@ public:
 	bool using_external_array;
 
 	ArrayOfcisTEMParameterLines *cached_parameters;
+	cisTEMParameterMask 		parameters_that_were_read;
 
 	cisTEMStarFileReader();
 	~cisTEMStarFileReader();
@@ -52,6 +53,8 @@ public:
 	bool ReadFile(wxString wanted_filename, wxString *error_string = NULL, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
 	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL, bool exclude_negative_film_numbers = false);
+	void Reset();
+	void ResetColumnPositions();
 
 	inline int   ReturnPositionInStack(int line_number) { return cached_parameters->Item(line_number).position_in_stack;}
 	inline int   ReturnImageIsActive(int line_number) { return cached_parameters->Item(line_number).image_is_active;}

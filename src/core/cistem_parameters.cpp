@@ -271,8 +271,6 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
-
-
 }
 
 cisTEMParameterLine::~cisTEMParameterLine()
@@ -282,7 +280,7 @@ cisTEMParameterLine::~cisTEMParameterLine()
 
 cisTEMParameters::cisTEMParameters()
 {
-
+	parameters_that_were_read.SetAllToFalse();
 }
 
 cisTEMParameters::~cisTEMParameters()
@@ -349,6 +347,7 @@ void cisTEMParameters::ReadFromcisTEMStarFile(wxString wanted_filename, bool exc
 	cisTEMParameterLine temp_line;
 	all_parameters.Clear();
 	cisTEMStarFileReader star_reader(wanted_filename, &all_parameters, exclude_negative_film_numbers);
+	parameters_that_were_read = star_reader.parameters_that_were_read;
 }
 
 void cisTEMParameters::AddCommentToHeader(wxString comment_to_add)
@@ -366,6 +365,14 @@ void cisTEMParameters::ClearAll()
 {
 	header_comments.Clear();
 	all_parameters.Clear();
+}
+
+void cisTEMParameters::SetAllReference3DFilename(wxString wanted_filename)
+{
+	for (long counter = 0; counter < all_parameters.GetCount(); counter++)
+	{
+		all_parameters[counter].reference_3d_filename = wanted_filename;
+	}
 }
 
 void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
@@ -663,9 +670,9 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.image_shift_y == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].image_shift_y);
 		if (parameters_to_write.best_2d_class == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].best_2d_class);
 		if (parameters_to_write.beam_tilt_group == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].beam_tilt_group);
-		if (parameters_to_write.stack_filename == true)  data_line += wxString::Format("%50s ", all_parameters[particle_counter].stack_filename);
-		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", all_parameters[particle_counter].original_image_filename);
-		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", all_parameters[particle_counter].reference_3d_filename);
+		if (parameters_to_write.stack_filename == true)  data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].stack_filename));
+		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].original_image_filename));
+		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].reference_3d_filename));
 		cisTEM_star_file->AddLine(data_line);
 
 	}
@@ -1330,5 +1337,16 @@ int cisTEMParameters::ReturnMaxPositionInStack(bool exclude_negative_film_number
 	}
 
 	return max;
+}
+
+
+static int wxCMPFUNC_CONV SortByReference3DFilenameCompareFunction( cisTEMParameterLine **a, cisTEMParameterLine **b) // function for sorting the classum selections by parent_image_id - this makes cutting them out more efficient
+{
+	return wxStringSortAscending(&(*a)->reference_3d_filename, &(*b)->reference_3d_filename);
+};
+
+void cisTEMParameters::SortByReference3DFilename()
+{
+	all_parameters.Sort(SortByReference3DFilenameCompareFunction);
 }
 

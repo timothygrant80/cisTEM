@@ -49,6 +49,8 @@ class DownhillSimplex {
 //    need to be called directly.                                            //
 ///////////////////////////////////////////////////////////////////////////////
 
+private :
+
      void amoeba(double **p, double y[], long ndim, double ftol, double funk(double []), long *nfunk);
      void amoeba(double **p, double y[], long ndim, double ftol, void *pt2Object, double (*callback)(void* pt2Object, double []), long *nfunk);
      double amotry(double **p,double y[], double psum[], long ndim, double funk(double []), long ihi, double fac);
@@ -67,10 +69,19 @@ class DownhillSimplex {
 
      double **initial_values;
      double *minimised_values;
+     double *value_scalers;
 
      long number_of_dimensions;
 
+     wxDateTime time_start;
+     wxDateTime time_end;
+
+
      double tolerance;
+     void MinimizeFunction(void *pt2Object, double (*callback)(void* pt2Object, double []));
+     void Setup();
+
+public:
 
 //   Constructors
 
@@ -83,10 +94,10 @@ class DownhillSimplex {
 
 //   Functions
 
-     void Setup();
-     void minimise_function(double function_to_min(double []));
-     void minimise_function(void *pt2Object, double (*callback)(void* pt2Object, double []));
-
+     void MinimizeFunction(double function_to_min(double []));
+     void SetIinitalValues(double *intial_values, double *wanted_range);
+     void GetMinimizedValues(double output_values[]);
+     wxTimeSpan ReturnTimeSpanOfMinimization() {return time_end-time_start;}
 
 
 };

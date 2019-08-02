@@ -131,7 +131,9 @@ public :
 
 	wxArrayString			    	header_comments;
 	ArrayOfcisTEMParameterLines 	all_parameters;
+
 	cisTEMParameterMask 			parameters_to_write;
+	cisTEMParameterMask 			parameters_that_were_read;
 
 	// for defocus dependance
 
@@ -201,6 +203,10 @@ public :
 	float ReturnMaxScore(bool exclude_negative_film_numbers = false);
 	int ReturnMinPositionInStack(bool exclude_negative_film_numbers = false);
 	int ReturnMaxPositionInStack(bool exclude_negative_film_numbers = false);
+
+	void SetAllReference3DFilename(wxString wanted_filename);
+	void SortByReference3DFilename();
+
 
 	cisTEMParameterLine ReturnParameterAverages(bool only_average_active = true);
 	cisTEMParameterLine ReturnParameterVariances(bool only_average_active = true);

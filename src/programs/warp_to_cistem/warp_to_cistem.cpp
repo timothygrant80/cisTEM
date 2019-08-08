@@ -59,7 +59,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	new_asset.mag_distortion_minor_scale = 1.0;
 	wxString dimension_string = "";
 	double pixel_size = 1.0;
-	double cs = 0.27;
+	double cs = 2.7;
 	double voltage=300;
 	double dose_rate = 1.0;
 	wxXmlNode *child_1 = warp_doc.GetRoot()->GetChildren();

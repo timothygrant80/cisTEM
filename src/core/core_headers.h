@@ -135,7 +135,6 @@ protected:
 #include "particle.h"
 #include "reconstruct_3d.h"
 #include "electron_dose.h"
-#include "run_profiles.h"
 #include "phenix_settings.h"
 #include "angular_distribution_histogram.h"
 #include "refinement_package.h"

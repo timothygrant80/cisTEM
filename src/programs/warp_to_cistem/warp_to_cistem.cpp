@@ -119,7 +119,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	wxString str_number_of_frames = tokenizer.GetNextToken();
 	if(!str_x_size.ToDouble(&x_size_angstroms)) {SendErrorAndCrash("Couldn't convert x size to a double");}
 	int x_size = myroundint(x_size_angstroms/pixel_size);
-	if(!str_y_size.ToDouble(&y_size_angstroms)) {SendErrorAndCrash("Couldn't convert x size to a double");}
+	if(!str_y_size.ToDouble(&y_size_angstroms)) {SendErrorAndCrash("Couldn't convert y size to a double");}
 	int y_size = myroundint(y_size_angstroms/pixel_size);
 	int number_of_frames = wxAtoi(str_number_of_frames);
 	new_asset.x_size = x_size;

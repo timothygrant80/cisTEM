@@ -44,7 +44,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 {
 	MovieAsset new_asset = MovieAsset();
 	new_asset.filename = movie_filename;
-	new_asset.asset_name = movie_filename;
+	new_asset.asset_name = new_asset.filename.GetName();
 	new_asset.asset_id = count+1;
 	new_asset.dark_filename = "";
 	new_asset.output_binning_factor = 1.0;

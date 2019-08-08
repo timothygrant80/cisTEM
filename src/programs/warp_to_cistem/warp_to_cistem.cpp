@@ -22,8 +22,6 @@ WarpToCistemApp : public MyApp
 
 IMPLEMENT_APP(WarpToCistemApp)
 
-// override the DoInteractiveUserInput
-
 void WarpToCistemApp::DoInteractiveUserInput()
 {
 	wxString warp_directory = "";
@@ -41,8 +39,6 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	my_current_job.ManualSetArguments("tttf",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), wanted_binned_pixel_size);
 
 }
-
-// override the do calculation method which will be what is actually run..
 
 MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size)
 {

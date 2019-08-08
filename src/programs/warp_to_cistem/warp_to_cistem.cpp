@@ -9,6 +9,8 @@ WarpToCistemApp : public MyApp
 
 	bool DoCalculation();
 	MovieAsset LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
+	ImageAsset LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
+
 	void DoInteractiveUserInput();
 
 	wxString warp_directory;
@@ -44,7 +46,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 {
 	MovieAsset new_asset = MovieAsset();
 	new_asset.filename = movie_filename;
-	new_asset.asset_name = movie_filename;
+	new_asset.asset_name = new_asset.filename.GetName();
 	new_asset.asset_id = count+1;
 	new_asset.dark_filename = "";
 	new_asset.output_binning_factor = 1.0;
@@ -127,6 +129,23 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	return new_asset;
 }
 
+ImageAsset WarpToCistemApp::LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_is_white){
+	ImageAsset new_asset = ImageAsset();
+	new_asset.filename = image_filename;
+	new_asset.asset_name = new_asset.filename.GetName();
+	new_asset.parent_id = parent_asset_id;
+	new_asset.asset_id = parent_asset_id;
+	new_asset.microscope_voltage = parent_voltage;
+	new_asset.spherical_aberration = parent_cs;
+	new_asset.protein_is_white = parent_is_white;
+	ImageFile img_file(image_filename.ToStdString(), false);
+	new_asset.x_size = img_file.ReturnXSize();
+	new_asset.y_size = img_file.ReturnYSize();
+	new_asset.pixel_size = img_file.ReturnPixelSize();
+	new_asset.is_valid = true;
+	return new_asset;
+}
+
 bool WarpToCistemApp::DoCalculation()
 {
 	wxString warp_directory = my_current_job.arguments[0].ReturnStringArgument();
@@ -152,7 +171,8 @@ bool WarpToCistemApp::DoCalculation()
 	new_project.CreateNewProject(wanted_database_file, wanted_folder_name, project_name);
 	wxPrintf(wanted_database_file.GetFullPath()+"\n");
 	wxPrintf("\nSuccessfully made project database\n\n");
-	wxPrintf("\nImporting Movies into new cisTEM Project...\n\n");
+
+	wxPrintf("\nImporting files from Warp Folder...\n\n");
 
 	wxArrayString all_files;
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrc", wxDIR_FILES);
@@ -161,28 +181,70 @@ bool WarpToCistemApp::DoCalculation()
 	all_files.Sort();
 	wxXmlDocument doc;
 	size_t number_of_files = all_files.GetCount();
-
+	wxString xml_filename;
+	wxString image_filename;
+	MovieAssetList movie_list = MovieAssetList();
+	MovieAsset new_movie_asset;
+	ImageAssetList image_list = ImageAssetList();
+	ImageAsset new_image_asset;
 	if (all_files.IsEmpty() == true) {SendErrorAndCrash("No movies were detected in the warp directory.");}
 	my_progress = new ProgressBar(number_of_files);
-	new_project.database.BeginMovieAssetInsert();
+
 	for (unsigned long counter = 0; counter < all_files.GetCount(); counter++)
 	{
 		size_t split_point = all_files.Item(counter).find_last_of(".");
-		wxString xml_filename = all_files.Item(counter);
+		xml_filename = all_files.Item(counter);
 		xml_filename = xml_filename.Mid(0, split_point);
 		xml_filename.Append(".xml");
+		// Check if warp xml exists before trying to do any more inserts
 		if (wxFileName::Exists(xml_filename) && doc.Load(xml_filename) && doc.IsOk())
 		{
-			MovieAsset new_asset = LoadMovieFromWarp(doc, warp_directory, all_files.Item(counter), counter, wanted_binned_pixel_size);
-			new_project.database.AddNextMovieAsset(new_asset.asset_id, new_asset.asset_name, new_asset.filename.GetFullPath(), 1, new_asset.x_size, new_asset.y_size, new_asset.number_of_frames, new_asset.microscope_voltage, new_asset.pixel_size, new_asset.dose_per_frame, new_asset.spherical_aberration,new_asset.gain_filename,new_asset.dark_filename, new_asset.output_binning_factor, new_asset.correct_mag_distortion, new_asset.mag_distortion_angle, new_asset.mag_distortion_major_scale, new_asset.mag_distortion_minor_scale, new_asset.protein_is_white);
+			new_movie_asset = LoadMovieFromWarp(doc, warp_directory, all_files.Item(counter), counter, wanted_binned_pixel_size);
+			movie_list.AddAsset(&new_movie_asset);
+
+			image_filename = warp_directory + "average/" + wxFileName(xml_filename).GetName() + ".mrc";
+			if (wxFileName(image_filename).IsOk() == true && wxFileName(image_filename).FileExists() == true) {
+				new_image_asset = LoadImageFromWarp(image_filename, new_movie_asset.asset_id, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, new_movie_asset.protein_is_white);
+				wxPrintf("New Image Asset Added: %s", new_image_asset.asset_name);
+				image_list.AddAsset(&new_image_asset);
+			} else wxPrintf("Couldn't find averaged image: %s", image_filename);
 		}
 		else wxPrintf("Couldn't find a warp xml output for movie " + all_files.Item(counter) + "\n");
 		my_progress->Update(counter+1);
 	}
+
+	delete my_progress;
+	wxPrintf("\nSuccessfully imported files\n\n");
+
+	wxPrintf("\nWriting movies to database\n\n");
+
+	my_progress = new ProgressBar(movie_list.number_of_assets);
+	new_project.database.BeginMovieAssetInsert();
+	for (unsigned long counter = 0; counter < movie_list.number_of_assets; counter++){
+		new_movie_asset = reinterpret_cast <MovieAsset *> (movie_list.assets)[counter];
+		new_project.database.AddNextMovieAsset(new_movie_asset.asset_id, new_movie_asset.asset_name, new_movie_asset.filename.GetFullPath(), 1, new_movie_asset.x_size, new_movie_asset.y_size, new_movie_asset.number_of_frames, new_movie_asset.microscope_voltage, new_movie_asset.pixel_size, new_movie_asset.dose_per_frame, new_movie_asset.spherical_aberration,new_movie_asset.gain_filename,new_movie_asset.dark_filename, new_movie_asset.output_binning_factor, new_movie_asset.correct_mag_distortion, new_movie_asset.mag_distortion_angle, new_movie_asset.mag_distortion_major_scale, new_movie_asset.mag_distortion_minor_scale, new_movie_asset.protein_is_white);
+		my_progress->Update(counter+1);
+	}
 	new_project.database.EndMovieAssetInsert();
 	delete my_progress;
-	wxPrintf("\nSuccessfully imported movies\n\n");
-//	Todo motion corrected image import
+
+	wxPrintf("\nDone with database insert of movies\n\n");
+
+	wxPrintf("\nWriting motion-corrected images to database\n\n");
+
+	my_progress = new ProgressBar(image_list.number_of_assets);
+	new_project.database.BeginImageAssetInsert();
+	for (unsigned long counter = 0; counter < image_list.number_of_assets; counter++){
+		new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
+		new_project.database.AddNextImageAsset(new_image_asset.asset_id, new_image_asset.asset_name, new_image_asset.filename.GetFullPath(), new_image_asset.position_in_stack, new_image_asset.parent_id, new_image_asset.alignment_id, new_image_asset.ctf_estimation_id, new_image_asset.x_size, new_image_asset.y_size, new_image_asset.microscope_voltage, new_image_asset.pixel_size, new_image_asset.spherical_aberration, new_image_asset.protein_is_white);
+		my_progress->Update(counter+1);
+	}
+	new_project.database.EndImageAssetInsert();
+	delete my_progress;
+
+	wxPrintf("\nDone with database insert of images\n\n");
+
+
 	wxPrintf("\nDone with database operations. cisTEM project ready to be loaded by GUI.\n");
 
 	return true;

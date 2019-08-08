@@ -9140,6 +9140,111 @@ void Image::CalculateDerivative(float direction_in_x, float direction_in_y, floa
 	if (apply_fft) BackwardFFT();
 }
 
+void Image::ReplaceHighRes(Image *high_res_image, float frequency_threshold)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "Low res image not in Fourier space");
+	MyDebugAssertTrue(high_res_image->is_in_real_space == false, "High res image not in Fourier space");
+
+	int k;
+	int j;
+	int i;
+
+	long pixel_counter = 0;
+
+	float z_coord;
+	float y_coord;
+	float x_coord;
+
+	float frequency_squared;
+	float frequency_threshold_squared = powf(frequency_threshold, 2);
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x_coord = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x_coord + y_coord + z_coord;
+				if (frequency_squared > frequency_threshold_squared)
+				{
+					complex_values[pixel_counter] = high_res_image->complex_values[pixel_counter];
+				}
+				pixel_counter++;
+			}
+		}
+	}
+}
+
+float Image::ReturnAverageAmplitudeInShell(float freq_lower_bound, float freq_upper_bound)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == false, "Low res image not in Fourier space");
+	MyDebugAssertTrue(freq_lower_bound >= 0.0,"Need positive frequencies");
+	MyDebugAssertTrue(freq_upper_bound > freq_lower_bound, "upper should be > lower");
+
+	int k;
+	int j;
+	int i;
+
+	long pixel_counter = 0;
+	float pixel_real;
+	float pixel_imag;
+
+	float z_coord;
+	float y_coord;
+	float x_coord;
+
+	float frequency_squared;
+	float freq_lower_squared = powf(freq_lower_bound, 2);
+	float freq_upper_squared = powf(freq_upper_bound, 2);
+	double amplitudes_sum = 0.0;
+	long amplitudes_count = 0;
+
+	for (k = 0; k <= physical_upper_bound_complex_z; k++)
+	{
+		z_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+		for (j = 0; j <= physical_upper_bound_complex_y; j++)
+		{
+			y_coord = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+			for (i = 0; i <= physical_upper_bound_complex_x; i++)
+			{
+				x_coord = powf(i * fourier_voxel_size_x, 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				frequency_squared = x_coord + y_coord + z_coord;
+				if (frequency_squared >= freq_lower_squared && frequency_squared <= freq_upper_squared)
+				{
+					pixel_real = real(complex_values[pixel_counter]);
+					pixel_imag = imag(complex_values[pixel_counter]);
+					amplitudes_sum += sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+					amplitudes_count++;
+				}
+				pixel_counter++;
+			}
+		}
+	}
+	if (amplitudes_count == 0)
+	{
+		return 0.0;
+	}
+	else
+	{
+		return float(amplitudes_sum/double(amplitudes_count));
+	}
+}
+
 // If you set half_width to 1, only the central row or column of pixels will be masked. Half_width of 2 means 3 pixels will be masked.
 void Image::MaskCentralCross(int vertical_half_width, int horizontal_half_width)
 {

@@ -146,7 +146,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxString wanted_folder_name = cistem_parent_directory + project_name;
 	if (wxFileName::Exists(wanted_folder_name))
 	{
-		MyDebugPrintWithDetails("Database directory should not already exist, and does!\n");
+		SendErrorAndCrash("Database directory should not already exist, and does!\n");
 	}
 	else wxFileName::Mkdir(wanted_folder_name);
 	wxFileName wanted_database_file = wanted_folder_name + "/" + project_name + ".db";

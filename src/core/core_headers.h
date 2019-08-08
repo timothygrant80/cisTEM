@@ -50,6 +50,7 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/textfile.h>
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
+#include <wx/xml/xml.h>
 
 
 class StackDump : public wxStackWalker // so we can give backtraces..

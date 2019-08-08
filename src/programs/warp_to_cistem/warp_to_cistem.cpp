@@ -187,7 +187,7 @@ bool WarpToCistemApp::DoCalculation()
 	delete my_progress;
 	wxPrintf("\nSuccessfully imported movies\n\n");
 //	Todo motion corrected image import
-	wxPrintf("\nDone with database operations. Cistem project ready to be loaded by GUI.\n");
+	wxPrintf("\nDone with database operations. cisTEM project ready to be loaded by GUI.\n");
 
 	return true;
 }

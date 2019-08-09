@@ -1,8 +1,6 @@
 rm -fr m4
 mkdir m4
-aclocal
-autoconf
 libtoolize || glibtoolize
+aclocal
+autoreconf
 automake --add-missing --copy
-
-

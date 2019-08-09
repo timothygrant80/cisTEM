@@ -172,7 +172,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxPrintf(wanted_database_file.GetFullPath()+"\n");
 	wxPrintf("\nSuccessfully made project database\n\n");
 
-	wxPrintf("\nImporting Movies into new cisTEM Project...\n\n");
+	wxPrintf("\nImporting files from Warp...\n\n");
 
 	wxArrayString all_files;
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrc", wxDIR_FILES);

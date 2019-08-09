@@ -133,6 +133,7 @@ void RefineTemplateApp::DoInteractiveUserInput()
 	float 		min_peak_radius;
 	float		xy_change_threshold = 10.0f;
 	bool		exclude_above_xy_threshold = false;
+	int			result_number = 1;
 
 	int			max_threads;
 
@@ -182,6 +183,7 @@ void RefineTemplateApp::DoInteractiveUserInput()
 //	my_symmetry = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
 	xy_change_threshold = my_input->GetFloatFromUser("Moved peak warning (A)", "Threshold for displaying warning of peak location changes during refinement", "10.0", 0.0);
 	exclude_above_xy_threshold = my_input->GetYesNoFromUser("Exclude moving peaks", "Should the peaks that move more than the threshold be excluded from the output MIPs?", "No");
+	result_number = my_input->GetIntFromUser("Result number to refine", "If input files contain results from several searches, which one should be refined?", "1", 1);
 
 #ifdef _OPENMP
 	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
@@ -199,7 +201,7 @@ void RefineTemplateApp::DoInteractiveUserInput()
 	delete my_input;
 
 //	my_current_job.Reset(42);
-	my_current_job.ManualSetArguments("ttfffffffffffifffffbffttttttttttttttfffbtfiiiiit",	input_search_images.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttfffffffffffifffffbffttttttttttttttfffbtfiiiiiit",	input_search_images.ToUTF8().data(),
 															input_reconstruction.ToUTF8().data(),
 															pixel_size,
 															voltage_kV,
@@ -247,6 +249,7 @@ void RefineTemplateApp::DoInteractiveUserInput()
 															last_search_position,
 															image_number_for_gui,
 															number_of_jobs_per_image_in_gui,
+															result_number,
 															max_threads,
 															directory_for_results.ToUTF8().data());
 }
@@ -307,8 +310,9 @@ bool RefineTemplateApp::DoCalculation()
 	int 		last_search_position = my_current_job.arguments[43].ReturnIntegerArgument();
 	int 		image_number_for_gui = my_current_job.arguments[44].ReturnIntegerArgument();
 	int 		number_of_jobs_per_image_in_gui = my_current_job.arguments[45].ReturnIntegerArgument();
-	int 		max_threads = my_current_job.arguments[46].ReturnIntegerArgument();
-	wxString	directory_for_results = my_current_job.arguments[47].ReturnStringArgument();
+	int 		result_number = my_current_job.arguments[46].ReturnIntegerArgument();
+	int 		max_threads = my_current_job.arguments[47].ReturnIntegerArgument();
+	wxString	directory_for_results = my_current_job.arguments[48].ReturnStringArgument();
 
 	/*wxPrintf("input image = %s\n", input_search_images_filename);
 	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
@@ -447,14 +451,20 @@ bool RefineTemplateApp::DoCalculation()
 	int peak_number;
 	float mask_falloff = 20.0;
 
-	input_image.ReadSlice(&input_search_image_file, 1);
-	mip_image.ReadSlice(&mip_input_file, 1);
-	scaled_mip_image.ReadSlice(&scaled_mip_input_file, 1);
-	psi_image.ReadSlice(&best_psi_input_file, 1);
-	theta_image.ReadSlice(&best_theta_input_file, 1);
-	phi_image.ReadSlice(&best_phi_input_file, 1);
-	defocus_image.ReadSlice(&best_defocus_input_file, 1);
-	pixel_size_image.ReadSlice(&best_pixel_size_input_file, 1);
+	if ((input_search_image_file.ReturnZSize() < result_number) || (mip_input_file.ReturnZSize() < result_number) || (scaled_mip_input_file.ReturnZSize() < result_number) \
+		|| (best_psi_input_file.ReturnZSize() < result_number) || (best_theta_input_file.ReturnZSize() < result_number) || (best_phi_input_file.ReturnZSize() < result_number) \
+		|| (best_defocus_input_file.ReturnZSize() < result_number) || (best_pixel_size_input_file.ReturnZSize() < result_number))
+	{
+		SendErrorAndCrash("Error: Input files do not contain selected result\n");
+	}
+	input_image.ReadSlice(&input_search_image_file, result_number);
+	mip_image.ReadSlice(&mip_input_file, result_number);
+	scaled_mip_image.ReadSlice(&scaled_mip_input_file, result_number);
+	psi_image.ReadSlice(&best_psi_input_file, result_number);
+	theta_image.ReadSlice(&best_theta_input_file, result_number);
+	phi_image.ReadSlice(&best_phi_input_file, result_number);
+	defocus_image.ReadSlice(&best_defocus_input_file, result_number);
+	pixel_size_image.ReadSlice(&best_pixel_size_input_file, result_number);
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_mip.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);

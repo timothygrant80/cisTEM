@@ -1077,3 +1077,17 @@ double cisTEM_erfcinv(double x)
 {
 	return cisTEM_erfinv(1.0 - x);
 }
+
+
+bool StripEnclosingSingleQuotesFromString(wxString &string_to_strip)
+{
+
+	if (string_to_strip[0] == '\'' && string_to_strip[string_to_strip.length() - 1] == '\'')
+	{
+		if (string_to_strip.Length() < 3) string_to_strip = "";
+		else string_to_strip = string_to_strip.Mid(1, string_to_strip.length() - 2);
+		return true;
+	}
+	else return false;
+
+}

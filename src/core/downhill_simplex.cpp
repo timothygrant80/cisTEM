@@ -5,16 +5,17 @@ DownhillSimplex::DownhillSimplex()
 
     // assume one dimension
 
-    number_of_dimensions = 1;
-    tolerance = 1.0e-5;
+    number_of_dimensions = 3;
+    tolerance = 1.0e-8;
     Setup();
 
 }
 
 DownhillSimplex::DownhillSimplex(long set_number_of_dimensions)
 {
+	MyDebugAssertTrue(set_number_of_dimensions >= 3, "Simplex must have at least 3 dimensions");
      number_of_dimensions = set_number_of_dimensions;
-     tolerance = 1.0e-5;
+     tolerance = 1.0e-8;
      Setup();
 }
 
@@ -22,6 +23,8 @@ DownhillSimplex::~DownhillSimplex()
 {
 
   delete[] minimised_values;
+  delete[] value_scalers;
+
   free_dmatrix(initial_values, 1, number_of_dimensions + 2, 1, number_of_dimensions + 1);
 
 }
@@ -29,17 +32,67 @@ DownhillSimplex::~DownhillSimplex()
 void DownhillSimplex::Setup()
 {
   minimised_values = new double[number_of_dimensions + 2];
+  value_scalers = new double[number_of_dimensions + 2];
   initial_values=dmatrix(1, number_of_dimensions + 2, 1, number_of_dimensions + 1);
 }
 
 
+void DownhillSimplex::GetMinimizedValues(double output_values[])
+{
+	for( int i=0; i < number_of_dimensions + 1 ; i++)
+	{
+		output_values[i] = minimised_values[i] / value_scalers[i];
+	}
+}
+
+void DownhillSimplex::SetIinitalValues(double *wanted_intial_values, double *wanted_range)
+{
+	int i,j;
+
+	for( i=1; i< number_of_dimensions + 1; i++)
+	{
+		if (wanted_intial_values[i] == 0) value_scalers[i] = 1.0f;
+		else value_scalers[i] = 1 / wanted_intial_values[i];
+		initial_values[1][i] = wanted_intial_values[i] * value_scalers[i];
+	}
+
+	for( i=1; i< number_of_dimensions + 1; i++)
+	{
+	  initial_values[2][i] = wanted_intial_values[i] * value_scalers[i] + wanted_range[i] * value_scalers[i];
+	}
+
+	for( i=1; i< number_of_dimensions + 1; i++)
+	{
+	  initial_values[3][i] = wanted_intial_values[i] * value_scalers[i] - wanted_range[i] * value_scalers[i];
+	}
+
+	for( i=4; i< number_of_dimensions + 2; i++)
+	{
+		for( j=1; j< number_of_dimensions + 1; j++)
+		{
+
+			if (global_random_number_generator.GetUniformRandom() >= 0)
+			{
+				initial_values[i][j] = wanted_intial_values[j] * value_scalers[i] + wanted_range[j] * value_scalers[i];
+			}
+			else
+			{
+				initial_values[i][j] = wanted_intial_values[j] * value_scalers[i] - wanted_range[j] * value_scalers[i];
+			}
+
+		}
+	}
+
+}
 
 void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, double funk(double []), long *nfunk)
 {
     long i,ihi,ilo,inhi,j,mpts=ndim+1;
-    double rtol,sum,swap,ysave,ytry,*psum;
+    double rtol,sum,swap,ysave,ytry,*psum, *psum_scaled;
 
     psum=dvector(1,ndim);
+    psum_scaled=dvector(1,ndim);
+
     *nfunk=0;
     for (j=1;j<=ndim;j++)
     {
@@ -73,8 +126,12 @@ void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, dou
 		for (i=1;i<=mpts;i++) {
 		    if (i != ilo) {
 			for (j=1;j<=ndim;j++)
+			{
 			    p[i][j]=psum[j]=0.5*(p[i][j]+p[ilo][j]);
-			y[i]=funk(psum);
+			    psum_scaled[j] = psum[j] / value_scalers[j];
+			}
+
+			y[i]=funk(psum_scaled);
 		    }
 		}
 		*nfunk += ndim;
@@ -89,14 +146,16 @@ void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, dou
 	}
 
 	free_dvector(psum,1,ndim);
+	free_dvector(psum_scaled,1,ndim);
 }
 
 void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, void *pt2Object, double (*callback)(void* pt2Object, double []), long *nfunk)
 {
     long i,ihi,ilo,inhi,j,mpts=ndim+1;
-    double rtol,sum,swap,ysave,ytry,*psum;
+    double rtol,sum,swap,ysave,ytry,*psum, *psum_scaled;
 
     psum=dvector(1,ndim);
+    psum_scaled=dvector(1,ndim);
     *nfunk=0;
     for (j=1;j<=ndim;j++)
     {
@@ -130,8 +189,11 @@ void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, voi
 		for (i=1;i<=mpts;i++) {
 		    if (i != ilo) {
 			for (j=1;j<=ndim;j++)
+			{
 			    p[i][j]=psum[j]=0.5*(p[i][j]+p[ilo][j]);
-			y[i]=callback(pt2Object,psum);
+				psum_scaled[j] = psum[j] / value_scalers[j];
+			}
+			y[i]=callback(pt2Object,psum_scaled);
 		    }
 		}
 		*nfunk += ndim;
@@ -146,18 +208,22 @@ void DownhillSimplex::amoeba(double **p, double y[], long ndim, double ftol, voi
 	}
 
 	free_dvector(psum,1,ndim);
+	free_dvector(psum_scaled,1,ndim);
 }
 
 double DownhillSimplex::amotry(double **p,double y[], double psum[], long ndim, double funk(double []), long ihi, double fac)
 {
     long j;
-    double fac1,fac2,ytry,*ptry;
+    double fac1,fac2,ytry,*ptry,*ptry_scaled;
 
     ptry=dvector(1,ndim);
+    ptry_scaled=dvector(1, ndim);
+
     fac1=(1.0-fac)/ndim;
     fac2=fac1-fac;
     for (j=1;j<=ndim;j++) ptry[j]=psum[j]*fac1-p[ihi][j]*fac2;
-    ytry=funk(ptry);
+    for (j=1;j<=ndim;j++) ptry_scaled[j] = ptry[j] / value_scalers[j];
+    ytry=funk(ptry_scaled);
     if (ytry < y[ihi]) {
 	y[ihi]=ytry;
 	for (j=1;j<=ndim;j++) {
@@ -166,6 +232,7 @@ double DownhillSimplex::amotry(double **p,double y[], double psum[], long ndim, 
 	    }
 	}
 	free_dvector(ptry,1,ndim);
+	free_dvector(ptry_scaled,1,ndim);
 //prlongf("f=%lf,",ytry);
 	return ytry;
 }
@@ -173,13 +240,16 @@ double DownhillSimplex::amotry(double **p,double y[], double psum[], long ndim, 
 double DownhillSimplex::amotry(double **p,double y[], double psum[], long ndim, void *pt2Object, double (*callback)(void* pt2Object, double []), long ihi, double fac)
 {
     long j;
-    double fac1,fac2,ytry,*ptry;
+    double fac1,fac2,ytry,*ptry,*ptry_scaled;
 
     ptry=dvector(1,ndim);
+    ptry_scaled=dvector(1,ndim);
+
     fac1=(1.0-fac)/ndim;
     fac2=fac1-fac;
     for (j=1;j<=ndim;j++) ptry[j]=psum[j]*fac1-p[ihi][j]*fac2;
-    ytry=callback(pt2Object,ptry);
+    for (j=1;j<=ndim;j++) ptry_scaled[j]=ptry[j] / value_scalers[j];
+    ytry=callback(pt2Object,ptry_scaled);
     if (ytry < y[ihi]) {
 	y[ihi]=ytry;
 	for (j=1;j<=ndim;j++) {
@@ -188,13 +258,15 @@ double DownhillSimplex::amotry(double **p,double y[], double psum[], long ndim, 
 	    }
 	}
 	free_dvector(ptry,1,ndim);
+	free_dvector(ptry_scaled,1,ndim);
 //prlongf("f=%lf,",ytry);
 	return ytry;
 }
-void DownhillSimplex::minimise_function(double function_to_min(double []))
+void DownhillSimplex::MinimizeFunction(double function_to_min(double []))
 {
-
+	time_start = wxDateTime::Now();
   long nfunk = 0; // hold the number of evaluations
+  double *scaled_values = new double[number_of_dimensions + 1];
 
   y = dvector(1, number_of_dimensions + 2);
   p = dmatrix(1, number_of_dimensions + 2, 1, number_of_dimensions +1);
@@ -215,7 +287,11 @@ void DownhillSimplex::minimise_function(double function_to_min(double []))
 
   for(long i=1; i<= number_of_dimensions+1 ; i++)
   {
-    y[i] = function_to_min(p[i]);
+	  for (int j = 1; j < number_of_dimensions + 1; j++)
+	  {
+		  scaled_values[j] = p[i][j] / value_scalers[j];
+	  }
+    y[i] = function_to_min(scaled_values);
   }
 
   // do the minimisation
@@ -228,18 +304,20 @@ void DownhillSimplex::minimise_function(double function_to_min(double []))
 
   // return the best values (middle of the simplex)
 
-  for(long i=1; i<= number_of_dimensions; i++)
+  for(int i=1; i< number_of_dimensions; i++)
   {
     minimised_values[i] = p[1][i];
   }
-
-
+  time_end = wxDateTime::Now();
+  delete [] scaled_values;
 }
 
 
-void DownhillSimplex::minimise_function(void *pt2Object, double (*callback)(void* pt2Object, double []))
+void DownhillSimplex::MinimizeFunction(void *pt2Object, double (*callback)(void* pt2Object, double []))
 {
+	time_start = wxDateTime::Now();
   long nfunk = 0; // hold the number of evaluations
+  double *scaled_values = new double[number_of_dimensions + 1];
 
   y = dvector(1, number_of_dimensions + 2);
   p = dmatrix(1, number_of_dimensions + 2, 1, number_of_dimensions +1);
@@ -260,7 +338,13 @@ void DownhillSimplex::minimise_function(void *pt2Object, double (*callback)(void
 
   for(long i=1; i<= number_of_dimensions+1 ; i++)
   {
-    y[i] = callback(pt2Object, p[i]);
+	  for (int j = 1; j < number_of_dimensions + 1; j++)
+	  {
+		 scaled_values[j] = p[i][j] / value_scalers[j];
+	  }
+
+	  y[i] = callback(pt2Object, scaled_values);
+
   }
 
   // do the minimisation
@@ -277,6 +361,9 @@ void DownhillSimplex::minimise_function(void *pt2Object, double (*callback)(void
   {
     minimised_values[i] = p[1][i];
   }
+
+  time_end = wxDateTime::Now();
+  delete [] scaled_values;
 
 }
 

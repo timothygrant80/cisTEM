@@ -6,6 +6,7 @@ private:
 public:
 
 	bool have_polynomial = false;
+	bool have_gaussian = false;
 	bool have_savitzky_golay = false;
 	int number_of_points = 0;
 	int allocated_space_for_points = 0;
@@ -14,6 +15,7 @@ public:
 	float *data_y = NULL;
 
 	float *polynomial_fit = NULL;
+	float *gaussian_fit = NULL;
 	float *savitzky_golay_fit = NULL;
 
 	int savitzky_golay_window_size = 0;
@@ -22,6 +24,7 @@ public:
 
 	int polynomial_order = 0;
 	float *polynomial_coefficients = 0;
+	float *gaussian_coefficients = 0;
 
 
 	// Constructors, destructors
@@ -50,6 +53,7 @@ public:
 	void MultiplyXByConstant(float constant_to_multiply_by);
 	void AddPoint(float x_value, float y_value);
 	void FitPolynomialToData(int wanted_polynomial_order = 6);
+	void FitGaussianToData(float lower_bound_x = -FLT_MAX, float upper_bound_x = FLT_MAX, bool apply_x_weighting = false);
 	void FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order);
 	float ReturnSavitzkyGolayInterpolationFromX( float wanted_x );
 	int ReturnIndexOfNearestPointFromX( float wanted_x );

@@ -1000,6 +1000,58 @@ void Curve::FitPolynomialToData(int wanted_polynomial_order)
 	LS_POLY(data_x, data_y, number_of_points, polynomial_order, polynomial_fit, polynomial_coefficients); // weird old code to do the fit
 }
 
+void Curve::FitGaussianToData(float lower_bound_x, float upper_bound_x, bool apply_x_weighting)
+{
+//	MyDebugAssertTrue(first_point >= 0 && first_point < number_of_points - 1, "first_point out of range");
+//	MyDebugAssertTrue(last_point >= 0 && first_point < number_of_points, "last_point out of range");
+
+	if (have_gaussian == true)
+	{
+		delete [] gaussian_coefficients;
+		delete [] gaussian_fit;
+	}
+
+	gaussian_fit = new float[number_of_points];
+	gaussian_coefficients = new float[2];
+	have_gaussian = true;
+
+	float s, sx, sxx, sxy, sy;
+	float delta, sigma2;
+	int i;
+
+    s = 0.0f;
+    sx = 0.0f;
+    sxx = 0.0f;
+    sxy = 0.0f;
+    sy = 0.0f;
+    sigma2 = 1.0f;
+
+    for (i = 0; i < number_of_points; i++)
+    {
+    	if (data_x[i] >= lower_bound_x && data_x[i] <= upper_bound_x)
+    	{
+    		if (apply_x_weighting) sigma2 = powf(data_x[i], 2);
+    		if (data_y[i] > 0.0f)
+    		{
+        		s += sigma2;
+        		sx += powf(data_x[i], 2) * sigma2;
+        		sxx += powf(data_x[i], 4) * sigma2;
+        		sxy += powf(data_x[i], 2) * log(data_y[i]) * sigma2;
+        		sy += log(data_y[i]) * sigma2;
+    		}
+    	}
+    }
+
+    delta = s * sxx - sx * sx;
+    gaussian_coefficients[0] = expf((sxx * sy - sx * sxy) / delta);
+    gaussian_coefficients[1] = (s * sxy - sx * sy) / delta;
+
+    for (i = 0; i < number_of_points; i++)
+    {
+    	gaussian_fit[i] = gaussian_coefficients[0] * expf(gaussian_coefficients[1] * powf(data_x[i], 2));
+    }
+}
+
 void Curve::Reciprocal()
 {
 #ifdef DEBUG

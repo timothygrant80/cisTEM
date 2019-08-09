@@ -113,7 +113,7 @@ public:
 	void ComputeFSCVectorized(Image *other_image, Image *work_this_image_squared, Image *work_other_image_squared, Image *work_cross_product_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products);
 	void ComputeFSC(Image *other_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products);
 	void DividePixelWise(Image &other_image);
-	void AddGaussianNoise(float wanted_sigma_value = 1.0);
+	void AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator *provided_generator = NULL);
 	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
 	long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
 	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
@@ -177,6 +177,8 @@ public:
 	Peak StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 	void AddSlices(Image &sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
+
+	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar);
 
 	inline long ReturnVolumeInRealSpace()
 	{
@@ -425,4 +427,22 @@ public:
 };
 
 
+class BeamTiltScorer
+{
+	CTF *pointer_to_ctf_to_use_for_calculation;
+	Image *pointer_binarised_phase_difference_spectrum;
+
+
+	Image beamtilt_spectrum;
+	float pixel_size;
+	float mask_radius;
+	float phase_multiplier;
+
+public:
+
+	double ScoreValues(double []);
+	BeamTiltScorer(CTF *pointer_to_wanted_ctf, Image *pointer_to_wanted_binarized_phase_diff_spectrum, float wanted_pixel_size, float wanted_mask_radius, float wanted_phase_multiplier);
+
+	Image temp_image; // to hold experimental beam tilt
+};
 

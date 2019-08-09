@@ -150,7 +150,6 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(cisTEMParameterLine &output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	float FindBeamTilt(Image &sum_of_phase_differences, CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier = 20.0f, bool progress_bar = false);
 	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit);
 	void CalculateMaskedLogLikelihood(Image &projection_image, ReconstructedVolume &input_3d, float classification_resolution_limit);
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,

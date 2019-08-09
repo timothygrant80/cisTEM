@@ -172,7 +172,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxPrintf(wanted_database_file.GetFullPath()+"\n");
 	wxPrintf("\nSuccessfully made project database\n\n");
 
-	wxPrintf("\nImporting files from Warp Folder...\n\n");
+	wxPrintf("\nImporting Movies into new cisTEM Project...\n\n");
 
 	wxArrayString all_files;
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrc", wxDIR_FILES);
@@ -208,10 +208,12 @@ bool WarpToCistemApp::DoCalculation()
 				wxPrintf("New Image Asset Added: %s", new_image_asset.asset_name);
 				image_list.AddAsset(&new_image_asset);
 			} else wxPrintf("Couldn't find averaged image: %s", image_filename);
+
 		}
 		else wxPrintf("Couldn't find a warp xml output for movie " + all_files.Item(counter) + "\n");
 		my_progress->Update(counter+1);
 	}
+
 
 	delete my_progress;
 	wxPrintf("\nSuccessfully imported files\n\n");
@@ -228,7 +230,7 @@ bool WarpToCistemApp::DoCalculation()
 	new_project.database.EndMovieAssetInsert();
 	delete my_progress;
 
-	wxPrintf("\nDone with database insert of movies\n\n");
+	wxPrintf("\n Successfully imported movies\n\n");
 
 	wxPrintf("\nWriting motion-corrected images to database\n\n");
 
@@ -243,6 +245,7 @@ bool WarpToCistemApp::DoCalculation()
 	delete my_progress;
 
 	wxPrintf("\nDone with database insert of images\n\n");
+
 
 
 	wxPrintf("\nDone with database operations. cisTEM project ready to be loaded by GUI.\n");

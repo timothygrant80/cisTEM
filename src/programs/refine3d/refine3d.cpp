@@ -726,6 +726,10 @@ bool Refine3DApp::DoCalculation()
 			exit(-1);
 		}
 		input_statistics.ReadStatisticsFromFile(input_reconstruction_statistics);
+//		input_statistics.part_SSNR.PrintToStandardOut();
+		input_statistics.RestrainParticleSSNR(10.0f);
+//		input_statistics.part_SSNR.PrintToStandardOut();
+//		exit(0);
 	}
 	else
 	{

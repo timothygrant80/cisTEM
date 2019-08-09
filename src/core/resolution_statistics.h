@@ -34,6 +34,7 @@ public:
 	void CalculateFSC(Image &reconstructed_volume_1, Image &reconstructed_volume_2, bool smooth_curve = false);
 	void CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_in_kDa);
 	void CalculateParticleSSNR(Image &image_reconstruction, float *ctf_reconstruction, float wanted_mask_volume_fraction = 1.0f);
+	void RestrainParticleSSNR(float low_resolution_limit = FLT_MAX);
 	void ZeroToResolution(float resolution_limit);
 	void PrintStatistics();
 	void WriteStatisticsToFile(NumericTextFile &output_statistics_file, float pssnr_division_factor = 1.0f);

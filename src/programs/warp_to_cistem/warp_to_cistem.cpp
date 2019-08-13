@@ -312,16 +312,43 @@ bool WarpToCistemApp::DoCalculation()
 		my_progress = new ProgressBar(image_list.number_of_assets);
 		Image large_image;
 		Image buffer_image;
+		float average;
+		float sigma;
 		for (counter = 0; counter < image_list.number_of_assets; counter++)
 		{
 			new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
 			//Spectrum
-			wxString wanted_spectrum_filename = wanted_folder_name + wxString::Format("/Assets/Images/Spectra/%s_%i_%i.mrc", new_image_asset.asset_name, new_image_asset.asset_id, 0);
+			wxString wanted_spectrum_filename = wanted_folder_name + wxString::Format("/Assets/Images/Spectra/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
 			wxString current_spectrum_filename = warp_directory + wxString::Format("powerspectrum/%s.mrc", new_image_asset.asset_name);
-			wxCopyFile(current_spectrum_filename, wanted_spectrum_filename);
+
+			// Warp spectra are halved and unthresholded, so this fixes that.
+			large_image.QuickAndDirtyReadSlice(current_spectrum_filename.ToStdString(), 1); // reusing large image and buffer_image here
+			buffer_image.Allocate(large_image.logical_x_dimension, large_image.logical_y_dimension * 2, 1);
+			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++)
+			{
+				buffer_image.real_values[output_address] = large_image.real_values[output_address];
+			}
+			int input_address = buffer_image.real_memory_allocated / 2;
+			for (int address = large_image.real_memory_allocated - 1; address >= 0; address--)
+			{
+			   buffer_image.real_values[input_address] = large_image.real_values[address];
+			   input_address++;
+			}
+
+			buffer_image.CosineRingMask(0, buffer_image.logical_x_dimension / 2, 5.0f);
+			buffer_image.ForwardFFT();
+			buffer_image.CosineMask(0, 0.05, true);
+			buffer_image.BackwardFFT();
+			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
+			buffer_image.DivideByConstant(sigma);
+			buffer_image.SetMaximumValueOnCentralCross(average/sigma+10.0);
+
+			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
+			buffer_image.SetMinimumAndMaximumValues(average - 15.0, average + 15.0);
+			buffer_image.QuickAndDirtyWriteSlice(wanted_spectrum_filename.ToStdString(), 1);
 
 			//Scaled Image - borrowed the logic heavily from Unblur
-			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s_%i_%i.mrc", new_image_asset.asset_name, new_image_asset.asset_id, 0);
+			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
 
 			int largest_dimension =  std::max(new_image_asset.x_size, new_image_asset.y_size);
 			float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);

@@ -78,7 +78,6 @@
 #include "../gui/PickingResultsDisplayPanel.h"
 #include "../gui/MyRunProfilesPanel.h"
 #include "../gui/MyAddRunCommandDialog.h"
-#include "../gui/MyPhenixSettingsPanel.h"
 #include "../gui/MyNewProjectWizard.h"
 #include "../gui/ImportRefinementPackageWizard.h"
 #include "../gui/ExportRefinementPackageWizard.h"
@@ -116,6 +115,7 @@
 #include "../gui/DistributionPlotDialog.h"
 
 #ifdef EXPERIMENTAL
+#include "../gui/MyPhenixSettingsPanel.h"
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/RefineCTFPanel.h"
 #endif

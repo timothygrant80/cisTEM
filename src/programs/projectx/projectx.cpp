@@ -22,7 +22,9 @@ MyRefine2DPanel *classification_panel;
 AbInitio3DPanel *ab_initio_3d_panel;
 AutoRefine3DPanel *auto_refine_3d_panel;
 MyRefine3DPanel *refine_3d_panel;
+#ifdef EXPERIMENTAL
 RefineCTFPanel *refine_ctf_panel;
+#endif
 Generate3DPanel *generate_3d_panel;
 Sharpen3DPanel *sharpen_3d_panel;
 
@@ -50,7 +52,9 @@ Refine2DResultsPanel *refine2d_results_panel;
 MyRefinementResultsPanel *refinement_results_panel;
 
 MyRunProfilesPanel *run_profiles_panel;
+#ifdef EXPERIMENTAL
 MyPhenixSettingsPanel *phenix_settings_panel;
+#endif
 
 wxImageList *MenuBookIconImages;
 wxImageList *ActionsBookIconImages;
@@ -88,7 +92,9 @@ bool MyGuiApp::OnInit()
 	#include "../../gui/icons/abinitio_icon.cpp"
 	#include "../../gui/icons/growth.cpp"
 	#include "../../gui/icons/manual_refine_icon.cpp"
+#ifdef EXPERIMENTAL
 	#include "../../gui/icons/refine_ctf_icon.cpp"
+#endif
 	#include "../../gui/icons/generate3d_icon.cpp"
 	#include "../../gui/icons/sharpen_map_icon.cpp"
 
@@ -133,7 +139,9 @@ bool MyGuiApp::OnInit()
 
 	// Individual Panels
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
+#ifdef EXPERIMENTAL
 	phenix_settings_panel = new MyPhenixSettingsPanel(settings_panel->SettingsBook);
+#endif
 
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
@@ -148,7 +156,9 @@ bool MyGuiApp::OnInit()
 	ab_initio_3d_panel = new AbInitio3DPanel(actions_panel->ActionsBook);
 	auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
 	refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
+#ifdef EXPERIMENTAL
 	refine_ctf_panel = new RefineCTFPanel(actions_panel->ActionsBook);
+#endif
 	generate_3d_panel = new Generate3DPanel(actions_panel->ActionsBook);
 	sharpen_3d_panel = new Sharpen3DPanel(actions_panel->ActionsBook);
 
@@ -201,14 +211,16 @@ bool MyGuiApp::OnInit()
 	wxBitmap ab_initio_3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(abinitio_icon);
 	wxBitmap refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(growth);
 	wxBitmap manual_refine3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(manual_refine_icon);
+#ifdef EXPERIMENTAL
 	wxBitmap refine_ctf_icon_bmp = wxBITMAP_PNG_FROM_DATA(refine_ctf_icon);
+#endif
 	wxBitmap generate3d_icon_bmp = wxBITMAP_PNG_FROM_DATA(generate3d_icon);
 	wxBitmap sharpen_map_icon_bmp = wxBITMAP_PNG_FROM_DATA(sharpen_map_icon);
 
 	wxBitmap run_profiles_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
-	wxBitmap phenix_settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 
 #ifdef EXPERIMENTAL
+	wxBitmap phenix_settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
 	wxBitmap match_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(match_template_icon);
 #endif
 
@@ -231,7 +243,9 @@ bool MyGuiApp::OnInit()
 	ActionsBookIconImages->Add(ab_initio_3d_icon_bmp);
 	ActionsBookIconImages->Add(refine3d_icon_bmp);
 	ActionsBookIconImages->Add(manual_refine3d_icon_bmp);
+#ifdef EXPERIMENTAL
 	ActionsBookIconImages->Add(refine_ctf_icon_bmp);
+#endif
 	ActionsBookIconImages->Add(generate3d_icon_bmp);
 	ActionsBookIconImages->Add(sharpen_map_icon_bmp);
 
@@ -248,9 +262,9 @@ bool MyGuiApp::OnInit()
 	ResultsBookIconImages->Add(refine3d_icon_bmp);
 
 	SettingsBookIconImages->Add(run_profiles_icon_bmp);
-	SettingsBookIconImages->Add(phenix_settings_icon_bmp);
 
 #ifdef EXPERIMENTAL
+	SettingsBookIconImages->Add(phenix_settings_icon_bmp);
 	ExperimentalBookIconImages->Add(match_template_icon_bmp);
 #endif
 
@@ -291,9 +305,14 @@ bool MyGuiApp::OnInit()
 	actions_panel->ActionsBook->AddPage(ab_initio_3d_panel,"Ab-Initio 3D",false, 4);
 	actions_panel->ActionsBook->AddPage(auto_refine_3d_panel,"Auto Refine",false, 5);
 	actions_panel->ActionsBook->AddPage(refine_3d_panel,"Manual Refine",false, 6);
+#ifdef EXPERIMENTAL
 	actions_panel->ActionsBook->AddPage(refine_ctf_panel,"Refine CTF",false, 7);
 	actions_panel->ActionsBook->AddPage(generate_3d_panel,"Generate 3D",false, 8);
 	actions_panel->ActionsBook->AddPage(sharpen_3d_panel,"Sharpen 3D",false, 9);
+#else
+	actions_panel->ActionsBook->AddPage(generate_3d_panel,"Generate 3D",false, 7);
+	actions_panel->ActionsBook->AddPage(sharpen_3d_panel,"Sharpen 3D",false, 8);
+#endif
 
 	results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
 	results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
@@ -302,9 +321,9 @@ bool MyGuiApp::OnInit()
 	results_panel->ResultsBook->AddPage(refinement_results_panel, "3D Refinement", false, 4);
 
 	settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
-	settings_panel->SettingsBook->AddPage(phenix_settings_panel, "Phenix Settings", false, 0);
 
 #ifdef EXPERIMENTAL
+	settings_panel->SettingsBook->AddPage(phenix_settings_panel, "Phenix Settings", false, 0);
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
 //	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
 #endif

@@ -2,7 +2,9 @@
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+#ifdef EXPERIMENTAL
 extern MyPhenixSettingsPanel *phenix_settings_panel;
+#endif
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 
@@ -563,12 +565,14 @@ void MyRefine3DPanel::SetDefaults()
 		LowPassMaskNoRadio->SetValue(true);
 		MaskFilterResolutionText->ChangeValueFloat(20.00);
 
+#ifdef EXPERIMENTAL
 		MergeMapModelYesRadioButton->SetValue(false);
 		MergeMapModelNoRadioButton->SetValue(true);
 		MergeMapModelFmodelResolutionTextCtrl->ChangeValueFloat(2.00);
 		MergeMapModelBoundaryResolutionTextCtrl->ChangeValueFloat(8.00);
 		MergeMapModelBoundaryWidthTextCtrl->ChangeValueFloat(10);
 		MergeMapModelModelFilenameTextCtrl->SetValue("");
+#endif
 
 		ExpertPanel->Thaw();
 	}
@@ -957,6 +961,7 @@ void MyRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	}
 }
 
+#ifdef EXPERIMENTAL
 void MyRefine3DPanel::OnMergeMapModelYesRadioButton( wxCommandEvent& event )
 {
 	MergeMapModelFmodelResolutionStaticText->Enable(true);
@@ -992,6 +997,7 @@ void MyRefine3DPanel::OnModelFileBrowseButtonClick( wxCommandEvent& event )
 		MergeMapModelModelFilenameTextCtrl->SetValue(openFileDialog.GetPath());
 	}
 }
+#endif
 
 void MyRefine3DPanel::ReDrawActiveReferences()
 {
@@ -1121,6 +1127,7 @@ void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
+#ifdef EXPERIMENTAL
 	if (my_refinement_manager.my_parent->MergeMapModelYesRadioButton->GetValue() == true)
 	{
 		// Validate paths supplied to merge_map_model before launching
@@ -1149,6 +1156,7 @@ void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
 			my_refinement_manager.BeginRefinementCycle();
 		}
 	}
+#endif
 }
 
 void MyRefine3DPanel::WriteInfoText(wxString text_to_write)
@@ -1265,19 +1273,23 @@ void RefinementManager::BeginRefinementCycle()
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
 	active_centre_mass = my_parent->AutoCenterYesRadioButton->GetValue();
+#ifdef EXPERIMENTAL
 	active_should_merge_map_model = my_parent->MergeMapModelYesRadioButton->GetValue();
+#endif
 
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_asset_id = -1;
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_filename = "";
 
+#ifdef EXPERIMENTAL
 	if (active_should_merge_map_model) active_fmodel_model_filename = my_parent->MergeMapModelModelFilenameTextCtrl->GetValue();
 	else active_fmodel_model_filename = "";
 	if (active_should_merge_map_model) active_fmodel_resolution = my_parent->MergeMapModelFmodelResolutionTextCtrl->ReturnValue();
 	else active_fmodel_resolution = 0;
 	if (active_should_merge_map_model) active_boundary_resolution = my_parent->MergeMapModelBoundaryResolutionTextCtrl->ReturnValue();
 	else active_boundary_resolution = 0;
+#endif
 
 	active_should_low_pass_filter_mask = my_parent->LowPassMaskYesRadio->GetValue();
 	active_mask_filter_resolution = my_parent->MaskFilterResolutionText->ReturnValue();
@@ -1366,11 +1378,13 @@ void RefinementManager::BeginRefinementCycle()
 			current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
 
+#ifdef EXPERIMENTAL
 		if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
 		{
 			my_parent->WriteBlueText("Merging the last reference volume with a map calculated from the provided model...\n");
 			MergeMapModel();
 		}
+#endif
 		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
 		{
 			DoMasking();
@@ -2691,6 +2705,7 @@ void RefinementManager::DoMasking()
 
 }
 
+#ifdef EXPERIMENTAL
 void RefinementManager::MergeMapModel()
 {
 	wxString		current_reference_filename; // reference volume (iterable)
@@ -2798,6 +2813,7 @@ void RefinementManager::MergeMapModel()
 	current_reference_filenames = merged_filenames;
 	return;
 }
+#endif
 
 void RefinementManager::CycleRefinement()
 {
@@ -2805,10 +2821,12 @@ void RefinementManager::CycleRefinement()
 	{
 		output_refinement = new Refinement;
 		start_with_reconstruction = false;
+#ifdef EXPERIMENTAL
 		if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
 		{
 			MergeMapModel();
 		}
+#endif
 		if (active_should_mask == true || active_should_auto_mask == true)
 		{
 			DoMasking();
@@ -2830,10 +2848,12 @@ void RefinementManager::CycleRefinement()
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
 
+#ifdef EXPERIMENTAL
 			if (active_should_merge_map_model == true) // TODO: read current boolean value from the GUI
 			{
 				MergeMapModel();
 			}
+#endif
 			if (active_should_mask == true || active_should_auto_mask == true)
 			{
 				DoMasking();

@@ -16,7 +16,9 @@ extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
 extern MyRefine2DPanel *classification_panel;
 extern MyRefine3DPanel *refine_3d_panel;
+#ifdef EXPERIMENTAL
 extern RefineCTFPanel *refine_ctf_panel;
+#endif
 extern AutoRefine3DPanel *auto_refine_3d_panel;
 extern AbInitio3DPanel *ab_initio_3d_panel;
 extern Generate3DPanel *generate_3d_panel;
@@ -225,7 +227,9 @@ void MyMainFrame::ResetAllPanels()
 	ab_initio_3d_panel->Reset();
 	auto_refine_3d_panel->Reset();
 	refine_3d_panel->Reset();
+#ifdef EXPERIMENTAL
 	refine_ctf_panel->Reset();
+#endif
 	generate_3d_panel->Reset();
 	sharpen_3d_panel->Reset();
 
@@ -251,9 +255,9 @@ void MyMainFrame::DirtyVolumes()
 	refine_3d_panel->volumes_are_dirty = true;
 	auto_refine_3d_panel->volumes_are_dirty = true;
 	sharpen_3d_panel->volumes_are_dirty = true;
-	refine_ctf_panel->volumes_are_dirty = true;
 
 #ifdef EXPERIMENTAL
+	refine_ctf_panel->volumes_are_dirty = true;
 	match_template_panel->volumes_are_dirty = true;
 #endif
 
@@ -290,7 +294,9 @@ void MyMainFrame::DirtyRefinementPackages()
 	refinement_package_asset_panel->is_dirty = true;
 	classification_panel->refinement_package_combo_is_dirty = true;
 	refine_3d_panel->refinement_package_combo_is_dirty = true;
+#ifdef EXPERIMENTAL
 	refine_ctf_panel->refinement_package_combo_is_dirty = true;
+#endif
 	auto_refine_3d_panel->refinement_package_combo_is_dirty = true;
 	refinement_results_panel->refinement_package_is_dirty = true;
 	refine2d_results_panel->refinement_package_combo_is_dirty = true;
@@ -301,7 +307,9 @@ void MyMainFrame::DirtyRefinementPackages()
 void MyMainFrame::DirtyRefinements()
 {
 	refine_3d_panel->input_params_combo_is_dirty = true;
+#ifdef EXPERIMENTAL
 	refine_ctf_panel->input_params_combo_is_dirty = true;
+#endif
 	refinement_results_panel->input_params_are_dirty = true;
 	generate_3d_panel->input_params_combo_is_dirty = true;
 
@@ -326,7 +334,9 @@ void MyMainFrame::DirtyRunProfiles()
 	findparticles_panel->run_profiles_are_dirty = true;
 	classification_panel->run_profiles_are_dirty = true;
 	refine_3d_panel->run_profiles_are_dirty = true;
+#ifdef EXPERIMENTAL
 	refine_ctf_panel->run_profiles_are_dirty = true;
+#endif
 	auto_refine_3d_panel->run_profiles_are_dirty = true;
 	ab_initio_3d_panel->run_profiles_are_dirty = true;
 	generate_3d_panel->run_profiles_are_dirty = true;

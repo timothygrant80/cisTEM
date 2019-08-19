@@ -94,7 +94,7 @@ public:
 	void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
 	void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
 	void SetLowResolutionContrast(float wanted_low_resolution_contrast);
-	inline void SetHighestFrequencyWithGoodFit(float wanted_frequency_inverse_pixels) {highest_frequency_with_good_fit = wanted_frequency_inverse_pixels;};
+	inline void SetHighestFrequencyWithGoodFit(float wanted_frequency_in_reciprocal_pixels) {highest_frequency_with_good_fit = wanted_frequency_in_reciprocal_pixels;};
 	//
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);

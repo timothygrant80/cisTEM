@@ -256,7 +256,7 @@ CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, f
 			0.0f,
 			0.0f,
 			0.0f); //A
-	return_ctf.SetHighestFrequencyWithGoodFit(1.0/resolution_estimate);
+	return_ctf.SetHighestFrequencyWithGoodFit(pixel_size/resolution_estimate); // send in inverse pixels
 
 	// Write out the avrot file here so we have it in the same scope as the xmldoc for when we want to actually scrape the plot.
 	wxTextFile *avrot_file = new wxTextFile(wanted_avrot_filename);
@@ -510,7 +510,7 @@ bool WarpToCistemApp::DoCalculation()
 													new_ctf.GetAstigmatismAzimuth()*180/PI, // Convert back to degrees
 													new_ctf.GetAdditionalPhaseShift(),
 													-1.0, // Score
-													1.0/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
+													new_image_asset.pixel_size/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
 													0.0, // Alias Resolution
 													wanted_ctf_filename.ToStdString().c_str(),
 													-1, // Number of frames averaged

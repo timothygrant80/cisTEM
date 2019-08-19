@@ -21,6 +21,7 @@ private:
 	float lowest_frequency_for_fitting;
 	float highest_frequency_for_fitting;
 	float astigmatism_tolerance;
+	float highest_frequency_with_good_fit;
 	// Precomputed terms to make evaluations faster
 	float precomputed_amplitude_contrast_term;
 	float squared_wavelength;
@@ -93,6 +94,7 @@ public:
 	void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
 	void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
 	void SetLowResolutionContrast(float wanted_low_resolution_contrast);
+	inline void SetHighestFrequencyWithGoodFit(float wanted_frequency_in_reciprocal_pixels) {highest_frequency_with_good_fit = wanted_frequency_in_reciprocal_pixels;};
 	//
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);
@@ -106,6 +108,7 @@ public:
 	float WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 	inline float GetLowestFrequencyForFitting() { return lowest_frequency_for_fitting; };
 	inline float GetHighestFrequencyForFitting() { return highest_frequency_for_fitting; };
+	inline float GetHighestFrequencyWithGoodFit() {return highest_frequency_with_good_fit;};
 	inline float GetAstigmatismTolerance() { return astigmatism_tolerance; };
 	inline float GetAstigmatism(){ return defocus_1 - defocus_2; };
 	bool IsAlmostEqualTo(CTF *wanted_ctf, float delta_defocus = 100.0f);
@@ -119,6 +122,7 @@ public:
 	inline float GetBeamTiltX() { return beam_tilt_x; };
 	inline float GetBeamTiltY() { return beam_tilt_y; };
 	inline float GetSphericalAberration(){return spherical_aberration;};
+	inline float GetAmplitudeContrast(){return amplitude_contrast;};
 	inline float GetAstigmatismAzimuth() { return astigmatism_azimuth; };
 	inline float GetAdditionalPhaseShift() { return additional_phase_shift; };
 	inline float GetWavelength() { return wavelength; };

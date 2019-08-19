@@ -510,7 +510,7 @@ bool WarpToCistemApp::DoCalculation()
 													new_ctf.GetAstigmatismAzimuth()*180/PI, // Convert back to degrees
 													new_ctf.GetAdditionalPhaseShift(),
 													-1.0, // Score
-													1.0/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
+													new_image_asset.pixel_size/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
 													0.0, // Alias Resolution
 													wanted_ctf_filename.ToStdString().c_str(),
 													-1, // Number of frames averaged

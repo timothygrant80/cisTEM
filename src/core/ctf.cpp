@@ -23,6 +23,7 @@ CTF::CTF()
 	lowest_frequency_for_fitting = 0;
 	highest_frequency_for_fitting = 0;
 	astigmatism_tolerance = 0;
+	highest_frequency_with_good_fit=-1.0; // Avoid divide by 0 failure
 	//
 	precomputed_amplitude_contrast_term = 0;
 	squared_wavelength = 0;

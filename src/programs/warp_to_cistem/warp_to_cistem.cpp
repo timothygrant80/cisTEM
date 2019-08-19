@@ -188,7 +188,7 @@ CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, f
 	wxString str_resolution_estimate;
 
 	str_resolution_estimate = warp_doc.GetRoot()->GetAttribute("CTFResolutionEstimate");
-	if(!str_resolution_estimate.ToDouble(&resolution_estimate)) {SendErrorAndCrash("Couldn't convert Voltage to a double");}
+	if(!str_resolution_estimate.ToDouble(&resolution_estimate)) {SendErrorAndCrash("Couldn't convert resolution estimate to a double");}
 	wxXmlNode *child_1 = warp_doc.GetRoot()->GetChildren();
 	while (child_1) {
 		// TODO - parse `PS1D` eventually... but not yet.

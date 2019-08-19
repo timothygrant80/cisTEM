@@ -230,7 +230,7 @@ CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, f
 				}
 				if (child_2->GetAttribute("Name") == "PhaseShift") {
 					str_phase_shift = child_2->GetAttribute("Value");
-					if(!str_phase_shift.ToDouble(&phase_shift)) {SendErrorAndCrash("Couldn't convert RangeMin to a double");}
+					if(!str_phase_shift.ToDouble(&phase_shift)) {SendErrorAndCrash("Couldn't convert Phaseshift to a double");}
 				}
 				child_2 = child_2->GetNext();
 			}

@@ -11,6 +11,7 @@ WarpToCistemApp : public MyApp
 	MovieAsset LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
 	ImageAsset LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
 	CTF LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
+
 	void DoInteractiveUserInput();
 
 	wxString warp_directory;
@@ -19,7 +20,7 @@ WarpToCistemApp : public MyApp
 	float wanted_binned_pixel_size;
 	bool do_import_images;
 	bool do_import_ctf_results;
-//	bool do_import_particle_coordinates;
+
 	Project new_project;
 	private:
 };
@@ -50,6 +51,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	delete my_input;
 
 	my_current_job.ManualSetArguments("tttbfb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results);
+
 
 }
 
@@ -278,6 +280,7 @@ bool WarpToCistemApp::DoCalculation()
 	float wanted_binned_pixel_size = my_current_job.arguments[4].ReturnFloatArgument();
 	bool do_import_ctf_results = my_current_job.arguments[5].ReturnBoolArgument();
 
+
 	ProgressBar *my_progress;
 	long counter;
 
@@ -316,6 +319,7 @@ bool WarpToCistemApp::DoCalculation()
 	ImageAsset new_image_asset;
 	std::vector<CTF> ctf_list;
 	CTF new_ctf_asset;
+
 	if (all_files.IsEmpty() == true) {SendErrorAndCrash("No movies were detected in the warp directory.");}
 	my_progress = new ProgressBar(number_of_files);
 
@@ -343,6 +347,7 @@ bool WarpToCistemApp::DoCalculation()
 					CTF new_ctf_asset = LoadCTFFromWarp(doc, new_image_asset.pixel_size, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, wanted_avrot_filename);
 					ctf_list.push_back(new_ctf_asset);
 				}
+
 				image_list.AddAsset(&new_image_asset);
 			} else if (do_import_images) wxPrintf("Couldn't find averaged image: %s\n", image_filename);
 
@@ -567,6 +572,7 @@ bool WarpToCistemApp::DoCalculation()
 				buffer_image.QuickAndDirtyWriteSlice(wanted_ctf_filename.ToStdString(), 1,true);
 			}
 
+
 			//Scaled Image - borrowed the logic heavily from Unblur
 			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
 
@@ -589,4 +595,3 @@ bool WarpToCistemApp::DoCalculation()
 	wxPrintf("\ncisTEM project ready to be loaded by GUI.\n");
 	return true;
 }
-

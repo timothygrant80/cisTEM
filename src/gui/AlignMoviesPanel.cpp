@@ -228,7 +228,7 @@ void MyAlignMoviesPanel::SetInfo()
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Mask Central Cross? : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centred on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
+	InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centered on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Horizontal Mask : "));

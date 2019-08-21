@@ -60,7 +60,7 @@ void MakeTemplateResult::DoInteractiveUserInput()
 	delete my_input;
 
 //	my_current_job.Reset(14);
-	my_current_job.ManualSetArguments("ttttttttttfffff",	input_reconstruction_filename.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttttttttfffffi",	input_reconstruction_filename.ToUTF8().data(),
 													input_mip_filename.ToUTF8().data(),
 													input_best_psi_filename.ToUTF8().data(),
 													input_best_theta_filename.ToUTF8().data(),

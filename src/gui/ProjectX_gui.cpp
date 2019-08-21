@@ -1066,7 +1066,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	fgSizer1->Add( bSizer26311, 1, wxEXPAND, 5 );
 	
-	m_staticText651 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Auto Centre Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText651 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Auto Center Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText651->Wrap( -1 );
 	fgSizer1->Add( m_staticText651, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -11192,7 +11192,7 @@ RecentrePicksWizardPanel::RecentrePicksWizardPanel( wxWindow* parent, wxWindowID
 	
 	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
 	
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to use the shifts estimated for the class averages to re-centre the picking co-ordinates prior to cutting out the images?  This can be especially helpful when the centreing on the picking was not very good, and a subsequent 2D classification with centre averages set to yes was run.   Note : This will only apply if cisTEM has images and co-ordinates for the particles, it will do nothing if the images come from an imported stack."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to use the shifts estimated for the class averages to re-center the picking co-ordinates prior to cutting out the images?  This can be especially helpful when the centreing on the picking was not very good, and a subsequent 2D classification with centre averages set to yes was run.   Note : This will only apply if cisTEM has images and co-ordinates for the particles, it will do nothing if the images come from an imported stack."), wxDefaultPosition, wxDefaultSize, 0 );
 	InfoText->Wrap( -1 );
 	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
 	

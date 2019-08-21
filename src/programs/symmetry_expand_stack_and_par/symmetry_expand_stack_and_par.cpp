@@ -362,7 +362,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 		use_least_squares_scaling = my_input->GetYesNoFromUser("Use Least Squares Scaling", "Answer yes to scale per particle.", "Yes");
 		mask_radius = my_input->GetFloatFromUser("Mask Radius for scaling (A)", "Only consider within this radius for scaling", "100", 0.0);
 
-		do_centring_and_cropping = my_input->GetYesNoFromUser("Centre and crop specific area", "If yes, the (3D) co-ordinates specified will be centred and cropped in the resulting 2D images. Typically, this would be the are that WASNT subtracted", "YES");
+		do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the are that WASNT subtracted", "YES");
 	}
 	else
 	{
@@ -378,10 +378,10 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 
 	if (do_centring_and_cropping == true)
 	{
-		centre_x_coord = my_input->GetFloatFromUser("X-Coord in 3D to centre (pixels)", "0 is bottom left", "100", 0.0);
-		centre_y_coord = my_input->GetFloatFromUser("Y-Coord in 3D to centre (pixels)", "0 is bottom left", "100", 0.0);
-		centre_z_coord = my_input->GetFloatFromUser("Z-Coord in 3D to centre (pixels)", "0 is bottom left", "100", 0.0);
-		cropped_box_size = my_input->GetIntFromUser("Output box size", "images will be cropped to this size after centreing", "100", 0.0);
+		centre_x_coord = my_input->GetFloatFromUser("X-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
+		centre_y_coord = my_input->GetFloatFromUser("Y-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
+		centre_z_coord = my_input->GetFloatFromUser("Z-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
+		cropped_box_size = my_input->GetIntFromUser("Output box size", "images will be cropped to this size after centereing", "100", 0.0);
 	}
 	else
 	{

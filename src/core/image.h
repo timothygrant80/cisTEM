@@ -335,7 +335,7 @@ public:
 	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite = false, float pixel_size = 0.0f);
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
 
-	bool IsConstant();
+	bool IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
 	bool HasNan();
 	bool HasNegativeRealValue();
 	void SetToConstant(float wanted_value);

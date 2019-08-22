@@ -667,8 +667,8 @@ bool WarpToCistemApp::DoCalculation()
 													radius,
 													radius, // Only one radius is used by warp
 													threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
-													minimum_distance,
 													-1, // No resolution Filter
+													minimum_distance,
 													0,
 													0,
 													-1, // Background boxes is nonsense here.

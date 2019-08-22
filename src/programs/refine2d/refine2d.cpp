@@ -964,9 +964,9 @@ bool Refine2DApp::DoCalculation()
 
 		input_image_local.ReplaceOutliersWithMean(5.0);
 		if (invert_contrast) input_image_local.InvertRealValues();
-		input_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
+		input_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
 		input_particle_local.SetLowResolutionContrast(low_resolution_contrast);
-		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
+		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
 		input_ctf.SetLowResolutionContrast(low_resolution_contrast);
 		ctf_input_image_local.CalculateCTFImage(input_ctf);
 

@@ -7,7 +7,7 @@ WarpToCistemApp : public MyApp
 	public:
 
 	bool DoCalculation();
-	bool GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& radius, double& threshold, double& minimum_distance);
+	bool GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
 	MovieAsset LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
 	ImageAsset LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
 	ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id);
@@ -48,10 +48,12 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	do_import_images = my_input -> GetYesNoFromUser("Import Images?", "Should we import aligned averaged images from WARP (using a different motion correction system than cisTEM)?", "Yes");
 	if (do_import_images) {
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
-		do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
+		if (do_import_ctf_results) {
+			do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
+		} else do_import_particle_coordinates=false;
 	} else {
 		do_import_ctf_results=false;
-		do import_particle_coordinates=false;
+		do_import_particle_coordinates=false;
 	}
 	delete my_input;
 
@@ -60,26 +62,27 @@ void WarpToCistemApp::DoInteractiveUserInput()
 
 }
 
-bool WarpToCistemApp::GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& radius, double& threshold, double& minimum_distance) {
+bool WarpToCistemApp::GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
 	wxXmlNode *child_1 = warp_settings_doc.GetRoot()->GetChildren();
-	wxString str_radius;
-	wxString str_threshold;
+	wxString str_warp_picking_radius;
+	wxString str_warp_picking_threshold;
 	wxString str_distance;
 	while (child_1) {
 		if (child_1->GetName() == "Picking") {
 			wxXmlNode *child_2 = child_1->GetChildren();
 			while (child_2) {
 				if (child_2->GetAttribute("Name") == "Diameter") {
-					str_radius = child_2->GetAttribute("Value");
-					if(!str_radius.ToDouble(&radius)) SendErrorAndCrash("Couldn't convert Radius into a double");
+					str_warp_picking_radius = child_2->GetAttribute("Value");
+					if(!str_warp_picking_radius.ToDouble(&warp_picking_radius)) SendErrorAndCrash("Couldn't convert Radius into a double");
+					warp_picking_radius = warp_picking_radius/2; // Radius vs Diameter
 				}
 				if (child_2->GetAttribute("Name") == "MinimumScore") {
-					str_threshold = child_2->GetAttribute("Value");
-					if(!str_threshold.ToDouble(&threshold)) SendErrorAndCrash("Couldn't convert Threshold into a double");
+					str_warp_picking_threshold = child_2->GetAttribute("Value");
+					if(!str_warp_picking_threshold.ToDouble(&warp_picking_threshold)) SendErrorAndCrash("Couldn't convert Threshold into a double");
 				}
 				if (child_2->GetAttribute("Name") == "MinimumDistance") {
 					str_distance = child_2->GetAttribute("Value");
-					if(!str_distance.ToDouble(&minimum_distance)) SendErrorAndCrash("Couldn't convert Minimum Distance into a double");
+					if(!str_distance.ToDouble(&warp_minimum_distance_from_exclusions)) SendErrorAndCrash("Couldn't convert Minimum Distance into a double");
 				}
 				if (child_2->GetAttribute("Name") == "ModelPath") {
 					boxnet_name = child_2->GetAttribute("Value");
@@ -395,13 +398,13 @@ bool WarpToCistemApp::DoCalculation()
 
 	wxPrintf("\nImporting files from Warp...\n\n");
 	wxString boxnet_name = "";
-	double radius = 0.0;
-	double threshold = 0.0;
-	double minimum_distance = 0.0;
+	double warp_picking_radius = 0.0;
+	double warp_picking_threshold = 0.0;
+	double warp_minimum_distance_from_exclusions = 0.0;
 	wxString warp_settings_file = warp_directory + "previous.settings";
 	wxXmlDocument settings_doc;
 	if (wxFileName::Exists(warp_settings_file) && settings_doc.Load(warp_settings_file) && settings_doc.IsOk()) {
-		 MyDebugAssertTrue(GetSettingsFromWarp(settings_doc, boxnet_name, radius,threshold, minimum_distance), "Failed to parse settings file)");
+		 MyDebugAssertTrue(GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions), "Failed to parse settings file)");
 	} else SendErrorAndCrash("Couldn't load warp settings");
 
 	wxArrayString all_files;
@@ -667,11 +670,11 @@ bool WarpToCistemApp::DoCalculation()
 													(long int) now.GetAsDOS(),
 													new_image_asset.asset_id,
 													-1, // Algorithm
-													radius,
-													radius, // Only one radius is used by warp
-													threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
+													warp_picking_radius,
+													warp_picking_radius, // Only one radius is used by warp
+													warp_picking_threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
 													-1, // No resolution Filter
-													minimum_distance,
+													warp_minimum_distance_from_exclusions,
 													0,
 													0,
 													-1, // Background boxes is nonsense here.

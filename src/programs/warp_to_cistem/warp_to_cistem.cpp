@@ -38,7 +38,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	float wanted_binned_pixel_size = 1.0;
 	bool do_import_images = false;
 	bool do_import_ctf_results = false;
-	bool do_import_particle_coordinates = true;
+	bool do_import_particle_coordinates = false;
 	UserInput *my_input = new UserInput("Warp to Cistem", 1.0);
 
 	warp_directory = my_input->GetFilenameFromUser("Input Warp Directory", "The folder in which Warp processed movies", "./Data", false);
@@ -49,7 +49,10 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	if (do_import_images) {
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
 		do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
-	} else do_import_ctf_results=false;
+	} else {
+		do_import_ctf_results=false;
+		do import_particle_coordinates=false;
+	}
 	delete my_input;
 
 	my_current_job.ManualSetArguments("tttbfbb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates);

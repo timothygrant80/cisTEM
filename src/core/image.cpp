@@ -4864,13 +4864,42 @@ void Image::SquareRootRealValues()
 	}
 }
 
-bool Image::IsConstant()
+bool Image::IsConstant(bool compare_to_constant, float constant_to_compare)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	MyDebugAssertTrue(is_in_real_space, "Only makes sense for images in real space")
+	MyDebugAssertTrue(! compare_to_constant || is_in_real_space, "compare_to_constant not implemented for Fourier transforms");
+
+	long pixel_counter;
+
+	if (is_in_real_space == true)
 	{
-		if (real_values[pixel_counter] != real_values[0]) return false;
+		float constant;
+		if (constant_to_compare) constant = constant_to_compare;
+		else constant = real_values[0];
+
+		pixel_counter = 0;
+		for ( int k = 0; k < logical_z_dimension; k ++ )
+		{
+			for ( int j = 0; j < logical_y_dimension; j ++ )
+			{
+				for ( int i = 0; i < logical_x_dimension; i ++ )
+				{
+					if (real_values[pixel_counter] != constant) return false;
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+		}
 	}
+	else
+	{
+		for ( pixel_counter = 1; pixel_counter < real_memory_allocated / 2; pixel_counter ++ )
+		{
+			if (complex_values[pixel_counter] != complex_values[0]) return false;
+		}
+	}
+
 	return true;
 }
 
@@ -8214,7 +8243,7 @@ void Image::ChangePixelSize(Image *other_image, float wanted_factor, float wante
 	MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
-	if (wanted_factor == 1.0f && return_fft)
+	if (fabsf(wanted_factor - 1.0f) < wanted_tolerance && return_fft)
 	{
 		if (other_image == this) ForwardFFT();
 		else
@@ -8224,7 +8253,7 @@ void Image::ChangePixelSize(Image *other_image, float wanted_factor, float wante
 		}
 		return;
 	}
-	if (wanted_factor == 1.0f)
+	if (fabsf(wanted_factor - 1.0f) < wanted_tolerance)
 	{
 		if (other_image != this) this->ClipInto(other_image);
 		return;

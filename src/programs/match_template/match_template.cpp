@@ -405,6 +405,7 @@ bool MatchTemplateApp::DoCalculation()
 	int current_bin;
 
 	float temp_float;
+	float variance;
 	double temp_double;
 	double temp_double_array[5];
 
@@ -740,14 +741,16 @@ bool MatchTemplateApp::DoCalculation()
 
 
 					current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges());
-	//				if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj.mrc", 1);
 
-					padded_reference.SetToConstant(0.0f);
+//					padded_reference.SetToConstant(0.0f);
+					variance = current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels \
+							- powf(current_projection.ReturnAverageOfRealValues() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
+					current_projection.DivideByConstant(sqrtf(variance));
 					current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
 
 					padded_reference.ForwardFFT();
 					padded_reference.ZeroCentralPixel();
-					padded_reference.DivideByConstant(sqrtf(padded_reference.ReturnSumOfSquares()));
+//					padded_reference.DivideByConstant(sqrtf(variance));
 
 					//if (first_search_position == 0)  padded_reference.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
 

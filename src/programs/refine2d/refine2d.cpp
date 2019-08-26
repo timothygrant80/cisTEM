@@ -515,7 +515,7 @@ bool Refine2DApp::DoCalculation()
 		{
 
 			input_image.ReadSlice(input_classes, current_class + 1);
-			variance = input_image.ReturnSumOfSquares();
+			variance = input_image.ReturnVarianceOfRealValues();
 			if (variance == 0.0 && input_classes != NULL) continue;
 
 			input_image.MultiplyByConstant(binning_factor);
@@ -537,56 +537,67 @@ bool Refine2DApp::DoCalculation()
 				buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, -FLT_MAX);
 				buffer_image.Binarise(threshold_value);
 
-				rle3d my_rle3d(buffer_image);
-				size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-				my_rle3d.ConnectedSizeDecodeTo(size_image);
-
-				float size_of_biggest_thing = size_image.ReturnMaximumValue();
-				size_image.Binarise(size_of_biggest_thing - 1.0f);
-				size_image.DilateBinarizedMask(5.0f / pixel_size);
-//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
-
-				for (address = 0; address < input_image.real_memory_allocated; address++)
+				if (buffer_image.IsConstant() == false)
 				{
-					if (size_image.real_values[address] == 0.0f) buffer_image.real_values[address] = 1.0f;
-					else buffer_image.real_values[address] = 0.0f;
+					rle3d my_rle3d(buffer_image);
+					size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+					my_rle3d.ConnectedSizeDecodeTo(size_image);
+
+					float size_of_biggest_thing = size_image.ReturnMaximumValue();
+					size_image.Binarise(size_of_biggest_thing - 1.0f);
+					size_image.DilateBinarizedMask(5.0f / pixel_size);
+	//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
+
+					for (address = 0; address < input_image.real_memory_allocated; address++)
+					{
+						if (size_image.real_values[address] == 0.0f) buffer_image.real_values[address] = 1.0f;
+						else buffer_image.real_values[address] = 0.0f;
+					}
+
+					// look for holes so we can fill them in
+					if (buffer_image.IsConstant() == false)
+					{
+						rle3d my_rle3d2(buffer_image);
+						my_rle3d2.ConnectedSizeDecodeTo(buffer_image);
+
+						for (address = 0; address < input_image.real_memory_allocated; address++)
+						{
+							if (buffer_image.real_values[address] <= size_of_biggest_thing) size_image.real_values[address] = 1.0f;
+							else size_image.real_values[address] = 0.0f;
+
+						}
+					}
+
+					size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
+
+
+	//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
+					input_image.SetMinimumValue(original_average_value);
+
+					for (address = 0; address < input_image.real_memory_allocated; address++)
+					{
+						if (size_image.real_values[address] <= 0.0f) input_image.real_values[address] = original_average_value;
+						//else
+						//input_image.real_values[address] += original_average_value;
+
+						//input_image.real_values[address] -= original_average_value;
+					}
+
+					input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
+	//				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
+					difference_image.CopyFrom(&input_image);
+					difference_image.SubtractImage(&copy_image);
+
+	//				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
+					difference_image.MultiplyByConstant(0.5f);
+					copy_image.AddImage(&difference_image);
+					input_image.CopyFrom(&copy_image);
 				}
-
-				// look for holes so we can fill them in
-				rle3d my_rle3d2(buffer_image);
-				my_rle3d2.ConnectedSizeDecodeTo(buffer_image);
-
-				for (address = 0; address < input_image.real_memory_allocated; address++)
+				else
 				{
-					if (buffer_image.real_values[address] <= size_of_biggest_thing) size_image.real_values[address] = 1.0f;
-					else size_image.real_values[address] = 0.0f;
-
+					input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
+					input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
 				}
-
-				size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
-
-
-//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
-				input_image.SetMinimumValue(original_average_value);
-
-				for (address = 0; address < input_image.real_memory_allocated; address++)
-				{
-					if (size_image.real_values[address] <= 0.0f) input_image.real_values[address] = original_average_value;
-					//else
-					//input_image.real_values[address] += original_average_value;
-
-					//input_image.real_values[address] -= original_average_value;
-				}
-
-				input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
-//				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
-				difference_image.CopyFrom(&input_image);
-				difference_image.SubtractImage(&copy_image);
-
-//				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
-				difference_image.MultiplyByConstant(0.5f);
-				copy_image.AddImage(&difference_image);
-				input_image.CopyFrom(&copy_image);
 			}
 			else
 			{
@@ -596,7 +607,7 @@ bool Refine2DApp::DoCalculation()
 
 			if (auto_centre == true)
 			{
-				input_image.CenterOfMass();
+//				input_image.CenterOfMass();
 				center_of_mass = input_image.CenterOfMass(0.0f, true);
 				input_image.RealSpaceIntegerShift(myroundint(center_of_mass.x), myroundint(center_of_mass.y), 0);
 			}
@@ -802,6 +813,8 @@ bool Refine2DApp::DoCalculation()
 				mask_radius_for_noise = 0.95 * input_image_local.logical_x_dimension / 2.0 - mask_falloff / 2.0 / input_parameters.pixel_size;
 			}
 			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
+//			if (input_image_local.logical_x_dimension != 128 || input_image_local.logical_y_dimension != 128 || pixel_size != 3.32 || input_parameters.pixel_size != 3.32) \
+//			wxPrintf("input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size = %i %i %g %g\n", input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size);
 			input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 			variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0f, 0.0f, 0.0f, true);
 			if (variance == 0.0f) continue;
@@ -951,9 +964,9 @@ bool Refine2DApp::DoCalculation()
 
 		input_image_local.ReplaceOutliersWithMean(5.0);
 		if (invert_contrast) input_image_local.InvertRealValues();
-		input_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
+		input_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
 		input_particle_local.SetLowResolutionContrast(low_resolution_contrast);
-		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
+		input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, 0.0f, 0.0f);
 		input_ctf.SetLowResolutionContrast(low_resolution_contrast);
 		ctf_input_image_local.CalculateCTFImage(input_ctf);
 
@@ -1183,7 +1196,7 @@ bool Refine2DApp::DoCalculation()
 					}
 					class_averages[current_class].BackwardFFT();
 				}
-				variance = class_averages[current_class].ReturnSumOfSquares();
+				variance = class_averages[current_class].ReturnVarianceOfRealValues();
 //				wxPrintf("images_processed = %i, occupancy = %g, variance = %g\n", images_processed, occupancy, variance);
 			}
 			else

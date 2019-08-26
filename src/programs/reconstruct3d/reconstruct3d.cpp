@@ -765,7 +765,7 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.pixel_size = pixel_size;
 		input_particle.is_masked = false;
 
-		input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y, calculate_complex_ctf);
+		input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y, calculate_complex_ctf);
 
 		if (use_input_reconstruction)
 		{
@@ -793,7 +793,7 @@ bool Reconstruct3DApp::DoCalculation()
 //		if (crop_images || binning_factor != 1.0)
 		if (use_input_reconstruction)
 		{
-			input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::min(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, original_pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
+			input_ctf.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, 0.0, 0.0, 0.0, original_pixel_size, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y);
 
 			if (input_ctf.IsAlmostEqualTo(&current_ctf, 40.0 / original_pixel_size) == false)
 			// Need to calculate current_ctf_image to be inserted into ctf_reconstruction

@@ -369,7 +369,7 @@ bool RefineCTFApp::DoCalculation()
 
 //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
-	wxPrintf("There are are %li 3D references\n", all_reference_3d_filenames.GetCount());
+//	wxPrintf("There are %li 3D references\n", all_reference_3d_filenames.GetCount());
 	currently_open_3d_filename = all_reference_3d_filenames[0];
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);

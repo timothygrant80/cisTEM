@@ -1841,7 +1841,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 	MyDebugAssertTrue(rotated_image.logical_z_dimension == 1, "Error: attempting to rotate into 3D image");
 	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
 	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
-	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+//	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
 	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
 	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(quad_i == 0 || quad_i == 90 || quad_i == 180 || quad_i == 270, "Selected rotation invalid");
@@ -1853,81 +1853,143 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 	long pixel_counter2;
 
 	rotated_image.object_is_centred_in_box = object_is_centred_in_box;
-	rotated_image.is_in_real_space = false;
+	rotated_image.is_in_real_space = is_in_real_space;
 
-	if (quad_i == 0)
+	if (! is_in_real_space)
 	{
-		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = complex_values[i];};
-		return;
-	}
-
-	if (quad_i == 180)
-	{
-		for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = conj(complex_values[i]);};
-		return;
-	}
-
-	if (quad_i == 90)
-	{
-		for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
+		if (quad_i == 0)
 		{
-			for (i = 0; i <= logical_upper_bound_complex_x; i++)
+			for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = complex_values[i];};
+			return;
+		}
+
+		if (quad_i == 180)
+		{
+			for (i = 0; i < real_memory_allocated / 2; i++) {rotated_image.complex_values[i] = conj(complex_values[i]);};
+			return;
+		}
+
+		if (quad_i == 90)
+		{
+			for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
 			{
-				pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				for (i = 0; i <= logical_upper_bound_complex_x; i++)
+				{
+					pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 
-				if (i <= logical_upper_bound_complex_y)
-				{
-					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
-				}
-				else
-				{
-					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
-				}
+					if (i <= logical_upper_bound_complex_y)
+					{
+						pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
+					}
+					else
+					{
+						pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
+					}
 
-				if (j <= 0)
-				{
-					rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
-				}
-				else
-				{
-					rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
+					if (j <= 0)
+					{
+						rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
+					}
+					else
+					{
+						rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
+					}
 				}
 			}
+			return;
 		}
-		return;
-	}
 
-	if (quad_i == 270)
-	{
-		for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
+		if (quad_i == 270)
 		{
-			for (i = 0; i <= logical_upper_bound_complex_x; i++)
+			for (j = logical_lower_bound_complex_y; j <= logical_upper_bound_complex_y; j++)
 			{
-				pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				for (i = 0; i <= logical_upper_bound_complex_x; i++)
+				{
+					pixel_counter = ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 
-				if (i <= logical_upper_bound_complex_y)
-				{
-					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
-				}
-				else
-				{
-					pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
-				}
+					if (i <= logical_upper_bound_complex_y)
+					{
+						pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,i,0);
+					}
+					else
+					{
+						pixel_counter2 = rotated_image.ReturnFourier1DAddressFromLogicalCoord(-j,-i,0);
+					}
 
-				if (j <= 0)
-				{
-					rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
-				}
-				else
-				{
-					rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
+					if (j <= 0)
+					{
+						rotated_image.complex_values[pixel_counter2] = complex_values[pixel_counter];
+					}
+					else
+					{
+						rotated_image.complex_values[pixel_counter2] = conj(complex_values[pixel_counter]);
+					}
 				}
 			}
+			return;
 		}
-		return;
+//	    rotated_image.is_in_real_space = false;
 	}
+	else
+	{
+		if (quad_i == 0)
+		{
+			for (i = 0; i < real_memory_allocated; i++) {rotated_image.real_values[i] = real_values[i];};
+			return;
+		}
 
-	rotated_image.is_in_real_space = false;
+		if (quad_i == 180)
+		{
+			pixel_counter = 0;
+			pixel_counter2 = real_memory_allocated;
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				pixel_counter2 -= padding_jump_value;
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					pixel_counter2--;
+					rotated_image.real_values[pixel_counter2] = real_values[pixel_counter];
+					pixel_counter++;
+				}
+				pixel_counter += padding_jump_value;
+			}
+			return;
+		}
+
+		if (quad_i == 90)
+		{
+			pixel_counter = 0;
+			for (j = 1; j <= logical_y_dimension; j++)
+			{
+				for (i = 0; i < logical_x_dimension; i++)
+				{
+					pixel_counter++;
+
+					pixel_counter2 = rotated_image.ReturnReal1DAddressFromPhysicalCoord(logical_y_dimension - j, i, 0);
+					rotated_image.real_values[pixel_counter2] = real_values[pixel_counter];
+				}
+				pixel_counter += padding_jump_value;
+			}
+			return;
+		}
+
+		if (quad_i == 270)
+		{
+			pixel_counter = 0;
+			for (j = 0; j < logical_y_dimension; j++)
+			{
+				for (i = 1; i <= logical_x_dimension; i++)
+				{
+					pixel_counter++;
+
+					pixel_counter2 = rotated_image.ReturnReal1DAddressFromPhysicalCoord(j, logical_x_dimension - i, 0);
+					rotated_image.real_values[pixel_counter2] = real_values[pixel_counter];
+				}
+				pixel_counter += padding_jump_value;
+			}
+			return;
+		}
+	}
 }
 
 
@@ -10566,6 +10628,82 @@ void Image::Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle
 
 	rotated_image.is_in_real_space = true;
 	rotated_image.object_is_centred_in_box = true;
+}
+
+void Image::Skew2D(Image &skewed_image, float height_offset, float skew_axis, float skew_angle)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(skewed_image.is_in_memory, "skewed_image memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	int i, j;
+	int height_min_i;
+	int height_min_j;
+	long pixel_counter;
+	float pad_value = ReturnAverageOfRealValues();
+	float height;
+//	float height_min;
+	float tan_angle = tanf(deg_2_rad(skew_angle));
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+	float x_rotated;
+	float y_rotated;
+	float x_skewed;
+	float y_skewed;
+	AnglesAndShifts rotation_angle;
+	AnglesAndShifts inverse_rotation_angle;
+
+	skewed_image.is_in_real_space = true;
+//	skewed_image.SetToConstant(pad_value);
+
+	rotation_angle.GenerateRotationMatrix2D(skew_axis);
+	inverse_rotation_angle.GenerateRotationMatrix2D(-skew_axis);
+
+//	height_min = FLT_MAX;
+//	pixel_counter = 0;
+//	for (j = 0; j < skewed_image.logical_y_dimension; j++)
+//	{
+//		y_coordinate_2d = j - skewed_image.physical_address_of_box_center_y;
+//		for (i = 0; i < skewed_image.logical_x_dimension; i++)
+//		{
+//			x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x;
+//			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+//			height = fabsf(height_offset + y_rotated * tan_angle);
+//			if (height < height_min)
+//			{
+//				height_min_i = i;
+//				height_min_j = j;
+//				height_min = height;
+//			}
+//			pixel_counter++;
+//		}
+//		pixel_counter += skewed_image.padding_jump_value;
+//	}
+
+	pixel_counter = 0;
+	for (j = 0; j < skewed_image.logical_y_dimension; j++)
+	{
+		y_coordinate_2d = j - skewed_image.physical_address_of_box_center_y;
+		for (i = 0; i < skewed_image.logical_x_dimension; i++)
+		{
+			x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x;
+			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+
+			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated;
+			x_skewed = x_rotated * sqrtf((fabsf(height_offset + y_skewed * tan_angle)) / height_offset);
+
+			inverse_rotation_angle.euler_matrix.RotateCoords2D(x_skewed, y_skewed, x_rotated, y_rotated);
+			x_rotated += physical_address_of_box_center_x;
+			y_rotated += physical_address_of_box_center_y;
+//			wxPrintf("x in, out = %g %g    y in, out = %g %g\n", x_coordinate_2d, x_rotated, y_coordinate_2d, y_rotated);
+			// Keep margin of one pixel to make sure interpolation is reasonable.
+			if (x_rotated >= 1.0f && x_rotated < logical_x_dimension -1 && y_rotated >= 1.0f && y_rotated < logical_y_dimension - 1) skewed_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
+			else skewed_image.real_values[pixel_counter] = pad_value;
+
+			pixel_counter++;
+		}
+		pixel_counter += skewed_image.padding_jump_value;
+	}
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND

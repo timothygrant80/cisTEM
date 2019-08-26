@@ -1,5 +1,4 @@
 #include "../../core/core_headers.h"
-#include <wx/xml/xml.h>
 
 class
 WarpToCistemApp : public MyApp
@@ -8,8 +7,10 @@ WarpToCistemApp : public MyApp
 	public:
 
 	bool DoCalculation();
+	bool GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions);
 	MovieAsset LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size);
 	ImageAsset LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
+	ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id);
 	CTF LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
 
 	void DoInteractiveUserInput();
@@ -20,6 +21,7 @@ WarpToCistemApp : public MyApp
 	float wanted_binned_pixel_size;
 	bool do_import_images;
 	bool do_import_ctf_results;
+	bool do_import_particle_coordinates;
 
 	Project new_project;
 	private:
@@ -36,7 +38,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	float wanted_binned_pixel_size = 1.0;
 	bool do_import_images = false;
 	bool do_import_ctf_results = false;
-//	bool do_import_particle_coordinates = true;
+	bool do_import_particle_coordinates = false;
 	UserInput *my_input = new UserInput("Warp to Cistem", 1.0);
 
 	warp_directory = my_input->GetFilenameFromUser("Input Warp Directory", "The folder in which Warp processed movies", "./Data", false);
@@ -46,13 +48,55 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	do_import_images = my_input -> GetYesNoFromUser("Import Images?", "Should we import aligned averaged images from WARP (using a different motion correction system than cisTEM)?", "Yes");
 	if (do_import_images) {
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
-	} else do_import_ctf_results=false;
-		//	do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
+		if (do_import_ctf_results) {
+			do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
+		} else do_import_particle_coordinates=false;
+	} else {
+		do_import_ctf_results=false;
+		do_import_particle_coordinates=false;
+	}
 	delete my_input;
 
-	my_current_job.ManualSetArguments("tttbfb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results);
+	my_current_job.ManualSetArguments("tttbfbb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates);
 
 
+}
+
+bool WarpToCistemApp::GetSettingsFromWarp(wxXmlDocument warp_settings_doc, wxString& boxnet_name, double& warp_picking_radius, double& warp_picking_threshold, double& warp_minimum_distance_from_exclusions) {
+	wxXmlNode *child_1 = warp_settings_doc.GetRoot()->GetChildren();
+	wxString str_warp_picking_radius;
+	wxString str_warp_picking_threshold;
+	wxString str_distance;
+	while (child_1) {
+		if (child_1->GetName() == "Picking") {
+			wxXmlNode *child_2 = child_1->GetChildren();
+			while (child_2) {
+				if (child_2->GetAttribute("Name") == "Diameter") {
+					str_warp_picking_radius = child_2->GetAttribute("Value");
+					if(!str_warp_picking_radius.ToDouble(&warp_picking_radius)) SendErrorAndCrash("Couldn't convert Radius into a double");
+					warp_picking_radius = warp_picking_radius/2; // Radius vs Diameter
+				}
+				if (child_2->GetAttribute("Name") == "MinimumScore") {
+					str_warp_picking_threshold = child_2->GetAttribute("Value");
+					if(!str_warp_picking_threshold.ToDouble(&warp_picking_threshold)) SendErrorAndCrash("Couldn't convert Threshold into a double");
+				}
+				if (child_2->GetAttribute("Name") == "MinimumDistance") {
+					str_distance = child_2->GetAttribute("Value");
+					if(!str_distance.ToDouble(&warp_minimum_distance_from_exclusions)) SendErrorAndCrash("Couldn't convert Minimum Distance into a double");
+				}
+				if (child_2->GetAttribute("Name") == "ModelPath") {
+					boxnet_name = child_2->GetAttribute("Value");
+				}
+
+				child_2 = child_2-> GetNext();
+			}
+		}
+		child_1 = child_1->GetNext();
+	}
+	if (boxnet_name == "") {
+		SendErrorAndCrash("Could not parse boxnet particle picker from warp settings");
+	}
+	return true;
 }
 
 MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString warp_folder, wxString movie_filename, unsigned long count, float wanted_binned_pixel_size)
@@ -271,6 +315,56 @@ CTF WarpToCistemApp::LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, f
 	return return_ctf;
 }
 
+ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id) {
+	ArrayOfParticlePositionAssets loaded_positions;
+	ParticlePositionAsset temp_asset;
+	wxTextFile *input_file = new wxTextFile(star_filename);
+	wxString current_line;
+	wxStringTokenizer tokenizer;
+	wxString str_x_pos;
+	double x_pos;
+	wxString str_y_pos;
+	double y_pos;
+	wxString str_figure_of_merit;
+	double figure_of_merit;
+	int current_id = starting_id;
+
+	input_file->Open();
+	MyDebugAssertTrue(input_file->IsOpened(), "File not open");
+	input_file->GoToLine(-1);
+
+	while (input_file->Eof() == false) {
+		current_line = input_file->GetNextLine();
+		current_line = current_line.Trim(true);
+		current_line = current_line.Trim(false);
+		if (current_line.IsEmpty() == true) continue;
+		if (current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' || current_line[0]== 'd' || current_line[0] == 'l' || current_line[0] == '_') continue; //Added a catch for data and loop
+		wxStringTokenizer tokenizer(current_line);
+		if(!tokenizer.CountTokens() == 4) continue;
+		str_x_pos = tokenizer.GetNextToken();
+		if(!str_x_pos.ToDouble(&x_pos)) {SendErrorAndCrash("Couldn't convert X position to a double");}
+		x_pos = new_image_asset.pixel_size * x_pos;
+		str_y_pos = tokenizer.GetNextToken();
+		if(!str_y_pos.ToDouble(&y_pos)) {SendErrorAndCrash("Couldn't convert Y position to a double");}
+		y_pos = new_image_asset.pixel_size * y_pos;
+		tokenizer.GetNextToken(); // dumping the micrograph name
+		str_figure_of_merit = tokenizer.GetNextToken();
+		if(!str_figure_of_merit.ToDouble(&figure_of_merit)) {SendErrorAndCrash("Couldn't convert Figure of Merit to a double");}
+		current_id += 1;
+		temp_asset.filename = new_image_asset.filename;
+		temp_asset.asset_name = new_image_asset.asset_name;
+		temp_asset.asset_id = current_id;
+		temp_asset.picking_id = new_image_asset.asset_id;
+		temp_asset.parent_id = new_image_asset.asset_id;
+		temp_asset.pick_job_id = 1;
+		temp_asset.peak_height = figure_of_merit;
+		temp_asset.x_position = x_pos;
+		temp_asset.y_position = y_pos;
+		loaded_positions.Add(temp_asset);
+	}
+	return loaded_positions;
+}
+
 bool WarpToCistemApp::DoCalculation()
 {
 	wxString warp_directory = my_current_job.arguments[0].ReturnStringArgument();
@@ -279,7 +373,7 @@ bool WarpToCistemApp::DoCalculation()
 	bool do_import_images = my_current_job.arguments[3].ReturnBoolArgument();
 	float wanted_binned_pixel_size = my_current_job.arguments[4].ReturnFloatArgument();
 	bool do_import_ctf_results = my_current_job.arguments[5].ReturnBoolArgument();
-
+	bool do_import_particle_coordinates = my_current_job.arguments[6].ReturnBoolArgument();
 
 	ProgressBar *my_progress;
 	long counter;
@@ -303,6 +397,15 @@ bool WarpToCistemApp::DoCalculation()
 	wxPrintf("\nSuccessfully made project database\n\n");
 
 	wxPrintf("\nImporting files from Warp...\n\n");
+	wxString boxnet_name = "";
+	double warp_picking_radius = 0.0;
+	double warp_picking_threshold = 0.0;
+	double warp_minimum_distance_from_exclusions = 0.0;
+	wxString warp_settings_file = warp_directory + "previous.settings";
+	wxXmlDocument settings_doc;
+	if (wxFileName::Exists(warp_settings_file) && settings_doc.Load(warp_settings_file) && settings_doc.IsOk()) {
+		 MyDebugAssertTrue(GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions), "Failed to parse settings file)");
+	} else SendErrorAndCrash("Couldn't load warp settings");
 
 	wxArrayString all_files;
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrc", wxDIR_FILES);
@@ -313,12 +416,16 @@ bool WarpToCistemApp::DoCalculation()
 	size_t number_of_files = all_files.GetCount();
 	wxString xml_filename;
 	wxString image_filename;
+	wxString star_filename;
 	MovieAssetList movie_list = MovieAssetList();
 	MovieAsset new_movie_asset;
 	ImageAssetList image_list = ImageAssetList();
+	ArrayOfParticlePositionAssets particle_list;
+	ArrayOfParticlePositionAssets temp_particle_list;
 	ImageAsset new_image_asset;
 	std::vector<CTF> ctf_list;
 	CTF new_ctf_asset;
+	int starting_id = 0;
 
 	if (all_files.IsEmpty() == true) {SendErrorAndCrash("No movies were detected in the warp directory.");}
 	my_progress = new ProgressBar(number_of_files);
@@ -347,7 +454,14 @@ bool WarpToCistemApp::DoCalculation()
 					CTF new_ctf_asset = LoadCTFFromWarp(doc, new_image_asset.pixel_size, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, wanted_avrot_filename);
 					ctf_list.push_back(new_ctf_asset);
 				}
-
+				if (do_import_particle_coordinates) {
+					 star_filename = warp_directory + "matching/" + new_image_asset.asset_name + "_" + boxnet_name + ".star";
+					 if (wxFileName::Exists(star_filename)) {
+						 temp_particle_list = LoadParticlePositionsFromWarp(star_filename, new_image_asset, starting_id);
+						 WX_APPEND_ARRAY(particle_list,temp_particle_list);
+						 starting_id += temp_particle_list.GetCount();
+					 }
+				}
 				image_list.AddAsset(&new_image_asset);
 			} else if (do_import_images) wxPrintf("Couldn't find averaged image: %s\n", image_filename);
 
@@ -377,7 +491,6 @@ bool WarpToCistemApp::DoCalculation()
 
 	wxPrintf("\nSuccessfully imported movies\n\n");
 
-	// Currently takes ~0.4 seconds per image to do these operations, driven mostly by the scaled image writing.
 	if (do_import_images) {
 		wxPrintf("\nWriting motion-corrected images to database and writing scaled images and spectra.\n\n");
 		wxDateTime now = wxDateTime::Now();
@@ -441,6 +554,7 @@ bool WarpToCistemApp::DoCalculation()
 			new_project.database.EndBatchInsert();
 			my_progress->Update(counter+1);
 		}
+		wxPrintf("\nDone with Image Alignment Jobs\n\n");
 
 		if (do_import_ctf_results) {
 			wxPrintf("\nInserting CTF results in database\n\n");
@@ -521,7 +635,57 @@ bool WarpToCistemApp::DoCalculation()
 			}
 			delete my_progress;
 			new_project.database.EndBatchInsert();
+			wxPrintf("\nDone with CTF database insertions");
 		}
+
+		if (do_import_particle_coordinates) {
+			wxPrintf("\nInserting Particle Coordinates into database\n\n");
+ 			new_project.database.CreateParticlePickingResultsTable(1); // hardcode 1
+			new_project.database.AddArrayOfParticlePositionAssetsToResultsTable(1,&particle_list);
+			new_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&particle_list);
+			wxPrintf("\nDone with Particle Coordinates insert\n\n");
+
+			wxPrintf("\nInserting Particle Picking Job Metadata into database\n\n");
+			new_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
+												"PICKING_ID",
+												"PICKING_JOB_ID",
+												"DATETIME_OF_RUN",
+												"PARENT_IMAGE_ASSET_ID",
+												"PICKING_ALGORITHM",
+												"CHARACTERISTIC_RADIUS",
+												"MAXIMUM_RADIUS",
+												"THRESHOLD_PEAK_HEIGHT",
+												"HIGHEST_RESOLUTION_USED_IN_PICKING",
+												"MIN_DIST_FROM_EDGES",
+												"AVOID_HIGH_VARIANCE",
+												"AVOID_HIGH_LOW_MEAN",
+												"NUM_BACKGROUND_BOXES",
+												"MANUAL_EDIT");
+			wxDateTime now = wxDateTime::Now();
+			my_progress = new ProgressBar(image_list.number_of_assets);
+			for (counter = 0; counter < image_list.number_of_assets; counter++) {
+				new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
+				new_project.database.AddToBatchInsert("iiliirrrriiiii", 		new_image_asset.asset_id,
+													1,
+													(long int) now.GetAsDOS(),
+													new_image_asset.asset_id,
+													-1, // Algorithm
+													warp_picking_radius,
+													warp_picking_radius, // Only one radius is used by warp
+													warp_picking_threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
+													-1, // No resolution Filter
+													warp_minimum_distance_from_exclusions,
+													0,
+													0,
+													-1, // Background boxes is nonsense here.
+													0);
+				my_progress->Update(counter+1);
+			}
+			new_project.database.EndBatchInsert();
+			delete my_progress;
+			wxPrintf("\nDone with Particle Coordinate Metadata insert\n\n");
+		}
+
 
 
 		new_project.database.Commit();
@@ -575,7 +739,14 @@ bool WarpToCistemApp::DoCalculation()
 
 			//Scaled Image - borrowed the logic heavily from Unblur
 			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-
+//			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
+//			png_image = wxImage(current_scaled_filename);
+//			png_data = png_image.GetData();
+//			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
+//			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++) {
+//				buffer_image.real_values[output_address] = (float)(png_data[output_address*3]);
+//			}
+//			buffer_image.AddFFTWPadding();
 			int largest_dimension =  std::max(new_image_asset.x_size, new_image_asset.y_size);
 			float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
 			if (scale_factor > 1) scale_factor=1.0;

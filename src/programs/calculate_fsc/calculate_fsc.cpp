@@ -66,19 +66,21 @@ bool CalculateFSC::DoCalculation()
 	Image density_map_2;
 	Image mask_volume;
 
-	if (reconstruction_1.ReturnZSize() <= 1)
+	if (reconstruction_1.ReturnZSize() < 1)
+//		if (reconstruction_1.ReturnZSize() <= 1)
+
 	{
 		MyPrintWithDetails("Error: Input reconstruction 1 is not a volume\n");
 		DEBUG_ABORT;
 	}
 
-	if (reconstruction_1.ReturnXSize() != reconstruction_1.ReturnYSize() && reconstruction_1.ReturnXSize() != reconstruction_1.ReturnZSize() && reconstruction_1.ReturnYSize() != reconstruction_1.ReturnZSize())
+	if (reconstruction_1.ReturnXSize() != reconstruction_1.ReturnYSize() && reconstruction_1.ReturnXSize() != reconstruction_1.ReturnZSize() && reconstruction_1.ReturnYSize() != reconstruction_1.ReturnZSize() && reconstruction_1.ReturnZSize() != 1 )
 	{
 		MyPrintWithDetails("Error: Input reconstruction 1 is not a cube\n");
 		DEBUG_ABORT;
 	}
 
-	if (reconstruction_1.ReturnXSize() != reconstruction_2.ReturnXSize() || reconstruction_1.ReturnYSize() != reconstruction_2.ReturnYSize() || reconstruction_1.ReturnZSize() != reconstruction_2.ReturnZSize())
+	if (reconstruction_1.ReturnXSize() != reconstruction_2.ReturnXSize() || reconstruction_1.ReturnYSize() != reconstruction_2.ReturnYSize() || reconstruction_1.ReturnZSize() != reconstruction_2.ReturnZSize() && reconstruction_1.ReturnZSize() != 1 )
 	{
 		wxPrintf("\nInput reconstructions have different dimensions\n");
 		DEBUG_ABORT;

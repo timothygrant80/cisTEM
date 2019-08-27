@@ -365,7 +365,7 @@ public:
 	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
 	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
-	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false);
+	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);
 	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);
 	void ApplyCurveFilterUninterpolated(Curve *filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);

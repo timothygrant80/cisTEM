@@ -28,6 +28,9 @@ CTF::CTF()
 	precomputed_amplitude_contrast_term = 0;
 	squared_wavelength = 0;
 	cubed_wavelength = 0;
+
+	squared_illumination_aperture = -1; // microradian
+	squared_energy_half_width -1;
 	low_resolution_contrast = 0;
 }
 
@@ -314,6 +317,62 @@ float CTF::ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_sh
 
 }
 
+// Set the envelope paramters
+void CTF::SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size_angstrom, float dose_rate)
+{
+
+	// wanted_acceleration_voltage is in the lab reference frame (eg. 300)
+	// dose_rate shold be in elec/Ang^2/s - so at 3EPS with  0.5A pix == 3/4
+
+	float chromatic_abberation;
+	const float energy_spread = 1.1f; // eV from Wim, for Krios
+	const float beam_brightness = 12e7f; // xfeg 10-14e7 A/m^2/sr/Volt from Wim (sfeg 2-4)
+	const float spherical_SI = spherical_aberration / 1e10f * wanted_pixel_size_angstrom;
+
+
+	squared_illumination_aperture = 16000.0f * dose_rate / ( PIf * beam_brightness ) ;
+	if (wanted_acceleration_voltage < 301 && wanted_acceleration_voltage > 299)
+	{
+		squared_illumination_aperture /= RELATIVISTIC_VOLTAGE_300;
+		chromatic_abberation = spherical_SI * LORENTZ_FACTOR_300;
+		// Aberration corrector adds 0.4mm @ 300KeV (via Wim)
+		if (spherical_SI < 1e-6) { chromatic_abberation += 2.52*LORENTZ_FACTOR_300; }
+	    squared_energy_half_width = (1+LORENTZ_FACTOR_300) / (1 + 0.5f*LORENTZ_FACTOR_300) * chromatic_abberation * energy_spread / (ELECTRON_REST_MASS + RELATIVISTIC_VOLTAGE_300);
+
+	}
+	else
+	if (wanted_acceleration_voltage < 201 && wanted_acceleration_voltage > 199)
+	{
+		squared_illumination_aperture /= RELATIVISTIC_VOLTAGE_200;
+		chromatic_abberation = spherical_SI * LORENTZ_FACTOR_200;
+		if (spherical_SI < 1e-6) { chromatic_abberation += 2.52*LORENTZ_FACTOR_200; }
+	    squared_energy_half_width = (1+LORENTZ_FACTOR_200) / (1 + 0.5f*LORENTZ_FACTOR_200) * chromatic_abberation * energy_spread / (ELECTRON_REST_MASS + RELATIVISTIC_VOLTAGE_200);
+	}
+	else
+	if (wanted_acceleration_voltage < 101 && wanted_acceleration_voltage >  99)
+	{
+		squared_illumination_aperture /= RELATIVISTIC_VOLTAGE_100;
+		chromatic_abberation = spherical_SI * LORENTZ_FACTOR_100;
+		if (spherical_SI < 1e-6) { chromatic_abberation += 2.52*LORENTZ_FACTOR_100; }
+	    squared_energy_half_width = (1+LORENTZ_FACTOR_100) / (1 + 0.5f*LORENTZ_FACTOR_100) * chromatic_abberation * energy_spread / (ELECTRON_REST_MASS + RELATIVISTIC_VOLTAGE_100);
+	}
+	else
+	{
+		wxPrintf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
+		DEBUG_ABORT;
+	}
+
+
+	// Everything in this class with units of length should be expressed normalized by the wanted pixel size
+	squared_energy_half_width /= wanted_pixel_size_angstrom;
+	squared_energy_half_width *= squared_energy_half_width;
+
+	// These are the FWHM values. I want the 1/e half widths / 2sqrt(log(2)) = sqrt(4log(2)) = sqrt(log(2^4))
+	squared_energy_half_width /= logf(16.0f);
+    squared_illumination_aperture /= logf(16.0f);
+
+
+}
 
 // Set the defocus and astigmatism angle, given in pixels and radians
 void CTF::SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians)
@@ -400,6 +459,29 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth)
 	}
 }
 
+// Return the value of the CTF at the given squared spatial frequency and azimuth
+float CTF::EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth )
+{
+
+	// Check that things are set
+	if (this->squared_energy_half_width == -1 || this->squared_illumination_aperture == -1)
+	{
+		wxPrintf("\nTo use EvaluateWithEnvelope, call SetEnvelope first\n");
+		exit(-1);
+	}
+	// Don't get hung up on speed here: this can all be cleaned up FIXME
+	float spatial_frequency = sqrtf(squared_spatial_frequency);
+
+	float common_term = -1.0f * PISQf * squared_spatial_frequency / (2.0f * (1 + (2*PISQf*squared_illumination_aperture*squared_spatial_frequency*squared_energy_half_width)));
+
+
+	float envelope_term = expf( common_term  * (squared_wavelength*squared_energy_half_width*squared_spatial_frequency +
+			                                    2.0f*squared_illumination_aperture *
+												powf(spherical_aberration*squared_wavelength*squared_spatial_frequency-0.5f*(defocus_1+defocus_2),2)  ));
+
+	return -sinf( PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency,azimuth) ) * envelope_term;
+}
+
 /* returns the argument (radians) to the sine and cosine terms of the ctf
 We follow the convention that underfocusing the objective lens
 gives rise to a positive phase shift of scattered electrons, whereas the spherical aberration gives a
@@ -435,7 +517,8 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
 //		wxPrintf("p2 = %g\n", phase_shift);
 //		phase_shift = rad_2_deg(phase_shift);
 //		return phase_shift + I * 0.0f;
-		return cosf( phase_shift ) + I * sinf( phase_shift );
+		// The sign of the phase shift seems to be the opposite (producing a negative shift) should be exp(-I*phaseshift)
+		return cosf( phase_shift ) - I * sinf( phase_shift );
 	}
 }
 

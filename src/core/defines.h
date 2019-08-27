@@ -5,8 +5,22 @@
 // Define PI constants
 #define PI 3.14159265359
 #define PIf 3.14159265359f
+#define PISQ 9.869604401089
+#define PISQf 9.869604401089f
 #define SOCKET_FLAGS wxSOCKET_WAITALL | wxSOCKET_BLOCK
 //#define SOCKET_FLAGS wxSOCKET_WAITALL
+
+// From Table 2.2 DeGraff
+#define RELATIVISTIC_VOLTAGE_100 109784.0f // Volts
+#define RELATIVISTIC_VOLTAGE_200 239139.0f
+#define RELATIVISTIC_VOLTAGE_300 388062.0f
+#define LORENTZ_FACTOR_100 1.196f // M/restMass or 1/sqrt(1-v^2/c^2)
+#define LORENTZ_FACTOR_200 1.235f
+#define LORENTZ_FACTOR_300 1.587f
+#define ELECTRON_REST_MASS 510998.0f // eV
+
+
+
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"

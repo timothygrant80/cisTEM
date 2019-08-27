@@ -2451,7 +2451,7 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
-	MyDebugAssertTrue(! object_is_centred_in_box, "Image volume quadrants not swapped");
+	MyDebugAssertFalse(object_is_centred_in_box, "Image volume quadrants not swapped");
 
 	int i;
 	int j;
@@ -8901,7 +8901,7 @@ void Image::ApplyCTFPhaseFlip(CTF ctf_to_apply)
 
 }
 
-void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt)
+void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool apply_envelope)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -8942,7 +8942,8 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt)
 			// Compute the square of the frequency
 			frequency_squared = x_coord_sq + y_coord_sq;
 
-			ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth);
+			if (apply_envelope) { ctf_value = ctf_to_apply.EvaluateWithEnvelope(frequency_squared,azimuth); }
+			else { ctf_value = ctf_to_apply.Evaluate(frequency_squared,azimuth); }
 
 			if (absolute) ctf_value = fabsf(ctf_value);
 

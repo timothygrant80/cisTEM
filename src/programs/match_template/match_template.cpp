@@ -534,7 +534,7 @@ bool MatchTemplateApp::DoCalculation()
 	ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
 
 // Some settings for testing
-	padding = 2.0f;
+	padding = 1.0f;
 //	ctf_refinement = true;
 //	defocus_search_range = 200.0f;
 //	defocus_step = 50.0f;
@@ -599,10 +599,13 @@ bool MatchTemplateApp::DoCalculation()
 	// search grid
 
 	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
-
-	if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+	wxPrintf("%s",my_symmetry);
+	if (my_symmetry.StartsWith("C1")) // TODO 2x check me - w/o this O symm at least is broken
 	{
-		global_euler_search.theta_max = 180.0f;
+		if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+		{
+			global_euler_search.theta_max = 180.0f;
+		}
 	}
 
 	global_euler_search.CalculateGridSearchPositions(false);
@@ -692,6 +695,30 @@ bool MatchTemplateApp::DoCalculation()
 
 	actual_number_of_ccs_calculated = 0.0;
 
+	wxDateTime 	overall_start;
+	wxDateTime 	overall_finish;
+	overall_start = wxDateTime::Now();
+
+#ifdef USEGPU
+
+	bool first_gpu_loop = true;
+	int nThreads = 8;
+	int nGPUs = 2;
+	int minPos = 0;
+	int maxPos = last_search_position;
+	int incPos = last_search_position / (nThreads);
+
+	TemplateMatchingCore GPU[nThreads];
+
+	DeviceManager gpuDev;
+	gpuDev.Init(nGPUs);
+
+	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
+
+//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
+#endif
+
+
 
 // REMOVE THIS SECTION
 
@@ -725,6 +752,40 @@ bool MatchTemplateApp::DoCalculation()
 	//	template_reconstruction.ForwardFFT();
 		template_reconstruction.ZeroCentralPixel();
 		template_reconstruction.SwapRealSpaceQuadrants();
+
+		wxPrintf("First search/ last search position %d/ %d\n",first_search_position, last_search_position);
+
+#ifdef USEGPU
+	bool first_gpu_loop = true;
+	if (first_gpu_loop)
+	{
+
+		omp_set_num_threads(nThreads);
+		#pragma omp parallel
+		{
+
+			int tIDX = omp_get_thread_num();
+
+
+			gpuDev.SetGpu(tIDX);
+
+			long t_first_search_position = 0 + (tIDX*incPos);
+			long t_last_search_position = (incPos-1) + (tIDX*incPos);
+
+			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
+
+			GPU[tIDX].Init(template_reconstruction, input_image, projection_filter, current_projection,
+							pixel_size_search_range, pixel_size_step, pixel_size,
+							defocus_search_range, defocus_step, defocus1, defocus2,
+							psi_max, psi_start, psi_step,
+							angles, global_euler_search, t_first_search_position, t_last_search_position);
+
+			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %ld-%ld\n",tIDX, t_first_search_position, t_last_search_position);
+
+		first_gpu_loop = false;
+		}
+	}
+#endif
 		for (defocus_i = - myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 		{
 			// make the projection filter, which will be CTF * whitening filter
@@ -732,6 +793,144 @@ bool MatchTemplateApp::DoCalculation()
 			projection_filter.CalculateCTFImage(input_ctf);
 			projection_filter.ApplyCurveFilter(&whitening_filter);
 
+			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
+
+#ifdef USEGPU
+//			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
+			omp_set_num_threads(nThreads);
+
+			#pragma omp parallel
+			{
+				int tIDX = omp_get_thread_num();
+				gpuDev.SetGpu(tIDX);
+
+
+				GPU[tIDX].RunInnerLoop(size_i, defocus_i, tIDX);
+
+
+				#pragma omp critical
+				{
+
+					pixel_counter = 0;
+
+					Image mip_buffer; mip_buffer.CopyFrom(&max_intensity_projection);
+					Image psi_buffer; psi_buffer.CopyFrom(&max_intensity_projection);
+					Image phi_buffer; phi_buffer.CopyFrom(&max_intensity_projection);
+					Image theta_buffer; theta_buffer.CopyFrom(&max_intensity_projection);
+
+					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false, false);
+					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false, false);
+					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false, false);
+					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false, false);
+
+					std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
+					GPU[tIDX].d_max_intensity_projection.Wait();
+					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
+
+
+					for (current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++)
+					{
+						for (current_x = 0; current_x < max_intensity_projection.logical_x_dimension; current_x++)
+						{
+							// first mip
+
+							if (mip_buffer.real_values[pixel_counter] > max_intensity_projection.real_values[pixel_counter])
+							{
+								max_intensity_projection.real_values[pixel_counter] = mip_buffer.real_values[pixel_counter];
+								best_psi.real_values[pixel_counter] = psi_buffer.real_values[pixel_counter];
+								best_theta.real_values[pixel_counter] = theta_buffer.real_values[pixel_counter];
+								best_phi.real_values[pixel_counter] = phi_buffer.real_values[pixel_counter];
+								best_defocus.real_values[pixel_counter] = float(defocus_i) * defocus_step;
+								best_pixel_size.real_values[pixel_counter] = float(size_i) * pixel_size_step;
+
+//								if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+							}
+
+							// histogram
+							// TODO add this inside the templateMatchingCore
+//
+//							current_bin = int(double((padded_reference.real_values[pixel_counter]) - histogram_min_scaled) / histogram_step_scaled);
+//							//current_bin = int(double((padded_reference.real_values[pixel_counter]) - histogram_min) / histogram_step);
+//
+//							if (current_bin >= 0 && current_bin <= histogram_number_of_points)
+//							{
+//								histogram_data[current_bin] += 1;
+//							}
+
+							pixel_counter++;
+						}
+
+						pixel_counter+=padded_reference.padding_jump_value;
+					}
+
+
+					// TODO should prob aggregate these across all workers
+				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
+					Image sum, t_sum;
+					Image sumSq, t_sumSq;
+
+					sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+					sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+
+					t_sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+					t_sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+
+					GPU[tIDX].d_sum1.CopyDeviceToHost(sum,true,false,false);
+					GPU[tIDX].d_sumSq1.CopyDeviceToHost(sumSq,true,false,false);
+
+					GPU[tIDX].d_sum2.CopyDeviceToHost(t_sum,true,false,false);
+					GPU[tIDX].d_sumSq2.CopyDeviceToHost(t_sumSq,true,false,false);
+
+					sum.AddImage(&t_sum);
+					sumSq.AddImage(&t_sumSq);
+
+					GPU[tIDX].d_sum3.CopyDeviceToHost(t_sum,true,false,false);
+					GPU[tIDX].d_sumSq3.CopyDeviceToHost(t_sumSq,true,false,false);
+
+							sum.AddImage(&t_sum);
+							sumSq.AddImage(&t_sumSq);
+
+
+					GPU[tIDX].d_sum4.CopyDeviceToHost(t_sum,true,false,false);
+					GPU[tIDX].d_sumSq4.CopyDeviceToHost(t_sumSq,true,false,false);
+							sum.AddImage(&t_sum);
+							sumSq.AddImage(&t_sumSq);
+
+					GPU[tIDX].d_sum5.CopyDeviceToHost(t_sum,true,false,false);
+					GPU[tIDX].d_sumSq5.CopyDeviceToHost(t_sumSq,true,false,false);
+
+							sum.AddImage(&t_sum);
+							sumSq.AddImage(&t_sumSq);
+
+
+
+					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
+					{
+						correlation_pixel_sum[pixel_counter] += sum.real_values[pixel_counter];
+						correlation_pixel_sum_of_squares[pixel_counter] += sumSq.real_values[pixel_counter];
+
+					}
+
+
+					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
+					actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
+				} // end of omp critical block
+			} // end of parallel block
+
+			if (is_running_locally == true) my_progress->Update(current_correlation_position);
+
+			if (is_running_locally == false)
+			{
+				actual_number_of_ccs_calculated++;
+				temp_float = current_correlation_position;
+				JobResult *temp_result = new JobResult;
+				temp_result->SetResult(1, &temp_float);
+				AddJobToResultQueue(temp_result);
+			}
+
+			continue;
+
+#endif
 			for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
 			{
 				//loop over each rotation angle
@@ -739,6 +938,7 @@ bool MatchTemplateApp::DoCalculation()
 				//current_rotation = 0;
 				for (current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step)
 				{
+
 					angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
 	//				angles.Init(67.909943, 132.502991, 298.514923, 0.0, 0.0);
 
@@ -757,9 +957,7 @@ bool MatchTemplateApp::DoCalculation()
 					}
 					//if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_nofilter.mrc", 1);
 
-
 					current_projection.MultiplyPixelWise(projection_filter);
-
 
 					//if (first_search_position == 0) projection_filter.QuickAndDirtyWriteSlice("/tmp/projection_filter.mrc", 1);
 					//if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_afterfilter.mrc", 1);
@@ -798,7 +996,7 @@ bool MatchTemplateApp::DoCalculation()
 
 					current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges());
 
-//					padded_reference.SetToConstant(0.0f);
+
 					variance = current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels \
 							- powf(current_projection.ReturnAverageOfRealValues() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
 					current_projection.DivideByConstant(sqrtf(variance));
@@ -905,6 +1103,11 @@ bool MatchTemplateApp::DoCalculation()
 		}
 	}
 
+#ifdef USEGPU
+		// Transfer back the results
+		// Clean up Gpu memory and then se fine
+#endif
+
 	if (is_running_locally == true)
 	{
 		delete my_progress;
@@ -992,6 +1195,7 @@ bool MatchTemplateApp::DoCalculation()
 //		max_intensity_projection.DividePixelWise(correlation_pixel_sum_of_squares);
 		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
 		max_intensity_projection.QuickAndDirtyWriteSlice(scaled_mip_output_file.ToStdString(), 1, true, pixel_size);
+
 
 		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
 		correlation_pixel_sum_image.QuickAndDirtyWriteSlice(correlation_average_output_file.ToStdString(), 1, true, pixel_size);
@@ -1146,6 +1350,9 @@ bool MatchTemplateApp::DoCalculation()
 		wxDateTime finish_time = wxDateTime::Now();
 		wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
 	}
+
+	wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
+
 
 	return true;
 }
@@ -1426,6 +1633,7 @@ void AggregatedTemplateResult::AddResult(float *result_array, long array_size, i
 	}
 
 	total_number_of_ccs += result_array[4];
+
 
 	float *result_mip_data = &result_array[7];
 	float *result_psi_data = &result_array[7 + int(result_array[2])];

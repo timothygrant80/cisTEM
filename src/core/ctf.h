@@ -27,6 +27,9 @@ private:
 	float squared_wavelength;
 	float cubed_wavelength;
 	float low_resolution_contrast;
+	
+	float squared_illumination_aperture;
+	float squared_energy_half_width;
 
 public:
 
@@ -91,6 +94,7 @@ public:
 
 	void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
 	void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
+	void SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size_angstrom, float dose_rate);
 	void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
 	void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
 	void SetLowResolutionContrast(float wanted_low_resolution_contrast);
@@ -98,6 +102,7 @@ public:
 	//
 	std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
 	float Evaluate(float squared_spatial_frequency, float azimuth);
+	float EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
 	float PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
 	std::complex<float> EvaluateBeamTiltPhaseShift(float squared_spatial_frequency, float azimuth);
 	float PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, float beam_tilt, float particle_shift = 0.0f);

@@ -67,7 +67,11 @@ class PDB {
 		// Constructors
 		PDB();
 		PDB(long number_of_non_water_atoms, float cubic_size, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
+
 		PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
+		PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
+
+
 		~PDB();
 
 		// data
@@ -76,6 +80,8 @@ class PDB {
 		long number_of_atoms;
 		int records_per_line;
 		double center_of_mass[3];
+		bool use_provided_com;
+
 		int number_of_particles_initialized;
 		long number_of_each_atom[NUMBER_OF_ATOM_TYPES];
 		float atomic_volume;
@@ -96,6 +102,8 @@ class PDB {
 		// Methods
 
         void Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
+        void SetEmpty();
+
         void Close();
         void Rewind();
         void Flush();

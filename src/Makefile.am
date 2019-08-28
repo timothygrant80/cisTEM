@@ -211,7 +211,7 @@ endif
 link_gpu_library=
 if USEGPU_AM
 bin_PROGRAMS += gpu_util_test
-link_gpu_library += /groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/lib/libcisTEMGPU.a
+link_gpu_library += gpu/lib/libcisTEMGPU.a
 endif
 
 

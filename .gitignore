@@ -13,7 +13,7 @@ depcomp
 build
 config.log
 src/gpu/bin
-src/gpu/lib
+src/gpu/lib/*.a
 src/gpu/**/*.mrc
 src/gpu/**/*.o
 src/gpu/RemoteSystemsTempFiles

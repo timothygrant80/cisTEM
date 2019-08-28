@@ -199,7 +199,7 @@ noinst_HEADERS += 	gui/MatchTemplatePanel.h \
 					core/water.h 
 					
 endif      
-
+	
 noinst_LIBRARIES = libcore.a libguicore.a
 
 bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates find_dqe niko_test warp_to_cistem
@@ -211,7 +211,7 @@ endif
 link_gpu_library=
 if USEGPU_AM
 bin_PROGRAMS += gpu_util_test
-link_gpu_library += gpu/lib/libcisTEMGPU.a
+link_gpu_library += /groups/grigorieff/home/himesb/work/cisTEM/src/gpu/lib/libcisTEMGPU.a
 endif
 
 

@@ -10,10 +10,7 @@ configure
 missing
 config.guess
 depcomp
-# Could just use a build* but I think it is better to be specific. BAH
 build
-build-GCC
-build-CUDA
 config.log
 gpu/bin
 gpu/lib

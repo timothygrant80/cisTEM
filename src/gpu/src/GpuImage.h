@@ -225,7 +225,7 @@ public:
   ////////////////////////////////////////////////////////////////////////
 
   enum BufferType : int  { b_image, b_sum, b_min, b_minIDX, b_max, b_maxIDX, b_minmax, b_minmaxIDX, b_mean, b_meanstddev,
-  	  	  	  	  	  	   b_countinrange };
+  	  	  	  	  	  	   b_countinrange, b_histogram };
 
   void CublasInit();
   void NppInit();
@@ -247,6 +247,7 @@ public:
   Npp8u* mean_buffer; 			bool is_allocated_mean_buffer;
   Npp8u* meanstddev_buffer; 	bool is_allocated_meanstddev_buffer;
   Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
+  Npp8u* histogram_buffer; 		bool is_allocated_histogram_buffer;
 
   
   GpuImage* mask_CSOS;   bool is_allocated_mask_CSOS;

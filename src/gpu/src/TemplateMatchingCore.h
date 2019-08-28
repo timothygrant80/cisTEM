@@ -41,7 +41,6 @@ public:
   GpuImage d_input_image;
   GpuImage d_current_projection;
   GpuImage d_padded_reference;
-  GpuImage d_projection_filter;
 
 
   // Search range parameters
@@ -64,6 +63,11 @@ public:
   int last_search_position;
   long total_number_of_cccs_calculated;
 
+  const int number_histogram_bins = 1024;
+  Npp32f* histogram_levels;
+  Npp32s* histogram;
+
+
   // Search objects
   AnglesAndShifts angles;
   EulerSearch global_euler_search;
@@ -73,7 +77,6 @@ public:
 
   void Init(Image &template_reconstruction,
             Image &input_image,
-            Image &projection_filter,
             Image &current_projection,
             float pixel_size_search_range,
             float pixel_size_step,
@@ -90,7 +93,7 @@ public:
             int first_search_position,
             int last_search_position);
 
-  void RunInnerLoop(float pixel_i, float defocus_i, int threadIDX);
+  void RunInnerLoop(Image &projection_filter, float pixel_i, float defocus_i, int threadIDX);
 
 
 private:

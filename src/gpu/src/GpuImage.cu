@@ -41,13 +41,17 @@ __global__ void ClipIntoRealKernel(cufftReal* real_values_gpu,
                                    int3 wanted_coordinate_of_box_center, 
                                    float wanted_padding_value);
 
-// cuFFT callbacks
-__device__ void CB_ScaleAndStoreC(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr)
-{
-	// This is to be used after calculating a forward FFT. The index values should be 1:1
-	((cufftComplex *)dataOut)[ offset ] = ComplexScale(element, *(float *)callerInfo);
-};
-__device__ cufftCallbackStoreC d_scaleAndStorePtr = CB_ScaleAndStoreC;
+//// cuFFT callbacks
+//__device__ void CB_ScaleAndStoreC(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr);
+//
+//__device__ void CB_ScaleAndStoreC(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr)
+//{
+//	// This is to be used after calculating a forward FFT. The index values should be 1:1
+//	float* scale_factor = (float *)callerInfo;
+//	cufftComplex value = (cufftComplex)ComplexScale((Complex *)&element, scale_factor);
+//	((cufftComplex *)dataOut)[ offset ] = value;
+//}
+//__device__ cufftCallbackStoreC d_scaleAndStorePtr = CB_ScaleAndStoreC;
 
 // Inline declarations
  __device__ __forceinline__ int
@@ -549,6 +553,16 @@ void GpuImage::BufferInit(BufferType bt)
         is_allocated_countinrange_buffer = true;
       }
       break;
+
+//  case b_histogram :
+//      if ( ! is_allocated_histogram_buffer )
+//      {
+//        int n_elem;
+//        nppiHistogramEvenGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+//        checkCudaErrors(cudaMalloc((void **)this->histogram_buffer, n_elem));
+//        is_allocated_histogram_buffer = true;
+//      }
+//      break;
 }
 
 }
@@ -1160,20 +1174,26 @@ void GpuImage::ForwardFFT(bool should_scale)
 	{
 		SetCufftPlan();
 		is_fft_planned = true;
+	    // TODO confirm that the reset actually happens and it is needed to set this each time.
+	    checkCudaErrors(cufftSetStream(this->cuda_plan_forward, cudaStreamPerThread));
 	}
 
 	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
 	if (should_scale && ! is_set_scaleAndStoreCallBack)
 	{
 //	  checkCudaErrors(cudaMemcpyFromSymbol(&h_scaleAndStorePtr, d_scaleAndStorePtr, sizeof(h_scaleAndStorePtr)));
-//	  float norm_factor = ft_normalization_factor*ft_normalization_factor ;
+//	  float* norm_factor;
+//      checkCudaErrors(cudaMalloc((void **)norm_factor, sizeof(float)));
+//	  *norm_factor = ft_normalization_factor*ft_normalization_factor ;
 //	  checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_scaleAndStorePtr, CUFFT_CB_ST_COMPLEX, (void **)&norm_factor));
 //	  is_set_scaleAndStoreCallBack = true;
+//	  checkCudaErrors(cudaFree(norm_factor));
 		this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
 	}
 
-    // TODO confirm that the reset actually happens and it is needed to set this each time.
-    checkCudaErrors(cufftSetStream(this->cuda_plan_forward, cudaStreamPerThread));
+
+//	BufferInit(b_image);
+//    checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)image_buffer->complex_values));
 
     checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)complex_values_gpu));
 
@@ -1190,10 +1210,13 @@ void GpuImage::BackwardFFT()
   {
     SetCufftPlan();
     is_fft_planned = true;
+    // TODO confirm that the reset actually happens and it is needed to set this each time.
+    checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
   }
 
-  // TODO confirm that the reset actually happens and it is needed to set this each time.
-  checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
+//  BufferInit(b_image);
+//  checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)image_buffer->complex_values, (cufftReal*)real_values_gpu));
+
   checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
 
   is_in_real_space = true;

@@ -36,7 +36,6 @@ void TemplateMatchingCore::Init(int number_of_jobs)
 
 void TemplateMatchingCore::Init(Image &template_reconstruction,
                                 Image &input_image,
-                                Image &projection_filter,
                                 Image &current_projection,
                                 float pixel_size_search_range,
                                 float pixel_size_step,
@@ -81,7 +80,6 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
     d_input_image.CopyHostToDevice();
 
     d_current_projection.Init(this->current_projection);
-    d_projection_filter.Init(projection_filter);
 
     d_padded_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_max_intensity_projection.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
@@ -113,7 +111,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 };
 
-void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int threadIDX)
+void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel, float c_defocus, int threadIDX)
 {
 
 
@@ -151,25 +149,16 @@ void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int thre
 
 
 
-
-//  this->gpuDev.ReSetGpu();
-
   cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
   checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
   checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
-
-  // Need to copy in the projection filter for this loop.
-  d_projection_filter.CopyHostToDevice();
-//  d_projection_filter.ForwardFFT(true); // This is for the standalone test
-  d_projection_filter.Wait();
-  d_projection_filter.QuickAndDirtyWriteSlices("/tmp/small_Prj_filter.mrc",1,1);
-
 
 
 
   long ccc_counter = 0;
   int current_search_position;
   float average_on_edge; 
+  float variance;
 
 	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
 	{
@@ -189,14 +178,13 @@ void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int thre
 
 
       current_projection.SwapRealSpaceQuadrants();
+      current_projection.MultiplyPixelWise(projection_filter);
+      current_projection.BackwardFFT();
+      average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
+//      variance = 1.0f / sqrtf( current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels /
+//              d_padded_reference.number_of_real_space_pixels - (average_on_edge*average_on_edge) );
+//      current_projection.AddMultiplyConstant(-average_on_edge, variance);
 
-
-////      current_projection.MultiplyPixelWise(*d_projection_filter.hostImage);
-//      current_projection.BackwardFFT();
-//      average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
-//      current_projection.AddConstant(-average_on_edge);
-////      current_projection.MultiplyByConstant( 1.0f / sqrtf( current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels /
-////                                                           d_padded_reference.number_of_real_space_pixels - (average_on_edge*average_on_edge) ));
 //      // TODO add more?
 
       // Make sure the device has moved on to the padded projection
@@ -205,16 +193,16 @@ void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int thre
     
       d_current_projection.CopyHostToDevice();
 
-      d_current_projection.MultiplyPixelWise(d_projection_filter);
-      d_current_projection.BackwardFFT();
-      average_on_edge = d_current_projection.ReturnAverageOfRealValuesOnEdges();
+//      d_current_projection.MultiplyPixelWise(d_projection_filter);
+//      d_current_projection.BackwardFFT();
+//      average_on_edge = d_current_projection.ReturnAverageOfRealValuesOnEdges();
 
 
 //      // To check
 //      average_on_edge = d_current_projection.ReturnAverageOfRealValuesOnEdges();
 //       
-
-      d_current_projection.MultiplyByConstant(1.0f / (sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels) - 
+      d_current_projection.AddConstant(-average_on_edge);
+      d_current_projection.MultiplyByConstant(1.0f / (sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels) -
                                                             (average_on_edge * average_on_edge)));
 
 
@@ -286,18 +274,6 @@ void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int thre
 		} // loop over psi angles
 
 
-//      if (current_search_position % 10 == 0)
-//      {
-//        std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(current_search_position) + ".mrc";
-////      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT3, 1, 1);
-//        d_max_intensity_projection.SwapRealSpaceQuadrants();
-//        d_max_intensity_projection.QuickAndDirtyWriteSlices(fileNameOUT4,1,1);
-//        d_max_intensity_projection.SwapRealSpaceQuadrants();
-//      }
-//      if (current_search_position > 20)
-//      {
-//        exit(-1);
-//      }
 
       
  	} // end of outer loop euler sphere position
@@ -305,14 +281,6 @@ void TemplateMatchingCore::RunInnerLoop(float c_pixel, float c_defocus, int thre
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 
-//        d_max_intensity_projection.SwapRealSpaceQuadrants();
-//        d_max_intensity_projection.QuickAndDirtyWriteSlices("/tmp/mip.mrc",1,1);
-
-//        exit(-1);
-  
-
-
-  // TODO return results to the host
   
 }
 

@@ -157,7 +157,7 @@
 <option id="autogenOpts" value=""/>
 </configuration>
 <configuration id="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.1458979391.1477678275">
-<option id="configure" value="configure --with-cuda=/groups/grigorieff/home/himesb/thirdParty/cuda-10.0   --with-fftw-dir=/groups/grigorieff/home/himesb/thirdParty/src/fftw-3.3.8  --enable-openmp --enable-experimental --with-wx-config=/groups/grigorieff/home/himesb/thirdParty/wxWidgets304_static/bin/wx-config"/>
+<option id="configure" value="configure  --with-cuda=/groups/grigorieff/home/himesb/thirdParty/cuda-10.0   --with-fftw-dir=/groups/grigorieff/home/himesb/thirdParty/src/fftw-3.3.8  --enable-openmp --enable-experimental --with-wx-config=/groups/grigorieff/home/himesb/thirdParty/wxWidgets304_static/bin/wx-config"/>
 <option id="configdir" value=""/>
 <option id="cache-file" value=""/>
 <option id="help" value="false"/>

@@ -774,7 +774,7 @@ bool MatchTemplateApp::DoCalculation()
 
 			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
-			GPU[tIDX].Init(template_reconstruction, input_image, projection_filter, current_projection,
+			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 							pixel_size_search_range, pixel_size_step, pixel_size,
 							defocus_search_range, defocus_step, defocus1, defocus2,
 							psi_max, psi_start, psi_step,
@@ -794,18 +794,18 @@ bool MatchTemplateApp::DoCalculation()
 			projection_filter.ApplyCurveFilter(&whitening_filter);
 
 			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
-
 #ifdef USEGPU
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 			omp_set_num_threads(nThreads);
 
-			#pragma omp parallel
+			#pragma omp parallel firstprivate(projection_filter)
 			{
 				int tIDX = omp_get_thread_num();
 				gpuDev.SetGpu(tIDX);
+				MyPrintWithDetails("t");
 
-
-				GPU[tIDX].RunInnerLoop(size_i, defocus_i, tIDX);
+				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
+				MyPrintWithDetails("t");
 
 
 				#pragma omp critical

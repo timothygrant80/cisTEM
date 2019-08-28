@@ -34,10 +34,10 @@ bool GpuUtilTest::DoCalculation()
 
   wxPrintf("GpuUtilTest is running!\n");
 
-  this->createImageAddOne();
+//  this->createImageAddOne();
   int nThreads = 2;
   int nGPUs = 1;
-//  this->TemplateMatchingStandalone(nThreads, nGPUs);
+  this->TemplateMatchingStandalone(nThreads, nGPUs);
 
   int gpuID = 0;
   wxPrintf("I made it here\n");
@@ -108,11 +108,11 @@ int tIDX = 0;
 			best_defocus.CopyFrom(&input_image);
 
 	//		// These should be in Fourier space, but were ifft to save
-	//		template_reconstruction.ForwardFFT();
-	//		template_reconstruction.SwapRealSpaceQuadrants();
-	//		input_image.ForwardFFT();
-	//		input_image.SwapRealSpaceQuadrants();
-
+			template_reconstruction.ForwardFFT();
+			template_reconstruction.SwapRealSpaceQuadrants();
+			input_image.ForwardFFT();
+			input_image.SwapRealSpaceQuadrants();
+			projection_filter.ForwardFFT();
 
 
 			// These also were set up prior to entering the GPU loop
@@ -147,7 +147,7 @@ int tIDX = 0;
 			gpuDev.SetGpu(tIDX);
 
 
-			GPU[tIDX].Init(template_reconstruction, input_image, projection_filter, current_projection,
+			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 					pixel_size_search_range, pixel_size_step, pixel_size,
 					defocus_search_range, defocus_step, defocus1, defocus2,
 					psi_max, psi_start, psi_step,
@@ -155,7 +155,7 @@ int tIDX = 0;
 
 			int size_i = 0;
 			int defocus_i = 0;
-			GPU[tIDX].RunInnerLoop(size_i, defocus_i, tIDX);
+			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
 
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 			max_intensity_projection.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);

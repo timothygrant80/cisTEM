@@ -20,4 +20,4 @@ gpu/lib
 gpu/**/*.mrc
 gpu/**/*.o
 gpu/RemoteSystemsTempFiles
-
+gpu/src/.*

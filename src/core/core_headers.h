@@ -174,10 +174,9 @@ protected:
 #include <typeinfo>
 #include <limits>
 #include <omp.h>
-#include "../../gpu/src/DeviceManager.h"
-#include "../../gpu/src/ContextManager.h"
-#include "../../gpu/src/GpuImage.h"
-#include "../../gpu/src/TemplateMatchingCore.h"
+#include "../gpu/src/DeviceManager.h"
+#include "../gpu/src/GpuImage.h"
+#include "../gpu/src/TemplateMatchingCore.h"
 #endif
 
 

@@ -1,0 +1,119 @@
+Nsight plugins supported > eclipse vs 4.7 (I'm starting from Mars 4.5). Update from the eclipse help menu (includes plugin SVN etc updates)
+
+This only took me to vs 4.5.2
+
+It turns out after vs 4.6, there is some major structural change in eclipse
+
+Pulled eclipse-cpp-2019-06-R-linux-gtk-x86_64.tar.gz from eclipse mirror
+
+tar -xvzf eclipse-cpp-2019-06-R-linux-gtk-x86_64.tar.gz (thirdParty/src)
+
+select my "testEclipse" workspace - close to current, but not the working cisTEM devel space
+also copy ~/.eclipse to .eclipse_bck_preNvidia
+
+This is forward compatible, but NOT backward and can jack up the workspace config!
+
+Installed vs 4.12
+
+
+unzip /groups/grigorieff/home/himesb/thirdParty/cuda-10.0/nsightee_plugins/com.nvidia.cuda.repo-1.0.0-SNAPSHOT.zip
+
+Add (local)
+
+Select Cuda main features -> next -> install -> restart
+
+I chose to say "NO" to allowing data harvesting for GOOGLE analytics
+
+ReLaunch -> new workspace "testNsight"
+
+New C++ project
+  GNU autotools
+  Executable -> Import CUDA Sample -> CUDA Linux toolchain
+  
+Selected the CudaLibraries -> simpleCUFFT_2d_MGPU option
+
+--> doesn't seem to be indexing correctly
+
+File --> new makefile project with exiting code
+  nikoTest
+  standalone/cuda
+  CUDA Linux toolchain
+
+Properties --> C++ General --> Paths and Symbols --> Includes
+  Added /groups/grigorieff/home/himesb/thirdParty/cuda-10.0/samples/common/includes
+
+  --> still did not find the <helper_functions.h>
+
+  --> selected the option to generate makefile automatically -> , this results in new errors around common funcitons.
+
+Regenerate
+
+C++ Build --> Settings --> Manage Configurations --> new from predfined --> executable cuda debug
+  - activate 
+  - now new tabs, scroll left to get to tool settings.
+
+
+Enable syntax highlighting for CUDA files in Eclipse:
+
+    Window -> Preferences -> in C/C++ -> File Types -> New
+    Enter “*.cu” and select “C++ Source File”
+    Repeat and enter “*.cuh” and select “C++ Header File”
+    Enter "*.cpp" select as "Cuda source file"
+
+Prevent Eclipse from complaining about global and others: In your code, either include cuda_runtime.h or add the following:
+
+ #ifdef __CDT_PARSER__
+ #define __global__
+ #define __device__
+ #define __shared__
+ #endif
+
+
+Windows --> Preferences --> General -->> Editors --> Text Editors --> Annotations 
+  Untick anything with underlining.
+
+
+programs/scattering_potential/scattering_potential-scattering_potential.obj: programs/scattering_potential/scattering_potential.cpp
+	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(scattering_potential_CPPFLAGS) $(CPPFLAGS) $(scattering_potential_CXXFLAGS) $(CXXFLAGS) -MT programs/scattering_potential/scattering_potential-scattering_potential.obj -Xcompiler="-MD -MP -MF programs/scattering_potential/$(DEPDIR)/scattering_potential-scattering_potential.Tpo" -c -o programs/scattering_potential/scattering_potential-scattering_potential.obj"' `if test -f 'programs/scattering_potential/scattering_potential.cpp'; then $(CYGPATH_W) 'programs/scattering_potential/scattering_potential.cpp'; else $(CYGPATH_W) '$(srcdir)/programs/scattering_potential/scattering_potential.cpp'; fi`
+
+-Xcompiler="-fopenmp -march=native -funroll-loops -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64"
+
+forced CXX=nvcc in Makefile
+
+installed fftw-3.3.8
+
+nsight eclipse plugins from CUDA-10.0 are only supporting proper indexing for eclipes4.7 - I have 4.9 pulling 10.1 update 1
+
+sudo ./cuda_10.1.168_418.67_linux.run
+  Just install the driver
+
+The installer is new in 10.1 and isn't setting the local path properly - use this
+./cuda_10.1.168_418.67_linux.run --silent --toolkit --toolkitpath=$HOME/thirdParty/cuda-10.1 --defaultroot=$HOME/thirdParty/cuda-10.1 --samples --samplespath=$HOME/thirdParty/cuda-10.1/samples
+
+Copied all cuda/include cuda/samples/common/inc to the project include
+
+enabled fast math and cuda sm70
+
+linked the default built $workspace/src/cuda to $workspace/bin
+  ln -s ../bin cuda
+
+--> Try a new cuda/c++ project
+--> Advanced setup
+  --> C++/Build --> CUDA TOOLKIT (change to 10.1)
+                --> SETTINGS --> command as "${nvcc} --cudart=static -ccbin g++ -gencode arch=compute_70,code=compute_70"
+                --> INCLUDES + /groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/includes
+                --> OPTIMIZATION "make use of fast math", set level to 03
+
+--> Enable doxygen in C++/General
+
+MANUALLY setup wx configuration - in cpu config.ac the appropriate vals are found by using the wx-config passed in (full path below) and the options. I couldn't run with the --static-yes options
+NOTE, when supplying the preproccessor defines in eclipse, the first entry gets the "-D" added, but the others must be specified.
+/groups/grigorieff/home/himesb/thirdParty/wxWidgets_bck2/bin/wx-config --static=yes --libs richtext,std,aui
+/groups/grigorieff/home/himesb/thirdParty/wxWidgets_bck2/bin/wx-config --static=yes --cppflags
+/groups/grigorieff/home/himesb/thirdParty/wxWidgets_bck2/bin/wx-config --static=yes --cxxflags | sed -e 's/-fno-exceptions//'
+
+Had to comment out three blocks in  /groups/grigorieff/home/himesb/thirdParty/wxWidgets/include/wx-3.0/wx/longlong.h
+(compare  /groups/grigorieff/home/himesb/thirdParty/wxWidgets/include/wx-3.0/wx/longlong.h.orig)
+
+
+

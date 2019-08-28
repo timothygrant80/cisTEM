@@ -17,7 +17,8 @@ src/gpu/lib
 src/gpu/**/*.mrc
 src/gpu/**/*.o
 src/gpu/RemoteSystemsTempFiles
-src/gpu/src/.*
+src/gpu/src/.project
+src/gpu/src/.cproject
 RemoteSystemsTempFiles
 .metadata
 .settings

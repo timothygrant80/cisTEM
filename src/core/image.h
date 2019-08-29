@@ -8,6 +8,7 @@ class ReconstructedVolume;
 class EulerSearch;
 class ResolutionStatistics;
 class RotationMatrix;
+class MyApp;
 
 class Image {
 
@@ -179,7 +180,7 @@ public:
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 	void AddSlices(Image &sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
-	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar);
+	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search = 0, int last_position_to_search = INT_MAX, MyApp *app_for_result = NULL);
 
 	inline long ReturnVolumeInRealSpace()
 	{
@@ -404,6 +405,10 @@ public:
 	void GetMinMax(float &min_value, float &max_value);
 
 	void RandomisePhases(float wanted_radius_in_reciprocal_pixels);
+
+	float ReturnCorrelationBetweenTwoHorizontalLines(int first_line, int second_line); // for relion repeated line edge detection
+	float ReturnCorrelationBetweenTwoVerticalLines(int first_line, int second_line);
+	bool  ContainsRepeatedLineEdges();
 
 	float GetCorrelationWithCTF(CTF ctf);
 	void SetupQuickCorrelationWithCTF(CTF ctf, int &number_of_values, double &norm_image, double &image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);

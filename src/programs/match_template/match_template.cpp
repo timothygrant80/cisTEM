@@ -702,7 +702,7 @@ bool MatchTemplateApp::DoCalculation()
 #ifdef USEGPU
 
 	bool first_gpu_loop = true;
-	int nThreads = 8;
+	int nThreads = 4;
 	int nGPUs = 2;
 	int minPos = 0;
 	int maxPos = last_search_position;
@@ -774,11 +774,14 @@ bool MatchTemplateApp::DoCalculation()
 
 			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
+;
 			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 							pixel_size_search_range, pixel_size_step, pixel_size,
 							defocus_search_range, defocus_step, defocus1, defocus2,
 							psi_max, psi_start, psi_step,
-							angles, global_euler_search, t_first_search_position, t_last_search_position);
+							angles, global_euler_search,
+							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
+							t_first_search_position, t_last_search_position);
 
 			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %ld-%ld\n",tIDX, t_first_search_position, t_last_search_position);
 
@@ -875,33 +878,19 @@ bool MatchTemplateApp::DoCalculation()
 					t_sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 					t_sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 
-					GPU[tIDX].d_sum1.CopyDeviceToHost(sum,true,false,false);
-					GPU[tIDX].d_sumSq1.CopyDeviceToHost(sumSq,true,false,false);
-
-					GPU[tIDX].d_sum2.CopyDeviceToHost(t_sum,true,false,false);
-					GPU[tIDX].d_sumSq2.CopyDeviceToHost(t_sumSq,true,false,false);
-
-					sum.AddImage(&t_sum);
-					sumSq.AddImage(&t_sumSq);
-
-					GPU[tIDX].d_sum3.CopyDeviceToHost(t_sum,true,false,false);
-					GPU[tIDX].d_sumSq3.CopyDeviceToHost(t_sumSq,true,false,false);
+					for (int iSum = 0; iSum < GPU[tIDX].nSums; iSum++)
+					{
+						if (GPU[tIDX].is_non_zero_sum_buffer[iSum])
+						{
+							GPU[tIDX].d_sum[iSum].CopyDeviceToHost(t_sum,true,false,false);
+							GPU[tIDX].d_sumSq[iSum].CopyDeviceToHost(t_sumSq,true,false,false);
 
 							sum.AddImage(&t_sum);
 							sumSq.AddImage(&t_sumSq);
 
+						}
 
-					GPU[tIDX].d_sum4.CopyDeviceToHost(t_sum,true,false,false);
-					GPU[tIDX].d_sumSq4.CopyDeviceToHost(t_sumSq,true,false,false);
-							sum.AddImage(&t_sum);
-							sumSq.AddImage(&t_sumSq);
-
-					GPU[tIDX].d_sum5.CopyDeviceToHost(t_sum,true,false,false);
-					GPU[tIDX].d_sumSq5.CopyDeviceToHost(t_sumSq,true,false,false);
-
-							sum.AddImage(&t_sum);
-							sumSq.AddImage(&t_sumSq);
-
+					}
 
 
 					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
@@ -909,6 +898,11 @@ bool MatchTemplateApp::DoCalculation()
 						correlation_pixel_sum[pixel_counter] += sum.real_values[pixel_counter];
 						correlation_pixel_sum_of_squares[pixel_counter] += sumSq.real_values[pixel_counter];
 
+					}
+
+					for (int iBin = 0; iBin < histogram_number_of_points; iBin++)
+					{
+						histogram_data[iBin] += GPU[tIDX].cummulative_histogram[iBin];
 					}
 
 

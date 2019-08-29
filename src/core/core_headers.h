@@ -169,13 +169,18 @@ protected:
 #include <npp.h>
 #include <nppi_arithmetic_and_logical_operations.h>
 #include <nppi_statistics_functions.h>
+#include <npps_arithmetic_and_logical_operations.h> // right now only using this in one place (Histogram.cu) not sure if it is (and what is) the expense associated.
 #include <helper_functions.h>
 #include <helper_cuda.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/device_vector.h>
+#include <thrust/functional.h>
 #include <typeinfo>
 #include <limits>
 #include <omp.h>
 #include "../gpu/src/DeviceManager.h"
 #include "../gpu/src/GpuImage.h"
+#include "../gpu/src/Histogram.h"
 #include "../gpu/src/TemplateMatchingCore.h"
 #endif
 

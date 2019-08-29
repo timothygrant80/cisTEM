@@ -7,9 +7,7 @@
 
 #include "gpu_core_headers.h"
 
-#include <thrust/transform_reduce.h>
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
+
 //#include <Exceptions.h>
 //#include <helper_string.h>
 // Kernel declarations
@@ -554,15 +552,7 @@ void GpuImage::BufferInit(BufferType bt)
       }
       break;
 
-//  case b_histogram :
-//      if ( ! is_allocated_histogram_buffer )
-//      {
-//        int n_elem;
-//        nppiHistogramEvenGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
-//        checkCudaErrors(cudaMalloc((void **)this->histogram_buffer, n_elem));
-//        is_allocated_histogram_buffer = true;
-//      }
-//      break;
+
 }
 
 }
@@ -1716,7 +1706,7 @@ void GpuImage::QuickAndDirtyWriteSlices(std::string filename, int first_slice, i
 	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
   Image buffer_img;
   buffer_img.Allocate(dims.x, dims.y, dims.z, true);
-  
+
   buffer_img.is_in_real_space = is_in_real_space;
   buffer_img.object_is_centred_in_box = object_is_centred_in_box;
   // Implicitly waiting on work to finish since copy is queued in the stream

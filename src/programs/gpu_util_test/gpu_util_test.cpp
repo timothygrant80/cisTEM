@@ -146,12 +146,23 @@ int tIDX = 0;
 
 			gpuDev.SetGpu(tIDX);
 
+			const float histogram_min = -20.0f;
+			const float histogram_max = 50.0f;
+			const int histogram_number_of_points = 1024;
+			float histogram_step;
+			float histogram_min_scaled, histogram_step_scaled;
+			histogram_step = (histogram_max - histogram_min) / float(histogram_number_of_points);
+
+			histogram_min_scaled = histogram_min / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
+			histogram_step_scaled = histogram_step / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
 
 			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 					pixel_size_search_range, pixel_size_step, pixel_size,
 					defocus_search_range, defocus_step, defocus1, defocus2,
 					psi_max, psi_start, psi_step,
-					angles, global_euler_search, first_search_position, last_search_position);
+					angles, global_euler_search,
+					histogram_min_scaled, histogram_step_scaled, histogram_number_of_points,
+					first_search_position, last_search_position);
 
 			int size_i = 0;
 			int defocus_i = 0;

@@ -10,7 +10,7 @@ NVCCFLAGS   :=
 INCLUDES    :=
 LDFLAGS     :=
 DEFINES     :=
-NVCCFLAGS += --default-stream per-thread -m64
+NVCCFLAGS += --default-stream per-thread -m64 -G
 NVCCFLAGS += --disable-warnings -Xcompiler= -std=c++11 -Xlinker -lcudart_static,-lcufft_static,-lcublas_static,-lcurand_static,-lnppc_static,-lnppial_static,-lnppist_static,-lculibos
 NVCCFLAGS += -lfftw3f,-lwx_gtk2u_richtext-3.0,-lwx_gtk2u_aui-3.0,-lwx_gtk2u_xrc-3.0,-lwx_gtk2u_html-3.0,-lwx_gtk2u_qa-3.0,lwx_gtk2u_adv-3.0,-lwx_gtk2u_core-3.0,-lwx_baseu_xml-3.0,-lwx_baseu_net-3.0,-lwx_baseu-3.0,-ltiff,-pthread,-fopenmp -gencode arch=compute_70,code=sm_70
 
@@ -22,7 +22,7 @@ DEFINES += -D _FILE_OFFSET_BITS=64 -DWXUSINGDLL  -DGPU   -D__WXGTK__ -DSTDC_HEAD
 
 SMS ?= 70 75
 # simplePrintf.cu ContextManager.cu
-SOURCES=TemplateMatchingCore.cu DeviceManager.cu GpuImage.cu 
+SOURCES= Histogram.cu TemplateMatchingCore.cu DeviceManager.cu GpuImage.cu 
 OBJECTS=$(SOURCES:.cu=.o)
 
 $(info $$SOURCES is [${SOURCES}])

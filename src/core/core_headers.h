@@ -169,7 +169,6 @@ protected:
 #include <npp.h>
 #include <nppi_arithmetic_and_logical_operations.h>
 #include <nppi_statistics_functions.h>
-#include <npps_arithmetic_and_logical_operations.h> // right now only using this in one place (Histogram.cu) not sure if it is (and what is) the expense associated.
 #include <helper_functions.h>
 #include <helper_cuda.h>
 #include <thrust/transform_reduce.h>

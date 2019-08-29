@@ -122,7 +122,6 @@ void Histogram::AddToHistogram(GpuImage &input_image, Npp32s* cummulative_histog
     	input_image.NppInit();
     	BufferInit(input_image.npp_ROI);
     }
-    MyPrintWithDetails("");
 
     MyAssertTrue(input_image.is_in_memory_gpu, "The image to add to the histogram is not in gpu memory.");
 
@@ -135,16 +134,11 @@ void Histogram::AddToHistogram(GpuImage &input_image, Npp32s* cummulative_histog
 											  (Npp8u *)histogram_buffer));
 
     input_image.Wait();
-    MyPrintWithDetails("");
     for (int iBin = 0; iBin < histogram_n_bins; iBin ++)
     {
-    	wxPrintf("Hist value %d is %d\n",iBin,cummulative_histogram[iBin]);
-    	wxPrintf("Hist value %d is %d\n",iBin,histogram[iBin]);
-
     	cummulative_histogram[iBin] += histogram[iBin];
     }
 //    checkNppErrors(nppsAdd_32s_ISfs((const Npp32s*)histogram,cummulative_histogram, histogram_n_bins, (int)0));
-    MyPrintWithDetails("");
 
 }
 

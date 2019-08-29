@@ -774,7 +774,6 @@ bool MatchTemplateApp::DoCalculation()
 
 			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
-;
 			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 							pixel_size_search_range, pixel_size_step, pixel_size,
 							defocus_search_range, defocus_step, defocus1, defocus2,

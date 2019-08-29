@@ -67,6 +67,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 {
 
 
+	MyPrintWithDetails("");
 
 	this->first_search_position = first_search_position;
 	this->last_search_position  = last_search_position;
@@ -77,7 +78,8 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 	this->psi_step  = psi_step;
 	this->psi_max   = psi_max;
 
-  
+	MyPrintWithDetails("");
+
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
     this->template_reconstruction.CopyFrom(&template_reconstruction);
     this->input_image.CopyFrom(&input_image);
@@ -87,23 +89,32 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
     d_input_image.CopyHostToDevice();
 
     d_current_projection.Init(this->current_projection);
+	MyPrintWithDetails("");
 
     d_padded_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_max_intensity_projection.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_psi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_theta.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-    d_best_psi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+    d_best_phi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	MyPrintWithDetails("");
 
     d_sum = new GpuImage[nSums];
     d_sumSq = new GpuImage[nSums];
     is_non_zero_sum_buffer = new bool[nSums];
     is_allocated_sum_buffer = true;
+	MyPrintWithDetails("");
 
-//    wxPrintf("Setting up the histogram\n\n");
-//	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
-//	checkCudaErrors(cudaMallocManaged(&this->cummulative_histogram,histogram_number_of_bins*sizeof(Npp32s)));
-//	is_allocated_cummulative_histogram = true;
-//	checkCudaErrors(cudaMemsetAsync(this->cummulative_histogram,(int)0,histogram_number_of_bins*sizeof(Npp32s),cudaStreamPerThread));
+	for (int iSum = 0; iSum < nSums; iSum++)
+	{
+	  d_sum[iSum].Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	  d_sumSq[iSum].Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	}
+
+    wxPrintf("Setting up the histogram\n\n");
+	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
+	checkCudaErrors(cudaMallocManaged(&this->cummulative_histogram,histogram_number_of_bins*sizeof(Npp32s)));
+	is_allocated_cummulative_histogram = true;
+	checkCudaErrors(cudaMemsetAsync(this->cummulative_histogram,(int)0,histogram_number_of_bins*sizeof(Npp32s),cudaStreamPerThread));
 
 
 
@@ -129,20 +140,17 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //  d_input_image.ForwardFFT(); // This is for the standalone test
 //  template_reconstruction.ForwardFFT(); // This is for the standalone test
 //  template_reconstruction.SwapRealSpaceQuadrants(); // This is for the standalone test
-
 	// Make sure we are starting with zeros
 	d_max_intensity_projection.Zeros();
 	d_best_psi.Zeros();
 	d_best_phi.Zeros();
 	d_best_theta.Zeros();
 	d_padded_reference.Zeros();
-	d_current_projection.Zeros();
-
 
 	for (int iSum = 0; iSum < nSums; iSum++)
 	{
 	  d_sum[iSum].Zeros();
-	  d_sum[iSum].Zeros();
+	  d_sumSq[iSum].Zeros();
 	}
 
 	this->c_defocus = c_defocus;
@@ -157,7 +165,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 
 
-	unsigned long long ccc_counter = 0;
+	long ccc_counter = 0;
 	int current_search_position;
 	float average_on_edge;
 	float variance;
@@ -237,25 +245,23 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //		d_padded_reference.NppInit();
 
 		d_sum[0].AddImage(d_padded_reference);
-	    MyPrintWithDetails("");
-
 		d_sumSq[0].AddSquaredImage(d_padded_reference);
-	    MyPrintWithDetails("");
 
 
-//    	histogram.AddToHistogram(d_padded_reference,cummulative_histogram);
-
-        MyPrintWithDetails("");
+    	histogram.AddToHistogram(d_padded_reference,cummulative_histogram);
 
 
 
+        ccc_counter++;
+        total_number_of_cccs_calculated++;
 
 		// FIXME long long or just long?
-		unsigned long long powerOfTen = 10;
+		long powerOfTen = 10;
 		for (int iSum = 0; iSum < nSums; iSum++)
 		{
-			if (ccc_counter % powerOfTen == 0)
+			if ( ccc_counter % powerOfTen == 0)
 			{
+
 				d_sum[iSum+1].AddImage(d_sum[iSum]);
 				d_sum[iSum].Zeros();
 
@@ -270,14 +276,12 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 		}
 
 
-
       current_projection.is_in_real_space = false;
       d_padded_reference.is_in_real_space = true;
       cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
       
-      ccc_counter++;
-      total_number_of_cccs_calculated++;
+
 
 
 		} // loop over psi angles

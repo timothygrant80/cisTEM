@@ -146,7 +146,7 @@ GpuImage & GpuImage::operator = (const GpuImage *other_gpu_image)
    if(this != other_gpu_image)
    {
 
-		MyDebugAssertTrue(other_gpu_image->is_in_memory_gpu, "Other image Memory not allocated");
+		MyAssertTrue(other_gpu_image->is_in_memory_gpu, "Other image Memory not allocated");
 
 		if (is_in_memory_gpu == true)
 		{
@@ -338,8 +338,8 @@ void GpuImage::printVal(std::string msg, int idx)
 void GpuImage::MultiplyPixelWiseComplexConjugate(GpuImage &other_image)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-  MyDebugAssertFalse(is_in_real_space, "Conj only supports complex images");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertFalse(is_in_real_space, "Conj only supports complex images");
 
 //  NppInit();
 //  Conj();
@@ -355,8 +355,8 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
 
 float GpuImage::ReturnAverageOfRealValuesOnEdges()
 {
-	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-  MyDebugAssertTrue(dims.z == 1, "ReturnAverageOfRealValuesOnEdges only implemented in 2d");
+	MyAssertTrue(is_in_memory, "Memory not allocated");
+  MyAssertTrue(dims.z == 1, "ReturnAverageOfRealValuesOnEdges only implemented in 2d");
 
   *tmpVal = 5.0f;
   ReturnSumOfRealValuesOnEdgesKernel<< <1, 1, 0, cudaStreamPerThread>> >(real_values_gpu, dims, padding_jump_value, tmpVal);
@@ -590,7 +590,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 {
 
   // 
-  MyDebugAssertTrue(is_in_memory_gpu, "Prior to making mask, GpuImage must be on device");
+  MyAssertTrue(is_in_memory_gpu, "Prior to making mask, GpuImage must be on device");
   long address = 0;
   bool x_is_even = IsEven(dims.x);
   int i,j,k,jj,kk;
@@ -698,7 +698,7 @@ __global__ void MultiplyPixelWiseComplexConjugateKernel(cufftComplex* ref_comple
 void GpuImage::MipPixelWise(GpuImage &other_image)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   ReturnLaunchParamters(dims, true);
   MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> > (real_values_gpu, other_image.real_values_gpu, this->dims);
 
@@ -721,7 +721,7 @@ void GpuImage::MipPixelWise(GpuImage &other_image, GpuImage &psi, GpuImage &phi,
                             float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   ReturnLaunchParamters(dims, true);
   MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(real_values_gpu, other_image.real_values_gpu, 
                                                                        psi.real_values_gpu,phi.real_values_gpu,theta.real_values_gpu,defocus.real_values_gpu,pixel.real_values_gpu,
@@ -759,7 +759,7 @@ void GpuImage::MipPixelWise(GpuImage &other_image, GpuImage &psi, GpuImage &phi,
                             float c_psi, float c_phi, float c_theta)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   ReturnLaunchParamters(dims, true);
   MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(real_values_gpu, other_image.real_values_gpu, 
                                                                        psi.real_values_gpu,phi.real_values_gpu,theta.real_values_gpu,
@@ -794,7 +794,7 @@ __global__ void MipPixelWiseKernel(cufftReal* mip, cufftReal *correlation_output
 
 void GpuImage::Abs()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
   NppInit();
   checkNppErrors(nppiAbs_32f_C1IR((Npp32f *)real_values_gpu, pitch, npp_ROI));
@@ -803,8 +803,8 @@ void GpuImage::Abs()
 void GpuImage::AbsDiff(GpuImage &other_image)
 {
   // In place abs diff (see overload for out of place)
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyDebugAssertTrue(other_image.is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(other_image.is_in_memory_gpu, "Memory not allocated");
 
   BufferInit(b_image);
   NppInit();
@@ -819,9 +819,9 @@ void GpuImage::AbsDiff(GpuImage &other_image)
 void GpuImage::AbsDiff(GpuImage &other_image, GpuImage &output_image)
 {
   // In place abs diff (see overload for out of place)
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyDebugAssertTrue(other_image.is_in_memory_gpu, "Memory not allocated");
-	MyDebugAssertTrue(output_image.is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(other_image.is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(output_image.is_in_memory_gpu, "Memory not allocated");
 
 
   NppInit();
@@ -834,7 +834,7 @@ void GpuImage::AbsDiff(GpuImage &other_image, GpuImage &output_image)
 
 void GpuImage::Min()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_min);
@@ -842,7 +842,7 @@ void GpuImage::Min()
 }
 void GpuImage::MinAndCoords()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_minIDX);
@@ -850,7 +850,7 @@ void GpuImage::MinAndCoords()
 }
 void GpuImage::Max()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_max);
@@ -858,7 +858,7 @@ void GpuImage::Max()
 }
 void GpuImage::MaxAndCoords()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_maxIDX);
@@ -866,7 +866,7 @@ void GpuImage::MaxAndCoords()
 }
 void GpuImage::MinMax()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_minmax);
@@ -874,7 +874,7 @@ void GpuImage::MinMax()
 }
 void GpuImage::MinMaxAndCoords()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_minmaxIDX);
@@ -883,7 +883,7 @@ void GpuImage::MinMaxAndCoords()
 
 void GpuImage::Mean()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_mean);
@@ -894,7 +894,7 @@ void GpuImage::Mean()
 
 void GpuImage::MeanStdDev()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	BufferInit(b_meanstddev);
@@ -905,7 +905,7 @@ void GpuImage::MeanStdDev()
 
 void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
   NppInit();
   checkNppErrors(nppiMul_32f_C1IR((const Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI));
@@ -915,7 +915,7 @@ void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 
 void GpuImage::AddConstant(const float add_val)
 {
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   NppInit();
   checkNppErrors(nppiAddC_32f_C1IR((const Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI));
@@ -924,7 +924,7 @@ void GpuImage::AddConstant(const float add_val)
 
 void GpuImage::SquareRealValues()
 {
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   NppInit();
   checkNppErrors(nppiSqr_32f_C1IR((Npp32f *)real_values_gpu, pitch, npp_ROI));
@@ -933,7 +933,7 @@ void GpuImage::SquareRealValues()
 
 void GpuImage::SquareRootRealValues()
 {
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   NppInit();
   checkNppErrors(nppiSqrt_32f_C1IR((Npp32f *)real_values_gpu, pitch, npp_ROI));
@@ -942,7 +942,7 @@ void GpuImage::SquareRootRealValues()
 
 void GpuImage::LogarithmRealValues()
 {
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   NppInit();
   checkNppErrors(nppiLn_32f_C1IR((Npp32f *)real_values_gpu, pitch, npp_ROI));
@@ -951,7 +951,7 @@ void GpuImage::LogarithmRealValues()
 
 void GpuImage::ExponentiateRealValues()
 {
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   NppInit();
   checkNppErrors(nppiExp_32f_C1IR((Npp32f *)real_values_gpu, pitch, npp_ROI));
@@ -960,7 +960,7 @@ void GpuImage::ExponentiateRealValues()
 
 void GpuImage::CountInRange(float lower_bound, float upper_bound)
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
 	checkNppErrors(nppiCountInRange_32f_C1R((const Npp32f *)real_values_gpu, pitch, npp_ROI, &number_of_pixels_in_range,
@@ -971,7 +971,7 @@ void GpuImage::CountInRange(float lower_bound, float upper_bound)
 float GpuImage::ReturnSumOfRealValues()
 {
 
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   
   Npp64f sum_val;
 
@@ -984,7 +984,9 @@ float GpuImage::ReturnSumOfRealValues()
 void GpuImage::AddImage(GpuImage &other_image)
 {
   // Add the real_values_gpu into a double array
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(other_image.is_in_memory_gpu, "other_image Memory not allocated");
+
 
   NppInit();
   checkNppErrors(nppiAdd_32f_C1IR((const Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI));
@@ -994,7 +996,7 @@ void GpuImage::AddImage(GpuImage &other_image)
 void GpuImage::AddSquaredImage(GpuImage &other_image)
 {
   // Add the real_values_gpu into a double array
-  MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
   NppInit();
   checkNppErrors(nppiAddSquare_32f_C1IR((const Npp32f*)other_image.real_values_gpu,  pitch, (Npp32f*)real_values_gpu,  pitch, npp_ROI));
@@ -1003,7 +1005,7 @@ void GpuImage::AddSquaredImage(GpuImage &other_image)
 
 void GpuImage::MultiplyByConstant(float scale_factor)
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 
   NppInit();
@@ -1019,8 +1021,8 @@ void GpuImage::MultiplyByConstant(float scale_factor)
 
 void GpuImage::Conj()
 {
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyDebugAssertFalse(is_in_real_space, "Conj only supports complex images");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertFalse(is_in_real_space, "Conj only supports complex images");
 
   float scale_factor = -1.0f;
   NppInit();
@@ -1031,7 +1033,7 @@ void GpuImage::Conj()
 void GpuImage::Zeros()
 {
  
-  MyDebugAssertTrue(is_meta_data_initialized, "Host meta data has not been copied");
+  MyAssertTrue(is_meta_data_initialized, "Host meta data has not been copied");
 
   if ( ! is_in_memory_gpu )
   {
@@ -1047,7 +1049,7 @@ void GpuImage::Zeros()
 void GpuImage::CopyHostToDevice()
 {
  
-  MyDebugAssertTrue(is_in_memory, "Host memory not allocated");
+  MyAssertTrue(is_in_memory, "Host memory not allocated");
 
   if ( ! is_in_memory_gpu )
   {
@@ -1065,7 +1067,7 @@ void GpuImage::CopyHostToDevice()
 void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 {
  
-  MyDebugAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
   // TODO other asserts on size etc.
   checkCudaErrors(cudaMemcpyAsync(pinnedPtr, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
 //  checkCudaErrors(cudaMemcpyAsync(real_values, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
@@ -1083,7 +1085,7 @@ void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 void GpuImage::CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory)
 {
  
-  MyDebugAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
+  MyAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
   // TODO other asserts on size etc.
 
   // TODO see if it is worth pinning the memory
@@ -1107,7 +1109,7 @@ void GpuImage::CopyVolumeHostToDevice()
 
   // FIXME not working
     bool is_working = false;
-    MyDebugAssertTrue(is_working, "CopyVolumeHostToDevice is not properly worked out");
+    MyAssertTrue(is_working, "CopyVolumeHostToDevice is not properly worked out");
 
 		d_pitchedPtr = { 0 };
 		d_extent = make_cudaExtent(dims.x * sizeof(float), dims.y, dims.z);
@@ -1128,7 +1130,7 @@ void GpuImage::CopyVolumeDeviceToHost(bool free_gpu_memory, bool unpin_host_memo
 
   // FIXME not working
     bool is_working = false;
-    MyDebugAssertTrue(is_working, "CopyVolumeDeviceToHost is not properly worked out");
+    MyAssertTrue(is_working, "CopyVolumeDeviceToHost is not properly worked out");
 
     if ( ! is_in_memory )
     {
@@ -1158,7 +1160,7 @@ void GpuImage::CopyVolumeDeviceToHost(bool free_gpu_memory, bool unpin_host_memo
 void GpuImage::ForwardFFT(bool should_scale)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 
 	if ( ! is_fft_planned )
 	{
@@ -1194,7 +1196,7 @@ void GpuImage::ForwardFFT(bool should_scale)
 void GpuImage::BackwardFFT()
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 
   if ( ! is_fft_planned )
   {
@@ -1221,7 +1223,7 @@ void GpuImage::Wait()
 void GpuImage::SwapRealSpaceQuadrants()
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 
 	bool must_fft = false;
 
@@ -1293,7 +1295,7 @@ void GpuImage::SwapRealSpaceQuadrants()
 void GpuImage::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 
 	bool need_to_fft = false;
 	if (is_in_real_space == true)
@@ -1342,8 +1344,8 @@ d_ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index,
                                                 int logical_x_dimension,
                                                 int physical_address_of_box_center_x)
 {
-//	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-//	MyDebugAssertTrue(physical_index <= physical_upper_bound_complex_x, "index out of bounds");
+//	MyAssertTrue(is_in_memory, "Memory not allocated");
+//	MyAssertTrue(physical_index <= physical_upper_bound_complex_x, "index out of bounds");
 
     //if (physical_index >= physical_index_of_first_negative_frequency_x)
     if (physical_index > physical_address_of_box_center_x)
@@ -1359,8 +1361,8 @@ d_ReturnFourierLogicalCoordGivenPhysicalCoord_Y(int physical_index,
                                                 int logical_y_dimension,
                                                 int physical_index_of_first_negative_frequency_y )
 {
-//	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-//	MyDebugAssertTrue(physical_index <= physical_upper_bound_complex_y, "index out of bounds");
+//	MyAssertTrue(is_in_memory, "Memory not allocated");
+//	MyAssertTrue(physical_index <= physical_upper_bound_complex_y, "index out of bounds");
 
     if (physical_index >= physical_index_of_first_negative_frequency_y)
     {
@@ -1376,8 +1378,8 @@ d_ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index,
                                                 int logical_z_dimension,
                                                 int physical_index_of_first_negative_frequency_z )
 {
-//	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-//	MyDebugAssertTrue(physical_index <= physical_upper_bound_complex_z, "index out of bounds");
+//	MyAssertTrue(is_in_memory, "Memory not allocated");
+//	MyAssertTrue(physical_index <= physical_upper_bound_complex_z, "index out of bounds");
 
     if (physical_index >= physical_index_of_first_negative_frequency_z)
     {
@@ -1540,9 +1542,9 @@ void GpuImage::ClipInto(GpuImage *other_image, float wanted_padding_value,
                         int wanted_coordinate_of_box_center_z)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyDebugAssertTrue(other_image->is_in_memory_gpu, "Other image Memory not allocated");
-	MyDebugAssertFalse((! is_in_real_space) && (wanted_coordinate_of_box_center_x != 0 || wanted_coordinate_of_box_center_y != 0 || wanted_coordinate_of_box_center_z != 0), "Cannot clip off-center in Fourier space");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(other_image->is_in_memory_gpu, "Other image Memory not allocated");
+	MyAssertFalse((! is_in_real_space) && (wanted_coordinate_of_box_center_x != 0 || wanted_coordinate_of_box_center_y != 0 || wanted_coordinate_of_box_center_z != 0), "Cannot clip off-center in Fourier space");
 
 
   int3 wanted_coordinate_of_box_center = make_int3(wanted_coordinate_of_box_center_x, 
@@ -1560,7 +1562,7 @@ void GpuImage::ClipInto(GpuImage *other_image, float wanted_padding_value,
 	if (is_in_real_space == true)
 	{
 
-		MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
+		MyAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
 
     ReturnLaunchParamters(other_image->dims, true);
 
@@ -1703,7 +1705,7 @@ void GpuImage::ClipInto(GpuImage *other_image, float wanted_padding_value,
 void GpuImage::QuickAndDirtyWriteSlices(std::string filename, int first_slice, int last_slice)
 {
 
-	MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   Image buffer_img;
   buffer_img.Allocate(dims.x, dims.y, dims.z, true);
 
@@ -1852,7 +1854,7 @@ void GpuImage::Deallocate()
 void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space)
 {
 
-	MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
+	MyAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
 
 	// check to see if we need to do anything?
 

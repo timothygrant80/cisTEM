@@ -10,7 +10,7 @@ NVCCFLAGS   :=
 INCLUDES    :=
 LDFLAGS     :=
 DEFINES     :=
-NVCCFLAGS += --default-stream per-thread -m64 -G
+NVCCFLAGS += --default-stream per-thread -m64 
 NVCCFLAGS += --disable-warnings -Xcompiler= -std=c++11 -Xlinker -lcudart_static,-lcufft_static,-lcublas_static,-lcurand_static,-lnppc_static,-lnppial_static,-lnppist_static,-lculibos
 NVCCFLAGS += -lfftw3f,-lwx_gtk2u_richtext-3.0,-lwx_gtk2u_aui-3.0,-lwx_gtk2u_xrc-3.0,-lwx_gtk2u_html-3.0,-lwx_gtk2u_qa-3.0,lwx_gtk2u_adv-3.0,-lwx_gtk2u_core-3.0,-lwx_baseu_xml-3.0,-lwx_baseu_net-3.0,-lwx_baseu-3.0,-ltiff,-pthread,-fopenmp -gencode arch=compute_70,code=sm_70
 

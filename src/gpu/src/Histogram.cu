@@ -7,6 +7,7 @@
 
 #include "gpu_core_headers.h"
 
+__global__ void histogram_final_accum(const unsigned int *in, int n, unsigned int *out);
 
 Histogram::Histogram()
 {
@@ -138,8 +139,7 @@ void Histogram::AddToHistogram(GpuImage &input_image, Npp32s* cummulative_histog
 //    {
 //    	cummulative_histogram[iBin] += histogram[iBin];
 //    }
-    checkNppErrors(nppsAdd_32s_ISfs((const Npp32s*)histogram,(Npp32s*)cummulative_histogram, (int)histogram_n_bins, (int)0));
+    checkNppErrors(nppsAdd_32s_ISfs((const Npp32s*)histogram, (Npp32s*)cummulative_histogram, (int)histogram_n_bins, (int)0));
 
 }
-
 

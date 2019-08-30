@@ -23,7 +23,7 @@
 const int MAX_GPU_COUNT = 32;
 
 
-#define checkNppErrors(npp_stat, ...) {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d\n", _cudaGetErrorEnum(npp_stat), __LINE__); DEBUG_ABORT}}
+#define checkNppErrors(npp_stat, ...) {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d in file %s\n", _cudaGetErrorEnum(npp_stat), __LINE__,__FILE__); DEBUG_ABORT}}
 #define checkCudaEvent(event_handle, ...) {if (cudaEventQuery(event_handle) != cudaSuccess) {return false; else return true;}}
 
 #if HEAVY_ERROR_CHECKING

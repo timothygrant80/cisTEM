@@ -62,10 +62,15 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 
 	}
 
+	wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n",this->vol_angX , this->vol_angY , this->vol_angZ);
+
 
 	this->vol_oX = floor(this->vol_nX / 2);
 	this->vol_oY = floor(this->vol_nY / 2);
 	this->vol_oZ = floor(this->vol_nZ / 2);
+
+	wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n",this->vol_angX , this->vol_angY , this->vol_angZ);
+
 }
 
 void Water::SeedWaters3d()
@@ -162,9 +167,7 @@ void Water::SeedWaters3d()
 void Water::ShakeWaters3d(int number_of_threads)
 {
 
-	// Try just using the functions output, which may not be quite perfect in distribution, but close.
-    std::random_device rd;  //Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+
 
 
 	float azimuthal;
@@ -173,6 +176,10 @@ void Water::ShakeWaters3d(int number_of_threads)
 
 	const float random_sigma = (dose_per_frame); // TODO check this. The point is to convert an rms displacement in 3D to 2D
 
+
+	// Try just using the functions output, which may not be quite perfect in distribution, but close.
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
     std::normal_distribution<float>  norm_dist_mag(0.0,random_sigma*1.5);
 
 	wxPrintf("Using a rmsd of %f for water perturbation\n", random_sigma);
@@ -184,6 +191,7 @@ void Water::ShakeWaters3d(int number_of_threads)
 	float polar_angle = 0;
 
 
+	// TODO benchmark this
 	int local_threads;
 	if (number_of_threads > 4)
 	{
@@ -195,7 +203,6 @@ void Water::ShakeWaters3d(int number_of_threads)
 	}
 
 	#pragma omp parallel for num_threads(local_threads) private(dr,dx,dy,dz,norm_dist_mag)
-
 	for (long iWater = 0; iWater < number_of_waters; iWater++)
 	{
 

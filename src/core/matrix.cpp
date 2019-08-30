@@ -34,7 +34,7 @@
 
 RotationMatrix::RotationMatrix()
 {
-	SetToConstant(0.0);
+	SetToConstant(0.0f);
 }
 
 RotationMatrix RotationMatrix::operator + (const RotationMatrix &other)

@@ -205,7 +205,13 @@ noinst_LIBRARIES = libcore.a libguicore.a
 bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates find_dqe niko_test warp_to_cistem
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += match_template refine_ctf refine_template make_template_result  scattering_potential 
+bin_PROGRAMS += match_template refine_ctf refine_template make_template_result  scattering_potential
+endif
+
+link_gpu_library=
+if USEGPU_AM
+bin_PROGRAMS += gpu_util_test
+link_gpu_library += gpu/lib/libcisTEMGPU.a
 endif
 
 
@@ -546,6 +552,7 @@ warp_to_cistem_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 warp_to_cistem_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
+
 make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp
 make_template_result_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -554,17 +561,18 @@ make_template_result_LDADD = libcore.a $(WX_LIBS_BASE)
 match_template_SOURCES = programs/match_template/match_template.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-match_template_LDADD = libcore.a $(WX_LIBS_BASE)
+match_template_LDADD = $(link_gpu_library) libcore.a $(WX_LIBS_BASE)
 
 refine_ctf_SOURCES = programs/refine_ctf/refine_ctf.cpp
 refine_ctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine_ctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine_ctf_LDADD = libcore.a $(WX_LIBS_BASE)
 
-scattering_potential_SOURCES = programs/scattering_potential/scattering_potential.cpp 
+scattering_potential_SOURCES =  programs/scattering_potential/scattering_potential.cpp 
 scattering_potential_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 scattering_potential_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 scattering_potential_LDADD = libcore.a $(WX_LIBS_BASE)
+
 
 refine_template_SOURCES = programs/refine_template/refine_template.cpp
 refine_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -572,3 +580,15 @@ refine_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
 endif
+
+if USEGPU_AM
+
+gpu_util_test_SUFFIXES = .cpp 
+gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp 
+gpu_util_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+gpu_util_test_LDADD =  $(link_gpu_library) libcore.a $(WX_LIBS_BASE)
+
+endif
+
+

@@ -21,18 +21,65 @@ CXXFLAGS="$INPUT_CXXFLAGS"
 CPPFLAGS="$INPUT_CPPFLAGS"
 
 # set up initial flags
+AC_MSG_NOTICE([Setting up initial flags])
+
+
+# check to see if compiler warnings are desired.
+WALLON=""
+AC_ARG_WITH([warnings-on], [Enable compiler warnings], [WALLON="-Wall"])
+
 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"		
-	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -Wall -pipe -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-	
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WALLON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"		
+	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WALLON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+
 	#sqlite needs dl on gcc
 	
 	LIBS="$LIBS -ldl"
 fi
+
+want_cuda="no"
+###############################
+# BEGIN CUDA CHECKS AND SETS
+###############################
+
+AC_MSG_NOTICE([Checking for gpu request and vars])
+AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
+[
+	with_cuda=$withval
+	if test "$withval" = "no"
+	then
+		want_cuda="no"
+	elif test "$withval" = "yes"
+	then
+		want_cuda="yes"
+	else
+		want_cuda="yes"
+		cuda_home_path=$withval
+	fi
+], [ want_cuda="no"] )
+
+
+if test "$want_cuda" = "yes" 
+then
+	# Set conditional and run macro
+	
+	AX_CUDA
+	
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS -DUSEGPU"
+    CXXFLAGS="$CXXFLAGS $CUDA_CFLAGS -DUSEGPU"	
+    LIBS="$LIBS $CUDA_LIBS"	
+fi
+
+##############################
+# END CUDA CHECKS AND SETS
+##############################
+
+AM_CONDITIONAL([USEGPU_AM], [test "$want_cuda" = "yes"])
 
 #
 # What kind of OS are we on?
@@ -121,8 +168,8 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -Wall $INPUT_CPPFLAGS"
-  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -Wall $INPUT_CXXFLAGS"
+  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $WALLON $INPUT_CPPFLAGS"
+  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $WALLON $INPUT_CXXFLAGS"
   fi
   ])
   

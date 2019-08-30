@@ -151,7 +151,7 @@ void MatchTemplatePanel::ResetDefaults()
 	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.0);
 	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.01);
 	EstimatedParticleSizeTextCtrl->ChangeValueFloat(200.0);
-	SymmetryComboBox->SetSelection(0);
+
 //	AssetGroup active_group;
 	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
 	if (active_group.number_of_members > 0)
@@ -416,8 +416,11 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	float defocus_step = DefocusSearchStepNumericCtrl->ReturnValue();
 	float pixel_size_search_range = PixelSizeSearchRangeNumericCtrl->ReturnValue();
 	float pixel_size_step = PixelSizeSearchStepNumericCtrl->ReturnValue();
-	wxString my_symmetry = SymmetryComboBox->GetValue();
+	wxString wanted_symmetry = SymmetryComboBox->GetValue();
+	wanted_symmetry = SymmetryComboBox->GetValue().Upper();
 	float high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue();
+
+	wxPrintf("\n\nWanted symmetry %s, Defocus Range %3.3f, Defocus Step %3.3f\n",wanted_symmetry,defocus_search_range,defocus_step);
 
 	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
 
@@ -430,16 +433,23 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
 	current_image_euler_search = new EulerSearch;
-	current_image_euler_search->InitGrid("C1", wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+	current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
 
+	if (wanted_symmetry.StartsWith("C1"))
+	{
 	if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 	{
 		current_image_euler_search->theta_max = 180.0f;
+	}
 	}
 
 	current_image_euler_search->CalculateGridSearchPositions(false);
 
 
+#ifdef USEGPU
+	number_of_jobs_per_image_in_gui = 1;
+	int number_of_jobs = number_of_processes;
+#else
 	if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
 	else
 	if (current_image_euler_search->number_of_search_positions > number_of_processes * 250) number_of_jobs_per_image_in_gui = number_of_processes * 10;
@@ -448,6 +458,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
 
 	delete current_image_euler_search;
+#endif
 
 // Some settings for testing
 //	float defocus_search_range = 1200.0f;
@@ -483,13 +494,14 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 		resolution_limit = current_image->pixel_size * 2.0f;
 		current_image_euler_search = new EulerSearch;
-		current_image_euler_search->InitGrid("C1", wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
-
-		if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+		current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+		if (wanted_symmetry.StartsWith("C1"))
 		{
-			current_image_euler_search->theta_max = 180.0f;
+			if (current_image_euler_search->test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+			{
+				current_image_euler_search->theta_max = 180.0f;
+			}
 		}
-
 		current_image_euler_search->CalculateGridSearchPositions(false);
 
 		number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
@@ -537,7 +549,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			wxString best_pixel_size_output_file = "/dev/null";
 			wxString scaled_mip_output_file ="/dev/null";
 			wxString correlation_variance_output_file = "/dev/null";
-//			wxString my_symmetry = "C1";
+			wxString my_symmetry = wanted_symmetry; //"C1";
 			float in_plane_angular_step = wanted_in_plane_angular_step;
 			wxString output_histogram_file = "/dev/null";
 
@@ -623,6 +635,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		GroupComboBox->Enable(false);
 		Layout();
 	}
+
 
 	ProgressBar->Pulse();
 }

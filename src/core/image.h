@@ -8,6 +8,7 @@ class ReconstructedVolume;
 class EulerSearch;
 class ResolutionStatistics;
 class RotationMatrix;
+class MyApp;
 
 class Image {
 
@@ -149,6 +150,7 @@ public:
 	void Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
 	void Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels = 0.0);
 	void Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
+	void Skew2D(Image &skewed_image, float height_offset, float skew_axis, float skew_angle);
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
@@ -178,7 +180,7 @@ public:
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 	void AddSlices(Image &sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
-	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar);
+	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search = 0, int last_position_to_search = INT_MAX, MyApp *app_for_result = NULL);
 
 	inline long ReturnVolumeInRealSpace()
 	{
@@ -364,7 +366,7 @@ public:
 	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
 	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
-	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false);
+	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);
 	void ApplyCurveFilter(Curve *filter_to_apply, float resolution_limit = 1.0);
 	void ApplyCurveFilterUninterpolated(Curve *filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
 	void MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
@@ -403,6 +405,10 @@ public:
 	void GetMinMax(float &min_value, float &max_value);
 
 	void RandomisePhases(float wanted_radius_in_reciprocal_pixels);
+
+	float ReturnCorrelationBetweenTwoHorizontalLines(int first_line, int second_line); // for relion repeated line edge detection
+	float ReturnCorrelationBetweenTwoVerticalLines(int first_line, int second_line);
+	bool  ContainsRepeatedLineEdges();
 
 	float GetCorrelationWithCTF(CTF ctf);
 	void SetupQuickCorrelationWithCTF(CTF ctf, int &number_of_values, double &norm_image, double &image_mean, int *addresses, float *spatial_frequency_squared, float *azimuth);

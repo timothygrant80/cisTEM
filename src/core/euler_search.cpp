@@ -30,6 +30,9 @@ EulerSearch::EulerSearch()
 
 EulerSearch::EulerSearch(const EulerSearch &other_search) // copy constructor
 {
+	// To avoid segfault in the copy
+	list_of_search_parameters = NULL;
+	list_of_best_parameters = NULL;
 	*this = other_search;
 }
 

@@ -414,12 +414,12 @@ inline bool DoesFileExistWithWait(wxString filename, int max_wait_time_in_second
 
 inline float rad_2_deg(float radians)
 {
-  return radians / (PI / 180.);
+  return radians / (PIf / 180.);
 }
 
 inline float deg_2_rad(float degrees)
 {
-  return degrees * PI / 180.;
+  return degrees * PIf / 180.;
 }
 
 inline float sinc(float radians)

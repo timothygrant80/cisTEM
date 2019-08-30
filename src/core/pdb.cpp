@@ -84,9 +84,11 @@ PDB::PDB()
 	my_atoms.Alloc(1);
 	my_atoms.Add(dummy_atom,1);
 
+    SetEmpty();
+
 }
 
-PDB::PDB(long number_of_non_water_atoms, float cubic_sizeint, int minimum_paddeding_x_and_y, double minimum_thickness_z)
+PDB::PDB(long number_of_non_water_atoms, float cubic_size, int minimum_paddeding_x_and_y, double minimum_thickness_z)
 {
 
 	input_file_stream = NULL;
@@ -99,9 +101,13 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_sizeint, int minimum_padded
 	my_atoms.Add(dummy_atom,number_of_non_water_atoms);
 	this->cubic_size = cubic_size;
 
+	this->use_provided_com = false;
+
+
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
 	this->MIN_THICKNESS  = minimum_thickness_z;
 
+    SetEmpty();
 
 
 }
@@ -113,13 +119,39 @@ PDB::PDB(wxString Filename, long wanted_access_type, long wanted_records_per_lin
 	output_file_stream = NULL;
 	output_text_stream = NULL;
 
+	this->use_provided_com = false;
+
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
 	this->MIN_THICKNESS  = minimum_thickness_z;
 
 
-
+    SetEmpty();
 	Open(Filename, wanted_access_type, wanted_records_per_line);
 }
+
+PDB::PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *COM)
+{
+	input_file_stream = NULL;
+	input_text_stream = NULL;
+	output_file_stream = NULL;
+	output_text_stream = NULL;
+
+	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
+	this->MIN_THICKNESS  = minimum_thickness_z;
+
+	this->use_provided_com = true;
+
+	for (int iCOM = 0; iCOM < 3; iCOM++)
+	{
+		this->center_of_mass[iCOM] = COM[iCOM];
+		wxPrintf("Using provided center of mass %d %3.3f\n",iCOM,this->center_of_mass[iCOM]);
+	}
+
+
+    SetEmpty();
+	Open(Filename, wanted_access_type, wanted_records_per_line);
+}
+
 
 PDB::~PDB()
 {
@@ -173,7 +205,7 @@ void PDB::Open(wxString Filename, long wanted_access_type, long wanted_records_p
 		DEBUG_ABORT;
 	}
 
-
+    SetEmpty();
 	Init();
 }
 
@@ -202,24 +234,29 @@ void PDB::Close()
 	output_text_stream = NULL;
 }
 
-void PDB::Init()
+void PDB::SetEmpty()
 {
-
 	this->vol_nX = 0;
 	this->vol_nY = 0;
 	this->vol_nZ = 0;
+	this->vol_oX = 0;
+	this->vol_oY = 0;
+	this->vol_oZ = 0;
 	this->vol_angX = 0;
 	this->vol_angY = 0;
 	this->vol_angZ = 0;
 	this->atomic_volume = 0;
 	this->number_of_particles_initialized = 0;
-	this->center_of_mass[0] = 0;
-	this->center_of_mass[1] = 0;
-	this->center_of_mass[2] = 0;
+	if (! use_provided_com)
+	{
+		this->center_of_mass[0] = 0;
+		this->center_of_mass[1] = 0;
+		this->center_of_mass[2] = 0;
+	}
+}
 
-
-
-
+void PDB::Init()
+{
 
 
 
@@ -570,24 +607,30 @@ void PDB::Init()
 
 		Rewind();
 
+
+
 		// Finally, calculate the center of mass of the PDB object.
-		for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
+		if (! use_provided_com)
 		{
-
-			center_of_mass[0] += my_atoms.Item(current_atom_number).x_coordinate;
-			center_of_mass[1] += my_atoms.Item(current_atom_number).y_coordinate;
-			center_of_mass[2] += my_atoms.Item(current_atom_number).z_coordinate;
-
-
-		}
-
-		for (current_atom_number = 0; current_atom_number < 3; current_atom_number++)
-		{
-			center_of_mass[current_atom_number] /= number_of_atoms;
-			if (std::isnan(center_of_mass[current_atom_number]))
+			for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
 			{
-				wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z",current_atom_number);
-				throw;
+
+				center_of_mass[0] += my_atoms.Item(current_atom_number).x_coordinate;
+				center_of_mass[1] += my_atoms.Item(current_atom_number).y_coordinate;
+				center_of_mass[2] += my_atoms.Item(current_atom_number).z_coordinate;
+
+
+			}
+
+
+			for (current_atom_number = 0; current_atom_number < 3; current_atom_number++)
+			{
+				center_of_mass[current_atom_number] /= number_of_atoms;
+				if (std::isnan(center_of_mass[current_atom_number]))
+				{
+					wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z",current_atom_number);
+					throw;
+				}
 			}
 		}
 
@@ -619,6 +662,7 @@ void PDB::Init()
 		output_file_stream = new wxFileOutputStream(text_filename);
 		output_text_stream = new wxTextOutputStream(*output_file_stream);
 	}
+
 
 
 }
@@ -946,11 +990,12 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	}
 
 
+
 	this->vol_angX = max_x-min_x+ MIN_PADDING_XY;
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.15*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.35*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
 	if (this->cubic_size > 1)
 	{
@@ -967,14 +1012,19 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 		if (IsEven(this->vol_nZ) == false) this->vol_nZ += 1;
 	}
 
+
 	// Adjust the angstrom dimension to match the extended values
 	this->vol_angX = this->vol_nX * wanted_pixel_size;
 	this->vol_angY = this->vol_nY * wanted_pixel_size;
 	this->vol_angZ = this->vol_nZ * wanted_pixel_size;
 
+
+
 	this->vol_oX = floor(this->vol_nX / 2);
 	this->vol_oY = floor(this->vol_nY / 2);
 	this->vol_oZ = floor(this->vol_nZ / 2);
+
+
 
 	wxPrintf("vol_angZ = %3.3e\n angstroms", this->vol_angZ);
 

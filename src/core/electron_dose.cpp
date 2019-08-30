@@ -40,13 +40,20 @@ void ElectronDose::Init(float wanted_acceleration_voltage, float wanted_pixel_si
 	if (wanted_acceleration_voltage < 201 && wanted_acceleration_voltage > 199)
 	{
 		acceleration_voltage = 200.0;
-		voltage_scaling_factor = 0.8;
+		voltage_scaling_factor = 0.8; // if this is based on the ratio of the wavelengths, shouldn't it be 0.785?
+	}
+	else
+	if (wanted_acceleration_voltage < 101 && wanted_acceleration_voltage >  99)
+	{
+		acceleration_voltage = 100.0;
+		voltage_scaling_factor = 0.532;
 	}
 	else
 	{
 		wxPrintf("Error: Unsupported voltage (%f)\n\n", wanted_acceleration_voltage);
 		DEBUG_ABORT;
 	}
+
 
 	pixel_size = wanted_pixel_size;
 

@@ -1,6 +1,6 @@
 #include "gpu_core_headers.h"
 
-
+#define DO_HISTOGRAM true
 
 TemplateMatchingCore::TemplateMatchingCore() 
 {
@@ -26,11 +26,12 @@ TemplateMatchingCore::~TemplateMatchingCore()
 		delete [] d_sumSq;
 		delete [] is_non_zero_sum_buffer;
 	}
-
-	if (is_allocated_cummulative_histogram)
-	{
-		checkCudaErrors(cudaFree(cummulative_histogram));
-	}
+// FIXME
+//	if (is_allocated_cummulative_histogram)
+//	{
+//		checkCudaErrors(cudaFree((void *)cummulative_histogram));
+//		checkCudaErrors(cudaFreeHost((void *)h_cummulative_histogram));
+//	}
 
 };
 
@@ -67,7 +68,6 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 {
 
 
-	MyPrintWithDetails("");
 
 	this->first_search_position = first_search_position;
 	this->last_search_position  = last_search_position;
@@ -78,7 +78,6 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 	this->psi_step  = psi_step;
 	this->psi_max   = psi_max;
 
-	MyPrintWithDetails("");
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
     this->template_reconstruction.CopyFrom(&template_reconstruction);
@@ -89,20 +88,17 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
     d_input_image.CopyHostToDevice();
 
     d_current_projection.Init(this->current_projection);
-	MyPrintWithDetails("");
 
     d_padded_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_max_intensity_projection.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_psi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_theta.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_phi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-	MyPrintWithDetails("");
 
     d_sum = new GpuImage[nSums];
     d_sumSq = new GpuImage[nSums];
     is_non_zero_sum_buffer = new bool[nSums];
     is_allocated_sum_buffer = true;
-	MyPrintWithDetails("");
 
 	for (int iSum = 0; iSum < nSums; iSum++)
 	{
@@ -110,11 +106,14 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 	  d_sumSq[iSum].Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
 	}
 
+
     wxPrintf("Setting up the histogram\n\n");
 	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
-	checkCudaErrors(cudaMallocManaged(&this->cummulative_histogram,histogram_number_of_bins*sizeof(Npp32s)));
+	checkCudaErrors(cudaMalloc((void **)&cummulative_histogram,histogram_number_of_bins*sizeof(Npp32s)));
+	checkCudaErrors(cudaMallocHost((void **)&h_cummulative_histogram, histogram_number_of_bins*sizeof(Npp32s)));
 	is_allocated_cummulative_histogram = true;
 	checkCudaErrors(cudaMemsetAsync(this->cummulative_histogram,(int)0,histogram_number_of_bins*sizeof(Npp32s),cudaStreamPerThread));
+
 
 
 
@@ -222,10 +221,14 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //      std::string fileNameOUT4 = "/tmp/checkPaddedRef" + std::to_string(threadIDX) + ".mrc";
 //      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT4, 1, 1); 
 
-      d_padded_reference.ForwardFFT(false);
+      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+      d_padded_reference.ForwardFFT();
+      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
       // The input image should have zero mean, so multipling also zeros the mean of the ref.
       d_padded_reference.MultiplyPixelWiseComplexConjugate(d_input_image);
+      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
       d_padded_reference.BackwardFFT();
+      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 
 
@@ -237,7 +240,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 
       // TODO these ops have no interdependency so could go into two accumulator strings with an event wait prior to the next use of padded reference.
-      d_max_intensity_projection.Wait();
+//      d_max_intensity_projection.Wait();
 //      d_sum1.AddImage(d_padded_reference);
 //      d_sumSq1.AddSquaredImage(d_padded_reference);
 //
@@ -248,7 +251,15 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 		d_sumSq[0].AddSquaredImage(d_padded_reference);
 
 
-    	histogram.AddToHistogram(d_padded_reference,cummulative_histogram);
+		if (DO_HISTOGRAM)
+		{
+			if ( ! histogram.is_allocated_histogram_buffer )
+			{
+				d_padded_reference.NppInit();
+		    	histogram.BufferInit(d_padded_reference.npp_ROI);
+			}
+			histogram.AddToHistogram(d_padded_reference,cummulative_histogram);
+		}
 
 
 
@@ -291,6 +302,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
       
  	} // end of outer loop euler sphere position
 
+
+    checkCudaErrors(cudaMemcpyAsync(h_cummulative_histogram,cummulative_histogram,
+    							sizeof(Npp32s)*histogram.histogram_n_bins,cudaMemcpyDeviceToHost,cudaStreamPerThread));
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 

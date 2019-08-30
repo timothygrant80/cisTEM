@@ -13,6 +13,10 @@
 #define USEGPU true
 #endif
 
+#ifndef HEAVY_ERROR_CHECKING
+#define HEAVE_ERROR_CHECKING false
+#endif
+
 #include "../../core/core_headers.h"
 
 
@@ -21,6 +25,14 @@ const int MAX_GPU_COUNT = 32;
 
 #define checkNppErrors(npp_stat, ...) {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d\n", _cudaGetErrorEnum(npp_stat), __LINE__); DEBUG_ABORT}}
 #define checkCudaEvent(event_handle, ...) {if (cudaEventQuery(event_handle) != cudaSuccess) {return false; else return true;}}
+
+#if HEAVY_ERROR_CHECKING
+#define checkErrorsAndTimingWithSynchronization(input_stream) { cudaError_t cuda_error = cudaStreamSynchronize(input_stream); if (cuda_error != cudaSuccess) {wxPrintf("Sync Check error = %s at line %d in file %s\n", _cudaGetErrorEnum(cuda_error), __LINE__, __FILE__);} };
+#define pre_checkErrorsAndTimingWithSynchronization(input_sream) { checkCudaErrors(cudaGetLastError()); }
+#else
+#define checkErrorsAndTimingWithSynchronization(input_stream);
+#define pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+#endif
 
 // Complex data type
 typedef float2 Complex;

@@ -702,7 +702,7 @@ bool MatchTemplateApp::DoCalculation()
 #ifdef USEGPU
 
 	bool first_gpu_loop = true;
-	int nThreads = 4;
+	int nThreads = 5;
 	int nGPUs = 2;
 	int minPos = 0;
 	int maxPos = last_search_position;
@@ -901,7 +901,7 @@ bool MatchTemplateApp::DoCalculation()
 
 					for (int iBin = 0; iBin < histogram_number_of_points; iBin++)
 					{
-						histogram_data[iBin] += GPU[tIDX].cummulative_histogram[iBin];
+						histogram_data[iBin] += GPU[tIDX].h_cummulative_histogram[iBin];
 					}
 
 

@@ -24,19 +24,20 @@ Histogram::Histogram(int histogram_n_bins, float histogram_min, float histogram_
 
 Histogram::~Histogram()
 {
-	if (is_allocated_histogram_buffer)
-	{
-		checkCudaErrors(cudaFree(histogram_buffer));
-	}
-	if (is_allocated_histogram)
-	{
-		checkCudaErrors(cudaFree(histogram));
-	}
-	if (is_allocated_histogram_bin_values)
-	{
-		checkCudaErrors(cudaFree(histogram_bin_values));
-	}
+//	if (is_allocated_histogram_buffer)
+//	{
+//		checkCudaErrors(cudaFree(histogram_buffer));
+//	}
+//	if (is_allocated_histogram)
+//	{
+//		checkCudaErrors(cudaFree(histogram));
+//	}
+//	if (is_allocated_histogram_bin_values)
+//	{
+//		checkCudaErrors(cudaFree(histogram_bin_values));
+//	}
 }
+	//FIXME
 
 void Histogram::Init(int histogram_n_bins, float histogram_min, float histogram_step)
 {
@@ -57,6 +58,7 @@ void Histogram::SetInitialValues()
 	float histogram_step	= 0.0f;
 }
 
+
 void Histogram::BufferInit(NppiSize npp_ROI)
 {
 
@@ -73,7 +75,7 @@ void Histogram::BufferInit(NppiSize npp_ROI)
     checkCudaErrors(cudaMallocHost(&h_histogram_bin_values,(histogram_n_bins+1)*sizeof(float)));
     checkCudaErrors(cudaMalloc(&histogram_bin_values,(histogram_n_bins+1)*sizeof(float)));
     // Fill in the bin values;
-    for (int iBin = 0; iBin <= histogram_n_bins; iBin ++)
+    for (int iBin = 0; iBin < 1 + histogram_n_bins; iBin ++)
     {
     	h_histogram_bin_values[iBin] = histogram_min + (iBin * histogram_step);
 //    	wxPrintf("Hist value %d is %f\n",iBin,h_histogram_bin_values[iBin]);
@@ -87,7 +89,6 @@ void Histogram::BufferInit(NppiSize npp_ROI)
     vector_ROI.width = histogram_n_bins;
     vector_ROI.height = 1;
 
-	MyPrintWithDetails("");
 }
 
 void Histogram::AddToHistogram(GpuImage &input_image)
@@ -117,11 +118,11 @@ void Histogram::AddToHistogram(GpuImage &input_image, Npp32s* cummulative_histog
 {
 
 
-    if ( ! is_allocated_histogram_buffer )
-    {
-    	input_image.NppInit();
-    	BufferInit(input_image.npp_ROI);
-    }
+//    if ( ! is_allocated_histogram_buffer )
+//    {
+////    	input_image.NppInit();
+//    	BufferInit(input_image.npp_ROI);
+//    }
 
     MyAssertTrue(input_image.is_in_memory_gpu, "The image to add to the histogram is not in gpu memory.");
 
@@ -133,12 +134,11 @@ void Histogram::AddToHistogram(GpuImage &input_image, Npp32s* cummulative_histog
 											  (int)(histogram_n_bins + 1),
 											  (Npp8u *)histogram_buffer));
 
-    input_image.Wait();
-    for (int iBin = 0; iBin < histogram_n_bins; iBin ++)
-    {
-    	cummulative_histogram[iBin] += histogram[iBin];
-    }
-//    checkNppErrors(nppsAdd_32s_ISfs((const Npp32s*)histogram,cummulative_histogram, histogram_n_bins, (int)0));
+//    for (int iBin = 0; iBin < histogram_n_bins; iBin ++)
+//    {
+//    	cummulative_histogram[iBin] += histogram[iBin];
+//    }
+    checkNppErrors(nppsAdd_32s_ISfs((const Npp32s*)histogram,(Npp32s*)cummulative_histogram, (int)histogram_n_bins, (int)0));
 
 }
 

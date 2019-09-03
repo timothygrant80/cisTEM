@@ -109,10 +109,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
     wxPrintf("Setting up the histogram\n\n");
 	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
-	checkCudaErrors(cudaMalloc((void **)&cummulative_histogram,histogram_number_of_bins*sizeof(Npp32s)));
-	checkCudaErrors(cudaMallocHost((void **)&h_cummulative_histogram, histogram_number_of_bins*sizeof(Npp32s)));
-	is_allocated_cummulative_histogram = true;
-	checkCudaErrors(cudaMemsetAsync(this->cummulative_histogram,(int)0,histogram_number_of_bins*sizeof(Npp32s),cudaStreamPerThread));
+
 
 
 
@@ -169,11 +166,16 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	float average_on_edge;
 	float variance;
 
+	int thisDevice;
+	cudaGetDevice(&thisDevice);
+	wxPrintf("Thread %d is running on device %d\n", threadIDX, thisDevice);
 
 	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
 	{
 
 		wxPrintf("Starting position %d/ %d\n", current_search_position, last_search_position);
+
+
 		for (float current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step)
 		{
 
@@ -247,19 +249,21 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 //		d_padded_reference.NppInit();
 
+		if (DO_HISTOGRAM)
+		{
+//			if ( ! histogram.is_allocated_histogram_buffer )
+//			{
+//				d_padded_reference.NppInit();
+//		    	histogram.BufferInit(d_padded_reference.npp_ROI);
+//			}
+			histogram.AddToHistogram(d_padded_reference);
+		}
+
 		d_sum[0].AddImage(d_padded_reference);
 		d_sumSq[0].AddSquaredImage(d_padded_reference);
 
 
-		if (DO_HISTOGRAM)
-		{
-			if ( ! histogram.is_allocated_histogram_buffer )
-			{
-				d_padded_reference.NppInit();
-		    	histogram.BufferInit(d_padded_reference.npp_ROI);
-			}
-			histogram.AddToHistogram(d_padded_reference,cummulative_histogram);
-		}
+
 
 
 
@@ -291,7 +295,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
       d_padded_reference.is_in_real_space = true;
       cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
-      
 
 
 
@@ -303,8 +306,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
  	} // end of outer loop euler sphere position
 
 
-    checkCudaErrors(cudaMemcpyAsync(h_cummulative_histogram,cummulative_histogram,
-    							sizeof(Npp32s)*histogram.histogram_n_bins,cudaMemcpyDeviceToHost,cudaStreamPerThread));
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 

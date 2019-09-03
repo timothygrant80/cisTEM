@@ -97,6 +97,7 @@ public:
   //Stream for asynchronous command execution
   cudaStream_t calcStream;
   cudaStream_t copyStream;
+   NppStreamContext nppStream;
 
   bool is_fft_planned;
   bool is_cublas_loaded;

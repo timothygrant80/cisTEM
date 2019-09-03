@@ -1,7 +1,7 @@
 .RECIPEPREFIX=+++ 
-CUDA_PATH ?= "/groups/grigorieff/home/himesb/thirdParty/cuda-10.0"
+CUDA_PATH ?= "/groups/grigorieff/home/himesb/thirdParty/cuda-10.1.2/cuda-toolkit"
 
-HOST_COMPILER ?= g++
+HOST_COMPILER ?= icpc
 NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER) 
 NVCCFLAGS   := 
 INCLUDES    :=

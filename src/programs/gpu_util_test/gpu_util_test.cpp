@@ -50,11 +50,11 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 {
 
 	int number_of_jobs_per_image_in_gui = 1;
-	nThreads = 1;
-	nGPUs = 1;
+	nThreads = 8;
+	nGPUs = 2;
 	int minPos = 0;
-	int maxPos = 10;
-	int incPos = 10 / (nThreads*nGPUs); // FIXME
+	int maxPos = 160;
+	int incPos = 160 / (nThreads*nGPUs); // FIXME
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel
@@ -68,14 +68,12 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 		DeviceManager gpuDev;
 		gpuDev.Init(nGPUs);
 
+		omp_set_num_threads(nThreads);
+		#pragma omp parallel
+		{
 
+			int tIDX = omp_get_thread_num();
 
-//		omp_set_num_threads(nThreads);
-//		#pragma omp parallel
-//		{
-//
-//			int tIDX = omp_get_thread_num();
-int tIDX = 0;
 	    	Image template_reconstruction;
 	    	Image projection_filter;
 	    	Image input_image;
@@ -166,6 +164,8 @@ int tIDX = 0;
 
 			int size_i = 0;
 			int defocus_i = 0;
+
+
 			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
 
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
@@ -173,7 +173,7 @@ int tIDX = 0;
 
 
 
-//    } // end of omp block
+    } // end of omp block
 }
 
 void GpuUtilTest::createImageAddOne()
@@ -188,8 +188,8 @@ void GpuUtilTest::createImageAddOne()
 	bool do_pad = false;
 
 
-	int wanted_number_of_gpus = 1;
-	int wanted_number_threads_per_gpu = 1;
+	int wanted_number_of_gpus = 8;
+	int wanted_number_threads_per_gpu = 2;
 
 	DeviceManager gpuDev(wanted_number_of_gpus);
 

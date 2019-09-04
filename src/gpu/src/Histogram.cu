@@ -7,7 +7,91 @@
 
 #include "gpu_core_headers.h"
 
-__global__ void histogram_final_accum(const unsigned int *in, int n, unsigned int *out);
+__global__ void AccumulateHistogramKernel( Npp32s* histogram, long*  cummulative_histogram, int n_elem);
+
+__global__ void AccumulateHistogramKernel( Npp32s* histogram, long*  cummulative_histogram, int n_elem)
+{
+
+	long c = 1;
+	int coords = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if (coords < n_elem)
+	{
+		cummulative_histogram[coords] += c;//(long)histogram[coords];
+	}
+
+}
+
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc);
+
+
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc)
+{
+  // pixel coordinates
+  int x = blockIdx.x * blockDim.x + threadIdx.x;
+  int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  // grid dimensions
+  int nx = blockDim.x * gridDim.x;
+  int ny = blockDim.y * gridDim.y;
+
+  // linear thread index within 2D block
+  int t = threadIdx.x + threadIdx.y * blockDim.x;
+
+  // total threads in 2D block
+  int nt = blockDim.x * blockDim.y;
+
+
+  // initialize temporary accumulation array in shared memory
+  extern __shared__ unsigned int smem[];
+  for (int i = t; i < n_bins +1; i += nt) smem[i] = 0;
+  __syncthreads();
+
+  int pixel_idx;
+  // process pixels
+  // updates our block's partial histogram in shared memory
+  for (int col = x; col < dims.x; col += nx)
+  {
+    for (int row = y; row < dims.y*dims.z; row += ny)
+    {
+      pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
+      pixel_idx = MAX(MIN(pixel_idx,n_bins),0);
+
+      atomicAdd(&smem[pixel_idx], 1);
+
+    }
+  }
+  __syncthreads();
+
+  // write partial histogram into the global memory
+  // increment the pointer to global memory by block_idx * nbins
+  out += (blockIdx.x + blockIdx.y * gridDim.x) * n_bins;
+  for (int i = t; i < n_bins; i += nt) {
+    out[i] = smem[i];
+  }
+}
+
+__global__ void histogram_final_accum(unsigned int *in, long *out, int n_bins, int n_blocks);
+
+
+__global__ void histogram_final_accum(unsigned int *in, long *out, int n_bins, int n_blocks)
+{
+
+	int lIDX = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (lIDX < n_bins)
+	{
+		long total = 0;
+		for (int j = 0; j < n_blocks; j ++)
+		{
+		  total += (long)in[lIDX + n_bins * j];
+		}
+		out[lIDX] += total;
+
+	}
+
+}
+
 
 Histogram::Histogram()
 {
@@ -46,87 +130,67 @@ void Histogram::Init(int histogram_n_bins, float histogram_min, float histogram_
 	this->histogram_n_bins 	= histogram_n_bins;
 	this->histogram_min 	= histogram_min;
 	this->histogram_step	= histogram_step;
-	wxPrintf("\n\tInit histogram with vals\n");
 
 }
 
 void Histogram::SetInitialValues()
 {
-
-	is_allocated_histogram_buffer = false;
-	int histogram_n_bins 	= 0;
-	float histogram_min 	= 0.0f;
-	float histogram_step	= 0.0f;
+	is_allocated_histogram = false;
+	histogram_n_bins 	= 0;
+	histogram_min 	= 0.0f;
+	histogram_step	= 0.0f;
 }
 
 
 void Histogram::BufferInit(NppiSize npp_ROI)
 {
 
-	wxPrintf("\n\tInit histogram buffers vals %d %d\n",npp_ROI.width, npp_ROI.height);
 
-	int n_elem;
-    checkNppErrors(nppiHistogramRangeGetBufferSize_32f_C1R(npp_ROI, histogram_n_bins + 1, &n_elem));
-    wxPrintf("Function asks for a min buffer of n elemen %d\n",n_elem);
-    n_elem = 1490400;
-    checkCudaErrors(cudaMalloc(&histogram_buffer, n_elem));
+	// Set up grids for the kernels
+	 threadsPerBlock_img = dim3(32, 32, 1);
+	 gridDims_img = dim3((npp_ROI.width + threadsPerBlock_img.x - 1) / threadsPerBlock_img.x,
+						 (npp_ROI.height+ threadsPerBlock_img.y - 1) / threadsPerBlock_img.y,1);
 
-    is_allocated_histogram_buffer = true;
-    checkCudaErrors(cudaMalloc(&histogram, histogram_n_bins*sizeof(Npp32s)));
-    checkCudaErrors(cudaMalloc(&cummulative_histogram, histogram_n_bins*sizeof(Npp32s)));
-    // could bring in the context and then put this to an async op
-    checkCudaErrors(cudaMemset(histogram, 0 , (histogram_n_bins)*sizeof(Npp32s)));
-    checkCudaErrors(cudaMemset(cummulative_histogram, 0 , (histogram_n_bins)*sizeof(Npp32s)));
-    is_allocated_histogram = true;
-
-    Npp32f* h_histogram_bin_values;
-    checkCudaErrors(cudaMallocHost(&h_histogram_bin_values,(histogram_n_bins+1)*sizeof(Npp32f)));
-    checkCudaErrors(cudaMalloc(&histogram_bin_values,(histogram_n_bins+1)*sizeof(Npp32f)));
-    // Fill in the bin values;
-    for (int iBin = 0; iBin < 1 + histogram_n_bins; iBin ++)
-    {
-    	h_histogram_bin_values[iBin] = (Npp32f)(histogram_min + (iBin * histogram_step));
-//    	wxPrintf("Hist value %d is %f\n",iBin,h_histogram_bin_values[iBin]);
-    }
-    checkCudaErrors(cudaMemcpy(histogram_bin_values, h_histogram_bin_values, (histogram_n_bins+1)*sizeof(Npp32f),cudaMemcpyHostToDevice));
-    is_allocated_histogram_bin_values = true;
-
-    checkCudaErrors(cudaFreeHost(h_histogram_bin_values));
+	 threadsPerBlock_accum_array = dim3(32, 1, 1);
+	 gridDims_accum_array = dim3((histogram_n_bins + threadsPerBlock_accum_array.x - 1) / threadsPerBlock_accum_array.x,1,1);
 
 
-    vector_ROI.width = histogram_n_bins;
-    vector_ROI.height = 1;
+	 size_of_temp_hist = (gridDims_img.x*gridDims_img.y*histogram_n_bins*sizeof(unsigned int));
+
+
+	 // Array of temporary storage to accumulate the shared mem to
+	checkCudaErrors(cudaMalloc(&histogram, size_of_temp_hist));
+	checkCudaErrors(cudaMalloc(&cummulative_histogram, histogram_n_bins*sizeof(long)));
+
+
+	// could bring in the context and then put this to an async op
+	checkCudaErrors(cudaMemset(histogram, 0 ,size_of_temp_hist));
+	checkCudaErrors(cudaMemset(cummulative_histogram, 0 , (histogram_n_bins)*sizeof(long)));
+
+
+	is_allocated_histogram = true;
+
 
 }
-
 
 
 void Histogram::AddToHistogram(GpuImage &input_image )
 {
 
 
-    if ( ! is_allocated_histogram_buffer )
-    {
-    	input_image.NppInit();
-    	BufferInit(input_image.npp_ROI);
-    }
-
     MyAssertTrue(input_image.is_in_memory_gpu, "The image to add to the histogram is not in gpu memory.");
 
-    // FIXME this function breaks under mutli-threading across multi gpus.
-    checkNppErrors(nppiHistogramRange_32f_C1R_Ctx((const Npp32f*)input_image.real_values_gpu,
-											  (int)input_image.pitch,
-											  (NppiSize)input_image.npp_ROI,
-											  (Npp32s *)histogram,
-											  (const Npp32f*)histogram_bin_values,
-											  (int)(histogram_n_bins + 1),
-											  (Npp8u *)histogram_buffer, input_image.nppStream));
 
-//    for (int iBin = 0; iBin < histogram_n_bins; iBin ++)
-//    {
-//    	cummulative_histogram[iBin] += histogram[iBin];
-//    }
-    checkNppErrors(nppsAdd_32s_ISfs_Ctx((const Npp32s*)histogram, (Npp32s*)cummulative_histogram, (int)histogram_n_bins, (int)0, input_image.nppStream));
+
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins+1)*sizeof(unsigned int), input_image.nppStream.hStream>>>((const Npp32f*)input_image.real_values_gpu, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+
 
 }
 
@@ -134,15 +198,20 @@ void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 {
 	// Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
 	long* tmp_array;
-	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(Npp32s)));
-	checkCudaErrors(cudaMemcpy((void *)tmp_array, (void *)cummulative_histogram,histogram_n_bins*sizeof(Npp32s),cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(long)));
+	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(long),cudaMemcpyDeviceToHost));
 
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{
 		array_to_add_to[iBin] += tmp_array[iBin];
+    	wxPrintf("Hist value adding ibin %d to %ld is %ld\n",iBin, tmp_array[iBin], array_to_add_to[iBin]);
+
 	}
 
-	checkCudaErrors(cudaFreeHost(&tmp_array));
+	checkCudaErrors(cudaFreeHost(tmp_array));
 }
+
+
+
 
 

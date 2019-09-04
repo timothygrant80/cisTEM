@@ -17,10 +17,16 @@ public:
 	Histogram(int histogram_n_bins, float histogram_min, float histogram_step);
 	virtual ~Histogram();
 
-	Npp8u* histogram_buffer;		bool is_allocated_histogram_buffer;
-	Npp32s* histogram;				bool is_allocated_histogram; // histogram_n_bins in size;
-	Npp32f* histogram_bin_values;	bool is_allocated_histogram_bin_values; // histogram_n_bins + 1 in size
-	NppiSize vector_ROI;
+	dim3 threadsPerBlock_img;
+	dim3 gridDims_img;
+
+	dim3 threadsPerBlock_accum_array;
+	dim3 gridDims_accum_array;
+
+	unsigned int* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
+	size_t size_of_temp_hist;
+	long* cummulative_histogram;
+
 
 	int histogram_n_bins; //
 	float histogram_min;
@@ -35,7 +41,6 @@ public:
 
 private:
 
-	Npp32s* cummulative_histogram;
 
 
 

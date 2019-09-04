@@ -248,22 +248,18 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //
 
 //		d_padded_reference.NppInit();
-
 		if (DO_HISTOGRAM)
 		{
-//			if ( ! histogram.is_allocated_histogram_buffer )
-//			{
-//				d_padded_reference.NppInit();
-//		    	histogram.BufferInit(d_padded_reference.npp_ROI);
-//			}
+			if ( ! histogram.is_allocated_histogram )
+			{
+				d_padded_reference.NppInit();
+		    	histogram.BufferInit(d_padded_reference.npp_ROI);
+			}
 			histogram.AddToHistogram(d_padded_reference);
 		}
 
 		d_sum[0].AddImage(d_padded_reference);
 		d_sumSq[0].AddSquaredImage(d_padded_reference);
-
-
-
 
 
 
@@ -305,7 +301,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
       
  	} // end of outer loop euler sphere position
 
-
+	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 

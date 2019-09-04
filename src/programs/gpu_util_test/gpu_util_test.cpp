@@ -35,7 +35,7 @@ bool GpuUtilTest::DoCalculation()
   wxPrintf("GpuUtilTest is running!\n");
 
 //  this->createImageAddOne();
-  int nThreads = 2;
+  int nThreads = 1;
   int nGPUs = 1;
   this->TemplateMatchingStandalone(nThreads, nGPUs);
 
@@ -50,11 +50,11 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 {
 
 	int number_of_jobs_per_image_in_gui = 1;
-	nThreads = 8;
-	nGPUs = 2;
+	nThreads = 1;
+	nGPUs = 1;
 	int minPos = 0;
-	int maxPos = 160;
-	int incPos = 160 / (nThreads*nGPUs); // FIXME
+	int maxPos = 10;
+	int incPos = 10 / (nThreads*nGPUs); // FIXME
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel
@@ -168,6 +168,12 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 
 			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
 
+			long* histogram_data = new long[GPU[tIDX].histogram.histogram_n_bins];
+			for (int iBin = 0; iBin < GPU[tIDX].histogram.histogram_n_bins; iBin++)
+			{
+				histogram_data[iBin] = 0;
+			}
+			GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 			max_intensity_projection.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 

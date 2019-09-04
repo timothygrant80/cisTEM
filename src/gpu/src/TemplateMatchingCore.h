@@ -69,9 +69,6 @@ public:
 	long total_number_of_cccs_calculated;
 
 	Histogram histogram;
-	Npp32s* cummulative_histogram;
-	Npp32s*  h_cummulative_histogram;
-	bool is_allocated_cummulative_histogram = false;
 
 	// Search objects
 	AnglesAndShifts angles;

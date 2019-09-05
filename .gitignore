@@ -20,5 +20,7 @@ src/gpu/RemoteSystemsTempFiles
 src/gpu/src/.project
 src/gpu/src/.cproject
 RemoteSystemsTempFiles
-.metadata
-.settings
+.metadata/
+.settings/
+.autotools
+.cproject

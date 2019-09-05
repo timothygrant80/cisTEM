@@ -9770,24 +9770,31 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
 	return found_peak;
 }
 
-float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar)
+float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search, int last_position_to_search, MyApp *app_for_result)
 {
 	int cycle_counter;
 	int counter;
 
 	float current_beamtilt_azimuth;
 	float best_beamtilt_azimuth = 0.0f;
+	float best_max_beamtilt_azimuth = 0.0f;
 
 	float current_beamtilt;
 	float best_beamtilt = 0.0f;
+	float best_max_beamtilt = 0.0f;
 
 	float current_particle_shift;
 	float best_particle_shift = 0.0f;
+	float best_max_particle_shift = 0.0f;
 
 	float current_particle_shift_azimuth;
 	float best_particle_shift_azimuth = 0.0f;
+	float best_max_particle_shift_azimuth = 0.0f;
 
 	float score;
+	float best_max_score;
+	float best_alternate_score;
+
 	float score_average = 0.0f;
 	float score_variance = 0.0f;
 	float best_score;
@@ -9810,6 +9817,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	float particle_shift_azimuth_search_step_size;
 
 
+
+
 	AnglesAndShifts rotation_matrix;
 	ProgressBar *my_progress;
 	Image *phase_difference_spectrum = new Image;
@@ -9829,7 +9838,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	//wxPrintf("mask radius = %f\n", mask_radius_local);
 
 	ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true);
-	phase_difference_spectrum->Binarise(0.0f);
+	//phase_difference_spectrum->Binarise(0.0f);
 	temp_image->CopyFrom(phase_difference_spectrum);
 	temp_image->ApplyMirrorAlongY();
 
@@ -9870,25 +9879,27 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 	ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true, phase_multiplier);
 	phase_error_output.CopyFrom(phase_difference_spectrum);
-	phase_difference_spectrum->Binarise(0.0f);
+	//phase_difference_spectrum->Binarise(0.0f);
 
 	best_score = std::numeric_limits<float>::max();
+	best_max_score = -std::numeric_limits<float>::max();
 
-	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth + PI) - 0.1f; // search 10 degrees either side
-	beam_tilt_azimuth_search_end_value = (best_beamtilt_azimuth + PI) + 0.1f;
-	beam_tilt_azimuth_search_step_size = 0.05f;
 
-	particle_shift_azimuth_search_start_value = -0.05f;
-	particle_shift_azimuth_search_end_value = 0.05f;
-	particle_shift_azimuth_search_step_size = 0.05f;
+	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth) - 0.1f; // search 10 degrees either side
+	beam_tilt_azimuth_search_end_value = (best_beamtilt_azimuth) + 0.1f;
+	beam_tilt_azimuth_search_step_size = 0.025f;
 
-	beam_tilt_search_start_value = 	0.0001f;
+	particle_shift_azimuth_search_start_value = -0.1f;
+	particle_shift_azimuth_search_end_value = 0.1f;
+	particle_shift_azimuth_search_step_size = 0.025f;
+
+	beam_tilt_search_start_value = 	-0.005f;
 	beam_tilt_search_end_value = 	0.005f; // 5 radians
 	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
 
-	particle_shift_search_start_value = 0.0f;
+	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
-	particle_shift_search_step_size = 0.1f;
+	particle_shift_search_step_size = 0.05f;
 
 	// count number of points in the refinement for the progress bar (this must be kept the same as the loops below - Messy, sorry)
 
@@ -9902,32 +9913,37 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 			{
 				for (current_particle_shift = particle_shift_search_start_value; current_particle_shift <= particle_shift_search_end_value; current_particle_shift += particle_shift_search_step_size)
 				{
-					counter++;
+					if (counter >= first_position_to_search && counter <= last_position_to_search) counter++;
 				//	wxPrintf("%i = %f, %f, %f, %f\n",cycle_counter, current_beamtilt_azimuth, current_particle_shift_azimuth, current_beamtilt, current_particle_shift);
 				}
 			}
 		}
 	}
 
+//	wxPrintf("There are %i positions\n", counter);
 	// actual search
 
-	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth + PI) - 0.1f; // search 10 degrees either side
-	beam_tilt_azimuth_search_end_value = (best_beamtilt_azimuth + PI) + 0.1f;
-	beam_tilt_azimuth_search_step_size = 0.05f;
+	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth) - 0.1f; // search 10 degrees either side
+	beam_tilt_azimuth_search_end_value = (best_beamtilt_azimuth) + 0.1f;
+	beam_tilt_azimuth_search_step_size = 0.025f;
 
-	particle_shift_azimuth_search_start_value = -0.05f;
-	particle_shift_azimuth_search_end_value = 0.05f;
-	particle_shift_azimuth_search_step_size = 0.05f;
+	particle_shift_azimuth_search_start_value = -0.1f;
+	particle_shift_azimuth_search_end_value = 0.1f;
+	particle_shift_azimuth_search_step_size = 0.025f;
 
-	beam_tilt_search_start_value = 	0.0001f;
+	beam_tilt_search_start_value = 	-0.005f;
 	beam_tilt_search_end_value = 	0.005f; // 5 radians
 	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
 
-	particle_shift_search_start_value = 0.0f;
+	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
-	particle_shift_search_step_size = 0.1f;
+	particle_shift_search_step_size = 0.05f;
 
-	if (progress_bar) {wxPrintf("\nEstimating beamtilt...\n\n"); my_progress = new ProgressBar(counter);}
+	if (progress_bar && ReturnThreadNumberOfCurrentThread() == 0) {wxPrintf("\nEstimating beamtilt...\n\n"); my_progress = new ProgressBar(counter);}
+
+	// mask out the centre..
+
+	phase_difference_spectrum->CosineRingMask(5.0f, phase_difference_spectrum->ReturnLargestLogicalDimension(), 2.0f);
 
 	// setup a scorer - this is important for running the subsequent downhill simplex..
 
@@ -9935,6 +9951,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	double input_values[5];
 
 	counter = 0;
+	int progress_bar_counter = 0;
 
 	for (current_beamtilt_azimuth = beam_tilt_azimuth_search_start_value;  current_beamtilt_azimuth <= beam_tilt_azimuth_search_end_value; current_beamtilt_azimuth +=beam_tilt_azimuth_search_step_size)
 	{
@@ -9945,42 +9962,73 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 				for (current_particle_shift = particle_shift_search_start_value; current_particle_shift <= particle_shift_search_end_value; current_particle_shift += particle_shift_search_step_size)
 				{
 
-		/*			UserInput *test_input = new UserInput("test", 0);
-					float beam_tilt_x = test_input->GetFloatFromUser("Beam Tilt X (mrad)", "", "0") / 1000;
-					float beam_tilt_y = test_input->GetFloatFromUser("Beam Tilt Y (mrad)", "", "0") / 1000;
-					float particle_shift_x = test_input->GetFloatFromUser("Particle Shift X (A)", "", "0") / pixel_size;
-					float particle_shift_y = test_input->GetFloatFromUser("Particle Shift Y (A)", "", "0") / pixel_size;
-					delete test_input;
-
-					input_ctf.SetBeamTilt(beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
-					temp_image->CalculateBeamTiltImage(input_ctf);
-					temp_image->ComputeAmplitudeSpectrumFull2D(beamtilt_spectrum, true, phase_multiplier);
-					beamtilt_spectrum->Binarise(0.0f);
-					beamtilt_spectrum->QuickAndDirtyWriteSlice("/tmp/current.mrc", 1, true);
-*/
-					input_values[1] = current_beamtilt_azimuth;
-					input_values[2] = current_beamtilt_azimuth + current_particle_shift_azimuth;
-					input_values[3] = current_beamtilt;
-					input_values[4] = current_particle_shift;
-					score = tilt_scorer.ScoreValues(input_values);
-
-					score_average += score;
-					score_variance += powf(score, 2);
-
-					if (score < best_score)
+					if (counter >= first_position_to_search && counter <= last_position_to_search)
 					{
-						best_score = score;
-						best_beamtilt_azimuth = current_beamtilt_azimuth;
-						best_particle_shift_azimuth = current_particle_shift_azimuth;
-						best_beamtilt = current_beamtilt;
-						best_particle_shift = current_particle_shift;
+						/*					UserInput *test_input = new UserInput("test", 0);
+						float beam_tilt_x = test_input->GetFloatFromUser("Beam Tilt X (mrad)", "", "0") / 1000;
+						float beam_tilt_y = test_input->GetFloatFromUser("Beam Tilt Y (mrad)", "", "0") / 1000;
+						float particle_shift_x = test_input->GetFloatFromUser("Particle Shift X (A)", "", "0") / pixel_size;
+						float particle_shift_y = test_input->GetFloatFromUser("Particle Shift Y (A)", "", "0") / pixel_size;
+						delete test_input;
 
-						difference_image.CopyFrom(beamtilt_spectrum);
-						beamtilt_output.CopyFrom(temp_image);
+						input_ctf.SetBeamTilt(beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
+						temp_image->CalculateBeamTiltImage(input_ctf);
+						temp_image->ComputeAmplitudeSpectrumFull2D(beamtilt_spectrum, true, phase_multiplier);
+						//	beamtilt_spectrum->Binarise(0.0f);
+						beamtilt_spectrum->QuickAndDirtyWriteSlice("/tmp/current.mrc", 1, true);
+						*/
+
+						input_values[1] = current_beamtilt_azimuth;
+						input_values[2] = current_beamtilt_azimuth + current_particle_shift_azimuth;
+						input_values[3] = current_beamtilt;
+						input_values[4] = current_particle_shift;
+						score = tilt_scorer.ScoreValues(input_values);
+
+						score_average += score;
+						score_variance += powf(score, 2);
+
+						if (score < best_score)
+						{
+							best_score = score;
+							best_beamtilt_azimuth = current_beamtilt_azimuth;
+							best_particle_shift_azimuth = current_particle_shift_azimuth;
+							best_beamtilt = current_beamtilt;
+							best_particle_shift = current_particle_shift;
+
+							//						difference_image.CopyFrom(beamtilt_spectrum);
+							//						beamtilt_output.CopyFrom(temp_image);
+						}
+
+						if (score > best_max_score)
+						{
+							best_max_score = score;
+							best_max_beamtilt_azimuth = current_beamtilt_azimuth;
+							best_max_particle_shift_azimuth = current_particle_shift_azimuth;
+							best_max_beamtilt = -current_beamtilt;
+							best_max_particle_shift = -current_particle_shift;
+
+							//						difference_image.CopyFrom(beamtilt_spectrum);
+							//						beamtilt_output.CopyFrom(temp_image);
+						}
+
+						progress_bar_counter++;
+						if (progress_bar&& ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(progress_bar_counter);
+						if (app_for_result != NULL)
+						{
+							JobResult *intermediate_result = new JobResult;
+							intermediate_result->job_number = app_for_result->my_current_job.job_number;
+							float result_line[2];
+
+							result_line[0] = progress_bar_counter;
+							result_line[1] = score;
+
+							intermediate_result->SetResult(2, result_line);
+							app_for_result->AddJobToResultQueue(intermediate_result);
+						}
+
 					}
 
 					counter++;
-					if (progress_bar) my_progress->Update(counter);
 				}
 			}
 		}
@@ -9989,8 +10037,9 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 	// do a downhill simplex minimization..
 
-	wxPrintf("Before minimization, score = %f\n", best_score);
-	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+//	wxPrintf("Before minimization, score = %f / %f\n", best_score, best_max_score);
+//	wxPrintf("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
+
 	DownhillSimplex simplex_minimzer(4);
 
 	double start_values[5];
@@ -10040,16 +10089,70 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	simplex_minimzer.MinimizeFunction(&tilt_scorer, BeamTiltScoreFunctionForSimplex);
 	simplex_minimzer.GetMinimizedValues(min_values);
 
-	best_score = tilt_scorer.ScoreValues(min_values);
-	wxPrintf("After, score = %f\n", best_score);
-	wxPrintf("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
 
+	best_score = tilt_scorer.ScoreValues(min_values);
+	temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
 	best_beamtilt_azimuth = min_values[1];
 	best_particle_shift_azimuth = min_values[2];
 	best_beamtilt = min_values[3];
 	best_particle_shift = min_values[4];
 
-	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+	// rerun with the "max" values
+
+	start_values[0] = 0;
+	start_values[1] = best_max_beamtilt_azimuth;
+	start_values[2] = best_max_beamtilt_azimuth + best_max_particle_shift_azimuth;
+	start_values[3] = best_max_beamtilt;
+	start_values[4] = best_max_particle_shift;
+
+	simplex_minimzer.SetIinitalValues(start_values, ranges);
+
+	simplex_minimzer.initial_values[1][1] = best_max_beamtilt_azimuth * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[1][2] = (best_max_beamtilt_azimuth + best_max_particle_shift_azimuth) * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[1][3] = best_max_beamtilt * simplex_minimzer.value_scalers[3];
+	simplex_minimzer.initial_values[1][4] = best_max_particle_shift * simplex_minimzer.value_scalers[4];
+
+	simplex_minimzer.initial_values[2][1] = simplex_minimzer.initial_values[1][1] + ranges[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[2][2] = simplex_minimzer.initial_values[1][2] + ranges[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[2][3] = simplex_minimzer.initial_values[1][3] + ranges[3] * simplex_minimzer.value_scalers[3];
+	simplex_minimzer.initial_values[2][4] = simplex_minimzer.initial_values[1][4] + ranges[4] * simplex_minimzer.value_scalers[4];
+
+	simplex_minimzer.initial_values[3][1] = simplex_minimzer.initial_values[1][1] - ranges[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[3][2] = simplex_minimzer.initial_values[1][2] - ranges[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[3][3] = simplex_minimzer.initial_values[1][3] - ranges[3] * simplex_minimzer.value_scalers[3];
+	simplex_minimzer.initial_values[3][4] = simplex_minimzer.initial_values[1][4] - ranges[4] * simplex_minimzer.value_scalers[4];
+
+	simplex_minimzer.initial_values[4][1] = simplex_minimzer.initial_values[1][1] - ranges[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[4][2] = simplex_minimzer.initial_values[1][2] + ranges[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[4][3] = simplex_minimzer.initial_values[1][3] - ranges[3] * simplex_minimzer.value_scalers[3];
+	simplex_minimzer.initial_values[4][4] = simplex_minimzer.initial_values[1][4] + ranges[4] * simplex_minimzer.value_scalers[4];
+
+	simplex_minimzer.initial_values[5][1] = simplex_minimzer.initial_values[1][1] + ranges[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[5][2] = simplex_minimzer.initial_values[1][2] - ranges[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[5][3] = simplex_minimzer.initial_values[1][3] + ranges[3] * simplex_minimzer.value_scalers[3];
+	simplex_minimzer.initial_values[5][4] = simplex_minimzer.initial_values[1][4] - ranges[4] * simplex_minimzer.value_scalers[4];
+
+	//simplex_minimzer.SetIinitalValues(start_values, ranges);
+	simplex_minimzer.MinimizeFunction(&tilt_scorer, BeamTiltScoreFunctionForSimplex);
+	simplex_minimzer.GetMinimizedValues(min_values);
+
+	best_alternate_score = tilt_scorer.ScoreValues(min_values);
+
+	if (best_alternate_score < best_score)
+	{
+		temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
+		best_score = best_alternate_score;
+		best_beamtilt_azimuth = min_values[1];
+		best_particle_shift_azimuth = min_values[2];
+		best_beamtilt = min_values[3];
+		best_particle_shift = min_values[4];
+	}
+
+//	wxPrintf("After, score = %f\n", best_score);
+//	wxPrintf("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
+
+
+//	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
 
 
 	beamtilt_x = best_beamtilt * cosf(best_beamtilt_azimuth);
@@ -10062,14 +10165,18 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	score_variance = score_variance / counter - powf(score_average, 2);
 	//	wxPrintf("score, score_average, score_sigma, npix = %g %g %g %g\n", best_score, score_average, sqrtf(score_variance), PI * mask_radius_local * mask_radius_local);
 
-	temp_image->CopyFrom(&tilt_scorer.temp_image);
+
 	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
+	difference_image.CopyFrom(temp_image);
+	difference_image.SubtractImage(phase_difference_spectrum);
+
 	difference_image.InvertRealValues();
 
 	delete phase_difference_spectrum;
 	delete beamtilt_spectrum;
 	delete temp_image;
-	if (progress_bar) delete my_progress;
+
+	if (progress_bar&& ReturnThreadNumberOfCurrentThread() == 0) delete my_progress;
 
 	return 0.5f * PI * powf((0.5f - best_score) * mask_radius_local, 2);
 }
@@ -10255,6 +10362,45 @@ void Image::SubSampleMask(Image *first_sampled_image, Image *second_sampled_imag
 
 		pixel_counter+=padding_jump_value;
 	}
+}
+
+bool Image::ContainsRepeatedLineEdges() // relion line artifacts
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(logical_z_dimension == 1, "3D not implemented");
+
+	bool weird_edge = false;
+	const float correlation_threshold = 0.85; // this will exclude some valid images as well probably
+
+	// top..
+
+/*	if (ReturnCorrelationBetweenTwoHorizontalLines(1, 2) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoHorizontalLines(1, 3) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoHorizontalLines(2, 3) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoHorizontalLines(logical_y_dimension - 2, logical_y_dimension - 3) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoHorizontalLines(logical_y_dimension - 2, logical_y_dimension - 4) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoHorizontalLines(logical_y_dimension - 3, logical_y_dimension - 4) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoVerticalLines(1, 2) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoVerticalLines(1, 3) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoVerticalLines(2, 3) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoVerticalLines(logical_x_dimension - 2, logical_x_dimension - 3) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoVerticalLines(logical_x_dimension - 2, logical_x_dimension - 4) > correlation_threshold &&
+		ReturnCorrelationBetweenTwoVerticalLines(logical_x_dimension - 3, logical_x_dimension - 4) > correlation_threshold) weird_edge = true;
+
+*/
+	if (ReturnCorrelationBetweenTwoHorizontalLines(1, 2) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoHorizontalLines(logical_y_dimension - 2, logical_y_dimension - 3) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoVerticalLines(1, 2) > correlation_threshold) weird_edge = true;
+	else
+	if (ReturnCorrelationBetweenTwoVerticalLines(logical_x_dimension - 2, logical_x_dimension - 3) > correlation_threshold) weird_edge = true;
+
+	return weird_edge;
 }
 
 bool Image::ContainsBlankEdges(float mask_radius)
@@ -11437,6 +11583,87 @@ void Image::CreateOrthogonalProjectionsImage(Image *image_to_create, bool includ
 	}
 }
 
+float Image::ReturnCorrelationBetweenTwoHorizontalLines(int first_line, int second_line)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "input_image is in Fourier space");
+	MyDebugAssertTrue(first_line >= 0, "Invalid first_slice");
+	MyDebugAssertTrue(second_line < logical_x_dimension, "Invalid last_slice");
+
+	float correlation = 0.0f;
+	float ab_buffer = 0.0f;
+	float aa_buffer = 0.0f;
+	float bb_buffer = 0.0f;
+
+	float first_line_average = 0.0f;
+	float second_line_average = 0.0f;
+
+	int counter;
+
+	for (counter = 0; counter < logical_x_dimension; counter++)
+	{
+		first_line_average += real_values[ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)];
+		second_line_average += real_values[ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)];
+	}
+
+	first_line_average /= logical_x_dimension;
+	second_line_average /= logical_x_dimension;
+
+	for (counter = 0; counter < logical_x_dimension; counter++)
+	{
+		ab_buffer += (real_values[ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average) * (real_values[ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average);
+			aa_buffer += powf(real_values[ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average, 2);
+		bb_buffer += powf(real_values[ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average, 2);
+	}
+
+	aa_buffer /= logical_x_dimension - 1;
+	bb_buffer /= logical_x_dimension - 1;
+
+	correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
+	return correlation / logical_x_dimension;
+}
+
+
+float Image::ReturnCorrelationBetweenTwoVerticalLines(int first_line, int second_line)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "input_image is in Fourier space");
+	MyDebugAssertTrue(first_line >= 0, "Invalid first_slice");
+	MyDebugAssertTrue(second_line < logical_y_dimension, "Invalid last_slice");
+
+	float correlation = 0.0f;
+	float ab_buffer = 0.0f;
+	float aa_buffer = 0.0f;
+	float bb_buffer = 0.0f;
+
+	float first_line_average = 0.0f;
+	float second_line_average = 0.0f;
+
+	int counter;
+
+	for (counter = 0; counter < logical_y_dimension; counter++)
+	{
+		first_line_average += real_values[ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)];
+		second_line_average += real_values[ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)];
+	}
+
+	first_line_average /= logical_y_dimension;
+	second_line_average /= logical_y_dimension;
+
+	for (counter = 0; counter < logical_y_dimension; counter++)
+	{
+		ab_buffer += (real_values[ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average) * (real_values[ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average);
+		aa_buffer += powf(real_values[ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average, 2);
+		bb_buffer += powf(real_values[ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average, 2);
+	}
+
+	aa_buffer /= logical_y_dimension - 1;
+	bb_buffer /= logical_y_dimension - 1;
+
+	correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
+	return correlation  / logical_y_dimension;
+}
+
 BeamTiltScorer::BeamTiltScorer(CTF *pointer_to_wanted_ctf, Image *pointer_to_wanted_binarized_phase_diff_spectrum, float wanted_pixel_size, float wanted_mask_radius, float wanted_phase_multiplier)
 {
 	pointer_to_ctf_to_use_for_calculation = pointer_to_wanted_ctf;
@@ -11460,7 +11687,9 @@ double BeamTiltScorer::ScoreValues(double input_values[])
 	pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), -input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, -input_values[4] * sinf(input_values[2]) / pixel_size);
 	temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
 	temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
-	beamtilt_spectrum.Binarise(0.0f);
+	//beamtilt_spectrum.Binarise(0.0f);
+
+	beamtilt_spectrum.CosineRingMask(5.0f, beamtilt_spectrum.ReturnLargestLogicalDimension(), 2.0f);
 	beamtilt_spectrum.SubtractImage(pointer_binarised_phase_difference_spectrum);
 
 	return beamtilt_spectrum.ReturnSumOfSquares(mask_radius);

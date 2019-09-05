@@ -99,7 +99,8 @@ then
 	if test -n "$cuda_home_path"
 	then
 	    CUDA_CFLAGS="-I$cuda_home_path/include  -I$cuda_home_path/samples/common/inc/"
-      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lcufft -lcublas -lcurand -lnppc -lnppial -lnppist -lnpps -lculibos"
+      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lculibos"
+#      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lcufft -lcublas -lcurand -lnppc -lnppial -lnppist -lnpps -lculibos"
 #      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart_static -lcufft_static -lcublas_static -lcurand_static -lnppc_static -lnppial_static -lnppist_static -lculibos"
 #	    CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lcufft -lcublas -lcurand -lculibos"
 	else

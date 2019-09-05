@@ -141,7 +141,9 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			global_euler_search.InitGrid("O", angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 			global_euler_search.CalculateGridSearchPositions(false);
 
-
+			wxDateTime 	overall_start;
+			wxDateTime 	overall_finish;
+			overall_start = wxDateTime::Now();
 			gpuDev.SetGpu(tIDX);
 
 			const float histogram_min = -20.0f;
@@ -177,6 +179,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 			max_intensity_projection.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 
+			wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
 
 
     } // end of omp block

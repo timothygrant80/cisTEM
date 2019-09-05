@@ -702,7 +702,7 @@ bool MatchTemplateApp::DoCalculation()
 #ifdef USEGPU
 
 	bool first_gpu_loop = true;
-	int nThreads = 8;
+	int nThreads = 6;
 	int nGPUs = 2;
 	int minPos = 0;
 	int maxPos = last_search_position;

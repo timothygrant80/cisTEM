@@ -33,11 +33,10 @@ public:
 	GpuImage d_best_defocus;
 	GpuImage d_best_pixel_size;
 
-	const int nSums = 5;
-	GpuImage* d_sum;
-	GpuImage* d_sumSq;
+	GpuImage d_sum1, d_sum2, d_sum3, d_sum4, d_sum5;
+	GpuImage d_sumSq1,d_sumSq2,d_sumSq3,d_sumSq4,d_sumSq5;
 	bool is_allocated_sum_buffer = false;
-	bool* is_non_zero_sum_buffer;
+	int is_non_zero_sum_buffer;
 
 	//  GpuImage d_sum1, d_sum2, d_sum3, d_sum4, d_sum5;
 	//  GpuImage d_sumSq1, d_sumSq2, d_sumSq3, d_sumSq4, d_sumSq5;

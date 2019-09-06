@@ -472,9 +472,8 @@ bool MatchTemplateApp::DoCalculation()
 	original_input_image_y = input_image.logical_y_dimension;
 	factorizable_x = input_image.logical_x_dimension;
 	factorizable_y = input_image.logical_y_dimension;
-	const bool DO_FACTORIZATION = false;
 
-
+	bool DO_FACTORIZATION = false;
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.5f;
@@ -527,13 +526,13 @@ bool MatchTemplateApp::DoCalculation()
 	}
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
-	}
+
 //	factorizable_x = original_input_image_x;
 //	factorizable_y = original_input_image_y;
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
 //	input_image.QuickAndDirtyWriteSlice("factor.mrc", 1);
 //	exit(0);
-
+	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -622,7 +621,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	// search grid
 
-	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
+	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 	wxPrintf("%s",my_symmetry);
 	if (my_symmetry.StartsWith("C1")) // TODO 2x check me - w/o this O symm at least is broken
 	{
@@ -748,29 +747,6 @@ bool MatchTemplateApp::DoCalculation()
 
 
 
-// REMOVE THIS SECTION
-
-	//Image average_value_image;
-	//Image variance_image;
-
-	//average_value_image.QuickAndDirtyReadSlice("/tmp/centre_sums.mrc", 1);
-	//variance_image.QuickAndDirtyReadSlice("/tmp/centre_square_sums.mrc", 1);
-
-	//average_value_image.SwapRealSpaceQuadrants();
-	//variance_image.SwapRealSpaceQuadrants();
-
-
-	//Image *correlation_buffers;
-	//int current_rotation;
-	//correlation_buffers = new Image[number_of_rotations];
-
-	//for (current_rotation = 0; current_rotation < number_of_rotations; current_rotation++)
-	//{
-		//correlation_buffers[current_rotation].Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-	//}
-
-//	last_search_position = first_search_position;
-//	psi_max = psi_start;
 
 //	wxPrintf("Starting job\n");
 	for (size_i = - myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i++)
@@ -823,7 +799,7 @@ bool MatchTemplateApp::DoCalculation()
 			projection_filter.CalculateCTFImage(input_ctf);
 			projection_filter.ApplyCurveFilter(&whitening_filter);
 
-			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
+//			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
 #ifdef USEGPU
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 			omp_set_num_threads(nThreads);
@@ -832,15 +808,13 @@ bool MatchTemplateApp::DoCalculation()
 			{
 				int tIDX = omp_get_thread_num();
 				gpuDev.SetGpu(tIDX);
-				MyPrintWithDetails("t");
 
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
-				MyPrintWithDetails("t");
 
 
 				#pragma omp critical
 				{
-					MyPrintWithDetails("t");
+
 					pixel_counter = 0;
 
 					Image mip_buffer; mip_buffer.CopyFrom(&max_intensity_projection);
@@ -852,11 +826,69 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
-					MyPrintWithDetails("t");
-					std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
+					// TODO should prob aggregate these across all workers
+				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
+					Image sum, t_sum;
+					Image sumSq, t_sumSq;
+
+					sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+					sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+
+					t_sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+					t_sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
+
+					sum.SetToConstant(0.0f);
+					sumSq.SetToConstant(0.0f);
+
+					t_sum.SetToConstant(0.0f);
+					t_sumSq.SetToConstant(0.0f);
+
+
+					if (GPU[tIDX].is_non_zero_sum_buffer >= 1)
+					{
+						GPU[tIDX].d_sum1.CopyDeviceToHost(t_sum,true,false);
+						GPU[tIDX].d_sumSq1.CopyDeviceToHost(t_sumSq,true,false);
+
+						sum.AddImage(&t_sum);
+						sumSq.AddImage(&t_sumSq);
+					}
+
+					if (GPU[tIDX].is_non_zero_sum_buffer >= 2)
+					{
+						GPU[tIDX].d_sum2.CopyDeviceToHost(t_sum,true,false);
+						GPU[tIDX].d_sumSq2.CopyDeviceToHost(t_sumSq,true,false);
+
+						sum.AddImage(&t_sum);
+						sumSq.AddImage(&t_sumSq);
+					}
+					if (GPU[tIDX].is_non_zero_sum_buffer >= 3)
+					{
+						GPU[tIDX].d_sum3.CopyDeviceToHost(t_sum,true,false);
+						GPU[tIDX].d_sumSq3.CopyDeviceToHost(t_sumSq,true,false);
+
+						sum.AddImage(&t_sum);
+						sumSq.AddImage(&t_sumSq);
+					}
+					if (GPU[tIDX].is_non_zero_sum_buffer >= 4)
+					{
+						GPU[tIDX].d_sum4.CopyDeviceToHost(t_sum,true,false);
+						GPU[tIDX].d_sumSq4.CopyDeviceToHost(t_sumSq,true,false);
+
+						sum.AddImage(&t_sum);
+						sumSq.AddImage(&t_sumSq);
+					}
+					if (GPU[tIDX].is_non_zero_sum_buffer >= 5)
+					{
+						GPU[tIDX].d_sum5.CopyDeviceToHost(t_sum,true,false);
+						GPU[tIDX].d_sumSq5.CopyDeviceToHost(t_sumSq,true,false);
+
+						sum.AddImage(&t_sum);
+						sumSq.AddImage(&t_sumSq);
+					}
+
+//					std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 					GPU[tIDX].d_max_intensity_projection.Wait();
-					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
-					MyPrintWithDetails("t");
+//					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 
 					for (current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++)
 					{
@@ -874,58 +906,20 @@ bool MatchTemplateApp::DoCalculation()
 								best_pixel_size.real_values[pixel_counter] = float(size_i) * pixel_size_step;
 
 //								if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+
 							}
 
-							// histogram
-							// TODO add this inside the templateMatchingCore
-//
-//							current_bin = int(double((padded_reference.real_values[pixel_counter]) - histogram_min_scaled) / histogram_step_scaled);
-//							//current_bin = int(double((padded_reference.real_values[pixel_counter]) - histogram_min) / histogram_step);
-//
-//							if (current_bin >= 0 && current_bin <= histogram_number_of_points)
-//							{
-//								histogram_data[current_bin] += 1;
-//							}
+							correlation_pixel_sum[pixel_counter] += (double)sum.real_values[pixel_counter];
+							correlation_pixel_sum_of_squares[pixel_counter] += (double)sumSq.real_values[pixel_counter];
 
 							pixel_counter++;
 						}
 
-						pixel_counter+=padded_reference.padding_jump_value;
+						pixel_counter += max_intensity_projection.padding_jump_value;
 					}
 
-					MyPrintWithDetails("t");
-					// TODO should prob aggregate these across all workers
-				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
-					Image sum, t_sum;
-					Image sumSq, t_sumSq;
 
-					sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-					sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 
-					t_sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-					t_sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-
-					for (int iSum = 0; iSum < GPU[tIDX].nSums; iSum++)
-					{
-						if (GPU[tIDX].is_non_zero_sum_buffer[iSum])
-						{
-							GPU[tIDX].d_sum[iSum].CopyDeviceToHost(t_sum,true,false);
-							GPU[tIDX].d_sumSq[iSum].CopyDeviceToHost(t_sumSq,true,false);
-
-							sum.AddImage(&t_sum);
-							sumSq.AddImage(&t_sumSq);
-
-						}
-
-					}
-					MyPrintWithDetails("t");
-
-					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
-					{
-						correlation_pixel_sum[pixel_counter] += (double)sum.real_values[pixel_counter];
-						correlation_pixel_sum_of_squares[pixel_counter] += (double)sumSq.real_values[pixel_counter];
-
-					}
 
 					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
@@ -933,7 +927,6 @@ bool MatchTemplateApp::DoCalculation()
 //					{
 //						histogram_data[iBin] += GPU[tIDX].h_cummulative_histogram[iBin];
 //					}
-					MyPrintWithDetails("t");
 
 					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
 					actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;

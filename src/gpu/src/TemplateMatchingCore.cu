@@ -20,12 +20,7 @@ TemplateMatchingCore::TemplateMatchingCore(int number_of_jobs)
 TemplateMatchingCore::~TemplateMatchingCore() 
 {
 
-	if (is_allocated_sum_buffer)
-	{
-		delete [] d_sum;
-		delete [] d_sumSq;
-		delete [] is_non_zero_sum_buffer;
-	}
+
 // FIXME
 //	if (is_allocated_cummulative_histogram)
 //	{
@@ -95,16 +90,13 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
     d_best_theta.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_phi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
 
-    d_sum = new GpuImage[nSums];
-    d_sumSq = new GpuImage[nSums];
-    is_non_zero_sum_buffer = new bool[nSums];
-    is_allocated_sum_buffer = true;
 
-	for (int iSum = 0; iSum < nSums; iSum++)
-	{
-	  d_sum[iSum].Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-	  d_sumSq[iSum].Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-	}
+
+	d_sum1.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	d_sumSq1.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	is_non_zero_sum_buffer = 1;
+
+
 
 
     wxPrintf("Setting up the histogram\n\n");
@@ -143,11 +135,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	d_best_theta.Zeros();
 	d_padded_reference.Zeros();
 
-	for (int iSum = 0; iSum < nSums; iSum++)
-	{
-	  d_sum[iSum].Zeros();
-	  d_sumSq[iSum].Zeros();
-	}
+	  d_sum1.Zeros();
+	  d_sumSq1.Zeros();
 
 	this->c_defocus = c_defocus;
 	this->c_pixel = c_pixel;
@@ -255,12 +244,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 				d_padded_reference.NppInit();
 		    	histogram.BufferInit(d_padded_reference.npp_ROI);
 			}
-//			histogram.AddToHistogram(d_padded_reference);
+			histogram.AddToHistogram(d_padded_reference);
 		}
 
-		d_sum[0].AddImage(d_padded_reference);
-		d_padded_reference.SquareRealValues();
-		d_sumSq[0].AddImage(d_padded_reference);
+		d_sum1.AddImage(d_padded_reference);
+		d_sumSq1.AddSquaredImage(d_padded_reference);
 
 //		d_sumSq[0].AddSquaredImage(d_padded_reference);
 
@@ -268,28 +256,80 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
         ccc_counter++;
         total_number_of_cccs_calculated++;
 
-		// FIXME long long or just long?
-		long powerOfTen = 10;
-		for (int iSum = 0; iSum < nSums; iSum++)
+
+		if ( ccc_counter % 10 == 0)
 		{
-			if ( ccc_counter % powerOfTen == 0)
+
+			if ( is_non_zero_sum_buffer < 2 )
 			{
-
-				d_sum[iSum+1].AddImage(d_sum[iSum]);
-				d_sum[iSum].Zeros();
-
-				d_sumSq[iSum+1].AddImage(d_sumSq[iSum]);
-				d_sumSq[iSum].Zeros();
-
-				if ( ! is_non_zero_sum_buffer[iSum] )
-				{
-			    	is_non_zero_sum_buffer[iSum] = true;
-			    	wxPrintf("\n\t\tSetting %d buffer sum to true\n",iSum);
-				}
-
-
+				d_sum2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum2.Zeros();
+				d_sumSq2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq2.Zeros();
+				is_non_zero_sum_buffer = 2;
 			}
-			powerOfTen *= powerOfTen;
+
+
+			d_sum2.AddImage(d_sum1);
+			d_sum1.Zeros();
+
+			d_sumSq2.AddImage(d_sumSq1);
+			d_sumSq1.Zeros();
+
+
+		}
+
+
+		if ( ccc_counter % 100 == 0)
+		{
+
+			if ( is_non_zero_sum_buffer < 3 )
+			{
+				d_sum3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum3.Zeros();
+				d_sumSq3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq3.Zeros();
+				is_non_zero_sum_buffer = 3;
+			}
+
+			d_sum3.AddImage(d_sum2);
+			d_sum2.Zeros();
+
+			d_sumSq3.AddImage(d_sumSq2);
+			d_sumSq2.Zeros();
+
+		}
+
+
+		if ( ccc_counter % 10000 == 0)
+		{
+			if ( is_non_zero_sum_buffer < 4 )
+			{
+				d_sum4.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum4.Zeros();
+				d_sumSq4.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq4.Zeros();
+				is_non_zero_sum_buffer = 4;
+			}
+
+			d_sum4.AddImage(d_sum3);
+			d_sum3.Zeros();
+
+			d_sumSq4.AddImage(d_sumSq3);
+			d_sumSq3.Zeros();
+
+		}
+
+
+		if ( ccc_counter % 100000000 == 0)
+		{
+
+			if ( is_non_zero_sum_buffer < 2 )
+			{
+				d_sum5.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum5.Zeros();
+				d_sumSq5.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq5.Zeros();
+				is_non_zero_sum_buffer = 5;
+			}
+
+			d_sum5.AddImage(d_sum4);
+			d_sum4.Zeros();
+
+			d_sumSq5.AddImage(d_sumSq4);
+			d_sumSq4.Zeros();
 
 		}
 
@@ -312,18 +352,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 
-    std::string fname;
-    fname = "/tmp/sum0_thread" + std::to_string(threadIDX) + ".mrc";
-    d_sum[0].QuickAndDirtyWriteSlices(fname,1,1);
-    fname = "/tmp/sum1_thread" + std::to_string(threadIDX) + ".mrc";
-
-    d_sum[1].QuickAndDirtyWriteSlices(fname,1,1);
-    fname = "/tmp/sumSq0_thread" + std::to_string(threadIDX) + ".mrc";
-
-    d_sumSq[0].QuickAndDirtyWriteSlices(fname,1,1);
-    fname = "/tmp/sumSq1_thread" + std::to_string(threadIDX) + ".mrc";
-
-    d_sumSq[1].QuickAndDirtyWriteSlices(fname,1,1);
 
 
   

@@ -474,7 +474,7 @@ void GpuImage::BufferInit(BufferType bt)
         if ( ! is_allocated_sum_buffer ) 
         {
           int n_elem;
-          nppiSumGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+          nppiSumGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
           checkCudaErrors(cudaMalloc((void **)this->sum_buffer, n_elem));
           is_allocated_sum_buffer = true;
         }     
@@ -484,7 +484,7 @@ void GpuImage::BufferInit(BufferType bt)
         if ( ! is_allocated_min_buffer )
         {
           int n_elem;
-          nppiMinGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+          nppiMinGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
           checkCudaErrors(cudaMalloc((void **)this->min_buffer, n_elem));
           is_allocated_min_buffer = true;
         }
@@ -494,7 +494,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_minIDX_buffer )
       {
         int n_elem;
-        nppiMinIndxGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMinIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->minIDX_buffer, n_elem));
         is_allocated_minIDX_buffer = true;
       }
@@ -504,7 +504,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_max_buffer )
       {
         int n_elem;
-        nppiMaxGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->max_buffer, n_elem));
         is_allocated_max_buffer = true;
       }
@@ -514,7 +514,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_maxIDX_buffer )
       {
         int n_elem;
-        nppiMaxIndxGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->maxIDX_buffer, n_elem));
         is_allocated_maxIDX_buffer = true;
       }
@@ -524,7 +524,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_minmax_buffer )
       {
         int n_elem;
-        nppiMinMaxGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMinMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->minmax_buffer, n_elem));
         is_allocated_minmax_buffer = true;
       }
@@ -534,7 +534,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_minmaxIDX_buffer )
       {
         int n_elem;
-        nppiMinMaxIndxGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMinMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->minmaxIDX_buffer, n_elem));
         is_allocated_minmaxIDX_buffer = true;
       }
@@ -544,7 +544,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_mean_buffer )
       {
         int n_elem;
-        nppiMeanGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMeanGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->mean_buffer, n_elem));
         is_allocated_mean_buffer = true;
       }
@@ -554,7 +554,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_meanstddev_buffer )
       {
         int n_elem;
-        nppiMeanGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiMeanGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->meanstddev_buffer, n_elem));
         is_allocated_meanstddev_buffer = true;
       }
@@ -564,7 +564,7 @@ void GpuImage::BufferInit(BufferType bt)
       if ( ! is_allocated_countinrange_buffer )
       {
         int n_elem;
-        nppiCountInRangeGetBufferHostSize_32f_C1R(npp_ROI, &n_elem);
+        nppiCountInRangeGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
         checkCudaErrors(cudaMalloc((void **)this->countinrange_buffer, n_elem));
         is_allocated_countinrange_buffer = true;
       }

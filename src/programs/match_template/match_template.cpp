@@ -423,7 +423,8 @@ bool MatchTemplateApp::DoCalculation()
 
 	int factorizable_x;
 	int factorizable_y;
-	int factor_result;
+	int factor_result_pos;
+	int factor_result_neg;
 
 	int defocus_i;
 	int size_i;
@@ -468,44 +469,67 @@ bool MatchTemplateApp::DoCalculation()
 
 	// Resize input image to be factorizable by small numbers
 	original_input_image_x = input_image.logical_x_dimension;
-	factor_score = FLT_MAX;
+	original_input_image_y = input_image.logical_y_dimension;
 	factorizable_x = input_image.logical_x_dimension;
-	for (i = -13; i <= 13; i += 2)
+	factorizable_y = input_image.logical_y_dimension;
+	const bool DO_FACTORIZATION = false;
+
+
+	const int max_number_primes = 6;
+	int primes[max_number_primes] = {2,3,5,7,9,13};
+	float max_reduction_by_fraction_of_reference = 0.5f;
+	float max_increas_by_fraction_of_image = 0.10f;
+
+	// for 5760 this will return
+	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
+	// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
+	if (DO_FACTORIZATION)
 	{
-		if (abs(i) == 9 || abs(i) == 1) continue;
-		if (i < 0) factor_result = ReturnClosestFactorizedLower(original_input_image_x, abs(i), true);
-		else factor_result = ReturnClosestFactorizedUpper(original_input_image_x, abs(i), true);
+	for ( i = 0; i < max_number_primes; i++ )
+	{
+
+		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true);
+		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true);
 
 //		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if (original_input_image_x - factor_result > float(input_reconstruction_file.ReturnXSize()) / 10.0f) continue;
-
-		if (factor_score > logf(float(abs(i) + 100)) * factor_result)
+		if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
 		{
-			factor_score = logf(float(abs(i) + 100)) * factor_result;
-			factorizable_x = factor_result;
+			factorizable_x = factor_result_neg;
+			break;
 		}
+		if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
+		{
+			factorizable_x = factor_result_pos;
+			break;
+		}
+
 	}
-	original_input_image_y = input_image.logical_y_dimension;
 	factor_score = FLT_MAX;
-	factorizable_y = input_image.logical_y_dimension;
-	for (i = -13; i <= 13; i += 2)
+	for ( i = 0; i < max_number_primes; i++ )
 	{
-		if (abs(i) == 9 || abs(i) == 1) continue;
-		if (i < 0) factor_result = ReturnClosestFactorizedLower(original_input_image_y, abs(i), true);
-		else factor_result = ReturnClosestFactorizedUpper(original_input_image_y, abs(i), true);
 
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(100 * i))) * factor_result);
-		if (original_input_image_y - factor_result > float(input_reconstruction_file.ReturnYSize()) / 10.0f) continue;
+		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true);
+		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true);
 
-		if (factor_score > logf(float(abs(i) + 100)) * factor_result)
+
+//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
+		if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
 		{
-			factor_score = logf(float(abs(i) + 100)) * factor_result;
-			factorizable_y = factor_result;
+			factorizable_y = factor_result_neg;
+			break;
 		}
+		if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
+		{
+			factorizable_y = factor_result_pos;
+			break;
+		}
+
+	}
+	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+
 	}
 //	factorizable_x = original_input_image_x;
 //	factorizable_y = original_input_image_y;
-//	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
 //	input_image.QuickAndDirtyWriteSlice("factor.mrc", 1);
 //	exit(0);
@@ -702,8 +726,12 @@ bool MatchTemplateApp::DoCalculation()
 #ifdef USEGPU
 
 	bool first_gpu_loop = true;
-	int nThreads = 6;
+	int nThreads;
 	int nGPUs = 2;
+	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 6 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 4 * nGPUs;}
+	else {nThreads = 2 * nGPUs;}
+
 	int minPos = 0;
 	int maxPos = last_search_position;
 	int incPos = last_search_position / (nThreads);
@@ -812,7 +840,7 @@ bool MatchTemplateApp::DoCalculation()
 
 				#pragma omp critical
 				{
-
+					MyPrintWithDetails("t");
 					pixel_counter = 0;
 
 					Image mip_buffer; mip_buffer.CopyFrom(&max_intensity_projection);
@@ -820,15 +848,15 @@ bool MatchTemplateApp::DoCalculation()
 					Image phi_buffer; phi_buffer.CopyFrom(&max_intensity_projection);
 					Image theta_buffer; theta_buffer.CopyFrom(&max_intensity_projection);
 
-					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false, false);
-					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false, false);
-					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false, false);
-					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false, false);
-
+					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false);
+					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
+					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
+					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
+					MyPrintWithDetails("t");
 					std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 					GPU[tIDX].d_max_intensity_projection.Wait();
 					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
-
+					MyPrintWithDetails("t");
 
 					for (current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++)
 					{
@@ -865,7 +893,7 @@ bool MatchTemplateApp::DoCalculation()
 						pixel_counter+=padded_reference.padding_jump_value;
 					}
 
-
+					MyPrintWithDetails("t");
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum, t_sum;
@@ -881,8 +909,8 @@ bool MatchTemplateApp::DoCalculation()
 					{
 						if (GPU[tIDX].is_non_zero_sum_buffer[iSum])
 						{
-							GPU[tIDX].d_sum[iSum].CopyDeviceToHost(t_sum,true,false,false);
-							GPU[tIDX].d_sumSq[iSum].CopyDeviceToHost(t_sumSq,true,false,false);
+							GPU[tIDX].d_sum[iSum].CopyDeviceToHost(t_sum,true,false);
+							GPU[tIDX].d_sumSq[iSum].CopyDeviceToHost(t_sumSq,true,false);
 
 							sum.AddImage(&t_sum);
 							sumSq.AddImage(&t_sumSq);
@@ -890,12 +918,12 @@ bool MatchTemplateApp::DoCalculation()
 						}
 
 					}
-
+					MyPrintWithDetails("t");
 
 					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
 					{
-						correlation_pixel_sum[pixel_counter] += sum.real_values[pixel_counter];
-						correlation_pixel_sum_of_squares[pixel_counter] += sumSq.real_values[pixel_counter];
+						correlation_pixel_sum[pixel_counter] += (double)sum.real_values[pixel_counter];
+						correlation_pixel_sum_of_squares[pixel_counter] += (double)sumSq.real_values[pixel_counter];
 
 					}
 
@@ -905,7 +933,7 @@ bool MatchTemplateApp::DoCalculation()
 //					{
 //						histogram_data[iBin] += GPU[tIDX].h_cummulative_histogram[iBin];
 //					}
-
+					MyPrintWithDetails("t");
 
 					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
 					actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
@@ -922,7 +950,7 @@ bool MatchTemplateApp::DoCalculation()
 				temp_result->SetResult(1, &temp_float);
 				AddJobToResultQueue(temp_result);
 			}
-
+			MyPrintWithDetails("t");
 			continue;
 
 #endif
@@ -1257,6 +1285,15 @@ bool MatchTemplateApp::DoCalculation()
 		float *pointer_to_histogram_data;
 
 		pointer_to_histogram_data = (float *) histogram_data;
+
+		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
+		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		best_defocus.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		best_pixel_size.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 
 		// Make sure there is enough space allocated for all results
 		number_of_result_floats += max_intensity_projection.real_memory_allocated * 8;

@@ -146,7 +146,7 @@ public:
 
 	void CopyHostToDevice();
 	void CopyDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
-	void CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete = false, bool free_gpu_memory = true, bool unpin_host_memory = true);
+	void CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete = false, bool free_gpu_memory = true);
 	// The volume copies with memory coalescing favoring padding are not directly
 	// compatible with the memory layout in Image().
 	void CopyVolumeHostToDevice();

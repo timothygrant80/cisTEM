@@ -255,12 +255,14 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 				d_padded_reference.NppInit();
 		    	histogram.BufferInit(d_padded_reference.npp_ROI);
 			}
-			histogram.AddToHistogram(d_padded_reference);
+//			histogram.AddToHistogram(d_padded_reference);
 		}
 
 		d_sum[0].AddImage(d_padded_reference);
-		d_sumSq[0].AddSquaredImage(d_padded_reference);
+		d_padded_reference.SquareRealValues();
+		d_sumSq[0].AddImage(d_padded_reference);
 
+//		d_sumSq[0].AddSquaredImage(d_padded_reference);
 
 
         ccc_counter++;
@@ -279,7 +281,12 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 				d_sumSq[iSum+1].AddImage(d_sumSq[iSum]);
 				d_sumSq[iSum].Zeros();
 
-		    	is_non_zero_sum_buffer[iSum] = true;
+				if ( ! is_non_zero_sum_buffer[iSum] )
+				{
+			    	is_non_zero_sum_buffer[iSum] = true;
+			    	wxPrintf("\n\t\tSetting %d buffer sum to true\n",iSum);
+				}
+
 
 			}
 			powerOfTen *= powerOfTen;
@@ -304,6 +311,20 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+
+    std::string fname;
+    fname = "/tmp/sum0_thread" + std::to_string(threadIDX) + ".mrc";
+    d_sum[0].QuickAndDirtyWriteSlices(fname,1,1);
+    fname = "/tmp/sum1_thread" + std::to_string(threadIDX) + ".mrc";
+
+    d_sum[1].QuickAndDirtyWriteSlices(fname,1,1);
+    fname = "/tmp/sumSq0_thread" + std::to_string(threadIDX) + ".mrc";
+
+    d_sumSq[0].QuickAndDirtyWriteSlices(fname,1,1);
+    fname = "/tmp/sumSq1_thread" + std::to_string(threadIDX) + ".mrc";
+
+    d_sumSq[1].QuickAndDirtyWriteSlices(fname,1,1);
+
 
   
 }

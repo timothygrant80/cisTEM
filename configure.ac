@@ -320,7 +320,6 @@ fi
 
 # tiff (if we're not using wx's builtin tiff support)
 #
-AC_MSG_NOTICE(Fuckin Twats)
 AC_CHECK_LIB([wxtiff-3.0],[TIFFOpen],[WX_LIBS_BASE="-lwxtiff-3.0 $WX_LIBS_BASE"],[wxtiff=0],`$WXCONFIG --libs base`)
 if test "x$wxtiff" = "x0"; then
   AC_SEARCH_LIBS([TIFFOpen],[tiff],[],[AC_MSG_ERROR(Could not find your installation of the TIFF library)])

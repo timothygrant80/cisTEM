@@ -204,7 +204,7 @@ void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{
 		array_to_add_to[iBin] += tmp_array[iBin];
-    	wxPrintf("Hist value adding ibin %d to %ld is %ld\n",iBin, tmp_array[iBin], array_to_add_to[iBin]);
+//    	wxPrintf("Hist value adding ibin %d to %ld is %ld\n",iBin, tmp_array[iBin], array_to_add_to[iBin]);
 
 	}
 

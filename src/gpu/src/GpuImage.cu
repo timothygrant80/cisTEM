@@ -1120,25 +1120,28 @@ void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 
 }
 
-void GpuImage::CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory)
+void GpuImage::CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory)
 {
 
 	MyAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
 	// TODO other asserts on size etc.
 
-	// TODO see if it is worth pinning the memory
+
+	float* tmpPinnedPtr;
+	// FIXME for now always pin the memory - this might be a bad choice for single copy or small images, but is required for asynch xfer and is ~2x as fast after pinning
+	cudaHostRegister(cpu_image.real_values, sizeof(float)*real_memory_allocated, cudaHostRegisterDefault);
+	cudaHostGetDevicePointer( &tmpPinnedPtr, cpu_image.real_values, 0);
+
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-	checkCudaErrors(cudaMemcpyAsync(cpu_image.real_values, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
+	checkCudaErrors(cudaMemcpyAsync(tmpPinnedPtr, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 	if (should_block_until_complete) checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 	// TODO add asserts etc.
 	if (free_gpu_memory) { cudaFree(&real_values_gpu) ; } // FIXME what about the other structures
-	if (unpin_host_memory && is_host_memory_pinned)
-	{
-		cudaHostUnregister(&real_values);
-		is_host_memory_pinned = false;
-	}
+
+	cudaHostUnregister(&tmpPinnedPtr);
+
 
 }
 

@@ -36,6 +36,7 @@ BasicStarFileReader::BasicStarFileReader()
 	defocus2_column = -1;
 	defocus_angle_column = -1;
 	phase_shift_column = -1;
+	micrograph_name_column = -1;
 
 }
 
@@ -218,6 +219,12 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 		temp_parameters.phase_shift = deg_2_rad(float(temp_double));
 	}
 
+	// Micrograph Name
+
+	if (micrograph_name_column == -1) temp_parameters.micrograph_name = "";
+	else temp_parameters.micrograph_name = all_tokens[micrograph_name_column];
+
+
 	cached_parameters.Add(temp_parameters);
 
 	return true;
@@ -318,7 +325,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		if (current_line.StartsWith("_rlnDefocusAngle") == true) defocus_angle_column = current_column;
 		else
 		if (current_line.StartsWith("_rlnPhaseShift") == true) phase_shift_column = current_column;
-
+		else
+		if (current_line.StartsWith("_rlnMicrographName") == true) micrograph_name_column = current_column;
 	    current_column++;
 	}
 

@@ -12,6 +12,7 @@ public :
 	float defocus2;
 	float defocus_angle;
 	float phase_shift;
+	wxString micrograph_name;
 
 	StarFileParameters();
 };
@@ -32,6 +33,7 @@ class BasicStarFileReader {
 	int defocus2_column;
 	int defocus_angle_column;
 	int phase_shift_column;
+	int micrograph_name_column;
 
 public:
 
@@ -63,5 +65,6 @@ public:
 	inline float ReturnDefocus2(int line_number) { return cached_parameters[line_number].defocus2;}
 	inline float ReturnDefocusAngle(int line_number) { return cached_parameters[line_number].defocus_angle;}
 	inline float ReturnPhaseShift(int line_number) { return cached_parameters[line_number].phase_shift;}
+	inline wxString ReturnMicrographName(int line_number) { return cached_parameters[line_number].micrograph_name;}
 
 };

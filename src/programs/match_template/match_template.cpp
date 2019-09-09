@@ -473,11 +473,12 @@ bool MatchTemplateApp::DoCalculation()
 	factorizable_x = input_image.logical_x_dimension;
 	factorizable_y = input_image.logical_y_dimension;
 
-	bool DO_FACTORIZATION = false;
+	bool DO_FACTORIZATION = true;
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.5f;
 	float max_increas_by_fraction_of_image = 0.10f;
+	int max_padding = 0; // To restrict histogram calculation
 
 	// for 5760 this will return
 	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
@@ -524,6 +525,9 @@ bool MatchTemplateApp::DoCalculation()
 		}
 
 	}
+	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
+	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
+
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
 
@@ -658,7 +662,7 @@ bool MatchTemplateApp::DoCalculation()
 	//whitening_filter.WriteToFile("/tmp/filter.txt");
 	input_image.ApplyCurveFilter(&whitening_filter);
 	input_image.ZeroCentralPixel();
-	input_image.DivideByConstant(sqrt(input_image.ReturnSumOfSquares()));
+	input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares()));
 	//input_image.QuickAndDirtyWriteSlice("/tmp/white.mrc", 1);
 	//exit(-1);
 
@@ -784,7 +788,7 @@ bool MatchTemplateApp::DoCalculation()
 							psi_max, psi_start, psi_step,
 							angles, global_euler_search,
 							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
-							t_first_search_position, t_last_search_position);
+							max_padding, t_first_search_position, t_last_search_position);
 
 			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %ld-%ld\n",tIDX, t_first_search_position, t_last_search_position);
 
@@ -815,7 +819,6 @@ bool MatchTemplateApp::DoCalculation()
 				#pragma omp critical
 				{
 
-					pixel_counter = 0;
 
 					Image mip_buffer; mip_buffer.CopyFrom(&max_intensity_projection);
 					Image psi_buffer; psi_buffer.CopyFrom(&max_intensity_projection);
@@ -890,6 +893,8 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_max_intensity_projection.Wait();
 //					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 
+					// TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
+					pixel_counter = 0;
 					for (current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++)
 					{
 						for (current_x = 0; current_x < max_intensity_projection.logical_x_dimension; current_x++)
@@ -943,7 +948,6 @@ bool MatchTemplateApp::DoCalculation()
 				temp_result->SetResult(1, &temp_float);
 				AddJobToResultQueue(temp_result);
 			}
-			MyPrintWithDetails("t");
 			continue;
 
 #endif
@@ -1120,9 +1124,19 @@ bool MatchTemplateApp::DoCalculation()
 	}
 
 #ifdef USEGPU
-		// Transfer back the results
-		// Clean up Gpu memory and then se fine
+	// I don't like this solution. The whole padding operation really makes a mess of the code. Be smarter. FIXME
+	for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
+	{
+		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
+		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+	}
+
+	correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+	correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+
 #endif
+
+
 
 	if (is_running_locally == true)
 	{
@@ -1149,6 +1163,7 @@ bool MatchTemplateApp::DoCalculation()
 			}
 			else correlation_pixel_sum_of_squares[pixel_counter] = 0.0f;
 			correlation_pixel_sum[pixel_counter] *= temp_double;
+
 		}
 
 
@@ -1239,7 +1254,7 @@ bool MatchTemplateApp::DoCalculation()
 
 		for (int line_counter = 0; line_counter <= histogram_number_of_points; line_counter++)
 		{
-				expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(input_image.logical_x_dimension * input_image.logical_y_dimension * float(total_correlation_positions));
+				expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(original_input_image_x * original_input_image_y * float(total_correlation_positions));
 		}
 
 		survival_histogram[histogram_number_of_points - 1] = histogram_data[histogram_number_of_points - 1];
@@ -1346,14 +1361,22 @@ bool MatchTemplateApp::DoCalculation()
 
 		for (pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++)
 		{
+#ifdef USEGPU
+			result[result_array_counter] = correlation_pixel_sum_image.real_values[pixel_counter];
+#else
 			result[result_array_counter] = correlation_pixel_sum[pixel_counter];
+#endif
 			result_array_counter++;
 		}
 
 
 		for (pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++)
 		{
+#ifdef USEGPU
+			result[result_array_counter] = correlation_pixel_sum_of_squares_image.real_values[pixel_counter];
+#else
 			result[result_array_counter] = correlation_pixel_sum_of_squares[pixel_counter];
+#endif
 			result_array_counter++;
 		}
 

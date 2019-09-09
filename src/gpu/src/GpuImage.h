@@ -61,7 +61,6 @@ public:
 	cufftReal 	 	*real_values_gpu;									// !<  Real array to hold values for REAL images.
 	cufftComplex 	*complex_values_gpu;								// !<  Complex array to hold values for COMP images.
 	bool        	is_in_memory_gpu;                                  // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
-	long			real_memory_allocated_gpu;							// !<  Number of floats allocated in real space;
 	bool		 	is_host_memory_pinned;	 							// !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
   float*    pinnedPtr;
 
@@ -180,6 +179,7 @@ public:
 	void CopyFromCpuImage(Image &cpu_image);
 	void UpdateCpuFlags();
 	void printVal(std::string msg, int idx);
+	bool HasSameDimensionsAs(GpuImage *other_image);
 	void Zeros();
 
 	void Abs();

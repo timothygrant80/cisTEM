@@ -57,6 +57,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
                     			float histogram_min_scaled,
                     			float histogram_step_scaled,
                     			int histogram_number_of_bins,
+                    			int max_padding,
                                 int first_search_position,
                                 int last_search_position)
                                 
@@ -72,6 +73,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 	this->psi_start = psi_start;
 	this->psi_step  = psi_step;
 	this->psi_max   = psi_max;
+
 
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
@@ -101,6 +103,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
     wxPrintf("Setting up the histogram\n\n");
 	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
+	if (max_padding > 2) {histogram.max_padding = max_padding;}
 
 
 
@@ -223,8 +226,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 
 
-
-      d_max_intensity_projection.MipPixelWise(d_padded_reference, d_best_psi, d_best_psi, d_best_theta, 
+      d_max_intensity_projection.MipPixelWise(d_padded_reference, d_best_psi, d_best_phi, d_best_theta,
                                               current_psi,
                                               global_euler_search.list_of_search_parameters[current_search_position][0],
                                               global_euler_search.list_of_search_parameters[current_search_position][1]);

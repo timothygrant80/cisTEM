@@ -94,6 +94,7 @@ public:
 			float histogram_min_scaled,
 			float histogram_step_scaled,
 			int histogram_number_of_bins,
+			int max_padding,
 			int first_search_position,
 			int last_search_position);
 

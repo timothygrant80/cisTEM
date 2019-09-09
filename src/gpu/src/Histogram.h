@@ -33,6 +33,9 @@ public:
 	float histogram_max;
 	float histogram_step;
 
+	int max_padding;
+
+
 	void SetInitialValues();
 	void Init(int histogram_n_bins, float histogram_min, float histogram_step);
 	void BufferInit(NppiSize npp_ROI);

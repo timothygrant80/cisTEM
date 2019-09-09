@@ -22,10 +22,10 @@ __global__ void AccumulateHistogramKernel( Npp32s* histogram, long*  cummulative
 
 }
 
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc);
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding);
 
 
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc)
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding)
 {
   // pixel coordinates
   int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -50,10 +50,12 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int
   int pixel_idx;
   // process pixels
   // updates our block's partial histogram in shared memory
-  for (int col = x; col < dims.x; col += nx)
+  for (int col = x; col < dims.x - max_padding ; col += nx)
   {
-    for (int row = y; row < dims.y*dims.z; row += ny)
+	if (col < max_padding) continue;
+    for (int row = y; row < dims.y*dims.z - max_padding; row += ny)
     {
+      if (row < max_padding) continue;
       pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
       pixel_idx = MAX(MIN(pixel_idx,n_bins),0);
 
@@ -130,6 +132,7 @@ void Histogram::Init(int histogram_n_bins, float histogram_min, float histogram_
 	this->histogram_n_bins 	= histogram_n_bins;
 	this->histogram_min 	= histogram_min;
 	this->histogram_step	= histogram_step;
+	this->max_padding = 2;
 
 }
 
@@ -183,7 +186,7 @@ void Histogram::AddToHistogram(GpuImage &input_image )
 
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins+1)*sizeof(unsigned int), input_image.nppStream.hStream>>>((const Npp32f*)input_image.real_values_gpu, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step);
+	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins+1)*sizeof(unsigned int), input_image.nppStream.hStream>>>((const Npp32f*)input_image.real_values_gpu, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step,max_padding);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);

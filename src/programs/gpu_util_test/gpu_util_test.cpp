@@ -146,6 +146,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			overall_start = wxDateTime::Now();
 			gpuDev.SetGpu(tIDX);
 
+			int max_padding = 0;
 			const float histogram_min = -20.0f;
 			const float histogram_max = 50.0f;
 			const int histogram_number_of_points = 1024;
@@ -162,7 +163,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 					psi_max, psi_start, psi_step,
 					angles, global_euler_search,
 					histogram_min_scaled, histogram_step_scaled, histogram_number_of_points,
-					first_search_position, last_search_position);
+					max_padding, first_search_position, last_search_position);
 
 			int size_i = 0;
 			int defocus_i = 0;

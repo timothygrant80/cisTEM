@@ -30,7 +30,7 @@ const int MAX_GPU_COUNT = 32;
 #define checkErrorsAndTimingWithSynchronization(input_stream) { cudaError_t cuda_error = cudaStreamSynchronize(input_stream); if (cuda_error != cudaSuccess) {wxPrintf("Sync Check error = %s at line %d in file %s\n", _cudaGetErrorEnum(cuda_error), __LINE__, __FILE__);} };
 #define pre_checkErrorsAndTimingWithSynchronization(input_sream) { checkCudaErrors(cudaGetLastError()); }
 #else
-#define checkErrorsAndTimingWithSynchronization(input_stream);
+#define checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 #define pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 #endif
 

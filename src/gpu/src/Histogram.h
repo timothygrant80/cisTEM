@@ -23,9 +23,9 @@ public:
 	dim3 threadsPerBlock_accum_array;
 	dim3 gridDims_accum_array;
 
-	unsigned int* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
+	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
 	size_t size_of_temp_hist;
-	long* cummulative_histogram;
+	float* cummulative_histogram;
 
 
 	int histogram_n_bins; //

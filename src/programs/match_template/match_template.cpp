@@ -728,6 +728,7 @@ bool MatchTemplateApp::DoCalculation()
 
 #ifdef USEGPU
 
+	cudaProfilerStart();
 	bool first_gpu_loop = true;
 	int nThreads;
 	int nGPUs = 2;
@@ -1124,6 +1125,9 @@ bool MatchTemplateApp::DoCalculation()
 	}
 
 #ifdef USEGPU
+	cudaProfilerStop();
+
+
 	// I don't like this solution. The whole padding operation really makes a mess of the code. Be smarter. FIXME
 	for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
 	{

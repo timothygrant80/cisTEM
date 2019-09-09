@@ -50,11 +50,11 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 {
 
 	int number_of_jobs_per_image_in_gui = 1;
-	nThreads = 1;
-	nGPUs = 1;
+	nThreads = 4;
+	nGPUs = 2;
 	int minPos = 0;
-	int maxPos = 10;
-	int incPos = 10 / (nThreads*nGPUs); // FIXME
+	int maxPos = 280;
+	int incPos = 280 / (nThreads*nGPUs); // FIXME
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel

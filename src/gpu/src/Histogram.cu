@@ -7,25 +7,12 @@
 
 #include "gpu_core_headers.h"
 
-__global__ void AccumulateHistogramKernel( Npp32s* histogram, long*  cummulative_histogram, int n_elem);
-
-__global__ void AccumulateHistogramKernel( Npp32s* histogram, long*  cummulative_histogram, int n_elem)
-{
-
-	long c = 1;
-	int coords = blockIdx.x*blockDim.x + threadIdx.x;
-
-	if (coords < n_elem)
-	{
-		cummulative_histogram[coords] += c;//(long)histogram[coords];
-	}
-
-}
-
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding);
 
 
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding)
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding);
+
+
+__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding)
 {
   // pixel coordinates
   int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -66,27 +53,30 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, unsigned int
   __syncthreads();
 
   // write partial histogram into the global memory
-  // increment the pointer to global memory by block_idx * nbins
+  // Converting to long was super slow. Given that I don't care about representing the number exactly,
+  // but do care about overflow, just switch the bins to flaot
   out += (blockIdx.x + blockIdx.y * gridDim.x) * n_bins;
   for (int i = t; i < n_bins; i += nt) {
-    out[i] = smem[i];
+    out[i] = (float)smem[i];
   }
 }
 
-__global__ void histogram_final_accum(unsigned int *in, long *out, int n_bins, int n_blocks);
+__global__ void histogram_final_accum(float *in, float *out, int n_bins, int n_blocks);
 
 
-__global__ void histogram_final_accum(unsigned int *in, long *out, int n_bins, int n_blocks)
+__global__ void histogram_final_accum(float *in, float *out, int n_bins, int n_blocks)
 {
+
+
 
 	int lIDX = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (lIDX < n_bins)
 	{
-		long total = 0;
+		float total = 0.0f;
 		for (int j = 0; j < n_blocks; j ++)
 		{
-		  total += (long)in[lIDX + n_bins * j];
+		  total += in[lIDX + n_bins * j];
 		}
 		out[lIDX] += total;
 
@@ -200,13 +190,13 @@ void Histogram::AddToHistogram(GpuImage &input_image )
 void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 {
 	// Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
-	long* tmp_array;
-	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(long)));
-	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(long),cudaMemcpyDeviceToHost));
+	float* tmp_array;
+	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(float)));
+	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(float),cudaMemcpyDeviceToHost));
 
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{
-		array_to_add_to[iBin] += tmp_array[iBin];
+		array_to_add_to[iBin] += (long)tmp_array[iBin];
 //    	wxPrintf("Hist value adding ibin %d to %ld is %ld\n",iBin, tmp_array[iBin], array_to_add_to[iBin]);
 
 	}

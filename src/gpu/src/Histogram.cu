@@ -183,6 +183,7 @@ void Histogram::AddToHistogram(GpuImage &input_image)
 
 void Histogram::Accumulate(GpuImage &input_image)
 {
+	checkCudaErrors(cudaStreamSynchronize(input_image.nppStream.hStream));
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
@@ -200,7 +201,6 @@ void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{
 		array_to_add_to[iBin] += (long)tmp_array[iBin];
-//    	wxPrintf("Hist value adding ibin %d to %ld is %ld\n",iBin, tmp_array[iBin], array_to_add_to[iBin]);
 
 	}
 

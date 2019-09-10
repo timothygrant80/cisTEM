@@ -38,7 +38,6 @@ void DeviceManager::Init(int wanted_number_of_gpus)
 	  wanted_number_of_gpus = MAX_GPU_COUNT;
   }
 
-
   this->nGPUs = wanted_number_of_gpus;
 
 };

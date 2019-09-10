@@ -1137,10 +1137,10 @@ void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	//  checkCudaErrors(cudaMemcpyAsync(real_values, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
 	// TODO add asserts etc.
-	if (free_gpu_memory) { cudaFree(&real_values_gpu) ; } // FIXME what about the other structures
+	if (free_gpu_memory) { cudaFree(real_values_gpu) ; } // FIXME what about the other structures
 	if (unpin_host_memory && is_host_memory_pinned)
 	{
-		cudaHostUnregister(&real_values);
+		cudaHostUnregister(real_values);
 		is_host_memory_pinned = false;
 	}
 
@@ -1164,9 +1164,9 @@ void GpuImage::CopyDeviceToHost(Image &cpu_image, bool should_block_until_comple
 
 	if (should_block_until_complete) checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 	// TODO add asserts etc.
-	if (free_gpu_memory) { cudaFree(&real_values_gpu) ; } // FIXME what about the other structures
+	if (free_gpu_memory) { cudaFree(real_values_gpu) ; } // FIXME what about the other structures
 
-	cudaHostUnregister(&tmpPinnedPtr);
+	cudaHostUnregister(tmpPinnedPtr);
 
 
 }
@@ -1217,10 +1217,10 @@ void GpuImage::CopyVolumeDeviceToHost(bool free_gpu_memory, bool unpin_host_memo
 
     // TODO add asserts etc.
     if (free_gpu_memory) 
-    { cudaFree(&d_pitchedPtr.ptr) ; } // FIXME what about the other structures
+    { cudaFree(d_pitchedPtr.ptr) ; } // FIXME what about the other structures
     if (unpin_host_memory && is_host_memory_pinned) 
     {
-      cudaHostUnregister(&real_values);
+      cudaHostUnregister(real_values);
       is_host_memory_pinned = false;
     }
 }
@@ -1621,11 +1621,6 @@ void GpuImage::ClipInto(GpuImage *other_image, float wanted_padding_value,
   int3 wanted_coordinate_of_box_center = make_int3(wanted_coordinate_of_box_center_x, 
                                                    wanted_coordinate_of_box_center_y, 
                                                    wanted_coordinate_of_box_center_z);
-//other_image->logical_z_dimension
-//other_image->physical_address_of_box_center_z
-//wanted_coordinate_of_box_center_z 
-//wanted_padding_value
-	// take other following attributes
 
 	other_image->is_in_real_space = is_in_real_space;
 	other_image->object_is_centred_in_box = object_is_centred_in_box;
@@ -1637,13 +1632,6 @@ void GpuImage::ClipInto(GpuImage *other_image, float wanted_padding_value,
 
     ReturnLaunchParamters(other_image->dims, true);
 
-//    wxPrintf("dims %d %d %d\nOther Dims %d %d %d\ncenter %d %d %d\nOther center %d %d %d\n,wanted Center %d %d %d\npad %f\n",
-//              dims.x, dims.y, dims.z,
-//              other_image->dims.x, other_image->dims.y, other_image->dims.z,
-//              physical_address_of_box_center.x, physical_address_of_box_center.y, physical_address_of_box_center.z,
-//              other_image->physical_address_of_box_center.x, other_image->physical_address_of_box_center.y, other_image->physical_address_of_box_center.z,
-//              wanted_coordinate_of_box_center.x, wanted_coordinate_of_box_center.y, wanted_coordinate_of_box_center.z, wanted_padding_value);
-//    exit(-1);
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
     ClipIntoRealKernel<< <gridDims, threadsPerBlock, 0, cudaStreamPerThread>> >(real_values_gpu,
                                                               other_image->real_values_gpu,
@@ -1890,7 +1878,7 @@ void GpuImage::Deallocate()
 {
 
 
-  if (is_host_memory_pinned) cudaHostUnregister(&real_values);
+  if (is_host_memory_pinned) cudaHostUnregister(real_values);
 
   cudaFree(tmpVal);
   cudaFree(tmpValComplex);
@@ -1929,7 +1917,6 @@ void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size,
 	MyAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
 
 	// check to see if we need to do anything?
-	SetupInitialValues();
 
 	if (is_in_memory_gpu == true)
 	{
@@ -1947,7 +1934,7 @@ void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size,
 		}
 	}
 
-
+	SetupInitialValues();
 	this->is_in_real_space = should_be_in_real_space;
 	dims.x = wanted_x_size; dims.y = wanted_y_size; dims.z = wanted_z_size;
 

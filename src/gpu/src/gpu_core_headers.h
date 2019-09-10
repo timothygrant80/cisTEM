@@ -37,7 +37,7 @@ const int MAX_GPU_COUNT = 32;
 // Complex data type
 typedef float2 Complex;
 static __device__ __host__ inline Complex ComplexAdd(Complex, Complex);
-static __device__ __host__ inline Complex ComplexScale(Complex, float);
+static __device__ __host__ inline Complex ComplexScale(Complex&, float&);
 static __device__ __host__ inline Complex ComplexMul(Complex, Complex);
 static __device__ __host__ inline Complex ComplexConjMul(Complex, Complex);
 
@@ -55,7 +55,7 @@ static __device__ __host__ inline Complex ComplexAdd(Complex a, Complex b)
 }
 
 // Complex scale
-static __device__ __host__ inline Complex ComplexScale(Complex a, float s)
+static __device__ __host__  inline Complex ComplexScale(Complex &a, float &s)
 {
     Complex c;
     c.x = s * a.x;

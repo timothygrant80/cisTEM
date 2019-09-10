@@ -131,6 +131,8 @@ public:
 				int wanted_coordinate_of_box_center_z);
 	void ForwardFFT(bool should_scale = true);                                           /**CPU_eq**/
 	void BackwardFFT();                                                                   /**CPU_eq**/
+	void BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply);
+
 
 	float ReturnSumOfSquares();
 	float ReturnAverageOfRealValuesOnEdges();
@@ -256,6 +258,7 @@ public:
   // Callback related parameters
   bool is_set_convertInputf16Tof32;
   bool is_set_scaleFFTAndStore;
+  bool is_set_complexConjMulLoad;
 
 /*template void d_MultiplyByScalar<T>(T* d_input, T* d_multiplicators, T* d_output, size_t elements, int batch);*/
 

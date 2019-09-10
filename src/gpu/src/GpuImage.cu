@@ -48,25 +48,33 @@ __device__ cufftReal CB_ConvertInputf16Tof32(void* dataIn, size_t offset, void* 
 	const __half element = ((__half*)dataIn)[offset];
 	return (cufftReal)(__half2float(element));
 }
-//__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
 __device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
 
 __device__ void CB_scaleFFTAndStore(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr);
 
 __device__ void CB_scaleFFTAndStore(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr)
 {
-	float* scale_factor = (float *)callerInfo;
-	cufftComplex value; //= (cufftComplex)ComplexScale(element, *scale_factor);
-	value.x = element.x;// * (cufftReal)*scale_factor;
-	value.y = element.y;// * (cufftReal)*scale_factor;
-	((cufftComplex*)dataOut)[offset] = value; // (cufftComplex)ComplexScale(element, *scale_factor);
+	float scale_factor = *(float *)callerInfo;
+
+	((cufftComplex*)dataOut)[offset] = (cufftComplex)ComplexScale(element, scale_factor);
 }
 //__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
 __device__ cufftCallbackStoreC d_scaleFFTAndStorePtr = CB_scaleFFTAndStore;
 
 
-// Inline declarations
- __device__ __forceinline__ int
+
+ __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+
+ __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+ {
+	 return (cufftComplex)ComplexConjMul(((Complex *)callerInfo)[offset],((Complex *)dataIn)[offset]);
+
+ }
+ __device__ cufftCallbackLoadC d_complexConjMulLoad = CB_complexConjMulLoad;
+
+
+ // Inline declarations
+  __device__ __forceinline__ int
 d_ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index, 
                                                 int logical_x_dimension,
                                                 int physical_address_of_box_center_x);
@@ -1255,7 +1263,7 @@ void GpuImage::ForwardFFT(bool should_scale)
 	}
 
 	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
-	if (! is_set_convertInputf16Tof32 )
+	if ( is_half_precision && ! is_set_convertInputf16Tof32 )
 	{
 		cufftCallbackLoadR h_ConvertInputf16Tof32Ptr;
 		checkCudaErrors(cudaMemcpyFromSymbol(&h_ConvertInputf16Tof32Ptr,d_ConvertInputf16Tof32Ptr, sizeof(h_ConvertInputf16Tof32Ptr)));
@@ -1269,7 +1277,6 @@ void GpuImage::ForwardFFT(bool should_scale)
 	{
 
 		float ft_norm_sq = ft_normalization_factor*ft_normalization_factor;
-		wxPrintf("ft norm sq is %3.3e\n", ft_norm_sq);
 		checkCudaErrors(cudaMalloc((void **)&d_scale_factor, sizeof(float)));
 		checkCudaErrors(cudaMemcpyAsync(d_scale_factor, &ft_norm_sq, sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
 		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
@@ -1296,20 +1303,53 @@ void GpuImage::BackwardFFT()
 	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 	MyAssertFalse(is_in_real_space, "Image is already in real space");
 
-  if ( ! is_fft_planned )
-  {
-    SetCufftPlan();
-    is_fft_planned = true;
-    // TODO confirm that the reset actually happens and it is needed to set this each time.
-    checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
-  }
+	if ( ! is_fft_planned )
+	{
+		SetCufftPlan();
+		is_fft_planned = true;
+		// TODO confirm that the reset actually happens and it is needed to set this each time.
+		checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
+	}
 
-//  BufferInit(b_image);
-//  checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)image_buffer->complex_values, (cufftReal*)real_values_gpu));
+	//  BufferInit(b_image);
+	//  checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)image_buffer->complex_values, (cufftReal*)real_values_gpu));
 
-  checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
+	checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
 
-  is_in_real_space = true;
+	is_in_real_space = true;
+
+}
+
+void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply)
+{
+
+	bool should_mul = false;
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertFalse(is_in_real_space, "Image is already in real space");
+
+	if ( ! is_fft_planned )
+	{
+		SetCufftPlan();
+		is_fft_planned = true;
+		// TODO confirm that the reset actually happens and it is needed to set this each time.
+		checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
+	}
+
+	if ( ! is_set_complexConjMulLoad )
+	{
+		cufftCallbackStoreC h_complexConjMulLoad;
+		checkCudaErrors(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad, sizeof(h_complexConjMulLoad)));
+		checkCudaErrors(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&image_to_multiply));
+//		d_complexConjMulLoad;
+		is_set_complexConjMulLoad = true;
+	}
+
+	//  BufferInit(b_image);
+	//  checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)image_buffer->complex_values, (cufftReal*)real_values_gpu));
+
+	checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
+
+	is_in_real_space = true;
 
 }
 
@@ -2041,6 +2081,7 @@ void GpuImage::UpdateBoolsToDefault()
 	// Callbacks
 	is_set_convertInputf16Tof32 = false;
 	is_set_scaleFFTAndStore = false;
+	is_set_complexConjMulLoad = false;
 
 }
 

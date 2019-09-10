@@ -39,17 +39,18 @@ __global__ void ClipIntoRealKernel(cufftReal* real_values_gpu,
                                    int3 wanted_coordinate_of_box_center, 
                                    float wanted_padding_value);
 
-//// cuFFT callbacks
-//__device__ void CB_ScaleAndStoreC(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr);
-//
-//__device__ void CB_ScaleAndStoreC(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr)
-//{
-//	// This is to be used after calculating a forward FFT. The index values should be 1:1
-//	float* scale_factor = (float *)callerInfo;
-//	cufftComplex value = (cufftComplex)ComplexScale((Complex *)&element, scale_factor);
-//	((cufftComplex *)dataOut)[ offset ] = value;
-//}
-//__device__ cufftCallbackStoreC d_scaleAndStorePtr = CB_ScaleAndStoreC;
+// cuFFT callbacks
+__device__ cufftReal CB_ConvertInputf16Tof32(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+
+__device__ cufftReal CB_ConvertInputf16Tof32(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+{
+
+	const __half element = ((__half*)dataIn)[offset];
+	return (cufftReal)(__half2float(element));
+}
+//__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
+__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
+
 
 // Inline declarations
  __device__ __forceinline__ int
@@ -1228,6 +1229,8 @@ void GpuImage::CopyVolumeDeviceToHost(bool free_gpu_memory, bool unpin_host_memo
 void GpuImage::ForwardFFT(bool should_scale)
 {
 
+	bool is_half_precision = false;
+
 	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 	MyAssertTrue(is_in_real_space, "Image alread in Fourier space");
 
@@ -1240,16 +1243,14 @@ void GpuImage::ForwardFFT(bool should_scale)
 	}
 
 	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
-	if (should_scale && ! is_set_scaleAndStoreCallBack)
+	if (! is_set_convertInputf16Tof32 )
 	{
-//	  checkCudaErrors(cudaMemcpyFromSymbol(&h_scaleAndStorePtr, d_scaleAndStorePtr, sizeof(h_scaleAndStorePtr)));
-//	  float* norm_factor;
-//      checkCudaErrors(cudaMalloc((void **)norm_factor, sizeof(float)));
-//	  *norm_factor = ft_normalization_factor*ft_normalization_factor ;
-//	  checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_scaleAndStorePtr, CUFFT_CB_ST_COMPLEX, (void **)&norm_factor));
-//	  is_set_scaleAndStoreCallBack = true;
-//	  checkCudaErrors(cudaFree(norm_factor));
-		this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
+		cufftCallbackLoadR h_ConvertInputf16Tof32Ptr;
+		checkCudaErrors(cudaMemcpyFromSymbol(&h_ConvertInputf16Tof32Ptr,d_ConvertInputf16Tof32Ptr, sizeof(h_ConvertInputf16Tof32Ptr)));
+		checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_ConvertInputf16Tof32Ptr, CUFFT_CB_LD_REAL, 0));
+		is_set_convertInputf16Tof32 = true;
+		//	  checkCudaErrors(cudaFree(norm_factor));
+		//	  this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
 	}
 
 
@@ -1284,6 +1285,7 @@ void GpuImage::BackwardFFT()
   is_in_real_space = true;
 
 }
+
 
 void GpuImage::Wait()
 {
@@ -2009,7 +2011,7 @@ void GpuImage::UpdateBoolsToDefault()
 	is_allocated_countinrange_buffer = false;
 
 	// Callbacks
-	is_set_scaleAndStoreCallBack = false;
+	is_set_convertInputf16Tof32 = false;
 
 }
 

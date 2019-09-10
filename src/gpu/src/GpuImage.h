@@ -253,7 +253,8 @@ public:
   float ReturnSumSquareModulusComplexValues();
   
   // Callback related parameters
-  cufftCallbackStoreC h_scaleAndStorePtr; 		bool is_set_scaleAndStoreCallBack;
+  bool is_set_convertInputf16Tof32;
+  bool is_set_scaleFFTAndStore;
 
 /*template void d_MultiplyByScalar<T>(T* d_input, T* d_multiplicators, T* d_output, size_t elements, int batch);*/
 

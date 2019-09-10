@@ -817,7 +817,7 @@ bool MatchTemplateApp::DoCalculation()
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
 
 
-				MyPrintWithDetails("");
+
 				#pragma omp critical
 				{
 
@@ -826,15 +826,15 @@ bool MatchTemplateApp::DoCalculation()
 					Image psi_buffer; psi_buffer.CopyFrom(&max_intensity_projection);
 					Image phi_buffer; phi_buffer.CopyFrom(&max_intensity_projection);
 					Image theta_buffer; theta_buffer.CopyFrom(&max_intensity_projection);
-					MyPrintWithDetails("");
+
 					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false);
-					MyPrintWithDetails("");
+
 					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
-					MyPrintWithDetails("");
+
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
-					MyPrintWithDetails("");
+
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
-					MyPrintWithDetails("");
+
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum, t_sum;

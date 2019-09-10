@@ -178,7 +178,6 @@ void Histogram::AddToHistogram(GpuImage &input_image)
 //	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 
-
 }
 
 void Histogram::Accumulate(GpuImage &input_image)

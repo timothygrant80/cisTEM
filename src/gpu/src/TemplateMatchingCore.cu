@@ -323,16 +323,13 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 		}
 
-
       current_projection.is_in_real_space = false;
       d_padded_reference.is_in_real_space = true;
       cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
 
 
-
 		} // loop over psi angles
-
 
 
       

@@ -927,7 +927,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 
-					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+//					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
 //					for (int iBin = 0; iBin < histogram_number_of_points; iBin++)
 //					{

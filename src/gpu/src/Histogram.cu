@@ -101,18 +101,13 @@ Histogram::Histogram(int histogram_n_bins, float histogram_min, float histogram_
 
 Histogram::~Histogram()
 {
-//	if (is_allocated_histogram_buffer)
-//	{
-//		checkCudaErrors(cudaFree(histogram_buffer));
-//	}
+
 //	if (is_allocated_histogram)
 //	{
 //		checkCudaErrors(cudaFree(histogram));
+//		checkCudaErrors(cudaFree(cummulative_histogram));
 //	}
-//	if (is_allocated_histogram_bin_values)
-//	{
-//		checkCudaErrors(cudaFree(histogram_bin_values));
-//	}
+
 }
 	//FIXME
 
@@ -165,7 +160,6 @@ void Histogram::BufferInit(NppiSize npp_ROI)
 
 
 }
-
 
 void Histogram::AddToHistogram(GpuImage &input_image)
 {

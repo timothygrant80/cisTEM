@@ -1897,7 +1897,7 @@ void GpuImage::Deallocate()
 
   if (is_fft_planned)
   {
-//    checkCudaErrors(cufftDestroy(cuda_plan_inverse));
+    checkCudaErrors(cufftDestroy(cuda_plan_inverse));
     checkCudaErrors(cufftDestroy(cuda_plan_forward));
     is_fft_planned = false;
   }

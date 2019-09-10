@@ -339,6 +339,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
  	} // end of outer loop euler sphere position
 
 	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
+    cudaStreamWaitEvent(cudaStreamPerThread,gpu_work_is_done_Event, 0);
 	histogram.Accumulate(d_padded_reference);
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 

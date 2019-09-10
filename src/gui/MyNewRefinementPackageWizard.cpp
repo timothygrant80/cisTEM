@@ -922,18 +922,18 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			for (particle_counter = 0; particle_counter < particle_info_buffer.GetCount(); particle_counter++)
 			{
-				if (particle_info_buffer[particle_counter].parent_image_id != -1)
+				if (particle_info_buffer[particle_counter].parent_image_id != -1  && particle_info_buffer[particle_counter].parent_image_id != -2)
 				{
 					active_images.Add(particle_info_buffer[particle_counter].parent_image_id);
 
 					for (second_counter = particle_counter + 1; second_counter < particle_info_buffer.GetCount(); second_counter++)
 					{
-						if (particle_info_buffer[second_counter].parent_image_id == particle_info_buffer[particle_counter].parent_image_id) particle_info_buffer[second_counter].parent_image_id = -1;
+						if (particle_info_buffer[second_counter].parent_image_id == particle_info_buffer[particle_counter].parent_image_id) particle_info_buffer[second_counter].parent_image_id = -2;
 					}
 				}
 			}
 
-			wxPrintf("There are %li active images\n", active_images.GetCount());
+			//wxPrintf("There are %li active images\n", active_images.GetCount());
 
 			// we are going to loop image by image, as duplicates must be on the same image, and there should probably never be enough particles on any one image to make this that slow..
 
@@ -960,8 +960,12 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				for (particle_counter = 0; particle_counter < particle_infos_for_current_image.GetCount(); particle_counter++)
 				{
+					if (particle_infos_for_current_image[particle_counter].parent_image_id == -1) continue; // can't do this if we don't have parent info..
+
 					for (second_counter = particle_counter + 1; second_counter < particle_infos_for_current_image.GetCount(); second_counter++)
 					{
+						if (particle_infos_for_current_image[second_counter].parent_image_id == -1) continue; // can't do this if we don't have parent info..
+
 						if (powf(particle_infos_for_current_image[particle_counter].x_pos - particle_infos_for_current_image[second_counter].x_pos, 2) + powf(particle_infos_for_current_image[particle_counter].y_pos - particle_infos_for_current_image[second_counter].y_pos, 2) < threshold_distance_squared)
 						{
 							// so these two particles are too close.. which one has the smallest shift, we will keep that one as that was most likely to be the best original pick..
@@ -1002,6 +1006,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				my_dialog->Update(image_counter + 1);
 			}
+
+			// we need to add any particles with no parent image back in as well (i.e. they came from an imported stack, otherwise they won't have been included)
+
+			for (particle_counter = 0; particle_counter < particle_info_buffer.GetCount(); particle_counter++)
+			{
+				if (particle_info_buffer[particle_counter].parent_image_id == -1) class_average_particle_infos.Add(particle_info_buffer[particle_counter]);
+			}
+
 /*
 			class_average_particle_infos.Clear();
 			for (particle_counter = 0; particle_counter < duplicate_debug.GetCount(); particle_counter++)
@@ -1012,7 +1024,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 
 			my_dialog->Destroy();
-			wxPrintf("Removed a %i of %li picks\n", number_removed, particle_info_buffer.GetCount());
+			//wxPrintf("Removed a %i of %li picks\n", number_removed, particle_info_buffer.GetCount());
 
 		}
 
@@ -1139,7 +1151,6 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					stack_image.InvertRealValues();
 					stack_image.ZeroFloatAndNormalize();
 				}
-
 
 				// pad into the new box..
 
@@ -1736,7 +1747,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 	  //if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
 	  //else return wizard_pointer->remove_duplicate_picks_threshold_page;
 
-	  return wizard_pointer->output_pixel_size_page;
+	  return wizard_pointer->symmetry_page;
 
 
 
@@ -1745,7 +1756,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
   wxWizardPage *  BoxSizeWizardPage::GetNext () const
   {
 	//  wxPrintf("Box Next\n");
-  	 return wizard_pointer->symmetry_page;
+  	 return wizard_pointer->output_pixel_size_page;
   }
 
   //////////////////////////
@@ -1774,21 +1785,21 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  	  //else
  	  //return wizard_pointer->class_selection_page;
 
- 	  if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() != 1) return wizard_pointer->largest_dimension_page;
+ 	  /*if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() != 1) return wizard_pointer->largest_dimension_page;
  	  else
  	  if (wizard_pointer->recentre_picks_page->my_panel->ReCentreYesButton->GetValue() == false) return wizard_pointer->recentre_picks_page;
  	  else
  	  if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
- 	  else return wizard_pointer->remove_duplicate_picks_threshold_page;
+ 	  else return wizard_pointer->remove_duplicate_picks_threshold_page;*/
 
-
-
+	  if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
+	  else return wizard_pointer->box_size_page;
    }
 
    wxWizardPage *  OutputPixelSizeWizardPage::GetNext () const
    {
-	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
-	   else return wizard_pointer->box_size_page;
+	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1) return wizard_pointer->recentre_picks_page;
+	   else return wizard_pointer->number_of_classes_page;
    }
   //////////////////////////
 
@@ -1816,6 +1827,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 //	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->parameter_page;
 	//   else return wizard_pointer->box_size_page;
 	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->parameter_page;
+	   else if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1) return wizard_pointer->class_selection_page;
 	   else return wizard_pointer->particle_group_page;
 
    }
@@ -1854,10 +1866,13 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
     wxWizardPage *  LargestDimensionWizardPage::GetNext () const
     {
-    	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1) return wizard_pointer->recentre_picks_page;
+    	/*if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1) return wizard_pointer->recentre_picks_page;
     	else
   	   	if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->symmetry_page;
     	else return wizard_pointer->output_pixel_size_page;
+    	*/
+
+    	return wizard_pointer->symmetry_page;
 
     }
 
@@ -1906,7 +1921,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
    wxWizardPage *  SymmetryWizardPage::GetNext () const
    {
  	//  wxPrintf("Box Next\n");
-   	 return wizard_pointer->number_of_classes_page;
+//   	 return wizard_pointer->number_of_classes_page;
+
+	   if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() > 1) return wizard_pointer->output_pixel_size_page;
+	   else return wizard_pointer->box_size_page;
    }
 
 
@@ -1972,7 +1990,14 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
  wxWizardPage *  NumberofClassesWizardPage::GetPrev () const
  {
-	 return wizard_pointer->symmetry_page;
+	 if (wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection() == 1)
+	 {
+		 if (wizard_pointer->remove_duplicate_picks_page->my_panel->RemoveDuplicateYesButton->GetValue() == false) return wizard_pointer->remove_duplicate_picks_page;
+	 	 else return wizard_pointer->remove_duplicate_picks_threshold_page;
+	 }
+	 else return wizard_pointer->output_pixel_size_page;
+
+
  }
 
  // ///////////////////////////
@@ -2527,14 +2552,14 @@ int ClassesSetupWizardPageC::ReturnSelectedNewClass()
  {
 	 if (my_panel->ReCentreYesButton->GetValue() == false)
 	 {
-			return wizard_pointer->output_pixel_size_page;
+			return wizard_pointer->number_of_classes_page;
 	 }
 	 else return wizard_pointer->remove_duplicate_picks_page;
  }
 
  wxWizardPage *  RecentrePicksWizardPage::GetPrev () const
  {
-	 return wizard_pointer->largest_dimension_page;
+	 return wizard_pointer->output_pixel_size_page;
  }
 
 
@@ -2569,7 +2594,7 @@ int ClassesSetupWizardPageC::ReturnSelectedNewClass()
  {
 	 if (my_panel->RemoveDuplicateYesButton->GetValue() == false)
 	 {
-		 return wizard_pointer->output_pixel_size_page;
+		 return wizard_pointer->number_of_classes_page;
 	 }
 	 else return wizard_pointer->remove_duplicate_picks_threshold_page;
  }
@@ -2608,7 +2633,7 @@ int ClassesSetupWizardPageC::ReturnSelectedNewClass()
 
  wxWizardPage *  RemoveDuplicateThresholdWizardPage::GetNext () const
  {
-	 return wizard_pointer->box_size_page;
+	 return wizard_pointer->number_of_classes_page;
  }
 
  wxWizardPage *  RemoveDuplicateThresholdWizardPage::GetPrev () const

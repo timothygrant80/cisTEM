@@ -208,7 +208,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT4, 1, 1); 
 
       pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-      d_padded_reference.ForwardFFT();
+      d_padded_reference.ForwardFFT(false);
       checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
       // The input image should have zero mean, so multipling also zeros the mean of the ref.
 //      d_padded_reference.MultiplyPixelWiseComplexConjugate(d_input_image);

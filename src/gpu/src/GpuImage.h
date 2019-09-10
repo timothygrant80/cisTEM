@@ -63,7 +63,6 @@ public:
 	bool		 	is_host_memory_pinned;	 							// !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
 	float*    pinnedPtr;
 
-	float* d_scale_factor;
 
 	cudaMemcpy3DParms h_3dparams = {0};
 	cudaExtent h_extent;

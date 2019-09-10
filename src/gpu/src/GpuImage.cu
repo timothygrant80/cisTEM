@@ -63,11 +63,20 @@ __device__ cufftCallbackStoreC d_scaleFFTAndStorePtr = CB_scaleFFTAndStore;
 
 
 
- __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+static __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
 
- __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+typedef struct _CB_complexConjMulLoad_params
+{
+	cufftComplex* target;
+	float scale;
+
+} CB_complexConjMulLoad_params;
+
+static __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
  {
-	 return (cufftComplex)ComplexConjMul(((Complex *)callerInfo)[offset],((Complex *)dataIn)[offset]);
+
+	CB_complexConjMulLoad_params* my_params = (CB_complexConjMulLoad_params *)callerInfo;
+	return (cufftComplex)ComplexConjMulAndScale(my_params->target[offset],((Complex *)dataIn)[offset],my_params->scale);
 
  }
  __device__ cufftCallbackLoadC d_complexConjMulLoad = CB_complexConjMulLoad;
@@ -1272,20 +1281,24 @@ void GpuImage::ForwardFFT(bool should_scale)
 		//	  checkCudaErrors(cudaFree(norm_factor));
 		//	  this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
 	}
-
-	if (should_scale && ! is_set_scaleFFTAndStore)
+	if (should_scale)
 	{
-
-		float ft_norm_sq = ft_normalization_factor*ft_normalization_factor;
-		checkCudaErrors(cudaMalloc((void **)&d_scale_factor, sizeof(float)));
-		checkCudaErrors(cudaMemcpyAsync(d_scale_factor, &ft_norm_sq, sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
-		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
-
-		cufftCallbackStoreC h_scaleFFTAndStorePtr;
-		checkCudaErrors(cudaMemcpyFromSymbol(&h_scaleFFTAndStorePtr,d_scaleFFTAndStorePtr, sizeof(h_scaleFFTAndStorePtr)));
-		checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_scaleFFTAndStorePtr, CUFFT_CB_ST_COMPLEX, (void **)&d_scale_factor));
-		is_set_scaleFFTAndStore = true;
+		this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
 	}
+
+//	if (should_scale && ! is_set_scaleFFTAndStore)
+//	{
+//
+//		float ft_norm_sq = ft_normalization_factor*ft_normalization_factor;
+//		checkCudaErrors(cudaMalloc((void **)&d_scale_factor, sizeof(float)));
+//		checkCudaErrors(cudaMemcpyAsync(d_scale_factor, &ft_norm_sq, sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
+//		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+//
+//		cufftCallbackStoreC h_scaleFFTAndStorePtr;
+//		checkCudaErrors(cudaMemcpyFromSymbol(&h_scaleFFTAndStorePtr,d_scaleFFTAndStorePtr, sizeof(h_scaleFFTAndStorePtr)));
+//		checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_scaleFFTAndStorePtr, CUFFT_CB_ST_COMPLEX, (void **)&d_scale_factor));
+//		is_set_scaleFFTAndStore = true;
+//	}
 
 
 //	BufferInit(b_image);
@@ -1338,8 +1351,18 @@ void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply)
 	if ( ! is_set_complexConjMulLoad )
 	{
 		cufftCallbackStoreC h_complexConjMulLoad;
+		CB_complexConjMulLoad_params* d_params;
+		CB_complexConjMulLoad_params h_params;
+
+		h_params.scale = ft_normalization_factor*ft_normalization_factor;
+		h_params.target = image_to_multiply;
+
+		checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_complexConjMulLoad_params)));
+		checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_complexConjMulLoad_params), cudaMemcpyHostToDevice, cudaStreamPerThread));
+		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+
 		checkCudaErrors(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad, sizeof(h_complexConjMulLoad)));
-		checkCudaErrors(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&image_to_multiply));
+		checkCudaErrors(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&d_params));
 //		d_complexConjMulLoad;
 		is_set_complexConjMulLoad = true;
 	}

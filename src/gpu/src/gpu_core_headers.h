@@ -40,6 +40,8 @@ static __device__ __host__ inline Complex ComplexAdd(Complex, Complex);
 static __device__ __host__ inline Complex ComplexScale(Complex&, float&);
 static __device__ __host__ inline Complex ComplexMul(Complex, Complex);
 static __device__ __host__ inline Complex ComplexConjMul(Complex, Complex);
+static __device__ __host__ inline Complex ComplexConjMulAndScale(Complex a, Complex b, float s);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Complex operations
@@ -78,6 +80,15 @@ static __device__ __host__ inline Complex ComplexConjMul(Complex a, Complex b)
     Complex c;
     c.x = a.x * b.x + a.y * b.y;
     c.y = a.y * b.x - a.x * b.y  ;
+    return c;
+}
+
+// Complex a * conj b multiplication
+static __device__ __host__ inline Complex ComplexConjMulAndScale(Complex a, Complex b, float s)
+{
+    Complex c;
+    c.x = s * (a.x * b.x + a.y * b.y);
+    c.y = s * (a.y * b.x - a.x * b.y) ;
     return c;
 }
 

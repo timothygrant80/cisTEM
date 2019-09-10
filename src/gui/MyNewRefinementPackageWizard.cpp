@@ -1503,7 +1503,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].pixel_size = active_result.pixel_size;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_voltage_kv = active_result.microscope_voltage_kv;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = active_result.microscope_spherical_aberration_mm;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = active_result.amplitude_contrast;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].amplitude_contrast = active_result.amplitude_contrast;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_x = active_result.beam_tilt_x;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_y = active_result.beam_tilt_y;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_x = active_result.image_shift_x;

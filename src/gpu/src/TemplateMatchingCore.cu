@@ -87,6 +87,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
     d_current_projection.Init(this->current_projection);
 
     d_padded_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+    d_stats_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_max_intensity_projection.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_psi.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
     d_best_theta.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
@@ -137,6 +138,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	d_best_phi.Zeros();
 	d_best_theta.Zeros();
 	d_padded_reference.Zeros();
+	d_stats_reference.Zeros();
 
 	  d_sum1.Zeros();
 	  d_sumSq1.Zeros();
@@ -146,11 +148,18 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	total_number_of_cccs_calculated = 0;
 
 
-
-	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
+	cudaStream_t statsStream;
+	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event, stats_are_done_Event, stats_copy_is_done_Event;
+	checkCudaErrors(cudaStreamCreateWithFlags(&statsStream, cudaStreamDefault));
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
+	checkCudaErrors(cudaEventCreateWithFlags(&stats_are_done_Event, cudaEventDisableTiming));
+	checkCudaErrors(cudaEventCreateWithFlags(&stats_copy_is_done_Event, cudaEventDisableTiming));
 
+
+	d_stats_reference.SetStream(statsStream);
+	d_sum1.SetStream(statsStream);d_sum2.SetStream(statsStream);d_sum3.SetStream(statsStream);d_sum4.SetStream(statsStream);d_sum5.SetStream(statsStream);
+	d_sumSq1.SetStream(statsStream);d_sumSq2.SetStream(statsStream);d_sumSq3.SetStream(statsStream);d_sumSq4.SetStream(statsStream);d_sumSq5.SetStream(statsStream);
 
 
 	long ccc_counter = 0;
@@ -191,66 +200,63 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //      // TODO add more?
 
       // Make sure the device has moved on to the padded projection
-      cudaStreamWaitEvent(cudaStreamPerThread,projection_is_free_Event, 0);
+      cudaStreamWaitEvent(d_padded_reference.calcStream,projection_is_free_Event, 0);
 
     
       d_current_projection.CopyHostToDevice();
 
-//      d_current_projection.MultiplyPixelWise(d_projection_filter);
-//      d_current_projection.BackwardFFT();
-//      average_on_edge = d_current_projection.ReturnAverageOfRealValuesOnEdges();
-
-
-//      // To check
-//      average_on_edge = d_current_projection.ReturnAverageOfRealValuesOnEdges();
-//       
       d_current_projection.AddConstant(-average_on_edge);
       d_current_projection.MultiplyByConstant(1.0f / sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
 
 
+      // Ensure the last padded ref is copied prior to over-writing it.
+      cudaStreamWaitEvent(d_stats_reference.calcStream,stats_are_done_Event, 0);
+
       d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
-      cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
+      cudaEventRecord(projection_is_free_Event, d_padded_reference.calcStream);
 
 //      cudaStreamSynchronize(cudaStreamPerThread);
 //      std::string fileNameOUT4 = "/tmp/checkPaddedRef" + std::to_string(threadIDX) + ".mrc";
 //      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT4, 1, 1); 
 
-      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+      pre_checkErrorsAndTimingWithSynchronization(d_padded_reference.calcStream);
       d_padded_reference.ForwardFFT();
-      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+      checkErrorsAndTimingWithSynchronization(d_padded_reference.calcStream);
       // The input image should have zero mean, so multipling also zeros the mean of the ref.
       d_padded_reference.MultiplyPixelWiseComplexConjugate(d_input_image);
-      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+      pre_checkErrorsAndTimingWithSynchronization(d_padded_reference.calcStream);
       d_padded_reference.BackwardFFT();
-      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+      checkErrorsAndTimingWithSynchronization(d_padded_reference.calcStream);
 
 
-
-      d_max_intensity_projection.MipPixelWise(d_padded_reference, d_best_psi, d_best_phi, d_best_theta,
-                                              current_psi,
-                                              global_euler_search.list_of_search_parameters[current_search_position][0],
-                                              global_euler_search.list_of_search_parameters[current_search_position][1]);
+      cudaStreamWaitEvent(d_stats_reference.calcStream,stats_are_done_Event, 0);
 
 
-      // TODO these ops have no interdependency so could go into two accumulator strings with an event wait prior to the next use of padded reference.
-//      d_max_intensity_projection.Wait();
-//      d_sum1.AddImage(d_padded_reference);
-//      d_sumSq1.AddSquaredImage(d_padded_reference);
+      // TODO make this a Device to Device method
+      checkCudaErrors(cudaMemcpyAsync(d_stats_reference.real_values_gpu,
+    		  	  	  	  	  	  	  d_padded_reference.real_values_gpu,
+    		  	  	  	  	  	  	  sizeof(cufftReal)*d_padded_reference.real_memory_allocated,
+    		  	  	  	  	  	  	  cudaMemcpyDeviceToDevice, d_stats_reference.calcStream));
+
+
+      cudaEventRecord(stats_copy_is_done_Event, d_stats_reference.calcStream);
+
 //
+      cudaStreamWaitEvent(d_stats_reference.calcStream,stats_are_done_Event, 0);
 
 //		d_padded_reference.NppInit();
 		if (DO_HISTOGRAM)
 		{
 			if ( ! histogram.is_allocated_histogram )
 			{
-				d_padded_reference.NppInit();
-		    	histogram.BufferInit(d_padded_reference.npp_ROI);
+				d_stats_reference.NppInit();
+		    	histogram.BufferInit(d_stats_reference.npp_ROI);
 			}
-			histogram.AddToHistogram(d_padded_reference);
+			histogram.AddToHistogram(d_stats_reference);
 		}
 
-		d_sum1.AddImage(d_padded_reference);
-		d_sumSq1.AddSquaredImage(d_padded_reference);
+		d_sum1.AddImage(d_stats_reference);
+		d_sumSq1.AddSquaredImage(d_stats_reference);
 
 //		d_sumSq[0].AddSquaredImage(d_padded_reference);
 
@@ -335,10 +341,17 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 		}
 
+		cudaEventRecord(stats_are_done_Event, d_stats_reference.calcStream);
+
+	      d_max_intensity_projection.MipPixelWise(d_padded_reference, d_best_psi, d_best_phi, d_best_theta,
+	                                              current_psi,
+	                                              global_euler_search.list_of_search_parameters[current_search_position][0],
+	                                              global_euler_search.list_of_search_parameters[current_search_position][1]);
 
       current_projection.is_in_real_space = false;
       d_padded_reference.is_in_real_space = true;
-      cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
+
+      cudaEventRecord(gpu_work_is_done_Event, d_padded_reference.calcStream);
 
 
 
@@ -352,7 +365,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
 
-    checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+    checkCudaErrors(cudaStreamSynchronize(d_padded_reference.calcStream));
+    checkCudaErrors(cudaStreamSynchronize(d_stats_reference.calcStream));
+
 
 
 

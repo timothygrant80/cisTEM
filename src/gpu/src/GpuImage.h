@@ -88,25 +88,25 @@ public:
 
 
 
-  cudaEvent_t calcEvent, copyEvent;
-  cublasHandle_t cublasHandle;
- 
+	cudaEvent_t calcEvent, copyEvent;
+	cublasHandle_t cublasHandle;
+
 	cufftHandle cuda_plan_forward;
 	cufftHandle cuda_plan_inverse;
-  //Stream for asynchronous command execution
-  cudaStream_t calcStream;
-  cudaStream_t copyStream;
-   NppStreamContext nppStream;
+	//Stream for asynchronous command execution
+	cudaStream_t calcStream;
+	cudaStream_t copyStream;
+	NppStreamContext nppStream;
 
-  bool is_fft_planned;
-  bool is_cublas_loaded;
-  bool is_npp_loaded;
-  cublasStatus_t cublas_stat;
-  NppStatus npp_stat;
+	bool is_fft_planned;
+	bool is_cublas_loaded;
+	bool is_npp_loaded;
+	cublasStatus_t cublas_stat;
+	NppStatus npp_stat;
 
-  // For the full image set width/height, otherwise set on function call.
-  NppiSize npp_ROI;
-  NppiSize npp_ROI_complex;
+	// For the full image set width/height, otherwise set on function call.
+	NppiSize npp_ROI;
+	NppiSize npp_ROI_complex;
 
 
 
@@ -162,6 +162,7 @@ public:
 
 
 	void Init(Image &cpu_image);
+	void SetStream(cudaStream_t input_stream);
 	void SetCufftPlan();
 	void SetupInitialValues();
 	void UpdateBoolsToDefault();

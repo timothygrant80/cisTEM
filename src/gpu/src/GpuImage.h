@@ -162,7 +162,6 @@ public:
 
 
 	void Init(Image &cpu_image);
-	void SetStream(cudaStream_t input_stream);
 	void SetCufftPlan();
 	void SetupInitialValues();
 	void UpdateBoolsToDefault();

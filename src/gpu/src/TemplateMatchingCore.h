@@ -45,7 +45,6 @@ public:
 	GpuImage d_input_image;
 	GpuImage d_current_projection;
 	GpuImage d_padded_reference;
-	GpuImage d_stats_reference;
 
 
 	// Search range parameters

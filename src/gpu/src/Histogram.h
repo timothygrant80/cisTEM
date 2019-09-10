@@ -40,6 +40,8 @@ public:
 	void Init(int histogram_n_bins, float histogram_min, float histogram_step);
 	void BufferInit(NppiSize npp_ROI);
 	void AddToHistogram(GpuImage &input_image);
+	void Accumulate(GpuImage &input_image);
+
 	void CopyToHostAndAdd(long* array_to_add_to);
 
 private:

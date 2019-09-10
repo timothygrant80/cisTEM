@@ -57,7 +57,7 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, 
   // but do care about overflow, just switch the bins to flaot
   out += (blockIdx.x + blockIdx.y * gridDim.x) * n_bins;
   for (int i = t; i < n_bins; i += nt) {
-    out[i] = (float)smem[i];
+    out[i] += (float)smem[i];
   }
 }
 
@@ -167,7 +167,7 @@ void Histogram::BufferInit(NppiSize npp_ROI)
 }
 
 
-void Histogram::AddToHistogram(GpuImage &input_image )
+void Histogram::AddToHistogram(GpuImage &input_image)
 {
 
 
@@ -179,16 +179,25 @@ void Histogram::AddToHistogram(GpuImage &input_image )
 	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins+1)*sizeof(unsigned int), input_image.nppStream.hStream>>>((const Npp32f*)input_image.real_values_gpu, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step,max_padding);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+//	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+//	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
+//	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 
 
 }
 
+void Histogram::Accumulate(GpuImage &input_image)
+{
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+}
+
 void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 {
+
+
 	// Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
 	float* tmp_array;
 	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(float)));

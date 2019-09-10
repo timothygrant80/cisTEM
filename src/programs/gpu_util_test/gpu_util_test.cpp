@@ -53,8 +53,8 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 	nThreads = 1;
 	nGPUs = 1;
 	int minPos = 0;
-	int maxPos = 10;
-	int incPos = 10 / (nThreads*nGPUs); // FIXME
+	int maxPos = 30;
+	int incPos = 30 / (nThreads*nGPUs); // FIXME
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel
@@ -96,7 +96,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			current_projection.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/current_projection.mrc",1);
 			padded_reference.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/padded_reference.mrc",1);
 
-			input_image.Resize(6144,4096,1,0.0f);
+			input_image.Resize(5832,4096,1,0.0f);
 			padded_reference.CopyFrom(&input_image);
 			// These are all blank to start
 			max_intensity_projection.CopyFrom(&input_image);

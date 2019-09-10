@@ -51,6 +51,19 @@ __device__ cufftReal CB_ConvertInputf16Tof32(void* dataIn, size_t offset, void* 
 //__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
 __device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
 
+__device__ void CB_scaleFFTAndStore(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr);
+
+__device__ void CB_scaleFFTAndStore(void* dataOut, size_t offset, cufftComplex element, void* callerInfo, void* sharedPtr)
+{
+	float* scale_factor = (float *)callerInfo;
+	cufftComplex value; //= (cufftComplex)ComplexScale(element, *scale_factor);
+	value.x = element.x;// * (cufftReal)*scale_factor;
+	value.y = element.y;// * (cufftReal)*scale_factor;
+	((cufftComplex*)dataOut)[offset] = value; // (cufftComplex)ComplexScale(element, *scale_factor);
+}
+//__device__ cufftCallbackLoadR d_ConvertInputf16Tof32Ptr = CB_ConvertInputf16Tof32;
+__device__ cufftCallbackStoreC d_scaleFFTAndStorePtr = CB_scaleFFTAndStore;
+
 
 // Inline declarations
  __device__ __forceinline__ int
@@ -303,7 +316,6 @@ void GpuImage::CopyFromCpuImage(Image &cpu_image)
 
 
 	ft_normalization_factor = cpu_image.ft_normalization_factor;
-
 
 	// FIXME for now always pin the memory - this might be a bad choice for single copy or small images, but is required for asynch xfer and is ~2x as fast after pinning
 	cudaHostRegister(real_values, sizeof(float)*real_memory_allocated, cudaHostRegisterDefault);
@@ -1253,6 +1265,21 @@ void GpuImage::ForwardFFT(bool should_scale)
 		//	  this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
 	}
 
+	if (should_scale && ! is_set_scaleFFTAndStore)
+	{
+
+		float ft_norm_sq = ft_normalization_factor*ft_normalization_factor;
+		wxPrintf("ft norm sq is %3.3e\n", ft_norm_sq);
+		checkCudaErrors(cudaMalloc((void **)&d_scale_factor, sizeof(float)));
+		checkCudaErrors(cudaMemcpyAsync(d_scale_factor, &ft_norm_sq, sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
+		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+
+		cufftCallbackStoreC h_scaleFFTAndStorePtr;
+		checkCudaErrors(cudaMemcpyFromSymbol(&h_scaleFFTAndStorePtr,d_scaleFFTAndStorePtr, sizeof(h_scaleFFTAndStorePtr)));
+		checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_scaleFFTAndStorePtr, CUFFT_CB_ST_COMPLEX, (void **)&d_scale_factor));
+		is_set_scaleFFTAndStore = true;
+	}
+
 
 //	BufferInit(b_image);
 //    checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)image_buffer->complex_values));
@@ -1970,6 +1997,7 @@ void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size,
 	number_of_real_space_pixels = long(dims.x) * long(dims.y) * long(dims.z);
 	ft_normalization_factor = 1.0 / sqrtf(float(number_of_real_space_pixels));
 
+
 	// Set other gpu vals
 
 	is_host_memory_pinned = false;
@@ -2012,6 +2040,7 @@ void GpuImage::UpdateBoolsToDefault()
 
 	// Callbacks
 	is_set_convertInputf16Tof32 = false;
+	is_set_scaleFFTAndStore = false;
 
 }
 

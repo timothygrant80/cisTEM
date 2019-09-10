@@ -13,8 +13,8 @@ class GpuImage {
 
 public:
 
-  GpuImage();
-  GpuImage( const GpuImage &other_gpu_image ); // copy constructor
+	GpuImage();
+	GpuImage( const GpuImage &other_gpu_image ); // copy constructor
 	GpuImage(Image &cpu_image);
 	virtual ~GpuImage();
 
@@ -24,19 +24,19 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// START MEMBER VARIABLES FROM THE cpu IMAGE CLASS
 
-  int4 dims;
+	int4 dims;
 	bool 		 is_in_real_space;								// !< Whether the image is in real or Fourier space
 	bool 		 object_is_centred_in_box;						//!<  Whether the object or region of interest is near the center of the box (as opposed to near the corners and wrapped around). This refers to real space and is meaningless in Fourier space.
-  int3 physical_upper_bound_complex;
-  int3 physical_address_of_box_center;
-  int3 physical_index_of_first_negative_frequency;
-  int3 logical_upper_bound_complex;
-  int3 logical_lower_bound_complex;
-  int3 logical_upper_bound_real;
-  int3 logical_lower_bound_real;
+	int3 physical_upper_bound_complex;
+	int3 physical_address_of_box_center;
+	int3 physical_index_of_first_negative_frequency;
+	int3 logical_upper_bound_complex;
+	int3 logical_lower_bound_complex;
+	int3 logical_upper_bound_real;
+	int3 logical_lower_bound_real;
 
-  float3 fourier_voxel_size;
-  
+	float3 fourier_voxel_size;
+
 
 	long         real_memory_allocated;							// !<  Number of floats allocated in real space;
 	int          padding_jump_value;                            // !<  The FFTW padding value, if odd this is 2, if even it is 1.  It is used in loops etc over real space.
@@ -44,44 +44,45 @@ public:
 
 	long		 number_of_real_space_pixels;					// !<	Total number of pixels in real space
 	float		 ft_normalization_factor;						// !<	Normalization factor for the Fourier transform (1/sqrt(N), where N is the number of pixels in real space)
-
 	// Arrays to hold voxel values
 
 	float 	 	 *real_values;									// !<  Real array to hold values for REAL images.
 	std::complex<float> *complex_values;								// !<  Complex array to hold values for COMP images.
 	bool         is_in_memory;                                  // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. 
 	bool         image_memory_should_not_be_deallocated;	    // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
-  int          gpu_plan_id;
+	int          gpu_plan_id;
 
 	// end  MEMBER VARIABLES FROM THE cpu IMAGE CLASS
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  Image*        hostImage;
+	Image*        hostImage;
 
 	cufftReal 	 	*real_values_gpu;									// !<  Real array to hold values for REAL images.
 	cufftComplex 	*complex_values_gpu;								// !<  Complex array to hold values for COMP images.
 	bool        	is_in_memory_gpu;                                  // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
 	bool		 	is_host_memory_pinned;	 							// !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
-  float*    pinnedPtr;
+	float*    pinnedPtr;
 
-  cudaMemcpy3DParms h_3dparams = {0};
-  cudaExtent h_extent;
-  cudaPos    h_pos;
-  cudaPitchedPtr h_pitchedPtr;
+	float* d_scale_factor;
 
-  cudaMemcpy3DParms d_3dparams = {0};
-  cudaExtent d_extent;
-  cudaPos    d_pos;
-  cudaPitchedPtr d_pitchedPtr;
+	cudaMemcpy3DParms h_3dparams = {0};
+	cudaExtent h_extent;
+	cudaPos    h_pos;
+	cudaPitchedPtr h_pitchedPtr;
 
-  size_t pitch;
+	cudaMemcpy3DParms d_3dparams = {0};
+	cudaExtent d_extent;
+	cudaPos    d_pos;
+	cudaPitchedPtr d_pitchedPtr;
 
-  dim3 threadsPerBlock;
-  dim3 gridDims;
+	size_t pitch;
 
-  bool is_meta_data_initialized;
-  float* tmpVal;
-  float* tmpValComplex;
+	dim3 threadsPerBlock;
+	dim3 gridDims;
+
+	bool is_meta_data_initialized;
+	float* tmpVal;
+	float* tmpValComplex;
   
 
  ////////////////////////////////////////////////////////

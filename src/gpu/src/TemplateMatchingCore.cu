@@ -145,7 +145,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	this->c_pixel = c_pixel;
 	total_number_of_cccs_calculated = 0;
 
-
+	d_input_image.ConvertToHalfPrecision(true);
 
 	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
@@ -198,22 +198,27 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
       d_current_projection.AddConstant(-average_on_edge);
       d_current_projection.MultiplyByConstant(1.0f / sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
+//      d_current_projection.ConvertToHalfPrecision(false);
 
-
-      d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
+//      d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
       cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
 
 //      cudaStreamSynchronize(cudaStreamPerThread);
 //      std::string fileNameOUT4 = "/tmp/checkPaddedRef" + std::to_string(threadIDX) + ".mrc";
 //      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT4, 1, 1); 
 
-      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-      d_padded_reference.ForwardFFT(false);
+//      d_padded_reference.ForwardFFT(false);
+
+      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
+      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
       checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
       // The input image should have zero mean, so multipling also zeros the mean of the ref.
 //      d_padded_reference.MultiplyPixelWiseComplexConjugate(d_input_image);
       pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-      d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu);
+//      d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu);
+      d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
+
 
 //      d_padded_reference.BackwardFFT();
       checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);

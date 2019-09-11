@@ -14,6 +14,7 @@
 
 
 
+__global__ void ConvertToHalfPrecisionKernel(cufftComplex* complex_32f_values, __half2* complex_16f_values, int4 dims, int3 physical_upper_bound_complex);
 
 __global__ void MultiplyPixelWiseComplexConjugateKernel(cufftComplex* ref_complex_values, cufftComplex* img_complex_values, int4 dims, int3 physical_upper_bound_complex);
 __global__ void MipPixelWiseKernel(cufftReal *mip, const cufftReal *correlation_output, const int4 dims);
@@ -63,23 +64,78 @@ __device__ cufftCallbackStoreC d_scaleFFTAndStorePtr = CB_scaleFFTAndStore;
 
 
 
-static __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+//static __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
 
-typedef struct _CB_complexConjMulLoad_params
+template<typename T> struct CB_complexConjMulLoad_params
 {
-	cufftComplex* target;
-	float scale;
+	T* 		target;
+	float 	scale;
 
-} CB_complexConjMulLoad_params;
+} ;
 
-static __device__ cufftComplex CB_complexConjMulLoad(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+
+static __device__ cufftComplex CB_complexConjMulLoad_32f(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+static __device__ cufftComplex CB_complexConjMulLoad_16f(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+
+static __device__ cufftComplex CB_complexConjMulLoad_32f(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
  {
-
-	CB_complexConjMulLoad_params* my_params = (CB_complexConjMulLoad_params *)callerInfo;
+	CB_complexConjMulLoad_params<cufftComplex>* my_params = (CB_complexConjMulLoad_params<cufftComplex> *)callerInfo;
 	return (cufftComplex)ComplexConjMulAndScale(my_params->target[offset],((Complex *)dataIn)[offset],my_params->scale);
-
  }
- __device__ cufftCallbackLoadC d_complexConjMulLoad = CB_complexConjMulLoad;
+static __device__ cufftComplex CB_complexConjMulLoad_16f(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+ {
+	CB_complexConjMulLoad_params<__half2>* my_params = (CB_complexConjMulLoad_params<__half2> *)callerInfo;
+	return (cufftComplex)ComplexConjMulAndScale((cufftComplex)__half22float2(my_params->target[offset]),((Complex *)dataIn)[offset],my_params->scale);
+ }
+
+ __device__ cufftCallbackLoadC d_complexConjMulLoad_32f = CB_complexConjMulLoad_32f;
+ __device__ cufftCallbackLoadC d_complexConjMulLoad_16f = CB_complexConjMulLoad_16f;
+
+typedef struct _CB_realLoadAndClipInto_params
+{
+	cufftReal*	target;
+	int i_lower_bound;
+	int j_lower_bound;
+	int i_upper_bound;
+	int j_upper_bound;
+	int nx_small;
+	int nx_large;
+
+} CB_realLoadAndClipInto_params;
+
+
+static __device__ cufftReal CB_realLoadAndClipInto(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr);
+
+static __device__ cufftReal CB_realLoadAndClipInto(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
+{
+ CB_realLoadAndClipInto_params* my_params = (CB_realLoadAndClipInto_params *)callerInfo;
+
+
+
+ int i = offset % my_params->nx_large;
+ if (i < my_params->i_lower_bound || i > my_params->i_upper_bound)
+ {
+	 return (cufftReal)0.0f;
+ }
+
+ int j = (offset-i) / my_params->nx_large;
+
+ if (j < my_params->j_lower_bound || j > my_params->j_upper_bound)
+ {
+	 return (cufftReal)0.0f;
+ }
+
+
+ // If we are here, we are in bounds.
+ int i_small = i - my_params->i_lower_bound;
+ int j_small = j - my_params->j_lower_bound ;
+ return my_params->target[i_small + j_small*my_params->nx_small];
+
+
+}
+
+  __device__ cufftCallbackLoadR d_realLoadAndClipInto = CB_realLoadAndClipInto;
+
 
 
  // Inline declarations
@@ -513,6 +569,15 @@ void GpuImage::BufferInit(BufferType bt)
           is_allocated_image_buffer = true;
         }     
         break;
+
+    case b_16f :
+    	if ( ! is_allocated_16f_buffer )
+    	{
+    		checkCudaErrors(cudaMalloc(&real_values_16f, sizeof(__half)*real_memory_allocated));
+    		complex_values_16f = (__half2 *)real_values_16f;
+    		is_allocated_16f_buffer = true;
+    	}
+    	break;
 
     case b_sum :
         if ( ! is_allocated_sum_buffer ) 
@@ -1310,6 +1375,71 @@ void GpuImage::ForwardFFT(bool should_scale)
 
 
 }
+
+void GpuImage::ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scale)
+{
+
+	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
+	MyAssertTrue(image_to_insert.is_in_memory_gpu, "Gpu memory in image to insert not allocated");
+	MyAssertTrue(is_in_real_space, "Image alread in Fourier space");
+	MyAssertTrue(image_to_insert.is_in_real_space, "I in image to insert alread in Fourier space");
+
+
+	if ( ! is_fft_planned )
+	{
+		SetCufftPlan();
+		is_fft_planned = true;
+	    // TODO confirm that the reset actually happens and it is needed to set this each time.
+	    checkCudaErrors(cufftSetStream(this->cuda_plan_forward, cudaStreamPerThread));
+	}
+
+	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
+	if ( ! is_set_realLoadAndClipInto )
+	{
+		cufftCallbackLoadR h_realLoadAndClipInto;
+		CB_realLoadAndClipInto_params* d_params;
+		CB_realLoadAndClipInto_params h_params;
+
+
+		h_params.target = (cufftReal *)image_to_insert.real_values_gpu;
+		h_params.i_lower_bound =  this->physical_address_of_box_center.x - image_to_insert.physical_address_of_box_center.x;
+		h_params.j_lower_bound =  this->physical_address_of_box_center.y - image_to_insert.physical_address_of_box_center.y;
+		h_params.i_upper_bound = h_params.i_lower_bound + image_to_insert.dims.x - 1;
+		h_params.j_upper_bound = h_params.j_lower_bound + image_to_insert.dims.y - 1;
+		// For the offset in memory, we need to consider the physical dimensions of the images and not just the logical.
+		h_params.nx_small = (image_to_insert.dims.w);
+		h_params.nx_large 	  = this->dims.w;
+
+		checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_realLoadAndClipInto_params)));
+		checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_realLoadAndClipInto_params), cudaMemcpyHostToDevice, cudaStreamPerThread));
+		checkCudaErrors(cudaMemcpyFromSymbol(&h_realLoadAndClipInto,d_realLoadAndClipInto, sizeof(h_realLoadAndClipInto)));
+		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+
+		checkCudaErrors(cufftXtSetCallback(cuda_plan_forward, (void **)&h_realLoadAndClipInto, CUFFT_CB_LD_REAL, (void **)&d_params));
+		is_set_realLoadAndClipInto = true;
+
+
+		//	  checkCudaErrors(cudaFree(norm_factor));
+		//	  this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
+	}
+	if (should_scale)
+	{
+		this->MultiplyByConstant(ft_normalization_factor*ft_normalization_factor);
+	}
+
+
+
+
+//	BufferInit(b_image);
+//    checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)image_buffer->complex_values));
+
+    checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)complex_values_gpu));
+
+    is_in_real_space = false;
+
+
+}
+
 void GpuImage::BackwardFFT()
 {
 
@@ -1333,10 +1463,9 @@ void GpuImage::BackwardFFT()
 
 }
 
-void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply)
+template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_to_multiply, bool load_half_precision)
 {
 
-	bool should_mul = false;
 	MyAssertTrue(is_in_memory_gpu, "Gpu memory not allocated");
 	MyAssertFalse(is_in_real_space, "Image is already in real space");
 
@@ -1351,18 +1480,27 @@ void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply)
 	if ( ! is_set_complexConjMulLoad )
 	{
 		cufftCallbackStoreC h_complexConjMulLoad;
-		CB_complexConjMulLoad_params* d_params;
-		CB_complexConjMulLoad_params h_params;
 
-		h_params.scale = ft_normalization_factor*ft_normalization_factor;
-		h_params.target = image_to_multiply;
 
-		checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_complexConjMulLoad_params)));
-		checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_complexConjMulLoad_params), cudaMemcpyHostToDevice, cudaStreamPerThread));
-		checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+			CB_complexConjMulLoad_params<T>* d_params;
+			CB_complexConjMulLoad_params<T> h_params;
+			h_params.scale = ft_normalization_factor*ft_normalization_factor;
+			h_params.target = (T *)image_to_multiply;
+			checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_complexConjMulLoad_params<T>)));
+			checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_complexConjMulLoad_params<T>), cudaMemcpyHostToDevice, cudaStreamPerThread));
 
-		checkCudaErrors(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad, sizeof(h_complexConjMulLoad)));
-		checkCudaErrors(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&d_params));
+			if (load_half_precision)
+			{
+				checkCudaErrors(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad_16f, sizeof(h_complexConjMulLoad)));
+			}
+			else
+			{
+				checkCudaErrors(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad_32f, sizeof(h_complexConjMulLoad)));
+			}
+
+			checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+			checkCudaErrors(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&d_params));
+
 //		d_complexConjMulLoad;
 		is_set_complexConjMulLoad = true;
 	}
@@ -1375,6 +1513,9 @@ void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply)
 	is_in_real_space = true;
 
 }
+template void GpuImage::BackwardFFTAfterComplexConjMul(__half2* image_to_multiply, bool load_half_precision);
+template void GpuImage::BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply, bool load_half_precision);
+
 
 
 void GpuImage::Wait()
@@ -2003,6 +2144,43 @@ void GpuImage::Deallocate()
 
 }
 
+void GpuImage::ConvertToHalfPrecision(bool deallocate_single_precision)
+{
+
+	// FIXME when adding real space complex images
+	MyAssertTrue( is_in_memory_gpu, "Image is in not on the GPU!");
+
+	BufferInit(b_16f);
+
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	ReturnLaunchParamters(dims, false);
+	ConvertToHalfPrecisionKernel<< <gridDims, threadsPerBlock,0, cudaStreamPerThread>> > (complex_values_gpu, complex_values_16f, this->dims, this->physical_upper_bound_complex);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+	if (deallocate_single_precision)
+	{
+		checkCudaErrors(cudaFree(real_values_gpu));
+		is_in_memory_gpu = false;
+	}
+}
+
+__global__ void ConvertToHalfPrecisionKernel(cufftComplex* complex_32f_values, __half2* complex_16f_values, int4 dims, int3 physical_upper_bound_complex)
+{
+
+	int3 coords = make_int3(blockIdx.x*blockDim.x + threadIdx.x,
+						  blockIdx.y*blockDim.y + threadIdx.y,
+						  blockIdx.z);
+
+	if (coords.x < dims.w / 2 && coords.y < dims.y && coords.z < dims.z)
+	{
+
+		long address = d_ReturnFourier1DAddressFromPhysicalCoord(coords, physical_upper_bound_complex);
+
+		complex_16f_values[address] = __float22half2_rn(complex_32f_values[address]);
+	}
+
+
+}
 void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space)
 {
 
@@ -2100,11 +2278,13 @@ void GpuImage::UpdateBoolsToDefault()
 	is_allocated_mean_buffer = false;
 	is_allocated_meanstddev_buffer = false;
 	is_allocated_countinrange_buffer = false;
+	is_allocated_16f_buffer = false;
 
 	// Callbacks
 	is_set_convertInputf16Tof32 = false;
 	is_set_scaleFFTAndStore = false;
 	is_set_complexConjMulLoad = false;
+	is_set_realLoadAndClipInto = false;
 
 }
 

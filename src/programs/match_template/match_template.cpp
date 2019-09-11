@@ -733,7 +733,7 @@ bool MatchTemplateApp::DoCalculation()
 	int nGPUs = 2;
 	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 6 * nGPUs;}
 	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 4 * nGPUs;}
-	else {nThreads = 2 * nGPUs;}
+	else {nThreads = 3 * nGPUs;}
 
 	int minPos = 0;
 	int maxPos = last_search_position;

@@ -59,6 +59,15 @@ public:
 
 	cufftReal 	 	*real_values_gpu;									// !<  Real array to hold values for REAL images.
 	cufftComplex 	*complex_values_gpu;								// !<  Complex array to hold values for COMP images.
+
+	__half* 	real_values_16f;
+	__half2*	complex_values_16f;
+
+
+	enum ImageType : size_t  { real16f = sizeof(__half), complex16f = sizeof(__half2), real32f = sizeof(float), complex32f = sizeof(float2), real64f = sizeof(double), complex64f = sizeof(double2) };
+	ImageType img_type;
+
+
 	bool        	is_in_memory_gpu;                                  // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
 	bool		 	is_host_memory_pinned;	 							// !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
 	float*    pinnedPtr;
@@ -130,12 +139,14 @@ public:
 				int wanted_coordinate_of_box_center_z);
 	void ForwardFFT(bool should_scale = true);                                           /**CPU_eq**/
 	void BackwardFFT();                                                                   /**CPU_eq**/
-	void BackwardFFTAfterComplexConjMul(cufftComplex* image_to_multiply);
+	void ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scale);
+	template < typename T > void BackwardFFTAfterComplexConjMul(T* image_to_multiply, bool load_half_precision = false);
 
 
 	float ReturnSumOfSquares();
 	float ReturnAverageOfRealValuesOnEdges();
 	void Deallocate();
+	void ConvertToHalfPrecision(bool deallocate_single_precision = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space);
 	// Combines this and UpdatePhysicalAddressOfBoxCenter and SetLogicalDimensions
 	void UpdateLoopingAndAddressing(int wanted_x_size, int wanted_y_size, int wanted_z_size);
@@ -227,7 +238,7 @@ public:
   ////////////////////////////////////////////////////////////////////////
 
   enum BufferType : int  { b_image, b_sum, b_min, b_minIDX, b_max, b_maxIDX, b_minmax, b_minmaxIDX, b_mean, b_meanstddev,
-  	  	  	  	  	  	   b_countinrange, b_histogram };
+  	  	  	  	  	  	   b_countinrange, b_histogram, b_16f };
 
   void CublasInit();
   void NppInit();
@@ -249,6 +260,8 @@ public:
   Npp8u* mean_buffer; 			bool is_allocated_mean_buffer;
   Npp8u* meanstddev_buffer; 	bool is_allocated_meanstddev_buffer;
   Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
+  	  	  	  	  	  	  	  	bool is_allocated_16f_buffer;
+  	  	  	  	  	  	  	  	bool is_set_realLoadAndClipInto;
 
   
   GpuImage* mask_CSOS;   bool is_allocated_mask_CSOS;

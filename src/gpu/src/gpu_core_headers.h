@@ -22,6 +22,9 @@
 
 const int MAX_GPU_COUNT = 32;
 
+// The following block is
+#define gMin(a,b) (((a) < (b)) ? (a) : (b))
+#define gMax(a,b) (((a) > (b)) ? (a) : (b))
 
 #define checkNppErrors(npp_stat, ...) {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d in file %s\n", _cudaGetErrorEnum(npp_stat), __LINE__,__FILE__); DEBUG_ABORT}}
 #define checkCudaEvent(event_handle, ...) {if (cudaEventQuery(event_handle) != cudaSuccess) {return false; else return true;}}

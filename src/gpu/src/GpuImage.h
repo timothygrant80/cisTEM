@@ -96,7 +96,6 @@ public:
  ////////////////////////////////////////////////////////
 
 
-
 	cudaEvent_t calcEvent, copyEvent;
 	cublasHandle_t cublasHandle;
 

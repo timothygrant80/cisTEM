@@ -20,10 +20,10 @@ $(info $$OBJECTS is [${OBJECTS}])
 #DEFINES += -DHEAVY_ERROR_CHECKING=true        
 
 
-NVCCFLAGS += --default-stream per-thread -m64 -line-info
-NVCCFLAGS += --disable-warnings 
+NVCCFLAGS += --default-stream per-thread -m64 
+NVCCFLAGS += -Xptxas --warn-on-double-precision-use,--warn-on-local-memory-usage,--warn-on-spills --generate-line-info
 NVCCFLAGS += -Xcompiler= -std=c++11 -Xlinker -lcudart_static,-lcublas_static,-lcurand_static,-lnppc_static,-lnppial_static,-lnppist_static,-lculibos
-NVCCFLAGS += -lfftw3f,-lwx_gtk2u_richtext-3.0,-lwx_gtk2u_aui-3.0,-lwx_gtk2u_xrc-3.0,-lwx_gtk2u_html-3.0,-lwx_gtk2u_qa-3.0,lwx_gtk2u_adv-3.0,-lwx_gtk2u_core-3.0,-lwx_baseu_xml-3.0,-lwx_baseu_net-3.0,-lwx_baseu-3.0,-ltiff,-pthread,-fopenmp -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75
+NVCCFLAGS += -lfftw3f,-lwx_gtk2u_richtext-3.0,-lwx_gtk2u_aui-3.0,-lwx_gtk2u_xrc-3.0,-lwx_gtk2u_html-3.0,-lwx_gtk2u_qa-3.0,lwx_gtk2u_adv-3.0,-lwx_gtk2u_core-3.0,-lwx_baseu_xml-3.0,-lwx_baseu_net-3.0,-lwx_baseu-3.0,-ltiff,-pthread,-fopenmp --gpu-architecture=compute_70 --gpu-code=sm_70,compute_70
 
 INCLUDES += -I../include -I/groups/grigorieff/himesb/thirdParty/src/fftw-3.3.8/include -I/groups/grigorieff/home/himesb/thirdParty/wxWidgets/lib/wx/include/gtk2-unicode-3.0 -I/groups/grigorieff/home/himesb/thirdParty/wxWidgets/include/wx-3.0 -I/groups/grigorieff/home/himesb/thirdParty/cuda-10.0/samples/7_CUDALibraries/common/UtilNPP -I/groups/grigorieff/home/himesb/thirdParty/cuda-10.0/samples/common/inc
 

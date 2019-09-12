@@ -31,7 +31,7 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, 
 
   // initialize temporary accumulation array in shared memory
   extern __shared__ unsigned int smem[];
-  for (int i = t; i < n_bins ; i += nt) smem[i] = 0;
+  for (int i = t; i < n_bins; i += nt) smem[i] = 0;
   __syncthreads();
 
   int pixel_idx;
@@ -43,7 +43,7 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, 
     for (int row = y; row < dims.y*dims.z - max_padding; row += ny)
     {
       if (row < max_padding) continue;
-      pixel_idx = __float2uint_rn((in[row * dims.w + col]-bin_min) / bin_inc);
+      pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
       pixel_idx = MAX(MIN(pixel_idx,n_bins-1),0);
 
       atomicAdd(&smem[pixel_idx], 1);

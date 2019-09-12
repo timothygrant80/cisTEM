@@ -44,7 +44,6 @@ void DeviceManager::Init(int wanted_number_of_gpus)
 void DeviceManager::SetGpu(int cpu_thread_idx)
 {
 
-
   
 	// Select the current device
 	this->gpuIDX = -1;

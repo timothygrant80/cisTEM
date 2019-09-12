@@ -374,7 +374,7 @@ void TemplateMatchingCore::MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuI
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((mip.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_peaks, (const long)mip.real_memory_allocated, mip.real_values_gpu, psi.real_values_gpu, theta.real_values_gpu, phi.real_values_gpu);
+	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_peaks, mip.real_memory_allocated, mip.real_values_gpu, psi.real_values_gpu, theta.real_values_gpu, phi.real_values_gpu);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }

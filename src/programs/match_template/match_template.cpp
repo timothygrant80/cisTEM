@@ -31,11 +31,11 @@ WX_DECLARE_OBJARRAY(AggregatedTemplateResult, ArrayOfAggregatedTemplateResults);
 WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
 
 
-// globals to track histogram size
+// nasty globals to track histogram size
 
-const int histogram_number_of_points = 1024;
-const float histogram_min = -20.0f;
-const float histogram_max = 50.0f;
+int histogram_number_of_points = 1024;
+float histogram_min = -20.0f;
+float histogram_max = 50.0f;
 
 class
 MatchTemplateApp : public MyApp
@@ -490,8 +490,8 @@ bool MatchTemplateApp::DoCalculation()
 	for ( i = 0; i < max_number_primes; i++ )
 	{
 
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true);
+		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
 
 //		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
 		if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
@@ -510,8 +510,8 @@ bool MatchTemplateApp::DoCalculation()
 	for ( i = 0; i < max_number_primes; i++ )
 	{
 
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true);
+		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
 
 
 //		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
@@ -735,7 +735,7 @@ bool MatchTemplateApp::DoCalculation()
 	int nGPUs = 2;
 	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 6 * nGPUs;}
 	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 4 * nGPUs;}
-	else {nThreads = 3 * nGPUs;}
+	else {nThreads = 2 * nGPUs;}
 
 	int minPos = 0;
 	int maxPos = last_search_position;
@@ -833,6 +833,7 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
+					mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum;
@@ -883,7 +884,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 
-//					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
 //					for (int iBin = 0; iBin < histogram_number_of_points; iBin++)
 //					{

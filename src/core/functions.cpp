@@ -314,18 +314,22 @@ std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add)
 	return filename.substr(0,filename.find_last_of('.')) + suffix_to_add + filename.substr(filename.find_last_of('.'), filename.length() - 1);
 }
 
-int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even)
+int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even, bool enforce_factor_of_four)
 {
 	int number;
 	int remainder = wanted_int;
 	int factor;
 	int temp_int;
+	int increment;
+
+	// enforce_factor_of_four implies enforce even. increment only affects enforce even block
+	if (enforce_factor_of_four) { enforce_even = true; increment = 4; } else { increment = 2; }
 
 	if (enforce_even)
 	{
 		temp_int = wanted_int;
 		if (! IsEven(temp_int)) temp_int++;
-		for (number = temp_int; number < 10000 * wanted_int; number += 2)
+		for (number = temp_int; number < 10000 * wanted_int; number += increment)
 		{
 			remainder = number;
 			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)
@@ -360,18 +364,22 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
 	return number;
 }
 
-int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even)
+int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even, bool enforce_factor_of_four)
 {
 	int number;
 	int remainder = wanted_int;
 	int factor;
 	int temp_int;
+	int decrement;
+
+	// enforce_factor_of_four implies enforce even. decrement only affects enforce even block
+	if (enforce_factor_of_four) { enforce_even = true; decrement = 4; } else { decrement = 2; }
 
 	if (enforce_even)
 	{
 		temp_int = wanted_int;
 		if (! IsEven(temp_int)) temp_int--;
-		for (number = temp_int; number >= 2; number -= 2)
+		for (number = temp_int; number >= 2; number -= decrement)
 		{
 			remainder = number;
 			for (factor = 2; (factor <= largest_factor) && (remainder != 1); factor++)

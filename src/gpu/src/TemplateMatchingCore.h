@@ -3,20 +3,20 @@
 
 
 typedef
-struct Peaks {
+struct _Peaks {
 	// This should be 128 byte words, so good for read access?
 	__half mip;
 	__half psi;
 	__half theta;
 	__half phi;
 
-};
+} Peaks;
 
 typedef
-struct Stats{
+struct _Stats{
 	cufftReal sum;
 	cufftReal sq_sum;
-};
+} Stats;
 
 class TemplateMatchingCore {
 

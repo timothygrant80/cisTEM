@@ -3,15 +3,19 @@
 
 
 typedef
-struct Stats {
+struct Peaks {
 	// This should be 128 byte words, so good for read access?
-	__half sum;
-	__half sq_sum;
 	__half mip;
 	__half psi;
 	__half theta;
 	__half phi;
 
+};
+
+typedef
+struct Stats{
+	cufftReal sum;
+	cufftReal sq_sum;
 };
 
 class TemplateMatchingCore {
@@ -89,8 +93,10 @@ public:
 
 
 	Stats* my_stats;
+	Peaks* my_peaks;
+	void SumPixelWise(GpuImage &image);
     void MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi);
-	void MipToImage(const Stats* my_stats, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi);
+	void MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi);
 	void AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum);
 
 

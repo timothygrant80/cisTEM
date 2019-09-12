@@ -1331,9 +1331,6 @@ void GpuImage::ForwardFFT(bool should_scale)
 	if ( ! is_fft_planned )
 	{
 		SetCufftPlan();
-		is_fft_planned = true;
-	    // TODO confirm that the reset actually happens and it is needed to set this each time.
-	    checkCudaErrors(cufftSetStream(this->cuda_plan_forward, cudaStreamPerThread));
 	}
 
 	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
@@ -1388,9 +1385,6 @@ void GpuImage::ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scal
 	if ( ! is_fft_planned )
 	{
 		SetCufftPlan();
-		is_fft_planned = true;
-	    // TODO confirm that the reset actually happens and it is needed to set this each time.
-	    checkCudaErrors(cufftSetStream(this->cuda_plan_forward, cudaStreamPerThread));
 	}
 
 	// For reference to clear cufftXtClearCallback(cufftHandle lan, cufftXtCallbackType type);
@@ -1449,9 +1443,6 @@ void GpuImage::BackwardFFT()
 	if ( ! is_fft_planned )
 	{
 		SetCufftPlan();
-		is_fft_planned = true;
-		// TODO confirm that the reset actually happens and it is needed to set this each time.
-		checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
 	}
 
 	//  BufferInit(b_image);
@@ -1472,9 +1463,6 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 	if ( ! is_fft_planned )
 	{
 		SetCufftPlan();
-		is_fft_planned = true;
-		// TODO confirm that the reset actually happens and it is needed to set this each time.
-		checkCudaErrors(cufftSetStream(this->cuda_plan_inverse, cudaStreamPerThread));
 	}
 
 	if ( ! is_set_complexConjMulLoad )
@@ -2013,21 +2001,28 @@ void GpuImage::QuickAndDirtyWriteSlices(std::string filename, int first_slice, i
   buffer_img.Deallocate();
 }
 
-void GpuImage::SetCufftPlan()
+void GpuImage::SetCufftPlan(bool use_half_precision)
 {
 
     int rank;
-    int* fftDims;
-    int* inembed;
-    int* onembed;
+    long long int* fftDims;
+    long long int* inembed;
+    long long int* onembed;
+
+
+    checkCudaErrors(cufftCreate(&cuda_plan_forward));
+    checkCudaErrors(cufftCreate(&cuda_plan_inverse));
+
+    checkCudaErrors(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
+    checkCudaErrors(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
 
 
     if (dims.z > 1) 
     { 
       rank = 3;
-      fftDims = new int[rank];
-      inembed = new int[rank];
-      onembed = new int[rank];
+      fftDims = new long long int[rank];
+      inembed = new long long int[rank];
+      onembed = new long long int[rank];
   
       fftDims[0] = dims.z;
       fftDims[1] = dims.y;
@@ -2047,9 +2042,9 @@ void GpuImage::SetCufftPlan()
     { 
       wxPrintf("\n\nAllocating a 2d Plan\n\n");
       rank = 2;
-      fftDims = new int[rank];  
-      inembed = new int[rank];
-      onembed = new int[rank];
+      fftDims = new long long int[rank];
+      inembed = new long long int[rank];
+      onembed = new long long int[rank];
 
       fftDims[0] = dims.y;
       fftDims[1] = dims.x;
@@ -2064,9 +2059,9 @@ void GpuImage::SetCufftPlan()
     else 
     { 
       rank = 1; 
-      fftDims = new int[rank];
-      inembed = new int[rank];
-      onembed = new int[rank];
+      fftDims = new long long int[rank];
+      inembed = new long long int[rank];
+      onembed = new long long int[rank];
   
       fftDims[0] = dims.x;
 
@@ -2076,20 +2071,30 @@ void GpuImage::SetCufftPlan()
 
 
 
-    int iStride(1), iDist(1), oStride(1), oDist(1);
     int iBatch = 1;
 
 // As far as I can tell, the padded layout must be assumed and onembed/inembed
 // are not needed. TODO ask John about this.
 
+    if (use_half_precision)
+    {
+    	checkCudaErrors(cufftXtMakePlanMany(cuda_plan_forward, rank, fftDims,
+    				  NULL, NULL, NULL, CUDA_R_16F,
+    				  NULL, NULL, NULL, CUDA_C_16F, iBatch, &cuda_plan_worksize_forward, CUDA_C_16F));
+    	checkCudaErrors(cufftXtMakePlanMany(cuda_plan_inverse, rank, fftDims,
+    				  NULL, NULL, NULL, CUDA_C_16F,
+    				  NULL, NULL, NULL, CUDA_R_16F, iBatch, &cuda_plan_worksize_inverse, CUDA_R_16F));
+    }
+    else
+    {
+    	checkCudaErrors(cufftXtMakePlanMany(cuda_plan_forward, rank, fftDims,
+    				  NULL, NULL, NULL, CUDA_R_32F,
+    				  NULL, NULL, NULL, CUDA_C_32F, iBatch, &cuda_plan_worksize_forward, CUDA_C_32F));
+    	checkCudaErrors(cufftXtMakePlanMany(cuda_plan_inverse, rank, fftDims,
+    				  NULL, NULL, NULL, CUDA_C_32F,
+    				  NULL, NULL, NULL, CUDA_R_32F, iBatch, &cuda_plan_worksize_inverse, CUDA_R_32F));
+    }
 
-
-    checkCudaErrors(cufftPlanMany(&cuda_plan_forward, rank, fftDims, 
-                  NULL, NULL, NULL, 
-                  NULL, NULL, NULL, CUFFT_R2C, 1));
-    checkCudaErrors(cufftPlanMany(&cuda_plan_inverse, rank, fftDims, 
-                  NULL, NULL, NULL, 
-                  NULL, NULL, NULL, CUFFT_C2R, 1));
 //    cufftPlanMany(&dims.cuda_plan_forward, rank, fftDims, 
 //                  inembed, iStride, iDist, 
 //                  onembed, oStride, oDist, CUFFT_R2C, iBatch);
@@ -2102,6 +2107,8 @@ void GpuImage::SetCufftPlan()
     delete [] fftDims;
     delete [] inembed;
     delete [] onembed;
+
+	is_fft_planned = true;
 
   }  
 

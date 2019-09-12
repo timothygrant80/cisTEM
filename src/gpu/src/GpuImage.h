@@ -102,6 +102,9 @@ public:
 
 	cufftHandle cuda_plan_forward;
 	cufftHandle cuda_plan_inverse;
+	size_t	cuda_plan_worksize_forward;
+	size_t	cuda_plan_worksize_inverse;
+
 	//Stream for asynchronous command execution
 	cudaStream_t calcStream;
 	cudaStream_t copyStream;
@@ -175,7 +178,7 @@ public:
 
 
 	void Init(Image &cpu_image);
-	void SetCufftPlan();
+	void SetCufftPlan(bool use_half_precision = false);
 	void SetupInitialValues();
 	void UpdateBoolsToDefault();
 

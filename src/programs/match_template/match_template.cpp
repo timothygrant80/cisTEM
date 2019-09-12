@@ -474,6 +474,8 @@ bool MatchTemplateApp::DoCalculation()
 	factorizable_y = input_image.logical_y_dimension;
 
 	bool DO_FACTORIZATION = true;
+	bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
+	bool MUST_BE_FACTOR_OF_FOUR = false; // May be faster
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.5f;

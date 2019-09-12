@@ -162,8 +162,8 @@ protected:
 
 #ifdef USEGPU
 #include <cuda_runtime.h>
-#include <cublas_v2.h>
 #include <cuda.h>
+#include <cublas_v2.h>
 #include <cuda_fp16.h>
 #include <cuda_profiler_api.h>
 #include <cufft.h>

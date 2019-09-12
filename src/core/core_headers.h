@@ -155,10 +155,10 @@ protected:
 #include "myapp.h"
 #include "rle3d.h"
 #include "local_resolution_estimator.h"
-#include "json_defs.h"
-#include "jsonwriter.h"
-#include "jsonreader.h"
-#include "jsonval.h"
+#include "json/json_defs.h"
+#include "json/jsonwriter.h"
+#include "json/jsonreader.h"
+#include "json/jsonval.h"
 #ifdef EXPERIMENTAL
 #include "pdb.h"
 #include "water.h"
@@ -193,4 +193,3 @@ protected:
 #endif
 
 extern RandomNumberGenerator global_random_number_generator;
-

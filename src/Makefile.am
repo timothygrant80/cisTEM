@@ -59,6 +59,10 @@ noinst_HEADERS = core/asset_group.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communicator.h \
+                 core/json_defs.h \
+                 core/jsonval.h \
+                 core/jsonreader.h \
+                 core/jsonwriter.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -235,6 +239,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/dm_file.cpp \
                        core/image_file.cpp \
                        core/sqlite/sqlite3.c \
+                       core/json/json.hpp \
                        core/database.cpp \
                        core/project.cpp \
                        core/reconstruct_3d.cpp \
@@ -266,7 +271,10 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/local_resolution_estimator.cpp  \
                        core/cistem_parameters.cpp \
                        core/cistem_star_file_reader.cpp \
-                       core/socket_communicator.cpp
+                       core/socket_communicator.cpp \
+                       core/jsonval.cpp \
+                       core/jsonreader.cpp \
+                       core/jsonwriter.cpp
 
 
 if EXPERIMENTAL_AM

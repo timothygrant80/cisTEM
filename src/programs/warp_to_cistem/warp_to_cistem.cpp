@@ -383,7 +383,7 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
 	return loaded_positions;
 }
 
-RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_mass, double voltage, double spherical_aberration, double amplitude_contrast, double particle_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement) {
+RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_weight, double voltage, double spherical_aberration, double amplitude_contrast, double particle_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement) {
 	RefinementPackage *refinement_package;
 	RefinementPackageParticleInfo temp_particle_info;
 	int stack_x_size;
@@ -417,7 +417,7 @@ RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 	refinement_package->stack_box_size = stack_x_size;
 	refinement_package->stack_filename = stack_filename;
 	refinement_package->symmetry = "C1";
-	refinement_package->estimated_particle_weight_in_kda = particle_mass;
+	refinement_package->estimated_particle_weight_in_kda = particle_weight;
 	refinement_package->estimated_particle_size_in_angstroms = 2.0 * particle_radius;
 
 	refinement_package->refinement_ids.Add(1);
@@ -495,16 +495,18 @@ RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 	return refinement_package;
 }
 
-ArrayofClassifications LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename) {
+ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename) {
 	ArrayofClassifications classification_list;
-	Classification *classification;
-	cisTEMParameters parameters;
-	wxJSONValue* root;
+	wxJSONValue root;
 	wxJSONReader reader;
 	wxFileInputStream latest_settings(latest_settings_filename);
-	reader.Parse(latest_settings, root);
-	wxJSONValue cycles = root->Item("cycles");
-	int particle_count;
+	reader.Parse(latest_settings, &root);
+	wxJSONValue cycles = root["cycles"];
+	long particle_count;
+	long number;
+	long class_count;
+	double high_res_lim;
+	double mask_radius;
 	int cycle_count = cycles.Size();
 	int parent_id = -1;
 	int refinement_package_asset_id = 1;
@@ -517,22 +519,27 @@ ArrayofClassifications LoadClassificationsFromLive2D(wxString live_2d_path, wxSt
 	// iterate over classifications
 	ProgressBar* my_progress = new ProgressBar(cycle_count);
 	for (int i=0; i<cycle_count; i++) {
+		Classification* classification = new Classification();
+		cisTEMParameters parameters;
 		wxJSONValue cycle = cycles[i];
-		particle_count = cycle["particle_count"].AsLong();
+		cycle["particle_count"].AsString().ToLong(&particle_count);
 		classification->SizeAndFillWithEmpty(particle_count);
-
-		classification->classification_id = cycle["number"].AsInt() + 1; // Start from 1, not 0.
+		cycle["number"].AsString().ToLong(&number);
+		classification->classification_id = number + 1; // Start from 1, not 0.
 		classification->refinement_package_asset_id = refinement_package_asset_id;
-		classification->name = wxString::Format("Live2D Cycle #%d", cycle["number"].AsInt());
-		classification->class_average_file = live_2d_path + cycle["name"].AsString() + ".star";
+		classification->name = wxString::Format("Live2D Cycle #%ld", number);
+		classification->class_average_file = live_2d_path + cycle["name"].AsString() + ".mrc";
 		classification->classification_was_imported_or_generated = true;
 		classification->datetime_of_run = wxDateTime::Now();
 		classification->starting_classification_id = parent_id;
 		classification->number_of_particles = particle_count;
-		classification->number_of_classes=cycle["settings"]["class_number"].AsInt();
+		cycle["settings"]["class_number"].AsString().ToLong(&class_count);
+		classification->number_of_classes=class_count;
 		classification->low_resolution_limit = low_resolution_limit;
-		classification->high_resolution_limit = cycle["high_res_limit"].AsDouble();
-		classification->mask_radius = cycle["settings"]["mask_radius"].AsDouble();
+		cycle["high_res_limit"].AsString().ToDouble(&high_res_lim);
+		classification->high_resolution_limit = high_res_lim;
+		cycle["settings"]["mask_radius"].AsString().ToDouble(&mask_radius);
+		classification->mask_radius = mask_radius;
 		classification->angular_search_step = angular_search_step;
 		classification->search_range_x = search_range;
 		classification->search_range_y = search_range;
@@ -545,7 +552,7 @@ ArrayofClassifications LoadClassificationsFromLive2D(wxString live_2d_path, wxSt
 
 		// Load in data from the class file and move it to an ArrayOfClassificationResults.
 		// This may eventually be worth moving into a class method for classification... I have to imagine this will be used elsewhere...
-		parameters.ReadFromcisTEMStarFile(classification->class_average_file);
+		parameters.ReadFromcisTEMStarFile(live_2d_path + cycle["name"].AsString() + ".star");
 		MyDebugAssertTrue(particle_count == parameters.ReturnNumberofLines(), "Wrong number of particles in Star File");
 		for (int line_number=0; line_number<particle_count;line_number++) {
 			classification->classification_results[line_number].position_in_stack =  parameters.ReturnPositionInStack(line_number);
@@ -568,8 +575,8 @@ ArrayofClassifications LoadClassificationsFromLive2D(wxString live_2d_path, wxSt
 			classification->classification_results[line_number].microscope_spherical_aberration_mm = parameters.ReturnMicroscopeCs(line_number);
 			classification->classification_results[line_number].amplitude_contrast = parameters.ReturnAmplitudeContrast(line_number);
 		}
+		my_progress->Update(i+1);
 		classification_list.Add(classification);
-		my_progress->Update(i);
 	}
 	delete my_progress;
 	return classification_list;
@@ -948,9 +955,10 @@ bool WarpToCistemApp::DoCalculation()
 				long refinement_package_id = 1; // hardcoded above.
 				long classification_id = classification->classification_id;
 				new_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", refinement_package_id, classification_id,  classification_id));
-				my_progress->Update(counter);
+				my_progress->Update(counter+1);
 			}
 			delete my_progress;
+			new_project.database.Commit();
 			wxPrintf("\nDone Inserting Classification Results\n\n");
 		}
 

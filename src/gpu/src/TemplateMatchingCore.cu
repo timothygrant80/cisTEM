@@ -2,6 +2,7 @@
 
 #define DO_HISTOGRAM true
 
+
 TemplateMatchingCore::TemplateMatchingCore() 
 {
 
@@ -96,7 +97,10 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 	d_sum1.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
 	d_sumSq1.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-	is_non_zero_sum_buffer = 1;
+	d_sum2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	d_sumSq2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	d_sum3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+	d_sumSq3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
 
 
 
@@ -127,10 +131,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 
   
-//  // TODO should this be swapped? Can it just be passed as FFT?
-//  d_input_image.ForwardFFT(); // This is for the standalone test
-//  template_reconstruction.ForwardFFT(); // This is for the standalone test
-//  template_reconstruction.SwapRealSpaceQuadrants(); // This is for the standalone test
+
 	// Make sure we are starting with zeros
 	d_max_intensity_projection.Zeros();
 	d_best_psi.Zeros();
@@ -138,8 +139,12 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	d_best_theta.Zeros();
 	d_padded_reference.Zeros();
 
-	  d_sum1.Zeros();
-	  d_sumSq1.Zeros();
+	d_sum1.Zeros();
+	d_sumSq1.Zeros();
+	d_sum2.Zeros();
+	d_sumSq2.Zeros();
+	d_sum3.Zeros();
+	d_sumSq3.Zeros();
 
 	this->c_defocus = c_defocus;
 	this->c_pixel = c_pixel;
@@ -147,10 +152,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 	d_input_image.ConvertToHalfPrecision(true);
 
+	checkCudaErrors(cudaMalloc((void **)&my_stats, sizeof(Stats)*d_input_image.real_memory_allocated));
+
 	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
-
 
 
 	long ccc_counter = 0;
@@ -171,172 +177,92 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 		for (float current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step)
 		{
 
-		  angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
+			angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
 
-//      wxPrintf("Pos %d working on phi, theta, psi, %3.3f %3.3f %3.3f \n", current_search_position, (float)global_euler_search.list_of_search_parameters[current_search_position][0], (float)global_euler_search.list_of_search_parameters[current_search_position][1], (float)current_psi);
-      // FIXME not padding enabled
-      // HOST project. Note that the projection has mean set to zero but it is probably better to ensure this here as it is cheap.
+			template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
+			current_projection.complex_values[0] = 0.0f + I * 0.0f;
 
-      template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
-      current_projection.complex_values[0] = 0.0f + I * 0.0f;
+			current_projection.SwapRealSpaceQuadrants();
+			current_projection.MultiplyPixelWise(projection_filter);
+			current_projection.BackwardFFT();
+			average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
 
-      current_projection.SwapRealSpaceQuadrants();
-      current_projection.MultiplyPixelWise(projection_filter);
-      current_projection.BackwardFFT();
-      average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
-//      variance = 1.0f / sqrtf( current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels /
-//              d_padded_reference.number_of_real_space_pixels - (average_on_edge*average_on_edge) );
-//      current_projection.AddMultiplyConstant(-average_on_edge, variance);
-
-//      // TODO add more?
-
-      // Make sure the device has moved on to the padded projection
-      cudaStreamWaitEvent(cudaStreamPerThread,projection_is_free_Event, 0);
-
-    
-      d_current_projection.CopyHostToDevice();
-
-      d_current_projection.AddConstant(-average_on_edge);
-      d_current_projection.MultiplyByConstant(1.0f / sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
-//      d_current_projection.ConvertToHalfPrecision(false);
-
-//      d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
-      cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
-
-//      cudaStreamSynchronize(cudaStreamPerThread);
-//      std::string fileNameOUT4 = "/tmp/checkPaddedRef" + std::to_string(threadIDX) + ".mrc";
-//      d_padded_reference.QuickAndDirtyWriteSlices(fileNameOUT4, 1, 1); 
-
-//      d_padded_reference.ForwardFFT(false);
-
-      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-
-      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-      // The input image should have zero mean, so multipling also zeros the mean of the ref.
-//      d_padded_reference.MultiplyPixelWiseComplexConjugate(d_input_image);
-      pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-//      d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu);
-      d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
+			// Make sure the device has moved on to the padded projection
+			cudaStreamWaitEvent(cudaStreamPerThread,projection_is_free_Event, 0);
 
 
-//      d_padded_reference.BackwardFFT();
-      checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+			//// TO THE GPU ////
+			d_current_projection.CopyHostToDevice();
+
+			d_current_projection.AddConstant(-average_on_edge);
+			d_current_projection.MultiplyByConstant(1.0f / sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
+
+			d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
+			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
 
 
+			d_padded_reference.ForwardFFT(false);
 
-      d_max_intensity_projection.MipPixelWise(d_padded_reference, d_best_psi, d_best_phi, d_best_theta,
-                                              current_psi,
-                                              global_euler_search.list_of_search_parameters[current_search_position][0],
-                                              global_euler_search.list_of_search_parameters[current_search_position][1]);
+			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
+
+			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
 
 
-//
+			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
+																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
 
-//		d_padded_reference.NppInit();
-		if (DO_HISTOGRAM)
-		{
-			if ( ! histogram.is_allocated_histogram )
+
+			if (DO_HISTOGRAM)
 			{
-				d_padded_reference.NppInit();
-		    	histogram.BufferInit(d_padded_reference.npp_ROI);
-			}
-			histogram.AddToHistogram(d_padded_reference);
-		}
-
-		d_sum1.AddImage(d_padded_reference);
-		d_sumSq1.AddSquaredImage(d_padded_reference);
-
-//		d_sumSq[0].AddSquaredImage(d_padded_reference);
-
-
-        ccc_counter++;
-        total_number_of_cccs_calculated++;
-
-
-		if ( ccc_counter % 10 == 0)
-		{
-
-			if ( is_non_zero_sum_buffer < 2 )
-			{
-				d_sum2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum2.Zeros();
-				d_sumSq2.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq2.Zeros();
-				is_non_zero_sum_buffer = 2;
+				if ( ! histogram.is_allocated_histogram )
+				{
+					d_padded_reference.NppInit();
+					histogram.BufferInit(d_padded_reference.npp_ROI);
+				}
+				histogram.AddToHistogram(d_padded_reference);
 			}
 
 
-			d_sum2.AddImage(d_sum1);
-			d_sum1.Zeros();
-
-			d_sumSq2.AddImage(d_sumSq1);
-			d_sumSq1.Zeros();
+			ccc_counter++;
+			total_number_of_cccs_calculated++;
 
 
-		}
-
-
-		if ( ccc_counter % 100 == 0)
-		{
-
-			if ( is_non_zero_sum_buffer < 3 )
+			if ( ccc_counter % 20 == 0)
 			{
-				d_sum3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum3.Zeros();
-				d_sumSq3.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq3.Zeros();
-				is_non_zero_sum_buffer = 3;
+				this->AccumulateSums(my_stats, d_sum1, d_sumSq1);
 			}
 
-			d_sum3.AddImage(d_sum2);
-			d_sum2.Zeros();
 
-			d_sumSq3.AddImage(d_sumSq2);
-			d_sumSq2.Zeros();
-
-		}
-
-
-		if ( ccc_counter % 10000 == 0)
-		{
-			if ( is_non_zero_sum_buffer < 4 )
+			if ( ccc_counter % 400 == 0)
 			{
-				d_sum4.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum4.Zeros();
-				d_sumSq4.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq4.Zeros();
-				is_non_zero_sum_buffer = 4;
+
+				d_sum2.AddImage(d_sum1);
+				d_sum1.Zeros();
+
+				d_sumSq2.AddImage(d_sumSq1);
+				d_sumSq1.Zeros();
+
 			}
 
-			d_sum4.AddImage(d_sum3);
-			d_sum3.Zeros();
-
-			d_sumSq4.AddImage(d_sumSq3);
-			d_sumSq3.Zeros();
-
-		}
-
-
-		if ( ccc_counter % 100000000 == 0)
-		{
-
-			if ( is_non_zero_sum_buffer < 5 )
+			if ( ccc_counter % 160000 == 0)
 			{
-				d_sum5.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sum5.Zeros();
-				d_sumSq5.Allocate(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);d_sumSq5.Zeros();
-				is_non_zero_sum_buffer = 5;
+
+				d_sum3.AddImage(d_sum2);
+				d_sum2.Zeros();
+
+				d_sumSq3.AddImage(d_sumSq2);
+				d_sumSq2.Zeros();
+
 			}
 
-			d_sum5.AddImage(d_sum4);
-			d_sum4.Zeros();
 
-			d_sumSq5.AddImage(d_sumSq4);
-			d_sumSq4.Zeros();
-
-		}
-
-      current_projection.is_in_real_space = false;
-      d_padded_reference.is_in_real_space = true;
-      cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
+			current_projection.is_in_real_space = false;
+			d_padded_reference.is_in_real_space = true;
+			cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
 
 
-		} // loop over psi angles
+			} // loop over psi angles
 
 
       
@@ -346,6 +272,16 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
     cudaStreamWaitEvent(cudaStreamPerThread,gpu_work_is_done_Event, 0);
 
+	this->AccumulateSums(my_stats, d_sum1, d_sumSq1);
+
+	d_sum2.AddImage(d_sum1);
+	d_sumSq2.AddImage(d_sumSq1);
+
+	d_sum3.AddImage(d_sum2);
+	d_sumSq3.AddImage(d_sumSq2);
+
+	this->MipToImage((const Stats *)my_stats, d_max_intensity_projection, d_best_psi, d_best_theta, d_best_phi);
+
 
 	histogram.Accumulate(d_padded_reference);
 
@@ -353,13 +289,110 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 
 
+}
 
+__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const long  numel,
+                                   __half c_psi, __half c_phi, __half c_theta);
 
+void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
+{
 
-  
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	dim3 threadsPerBlock = dim3(1024, 1, 1);
+	dim3 gridDims = dim3((image.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
+
+	MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_stats,(const long) image.real_memory_allocated, psi,theta, phi);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
 }
 
 
+__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const long  numel,
+                                   __half psi, __half theta, __half phi)
+{
+
+    const int x = blockIdx.x*blockDim.x + threadIdx.x;
+
+    __half val = __float2half_rn(correlation_output[x]);
+
+	if ( x < numel  )
+	{
+
+		my_stats[x].sum = __hadd(my_stats[x].sum, val);
+		my_stats[x].sq_sum = __hadd(my_stats[x].sum, __hmul(val,val));
+
+
+
+		if ( __hgt( val , my_stats[x].mip) )
+		{
+
+			my_stats[x].mip = val;
+			my_stats[x].psi = psi;
+			my_stats[x].theta = theta;
+			my_stats[x].phi = phi;
+
+		}
+
+    }
+}
+
+__global__ void MipToImageKernel(const Stats*, const long, cufftReal*, cufftReal*, cufftReal*, cufftReal*);
+
+void TemplateMatchingCore::MipToImage(const Stats* my_stats, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi)
+{
+
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	dim3 threadsPerBlock = dim3(1024, 1, 1);
+	dim3 gridDims = dim3((mip.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
+
+	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_stats, (const long)mip.real_memory_allocated, mip.real_values_gpu, psi.real_values_gpu, theta.real_values_gpu, phi.real_values_gpu);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+}
+
+__global__ void  MipToImageKernel(const Stats* my_stats, const long numel, cufftReal* mip, cufftReal* psi, cufftReal* theta, cufftReal* phi)
+{
+
+    const int x = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if ( x < numel  )
+	{
+		mip[x] = 	(cufftReal)__half2float(my_stats[x].mip);
+		psi[x] = 	(cufftReal)__half2float(my_stats[x].psi);
+		theta[x] =	(cufftReal)__half2float(my_stats[x].theta);
+		phi[x] =	(cufftReal)__half2float(my_stats[x].phi);
+
+    }
+}
+
+__global__ void AccumulateSumsKernel(Stats* my_stats, const long numel, cufftReal* sum, cufftReal* sq_sum);
+
+void TemplateMatchingCore::AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum)
+{
+
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	dim3 threadsPerBlock = dim3(1024, 1, 1);
+	dim3 gridDims = dim3((sum.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
+
+	AccumulateSumsKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_stats, sum.real_memory_allocated, sum.real_values_gpu, sq_sum.real_values_gpu);
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+}
+
+__global__ void AccumulateSumsKernel(Stats* my_stats, const long numel, cufftReal* sum, cufftReal* sq_sum)
+{
+
+    const int x = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if ( x < numel )
+	{
+		sum[x] += (cufftReal)__half2float(my_stats[x].sum);
+		sq_sum[x] += (cufftReal)__half2float(my_stats[x].sq_sum);
+
+		my_stats[x].sum = 0.0f;
+		my_stats[x].sq_sum = 0.0f;
+    }
+}
 
 
 

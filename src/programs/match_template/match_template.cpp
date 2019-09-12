@@ -31,11 +31,11 @@ WX_DECLARE_OBJARRAY(AggregatedTemplateResult, ArrayOfAggregatedTemplateResults);
 WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
 
 
-// nasty globals to track histogram size
+// globals to track histogram size
 
-int histogram_number_of_points = 1024;
-float histogram_min = -20.0f;
-float histogram_max = 50.0f;
+const int histogram_number_of_points = 1024;
+const float histogram_min = -20.0f;
+const float histogram_max = 50.0f;
 
 class
 MatchTemplateApp : public MyApp
@@ -827,76 +827,28 @@ bool MatchTemplateApp::DoCalculation()
 					Image theta_buffer; theta_buffer.CopyFrom(&max_intensity_projection);
 
 					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false);
-
 					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
-
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
-
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
-					Image sum, t_sum;
-					Image sumSq, t_sumSq;
+					Image sum;
+					Image sumSq;
 
 					sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 					sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 
-					t_sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-					t_sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 
 					sum.SetToConstant(0.0f);
 					sumSq.SetToConstant(0.0f);
 
-					t_sum.SetToConstant(0.0f);
-					t_sumSq.SetToConstant(0.0f);
+
+					GPU[tIDX].d_sum3.CopyDeviceToHost(sum,true,false);
+					GPU[tIDX].d_sumSq3.CopyDeviceToHost(sumSq,true,false);
 
 
-					if (GPU[tIDX].is_non_zero_sum_buffer >= 1)
-					{
-						GPU[tIDX].d_sum1.CopyDeviceToHost(t_sum,true,false);
-						GPU[tIDX].d_sumSq1.CopyDeviceToHost(t_sumSq,true,false);
-
-						sum.AddImage(&t_sum);
-						sumSq.AddImage(&t_sumSq);
-					}
-
-					if (GPU[tIDX].is_non_zero_sum_buffer >= 2)
-					{
-						GPU[tIDX].d_sum2.CopyDeviceToHost(t_sum,true,false);
-						GPU[tIDX].d_sumSq2.CopyDeviceToHost(t_sumSq,true,false);
-
-						sum.AddImage(&t_sum);
-						sumSq.AddImage(&t_sumSq);
-					}
-					if (GPU[tIDX].is_non_zero_sum_buffer >= 3)
-					{
-						GPU[tIDX].d_sum3.CopyDeviceToHost(t_sum,true,false);
-						GPU[tIDX].d_sumSq3.CopyDeviceToHost(t_sumSq,true,false);
-
-						sum.AddImage(&t_sum);
-						sumSq.AddImage(&t_sumSq);
-					}
-					if (GPU[tIDX].is_non_zero_sum_buffer >= 4)
-					{
-						GPU[tIDX].d_sum4.CopyDeviceToHost(t_sum,true,false);
-						GPU[tIDX].d_sumSq4.CopyDeviceToHost(t_sumSq,true,false);
-
-						sum.AddImage(&t_sum);
-						sumSq.AddImage(&t_sumSq);
-					}
-					if (GPU[tIDX].is_non_zero_sum_buffer >= 5)
-					{
-						GPU[tIDX].d_sum5.CopyDeviceToHost(t_sum,true,false);
-						GPU[tIDX].d_sumSq5.CopyDeviceToHost(t_sumSq,true,false);
-
-						sum.AddImage(&t_sum);
-						sumSq.AddImage(&t_sumSq);
-					}
-
-//					std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 					GPU[tIDX].d_max_intensity_projection.Wait();
-//					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 
 					// TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
 					pixel_counter = 0;
@@ -914,8 +866,6 @@ bool MatchTemplateApp::DoCalculation()
 								best_phi.real_values[pixel_counter] = phi_buffer.real_values[pixel_counter];
 								best_defocus.real_values[pixel_counter] = float(defocus_i) * defocus_step;
 								best_pixel_size.real_values[pixel_counter] = float(size_i) * pixel_size_step;
-
-//								if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
 
 							}
 

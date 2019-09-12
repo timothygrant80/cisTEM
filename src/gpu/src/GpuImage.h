@@ -38,11 +38,11 @@ public:
 	float3 fourier_voxel_size;
 
 
-	long         real_memory_allocated;							// !<  Number of floats allocated in real space;
+	int         real_memory_allocated;							// !<  Number of floats allocated in real space;
 	int          padding_jump_value;                            // !<  The FFTW padding value, if odd this is 2, if even it is 1.  It is used in loops etc over real space.
 	int			 insert_into_which_reconstruction;				// !<  Determines which reconstruction the image will be inserted into (for FSC calculation).
 
-	long		 number_of_real_space_pixels;					// !<	Total number of pixels in real space
+	int		 number_of_real_space_pixels;					// !<	Total number of pixels in real space
 	float		 ft_normalization_factor;						// !<	Normalization factor for the Fourier transform (1/sqrt(N), where N is the number of pixels in real space)
 	// Arrays to hold voxel values
 

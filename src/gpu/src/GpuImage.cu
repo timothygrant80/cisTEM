@@ -160,10 +160,10 @@ d_ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float
  __device__ __forceinline__ void
 d_Return3DPhaseFromIndividualDimensions( float phase_x, float phase_y, float phase_z, float2 &angles);
 
- __device__ __forceinline__ long
+ __device__ __forceinline__ int
 d_ReturnReal1DAddressFromPhysicalCoord(int3 coords, int4 img_dims);
 
- __device__ __forceinline__ long
+ __device__ __forceinline__ int
 d_ReturnFourier1DAddressFromPhysicalCoord(int3 wanted_dims, int3 physical_upper_bound_complex);
 
  __inline__ int
@@ -378,7 +378,6 @@ void GpuImage::CopyFromCpuImage(Image &cpu_image)
 
 	is_in_memory = cpu_image.is_in_memory;
 
-
 	padding_jump_value = cpu_image.padding_jump_value;
 	image_memory_should_not_be_deallocated = cpu_image.image_memory_should_not_be_deallocated; // TODO what is this for?
 
@@ -482,8 +481,8 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
 	int plane_counter;
 
 	double sum = 0.0;
-	long number_of_pixels = 0;
-	long address = 0;
+	int number_of_pixels = 0;
+	int address = 0;
 
 
 		// Two-dimensional image
@@ -718,7 +717,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	//
 	MyAssertTrue(is_in_memory_gpu, "Image not allocated");
 	MyAssertFalse(is_in_real_space, "This method is NOT for real space, use ReturnSumofSquares for realspace")
-	long address = 0;
+	int address = 0;
 	bool x_is_even = IsEven(dims.x);
 	int i,j,k,jj,kk;
 	const std::complex<float> c1(sqrtf(0.25f),sqrtf(0.25));
@@ -818,7 +817,7 @@ __global__ void MultiplyPixelWiseComplexConjugateKernel(cufftComplex* ref_comple
     if (coords.x < dims.w / 2 && coords.y < dims.y && coords.z < dims.z)
     {
 
-	    long address = d_ReturnFourier1DAddressFromPhysicalCoord(coords, physical_upper_bound_complex);
+	    int address = d_ReturnFourier1DAddressFromPhysicalCoord(coords, physical_upper_bound_complex);
 
 	    ref_complex_values[address] = (cufftComplex)ComplexConjMul((Complex)img_complex_values[address],(Complex)ref_complex_values[address]);
     }
@@ -845,7 +844,7 @@ __global__ void MipPixelWiseKernel(cufftReal *mip, const cufftReal *correlation_
 
     if (coords.x < dims.x && coords.y < dims.y && coords.z < dims.z)
     {
-	    long address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
+	    int address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
 	    mip[address] = MAX(mip[address], correlation_output[address]);
     }
 }
@@ -877,7 +876,7 @@ __global__ void MipPixelWiseKernel(cufftReal* mip, cufftReal *correlation_output
 
     if (coords.x < dims.x && coords.y < dims.y && coords.z < dims.z)
     {
-	    long address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
+	    int address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
       if (correlation_output[address] > mip[address])
       {
         mip[address] = correlation_output[address];
@@ -917,7 +916,7 @@ __global__ void MipPixelWiseKernel(cufftReal* mip, cufftReal *correlation_output
 
     if (coords.x < dims.x && coords.y < dims.y && coords.z < dims.z)
     {
-	  long address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
+	  int address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
       if (correlation_output[address] > mip[address])
       {
         mip[address] = correlation_output[address];
@@ -1680,17 +1679,17 @@ d_ReturnFourierLogicalCoordGivenPhysicalCoord_Z(int physical_index,
     else return physical_index;
 }
 
- __device__ __forceinline__ long
+ __device__ __forceinline__ int
 d_ReturnReal1DAddressFromPhysicalCoord(int3 coords, int4 img_dims)
 {
-	return ( (((long)coords.z*(long)img_dims.y + coords.y) * (long)img_dims.w)  + (long)coords.x) ;
+	return ( (((int)coords.z*(int)img_dims.y + coords.y) * (int)img_dims.w)  + (int)coords.x) ;
 }
 
- __device__ __forceinline__ long
+ __device__ __forceinline__ int
 d_ReturnFourier1DAddressFromPhysicalCoord(int3 wanted_dims, int3 physical_upper_bound_complex)
 {
-	return ( (long)((physical_upper_bound_complex.y + 1) * wanted_dims.z + wanted_dims.y) * 
-            (long)(physical_upper_bound_complex.x + 1) + (long)wanted_dims.x );
+	return ( (int)((physical_upper_bound_complex.y + 1) * wanted_dims.z + wanted_dims.y) *
+            (int)(physical_upper_bound_complex.x + 1) + (int)wanted_dims.x );
 }
 
 
@@ -1815,7 +1814,7 @@ __global__ void PhaseShiftKernel(cufftComplex* d_input,
                                               dims.z),
                                              angles);
     
-    long address = d_ReturnFourier1DAddressFromPhysicalCoord(wanted_dims, physical_upper_bound_complex);
+    int address = d_ReturnFourier1DAddressFromPhysicalCoord(wanted_dims, physical_upper_bound_complex);
     init_vals.x = d_input[ address ].x;
     init_vals.y = d_input[ address ].y;
     d_input[ address ].x = init_vals.x*angles.x - init_vals.y*angles.y;
@@ -2181,7 +2180,7 @@ __global__ void ConvertToHalfPrecisionKernel(cufftComplex* complex_32f_values, _
 	if (coords.x < dims.w / 2 && coords.y < dims.y && coords.z < dims.z)
 	{
 
-		long address = d_ReturnFourier1DAddressFromPhysicalCoord(coords, physical_upper_bound_complex);
+		int address = d_ReturnFourier1DAddressFromPhysicalCoord(coords, physical_upper_bound_complex);
 
 		complex_16f_values[address] = __float22half2_rn(complex_32f_values[address]);
 	}
@@ -2242,7 +2241,7 @@ void GpuImage::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size,
 	dims.w = dims.x + padding_jump_value;
 	pitch = dims.w * sizeof(float);
 
-	number_of_real_space_pixels = long(dims.x) * long(dims.y) * long(dims.z);
+	number_of_real_space_pixels = int(dims.x) * int(dims.y) * int(dims.z);
 	ft_normalization_factor = 1.0 / sqrtf(float(number_of_real_space_pixels));
 
 

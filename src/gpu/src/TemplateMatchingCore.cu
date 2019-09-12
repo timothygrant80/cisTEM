@@ -160,7 +160,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
 
 
-	long ccc_counter = 0;
+	int ccc_counter = 0;
 	int current_search_position;
 	float average_on_edge;
 	float variance;
@@ -294,7 +294,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 }
 
 
-__global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const long  numel);
+__global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const int  numel);
 
 void TemplateMatchingCore::SumPixelWise(GpuImage &image)
 {
@@ -303,13 +303,13 @@ void TemplateMatchingCore::SumPixelWise(GpuImage &image)
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((image.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	SumPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_stats,(const long) image.real_memory_allocated);
+	SumPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_stats,(const int) image.real_memory_allocated);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
 
 
-__global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const long  numel)
+__global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* my_stats, const int  numel)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -325,7 +325,7 @@ __global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* 
 }
 
 
-__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const long  numel,
+__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
                                    __half c_psi, __half c_phi, __half c_theta);
 
 void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
@@ -335,13 +335,13 @@ void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half thet
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((image.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_peaks,(const long) image.real_memory_allocated, psi,theta, phi);
+	MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_peaks,(const int) image.real_memory_allocated, psi,theta, phi);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
 
 
-__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const long  numel,
+__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
                                    __half psi, __half theta, __half phi)
 {
 
@@ -365,7 +365,7 @@ __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* 
     }
 }
 
-__global__ void MipToImageKernel(const Peaks*, const long, cufftReal*, cufftReal*, cufftReal*, cufftReal*);
+__global__ void MipToImageKernel(const Peaks*, const int, cufftReal*, cufftReal*, cufftReal*, cufftReal*);
 
 void TemplateMatchingCore::MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi)
 {
@@ -379,7 +379,7 @@ void TemplateMatchingCore::MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuI
 
 }
 
-__global__ void  MipToImageKernel(const Peaks* my_peaks, const long numel, cufftReal* mip, cufftReal* psi, cufftReal* theta, cufftReal* phi)
+__global__ void  MipToImageKernel(const Peaks* my_peaks, const int numel, cufftReal* mip, cufftReal* psi, cufftReal* theta, cufftReal* phi)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -394,7 +394,7 @@ __global__ void  MipToImageKernel(const Peaks* my_peaks, const long numel, cufft
     }
 }
 
-__global__ void AccumulateSumsKernel(Stats* my_stats, const long numel, cufftReal* sum, cufftReal* sq_sum);
+__global__ void AccumulateSumsKernel(Stats* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum);
 
 void TemplateMatchingCore::AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum)
 {
@@ -408,7 +408,7 @@ void TemplateMatchingCore::AccumulateSums(Stats* my_stats, GpuImage &sum, GpuIma
 
 }
 
-__global__ void AccumulateSumsKernel(Stats* my_stats, const long numel, cufftReal* sum, cufftReal* sq_sum)
+__global__ void AccumulateSumsKernel(Stats* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;

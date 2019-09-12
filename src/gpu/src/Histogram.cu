@@ -148,12 +148,12 @@ void Histogram::BufferInit(NppiSize npp_ROI)
 
 	 // Array of temporary storage to accumulate the shared mem to
 	checkCudaErrors(cudaMalloc(&histogram, size_of_temp_hist));
-	checkCudaErrors(cudaMalloc(&cummulative_histogram, histogram_n_bins*sizeof(long)));
+	checkCudaErrors(cudaMalloc(&cummulative_histogram, histogram_n_bins*sizeof(int)));
 
 
 	// could bring in the context and then put this to an async op
 	checkCudaErrors(cudaMemset(histogram, 0 ,size_of_temp_hist));
-	checkCudaErrors(cudaMemset(cummulative_histogram, 0 , (histogram_n_bins)*sizeof(long)));
+	checkCudaErrors(cudaMemset(cummulative_histogram, 0 , (histogram_n_bins)*sizeof(int)));
 
 
 	is_allocated_histogram = true;
@@ -194,8 +194,8 @@ void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 
 	// Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
 	float* tmp_array;
-	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(float)));
-	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(float),cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(long)));
+	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(long),cudaMemcpyDeviceToHost));
 
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{

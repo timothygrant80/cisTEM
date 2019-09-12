@@ -475,7 +475,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	bool DO_FACTORIZATION = true;
 	bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
-	bool MUST_BE_FACTOR_OF_FOUR = false; // May be faster
+	bool MUST_BE_FACTOR_OF_FOUR = true; // May be faster
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.5f;
@@ -529,6 +529,10 @@ bool MatchTemplateApp::DoCalculation()
 	}
 	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
+
+//	// Temp override for profiling:
+	factorizable_x = 512*2;
+	factorizable_y = 512*2;
 
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
@@ -732,9 +736,10 @@ bool MatchTemplateApp::DoCalculation()
 
 	bool first_gpu_loop = true;
 	int nThreads;
-	int nGPUs = 2;
-	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 6 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 4 * nGPUs;}
+	int nGPUs = -1;
+	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 3 * nGPUs;}
 	else {nThreads = 2 * nGPUs;}
 
 	int minPos = 0;
@@ -1081,6 +1086,9 @@ bool MatchTemplateApp::DoCalculation()
 		}
 	}
 
+	wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
+
+
 #ifdef USEGPU
 
 
@@ -1359,7 +1367,6 @@ bool MatchTemplateApp::DoCalculation()
 		wxPrintf("Total Run Time : %s\n\n", finish_time.Subtract(start_time).Format("%Hh:%Mm:%Ss"));
 	}
 
-	wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
 
 
 	return true;

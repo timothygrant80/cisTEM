@@ -322,17 +322,21 @@ void GpuUtilTest::createImageAddOne()
 			c.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/oval_full.mrc",1);
 			c.AddConstant(-c.ReturnAverageOfRealValues(0.0,false));
 			GpuImage g;
-			g.Init(c);
-			g.CopyHostToDevice();
-			wxPrintf("Starting sum of squares is %3.3e\n", g.ReturnSumOfSquares());
-			g.MultiplyByConstant((1.0f/sqrtf(g.ReturnSumOfSquares())));
-			wxPrintf("Starting realspace var is %3.3e\n",g.ReturnSumOfSquares());
-			g.ForwardFFT();
-			g.MultiplyByConstant(sqrtf(1.0/sqrtf(g.ReturnSumSquareModulusComplexValues())));
-			g.BackwardFFT();
+			c.ForwardFFT();
+			c.MultiplyByConstant(1/sqrtf(c.ReturnSumOfSquares(0.0,0.0,0.0,false)));
+			c.BackwardFFT();
+//			g.Init(c);
+//
+//			g.CopyHostToDevice();
+//			wxPrintf("Starting sum of squares is %3.3e\n", g.ReturnSumOfSquares());
+//			g.MultiplyByConstant((1.0f/sqrtf(g.ReturnSumOfSquares())));
+//			wxPrintf("Starting realspace var is %3.3e\n",g.ReturnSumOfSquares());
+//			g.ForwardFFT(false);
+//			g.MultiplyByConstant(1.0/sqrtf(g.ReturnSumSquareModulusComplexValues()));
+//			g.BackwardFFT();
 //			g.MultiplyByConstant(1.0f/g.number_of_real_space_pixels);
 
-			wxPrintf("After realspace var is %3.3e\n",g.ReturnSumOfSquares());
+			wxPrintf("After realspace var is %3.3e\n",c.ReturnSumOfSquares()*c.number_of_real_space_pixels);
 
 //
 //			for (int iLoop = 1; iLoop < 100000; iLoop++)

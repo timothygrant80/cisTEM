@@ -1,6 +1,8 @@
 #include "../../core/core_headers.h"
 
 
+
+
 class AggregatedTemplateResult
 {
 public:
@@ -52,8 +54,45 @@ MatchTemplateApp : public MyApp
 	ArrayOfAggregatedTemplateResults aggregated_results;
 	int original_input_image_x;
 	int original_input_image_y;
+	int n_sub_images;
+
+	struct  SubCoordinates
+	{
+		int xi;
+		int yi;
+		int xf;
+		int yf;
+		int xo;
+		int yo;
+	};
+
+
+
+	Image input_image;
+	Image padded_reference;
+	Image input_reconstruction;
+	Image template_reconstruction;
+	Image current_projection;
+	Image padded_projection;
+
+	Image projection_filter;
+
+	Image max_intensity_projection;
+
+	Image best_psi;
+	Image best_theta;
+	Image best_phi;
+	Image best_defocus;
+	Image best_pixel_size;
+
+	Image correlation_pixel_sum_image;
+	Image correlation_pixel_sum_of_squares_image;
+
+	Image temp_image;
+
 
 	private:
+
 };
 
 class ImageProjectionComparison
@@ -443,27 +482,7 @@ bool MatchTemplateApp::DoCalculation()
 	input_search_image_file.OpenFile(input_search_images_filename.ToStdString(), false);
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
-	Image input_image;
-	Image padded_reference;
-	Image input_reconstruction;
-	Image template_reconstruction;
-	Image current_projection;
-	Image padded_projection;
 
-	Image projection_filter;
-
-	Image max_intensity_projection;
-
-	Image best_psi;
-	Image best_theta;
-	Image best_phi;
-	Image best_defocus;
-	Image best_pixel_size;
-
-	Image correlation_pixel_sum_image;
-	Image correlation_pixel_sum_of_squares_image;
-
-	Image temp_image;
 
 	input_image.ReadSlice(&input_search_image_file, 1);
 

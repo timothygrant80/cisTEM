@@ -188,6 +188,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 //	MyDebugAssertTrue(is_in_real_space, "Not in real space");
 
+	// Fixme WHY does this return sum(x^2)/N for real space and sum(X^2) for Fourier space?? this is really confusing - BAH
 	int i;
 	int j;
 	int k;

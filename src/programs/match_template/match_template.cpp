@@ -52,18 +52,26 @@ MatchTemplateApp : public MyApp
 	// for master collation
 
 	ArrayOfAggregatedTemplateResults aggregated_results;
-	int original_input_image_x;
-	int original_input_image_y;
+//	int original_input_image_x;
+//	int original_input_image_y;
 	int n_sub_images;
 
 	struct  SubCoordinates
 	{
-		int xi;
-		int yi;
-		int xf;
-		int yf;
-		int xo;
-		int yo;
+		// Track the input and ouput image sizes
+		int nx_original, ny_original;
+		int nx_trimmed,  ny_trimmed;
+
+		// Logigal indices describing the valid area in the sub-image
+		// Use these to zero any padding values prior to re-inserting in the full image with ClipInto()
+		int x_lower_bound, y_lower_bound;
+		int x_upper_bound, y_upper_bound;
+		
+
+		// Shift vector describing the offset between the sub_image origin in the original image
+		// and the origin of the original image. The negative of these are used to cut out with ClipInto() while the positive
+		// are used to re-insert;
+		int ox, oy;
 	};
 
 
@@ -482,84 +490,104 @@ bool MatchTemplateApp::DoCalculation()
 	input_search_image_file.OpenFile(input_search_images_filename.ToStdString(), false);
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
+	// TODO add the gpu block that will set this here. for the cpu code, default to 1;
+	n_sub_images = 1;
+	SubCoordinates* coords = new SubCoordinates[n_sub_images];
 
 
 	input_image.ReadSlice(&input_search_image_file, 1);
+	int sub_region_padding = std::max((float)input_reconstruction_file.ReturnXSize()*padding,	
+					  (float)input_reconstruction_file.ReturnYSize()*padding);
+	// TODO resume here. Add if condition on sub_regions > 1 and then considering padding in the factorization, determine the new size and needed shifts
+	// There calcued the upper and lower bounds. etc.
+	//
+	for (int iSC = 0; iSC < n_sub_images; iSC++)
+	{
+		coords[iSC].nx_original = input_image.logical_x_dimension;
+		coords[iSC].ny_original = input_image.logical_y_dimension;
+	
 
+	//TODO move the splitting and foactorization to a method
 	// Resize input image to be factorizable by small numbers
-	original_input_image_x = input_image.logical_x_dimension;
-	original_input_image_y = input_image.logical_y_dimension;
-	factorizable_x = input_image.logical_x_dimension;
-	factorizable_y = input_image.logical_y_dimension;
+//original_input_image_x = input_image.logical_x_dimension;
+//original_input_image_y = input_image.logical_y_dimension;
+//		// for now, split on just the larger dimension. Assuming only 1 or 2 sub images
+		MyAssertTrue(n_sub_images == 1 || n_sub_images == 2, "Only 1 or 2 sub-images are currently supported.");
+		int x_division = 1; 
+		int y_division = 1;
+		if ( coords[iSC].nx_original >= coords[iSC].ny_original ) { x_division = n_sub_images; } else { y_division = n_sub_images; }
 
-	bool DO_FACTORIZATION = true;
-	bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
-	int MUST_BE_FACTOR_OF_FOUR = 0; // May be faster
-	const int max_number_primes = 6;
-	int primes[max_number_primes] = {2,3,5,7,9,13};
-	float max_reduction_by_fraction_of_reference = 0.5f;
-	float max_increas_by_fraction_of_image = 0.10f;
-	int max_padding = 0; // To restrict histogram calculation
+		factorizable_x = coords[iSC].nx_original / x_division;
+		factorizable_y = coords[iSC].ny_original / y_division;
 
-	// for 5760 this will return
-	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
-	// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
-	if (DO_FACTORIZATION)
-	{
-	for ( i = 0; i < max_number_primes; i++ )
-	{
+		bool DO_FACTORIZATION = true;
+		bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
+		int MUST_BE_FACTOR_OF_FOUR = 0; // May be faster
+		const int max_number_primes = 6;
+		int primes[max_number_primes] = {2,3,5,7,9,13};
+		float max_reduction_by_fraction_of_reference = 0.5f;
+		float max_increas_by_fraction_of_image = 0.10f;
+		int max_padding = 0; // To restrict histogram calculation
 
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+		// for 5760 this will return
+		// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
+		// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
+		if (DO_FACTORIZATION)
+		{
+		for ( i = 0; i < max_number_primes; i++ )
+		{
+
+			factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+			factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+
+	//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
+			if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
+			{
+				factorizable_x = factor_result_neg;
+				break;
+			}
+			if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
+			{
+				factorizable_x = factor_result_pos;
+				break;
+			}
+
+		}
+		factor_score = FLT_MAX;
+		for ( i = 0; i < max_number_primes; i++ )
+		{
+
+			factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+			factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+	
 
 //		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_x = factor_result_neg;
-			break;
+			if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
+			{
+				factorizable_y = factor_result_neg;
+				break;
+			}
+			if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
+			{
+				factorizable_y = factor_result_pos;
+				break;
+			}
+
 		}
-		if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_x = factor_result_pos;
-			break;
+		if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
+		if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
+
+	//	// Temp override for profiling:
+		//factorizable_x = 1024*4+512;
+		//factorizable_y = 1024*4+512;
+
+		wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+
+
+
+		input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
+
 		}
-
-	}
-	factor_score = FLT_MAX;
-	for ( i = 0; i < max_number_primes; i++ )
-	{
-
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-
-
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_y = factor_result_neg;
-			break;
-		}
-		if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_y = factor_result_pos;
-			break;
-		}
-
-	}
-	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
-	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
-
-//	// Temp override for profiling:
-	factorizable_x = 1024*4+512;
-	factorizable_y = 1024*4+512;
-
-	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
-
-
-
-	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-
-	}
 
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);

@@ -12,7 +12,7 @@
 //#include <helper_string.h>
 // Kernel declarations
 
-
+// FIXME I switched all counters to signed ints (32bit) so I guess a check on image dimensions would be needed. Unless the compiler can detect and adjust for overflow situations?
 
 __global__ void ConvertToHalfPrecisionKernel(cufftComplex* complex_32f_values, __half2* complex_16f_values, int4 dims, int3 physical_upper_bound_complex);
 
@@ -1059,8 +1059,6 @@ void GpuImage::MeanStdDev()
 void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 {
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyAssertTrue(is_in_real_space, "Not in real space");
-
 
 	NppInit();
 	checkNppErrors(nppiMul_32f_C1IR_Ctx((const Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
@@ -1074,7 +1072,7 @@ void GpuImage::AddConstant(const float add_val)
 
 
 	NppInit();
-	checkNppErrors(nppiAddC_32f_C1IR_Ctx((const Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+	checkNppErrors(nppiAddC_32f_C1IR_Ctx((Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
 }
 
 void GpuImage::SquareRealValues()
@@ -1168,7 +1166,7 @@ void GpuImage::MultiplyByConstant(float scale_factor)
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
-	checkNppErrors(nppiMulC_32f_C1IR_Ctx((const Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
+	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
 }
 
 void GpuImage::Conj()
@@ -1178,7 +1176,7 @@ void GpuImage::Conj()
 
 	float scale_factor = -1.0f;
 	NppInit();
-	checkNppErrors(nppiMulC_32f_C1IR_Ctx((const Npp32f) (scale_factor+1), (Npp32f*)real_values_gpu,  dims.w/2*sizeof(float), npp_ROI,nppStream));
+	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) (scale_factor+1), (Npp32f*)real_values_gpu,  dims.w/2*sizeof(float), npp_ROI,nppStream));
 	// FIXME make sure that a) there isn't already a function fo rthis, b) you aren't striding out of bounds (mask instead_;
 }
 
@@ -1471,7 +1469,7 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 
 			CB_complexConjMulLoad_params<T>* d_params;
 			CB_complexConjMulLoad_params<T> h_params;
-			h_params.scale = ft_normalization_factor*ft_normalization_factor;
+			h_params.scale = ft_normalization_factor;//*ft_normalization_factor;
 			h_params.target = (T *)image_to_multiply;
 			checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_complexConjMulLoad_params<T>)));
 			checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_complexConjMulLoad_params<T>), cudaMemcpyHostToDevice, cudaStreamPerThread));
@@ -2014,7 +2012,6 @@ void GpuImage::SetCufftPlan(bool use_half_precision)
 
     checkCudaErrors(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
     checkCudaErrors(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
-
 
     if (dims.z > 1) 
     { 

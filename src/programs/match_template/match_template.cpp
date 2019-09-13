@@ -475,7 +475,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	bool DO_FACTORIZATION = true;
 	bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
-	bool MUST_BE_FACTOR_OF_FOUR = true; // May be faster
+	int MUST_BE_FACTOR_OF_FOUR = 0; // May be faster
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.5f;
@@ -531,18 +531,17 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
 //	// Temp override for profiling:
-	factorizable_x = 512*2;
-	factorizable_y = 512*2;
+	factorizable_x = 1024*4+512;
+	factorizable_y = 1024*4+512;
 
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
 
-//	factorizable_x = original_input_image_x;
-//	factorizable_y = original_input_image_y;
+
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-//	input_image.QuickAndDirtyWriteSlice("factor.mrc", 1);
-//	exit(0);
+
 	}
+
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -561,13 +560,12 @@ bool MatchTemplateApp::DoCalculation()
 	best_theta.SetToConstant(0.0f);
 	best_phi.SetToConstant(0.0f);
 	best_defocus.SetToConstant(0.0f);
-//	correlation_pixel_sum.SetToConstant(0.0f);
-//	correlation_pixel_sum_of_squares.SetToConstant(0.0f);
+
 	ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
 	ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
 
 // Some settings for testing
-	padding = 1.0f;
+//	padding = 1.0f;
 //	ctf_refinement = true;
 //	defocus_search_range = 200.0f;
 //	defocus_step = 50.0f;
@@ -1098,11 +1096,11 @@ bool MatchTemplateApp::DoCalculation()
 		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
 		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
 	}
-
-	correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
-	correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+	correlation_pixel_sum_image.QuickAndDirtyWriteSlice("/tmp/SumImg.mrc",1,1);
+	correlation_pixel_sum_of_squares_image.QuickAndDirtyWriteSlice("/tmp/SumImgSq.mrc",1,1);
 
 #endif
+
 
 
 
@@ -1262,9 +1260,9 @@ bool MatchTemplateApp::DoCalculation()
 
 		pointer_to_histogram_data = (float *) histogram_data;
 
-		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
-		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
-		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
+		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);// max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);//correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1,0.0f);// correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
 		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);

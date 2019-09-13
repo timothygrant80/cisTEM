@@ -106,7 +106,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 
     wxPrintf("Setting up the histogram\n\n");
-	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
+	histogram.Init(histogram_number_of_bins, histogram_min_scaled * d_input_image.number_of_real_space_pixels, histogram_step_scaled * d_input_image.number_of_real_space_pixels);
 	if (max_padding > 2) {histogram.max_padding = max_padding;}
 
 
@@ -219,8 +219,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			}
 
 
-			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
-																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
+			this->MipPixelWise(d_padded_reference, (current_psi) , (global_euler_search.list_of_search_parameters[current_search_position][1]),
+																			 	(global_euler_search.list_of_search_parameters[current_search_position][0]));
+
+//			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
+//																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
 			this->SumPixelWise(d_padded_reference);
 
 
@@ -263,14 +266,12 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
 
-
 			} // loop over psi angles
-
 
       
  	} // end of outer loop euler sphere position
 
-	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
+	wxPrintf("\t\t\ntotal number %d\n",ccc_counter);
 
     cudaStreamWaitEvent(cudaStreamPerThread,gpu_work_is_done_Event, 0);
 
@@ -326,9 +327,9 @@ __global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* 
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   __half c_psi, __half c_phi, __half c_theta);
+                                   float c_psi, float c_phi, float c_theta);
 
-void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
+void TemplateMatchingCore::MipPixelWise(GpuImage &image, float psi, float theta, float phi)
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
@@ -342,7 +343,7 @@ void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half thet
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   __half psi, __half theta, __half phi)
+                                   float psi, float theta, float phi)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -350,9 +351,11 @@ __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* 
 
 	if ( x < numel  )
 	{
-	    __half val = __float2half_rn(correlation_output[x]);
+//	    __half val = __float2half_rn(correlation_output[x]);
+		float val = correlation_output[x];
 
-		if ( __hgt( val , my_peaks[x].mip) )
+//		if ( __hgt( val , my_peaks[x].mip) )
+		if ( val > my_peaks[x].mip )
 		{
 
 			my_peaks[x].mip = val;
@@ -386,10 +389,14 @@ __global__ void  MipToImageKernel(const Peaks* my_peaks, const int numel, cufftR
 
 	if ( x < numel  )
 	{
-		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
-		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
-		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
-		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
+//		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
+//		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
+//		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
+//		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
+		mip[x] = 	(cufftReal)(my_peaks[x].mip);
+		psi[x] = 	(cufftReal)(my_peaks[x].psi);
+		theta[x] =	(cufftReal)(my_peaks[x].theta);
+		phi[x] =	(cufftReal)(my_peaks[x].phi);
 
     }
 }

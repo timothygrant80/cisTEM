@@ -34,10 +34,10 @@ bool GpuUtilTest::DoCalculation()
 
   wxPrintf("GpuUtilTest is running!\n");
 
-//  this->createImageAddOne();
+  this->createImageAddOne();
   int nThreads = 1;
   int nGPUs = 1;
-  this->TemplateMatchingStandalone(nThreads, nGPUs);
+//  this->TemplateMatchingStandalone(nThreads, nGPUs);
 
   int gpuID = 0;
   wxPrintf("I made it here\n");
@@ -199,8 +199,8 @@ void GpuUtilTest::createImageAddOne()
 	bool do_pad = false;
 
 
-	int wanted_number_of_gpus = 8;
-	int wanted_number_threads_per_gpu = 2;
+	int wanted_number_of_gpus = 1;
+	int wanted_number_threads_per_gpu = 1;
 
 	DeviceManager gpuDev(wanted_number_of_gpus);
 
@@ -319,21 +319,31 @@ void GpuUtilTest::createImageAddOne()
 			start = wxDateTime::Now();
 
 			Image c;
-			c.Allocate(514,514,1,true);
-
+			c.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/oval_full.mrc",1);
+			c.AddConstant(-c.ReturnAverageOfRealValues(0.0,false));
 			GpuImage g;
 			g.Init(c);
 			g.CopyHostToDevice();
+			wxPrintf("Starting sum of squares is %3.3e\n", g.ReturnSumOfSquares());
+			g.MultiplyByConstant((1.0f/sqrtf(g.ReturnSumOfSquares())));
+			wxPrintf("Starting realspace var is %3.3e\n",g.ReturnSumOfSquares());
+			g.ForwardFFT();
+			g.MultiplyByConstant(sqrtf(1.0/sqrtf(g.ReturnSumSquareModulusComplexValues())));
+			g.BackwardFFT();
+//			g.MultiplyByConstant(1.0f/g.number_of_real_space_pixels);
 
-			for (int iLoop = 1; iLoop < 100000; iLoop++)
-			{
-				g.ForwardFFT(false);
-				g.BackwardFFT();
-				g.Wait();
-			}
+			wxPrintf("After realspace var is %3.3e\n",g.ReturnSumOfSquares());
 
-			wxPrintf("Timings: Overall: %s\n",(wxDateTime::Now()-start).Format());
-			g.CopyDeviceToHost();
+//
+//			for (int iLoop = 1; iLoop < 100000; iLoop++)
+//			{
+//				g.ForwardFFT(false);
+//				g.BackwardFFT();
+//				g.Wait();
+//			}
+//
+//			wxPrintf("Timings: Overall: %s\n",(wxDateTime::Now()-start).Format());
+//			g.CopyDeviceToHost();
 			exit(0);
 			// full size image
 

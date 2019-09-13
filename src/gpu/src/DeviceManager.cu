@@ -15,7 +15,6 @@ DeviceManager::DeviceManager(int wanted_number_of_gpus)
 };
 
 
-
 DeviceManager::~DeviceManager() 
 {
 	// TODO make sure this only destroying the proper context.

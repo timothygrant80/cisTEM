@@ -62,7 +62,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/json/json_defs.h \
                  core/json/jsonval.h \
                  core/json/jsonreader.h \
-                 core/jsonwriter.h \
+                 core/json/jsonwriter.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \

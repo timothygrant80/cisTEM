@@ -41,7 +41,7 @@ void TemplateMatchingCore::Init(int number_of_jobs)
 };
 
 void TemplateMatchingCore::Init(Image &template_reconstruction,
-                                Image &input_image,
+                                ImageExtender &extended_image,
                                 Image &current_projection,
                                 float pixel_size_search_range,
                                 float pixel_size_step,
@@ -58,13 +58,15 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
                     			float histogram_min_scaled,
                     			float histogram_step_scaled,
                     			int histogram_number_of_bins,
-                    			int max_padding,
                                 int first_search_position,
                                 int last_search_position)
+
+
                                 
 {
 
 
+	this->extended_image = extended_image;
 
 	this->first_search_position = first_search_position;
 	this->last_search_position  = last_search_position;
@@ -79,10 +81,10 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
     this->template_reconstruction.CopyFrom(&template_reconstruction);
-    this->input_image.CopyFrom(&input_image);
+    this->input_image = input_image;
     this->current_projection.CopyFrom(&current_projection);
 
-    d_input_image.Init(this->input_image);
+    d_input_image.Init(this->extended_image.subImage[0]);
     d_input_image.CopyHostToDevice();
 
     d_current_projection.Init(this->current_projection);
@@ -107,7 +109,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
     wxPrintf("Setting up the histogram\n\n");
 	histogram.Init(histogram_number_of_bins, histogram_min_scaled * d_input_image.number_of_real_space_pixels, histogram_step_scaled * d_input_image.number_of_real_space_pixels);
-	if (max_padding > 2) {histogram.max_padding = max_padding;}
+	if (extended_image.max_padding > 2) {histogram.max_padding = extended_image.max_padding;}
 
 
 
@@ -130,21 +132,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 {
 
 
-  
-
-	// Make sure we are starting with zeros
-	d_max_intensity_projection.Zeros();
-	d_best_psi.Zeros();
-	d_best_phi.Zeros();
-	d_best_theta.Zeros();
-	d_padded_reference.Zeros();
-
-	d_sum1.Zeros();
-	d_sumSq1.Zeros();
-	d_sum2.Zeros();
-	d_sumSq2.Zeros();
-	d_sum3.Zeros();
-	d_sumSq3.Zeros();
 
 	this->c_defocus = c_defocus;
 	this->c_pixel = c_pixel;
@@ -159,6 +146,22 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
 
+	for (int iSubRegion = 0; iSubRegion < extended_image.n_sub_regions; iSubRegion++)
+	{
+
+		// Make sure we are starting with zeros
+		d_max_intensity_projection.Zeros();
+		d_best_psi.Zeros();
+		d_best_phi.Zeros();
+		d_best_theta.Zeros();
+		d_padded_reference.Zeros();
+
+		d_sum1.Zeros();
+		d_sumSq1.Zeros();
+		d_sum2.Zeros();
+		d_sumSq2.Zeros();
+		d_sum3.Zeros();
+		d_sumSq3.Zeros();
 
 	int ccc_counter = 0;
 	int current_search_position;
@@ -292,6 +295,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 
 
+	} // end of loop on sub regions
 }
 
 

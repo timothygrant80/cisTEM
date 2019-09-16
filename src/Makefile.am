@@ -59,6 +59,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communicator.h \
+                 core/image_extender.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -197,7 +198,7 @@ noinst_HEADERS += 	gui/MatchTemplatePanel.h \
 					gui/icons/experimental_icon.cpp \
 					gui/icons/match_template_icon.cpp \
 					core/water.h 
-					
+									
 endif      
 	
 noinst_LIBRARIES = libcore.a libguicore.a
@@ -270,7 +271,7 @@ libcore_a_SOURCES =    core/functions.cpp \
 
 
 if EXPERIMENTAL_AM
-libcore_a_SOURCES += core/water.cpp core/pdb.cpp
+libcore_a_SOURCES += core/water.cpp core/pdb.cpp core/image_extender.cpp
 endif
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

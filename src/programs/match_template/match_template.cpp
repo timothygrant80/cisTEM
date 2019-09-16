@@ -56,25 +56,6 @@ MatchTemplateApp : public MyApp
 //	int original_input_image_y;
 	int n_sub_images;
 
-	struct  SubCoordinates
-	{
-		// Track the input and ouput image sizes
-		int nx_original, ny_original;
-		int nx_trimmed,  ny_trimmed;
-
-		// Logigal indices describing the valid area in the sub-image
-		// Use these to zero any padding values prior to re-inserting in the full image with ClipInto()
-		int x_lower_bound, y_lower_bound;
-		int x_upper_bound, y_upper_bound;
-		
-
-		// Shift vector describing the offset between the sub_image origin in the original image
-		// and the origin of the original image. The negative of these are used to cut out with ClipInto() while the positive
-		// are used to re-insert;
-		int ox, oy;
-	};
-
-
 
 	Image input_image;
 	Image padded_reference;
@@ -307,64 +288,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 
 bool MatchTemplateApp::DoCalculation()
 {
-	/*
-	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument(); // global
-	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument(); // not sure
-	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument(); // global
-	wxString input_reconstruction_statistics 	= my_current_job.arguments[3].ReturnStringArgument(); // global
-	bool	 use_statistics						= my_current_job.arguments[4].ReturnBoolArgument();   // global
-	wxString ouput_matching_projections 		= my_current_job.arguments[5].ReturnStringArgument(); // ignore (always false)
-	wxString ouput_parameter_file				= my_current_job.arguments[6].ReturnStringArgument(); // not sure par file
-	wxString ouput_shift_file					= my_current_job.arguments[7].ReturnStringArgument(); // not sure output
-	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument(); // global
-	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument(); // local (effectively ignore)
-	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument(); // local (effectively ignore)
-	float	 percent_used						= my_current_job.arguments[11].ReturnFloatArgument();
-	float 	 pixel_size							= my_current_job.arguments[12].ReturnFloatArgument(); // local
-	float    voltage_kV							= my_current_job.arguments[13].ReturnFloatArgument(); // local
-	float 	 spherical_aberration_mm			= my_current_job.arguments[14].ReturnFloatArgument(); // local
-	float    amplitude_contrast					= my_current_job.arguments[15].ReturnFloatArgument(); // local
-	float	 molecular_mass_kDa					= my_current_job.arguments[16].ReturnFloatArgument(); // global
-	float    inner_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument(); // global
-	float    outer_mask_radius					= my_current_job.arguments[18].ReturnFloatArgument(); // global
-	float    low_resolution_limit				= my_current_job.arguments[19].ReturnFloatArgument(); // global
-	float    high_resolution_limit				= my_current_job.arguments[20].ReturnFloatArgument(); // global
-	float	 signed_CC_limit					= my_current_job.arguments[21].ReturnFloatArgument(); // global
-	float	 classification_resolution_limit	= my_current_job.arguments[22].ReturnFloatArgument(); // global
-	float    mask_radius_search					= my_current_job.arguments[23].ReturnFloatArgument(); // global
-	float	 high_resolution_limit_search		= my_current_job.arguments[24].ReturnFloatArgument(); // global
-	float	 angular_step						= my_current_job.arguments[25].ReturnFloatArgument(); // global
-	int		 best_parameters_to_keep			= my_current_job.arguments[26].ReturnIntegerArgument(); // global
-	float	 max_search_x						= my_current_job.arguments[27].ReturnFloatArgument(); // global
-	float	 max_search_y						= my_current_job.arguments[28].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_x			= my_current_job.arguments[29].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_y			= my_current_job.arguments[30].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_z			= my_current_job.arguments[31].ReturnFloatArgument(); // global
-	refine_particle.mask_radius_2d				= my_current_job.arguments[32].ReturnFloatArgument(); // global
-	float	 defocus_search_range				= my_current_job.arguments[33].ReturnFloatArgument(); // global
-	float	 defocus_step						= my_current_job.arguments[34].ReturnFloatArgument(); // global
-	float	 padding							= my_current_job.arguments[35].ReturnFloatArgument(); // global
-//	float	 filter_constant					= my_current_job.arguments[35].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[36].ReturnBoolArgument(); // global
-	bool	 local_refinement					= my_current_job.arguments[37].ReturnBoolArgument(); // global
-// Psi, Theta, Phi, ShiftX, ShiftY
-	refine_particle.parameter_map[3]			= my_current_job.arguments[38].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[2]			= my_current_job.arguments[39].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[1]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[4]			= my_current_job.arguments[41].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[5]			= my_current_job.arguments[42].ReturnBoolArgument(); // global
-	bool 	 calculate_matching_projections		= my_current_job.arguments[43].ReturnBoolArgument(); // global - but ignore
-	refine_particle.apply_2D_masking			= my_current_job.arguments[44].ReturnBoolArgument(); // global
-	bool	 ctf_refinement						= my_current_job.arguments[45].ReturnBoolArgument(); // global
-	bool	 normalize_particles				= my_current_job.arguments[46].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
-	bool	 exclude_blank_edges				= my_current_job.arguments[48].ReturnBoolArgument();
-	bool	 normalize_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
-	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
-	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
-	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
-*/
+
 
 	wxDateTime start_time = wxDateTime::Now();
 
@@ -407,30 +331,6 @@ bool MatchTemplateApp::DoCalculation()
 	wxString    correlation_average_output_file = my_current_job.arguments[36].ReturnStringArgument();
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
 
-	/*wxPrintf("input image = %s\n", input_search_images_filename);
-	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
-	wxPrintf("pixel size = %f\n", pixel_size);
-	wxPrintf("voltage = %f\n", voltage_kV);
-	wxPrintf("Cs = %f\n", spherical_aberration_mm);
-	wxPrintf("amp contrast = %f\n", amplitude_contrast);
-	wxPrintf("defocus1 = %f\n", defocus1);
-	wxPrintf("defocus2 = %f\n", defocus2);
-	wxPrintf("defocus_angle = %f\n", defocus_angle);
-	wxPrintf("low res limit = %f\n", low_resolution_limit);
-	wxPrintf("high res limit = %f\n", high_resolution_limit_search);
-	wxPrintf("angular step = %f\n", angular_step);
-	wxPrintf("best params to keep = %i\n", best_parameters_to_keep);
-	wxPrintf("defocus search range = %f\n", defocus_search_range);
-	wxPrintf("defocus step = %f\n", defocus_step);
-	wxPrintf("padding = %f\n", padding);
-	wxPrintf("ctf_refinement = %i\n", int(ctf_refinement));
-	wxPrintf("mask search radius = %f\n", mask_radius_search);
-	wxPrintf("phase shift = %f\n", phase_shift);
-	wxPrintf("symmetry = %s\n", my_symmetry);
-	wxPrintf("in plane step = %f\n", in_plane_angular_step);
-	wxPrintf("first location = %i\n", first_search_position);
-	wxPrintf("last location = %i\n", last_search_position);
-	*/
 
 	ParameterMap parameter_map; // needed for euler search init
 	//for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
@@ -490,129 +390,49 @@ bool MatchTemplateApp::DoCalculation()
 	input_search_image_file.OpenFile(input_search_images_filename.ToStdString(), false);
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
-	// TODO add the gpu block that will set this here. for the cpu code, default to 1;
+
+	// Default to 1. In the GPU block below, increase to 2 for images > large limit (4k x 3k)
 	n_sub_images = 1;
-	SubCoordinates* coords = new SubCoordinates[n_sub_images];
 
-
+	ImageExtender extended_image;
 	input_image.ReadSlice(&input_search_image_file, 1);
-	int sub_region_padding = myroundint(std::max((float)input_reconstruction_file.ReturnXSize()*padding,	
-					  	(float)input_reconstruction_file.ReturnYSize()*padding));
-	// TODO resume here. Add if condition on sub_regions > 1 and then considering padding in the factorization, determine the new size and needed shifts
-	// There calcued the upper and lower bounds. etc.
-	//
-	for (int iSC = 0; iSC < n_sub_images; iSC++)
+
+#ifdef USEGPU
+
+	// Add a condition that for now will enforce the division to only happen for large *(K3 size) where the number of threads is even and 2. (test 4 though)
+	bool first_gpu_loop = true;
+	int nThreads;
+	int nGPUs = -1;
+	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+
+	if (input_image.logical_x_dimension*input_image.logical_y_dimension < 2048 * 2048) { nThreads = 6 * nGPUs;}
+	else if (input_image.logical_x_dimension*input_image.logical_y_dimension < 4096 * 3072) {nThreads = 4 * nGPUs;}
+	else
 	{
-		coords[iSC].nx_original = input_image.logical_x_dimension;
-		coords[iSC].ny_original = input_image.logical_y_dimension;
-	
+		nThreads = 2 * nGPUs;
+		n_sub_images = 2;
 
-	//TODO move the splitting and foactorization to a method
-	// Resize input image to be factorizable by small numbers
-//original_input_image_x = input_image.logical_x_dimension;
-//original_input_image_y = input_image.logical_y_dimension;
-//		// for now, split on just the larger dimension. Assuming only 1 or 2 sub images
-		MyAssertTrue(n_sub_images == 1 || n_sub_images == 2, "Only 1 or 2 sub-images are currently supported.");
-		int x_division = 1; 
-		int x_padding = 1;
-		int y_division = 1;
-		int y_padding = 1;
-		// TODO move these into the coords struct
-		if ( coords[iSC].nx_original >= coords[iSC].ny_original ) 
-		{ 
-			x_division = n_sub_images; 
-			x_padding = sub_region_padding;
-			y_padding = 0;
-		}
-		else 
-		{ 
-			y_division = n_sub_images; 
-			y_padding = sub_region_padding;
-			x_padding = 0;
-		}
-
-		factorizable_x = coords[iSC].nx_original / x_division + x_padding;
-		factorizable_y = coords[iSC].ny_original / y_division + y_padding;
+	}
 
 
-		bool DO_FACTORIZATION = true;
-		bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
-		int MUST_BE_FACTOR_OF_FOUR = 0; // May be faster
-		const int max_number_primes = 6;
-		int primes[max_number_primes] = {2,3,5,7,9,13};
-		float max_reduction_by_fraction_of_reference = 0.5f;
-		float max_increas_by_fraction_of_image = 0.10f;
-		int max_padding = 0; // To restrict histogram calculation
+	int minPos = 0;
+	int maxPos = last_search_position;
+	int incPos = last_search_position / (nThreads);
 
-		// for 5760 this will return
-		// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
-		// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
-		if (DO_FACTORIZATION)
-		{
-		for ( i = 0; i < max_number_primes; i++ )
-		{
+	TemplateMatchingCore GPU[nThreads];
 
-			factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-			factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-			// We don't want to shrink the dimension that has been trimmed;
-			if ( x_division > 1 ) factor_result_neg = 0;
+	DeviceManager gpuDev;
+	gpuDev.Init(nGPUs);
 
-	//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-			if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
-			{
-				factorizable_x = factor_result_neg;
-				break;
-			}
-			if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
-			{
-				factorizable_x = factor_result_pos;
-			break;
-			}
+	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
 
-		}
-		factor_score = FLT_MAX;
-		for ( i = 0; i < max_number_primes; i++ )
-		{
+//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
+#endif
 
-			factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-			factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-			// We don't want to shrink the dimwnsion that has been cut
-			if ( y_division > 1 ) factor_result_neg = 1;
-
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-			if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
-			{
-				factorizable_y = factor_result_neg;
-				break;
-			}
-			if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
-			{
-				factorizable_y = factor_result_pos;
-				break;
-			}
-
-		}
-		if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
-		if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
-
-	//	// Temp override for profiling:
-		//factorizable_x = 1024*4+512;
-		//factorizable_y = 1024*4+512;
-
-		wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+	// FIXME Note that it would be better to get the convolution padding from the input particle diameter and not it's box size.
+	extended_image.Init(n_sub_images, (int)input_reconstruction_file.ReturnXSize());
 
 
-		coords[iSC].nx_trimmed = factorizable_x;
-		coords[iSC].ny_trimmed = factorizable_y;
-		coords[iSC].ox = factorizable_x/2 - coords[iSC].nx_original;
-		coords[iSC].oy = factorizable_y/2 - coords[iSC].ny_original;
-		
-		if (n_sub_images == 1)
-		{
-			input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-		}
-
-		}
 
 	// For the host code, these will be the resized image. for the gpu code, these will be the original image size.
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -803,30 +623,7 @@ bool MatchTemplateApp::DoCalculation()
 	wxDateTime 	overall_finish;
 	overall_start = wxDateTime::Now();
 
-#ifdef USEGPU
-	// TODO move this up to before the image division section.
-	// Add a condition that for now will enforce the division to only happen for large *(K3 size) where the number of threads is even and 2. (test 4 though)
-	bool first_gpu_loop = true;
-	int nThreads;
-	int nGPUs = -1;
-	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
-	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 3 * nGPUs;}
-	else {nThreads = 2 * nGPUs;}
 
-	int minPos = 0;
-	int maxPos = last_search_position;
-	int incPos = last_search_position / (nThreads);
-
-	TemplateMatchingCore GPU[nThreads];
-
-	DeviceManager gpuDev;
-	gpuDev.Init(nGPUs);
-
-	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
-
-//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
-#endif
 
 
 
@@ -858,34 +655,14 @@ bool MatchTemplateApp::DoCalculation()
 
 			long t_first_search_position = 0 + (tIDX*incPos);
 			long t_last_search_position = (incPos-1) + (tIDX*incPos);
-			Image t_image_sub_region;
 
-			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
-			// FIXME it would be better just to resize outside the loop, but for initial testing, put it here;
-			if (n_sub_regions > 1)
-			{
-				if (tIDX % 2 == 0)
-				{
-					t_image_sub_region.Allocate(coords[0].nx_trimmed, coords[0].ny_trimmed, 1, true);
-					input_image.ClipInto(&t_image_sub_region, 0.0f, false, 1.0f, coords[0].ox, coords[0].oy, 0);
-				}
-				else
-				{
-					t_image_sub_region.Allocate(coords[1].nx_trimmed, coords[1].ny_trimmed,1 , true);
-					input_image.ClipInto(&t_image_sub_region, 0.0f, false, 1.0f, coords[1].ox, coords[1].oy, 0);
-				}
-			}
-			else
-			{
-				t_image_sub_region = input_image;
-			}
-			GPU[tIDX].Init(template_reconstruction, t_image_sub_region, current_projection,
+			GPU[tIDX].Init(template_reconstruction, extended_image, current_projection,
 							pixel_size_search_range, pixel_size_step, pixel_size,
 							defocus_search_range, defocus_step, defocus1, defocus2,
 							psi_max, psi_start, psi_step,
 							angles, global_euler_search,
 							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
-							max_padding, t_first_search_position, t_last_search_position);
+							t_first_search_position, t_last_search_position);
 
 			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %ld-%ld\n",tIDX, t_first_search_position, t_last_search_position);
 

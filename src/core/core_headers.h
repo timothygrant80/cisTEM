@@ -155,6 +155,7 @@ protected:
 #include "myapp.h"
 #include "rle3d.h"
 #include "local_resolution_estimator.h"
+#include "image_extender.h"
 #ifdef EXPERIMENTAL
 #include "pdb.h"
 #include "water.h"

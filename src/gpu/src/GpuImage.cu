@@ -12,7 +12,7 @@
 //#include <helper_string.h>
 // Kernel declarations
 
-// FIXME I switched all counters to signed ints (32bit) so I guess a check on image dimensions would be needed. Unless the compiler can detect and adjust for overflow situations?
+
 
 __global__ void ConvertToHalfPrecisionKernel(cufftComplex* complex_32f_values, __half2* complex_16f_values, int4 dims, int3 physical_upper_bound_complex);
 
@@ -1487,7 +1487,7 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 
 			CB_complexConjMulLoad_params<T>* d_params;
 			CB_complexConjMulLoad_params<T> h_params;
-			h_params.scale = ft_normalization_factor;//*ft_normalization_factor;
+			h_params.scale = ft_normalization_factor*ft_normalization_factor;
 			h_params.target = (T *)image_to_multiply;
 			checkCudaErrors(cudaMalloc((void **)&d_params,sizeof(CB_complexConjMulLoad_params<T>)));
 			checkCudaErrors(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_complexConjMulLoad_params<T>), cudaMemcpyHostToDevice, cudaStreamPerThread));

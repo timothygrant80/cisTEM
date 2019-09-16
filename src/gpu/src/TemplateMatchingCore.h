@@ -13,12 +13,12 @@
 //} Peaks;
 
 typedef
-struct __align__(16) _Peaks {
+struct __align__(8) _Peaks {
 	// This should be 128 byte words, so good for read access?
-	float mip;
-	float psi;
-	float theta;
-	float phi;
+	__half mip;
+	__half psi;
+	__half theta;
+	__half phi;
 
 } Peaks;
 
@@ -48,7 +48,6 @@ public:
 	// CPU images to be passed in -
 	Image template_reconstruction;
 	Image current_projection;
-	ImageExtender extended_image;
 	Image input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
 
 
@@ -107,11 +106,11 @@ public:
 	Stats* my_stats;
 	Peaks* my_peaks;
 	void SumPixelWise(GpuImage &image);
-    void MipPixelWise(GpuImage &image, float psi, float theta, float phi);
+    void MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi);
 	void MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi);
 	void AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum);
 
-// TODO replace this with the more generic. Retained for gpu_util test while testing sub image
+
 	void Init(Image &template_reconstruction,
 			Image &input_image,
 			Image &current_projection,
@@ -134,28 +133,8 @@ public:
 			int first_search_position,
 			int last_search_position);
 
-	void Init(Image &template_reconstruction,
-			ImageExtender &input_image,
-			Image &current_projection,
-			float pixel_size_search_range,
-			float pixel_size_step,
-			float pixel_size,
-			float defocus_search_range,
-			float defocus_step,
-			float defocus1,
-			float defocus2,
-			float psi_max,
-			float psi_start,
-			float psi_step,
-			AnglesAndShifts angles,
-			EulerSearch global_euler_search,
-			float histogram_min_scaled,
-			float histogram_step_scaled,
-			int histogram_number_of_bins,
-			int first_search_position,
-			int last_search_position);
-
 	void RunInnerLoop(Image &projection_filter, float pixel_i, float defocus_i, int threadIDX);
+
 
 private:
 

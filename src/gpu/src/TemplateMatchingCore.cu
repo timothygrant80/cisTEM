@@ -41,7 +41,7 @@ void TemplateMatchingCore::Init(int number_of_jobs)
 };
 
 void TemplateMatchingCore::Init(Image &template_reconstruction,
-                                ImageExtender &extended_image,
+                                Image &input_image,
                                 Image &current_projection,
                                 float pixel_size_search_range,
                                 float pixel_size_step,
@@ -58,15 +58,13 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
                     			float histogram_min_scaled,
                     			float histogram_step_scaled,
                     			int histogram_number_of_bins,
+                    			int max_padding,
                                 int first_search_position,
                                 int last_search_position)
-
-
                                 
 {
 
 
-	this->extended_image = extended_image;
 
 	this->first_search_position = first_search_position;
 	this->last_search_position  = last_search_position;
@@ -81,10 +79,10 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
     this->template_reconstruction.CopyFrom(&template_reconstruction);
-    this->input_image = input_image;
+    this->input_image.CopyFrom(&input_image);
     this->current_projection.CopyFrom(&current_projection);
 
-    d_input_image.Init(this->extended_image.subImage[0]);
+    d_input_image.Init(this->input_image);
     d_input_image.CopyHostToDevice();
 
     d_current_projection.Init(this->current_projection);
@@ -108,8 +106,8 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 
     wxPrintf("Setting up the histogram\n\n");
-	histogram.Init(histogram_number_of_bins, histogram_min_scaled * d_input_image.number_of_real_space_pixels, histogram_step_scaled * d_input_image.number_of_real_space_pixels);
-	if (extended_image.max_padding > 2) {histogram.max_padding = extended_image.max_padding;}
+	histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
+	if (max_padding > 2) {histogram.max_padding = max_padding;}
 
 
 
@@ -132,6 +130,21 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 {
 
 
+  
+
+	// Make sure we are starting with zeros
+	d_max_intensity_projection.Zeros();
+	d_best_psi.Zeros();
+	d_best_phi.Zeros();
+	d_best_theta.Zeros();
+	d_padded_reference.Zeros();
+
+	d_sum1.Zeros();
+	d_sumSq1.Zeros();
+	d_sum2.Zeros();
+	d_sumSq2.Zeros();
+	d_sum3.Zeros();
+	d_sumSq3.Zeros();
 
 	this->c_defocus = c_defocus;
 	this->c_pixel = c_pixel;
@@ -146,22 +159,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
 
-	for (int iSubRegion = 0; iSubRegion < extended_image.n_sub_regions; iSubRegion++)
-	{
-
-		// Make sure we are starting with zeros
-		d_max_intensity_projection.Zeros();
-		d_best_psi.Zeros();
-		d_best_phi.Zeros();
-		d_best_theta.Zeros();
-		d_padded_reference.Zeros();
-
-		d_sum1.Zeros();
-		d_sumSq1.Zeros();
-		d_sum2.Zeros();
-		d_sumSq2.Zeros();
-		d_sum3.Zeros();
-		d_sumSq3.Zeros();
 
 	int ccc_counter = 0;
 	int current_search_position;
@@ -228,11 +225,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			}
 
 
-			this->MipPixelWise(d_padded_reference, (current_psi) , (global_euler_search.list_of_search_parameters[current_search_position][1]),
-																			 	(global_euler_search.list_of_search_parameters[current_search_position][0]));
-
-//			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
-//																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
+			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
+																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
 			this->SumPixelWise(d_padded_reference);
 
 
@@ -275,6 +269,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
 
+
 			} // loop over psi angles
 
       
@@ -301,7 +296,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 
 
-	} // end of loop on sub regions
 }
 
 
@@ -337,9 +331,9 @@ __global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* 
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   float c_psi, float c_phi, float c_theta);
+                                   __half c_psi, __half c_phi, __half c_theta);
 
-void TemplateMatchingCore::MipPixelWise(GpuImage &image, float psi, float theta, float phi)
+void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
@@ -353,7 +347,7 @@ void TemplateMatchingCore::MipPixelWise(GpuImage &image, float psi, float theta,
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   float psi, float theta, float phi)
+                                   __half psi, __half theta, __half phi)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -361,11 +355,9 @@ __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* 
 
 	if ( x < numel  )
 	{
-//	    __half val = __float2half_rn(correlation_output[x]);
-		float val = correlation_output[x];
+	    __half val = __float2half_rn(correlation_output[x]);
 
-//		if ( __hgt( val , my_peaks[x].mip) )
-		if ( val > my_peaks[x].mip )
+		if ( __hgt( val , my_peaks[x].mip) )
 		{
 
 			my_peaks[x].mip = val;
@@ -399,14 +391,10 @@ __global__ void  MipToImageKernel(const Peaks* my_peaks, const int numel, cufftR
 
 	if ( x < numel  )
 	{
-//		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
-//		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
-//		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
-//		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
-		mip[x] = 	(cufftReal)(my_peaks[x].mip);
-		psi[x] = 	(cufftReal)(my_peaks[x].psi);
-		theta[x] =	(cufftReal)(my_peaks[x].theta);
-		phi[x] =	(cufftReal)(my_peaks[x].phi);
+		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
+		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
+		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
+		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
 
     }
 }

@@ -744,7 +744,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	int minPos = 0;
 	int maxPos = 16;//last_search_position;
-	int incPos = 16/nThreads;//last_search_position / (nThreads);
+	int incPos = 16 / nThreads;//last_search_position / (nThreads);
 
 	TemplateMatchingCore GPU[nThreads];
 

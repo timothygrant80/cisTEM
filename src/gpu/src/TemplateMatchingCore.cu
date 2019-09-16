@@ -197,7 +197,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			d_current_projection.CopyHostToDevice();
 
 			d_current_projection.AddConstant(-average_on_edge);
+			// scale the average to be the sum instead.
+			average_on_edge *= (float)d_current_projection.number_of_real_space_pixels;
 			d_current_projection.MultiplyByConstant(1.0f/sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_current_projection.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
+//			d_current_projection.MultiplyByConstant(1.0f/sqrtf( (d_current_projection.ReturnSumOfSquares() - (average_on_edge * average_on_edge)) / (float)d_padded_reference.number_of_real_space_pixels));
+
 
 			d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
 			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);

@@ -1,6 +1,8 @@
 #include "../../core/core_headers.h"
 
 
+
+
 class AggregatedTemplateResult
 {
 public:
@@ -50,10 +52,36 @@ MatchTemplateApp : public MyApp
 	// for master collation
 
 	ArrayOfAggregatedTemplateResults aggregated_results;
-	int original_input_image_x;
-	int original_input_image_y;
+//	int original_input_image_x;
+//	int original_input_image_y;
+	int n_sub_images;
+
+
+	Image input_image;
+	Image padded_reference;
+	Image input_reconstruction;
+	Image template_reconstruction;
+	Image current_projection;
+	Image padded_projection;
+
+	Image projection_filter;
+
+	Image max_intensity_projection;
+
+	Image best_psi;
+	Image best_theta;
+	Image best_phi;
+	Image best_defocus;
+	Image best_pixel_size;
+
+	Image correlation_pixel_sum_image;
+	Image correlation_pixel_sum_of_squares_image;
+
+	Image temp_image;
+
 
 	private:
+
 };
 
 class ImageProjectionComparison
@@ -260,64 +288,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 
 bool MatchTemplateApp::DoCalculation()
 {
-	/*
-	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument(); // global
-	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument(); // not sure
-	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument(); // global
-	wxString input_reconstruction_statistics 	= my_current_job.arguments[3].ReturnStringArgument(); // global
-	bool	 use_statistics						= my_current_job.arguments[4].ReturnBoolArgument();   // global
-	wxString ouput_matching_projections 		= my_current_job.arguments[5].ReturnStringArgument(); // ignore (always false)
-	wxString ouput_parameter_file				= my_current_job.arguments[6].ReturnStringArgument(); // not sure par file
-	wxString ouput_shift_file					= my_current_job.arguments[7].ReturnStringArgument(); // not sure output
-	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument(); // global
-	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument(); // local (effectively ignore)
-	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument(); // local (effectively ignore)
-	float	 percent_used						= my_current_job.arguments[11].ReturnFloatArgument();
-	float 	 pixel_size							= my_current_job.arguments[12].ReturnFloatArgument(); // local
-	float    voltage_kV							= my_current_job.arguments[13].ReturnFloatArgument(); // local
-	float 	 spherical_aberration_mm			= my_current_job.arguments[14].ReturnFloatArgument(); // local
-	float    amplitude_contrast					= my_current_job.arguments[15].ReturnFloatArgument(); // local
-	float	 molecular_mass_kDa					= my_current_job.arguments[16].ReturnFloatArgument(); // global
-	float    inner_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument(); // global
-	float    outer_mask_radius					= my_current_job.arguments[18].ReturnFloatArgument(); // global
-	float    low_resolution_limit				= my_current_job.arguments[19].ReturnFloatArgument(); // global
-	float    high_resolution_limit				= my_current_job.arguments[20].ReturnFloatArgument(); // global
-	float	 signed_CC_limit					= my_current_job.arguments[21].ReturnFloatArgument(); // global
-	float	 classification_resolution_limit	= my_current_job.arguments[22].ReturnFloatArgument(); // global
-	float    mask_radius_search					= my_current_job.arguments[23].ReturnFloatArgument(); // global
-	float	 high_resolution_limit_search		= my_current_job.arguments[24].ReturnFloatArgument(); // global
-	float	 angular_step						= my_current_job.arguments[25].ReturnFloatArgument(); // global
-	int		 best_parameters_to_keep			= my_current_job.arguments[26].ReturnIntegerArgument(); // global
-	float	 max_search_x						= my_current_job.arguments[27].ReturnFloatArgument(); // global
-	float	 max_search_y						= my_current_job.arguments[28].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_x			= my_current_job.arguments[29].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_y			= my_current_job.arguments[30].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_z			= my_current_job.arguments[31].ReturnFloatArgument(); // global
-	refine_particle.mask_radius_2d				= my_current_job.arguments[32].ReturnFloatArgument(); // global
-	float	 defocus_search_range				= my_current_job.arguments[33].ReturnFloatArgument(); // global
-	float	 defocus_step						= my_current_job.arguments[34].ReturnFloatArgument(); // global
-	float	 padding							= my_current_job.arguments[35].ReturnFloatArgument(); // global
-//	float	 filter_constant					= my_current_job.arguments[35].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[36].ReturnBoolArgument(); // global
-	bool	 local_refinement					= my_current_job.arguments[37].ReturnBoolArgument(); // global
-// Psi, Theta, Phi, ShiftX, ShiftY
-	refine_particle.parameter_map[3]			= my_current_job.arguments[38].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[2]			= my_current_job.arguments[39].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[1]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[4]			= my_current_job.arguments[41].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[5]			= my_current_job.arguments[42].ReturnBoolArgument(); // global
-	bool 	 calculate_matching_projections		= my_current_job.arguments[43].ReturnBoolArgument(); // global - but ignore
-	refine_particle.apply_2D_masking			= my_current_job.arguments[44].ReturnBoolArgument(); // global
-	bool	 ctf_refinement						= my_current_job.arguments[45].ReturnBoolArgument(); // global
-	bool	 normalize_particles				= my_current_job.arguments[46].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
-	bool	 exclude_blank_edges				= my_current_job.arguments[48].ReturnBoolArgument();
-	bool	 normalize_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
-	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
-	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
-	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
-*/
+
 
 	wxDateTime start_time = wxDateTime::Now();
 
@@ -360,30 +331,6 @@ bool MatchTemplateApp::DoCalculation()
 	wxString    correlation_average_output_file = my_current_job.arguments[36].ReturnStringArgument();
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
 
-	/*wxPrintf("input image = %s\n", input_search_images_filename);
-	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
-	wxPrintf("pixel size = %f\n", pixel_size);
-	wxPrintf("voltage = %f\n", voltage_kV);
-	wxPrintf("Cs = %f\n", spherical_aberration_mm);
-	wxPrintf("amp contrast = %f\n", amplitude_contrast);
-	wxPrintf("defocus1 = %f\n", defocus1);
-	wxPrintf("defocus2 = %f\n", defocus2);
-	wxPrintf("defocus_angle = %f\n", defocus_angle);
-	wxPrintf("low res limit = %f\n", low_resolution_limit);
-	wxPrintf("high res limit = %f\n", high_resolution_limit_search);
-	wxPrintf("angular step = %f\n", angular_step);
-	wxPrintf("best params to keep = %i\n", best_parameters_to_keep);
-	wxPrintf("defocus search range = %f\n", defocus_search_range);
-	wxPrintf("defocus step = %f\n", defocus_step);
-	wxPrintf("padding = %f\n", padding);
-	wxPrintf("ctf_refinement = %i\n", int(ctf_refinement));
-	wxPrintf("mask search radius = %f\n", mask_radius_search);
-	wxPrintf("phase shift = %f\n", phase_shift);
-	wxPrintf("symmetry = %s\n", my_symmetry);
-	wxPrintf("in plane step = %f\n", in_plane_angular_step);
-	wxPrintf("first location = %i\n", first_search_position);
-	wxPrintf("last location = %i\n", last_search_position);
-	*/
 
 	ParameterMap parameter_map; // needed for euler search init
 	//for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
@@ -443,106 +390,57 @@ bool MatchTemplateApp::DoCalculation()
 	input_search_image_file.OpenFile(input_search_images_filename.ToStdString(), false);
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
-	Image input_image;
-	Image padded_reference;
-	Image input_reconstruction;
-	Image template_reconstruction;
-	Image current_projection;
-	Image padded_projection;
 
-	Image projection_filter;
+	// Default to 1. In the GPU block below, increase to 2 for images > large limit (4k x 3k)
+	n_sub_images = 1;
 
-	Image max_intensity_projection;
-
-	Image best_psi;
-	Image best_theta;
-	Image best_phi;
-	Image best_defocus;
-	Image best_pixel_size;
-
-	Image correlation_pixel_sum_image;
-	Image correlation_pixel_sum_of_squares_image;
-
-	Image temp_image;
-
+	ImageExtender extended_image;
 	input_image.ReadSlice(&input_search_image_file, 1);
 
-	// Resize input image to be factorizable by small numbers
-	original_input_image_x = input_image.logical_x_dimension;
-	original_input_image_y = input_image.logical_y_dimension;
-	factorizable_x = input_image.logical_x_dimension;
-	factorizable_y = input_image.logical_y_dimension;
+#ifdef USEGPU
 
-	bool DO_FACTORIZATION = true;
-	bool MUST_BE_POWER_OF_TWO = false; // Required for half-preicision xforms
-	bool MUST_BE_FACTOR_OF_FOUR = true; // May be faster
-	const int max_number_primes = 6;
-	int primes[max_number_primes] = {2,3,5,7,9,13};
-	float max_reduction_by_fraction_of_reference = 0.5f;
-	float max_increas_by_fraction_of_image = 0.10f;
-	int max_padding = 0; // To restrict histogram calculation
+	// Add a condition that for now will enforce the division to only happen for large *(K3 size) where the number of threads is even and 2. (test 4 though)
+	bool first_gpu_loop = true;
+	int nThreads;
+	int nGPUs = -1;
+	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
 
-	// for 5760 this will return
-	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
-	// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
-	if (DO_FACTORIZATION)
+	if (input_image.logical_x_dimension*input_image.logical_y_dimension < 2048 * 2048) { nThreads = 6 * nGPUs;}
+	else if (input_image.logical_x_dimension*input_image.logical_y_dimension < 4096 * 3072) {nThreads = 4 * nGPUs;}
+	else
 	{
-	for ( i = 0; i < max_number_primes; i++ )
-	{
-
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_x = factor_result_neg;
-			break;
-		}
-		if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_x = factor_result_pos;
-			break;
-		}
+		nThreads = 2 * nGPUs;
+		n_sub_images = 2;
 
 	}
-	factor_score = FLT_MAX;
-	for ( i = 0; i < max_number_primes; i++ )
-	{
-
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
 
 
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_y = factor_result_neg;
-			break;
-		}
-		if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_y = factor_result_pos;
-			break;
-		}
+	int minPos = 0;
+	int maxPos = last_search_position;
+	int incPos = last_search_position / (nThreads);
 
-	}
-	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
-	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
+	TemplateMatchingCore GPU[nThreads];
 
+	DeviceManager gpuDev;
+	gpuDev.Init(nGPUs);
+
+	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
+
+//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
+#endif
+
+<<<<<<< HEAD
+	// FIXME Note that it would be better to get the convolution padding from the input particle diameter and not it's box size.
+	extended_image.Init(n_sub_images, (int)input_reconstruction_file.ReturnXSize());
+=======
 //	// Temp override for profiling:
 //	factorizable_x = 6144;
 //	factorizable_y = 6144;
+>>>>>>> checkLarge
 
-	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
 
-//	factorizable_x = original_input_image_x;
-//	factorizable_y = original_input_image_y;
-	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-//	input_image.QuickAndDirtyWriteSlice("factor.mrc", 1);
-//	exit(0);
-	}
+	// For the host code, these will be the resized image. for the gpu code, these will be the original image size.
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -561,13 +459,12 @@ bool MatchTemplateApp::DoCalculation()
 	best_theta.SetToConstant(0.0f);
 	best_phi.SetToConstant(0.0f);
 	best_defocus.SetToConstant(0.0f);
-//	correlation_pixel_sum.SetToConstant(0.0f);
-//	correlation_pixel_sum_of_squares.SetToConstant(0.0f);
+
 	ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
 	ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
 
 // Some settings for testing
-	padding = 1.0f;
+//	padding = 1.0f;
 //	ctf_refinement = true;
 //	defocus_search_range = 200.0f;
 //	defocus_step = 50.0f;
@@ -732,6 +629,8 @@ bool MatchTemplateApp::DoCalculation()
 	wxDateTime 	overall_finish;
 	overall_start = wxDateTime::Now();
 
+<<<<<<< HEAD
+=======
 #ifdef USEGPU
 
 	bool first_gpu_loop = true;
@@ -747,14 +646,8 @@ bool MatchTemplateApp::DoCalculation()
 	int incPos = last_search_position / (nThreads);
 
 	TemplateMatchingCore GPU[nThreads];
+>>>>>>> checkLarge
 
-	DeviceManager gpuDev;
-	gpuDev.Init(nGPUs);
-
-	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
-
-//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
-#endif
 
 
 
@@ -787,15 +680,13 @@ bool MatchTemplateApp::DoCalculation()
 			int t_first_search_position = 0 + (tIDX*incPos);
 			int t_last_search_position = (incPos-1) + (tIDX*incPos);
 
-			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
-
-			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
+			GPU[tIDX].Init(template_reconstruction, extended_image, current_projection,
 							pixel_size_search_range, pixel_size_step, pixel_size,
 							defocus_search_range, defocus_step, defocus1, defocus2,
 							psi_max, psi_start, psi_step,
 							angles, global_euler_search,
 							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
-							max_padding, t_first_search_position, t_last_search_position);
+							t_first_search_position, t_last_search_position);
 
 			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n",tIDX, t_first_search_position, t_last_search_position);
 
@@ -827,11 +718,29 @@ bool MatchTemplateApp::DoCalculation()
 				#pragma omp critical
 				{
 
-
+					// FIXME since these are in this critical section, they should be fine to intialize outside the loop.
 					Image mip_buffer; mip_buffer.CopyFrom(&max_intensity_projection);
 					Image psi_buffer; psi_buffer.CopyFrom(&max_intensity_projection);
 					Image phi_buffer; phi_buffer.CopyFrom(&max_intensity_projection);
 					Image theta_buffer; theta_buffer.CopyFrom(&max_intensity_projection);
+					Image re_assemble_buffer; 
+					if (n_sub_images > 1)
+					{
+						re_assemble_buffer.CopyFrom(&max_intensity_projection);
+						if ( tIDX % 2 == 0)
+						{
+							// FIXME There will need to be a dependence and re-assembly  prior to proceeding. It might actually make the most sense to actually
+							// handle the splitting and re-assembly WITHIN the gpu code. This also would leave the host code much cleaner.
+							// Just modify to pass in the coords struct and the original image, and since we make a copy of the input host side
+							// image anyway, proceed from there.
+						}
+						else
+						{
+
+						}
+								
+								
+
 
 					GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false);
 					GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
@@ -1098,9 +1007,15 @@ bool MatchTemplateApp::DoCalculation()
 		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
 		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
 	}
+<<<<<<< HEAD
+	correlation_pixel_sum_image.QuickAndDirtyWriteSlice("/tmp/SumImg.mrc",1,1);
+	correlation_pixel_sum_of_squares_image.QuickAndDirtyWriteSlice("/tmp/SumImgSq.mrc",1,1);
+=======
 
+>>>>>>> checkLarge
 
 #endif
+
 
 
 
@@ -1260,9 +1175,15 @@ bool MatchTemplateApp::DoCalculation()
 
 		pointer_to_histogram_data = (float *) histogram_data;
 
+<<<<<<< HEAD
+		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);// max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);//correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
+		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1,0.0f);// correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
+=======
 		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+>>>>>>> checkLarge
 		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);

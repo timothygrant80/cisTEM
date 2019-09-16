@@ -194,8 +194,8 @@ void Histogram::CopyToHostAndAdd(long* array_to_add_to)
 
 	// Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
 	float* tmp_array;
-	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(long)));
-	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(long),cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMallocHost(&tmp_array, histogram_n_bins*sizeof(float)));
+	checkCudaErrors(cudaMemcpy(tmp_array, this->cummulative_histogram,histogram_n_bins*sizeof(float),cudaMemcpyDeviceToHost));
 
 	for (int iBin = 0; iBin < histogram_n_bins; iBin++)
 	{

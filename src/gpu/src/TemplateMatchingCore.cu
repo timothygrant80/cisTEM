@@ -180,6 +180,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 			angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
 
+//			current_projection.SetToConstant(0.0f); // This also sets the FFT padding to zero
 			template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
 			current_projection.complex_values[0] = 0.0f + I * 0.0f;
 
@@ -196,17 +197,19 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			d_current_projection.CopyHostToDevice();
 
 			d_current_projection.AddConstant(-average_on_edge);
-			d_current_projection.MultiplyByConstant(1.0f / sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
+			d_current_projection.MultiplyByConstant(1.0f/sqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_current_projection.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
 
 			d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
 			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
 
 
+
 			d_padded_reference.ForwardFFT(false);
-
 			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-
 			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
+
+
+
 
 			if (DO_HISTOGRAM)
 			{
@@ -270,7 +273,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
       
  	} // end of outer loop euler sphere position
 
-	wxPrintf("\t\t\ntotal number %ld\n",ccc_counter);
+	wxPrintf("\t\t\ntotal number %d\n",ccc_counter);
 
     cudaStreamWaitEvent(cudaStreamPerThread,gpu_work_is_done_Event, 0);
 
@@ -303,7 +306,7 @@ void TemplateMatchingCore::SumPixelWise(GpuImage &image)
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((image.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	SumPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_stats,(const int) image.real_memory_allocated);
+	SumPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((cufftReal *)image.real_values_gpu, my_stats,(int) image.real_memory_allocated);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
@@ -335,7 +338,7 @@ void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half thet
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((image.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((const cufftReal *)image.real_values_gpu, my_peaks,(const int) image.real_memory_allocated, psi,theta, phi);
+	MipPixelWiseKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >((cufftReal *)image.real_values_gpu, my_peaks,(int) image.real_memory_allocated, psi,theta, phi);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }

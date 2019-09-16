@@ -544,7 +544,7 @@ void GpuImage::NppInit()
 	cudaDeviceGetAttribute(&nppStream.nCudaDevAttrComputeCapabilityMinor,cudaDevAttrComputeCapabilityMinor,nppStream.nCudaDeviceId);
 
 //    nppSetStream(cudaStreamPerThread);
-    npp_ROI.width  = dims.w;
+    npp_ROI.width  = dims.x;
     npp_ROI.height = dims.y * dims.z;
 
     npp_ROI_complex.width = dims.w / 2;
@@ -678,6 +678,15 @@ void GpuImage::BufferInit(BufferType bt)
       }
       break;
 
+  case b_l2norm :
+	  if (! is_allocated_l2norm_buffer)
+	  {
+		  int n_elem;
+		  nppiNormL2GetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
+		  checkCudaErrors(cudaMalloc((void **)this->l2norm_buffer,n_elem));
+		  is_allocated_l2norm_buffer = true;
+	  }
+
 
 }
 
@@ -693,7 +702,16 @@ float GpuImage::ReturnSumOfSquares()
 
 
 	float returnValue = 0.0f;
-
+//	Npp64f pNorm = 0.0;
+//	NppInit();
+//
+//	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
+//									 	   &pNorm, this->l2norm_buffer, nppStream));
+//
+//	checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+//
+////	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+//	return (float)(pNorm * pNorm);
 	CublasInit();
 	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
 	cublas_stat = cublasSdot( cublasHandle, real_memory_allocated,
@@ -1063,7 +1081,7 @@ void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 
 
 	NppInit();
-	checkNppErrors(nppiMul_32f_C1IR_Ctx((const Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+	checkNppErrors(nppiMul_32f_C1IR_Ctx((Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
 }
 
 
@@ -1074,7 +1092,7 @@ void GpuImage::AddConstant(const float add_val)
 
 
 	NppInit();
-	checkNppErrors(nppiAddC_32f_C1IR_Ctx((const Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+	checkNppErrors(nppiAddC_32f_C1IR_Ctx((Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
 }
 
 void GpuImage::SquareRealValues()
@@ -1168,7 +1186,7 @@ void GpuImage::MultiplyByConstant(float scale_factor)
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
-	checkNppErrors(nppiMulC_32f_C1IR_Ctx((const Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
+	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
 }
 
 void GpuImage::Conj()
@@ -1178,7 +1196,7 @@ void GpuImage::Conj()
 
 	float scale_factor = -1.0f;
 	NppInit();
-	checkNppErrors(nppiMulC_32f_C1IR_Ctx((const Npp32f) (scale_factor+1), (Npp32f*)real_values_gpu,  dims.w/2*sizeof(float), npp_ROI,nppStream));
+	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) (scale_factor+1), (Npp32f*)real_values_gpu,  dims.w/2*sizeof(float), npp_ROI,nppStream));
 	// FIXME make sure that a) there isn't already a function fo rthis, b) you aren't striding out of bounds (mask instead_;
 }
 
@@ -2284,6 +2302,7 @@ void GpuImage::UpdateBoolsToDefault()
 	is_allocated_mean_buffer = false;
 	is_allocated_meanstddev_buffer = false;
 	is_allocated_countinrange_buffer = false;
+	is_allocated_l2norm_buffer = false;
 	is_allocated_16f_buffer = false;
 
 	// Callbacks

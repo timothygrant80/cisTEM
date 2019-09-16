@@ -531,8 +531,8 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
 //	// Temp override for profiling:
-	factorizable_x = 512*2;
-	factorizable_y = 512*2;
+//	factorizable_x = 6144;
+//	factorizable_y = 6144;
 
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
@@ -739,12 +739,12 @@ bool MatchTemplateApp::DoCalculation()
 	int nGPUs = -1;
 	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
 	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 4096) {nThreads = 3 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 3 * nGPUs;}
 	else {nThreads = 2 * nGPUs;}
 
 	int minPos = 0;
-	int maxPos = last_search_position;
-	int incPos = last_search_position / (nThreads);
+	int maxPos = 16;//last_search_position;
+	int incPos = 16/nThreads;//last_search_position / (nThreads);
 
 	TemplateMatchingCore GPU[nThreads];
 
@@ -1099,8 +1099,6 @@ bool MatchTemplateApp::DoCalculation()
 		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
 	}
 
-	correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
-	correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges());
 
 #endif
 
@@ -1262,9 +1260,9 @@ bool MatchTemplateApp::DoCalculation()
 
 		pointer_to_histogram_data = (float *) histogram_data;
 
-		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, max_intensity_projection.ReturnAverageOfRealValuesOnEdges());
-		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
-		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
+		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 		best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);

@@ -920,6 +920,7 @@ bool WarpToCistemApp::DoCalculation()
 
 
 
+
 	wxPrintf("\nDone with database operations for Warp import\n\n");
 
 	if (do_import_refinement_package) {
@@ -945,6 +946,7 @@ bool WarpToCistemApp::DoCalculation()
 		new_project.database.Commit();
 		wxPrintf("\nDone Inserting Refinement Package\n\n");
 	}
+
 
 	if (do_import_classification_results) {
 		wxPrintf("\nImporting Classification Results from Live2D\n\n");

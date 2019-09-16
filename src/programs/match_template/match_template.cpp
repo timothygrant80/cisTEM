@@ -743,8 +743,8 @@ bool MatchTemplateApp::DoCalculation()
 	else {nThreads = 2 * nGPUs;}
 
 	int minPos = 0;
-	int maxPos = 16;//last_search_position;
-	int incPos = 16 / nThreads;//last_search_position / (nThreads);
+	int maxPos = last_search_position;
+	int incPos = last_search_position / (nThreads);
 
 	TemplateMatchingCore GPU[nThreads];
 
@@ -784,8 +784,8 @@ bool MatchTemplateApp::DoCalculation()
 
 			gpuDev.SetGpu(tIDX);
 
-			long t_first_search_position = 0 + (tIDX*incPos);
-			long t_last_search_position = (incPos-1) + (tIDX*incPos);
+			int t_first_search_position = 0 + (tIDX*incPos);
+			int t_last_search_position = (incPos-1) + (tIDX*incPos);
 
 			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
@@ -797,7 +797,7 @@ bool MatchTemplateApp::DoCalculation()
 							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
 							max_padding, t_first_search_position, t_last_search_position);
 
-			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %ld-%ld\n",tIDX, t_first_search_position, t_last_search_position);
+			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n",tIDX, t_first_search_position, t_last_search_position);
 
 		first_gpu_loop = false;
 		}

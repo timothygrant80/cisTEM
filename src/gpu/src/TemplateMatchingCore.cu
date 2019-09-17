@@ -163,7 +163,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	int ccc_counter = 0;
 	int current_search_position;
 	float average_on_edge;
-	float variance;
 
 	int thisDevice;
 	cudaGetDevice(&thisDevice);
@@ -289,7 +288,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 	this->MipToImage((const Peaks *)my_peaks, d_max_intensity_projection, d_best_psi, d_best_theta, d_best_phi);
 
-
+	MyAssertTrue(histogram.is_allocated_histogram, "Trying to accumulate a histogram that has not been initialized!")
 	histogram.Accumulate(d_padded_reference);
 
 

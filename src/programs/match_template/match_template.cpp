@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+#include <unistd.h> // For trouble shooting parallelism, report the host name we are actually running on.
+
 
 class AggregatedTemplateResult
 {
@@ -359,6 +361,13 @@ bool MatchTemplateApp::DoCalculation()
 	int 		number_of_jobs_per_image_in_gui = my_current_job.arguments[35].ReturnIntegerArgument();
 	wxString    correlation_average_output_file = my_current_job.arguments[36].ReturnStringArgument();
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
+
+
+	// For trouble shooting parallelism, report the host name we are actually running on.
+	char hostNameBuffer[255];
+	int hostName;
+	hostName = gethostname(hostNameBuffer, sizeof(hostNameBuffer));
+	MyAssertFalse(hostName == -1, "Hostname error");
 
 	/*wxPrintf("input image = %s\n", input_search_images_filename);
 	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
@@ -742,16 +751,18 @@ bool MatchTemplateApp::DoCalculation()
 	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 3 * nGPUs;}
 	else {nThreads = 2 * nGPUs;}
 
-	int minPos = 0;
+	int minPos = first_search_position;
 	int maxPos = last_search_position;
-	int incPos = last_search_position / (nThreads);
+	int incPos = (last_search_position-first_search_position+1) / (nThreads);
+
+	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 
 	TemplateMatchingCore GPU[nThreads];
 
 	DeviceManager gpuDev;
 	gpuDev.Init(nGPUs);
 
-	wxPrintf("nThreads %d on nGPUs %d with nSearchPos %d inc as %d\n", nThreads, nGPUs, maxPos, incPos);
+//	wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
 //	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
 #endif
@@ -768,7 +779,7 @@ bool MatchTemplateApp::DoCalculation()
 		template_reconstruction.ZeroCentralPixel();
 		template_reconstruction.SwapRealSpaceQuadrants();
 
-		wxPrintf("First search/ last search position %d/ %d\n",first_search_position, last_search_position);
+//		wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
 
 #ifdef USEGPU
 	bool first_gpu_loop = true;
@@ -784,8 +795,8 @@ bool MatchTemplateApp::DoCalculation()
 
 			gpuDev.SetGpu(tIDX);
 
-			int t_first_search_position = 0 + (tIDX*incPos);
-			int t_last_search_position = (incPos-1) + (tIDX*incPos);
+			int t_first_search_position = first_search_position + (tIDX*incPos);
+			int t_last_search_position = first_search_position + (incPos-1) + (tIDX*incPos);
 
 			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
@@ -797,7 +808,11 @@ bool MatchTemplateApp::DoCalculation()
 							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
 							max_padding, t_first_search_position, t_last_search_position);
 
-			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n",tIDX, t_first_search_position, t_last_search_position);
+			wxPrintf("%d\n",tIDX);
+			wxPrintf("%s\n", hostNameBuffer);
+			wxPrintf("%d\n", t_first_search_position);
+			wxPrintf("%d\n", t_last_search_position);
+			wxPrintf("Staring TemplateMatchingCore object %d on host %s to work on position range %d-%d\n", tIDX, hostNameBuffer, t_first_search_position, t_last_search_position);
 
 		first_gpu_loop = false;
 		}

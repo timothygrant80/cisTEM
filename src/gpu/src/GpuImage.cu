@@ -723,7 +723,6 @@ float GpuImage::ReturnSumOfSquares()
 	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
 									 	   (Npp64f *)pNorm, (Npp8u *)this->l2norm_buffer, nppStream));
 
-	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
 	return ((float)*pNorm * (float)*pNorm);
 
 //	CublasInit();complex_6EK0_SSU.pdb

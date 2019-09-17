@@ -752,8 +752,8 @@ bool MatchTemplateApp::DoCalculation()
 	int nThreads;
 	int nGPUs = -1;
 	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
-	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 3 * nGPUs;}
+	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 2 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 2 * nGPUs;}
 	else {nThreads = 2 * nGPUs;}
 
 	int minPos = first_search_position;
@@ -1535,7 +1535,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] / aggregated_results[array_location].total_number_of_ccs - powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2);
 			if (aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f)
 			{
-				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter])	* sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension);
+				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
 				aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) / aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
 			}
 			else
@@ -1550,7 +1550,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
@@ -1633,7 +1632,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 		histogram_file.Close();
-
 
 		// this should be done now.. so delete it
 

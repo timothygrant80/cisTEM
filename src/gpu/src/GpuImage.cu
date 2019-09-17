@@ -516,15 +516,15 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
    *returnValue = (float)sum / (float)number_of_pixels;
 }
 
-void GpuImage::CublasInit()
-{
-  if ( ! is_cublas_loaded ) 
-  {
-    cublasCreate(&cublasHandle);
-    is_cublas_loaded = true;
-    cublasSetStream(cublasHandle, cudaStreamPerThread);
-  }
-}
+//void GpuImage::CublasInit()
+//{
+//  if ( ! is_cublas_loaded )
+//  {
+//    cublasCreate(&cublasHandle);
+//    is_cublas_loaded = true;
+//    cublasSetStream(cublasHandle, cudaStreamPerThread);
+//  }
+//}
 
 void GpuImage::NppInit()
 {
@@ -583,7 +583,7 @@ void GpuImage::BufferInit(BufferType bt)
         {
           int n_elem;
           nppiSumGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-          checkCudaErrors(cudaMalloc((void **)this->sum_buffer, n_elem));
+          checkCudaErrors(cudaMalloc(&this->sum_buffer, n_elem));
           is_allocated_sum_buffer = true;
         }     
         break;   
@@ -593,7 +593,7 @@ void GpuImage::BufferInit(BufferType bt)
         {
           int n_elem;
           nppiMinGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-          checkCudaErrors(cudaMalloc((void **)this->min_buffer, n_elem));
+          checkCudaErrors(cudaMalloc(&this->min_buffer, n_elem));
           is_allocated_min_buffer = true;
         }
         break;
@@ -603,7 +603,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMinIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->minIDX_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->minIDX_buffer, n_elem));
         is_allocated_minIDX_buffer = true;
       }
       break;
@@ -613,7 +613,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->max_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->max_buffer, n_elem));
         is_allocated_max_buffer = true;
       }
       break;
@@ -623,7 +623,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->maxIDX_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->maxIDX_buffer, n_elem));
         is_allocated_maxIDX_buffer = true;
       }
       break;
@@ -633,7 +633,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMinMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->minmax_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->minmax_buffer, n_elem));
         is_allocated_minmax_buffer = true;
       }
       break;
@@ -643,7 +643,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMinMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->minmaxIDX_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->minmaxIDX_buffer, n_elem));
         is_allocated_minmaxIDX_buffer = true;
       }
       break;
@@ -653,7 +653,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMeanGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->mean_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->mean_buffer, n_elem));
         is_allocated_mean_buffer = true;
       }
       break;
@@ -663,7 +663,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiMeanGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->meanstddev_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->meanstddev_buffer, n_elem));
         is_allocated_meanstddev_buffer = true;
       }
       break;
@@ -673,7 +673,7 @@ void GpuImage::BufferInit(BufferType bt)
       {
         int n_elem;
         nppiCountInRangeGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-        checkCudaErrors(cudaMalloc((void **)this->countinrange_buffer, n_elem));
+        checkCudaErrors(cudaMalloc(&this->countinrange_buffer, n_elem));
         is_allocated_countinrange_buffer = true;
       }
       break;
@@ -683,9 +683,21 @@ void GpuImage::BufferInit(BufferType bt)
 	  {
 		  int n_elem;
 		  nppiNormL2GetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem,nppStream);
-		  checkCudaErrors(cudaMalloc((void **)this->l2norm_buffer,n_elem));
+		  checkCudaErrors(cudaMalloc(&this->l2norm_buffer,n_elem));
+
 		  is_allocated_l2norm_buffer = true;
 	  }
+	  break;
+
+  case b_dotproduct :
+	  if ( ! is_allocated_dotproduct_buffer )
+	  {
+		  int n_elem;
+		  nppiDotProdGetBufferHostSize_32f64f_C1R_Ctx(npp_ROI, &n_elem, nppStream);
+		  checkCudaErrors(cudaMalloc(&this->dotproduct_buffer, n_elem));
+		  is_allocated_dotproduct_buffer = true;
+	  }
+	  break;
 
 
 }
@@ -701,29 +713,31 @@ float GpuImage::ReturnSumOfSquares()
 	MyAssertTrue(is_in_real_space, "This method is for real space, use ReturnSumSquareModulusComplexValues for Fourier space")
 
 
-	float returnValue = 0.0f;
-//	Npp64f pNorm = 0.0;
-//	NppInit();
-//
-//	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
-//									 	   &pNorm, this->l2norm_buffer, nppStream));
-//
-//	checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
-//
-////	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
-//	return (float)(pNorm * pNorm);
-	CublasInit();
-	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
-	cublas_stat = cublasSdot( cublasHandle, real_memory_allocated,
-							real_values_gpu, 1,
-							real_values_gpu, 1,
-							&returnValue);
+//	float returnValue = 0.0f;
+	Npp64f* pNorm;
+	checkCudaErrors(cudaMallocManaged(&pNorm, sizeof(Npp64f)));
 
-	if (cublas_stat) {
-	wxPrintf("Cublas return val %s\n", cublas_stat); }
+	BufferInit(b_l2norm);
+	NppInit();
+
+	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
+									 	   (Npp64f *)pNorm, (Npp8u *)this->l2norm_buffer, nppStream));
+
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+	return ((float)*pNorm * (float)*pNorm);
+
+//	CublasInit();complex_6EK0_SSU.pdb
+//	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
+//	cublas_stat = cublasSdot( cublasHandle, real_memory_allocated,
+//							real_values_gpu, 1,
+//							real_values_gpu, 1,
+//							&returnValue);
+//
+//	if (cublas_stat) {
+//	wxPrintf("Cublas return val %s\n", cublas_stat); }
 
 
-	return returnValue;
+//	return returnValue;
 
 }
 
@@ -811,16 +825,26 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	image_buffer->MultiplyPixelWise(*this);
 
-	CublasInit();
+//	CublasInit();
 	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-	cublasSdot( cublasHandle, real_memory_allocated,
-			  image_buffer->real_values_gpu, 1,
-			  image_buffer->real_values_gpu, 1,
-			  &returnValue);
+
+	NppInit();
+	BufferInit(b_dotproduct);
+	Npp64f* dotProd;
+	checkCudaErrors(cudaMallocManaged(&dotProd, sizeof(Npp64f)));
+
+	checkNppErrors(nppiDotProd_32f64f_C1R_Ctx((Npp32f *)image_buffer->real_values_gpu, pitch,
+											  (Npp32f *)image_buffer->real_values_gpu, pitch,
+											  npp_ROI, dotProd, dotproduct_buffer, nppStream));
+
+//	cublasSdot( cublasHandle, real_memory_allocated,
+//			  image_buffer->real_values_gpu, 1,
+//			  image_buffer->real_values_gpu, 1,
+//			  &returnValue);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
-	return returnValue*2.0f;
+	return (float)(*dotProd * 2.0f);
 
   
 }
@@ -2144,11 +2168,11 @@ void GpuImage::Deallocate()
     is_fft_planned = false;
   }
 
-  if (is_cublas_loaded) 
-  {
-    checkCudaErrors(cublasDestroy(cublasHandle));
-    is_cublas_loaded = false;
-  }
+//  if (is_cublas_loaded)
+//  {
+//    checkCudaErrors(cublasDestroy(cublasHandle));
+//    is_cublas_loaded = false;
+//  }
 
   if (is_allocated_mask_CSOS)
   {
@@ -2282,7 +2306,7 @@ void GpuImage::UpdateBoolsToDefault()
 
 	// libraries
 	is_fft_planned = false;
-	is_cublas_loaded = false;
+//	is_cublas_loaded = false;
 	is_npp_loaded = false;
 
 	// Buffers
@@ -2300,6 +2324,7 @@ void GpuImage::UpdateBoolsToDefault()
 	is_allocated_meanstddev_buffer = false;
 	is_allocated_countinrange_buffer = false;
 	is_allocated_l2norm_buffer = false;
+	is_allocated_dotproduct_buffer = false;
 	is_allocated_16f_buffer = false;
 
 	// Callbacks

@@ -207,12 +207,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
 
 
-
 			d_padded_reference.ForwardFFT(false);
 			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
 			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
-
-
 
 
 			if (DO_HISTOGRAM)

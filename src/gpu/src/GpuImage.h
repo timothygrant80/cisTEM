@@ -240,7 +240,7 @@ public:
   ////////////////////////////////////////////////////////////////////////
 
   enum BufferType : int  { b_image, b_sum, b_min, b_minIDX, b_max, b_maxIDX, b_minmax, b_minmaxIDX, b_mean, b_meanstddev,
-  	  	  	  	  	  	   b_countinrange, b_histogram, b_16f, b_l2norm};
+  	  	  	  	  	  	   b_countinrange, b_histogram, b_16f, b_l2norm, b_dotproduct};
 
   void CublasInit();
   void NppInit();
@@ -263,6 +263,7 @@ public:
   Npp8u* meanstddev_buffer; 	bool is_allocated_meanstddev_buffer;
   Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
   Npp8u* l2norm_buffer;			bool is_allocated_l2norm_buffer;
+  Npp8u* dotproduct_buffer;		bool is_allocated_dotproduct_buffer;
   	  	  	  	  	  	  	  	bool is_allocated_16f_buffer;
   	  	  	  	  	  	  	  	bool is_set_realLoadAndClipInto;
 

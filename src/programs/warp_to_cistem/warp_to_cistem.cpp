@@ -392,12 +392,13 @@ RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 	bool stack_is_ok = GetMRCDetails(stack_filename, stack_x_size, stack_y_size, stack_number_of_images);
 	if (stack_is_ok == false) SendErrorAndCrash(wxString::Format("Could not load the Stack file: %s\n", stack_filename));
 	MyDebugAssertTrue(stack_x_size == stack_y_size, "Particles are not square");
-
 	BasicStarFileReader input_star_file;
 	wxString star_error_text;
-	MyDebugAssertTrue(input_star_file.ReadFile(star_filename, &star_error_text), "Could not load star file");
+	if (input_star_file.ReadFile(star_filename, &star_error_text) == false)
+	{
+		SendErrorAndCrash(wxString::Format("Error: Encountered the following error - aborting :-\n%s", star_error_text));
+	}
 	MyDebugAssertTrue(stack_number_of_images >= input_star_file.cached_parameters.GetCount(), "Number of Particles in star is larger than in stack");
-
 	refinement_package =  new RefinementPackage;
 	refinement.SizeAndFillWithEmpty(input_star_file.cached_parameters.GetCount(), 1);
 	refinement_package->asset_id = 1;
@@ -432,10 +433,8 @@ RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 	temp_particle_info.amplitude_contrast = amplitude_contrast;
 	temp_particle_info.x_pos = 0; // I am f
 	temp_particle_info.y_pos = 0; // This isn't by default read by star_reader
-
 	refinement.class_refinement_results[0].class_resolution_statistics.Init(temp_particle_info.pixel_size, refinement.resolution_statistics_box_size);
 	refinement.class_refinement_results[0].class_resolution_statistics.GenerateDefaultStatistics(refinement_package->estimated_particle_weight_in_kda);
-
 	// Loop over all particles
 	wxString movie_name = "";
 	int particle_coordinate_index_per_image = 0;
@@ -443,12 +442,11 @@ RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString sta
 	ArrayOfParticlePositionAssets particle_assets_by_parent;
 	ParticlePositionAsset particle_asset;
 	ProgressBar *my_progress = new ProgressBar(input_star_file.cached_parameters.GetCount());
-
 	for (int particle_counter = 0; particle_counter < stack_number_of_images; particle_counter++)
 	{
-		// Count number of particles in a given micrograph to associate back to relevant particle ID.
-		// Micrograph ID = Image ID in this script always, so I can get away with querying movie_list instead of image_list to skip some filename wrangling.
-		// This is all necessary because Warp's processing order is very different from cisTEM's import order (and is not consistent, depending on when symlinks are written).
+//		 Count number of particles in a given micrograph to associate back to relevant particle ID.
+//		 Micrograph ID = Image ID in this script always, so I can get away with querying movie_list instead of image_list to skip some filename wrangling.
+//		 This is all necessary because Warp's processing order is very different from cisTEM's import order (and is not consistent, depending on when symlinks are written).
 		if (movie_name != input_star_file.ReturnMicrographName(particle_counter)) {
 			movie_name = input_star_file.ReturnMicrographName(particle_counter);
 			particle_coordinate_index_per_image = 0;
@@ -628,7 +626,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxString warp_settings_file = warp_directory + "previous.settings";
 	wxXmlDocument settings_doc;
 	if (wxFileName::Exists(warp_settings_file) && settings_doc.Load(warp_settings_file) && settings_doc.IsOk()) {
-		 MyDebugAssertTrue(GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions), "Failed to parse settings file)");
+		 GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions);
 	} else SendErrorAndCrash("Couldn't load warp settings");
 
 	wxArrayString all_files;

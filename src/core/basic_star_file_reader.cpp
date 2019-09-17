@@ -14,6 +14,7 @@ StarFileParameters::StarFileParameters()
 	defocus2 = 0;
 	defocus_angle = 0;
 	phase_shift = 0;
+	micrograph_name = "";
 }
 
 BasicStarFileReader::BasicStarFileReader()

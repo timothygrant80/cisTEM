@@ -150,7 +150,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	this->c_pixel = c_pixel;
 	total_number_of_cccs_calculated = 0;
 
-	d_input_image.ConvertToHalfPrecision(true);
+	// Either do not delete the single precision, or add in a copy here so that each loop over defocus vals
+	// have a copy to work with. Otherwise this will not exist on the second loop
+	d_input_image.ConvertToHalfPrecision(false);
 
 	checkCudaErrors(cudaMalloc((void **)&my_peaks, sizeof(Peaks)*d_input_image.real_memory_allocated));
 	checkCudaErrors(cudaMalloc((void **)&my_stats, sizeof(Stats)*d_input_image.real_memory_allocated));
@@ -291,6 +293,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	MyAssertTrue(histogram.is_allocated_histogram, "Trying to accumulate a histogram that has not been initialized!")
 	histogram.Accumulate(d_padded_reference);
 
+	checkCudaErrors(cudaFree(my_peaks));
+	checkCudaErrors(cudaFree(my_stats));
 
     checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
 

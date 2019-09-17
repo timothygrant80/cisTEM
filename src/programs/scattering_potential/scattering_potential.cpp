@@ -76,8 +76,8 @@ const float MAX_PIXEL_SIZE = 3.0f;
 // Some of the more common elements, should add to this later. These are from Peng et al. 1996.
 //const int n_tilt_angles = 41;
 //const float SET_TILT_ANGLES[n_tilt_angles] = {0, 3, -3, 6, -6, 9, -9, 12, -12, 15, -15, 18, -18, 21, -21, 24, -24, 27, -27, 30, -30, 33, -33, 36, -36, 39, -39, 42, -42, 45, -45, 48, -48, 51, -51, 54, -54, 57, -57, 60, -60};
-const int n_tilt_angles = 2;
-const float SET_TILT_ANGLES[2] = {0,25};
+const int n_tilt_angles = 1;
+const float SET_TILT_ANGLES[n_tilt_angles] = {30.0f};
 
 // The name is to an index matching here in the PDB class. If you change this, you MUST change that. This is probably a bad idea.
 // H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
@@ -548,7 +548,7 @@ void ScatteringPotentialApp::DoInteractiveUserInput()
 		this->DO_COMPEX_AMPLITUDE_TERM = my_input->GetYesNoFromUser("Use the complex amplitude term?","(optical potential)","yes");
 		this->DO_APPLY_DQE = my_input->GetYesNoFromUser("Apply the DQE?","depends on camera model","yes");
 
-		this->DO_APPLY_NTF = my_input->GetYesNoFromUser("Apply NTF?","depends on camera model","yes");
+		this->DO_APPLY_NTF = my_input->GetYesNoFromUser("Apply NTF?","depends on camera model","no");
 		if (DO_APPLY_NTF)
 		{
 			wxPrintf("Currently a perfect counting detector is modelled. The noise spectrum is flat.\n\n");

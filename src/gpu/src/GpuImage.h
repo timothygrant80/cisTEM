@@ -117,8 +117,9 @@ public:
 
 	// For the full image set width/height, otherwise set on function call.
 	NppiSize npp_ROI;
-	NppiSize npp_ROI_complex;
-	NppiSize npp_ROI_complex_in_real_functor;
+	NppiSize npp_ROI_real_space;
+	NppiSize npp_ROI_fourier_space;
+	NppiSize npp_ROI_fourier_with_real_functor;
 
 
 
@@ -206,6 +207,8 @@ public:
 	void LogarithmRealValues();
 	void ExponentiateRealValues();
 	void AddConstant(const float add_val);
+	void AddConstant(const Npp32fc add_val);
+
 	void AddImage(GpuImage &other_image);
 	void AddSquaredImage(GpuImage &other_image);
 

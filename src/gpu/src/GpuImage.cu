@@ -786,7 +786,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 		wxPrintf("\n\tMaking mask_CSOS\n");
 		mask_CSOS->Allocate(dims.x, dims.y, dims.z, true);
 		// The mask should always be in real_space, and starts out not centered
-		mask_CSOS->is_in_real_space = true;
+		mask_CSOS->is_in_real_space = false;
 		mask_CSOS->object_is_centred_in_box = true;
 		// Allocate pinned host memb
 		checkCudaErrors(cudaHostAlloc(&mask_CSOS->real_values, sizeof(float)*real_memory_allocated, cudaHostAllocDefault));
@@ -1151,7 +1151,7 @@ void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 	}
 	else
 	{
-		checkNppErrors(nppiMul_32fc_C1IR_Ctx((Npp32fc *)other_image.complex_values_gpu, pitch, (Npp32fc *)complex_values_gpu, pitch, npp_ROI_complex, nppStream));
+		checkNppErrors(nppiMul_32fc_C1IR_Ctx((Npp32fc *)other_image.complex_values_gpu, pitch, (Npp32fc *)complex_values_gpu, pitch, npp_ROI, nppStream));
 	}
 }
 
@@ -1164,6 +1164,15 @@ void GpuImage::AddConstant(const float add_val)
 
 	NppInit();
 	checkNppErrors(nppiAddC_32f_C1IR_Ctx((Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+}
+
+void GpuImage::AddConstant(const Npp32fc add_val)
+{
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_real_space, "Image in real space.")
+
+	NppInit();
+	checkNppErrors(nppiAddC_32fc_C1IR_Ctx((Npp32fc)add_val, (Npp32fc*)complex_values_gpu, pitch, npp_ROI, nppStream));
 }
 
 void GpuImage::SquareRealValues()
@@ -1224,14 +1233,15 @@ float GpuImage::ReturnSumOfRealValues()
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 	MyAssertTrue(is_in_real_space, "Not in real space");
 
-
-	Npp64f sum_val;
+	Npp64f* sum_val;
+	checkCudaErrors(cudaMallocManaged(&sum_val,sizeof(Npp64f)));
 
 	NppInit();
 	BufferInit(b_sum);
-	checkNppErrors(nppiSum_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI,sum_buffer,&sum_val, nppStream));
+	checkNppErrors(nppiSum_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI,sum_buffer, sum_val, nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
 
-	return (float)sum_val;
+	return (float)*sum_val;
 }
 void GpuImage::AddImage(GpuImage &other_image)
 {
@@ -1265,7 +1275,7 @@ void GpuImage::MultiplyByConstant(float scale_factor)
 	}
 	else
 	{
-		checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI_complex_in_real_functor, nppStream));
+		checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI_fourier_with_real_functor, nppStream));
 	}
 }
 

@@ -516,15 +516,15 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
    *returnValue = (float)sum / (float)number_of_pixels;
 }
 
-//void GpuImage::CublasInit()
-//{
-//  if ( ! is_cublas_loaded )
-//  {
-//    cublasCreate(&cublasHandle);
-//    is_cublas_loaded = true;
-//    cublasSetStream(cublasHandle, cudaStreamPerThread);
-//  }
-//}
+void GpuImage::CublasInit()
+{
+  if ( ! is_cublas_loaded ) 
+  {
+    cublasCreate(&cublasHandle);
+    is_cublas_loaded = true;
+    cublasSetStream(cublasHandle, cudaStreamPerThread);
+  }
+}
 
 void GpuImage::NppInit()
 {
@@ -544,11 +544,26 @@ void GpuImage::NppInit()
 	cudaDeviceGetAttribute(&nppStream.nCudaDevAttrComputeCapabilityMinor,cudaDevAttrComputeCapabilityMinor,nppStream.nCudaDeviceId);
 
 //    nppSetStream(cudaStreamPerThread);
-    npp_ROI.width  = dims.x;
-    npp_ROI.height = dims.y * dims.z;
 
-    npp_ROI_complex.width = dims.w / 2;
-    npp_ROI_complex.height = dims.y * dims.z;
+	npp_ROI_real_space.width = dims.x;
+	npp_ROI_real_space.height = dims.y * dims.z;
+
+	npp_ROI_fourier_space.width = dims.w / 2;
+	npp_ROI_fourier_space.height = dims.y * dims.z;
+
+	// This is used only in special cases, and is explicit.
+    npp_ROI_fourier_with_real_functor.width = dims.w;
+    npp_ROI_fourier_with_real_functor.height = dims.y * dims.z;
+
+    // This is switched appropriately in FFT/iFFT calls
+    if (is_in_real_space)
+    {
+    	npp_ROI = npp_ROI_real_space;
+    }
+    else
+    {
+    	npp_ROI = npp_ROI_fourier_space;
+    }
 
     is_npp_loaded = true;
 
@@ -723,9 +738,11 @@ float GpuImage::ReturnSumOfSquares()
 	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
 									 	   (Npp64f *)pNorm, (Npp8u *)this->l2norm_buffer, nppStream));
 
-	return ((float)*pNorm * (float)*pNorm);
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
 
-//	CublasInit();complex_6EK0_SSU.pdb
+	return (float)(*pNorm * *pNorm);
+
+//	CublasInit();
 //	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
 //	cublas_stat = cublasSdot( cublasHandle, real_memory_allocated,
 //							real_values_gpu, 1,
@@ -734,8 +751,8 @@ float GpuImage::ReturnSumOfSquares()
 //
 //	if (cublas_stat) {
 //	wxPrintf("Cublas return val %s\n", cublas_stat); }
-
-
+//
+//
 //	return returnValue;
 
 }
@@ -752,7 +769,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	bool x_is_even = IsEven(dims.x);
 	int i,j,k,jj,kk;
 	const std::complex<float> c1(sqrtf(0.25f),sqrtf(0.25));
-	const std::complex<float> c2(sqrtf(0.5),sqrtf(0.5)); // original code is pow(abs(Val),2)*0.5
+	const std::complex<float> c2(sqrtf(0.5f),sqrtf(0.5f)); // original code is pow(abs(Val),2)*0.5
 	const std::complex<float> c3(1.0,1.0);
 	const std::complex<float> c4(0.0,0.0);
 	float returnValue;
@@ -769,11 +786,12 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 		wxPrintf("\n\tMaking mask_CSOS\n");
 		mask_CSOS->Allocate(dims.x, dims.y, dims.z, true);
 		// The mask should always be in real_space, and starts out not centered
-		mask_CSOS->is_in_real_space = true;
+		mask_CSOS->is_in_real_space = false;
 		mask_CSOS->object_is_centred_in_box = true;
 		// Allocate pinned host memb
 		checkCudaErrors(cudaHostAlloc(&mask_CSOS->real_values, sizeof(float)*real_memory_allocated, cudaHostAllocDefault));
 		mask_CSOS->complex_values = (std::complex<float>*) mask_CSOS->real_values;
+
 		for (k = 0; k <= physical_upper_bound_complex.z; k++)
 		{
 
@@ -783,30 +801,31 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 				jj = ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j,dims.y, physical_index_of_first_negative_frequency.y);
 				for (i = 0; i <= physical_upper_bound_complex.x; i++)
 				{
-					if ((i == 0  || (i  == logical_upper_bound_complex.x && x_is_even)) && 
-			  (jj == 0 || (jj == logical_lower_bound_complex.y && x_is_even)) &&
-			  (kk == 0 || (kk == logical_lower_bound_complex.z && x_is_even)))
-		  {
-			mask_CSOS->complex_values[address] = c2;
-
-		  }
+					if ((i  == 0 || (i  == logical_upper_bound_complex.x && x_is_even)) &&
+						(jj == 0 || (jj == logical_lower_bound_complex.y && x_is_even)) &&
+						(kk == 0 || (kk == logical_lower_bound_complex.z && x_is_even)))
+					{
+						mask_CSOS->complex_values[address] = c2;
+					}
 					else if ((i == 0 || (i == logical_upper_bound_complex.x && x_is_even)) && dims.z != 1) 
-		  {
-			mask_CSOS->complex_values[address] = c1;
-		  }
+					{
+						mask_CSOS->complex_values[address] = c1;
+					}
 					else if ((i != 0 && (i != logical_upper_bound_complex.x || ! x_is_even)) || (jj >= 0 && kk >= 0)) 
-		  {
-			mask_CSOS->complex_values[address] = c3;
-		  }
-		  else
-		  {
-			mask_CSOS->complex_values[address] = c4;
-		  }
+					{
+						mask_CSOS->complex_values[address] = c3;
+					}
+					else
+					{
+						mask_CSOS->complex_values[address] = c4;
+					}
 
 					address++;
 				}
 			}
 		}   
+
+
 
 		pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 		checkCudaErrors(cudaMemcpyAsync(mask_CSOS->real_values_gpu, mask_CSOS->real_values,sizeof(float)*real_memory_allocated,cudaMemcpyHostToDevice,cudaStreamPerThread));
@@ -822,28 +841,37 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	checkCudaErrors(cudaMemcpyAsync(image_buffer->real_values_gpu, mask_CSOS->real_values_gpu, sizeof(float)*real_memory_allocated,cudaMemcpyDeviceToDevice,cudaStreamPerThread));
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+
+	image_buffer->is_in_real_space = false;
+	image_buffer->npp_ROI = image_buffer->npp_ROI_fourier_space;
 	image_buffer->MultiplyPixelWise(*this);
 
 //	CublasInit();
 	// With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
-	NppInit();
-	BufferInit(b_dotproduct);
-	Npp64f* dotProd;
-	checkCudaErrors(cudaMallocManaged(&dotProd, sizeof(Npp64f)));
 
-	checkNppErrors(nppiDotProd_32f64f_C1R_Ctx((Npp32f *)image_buffer->real_values_gpu, pitch,
-											  (Npp32f *)image_buffer->real_values_gpu, pitch,
-											  npp_ROI, dotProd, dotproduct_buffer, nppStream));
+	Npp64f* pNorm;
+	checkCudaErrors(cudaMallocManaged(&pNorm, sizeof(Npp64f)));
+
+	BufferInit(b_l2norm);
+	NppInit();
+	checkNppErrors(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)image_buffer->real_values_gpu, pitch, npp_ROI_fourier_with_real_functor,
+									 	   (Npp64f *)pNorm, (Npp8u *)this->l2norm_buffer, nppStream));
+
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
+	return (float)(*pNorm * *pNorm );
 
 //	cublasSdot( cublasHandle, real_memory_allocated,
 //			  image_buffer->real_values_gpu, 1,
 //			  image_buffer->real_values_gpu, 1,
 //			  &returnValue);
+
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
-	return (float)(*dotProd * 2.0f);
+//	return (float)(*dotProd * 2.0f);
+//	return (float)(returnValue * 2.0f);
 
   
 }
@@ -1020,16 +1048,18 @@ void GpuImage::Min()
 	NppInit();
 	BufferInit(b_min);
 	checkNppErrors(nppiMin_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, min_buffer, (Npp32f *)&min_value,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
 }
 void GpuImage::MinAndCoords()
 {
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 	MyAssertTrue(is_in_real_space, "Not in real space");
 
-
 	NppInit();
 	BufferInit(b_minIDX);
 	checkNppErrors(nppiMinIndx_32f_C1R_Ctx((const Npp32f *)real_values_gpu, pitch, npp_ROI, minIDX_buffer, (Npp32f *)&min_value, &min_idx.x, &min_idx.y,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 }
 void GpuImage::Max()
 {
@@ -1040,6 +1070,8 @@ void GpuImage::Max()
 	NppInit();
 	BufferInit(b_max);
 	checkNppErrors(nppiMax_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, max_buffer, (Npp32f *)&max_value,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 }
 void GpuImage::MaxAndCoords()
 {
@@ -1050,7 +1082,10 @@ void GpuImage::MaxAndCoords()
 	NppInit();
 	BufferInit(b_maxIDX);
 	checkNppErrors(nppiMaxIndx_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, maxIDX_buffer, (Npp32f *)&max_value, &max_idx.x, &max_idx.y, nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 }
+
 void GpuImage::MinMax()
 {
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
@@ -1060,6 +1095,8 @@ void GpuImage::MinMax()
 	NppInit();
 	BufferInit(b_minmax);
 	checkNppErrors(nppiMinMax_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, (Npp32f *)&min_value, (Npp32f *)&max_value, minmax_buffer,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 }
 void GpuImage::MinMaxAndCoords()
 {
@@ -1070,6 +1107,8 @@ void GpuImage::MinMaxAndCoords()
 	NppInit();
 	BufferInit(b_minmaxIDX);
 	checkNppErrors(nppiMinMaxIndx_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, (Npp32f *)&min_value, (Npp32f *)&max_value,  &min_idx, &max_idx,minmax_buffer,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 }
 
 void GpuImage::Mean()
@@ -1080,6 +1119,8 @@ void GpuImage::Mean()
 	NppInit();
 	BufferInit(b_mean);
 	checkNppErrors(nppiMean_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, mean_buffer, npp_mean, nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 	this->img_mean   = (float)*npp_mean;
 
 }
@@ -1093,6 +1134,8 @@ void GpuImage::MeanStdDev()
 	NppInit();
 	BufferInit(b_meanstddev);
 	checkNppErrors(nppiMean_StdDev_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, meanstddev_buffer, npp_mean, npp_stdDev,nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 	this->img_mean   = (float)*npp_mean;
 	this->img_stdDev = (float)*npp_stdDev;
 }
@@ -1102,25 +1145,35 @@ void GpuImage::MultiplyPixelWise(GpuImage &other_image)
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 
 	NppInit();
-	checkNppErrors(nppiMul_32f_C1IR_Ctx((Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+
+	wxPrintf("In mPixel roi is %d %d\n",npp_ROI.width, npp_ROI.height);
+	checkNppErrors(nppiMul_32f_C1IR_Ctx((Npp32f *)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+
 }
 
 
 void GpuImage::AddConstant(const float add_val)
 {
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
-	MyAssertTrue(is_in_real_space, "Not in real space");
-
+	MyAssertTrue(is_in_real_space, "Image not in real space.")
 
 	NppInit();
 	checkNppErrors(nppiAddC_32f_C1IR_Ctx((Npp32f)add_val, (Npp32f*)real_values_gpu, pitch, npp_ROI,nppStream));
+}
+
+void GpuImage::AddConstant(const Npp32fc add_val)
+{
+	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
+	MyAssertTrue(is_in_real_space, "Image in real space.")
+
+	NppInit();
+	checkNppErrors(nppiAddC_32fc_C1IR_Ctx((Npp32fc)add_val, (Npp32fc*)complex_values_gpu, pitch, npp_ROI, nppStream));
 }
 
 void GpuImage::SquareRealValues()
 {
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 	MyAssertTrue(is_in_real_space, "Not in real space");
-
 
 	NppInit();
 	checkNppErrors(nppiSqr_32f_C1IR_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI, nppStream));
@@ -1164,6 +1217,8 @@ void GpuImage::CountInRange(float lower_bound, float upper_bound)
 	NppInit();
 	checkNppErrors(nppiCountInRange_32f_C1R_Ctx((const Npp32f *)real_values_gpu, pitch, npp_ROI, &number_of_pixels_in_range,
 											(Npp32f)lower_bound,(Npp32f)upper_bound,countinrange_buffer, nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
+
 
 }
 
@@ -1173,20 +1228,21 @@ float GpuImage::ReturnSumOfRealValues()
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 	MyAssertTrue(is_in_real_space, "Not in real space");
 
-
-	Npp64f sum_val;
+	Npp64f* sum_val;
+	checkCudaErrors(cudaMallocManaged(&sum_val,sizeof(Npp64f)));
 
 	NppInit();
 	BufferInit(b_sum);
-	checkNppErrors(nppiSum_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI,sum_buffer,&sum_val, nppStream));
+	checkNppErrors(nppiSum_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI,sum_buffer, sum_val, nppStream));
+	checkCudaErrors(cudaStreamSynchronize(nppStream.hStream));
 
-	return (float)sum_val;
+	return (float)*sum_val;
 }
+
 void GpuImage::AddImage(GpuImage &other_image)
 {
   // Add the real_values_gpu into a double array
 	MyAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimensions");
-
 
 	NppInit();
 	checkNppErrors(nppiAdd_32f_C1IR_Ctx((const Npp32f*)other_image.real_values_gpu, pitch, (Npp32f*)real_values_gpu, pitch, npp_ROI, nppStream));
@@ -1197,6 +1253,7 @@ void GpuImage::AddSquaredImage(GpuImage &other_image)
 {
 	// Add the real_values_gpu into a double array
 	MyAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimensions");
+	MyAssertTrue(is_in_real_space, "Image is not in real space");
 
 	NppInit();
 	checkNppErrors(nppiAddSquare_32f_C1IR_Ctx((const Npp32f*)other_image.real_values_gpu,  pitch, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
@@ -1208,6 +1265,7 @@ void GpuImage::MultiplyByConstant(float scale_factor)
 
 	NppInit();
 	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) scale_factor, (Npp32f*)real_values_gpu,  pitch, npp_ROI, nppStream));
+
 }
 
 void GpuImage::Conj()
@@ -1215,10 +1273,12 @@ void GpuImage::Conj()
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
 	MyAssertFalse(is_in_real_space, "Conj only supports complex images");
 
-	float scale_factor = -1.0f;
+	Npp32fc scale_factor;
+	scale_factor.re =  1.0f;
+	scale_factor.im = -1.0f;
 	NppInit();
-	checkNppErrors(nppiMulC_32f_C1IR_Ctx((Npp32f) (scale_factor+1), (Npp32f*)real_values_gpu,  dims.w/2*sizeof(float), npp_ROI,nppStream));
-	// FIXME make sure that a) there isn't already a function fo rthis, b) you aren't striding out of bounds (mask instead_;
+	checkNppErrors(nppiMulC_32fc_C1IR_Ctx((Npp32fc)scale_factor, (Npp32fc*)complex_values_gpu, pitch, npp_ROI,nppStream));
+
 }
 
 void GpuImage::Zeros()
@@ -1407,6 +1467,8 @@ void GpuImage::ForwardFFT(bool should_scale)
     checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)complex_values_gpu));
 
     is_in_real_space = false;
+	npp_ROI = npp_ROI_fourier_space;
+
 
 
 }
@@ -1468,6 +1530,7 @@ void GpuImage::ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scal
     checkCudaErrors(cufftExecR2C(this->cuda_plan_forward, (cufftReal*)real_values_gpu, (cufftComplex*)complex_values_gpu));
 
     is_in_real_space = false;
+    npp_ROI = npp_ROI_fourier_space;
 
 
 }
@@ -1489,6 +1552,8 @@ void GpuImage::BackwardFFT()
 	checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
 
 	is_in_real_space = true;
+	npp_ROI = npp_ROI_real_space;
+
 
 }
 
@@ -1537,6 +1602,7 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 	checkCudaErrors(cufftExecC2R(this->cuda_plan_inverse, (cufftComplex*)complex_values_gpu, (cufftReal*)real_values_gpu));
 
 	is_in_real_space = true;
+	npp_ROI = npp_ROI_real_space;
 
 }
 template void GpuImage::BackwardFFTAfterComplexConjMul(__half2* image_to_multiply, bool load_half_precision);
@@ -2167,11 +2233,11 @@ void GpuImage::Deallocate()
     is_fft_planned = false;
   }
 
-//  if (is_cublas_loaded)
-//  {
-//    checkCudaErrors(cublasDestroy(cublasHandle));
-//    is_cublas_loaded = false;
-//  }
+  if (is_cublas_loaded) 
+  {
+    checkCudaErrors(cublasDestroy(cublasHandle));
+    is_cublas_loaded = false;
+  }
 
   if (is_allocated_mask_CSOS)
   {
@@ -2305,7 +2371,7 @@ void GpuImage::UpdateBoolsToDefault()
 
 	// libraries
 	is_fft_planned = false;
-//	is_cublas_loaded = false;
+	is_cublas_loaded = false;
 	is_npp_loaded = false;
 
 	// Buffers

@@ -54,7 +54,6 @@ MatchTemplateApp : public MyApp
 	ArrayOfAggregatedTemplateResults aggregated_results;
 	int original_input_image_x;
 	int original_input_image_y;
-	int remove_npix_from_edge = 0;
 
 	private:
 };
@@ -453,10 +452,6 @@ bool MatchTemplateApp::DoCalculation()
 	input_search_image_file.OpenFile(input_search_images_filename.ToStdString(), false);
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
-	// Convolution is only valid 1/2 particle radius in from the edge. Here use the larger 1/2 box size as it also includes (or should) delocalization of the particle beyond it's true envelope.
-	remove_npix_from_edge = std::max(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnYSize()) / 2 + 1;
-
-
 	Image input_image;
 	Image padded_reference;
 	Image input_reconstruction;
@@ -752,8 +747,8 @@ bool MatchTemplateApp::DoCalculation()
 	int nThreads;
 	int nGPUs = -1;
 	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
-	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 2 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 2 * nGPUs;}
+	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 3 * nGPUs;}
 	else {nThreads = 2 * nGPUs;}
 
 	int minPos = first_search_position;
@@ -1440,14 +1435,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
 		}
 
-		float central_average;
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 //		wxPrintf("writing to %s/n", wxString::Format("%s/mip.mrc\n", directory_for_writing_results));
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// psi
@@ -1458,11 +1449,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_psi_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		//theta
@@ -1473,11 +1461,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_theta_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// phi
@@ -1488,11 +1473,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_phi_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// defocus
@@ -1503,15 +1485,11 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_defocus_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// pixel size
-
 
 		temp_image.Allocate(int(aggregated_results[array_location].collated_data_array[0]), int(aggregated_results[array_location].collated_data_array[1]), true);
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
@@ -1519,11 +1497,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_size_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/pixel_size.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/pixel_size.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// do the scaling..
@@ -1535,7 +1510,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] / aggregated_results[array_location].total_number_of_ccs - powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2);
 			if (aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f)
 			{
-				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
+				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter])	* sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension);
 				aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) / aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
 			}
 			else
@@ -1550,11 +1525,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
 		}
 
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number,true);
+		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// sums
@@ -1565,12 +1538,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// square sums
@@ -1583,12 +1552,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		//temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 
-		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
-		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
-		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
-		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
-
-		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		/// histogram
@@ -1632,6 +1597,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 		histogram_file.Close();
+
 
 		// this should be done now.. so delete it
 

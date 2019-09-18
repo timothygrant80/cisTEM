@@ -34,10 +34,10 @@ bool GpuUtilTest::DoCalculation()
 
   wxPrintf("GpuUtilTest is running!\n");
 
-//  this->createImageAddOne();
+  this->createImageAddOne();
   int nThreads = 1;
   int nGPUs = 1;
-  this->TemplateMatchingStandalone(nThreads, nGPUs);
+//  this->TemplateMatchingStandalone(nThreads, nGPUs);
 
   int gpuID = 0;
   wxPrintf("I made it here\n");
@@ -96,6 +96,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			current_projection.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/current_projection.mrc",1);
 			padded_reference.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/padded_reference.mrc",1);
 
+
 			input_image.Resize(4096,4096,1,0.0f);
 			padded_reference.CopyFrom(&input_image);
 			// These are all blank to start
@@ -112,6 +113,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			input_image.ForwardFFT();
 			input_image.SwapRealSpaceQuadrants();
 			projection_filter.ForwardFFT();
+
 
 
 			// These also were set up prior to entering the GPU loop
@@ -199,8 +201,8 @@ void GpuUtilTest::createImageAddOne()
 	bool do_pad = false;
 
 
-	int wanted_number_of_gpus = 8;
-	int wanted_number_threads_per_gpu = 2;
+	int wanted_number_of_gpus = 1;
+	int wanted_number_threads_per_gpu = 1;
 
 	DeviceManager gpuDev(wanted_number_of_gpus);
 
@@ -321,30 +323,48 @@ void GpuUtilTest::createImageAddOne()
 			Image c;
 			c.Allocate(514,514,1,true);
 
-			GpuImage g;
-			g.Init(c);
-			g.CopyHostToDevice();
 
-			for (int iLoop = 1; iLoop < 100000; iLoop++)
-			{
-				g.ForwardFFT(false);
-				g.BackwardFFT();
-				g.Wait();
-			}
-
-			wxPrintf("Timings: Overall: %s\n",(wxDateTime::Now()-start).Format());
-			g.CopyDeviceToHost();
-			exit(0);
 			// full size image
 
 			// Read in the CPU image
 			cpu_image_full.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/oval_full.mrc",1);
+			cpu_image_full.AddConstant(-cpu_image_full.ReturnAverageOfRealValues(0.0f,false));
 
 			// Copy of the image to operate on using cpu method
 			cpu_work_full.CopyFrom(&cpu_image_full);
 
-			// Re-use the image and library contexts - this needs to have debug asserts added
+			// Re-use the image and library contexts - this needs to have debug asserts added'			'
+			d_image_full.Init(cpu_image_full);
+
 			d_image_full.CopyHostToDevice();
+
+//			d_image_full.Mean();
+//			d_image_full.AddConstant(-d_image_full.img_mean);
+			bool doNorm = false;
+			cpu_work_full.AddConstant(-cpu_work_full.ReturnAverageOfRealValues(0.0f,false));
+
+			cpu_work_full.MultiplyByConstant(1.0f/sqrtf(cpu_work_full.ReturnSumOfSquares()));
+			wxPrintf("cpu var before fft is %3.3e\n", (cpu_work_full.ReturnSumOfSquares()));
+
+			cpu_work_full.ForwardFFT(doNorm);
+			wxPrintf("cpu var after fft no norm is %3.3e or *= / n^2 %3.3e\n", (cpu_work_full.ReturnSumOfSquares()), cpu_work_full.ReturnSumOfSquares()/cpu_work_full.number_of_real_space_pixels/cpu_work_full.number_of_real_space_pixels);
+			cpu_work_full.MultiplyByConstant(1.0f/sqrtf(cpu_work_full.ReturnSumOfSquares()));
+			cpu_work_full.BackwardFFT();
+			wxPrintf("cpu var after ifft with norm is %3.3e or *= / n^2 %3.3e\n", (cpu_work_full.ReturnSumOfSquares()), cpu_work_full.ReturnSumOfSquares()/(cpu_work_full.number_of_real_space_pixels)/cpu_work_full.number_of_real_space_pixels);
+
+
+			d_image_full.MultiplyByConstant(1.0f/sqrtf(d_image_full.ReturnSumOfSquares()));
+			wxPrintf("gpu var before fft is %3.3e\n", (d_image_full.ReturnSumOfSquares()));
+
+			d_image_full.ForwardFFT(doNorm);
+			wxPrintf("gpu var after fft no norm is %3.3e or *= / n %3.3e\n", (d_image_full.ReturnSumSquareModulusComplexValues()), d_image_full.ReturnSumSquareModulusComplexValues()/(d_image_full.number_of_real_space_pixels));
+			d_image_full.MultiplyByConstant(1.0f/sqrtf(d_image_full.ReturnSumSquareModulusComplexValues()));
+			d_image_full.BackwardFFT();
+			wxPrintf("gpu var after ifft with norm is %3.3e or *= / n %3.3e\n", (d_image_full.ReturnSumOfSquares()), d_image_full.ReturnSumOfSquares()/(d_image_full.number_of_real_space_pixels));
+
+			exit(0);
+
+
 
 			cpu_work_full.ForwardFFT(true);
 			cpu_work_full.BackwardFFT();

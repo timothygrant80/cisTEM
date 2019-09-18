@@ -290,11 +290,12 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	MyAssertTrue(histogram.is_allocated_histogram, "Trying to accumulate a histogram that has not been initialized!")
 	histogram.Accumulate(d_padded_reference);
 
+	checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
+
 	checkCudaErrors(cudaFree(my_peaks));
 	checkCudaErrors(cudaFree(my_stats));
 
-    checkCudaErrors(cudaStreamSynchronize(cudaStreamPerThread));
-
+    
 
 }
 

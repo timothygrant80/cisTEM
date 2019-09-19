@@ -262,8 +262,8 @@ public:
 
     // public static functions: mainly used for debugging
     static  wxString TypeToString( wxJSONType type );
-    static  wxString MemoryBuffToString( const wxMemoryBuffer& buff, size_t len = -1 );
-    static  wxString MemoryBuffToString( const void* buff, size_t len, size_t actualLen = -1 );
+    static  wxString MemoryBuffToString( const wxMemoryBuffer& buff, size_t len);
+    static  wxString MemoryBuffToString( const void* buff, size_t len, size_t actualLen);
     static  int      CompareMemoryBuff( const wxMemoryBuffer& buff1, const wxMemoryBuffer& buff2 );
     static  int      CompareMemoryBuff( const wxMemoryBuffer& buff1, const void* buff2 );
     static wxMemoryBuffer ArrayToMemoryBuff( const wxJSONValue& value );

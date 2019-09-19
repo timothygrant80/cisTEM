@@ -447,8 +447,11 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 
 #ifdef USEGPU
-	number_of_jobs_per_image_in_gui = 1;
-	int number_of_jobs = number_of_processes;
+	number_of_jobs_per_image_in_gui = number_of_processes;
+	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
+	wxPrintf("In USEGPU There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+	delete current_image_euler_search;
+
 #else
 	if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
 	else

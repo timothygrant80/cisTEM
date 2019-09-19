@@ -166,22 +166,28 @@ protected:
 
 #ifdef USEGPU
 #include <cuda_runtime.h>
-#include <cublas_v2.h>
 #include <cuda.h>
+#include <cublas_v2.h>
+#include <cuda_fp16.h>
+#include <cuda_profiler_api.h>
 #include <cufft.h>
 #include <cufftXt.h>
 #include <npp.h>
 #include <nppi_arithmetic_and_logical_operations.h>
 #include <nppi_statistics_functions.h>
+#include <npps_arithmetic_and_logical_operations.h>
 #include <helper_functions.h>
 #include <helper_cuda.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/device_vector.h>
+#include <thrust/functional.h>
 #include <typeinfo>
 #include <limits>
 #include <omp.h>
-#include "../../gpu/src/DeviceManager.h"
-#include "../../gpu/src/ContextManager.h"
-#include "../../gpu/src/GpuImage.h"
-#include "../../gpu/src/TemplateMatchingCore.h"
+#include "../gpu/src/DeviceManager.h"
+#include "../gpu/src/GpuImage.h"
+#include "../gpu/src/Histogram.h"
+#include "../gpu/src/TemplateMatchingCore.h"
 #endif
 
 

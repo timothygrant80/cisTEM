@@ -35,7 +35,7 @@ bool GpuUtilTest::DoCalculation()
   wxPrintf("GpuUtilTest is running!\n");
 
   this->createImageAddOne();
-  int nThreads = 2;
+  int nThreads = 1;
   int nGPUs = 1;
 //  this->TemplateMatchingStandalone(nThreads, nGPUs);
 
@@ -68,14 +68,12 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 		DeviceManager gpuDev;
 		gpuDev.Init(nGPUs);
 
+		omp_set_num_threads(nThreads);
+		#pragma omp parallel
+		{
 
+			int tIDX = omp_get_thread_num();
 
-//		omp_set_num_threads(nThreads);
-//		#pragma omp parallel
-//		{
-//
-//			int tIDX = omp_get_thread_num();
-int tIDX = 0;
 	    	Image template_reconstruction;
 	    	Image projection_filter;
 	    	Image input_image;
@@ -99,6 +97,8 @@ int tIDX = 0;
 			padded_reference.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/padded_reference.mrc",1);
 
 
+			input_image.Resize(4096,4096,1,0.0f);
+			padded_reference.CopyFrom(&input_image);
 			// These are all blank to start
 			max_intensity_projection.CopyFrom(&input_image);
 			best_psi.CopyFrom(&input_image);
@@ -108,10 +108,11 @@ int tIDX = 0;
 			best_defocus.CopyFrom(&input_image);
 
 	//		// These should be in Fourier space, but were ifft to save
-	//		template_reconstruction.ForwardFFT();
-	//		template_reconstruction.SwapRealSpaceQuadrants();
-	//		input_image.ForwardFFT();
-	//		input_image.SwapRealSpaceQuadrants();
+			template_reconstruction.ForwardFFT();
+			template_reconstruction.SwapRealSpaceQuadrants();
+			input_image.ForwardFFT();
+			input_image.SwapRealSpaceQuadrants();
+			projection_filter.ForwardFFT();
 
 
 
@@ -143,26 +144,49 @@ int tIDX = 0;
 			global_euler_search.InitGrid("O", angular_step, 0.0, 0.0, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 			global_euler_search.CalculateGridSearchPositions(false);
 
-
+			wxDateTime 	overall_start;
+			wxDateTime 	overall_finish;
+			overall_start = wxDateTime::Now();
 			gpuDev.SetGpu(tIDX);
 
+			int max_padding = 0;
+			const float histogram_min = -20.0f;
+			const float histogram_max = 50.0f;
+			const int histogram_number_of_points = 1024;
+			float histogram_step;
+			float histogram_min_scaled, histogram_step_scaled;
+			histogram_step = (histogram_max - histogram_min) / float(histogram_number_of_points);
 
-			GPU[tIDX].Init(template_reconstruction, input_image, projection_filter, current_projection,
+			histogram_min_scaled = histogram_min / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
+			histogram_step_scaled = histogram_step / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
+
+			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
 					pixel_size_search_range, pixel_size_step, pixel_size,
 					defocus_search_range, defocus_step, defocus1, defocus2,
 					psi_max, psi_start, psi_step,
-					angles, global_euler_search, first_search_position, last_search_position);
+					angles, global_euler_search,
+					histogram_min_scaled, histogram_step_scaled, histogram_number_of_points,
+					max_padding, first_search_position, last_search_position);
 
 			int size_i = 0;
 			int defocus_i = 0;
-			GPU[tIDX].RunInnerLoop(size_i, defocus_i, tIDX);
 
+
+			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
+
+			long* histogram_data = new long[GPU[tIDX].histogram.histogram_n_bins];
+			for (int iBin = 0; iBin < GPU[tIDX].histogram.histogram_n_bins; iBin++)
+			{
+				histogram_data[iBin] = 0;
+			}
+			GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 			max_intensity_projection.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 
+			wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
 
 
-//    } // end of omp block
+    } // end of omp block
 }
 
 void GpuUtilTest::createImageAddOne()
@@ -299,30 +323,48 @@ void GpuUtilTest::createImageAddOne()
 			Image c;
 			c.Allocate(514,514,1,true);
 
-			GpuImage g;
-			g.Init(c);
-			g.CopyHostToDevice();
 
-			for (int iLoop = 1; iLoop < 100000; iLoop++)
-			{
-				g.ForwardFFT(false);
-				g.BackwardFFT();
-				g.Wait();
-			}
-
-			wxPrintf("Timings: Overall: %s\n",(wxDateTime::Now()-start).Format());
-			g.CopyDeviceToHost();
-			exit(0);
 			// full size image
 
 			// Read in the CPU image
 			cpu_image_full.QuickAndDirtyReadSlice("/groups/grigorieff/home/himesb/cisTEM_2/cisTEM/trunk/gpu/include/oval_full.mrc",1);
+			cpu_image_full.AddConstant(-cpu_image_full.ReturnAverageOfRealValues(0.0f,false));
 
 			// Copy of the image to operate on using cpu method
 			cpu_work_full.CopyFrom(&cpu_image_full);
 
-			// Re-use the image and library contexts - this needs to have debug asserts added
+			// Re-use the image and library contexts - this needs to have debug asserts added'			'
+			d_image_full.Init(cpu_image_full);
+
 			d_image_full.CopyHostToDevice();
+
+//			d_image_full.Mean();
+//			d_image_full.AddConstant(-d_image_full.img_mean);
+			bool doNorm = false;
+			cpu_work_full.AddConstant(-cpu_work_full.ReturnAverageOfRealValues(0.0f,false));
+
+			cpu_work_full.MultiplyByConstant(1.0f/sqrtf(cpu_work_full.ReturnSumOfSquares()));
+			wxPrintf("cpu var before fft is %3.3e\n", (cpu_work_full.ReturnSumOfSquares()));
+
+			cpu_work_full.ForwardFFT(doNorm);
+			wxPrintf("cpu var after fft no norm is %3.3e or *= / n^2 %3.3e\n", (cpu_work_full.ReturnSumOfSquares()), cpu_work_full.ReturnSumOfSquares()/cpu_work_full.number_of_real_space_pixels/cpu_work_full.number_of_real_space_pixels);
+			cpu_work_full.MultiplyByConstant(1.0f/sqrtf(cpu_work_full.ReturnSumOfSquares()));
+			cpu_work_full.BackwardFFT();
+			wxPrintf("cpu var after ifft with norm is %3.3e or *= / n^2 %3.3e\n", (cpu_work_full.ReturnSumOfSquares()), cpu_work_full.ReturnSumOfSquares()/(cpu_work_full.number_of_real_space_pixels)/cpu_work_full.number_of_real_space_pixels);
+
+
+			d_image_full.MultiplyByConstant(1.0f/sqrtf(d_image_full.ReturnSumOfSquares()));
+			wxPrintf("gpu var before fft is %3.3e\n", (d_image_full.ReturnSumOfSquares()));
+
+			d_image_full.ForwardFFT(doNorm);
+			wxPrintf("gpu var after fft no norm is %3.3e or *= / n %3.3e\n", (d_image_full.ReturnSumSquareModulusComplexValues()), d_image_full.ReturnSumSquareModulusComplexValues()/(d_image_full.number_of_real_space_pixels));
+			d_image_full.MultiplyByConstant(1.0f/sqrtf(d_image_full.ReturnSumSquareModulusComplexValues()));
+			d_image_full.BackwardFFT();
+			wxPrintf("gpu var after ifft with norm is %3.3e or *= / n %3.3e\n", (d_image_full.ReturnSumOfSquares()), d_image_full.ReturnSumOfSquares()/(d_image_full.number_of_real_space_pixels));
+
+			exit(0);
+
+
 
 			cpu_work_full.ForwardFFT(true);
 			cpu_work_full.BackwardFFT();

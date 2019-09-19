@@ -74,10 +74,10 @@ const float MAX_PIXEL_SIZE = 3.0f;
 //const int n_tilt_angles = 51;
 //const float SET_TILT_ANGLES[n_tilt_angles] = {0.00, 2.800, -2.800, 5.600, -5.600, 8.400, -8.400, 11.200, -11.200, 14.000, -14.000, 16.800, -16.800, 19.600, -19.600, 22.400, -22.400, 25.200, -25.200, 28.000, -28.000, 30.800, -30.800, 33.600, -33.600, 36.400, -36.400, 39.200, -39.200, 42.000, -42.000, 44.800, -44.800, 47.600, -47.600, 50.400, -50.400, 53.200, -53.200, 56.000, -56.000, 58.800, -58.800, 61.600, -61.600, 64.400, -64.400, 67.200, -67.200, 70.000, -70.000};
 // Some of the more common elements, should add to this later. These are from Peng et al. 1996.
-const int n_tilt_angles = 41;
-const float SET_TILT_ANGLES[n_tilt_angles] = {0, 3, -3, 6, -6, 9, -9, 12, -12, 15, -15, 18, -18, 21, -21, 24, -24, 27, -27, 30, -30, 33, -33, 36, -36, 39, -39, 42, -42, 45, -45, 48, -48, 51, -51, 54, -54, 57, -57, 60, -60};
-//const int n_tilt_angles = 2;
-//const float SET_TILT_ANGLES[2] = {0,25};
+//const int n_tilt_angles = 41;
+//const float SET_TILT_ANGLES[n_tilt_angles] = {0, 3, -3, 6, -6, 9, -9, 12, -12, 15, -15, 18, -18, 21, -21, 24, -24, 27, -27, 30, -30, 33, -33, 36, -36, 39, -39, 42, -42, 45, -45, 48, -48, 51, -51, 54, -54, 57, -57, 60, -60};
+const int n_tilt_angles = 1;
+const float SET_TILT_ANGLES[n_tilt_angles] = {30.0f};
 
 // The name is to an index matching here in the PDB class. If you change this, you MUST change that. This is probably a bad idea.
 // H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
@@ -298,7 +298,10 @@ class ScatteringPotentialApp : public MyApp
 	wxTimeSpan  span_waters;
 	wxTimeSpan  span_shake;
 	wxTimeSpan	span_propagate;
-	wxDateTime 	overall_finish;
+	wxTimeSpan 	exposure_filter3d_span;
+	wxTimeSpan 	exposure_filter2d_span;
+	wxTimeSpan 	project_span;
+	wxTimeSpan 	overall_finish;
 
 
 	//////////////////////////////////////////
@@ -545,7 +548,7 @@ void ScatteringPotentialApp::DoInteractiveUserInput()
 		this->DO_COMPEX_AMPLITUDE_TERM = my_input->GetYesNoFromUser("Use the complex amplitude term?","(optical potential)","yes");
 		this->DO_APPLY_DQE = my_input->GetYesNoFromUser("Apply the DQE?","depends on camera model","yes");
 
-		this->DO_APPLY_NTF = my_input->GetYesNoFromUser("Apply NTF?","depends on camera model","yes");
+		this->DO_APPLY_NTF = my_input->GetYesNoFromUser("Apply NTF?","depends on camera model","no");
 		if (DO_APPLY_NTF)
 		{
 			wxPrintf("Currently a perfect counting detector is modelled. The noise spectrum is flat.\n\n");
@@ -700,17 +703,22 @@ bool ScatteringPotentialApp::DoCalculation()
 
 
 
-	wxPrintf("\nFinished pre seg fault");
+	wxPrintf("\nFinished pre seg fault\n");
 
-	overall_finish = wxDateTime::Now();
+	overall_finish += wxDateTime::Now()- overall_start;
 
-
+	wxPrintf("Timings: overall: %s\n",(overall_finish).Format());
 	wxPrintf("Timings: seed_waters: %s\n",(this->span_seed).Format());
 	wxPrintf("Timings: shake_waters: %s\n",(this->span_shake).Format());
 	wxPrintf("Timings: calc_atoms: %s\n",(this->span_atoms).Format());
 	wxPrintf("Timings: calc_waters: %s\n",(this->span_waters).Format());
+	wxPrintf("Timings: exposure_filter_3d: %s\n",(this->exposure_filter3d_span).Format());
+	wxPrintf("Timings: exposure_filter_2d: %s\n",(this->exposure_filter2d_span).Format());
+	wxPrintf("Timings: calc_projection: %s\n",(this->project_span).Format());
 	wxPrintf("Timings: propagate_wave_function: %s\n",(this->span_propagate).Format());
-	wxPrintf("Timings: unaccounted: %s\n",((overall_finish-overall_start)-(this->span_atoms+this->span_propagate+this->span_seed+this->span_shake+this->span_waters)).Format());
+	wxPrintf("Timings: unaccounted: %s\n",((overall_finish)-
+										(this->span_atoms+this->span_propagate+this->span_seed+
+										 this->span_shake+this->span_waters+exposure_filter2d_span+exposure_filter3d_span+project_span)).Format());
 
 	// It gives a segfault at the end either way.
    // pdb_ensemble[0].Close();
@@ -1667,6 +1675,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 
 //			if (DO_EXPOSURE_FILTER == 3 && CALC_HOLES_ONLY == false && CALC_WATER_NO_HOLE == false)
+			this->timer_start = wxDateTime::Now();
 			if (DO_EXPOSURE_FILTER == 3  && CALC_WATER_NO_HOLE == false)
 
 			{
@@ -1726,13 +1735,16 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 			}
 
+			this->exposure_filter3d_span += wxDateTime::Now() - this->timer_start;
 
-
+			this->timer_start = wxDateTime::Now();
 			if ( CALC_HOLES_ONLY == false )
 			{
 				this->project(&scattering_slab,scattering_potential,iSlab);
 				this->project(&inelastic_slab,inelastic_potential,iSlab);
 			}
+
+			this->project_span += wxDateTime::Now() - this->timer_start;
 
 			// Keep a clean copy of the ref without any dose filtering or water (alternate condition below)
 			if (SAVE_REF && EXPOSURE_FILTER_REF == false)
@@ -1763,6 +1775,8 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 			}
 
 //			if (DO_EXPOSURE_FILTER == 2 && CALC_HOLES_ONLY == false && CALC_WATER_NO_HOLE == false)
+			this->timer_start = wxDateTime::Now();
+
 			if (DO_EXPOSURE_FILTER == 2 && CALC_WATER_NO_HOLE == false)
 
 			{
@@ -1856,7 +1870,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 						mrc_out.CloseFile();
 				}
 			}
-
+			this->exposure_filter2d_span += wxDateTime::Now() - this->timer_start;
 
 			// Keep a clean copy of the ref with dose filtering
 			if (SAVE_REF && EXPOSURE_FILTER_REF == true)
@@ -1919,7 +1933,6 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 
 
-			this->timer_start = wxDateTime::Now();
 
 
 //			// Now apply the CTF - check that slab_oZ is doing what you intend it to TODO
@@ -1941,7 +1954,7 @@ void ScatteringPotentialApp::probability_density_2d(PDB *pdb_ensemble, int time_
 
 //		#pragma omp parallel num_threads(4)
 		// TODO make propagtor class
-
+	this->timer_start = wxDateTime::Now();
 		int propagate_threads_4;
 		int propagate_threads_2;
 

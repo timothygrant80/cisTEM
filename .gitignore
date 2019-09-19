@@ -10,14 +10,17 @@ configure
 missing
 config.guess
 depcomp
-# Could just use a build* but I think it is better to be specific. BAH
 build
-build-GCC
-build-CUDA
 config.log
-gpu/bin
-gpu/lib
-gpu/**/*.mrc
-gpu/**/*.o
-gpu/RemoteSystemsTempFiles
-
+src/gpu/bin
+src/gpu/lib/*.a
+src/gpu/**/*.mrc
+src/gpu/**/*.o
+src/gpu/RemoteSystemsTempFiles
+src/gpu/src/.project
+src/gpu/src/.cproject
+RemoteSystemsTempFiles
+.metadata/
+.settings/
+.autotools
+.cproject

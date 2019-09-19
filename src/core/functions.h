@@ -494,8 +494,8 @@ inline bool OutputIsAtTerminal()
 
 float CalculateAngularStep(float required_resolution, float radius_in_angstroms);
 
-int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false);
-int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false);
+int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
+int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
 
 /*
  *

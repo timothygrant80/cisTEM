@@ -521,105 +521,101 @@ bool Refine2DApp::DoCalculation()
 			input_image.MultiplyByConstant(binning_factor);
 
 			if (auto_mask == true)
-			{
-				copy_image.CopyFrom(&input_image);
-				difference_image.CopyFrom(&input_image);
-				buffer_image.CopyFrom(&input_image);
-				buffer_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
-				buffer_image.ForwardFFT();
-				buffer_image.CosineMask(pixel_size / 20.0f, pixel_size / 10.0f);
-				buffer_image.BackwardFFT();
-
-				average_value = buffer_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
-				average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, mask_radius / pixel_size);
-				threshold_value = average_value + ((average_of_100_max - average_value) * 0.02);
-
-				buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, -FLT_MAX);
-				buffer_image.Binarise(threshold_value);
-
-				if (buffer_image.IsConstant() == false)
-				{
-					rle3d my_rle3d(buffer_image);
-					size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-					my_rle3d.ConnectedSizeDecodeTo(size_image);
-
-					float size_of_biggest_thing = size_image.ReturnMaximumValue();
-					size_image.Binarise(size_of_biggest_thing - 1.0f);
-					size_image.DilateBinarizedMask(5.0f / pixel_size);
-	//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
-
-					for (address = 0; address < input_image.real_memory_allocated; address++)
 					{
-						if (size_image.real_values[address] == 0.0f) buffer_image.real_values[address] = 1.0f;
-						else buffer_image.real_values[address] = 0.0f;
-					}
+						copy_image.CopyFrom(&input_image);
+						difference_image.CopyFrom(&input_image);
+						buffer_image.CopyFrom(&input_image);
+						buffer_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
+						buffer_image.ForwardFFT();
+						buffer_image.CosineMask(pixel_size / 20.0f, pixel_size / 10.0f);
+						buffer_image.BackwardFFT();
 
-					// look for holes so we can fill them in
-					if (buffer_image.IsConstant() == false)
-					{
-						rle3d my_rle3d2(buffer_image);
-						my_rle3d2.ConnectedSizeDecodeTo(buffer_image);
+						average_value = buffer_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
+						average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, mask_radius / pixel_size);
+						threshold_value = average_value + ((average_of_100_max - average_value) * 0.02);
 
-						for (address = 0; address < input_image.real_memory_allocated; address++)
+						buffer_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, -FLT_MAX);
+						buffer_image.Binarise(threshold_value);
+
+						if (buffer_image.IsConstant() == false) // don't do any masking as nothing is above the threshold..
 						{
-							if (buffer_image.real_values[address] <= size_of_biggest_thing) size_image.real_values[address] = 1.0f;
-							else size_image.real_values[address] = 0.0f;
 
+							rle3d my_rle3d(buffer_image);
+							size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
+							my_rle3d.ConnectedSizeDecodeTo(size_image);
+
+							float size_of_biggest_thing = size_image.ReturnMaximumValue();
+							size_image.Binarise(size_of_biggest_thing - 1.0f);
+							size_image.DilateBinarizedMask(5.0f / pixel_size);
+							//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size_ori.mrc", current_class + 1);
+
+							for (address = 0; address < input_image.real_memory_allocated; address++)
+							{
+								if (size_image.real_values[address] == 0.0f) buffer_image.real_values[address] = 1.0f;
+								else buffer_image.real_values[address] = 0.0f;
+							}
+
+							// look for holes so we can fill them in
+
+							if (buffer_image.IsConstant() == false)
+							{
+								rle3d my_rle3d2(buffer_image);
+								my_rle3d2.ConnectedSizeDecodeTo(buffer_image);
+
+								for (address = 0; address < input_image.real_memory_allocated; address++)
+								{
+									if (buffer_image.real_values[address] <= size_of_biggest_thing) size_image.real_values[address] = 1.0f;
+									else size_image.real_values[address] = 0.0f;
+								}
+							}
+
+							size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
+
+
+							//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
+							input_image.SetMinimumValue(original_average_value);
+
+							for (address = 0; address < input_image.real_memory_allocated; address++)
+							{
+								if (size_image.real_values[address] <= 0.0f) input_image.real_values[address] = original_average_value;
+							//else
+							//input_image.real_values[address] += original_average_value;
+
+							//input_image.real_values[address] -= original_average_value;
+							}
+
+							input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
+		//				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
+							difference_image.CopyFrom(&input_image);
+							difference_image.SubtractImage(&copy_image);
+
+		//				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
+							difference_image.MultiplyByConstant(0.5f);
+							copy_image.AddImage(&difference_image);
+							input_image.CopyFrom(&copy_image);
 						}
 					}
-
-					size_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
-
-
-	//				if (first_particle == 1) size_image.QuickAndDirtyWriteSlice("/tmp/size.mrc", current_class + 1);
-					input_image.SetMinimumValue(original_average_value);
-
-					for (address = 0; address < input_image.real_memory_allocated; address++)
+					else
 					{
-						if (size_image.real_values[address] <= 0.0f) input_image.real_values[address] = original_average_value;
-						//else
-						//input_image.real_values[address] += original_average_value;
-
-						//input_image.real_values[address] -= original_average_value;
+						input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
+						input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
 					}
 
-					input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, original_average_value);
-	//				if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/pure_masked", current_class + 1);
-					difference_image.CopyFrom(&input_image);
-					difference_image.SubtractImage(&copy_image);
+					if (auto_centre == true)
+					{
+						input_image.CenterOfMass();
+						center_of_mass = input_image.CenterOfMass(0.0f, true);
+						input_image.RealSpaceIntegerShift(myroundint(center_of_mass.x), myroundint(center_of_mass.y), 0);
+					}
 
-	//				if (first_particle == 1) difference_image.QuickAndDirtyWriteSlice("/tmp/difference.mrc", current_class + 1);
-					difference_image.MultiplyByConstant(0.5f);
-					copy_image.AddImage(&difference_image);
-					input_image.CopyFrom(&copy_image);
+
+					input_image.ClipInto(&cropped_input_image);
+		//			if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/masked.mrc", current_class + 1);
+					cropped_input_image.ForwardFFT();
+					cropped_input_image.ClipInto(&input_classes_cache[j]);
+					j++;
 				}
-				else
-				{
-					input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
-					input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
-				}
 			}
-			else
-			{
-				input_image.SetMinimumValue(-0.3 * input_image.ReturnMaximumValue());
-				input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0f);
-			}
-
-			if (auto_centre == true)
-			{
-//				input_image.CenterOfMass();
-				center_of_mass = input_image.CenterOfMass(0.0f, true);
-				input_image.RealSpaceIntegerShift(myroundint(center_of_mass.x), myroundint(center_of_mass.y), 0);
-			}
-
-
-			input_image.ClipInto(&cropped_input_image);
-//			if (first_particle == 1) input_image.QuickAndDirtyWriteSlice("/tmp/masked.mrc", current_class + 1);
-			cropped_input_image.ForwardFFT();
-			cropped_input_image.ClipInto(&input_classes_cache[j]);
-			j++;
-		}
-	}
 	else
 	{
 		wxPrintf("\nGenerating %i starting class averages...\n\n", number_of_classes);
@@ -677,12 +673,27 @@ bool Refine2DApp::DoCalculation()
 			input_image.ReadSlice(&input_stack, input_parameters.position_in_stack);
 			input_image.ChangePixelSize(&input_image, pixel_size / input_parameters.pixel_size, 0.001f);
 			//if (exclude_blank_edges && input_image.ContainsBlankEdges(mask_radius / pixel_size)) {number_of_blank_edges++; continue;}
+
 			if (normalize_particles)
 			{
-				variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
-				average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-				if (invert_contrast) input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
-				else input_image.AddMultiplyConstant(- average, - 1.0 / sqrtf(variance));
+				//variance = input_image.ReturnVarianceOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
+				//average = input_image.ReturnAverageOfRealValues(input_image.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
+
+				mask_radius_for_noise = mask_radius / pixel_size;
+				if (2.0 * mask_radius_for_noise + mask_falloff / pixel_size > 0.95 * input_image.logical_x_dimension)
+				{
+					mask_radius_for_noise = 0.95 * input_image.logical_x_dimension / 2.0 - mask_falloff / 2.0 / pixel_size;
+				}
+
+				variance = input_image.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0, 0.0, 0.0, true);
+				average = input_image.ReturnAverageOfRealValues(mask_radius_for_noise, true);
+
+				if (variance == 0.0f) input_image.SetToConstant(0.0f);
+				else
+				{
+					if (invert_contrast) input_image.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+					else input_image.AddMultiplyConstant(- average, - 1.0 / sqrtf(variance));
+				}
 			}
 			else
 			if (! invert_contrast) input_image.MultiplyByConstant(- 1.0 );
@@ -734,7 +745,7 @@ bool Refine2DApp::DoCalculation()
 		return true;
 	}
 
-	if (normalize_particles)
+	if (normalize_particles) 
 	{
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
 		percentage = float(max_samples) / float(images_to_process);
@@ -807,16 +818,20 @@ bool Refine2DApp::DoCalculation()
 
 			if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
 			if (! file_read) continue;
+
 			mask_radius_for_noise = mask_radius / input_parameters.pixel_size;
 			if (2.0 * mask_radius_for_noise + mask_falloff / input_parameters.pixel_size > 0.95 * input_image_local.logical_x_dimension)
 			{
 				mask_radius_for_noise = 0.95 * input_image_local.logical_x_dimension / 2.0 - mask_falloff / 2.0 / input_parameters.pixel_size;
 			}
-			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
+			//if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
+
+			if (input_image_local.ContainsBlankEdges(mask_radius_for_noise) || input_image_local.ContainsRepeatedLineEdges()) {number_of_blank_edges_local++; continue;}
 //			if (input_image_local.logical_x_dimension != 128 || input_image_local.logical_y_dimension != 128 || pixel_size != 3.32 || input_parameters.pixel_size != 3.32) \
 //			wxPrintf("input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size = %i %i %g %g\n", input_image_local.logical_x_dimension, input_image_local.logical_x_dimension, pixel_size, input_parameters.pixel_size);
 			input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 			variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0f, 0.0f, 0.0f, true);
+
 			if (variance == 0.0f) continue;
 			input_image_local.MultiplyByConstant(1.0f / sqrtf(variance));
 			input_image_local.CosineMask(mask_radius_for_noise, mask_falloff / input_parameters.pixel_size, true);
@@ -865,7 +880,7 @@ bool Refine2DApp::DoCalculation()
 		fourier_size, input_particle, binning_factor, normalize_particles, low_resolution_contrast, input_classes_cache, sum_logp_particle) \
 	private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \
 		output_parameters, input_ctf, average, ctf_input_image_local, cropped_input_image_local, psi, i, rotation_angle, current_class, best_class, ssq_X, best_correlation_map, \
-		images_processed_local, padded_image, input_particle_local, sum_logp_particle_local, max_logp_particle, sum_logp_total_local, sum_snr_local)
+		images_processed_local, padded_image, input_particle_local, sum_logp_particle_local, max_logp_particle, sum_logp_total_local, sum_snr_local, mask_radius_for_noise)
 	{
 
 	image_counter = 0;
@@ -930,7 +945,7 @@ bool Refine2DApp::DoCalculation()
 
 		input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
 
-		if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size))
+		if (exclude_blank_edges && (input_image_local.ContainsBlankEdges(mask_radius / input_parameters.pixel_size) || input_image_local.ContainsRepeatedLineEdges()))
 		{
 			number_of_blank_edges_local++;
 			input_parameters.best_2d_class = - abs(input_parameters.best_2d_class);
@@ -979,9 +994,20 @@ bool Refine2DApp::DoCalculation()
 			input_image_local.CosineMask(std::max(pixel_size / high_resolution_limit, pixel_size / 7.0f + pixel_size / mask_falloff) - pixel_size / (2.0 * mask_falloff), pixel_size / mask_falloff);
 			input_image_local.BackwardFFT();
 			// Normalize background variance and average
-			variance = input_image_local.ReturnVarianceOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
-			average = input_image_local.ReturnAverageOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-			input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+		//	variance = input_image_local.ReturnVarianceOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
+			//average = input_image_local.ReturnAverageOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
+
+			mask_radius_for_noise = mask_radius / pixel_size;
+			if (2.0 * mask_radius_for_noise + mask_falloff / pixel_size > 0.95 * input_image_local.logical_x_dimension)
+			{
+				mask_radius_for_noise = 0.95 * input_image_local.logical_x_dimension / 2.0 - mask_falloff / 2.0 / pixel_size;
+			}
+
+			variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0, 0.0, 0.0, true);
+			average = input_image_local.ReturnAverageOfRealValues(mask_radius_for_noise, true);
+
+			if (variance == 0.0f) input_image_local.SetToConstant(0.0f);
+			else input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
 		// Multiply by binning_factor so variance after binning is close to 1.
@@ -1303,7 +1329,7 @@ void Refine2DApp::SendRefineResult(cisTEMParameterLine *current_params)
 		gui_result_params[2] = current_params->x_shift;
 		gui_result_params[3] = current_params->y_shift;
 		gui_result_params[4] = current_params->best_2d_class;
-		wxPrintf("best class = %i\n", current_params->best_2d_class);
+	//	wxPrintf("best class = %i\n", current_params->best_2d_class);
 		gui_result_params[5] = current_params->sigma;
 		gui_result_params[6] = current_params->logp;
 		gui_result_params[7] = current_params->amplitude_contrast;

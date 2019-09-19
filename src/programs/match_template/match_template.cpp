@@ -492,7 +492,7 @@ bool MatchTemplateApp::DoCalculation()
 	bool MUST_BE_FACTOR_OF_FOUR = true; // May be faster
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
-	float max_reduction_by_fraction_of_reference = 0.5f;
+	float max_reduction_by_fraction_of_reference = 0.000001f; // FIXME the cpu version is crashing when the image is reduced, but not the GPU
 	float max_increas_by_fraction_of_image = 0.10f;
 	int max_padding = 0; // To restrict histogram calculation
 
@@ -1109,8 +1109,6 @@ bool MatchTemplateApp::DoCalculation()
 	wxPrintf("\n\n\tTimings: Overall: %s\n",(wxDateTime::Now()-overall_start).Format());
 
 
-#ifdef USEGPU
-
 
 	// I don't like this solution. The whole padding operation really makes a mess of the code. Be smarter. FIXME
 	for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
@@ -1118,9 +1116,6 @@ bool MatchTemplateApp::DoCalculation()
 		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
 		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
 	}
-
-
-#endif
 
 
 
@@ -1359,22 +1354,22 @@ bool MatchTemplateApp::DoCalculation()
 
 		for (pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++)
 		{
-#ifdef USEGPU
+//#ifdef USEGPU
 			result[result_array_counter] = correlation_pixel_sum_image.real_values[pixel_counter];
-#else
-			result[result_array_counter] = correlation_pixel_sum[pixel_counter];
-#endif
+//#else
+//			result[result_array_counter] = correlation_pixel_sum[pixel_counter];
+//#endif
 			result_array_counter++;
 		}
 
 
 		for (pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++)
 		{
-#ifdef USEGPU
+//#ifdef USEGPU
 			result[result_array_counter] = correlation_pixel_sum_of_squares_image.real_values[pixel_counter];
-#else
-			result[result_array_counter] = correlation_pixel_sum_of_squares[pixel_counter];
-#endif
+//#else
+//			result[result_array_counter] = correlation_pixel_sum_of_squares[pixel_counter];
+//#endif
 			result_array_counter++;
 		}
 

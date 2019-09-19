@@ -12,16 +12,24 @@
 //
 //} Peaks;
 
+//typedef
+//struct __align__(8) _Peaks {
+//	// This should be 128 byte words, so good for read access?
+//	__half mip;
+//	__half psi;
+//	__half theta;
+//	__half phi;
+//
+//} Peaks;
 typedef
-struct __align__(8) _Peaks {
+struct __align__(16) _Peaks {
 	// This should be 128 byte words, so good for read access?
-	__half mip;
-	__half psi;
-	__half theta;
-	__half phi;
+	float mip;
+	float psi;
+	float theta;
+	float phi;
 
 } Peaks;
-
 
 typedef
 struct __align__(8)_Stats{
@@ -106,7 +114,7 @@ public:
 	Stats* my_stats;
 	Peaks* my_peaks;
 	void SumPixelWise(GpuImage &image);
-    void MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi);
+    void MipPixelWise(GpuImage &image, float psi, float theta, float phi);
 	void MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi);
 	void AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum);
 

@@ -232,13 +232,13 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			total_number_of_cccs_calculated++;
 
 
-			if ( ccc_counter % 20 == 0)
+			if ( ccc_counter % 10 == 0)
 			{
 				this->AccumulateSums(my_stats, d_sum1, d_sumSq1);
 			}
 
 
-			if ( ccc_counter % 400 == 0)
+			if ( ccc_counter % 100 == 0)
 			{
 
 				d_sum2.AddImage(d_sum1);
@@ -249,7 +249,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 			}
 
-			if ( ccc_counter % 160000 == 0)
+			if ( ccc_counter % 10000 == 0)
 			{
 
 				d_sum3.AddImage(d_sum2);
@@ -331,9 +331,9 @@ __global__ void SumPixelWiseKernel(const cufftReal*  correlation_output, Stats* 
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   __half c_psi, __half c_phi, __half c_theta);
+                                   float c_psi, float c_phi, float c_theta);
 
-void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
+void TemplateMatchingCore::MipPixelWise(GpuImage &image, float psi, float theta, float phi)
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
@@ -347,7 +347,7 @@ void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half thet
 
 
 __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   __half psi, __half theta, __half phi)
+                                   float psi, float theta, float phi)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -355,7 +355,8 @@ __global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* 
 
 	if ( x < numel  )
 	{
-	    __half val = __float2half_rn(correlation_output[x]);
+//	    __half val = __float2half_rn(correlation_output[x]);
+	    cufftReal val = correlation_output[x];
 
 		if ( __hgt( val , my_peaks[x].mip) )
 		{
@@ -391,10 +392,14 @@ __global__ void  MipToImageKernel(const Peaks* my_peaks, const int numel, cufftR
 
 	if ( x < numel  )
 	{
-		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
-		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
-		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
-		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
+//		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
+//		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
+//		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
+//		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
+		mip[x] = 	(cufftReal)(my_peaks[x].mip);
+		psi[x] = 	(cufftReal)(my_peaks[x].psi);
+		theta[x] =	(cufftReal)(my_peaks[x].theta);
+		phi[x] =	(cufftReal)(my_peaks[x].phi);
 
     }
 }

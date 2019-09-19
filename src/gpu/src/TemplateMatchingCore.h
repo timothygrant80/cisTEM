@@ -92,7 +92,7 @@ public:
 	int current_search_position;
 	int first_search_position;
 	int last_search_position;
-	int total_number_of_cccs_calculated;
+	long total_number_of_cccs_calculated;
 
 	Histogram histogram;
 

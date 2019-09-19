@@ -161,7 +161,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	checkCudaErrors(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	checkCudaErrors(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
 
-
 	int ccc_counter = 0;
 	int current_search_position;
 	float average_on_edge;

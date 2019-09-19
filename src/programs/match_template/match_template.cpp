@@ -52,8 +52,8 @@ MatchTemplateApp : public MyApp
 	// for master collation
 
 	ArrayOfAggregatedTemplateResults aggregated_results;
-	int original_input_image_x;
-	int original_input_image_y;
+	long original_input_image_x;
+	long original_input_image_y;
 	int remove_npix_from_edge = 0;
 
 	private:
@@ -454,7 +454,7 @@ bool MatchTemplateApp::DoCalculation()
 	input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString(), false);
 
 	// Convolution is only valid 1/2 particle radius in from the edge. Here use the larger 1/2 box size as it also includes (or should) delocalization of the particle beyond it's true envelope.
-	remove_npix_from_edge = std::max(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnYSize()) / 2 + 1;
+	remove_npix_from_edge = std::max(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnYSize());
 
 
 	Image input_image;
@@ -699,6 +699,7 @@ bool MatchTemplateApp::DoCalculation()
 		last_search_position = global_euler_search.number_of_search_positions - 1;
 	}
 
+	// TODO unroll these loops and multiply the product.
 	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
 	{
 		//loop over each rotation angle
@@ -753,8 +754,8 @@ bool MatchTemplateApp::DoCalculation()
 	int nGPUs = -1;
 	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
 	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 5 * nGPUs;}
-	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 3 * nGPUs;}
-	else {nThreads = 2 * nGPUs;}
+	else if (factorizable_x*factorizable_y < 4096 * 3072) {nThreads = 4 * nGPUs;}
+	else {nThreads =  3 * nGPUs;}
 
 	int minPos = first_search_position;
 	int maxPos = last_search_position;
@@ -925,7 +926,6 @@ bool MatchTemplateApp::DoCalculation()
 
 			if (is_running_locally == false)
 			{
-				actual_number_of_ccs_calculated++;
 				temp_float = current_correlation_position;
 				JobResult *temp_result = new JobResult;
 				temp_result->SetResult(1, &temp_float);
@@ -1186,8 +1186,20 @@ bool MatchTemplateApp::DoCalculation()
 
 
 		// calculate the expected threshold (from peter's paper)
+		const float CCG_NOISE_STDDEV = 1.0;
+		double temp_threshold;
+		double erf_input = 1.0 / (2.0 * (double)original_input_image_x * (double)original_input_image_y * (double)total_correlation_positions);
+#ifdef MKL
+		vdErfcInv(1, &erf_input, &temp_threshold);
+#else
+		cisTEM_erfcinv(erf_input);
+#endif
+		expected_threshold = sqrtf(2.0f)*(float)temp_threshold*CCG_NOISE_STDDEV;
 
-		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((original_input_image_x * original_input_image_y * double(total_correlation_positions))));
+//		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((original_input_image_x * original_input_image_y * double(total_correlation_positions))));
+
+
+
 
 		// write out images..
 
@@ -1618,7 +1630,19 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(aggregated_results[array_location].collated_data_array[0] * aggregated_results[array_location].collated_data_array[1] * aggregated_results[array_location].total_number_of_ccs);
 		}
 
-		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+		// calculate the expected threshold (from peter's paper)
+		const float CCG_NOISE_STDDEV = 1.0;
+		double temp_threshold = 0.0;
+		double erf_input = 1.0 / (2.0 * (double)result_array[5] * (double)result_array[6] * (double)aggregated_results[array_location].total_number_of_ccs);
+		wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
+#ifdef MKL
+		vdErfcInv(1, &erf_input, &temp_threshold);
+#else
+		cisTEM_erfcinv(erf_input);
+#endif
+		expected_threshold = sqrtf(2.0f)*(float)temp_threshold*CCG_NOISE_STDDEV;
+
+//		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
 
 		histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
 		histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");

@@ -59,6 +59,10 @@ noinst_HEADERS = core/asset_group.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communicator.h \
+                 core/json/json_defs.h \
+                 core/json/jsonval.h \
+                 core/json/jsonreader.h \
+                 core/json/jsonwriter.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -266,7 +270,10 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/local_resolution_estimator.cpp  \
                        core/cistem_parameters.cpp \
                        core/cistem_star_file_reader.cpp \
-                       core/socket_communicator.cpp
+                       core/socket_communicator.cpp \
+                       core/json/jsonval.cpp \
+                       core/json/jsonreader.cpp \
+                       core/json/jsonwriter.cpp
 
 
 if EXPERIMENTAL_AM

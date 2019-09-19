@@ -12,7 +12,8 @@ WarpToCistemApp : public MyApp
 	ImageAsset LoadImageFromWarp(wxString image_filename, unsigned long parent_asset_id, double parent_voltage, double parent_cs, bool parent_are_white);
 	ArrayOfParticlePositionAssets LoadParticlePositionsFromWarp(wxString star_filename, ImageAsset new_image_asset, int starting_id);
 	CTF LoadCTFFromWarp(wxXmlDocument warp_doc, float pixel_size, float voltage, float spherical_aberration, wxString wanted_avrot_filename);
-
+	RefinementPackage *LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_mass, double voltage, double spherical_aberration, double amplitude_contrast, double picking_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement);
+	ArrayofClassifications LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename);
 	void DoInteractiveUserInput();
 
 	wxString warp_directory;
@@ -22,6 +23,9 @@ WarpToCistemApp : public MyApp
 	bool do_import_images;
 	bool do_import_ctf_results;
 	bool do_import_particle_coordinates;
+	bool do_import_refinement_package;
+	wxString live_2d_directory;
+	bool do_import_classification_results;
 
 	Project new_project;
 	private:
@@ -39,6 +43,10 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	bool do_import_images = false;
 	bool do_import_ctf_results = false;
 	bool do_import_particle_coordinates = false;
+	bool do_import_refinement_package = false;
+	wxString live_2d_directory = "";
+	bool do_import_classification_results = false;
+	float particle_mass = 100.0;
 	UserInput *my_input = new UserInput("Warp to Cistem", 1.0);
 
 	warp_directory = my_input->GetFilenameFromUser("Input Warp Directory", "The folder in which Warp processed movies", "./Data", false);
@@ -48,16 +56,26 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	do_import_images = my_input -> GetYesNoFromUser("Import Images?", "Should we import aligned averaged images from WARP (using a different motion correction system than cisTEM)?", "Yes");
 	if (do_import_images) {
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
-		if (do_import_ctf_results) {
-			do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
-		} else do_import_particle_coordinates=false;
 	} else {
 		do_import_ctf_results=false;
-		do_import_particle_coordinates=false;
 	}
+	if (do_import_ctf_results) {
+		do_import_particle_coordinates = my_input -> GetYesNoFromUser("Import Particle Coordinates?", "Should we import coordinates of particles picked by WARP (using BoxNet)?", "Yes");
+	} else do_import_particle_coordinates=false;
+
+	if (do_import_particle_coordinates) {
+		do_import_refinement_package = my_input -> GetYesNoFromUser("Import Refinement Package from Live2D?", "Should we import the refinement package used by Live2D for classification?", "No");
+	} else do_import_refinement_package=false;
+
+	if (do_import_refinement_package) {
+		live_2d_directory = my_input -> GetFilenameFromUser("Input Live2D Directory", "The folder in which live2d output combined stacks and classification results.", "./Live2D", false);
+		particle_mass = my_input -> GetFloatFromUser("Approximate Particle Mass (kDa)", "The approximate molar mass of the boxes particles", "100.0", 0.0);
+		do_import_classification_results = my_input -> GetYesNoFromUser("Import Classification Results from Live2D?", "Should we import 2D Classification results from Live2D?", "No");
+	} else do_import_classification_results = false;
+
 	delete my_input;
 
-	my_current_job.ManualSetArguments("tttbfbb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates);
+	my_current_job.ManualSetArguments("tttbfbbbtfb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.ToUTF8().data(), particle_mass, do_import_classification_results);
 
 
 }
@@ -365,6 +383,204 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
 	return loaded_positions;
 }
 
+RefinementPackage *WarpToCistemApp::LoadRefinementPackageFromLive2D(wxString star_filename, wxString stack_filename, double pixel_size, double particle_weight, double voltage, double spherical_aberration, double amplitude_contrast, double particle_radius, Database& database, MovieAssetList& movie_list, Refinement& refinement) {
+	RefinementPackage *refinement_package;
+	RefinementPackageParticleInfo temp_particle_info;
+	int stack_x_size;
+	int stack_y_size;
+	int stack_number_of_images;
+	bool stack_is_ok = GetMRCDetails(stack_filename, stack_x_size, stack_y_size, stack_number_of_images);
+	if (stack_is_ok == false) SendErrorAndCrash(wxString::Format("Could not load the Stack file: %s\n", stack_filename));
+	MyDebugAssertTrue(stack_x_size == stack_y_size, "Particles are not square");
+	BasicStarFileReader input_star_file;
+	wxString star_error_text;
+	if (input_star_file.ReadFile(star_filename, &star_error_text) == false)
+	{
+		SendErrorAndCrash(wxString::Format("Error: Encountered the following error - aborting :-\n%s", star_error_text));
+	}
+	MyDebugAssertTrue(stack_number_of_images >= input_star_file.cached_parameters.GetCount(), "Number of Particles in star is larger than in stack");
+	refinement_package =  new RefinementPackage;
+	refinement.SizeAndFillWithEmpty(input_star_file.cached_parameters.GetCount(), 1);
+	refinement_package->asset_id = 1;
+	refinement_package->name = "Live2D Refinement Package";
+	refinement_package->number_of_classes = 1;
+	refinement_package->number_of_run_refinments = 0; // Adjust later when importing classification results.
+	refinement_package->stack_has_white_protein = true;
+	refinement_package->output_pixel_size = pixel_size;
+
+	refinement.number_of_classes = refinement_package->number_of_classes;
+	refinement.number_of_particles = input_star_file.cached_parameters.GetCount();
+	refinement.name = "Imported Parameters";
+	refinement.resolution_statistics_box_size = stack_x_size;
+	refinement.resolution_statistics_pixel_size = pixel_size;
+	refinement.refinement_package_asset_id = 1;
+
+	refinement_package->stack_box_size = stack_x_size;
+	refinement_package->stack_filename = stack_filename;
+	refinement_package->symmetry = "C1";
+	refinement_package->estimated_particle_weight_in_kda = particle_weight;
+	refinement_package->estimated_particle_size_in_angstroms = 2.0 * particle_radius;
+
+	refinement_package->refinement_ids.Add(1);
+	refinement_package->references_for_next_refinement.Add(-1);
+
+	refinement.refinement_id = 1;
+	refinement.resolution_statistics_are_generated = true;
+
+	temp_particle_info.spherical_aberration = spherical_aberration;
+	temp_particle_info.microscope_voltage = voltage;
+	temp_particle_info.pixel_size = pixel_size;
+	temp_particle_info.amplitude_contrast = amplitude_contrast;
+	temp_particle_info.x_pos = 0; // I am f
+	temp_particle_info.y_pos = 0; // This isn't by default read by star_reader
+	refinement.class_refinement_results[0].class_resolution_statistics.Init(temp_particle_info.pixel_size, refinement.resolution_statistics_box_size);
+	refinement.class_refinement_results[0].class_resolution_statistics.GenerateDefaultStatistics(refinement_package->estimated_particle_weight_in_kda);
+	// Loop over all particles
+	wxString movie_name = "";
+	int particle_coordinate_index_per_image = 0;
+	int parent_asset_id = 0;
+	ArrayOfParticlePositionAssets particle_assets_by_parent;
+	ParticlePositionAsset particle_asset;
+	ProgressBar *my_progress = new ProgressBar(input_star_file.cached_parameters.GetCount());
+	for (int particle_counter = 0; particle_counter < stack_number_of_images; particle_counter++)
+	{
+//		 Count number of particles in a given micrograph to associate back to relevant particle ID.
+//		 Micrograph ID = Image ID in this script always, so I can get away with querying movie_list instead of image_list to skip some filename wrangling.
+//		 This is all necessary because Warp's processing order is very different from cisTEM's import order (and is not consistent, depending on when symlinks are written).
+		if (movie_name != input_star_file.ReturnMicrographName(particle_counter)) {
+			movie_name = input_star_file.ReturnMicrographName(particle_counter);
+			particle_coordinate_index_per_image = 0;
+			parent_asset_id = movie_list.FindFile(movie_name, true, -1) + 1;
+			particle_assets_by_parent = database.ReturnArrayOfParticlePositionAssetsFromAssetsTable(parent_asset_id);
+		} else particle_coordinate_index_per_image += 1;
+		particle_asset = particle_assets_by_parent.Item(particle_coordinate_index_per_image);
+		temp_particle_info.parent_image_id = parent_asset_id;
+		temp_particle_info.original_particle_position_asset_id = particle_asset.asset_id;
+		temp_particle_info.x_pos = particle_asset.x_position;
+		temp_particle_info.y_pos = particle_asset.y_position;
+		temp_particle_info.position_in_stack = input_star_file.ReturnPositionInStack(particle_counter);
+		temp_particle_info.defocus_1 = input_star_file.ReturnDefocus1(particle_counter);
+		temp_particle_info.defocus_2 = input_star_file.ReturnDefocus2(particle_counter);
+		temp_particle_info.defocus_angle = input_star_file.ReturnDefocusAngle(particle_counter);
+		temp_particle_info.phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
+
+		refinement_package->contained_particles.Add(temp_particle_info);
+
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack = input_star_file.ReturnPositionInStack(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus1 = input_star_file.ReturnDefocus1(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus2 = input_star_file.ReturnDefocus2(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus_angle = input_star_file.ReturnDefocusAngle(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].logp = 0;
+
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].occupancy = 100.0;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].phi =  input_star_file.ReturnPhi(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].theta = input_star_file.ReturnTheta(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].psi = input_star_file.ReturnPsi(particle_counter);
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].xshift = -input_star_file.ReturnXShift(particle_counter) * pixel_size;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].yshift = -input_star_file.ReturnYShift(particle_counter) * pixel_size;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].score = 0.0;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active = 1;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma = 10.0;
+
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pixel_size = pixel_size;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv = voltage;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = spherical_aberration;
+		refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = amplitude_contrast;
+		my_progress->Update(particle_counter+1);
+	}
+	delete my_progress;
+	return refinement_package;
+}
+
+ArrayofClassifications WarpToCistemApp::LoadClassificationsFromLive2D(wxString live_2d_path, wxString latest_settings_filename) {
+	ArrayofClassifications classification_list;
+	wxJSONValue root;
+	wxJSONReader reader;
+	wxFileInputStream latest_settings(latest_settings_filename);
+	reader.Parse(latest_settings, &root);
+	wxJSONValue cycles = root["cycles"];
+	long particle_count;
+	long number;
+	long class_count;
+	double high_res_lim;
+	double mask_radius;
+	int cycle_count = cycles.Size();
+	int parent_id = -1;
+	int refinement_package_asset_id = 1;
+	float low_resolution_limit = 300.0; // Currently hardcoded in live2d
+	float angular_search_step = 15.0; // Currently hardcoded in live2d
+	float search_range = 49.5; // Currently hardcoded in live2d
+	float smoothing_factor = 1.0; // Currently hardcoded in live2d
+	bool include_blank_edges = true; // Currently hardcoded in live2d
+	bool auto_percent_used = true; // Currently hardcoded in live2d
+	// iterate over classifications
+	ProgressBar* my_progress = new ProgressBar(cycle_count);
+	for (int i=0; i<cycle_count; i++) {
+		Classification* classification = new Classification();
+		cisTEMParameters parameters;
+		wxJSONValue cycle = cycles[i];
+		cycle["particle_count"].AsString().ToLong(&particle_count);
+		classification->SizeAndFillWithEmpty(particle_count);
+		cycle["number"].AsString().ToLong(&number);
+		classification->classification_id = number + 1; // Start from 1, not 0.
+		classification->refinement_package_asset_id = refinement_package_asset_id;
+		classification->name = wxString::Format("Live2D Cycle #%ld", number);
+		classification->class_average_file = live_2d_path + cycle["name"].AsString() + ".mrc";
+		classification->classification_was_imported_or_generated = true;
+		classification->datetime_of_run = wxDateTime::Now();
+		classification->starting_classification_id = parent_id;
+		classification->number_of_particles = particle_count;
+		cycle["settings"]["class_number"].AsString().ToLong(&class_count);
+		classification->number_of_classes=class_count;
+		classification->low_resolution_limit = low_resolution_limit;
+		cycle["high_res_limit"].AsString().ToDouble(&high_res_lim);
+		classification->high_resolution_limit = high_res_lim;
+		cycle["settings"]["mask_radius"].AsString().ToDouble(&mask_radius);
+		classification->mask_radius = mask_radius;
+		classification->angular_search_step = angular_search_step;
+		classification->search_range_x = search_range;
+		classification->search_range_y = search_range;
+		classification->smoothing_factor = smoothing_factor;
+		classification->auto_percent_used = auto_percent_used;
+		classification->percent_used = 100; // This isn't getting reported in the json file... yet. I made the change, but it hasn't gone live.
+		// classification->percent_used = cycle["fraction_used"].AsDouble() * 100;
+
+		parent_id = classification->classification_id; // Live2d classes are linear - no branching allowed.
+
+		// Load in data from the class file and move it to an ArrayOfClassificationResults.
+		// This may eventually be worth moving into a class method for classification... I have to imagine this will be used elsewhere...
+		parameters.ReadFromcisTEMStarFile(live_2d_path + cycle["name"].AsString() + ".star");
+		MyDebugAssertTrue(particle_count == parameters.ReturnNumberofLines(), "Wrong number of particles in Star File");
+		for (int line_number=0; line_number<particle_count;line_number++) {
+			classification->classification_results[line_number].position_in_stack =  parameters.ReturnPositionInStack(line_number);
+			classification->classification_results[line_number].psi = parameters.ReturnPsi(line_number);
+			classification->classification_results[line_number].xshift = parameters.ReturnXShift(line_number);
+			classification->classification_results[line_number].yshift = parameters.ReturnYShift(line_number);
+			classification->classification_results[line_number].best_class = parameters.ReturnBest2DClass(line_number);
+			classification->classification_results[line_number].sigma = parameters.ReturnSigma(line_number);
+			classification->classification_results[line_number].logp = parameters.ReturnLogP(line_number);
+			classification->classification_results[line_number].defocus_1 = parameters.ReturnDefocus1(line_number);
+			classification->classification_results[line_number].defocus_2 = parameters.ReturnDefocus2(line_number);
+			classification->classification_results[line_number].defocus_angle = parameters.ReturnDefocusAngle(line_number);
+			classification->classification_results[line_number].phase_shift = parameters.ReturnPhaseShift(line_number);
+			classification->classification_results[line_number].beam_tilt_x = parameters.ReturnBeamTiltX(line_number);
+			classification->classification_results[line_number].beam_tilt_y = parameters.ReturnBeamTiltY(line_number);
+			classification->classification_results[line_number].image_shift_x = parameters.ReturnImageShiftX(line_number);
+			classification->classification_results[line_number].image_shift_y = parameters.ReturnImageShiftY(line_number);
+			classification->classification_results[line_number].pixel_size = parameters.ReturnPixelSize(line_number);
+			classification->classification_results[line_number].microscope_voltage_kv = parameters.ReturnMicroscopekV(line_number);
+			classification->classification_results[line_number].microscope_spherical_aberration_mm = parameters.ReturnMicroscopeCs(line_number);
+			classification->classification_results[line_number].amplitude_contrast = parameters.ReturnAmplitudeContrast(line_number);
+		}
+		my_progress->Update(i+1);
+		classification_list.Add(classification);
+	}
+	delete my_progress;
+	return classification_list;
+}
+
+
 bool WarpToCistemApp::DoCalculation()
 {
 	wxString warp_directory = my_current_job.arguments[0].ReturnStringArgument();
@@ -374,6 +590,10 @@ bool WarpToCistemApp::DoCalculation()
 	float wanted_binned_pixel_size = my_current_job.arguments[4].ReturnFloatArgument();
 	bool do_import_ctf_results = my_current_job.arguments[5].ReturnBoolArgument();
 	bool do_import_particle_coordinates = my_current_job.arguments[6].ReturnBoolArgument();
+	bool do_import_refinement_package = my_current_job.arguments[7].ReturnBoolArgument();
+	wxString live_2d_directory = my_current_job.arguments[8].ReturnStringArgument();
+	float particle_mass = my_current_job.arguments[9].ReturnFloatArgument();
+	bool do_import_classification_results = my_current_job.arguments[10].ReturnBoolArgument();
 
 	ProgressBar *my_progress;
 	long counter;
@@ -381,6 +601,8 @@ bool WarpToCistemApp::DoCalculation()
 	wxPrintf("\nGenerating New cisTEM Project...\n\n");
 
 	if (warp_directory.EndsWith("/") == false) warp_directory += "/";
+	if (live_2d_directory != "" && live_2d_directory.EndsWith("/") == false) live_2d_directory += "/";
+
 	if (cistem_parent_directory.EndsWith("/") == false) cistem_parent_directory += "/";
 	wxString wanted_folder_name = cistem_parent_directory + project_name;
 	if (wxFileName::Exists(wanted_folder_name))
@@ -404,7 +626,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxString warp_settings_file = warp_directory + "previous.settings";
 	wxXmlDocument settings_doc;
 	if (wxFileName::Exists(warp_settings_file) && settings_doc.Load(warp_settings_file) && settings_doc.IsOk()) {
-		 MyDebugAssertTrue(GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions), "Failed to parse settings file)");
+		 GetSettingsFromWarp(settings_doc, boxnet_name, warp_picking_radius,warp_picking_threshold, warp_minimum_distance_from_exclusions);
 	} else SendErrorAndCrash("Couldn't load warp settings");
 
 	wxArrayString all_files;
@@ -475,10 +697,9 @@ bool WarpToCistemApp::DoCalculation()
 	delete my_progress;
 	wxPrintf("\nSuccessfully imported files\n\n");
 
-	new_project.database.Begin();
 
 	wxPrintf("\nWriting movies to database\n\n");
-
+	new_project.database.Begin();
 	my_progress = new ProgressBar(movie_list.number_of_assets);
 	new_project.database.BeginMovieAssetInsert();
 	for (counter = 0; counter < movie_list.number_of_assets; counter++){
@@ -487,6 +708,7 @@ bool WarpToCistemApp::DoCalculation()
 		my_progress->Update(counter+1);
 	}
 	new_project.database.EndMovieAssetInsert();
+	new_project.database.Commit();
 	delete my_progress;
 
 	wxPrintf("\nSuccessfully imported movies\n\n");
@@ -494,6 +716,7 @@ bool WarpToCistemApp::DoCalculation()
 	if (do_import_images) {
 		wxPrintf("\nWriting motion-corrected images to database and writing scaled images and spectra.\n\n");
 		wxDateTime now = wxDateTime::Now();
+		new_project.database.Begin();
 		my_progress = new ProgressBar(image_list.number_of_assets);
 		new_project.database.BeginImageAssetInsert();
 		for (counter = 0; counter < image_list.number_of_assets; counter++){
@@ -506,7 +729,7 @@ bool WarpToCistemApp::DoCalculation()
 
 		wxPrintf("\nDone with database insert of images\n\n");
 
-		wxPrintf("\nPopulating Image Alignment Jobs in Database\n\n");
+		wxPrintf("\nInserting Image Alignment Jobs into Database\n\n");
 		my_progress = new ProgressBar(image_list.number_of_assets);
 		new_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM" );
 		for (counter = 0; counter < image_list.number_of_assets; counter++){
@@ -536,7 +759,6 @@ bool WarpToCistemApp::DoCalculation()
 			my_progress->Update(counter + 1);
 		}
 		new_project.database.EndBatchInsert();
-
 		delete my_progress;
 
 		my_progress = new ProgressBar(image_list.number_of_assets);
@@ -554,144 +776,197 @@ bool WarpToCistemApp::DoCalculation()
 			new_project.database.EndBatchInsert();
 			my_progress->Update(counter+1);
 		}
-		wxPrintf("\nDone with Image Alignment Jobs\n\n");
-
-		if (do_import_ctf_results) {
-			wxPrintf("\nInserting CTF results in database\n\n");
-			wxDateTime now = wxDateTime::Now();
-			my_progress = new ProgressBar(image_list.number_of_assets);
-			new_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 32,
-												  "CTF_ESTIMATION_ID",
-												  "CTF_ESTIMATION_JOB_ID",
-												  "DATETIME_OF_RUN",
-												  "IMAGE_ASSET_ID",
-												  "ESTIMATED_ON_MOVIE_FRAMES",
-												  "VOLTAGE",
-												  "SPHERICAL_ABERRATION",
-												  "PIXEL_SIZE",
-												  "AMPLITUDE_CONTRAST",
-												  "BOX_SIZE",
-												  "MIN_RESOLUTION",
-												  "MAX_RESOLUTION",
-												  "MIN_DEFOCUS",
-												  "MAX_DEFOCUS",
-												  "DEFOCUS_STEP",
-												  "RESTRAIN_ASTIGMATISM",
-												  "TOLERATED_ASTIGMATISM",
-												  "FIND_ADDITIONAL_PHASE_SHIFT",
-												  "MIN_PHASE_SHIFT",
-												  "MAX_PHASE_SHIFT",
-												  "PHASE_SHIFT_STEP",
-												  "DEFOCUS1",
-												  "DEFOCUS2",
-												  "DEFOCUS_ANGLE",
-												  "ADDITIONAL_PHASE_SHIFT",
-												  "SCORE",
-												  "DETECTED_RING_RESOLUTION",
-												  "DETECTED_ALIAS_RESOLUTION",
-												  "OUTPUT_DIAGNOSTIC_FILE",
-												  "NUMBER_OF_FRAMES_AVERAGED",
-												  "LARGE_ASTIGMATISM_EXPECTED",
-												  "ICINESS");
-			for	(counter = 0; counter < image_list.number_of_assets; counter++) {
-				new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
-				CTF new_ctf = ctf_list.at(counter);
-				wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name); // This logic is repeated before - its the only case of straight repeating code I've resorted to, but calculating it twice is easier than storing the data in an object somewhere for multiple iterations.
-				new_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiir",
-													new_image_asset.ctf_estimation_id, // Image asset join column reference
-													1, // CTF Job id
-													(long int) now.GetAsDOS(), // datetime
-													new_image_asset.asset_id, // Image asset parent
-													1, // Estimated on movie frames - I am not scraping this from Warp because it doesn't fit in the CTF object easily, and doesn't add enough to be worth adding to the object definition.
-													new_image_asset.microscope_voltage, // I could get this from the wavelength of the CTF object, but it doesn't seem necessary.
-													new_ctf.GetSphericalAberration() /10000000.0*new_image_asset.pixel_size, // convert back to mm
-													new_image_asset.pixel_size,
-													new_ctf.GetAmplitudeContrast(),
-													512, // box size - I think this is the box size of the spectrum and am filling on that assumption.
-													new_image_asset.pixel_size/new_ctf.GetLowestFrequencyForFitting(), // Invert the frequency
-													new_image_asset.pixel_size/new_ctf.GetHighestFrequencyForFitting(), // Invert the frequency
-													10000*0.0, // Min defocus - I am not scraping this from warp (same as ESTIMATED_ON_MOVIE_FRAMES) but these are the defaults as of 190815
-													10000*2.0, // Max defocus - I am not scraping this from warp (same as above).
-													-1, // Defocus Step is not reported by warp anywhere... this is negative for safety.
-													0, // Restrain Astigmatism is not selectable by warp.
-													-1, //Tolerated Astigmatism is not selectable by warp.
-													0, // Not scraping find additional phase shift - See above, I don't want to add all this to CTF unless I have to.
-													0.0, // Min Phase
-													0.0, // Max Phase
-													0.0, // Phase shift step
-													new_ctf.GetDefocus1()*new_image_asset.pixel_size,
-													new_ctf.GetDefocus2()*new_image_asset.pixel_size,
-													new_ctf.GetAstigmatismAzimuth()*180/PI, // Convert back to degrees
-													new_ctf.GetAdditionalPhaseShift(),
-													-1.0, // Score
-													new_image_asset.pixel_size/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
-													0.0, // Alias Resolution
-													wanted_ctf_filename.ToStdString().c_str(),
-													-1, // Number of frames averaged
-													0, // Large Astigmatism Expected is not used by warp
-													-1.0); // Iciness is not calculated by warp
-
-				my_progress->Update(counter+1);
-			}
-			delete my_progress;
-			new_project.database.EndBatchInsert();
-			wxPrintf("\nDone with CTF database insertions");
-		}
-
-		if (do_import_particle_coordinates) {
-			wxPrintf("\nInserting Particle Coordinates into database\n\n");
- 			new_project.database.CreateParticlePickingResultsTable(1); // hardcode 1
-			new_project.database.AddArrayOfParticlePositionAssetsToResultsTable(1,&particle_list);
-			new_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&particle_list);
-			wxPrintf("\nDone with Particle Coordinates insert\n\n");
-
-			wxPrintf("\nInserting Particle Picking Job Metadata into database\n\n");
-			new_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
-												"PICKING_ID",
-												"PICKING_JOB_ID",
-												"DATETIME_OF_RUN",
-												"PARENT_IMAGE_ASSET_ID",
-												"PICKING_ALGORITHM",
-												"CHARACTERISTIC_RADIUS",
-												"MAXIMUM_RADIUS",
-												"THRESHOLD_PEAK_HEIGHT",
-												"HIGHEST_RESOLUTION_USED_IN_PICKING",
-												"MIN_DIST_FROM_EDGES",
-												"AVOID_HIGH_VARIANCE",
-												"AVOID_HIGH_LOW_MEAN",
-												"NUM_BACKGROUND_BOXES",
-												"MANUAL_EDIT");
-			wxDateTime now = wxDateTime::Now();
-			my_progress = new ProgressBar(image_list.number_of_assets);
-			for (counter = 0; counter < image_list.number_of_assets; counter++) {
-				new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
-				new_project.database.AddToBatchInsert("iiliirrrriiiii", 		new_image_asset.asset_id,
-													1,
-													(long int) now.GetAsDOS(),
-													new_image_asset.asset_id,
-													-1, // Algorithm
-													warp_picking_radius,
-													warp_picking_radius, // Only one radius is used by warp
-													warp_picking_threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
-													-1, // No resolution Filter
-													warp_minimum_distance_from_exclusions,
-													0,
-													0,
-													-1, // Background boxes is nonsense here.
-													0);
-				my_progress->Update(counter+1);
-			}
-			new_project.database.EndBatchInsert();
-			delete my_progress;
-			wxPrintf("\nDone with Particle Coordinate Metadata insert\n\n");
-		}
-
-
-
+		delete my_progress;
 		new_project.database.Commit();
+		wxPrintf("\nDone with Image Alignment Jobs\n\n");
+	}
 
-		wxPrintf("\nDone with database operations\n\n");
+	if (do_import_ctf_results) {
+		wxPrintf("\nInserting CTF results in database\n\n");
+		wxDateTime now = wxDateTime::Now();
+		new_project.database.Begin();
+		my_progress = new ProgressBar(image_list.number_of_assets);
+		new_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 32,
+											  "CTF_ESTIMATION_ID",
+											  "CTF_ESTIMATION_JOB_ID",
+											  "DATETIME_OF_RUN",
+											  "IMAGE_ASSET_ID",
+											  "ESTIMATED_ON_MOVIE_FRAMES",
+											  "VOLTAGE",
+											  "SPHERICAL_ABERRATION",
+											  "PIXEL_SIZE",
+											  "AMPLITUDE_CONTRAST",
+											  "BOX_SIZE",
+											  "MIN_RESOLUTION",
+											  "MAX_RESOLUTION",
+											  "MIN_DEFOCUS",
+											  "MAX_DEFOCUS",
+											  "DEFOCUS_STEP",
+											  "RESTRAIN_ASTIGMATISM",
+											  "TOLERATED_ASTIGMATISM",
+											  "FIND_ADDITIONAL_PHASE_SHIFT",
+											  "MIN_PHASE_SHIFT",
+											  "MAX_PHASE_SHIFT",
+											  "PHASE_SHIFT_STEP",
+											  "DEFOCUS1",
+											  "DEFOCUS2",
+											  "DEFOCUS_ANGLE",
+											  "ADDITIONAL_PHASE_SHIFT",
+											  "SCORE",
+											  "DETECTED_RING_RESOLUTION",
+											  "DETECTED_ALIAS_RESOLUTION",
+											  "OUTPUT_DIAGNOSTIC_FILE",
+											  "NUMBER_OF_FRAMES_AVERAGED",
+											  "LARGE_ASTIGMATISM_EXPECTED",
+											  "ICINESS");
+		for	(counter = 0; counter < image_list.number_of_assets; counter++) {
+			new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
+			CTF new_ctf = ctf_list.at(counter);
+			wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name); // This logic is repeated before - its the only case of straight repeating code I've resorted to, but calculating it twice is easier than storing the data in an object somewhere for multiple iterations.
+			new_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiir",
+												new_image_asset.ctf_estimation_id, // Image asset join column reference
+												1, // CTF Job id
+												(long int) now.GetAsDOS(), // datetime
+												new_image_asset.asset_id, // Image asset parent
+												1, // Estimated on movie frames - I am not scraping this from Warp because it doesn't fit in the CTF object easily, and doesn't add enough to be worth adding to the object definition.
+												new_image_asset.microscope_voltage, // I could get this from the wavelength of the CTF object, but it doesn't seem necessary.
+												new_ctf.GetSphericalAberration() /10000000.0*new_image_asset.pixel_size, // convert back to mm
+												new_image_asset.pixel_size,
+												new_ctf.GetAmplitudeContrast(),
+												512, // box size - I think this is the box size of the spectrum and am filling on that assumption.
+												new_image_asset.pixel_size/new_ctf.GetLowestFrequencyForFitting(), // Invert the frequency
+												new_image_asset.pixel_size/new_ctf.GetHighestFrequencyForFitting(), // Invert the frequency
+												10000*0.0, // Min defocus - I am not scraping this from warp (same as ESTIMATED_ON_MOVIE_FRAMES) but these are the defaults as of 190815
+												10000*2.0, // Max defocus - I am not scraping this from warp (same as above).
+												-1, // Defocus Step is not reported by warp anywhere... this is negative for safety.
+												0, // Restrain Astigmatism is not selectable by warp.
+												-1, //Tolerated Astigmatism is not selectable by warp.
+												0, // Not scraping find additional phase shift - See above, I don't want to add all this to CTF unless I have to.
+												0.0, // Min Phase
+												0.0, // Max Phase
+												0.0, // Phase shift step
+												new_ctf.GetDefocus1()*new_image_asset.pixel_size,
+												new_ctf.GetDefocus2()*new_image_asset.pixel_size,
+												new_ctf.GetAstigmatismAzimuth()*180/PI, // Convert back to degrees
+												new_ctf.GetAdditionalPhaseShift(),
+												-1.0, // Score
+												new_image_asset.pixel_size/new_ctf.GetHighestFrequencyWithGoodFit(), //Resolution of fit.
+												0.0, // Alias Resolution
+												wanted_ctf_filename.ToStdString().c_str(),
+												-1, // Number of frames averaged
+												0, // Large Astigmatism Expected is not used by warp
+												-1.0); // Iciness is not calculated by warp
 
+			my_progress->Update(counter+1);
+		}
+		delete my_progress;
+		new_project.database.EndBatchInsert();
+		new_project.database.Commit();
+		wxPrintf("\nDone with CTF database insertions");
+	}
+
+	if (do_import_particle_coordinates) {
+		wxPrintf("\nInserting Particle Coordinates into database\n\n");
+		new_project.database.Begin();
+		new_project.database.CreateParticlePickingResultsTable(1); // hardcode 1
+		new_project.database.AddArrayOfParticlePositionAssetsToResultsTable(1,&particle_list);
+		new_project.database.AddArrayOfParticlePositionAssetsToAssetsTable(&particle_list);
+		wxPrintf("\nDone with Particle Coordinates insert\n\n");
+
+		wxPrintf("\nInserting Particle Picking Job Metadata into database\n\n");
+		new_project.database.BeginBatchInsert("PARTICLE_PICKING_LIST",14,
+											"PICKING_ID",
+											"PICKING_JOB_ID",
+											"DATETIME_OF_RUN",
+											"PARENT_IMAGE_ASSET_ID",
+											"PICKING_ALGORITHM",
+											"CHARACTERISTIC_RADIUS",
+											"MAXIMUM_RADIUS",
+											"THRESHOLD_PEAK_HEIGHT",
+											"HIGHEST_RESOLUTION_USED_IN_PICKING",
+											"MIN_DIST_FROM_EDGES",
+											"AVOID_HIGH_VARIANCE",
+											"AVOID_HIGH_LOW_MEAN",
+											"NUM_BACKGROUND_BOXES",
+											"MANUAL_EDIT");
+		wxDateTime now = wxDateTime::Now();
+		my_progress = new ProgressBar(image_list.number_of_assets);
+		for (counter = 0; counter < image_list.number_of_assets; counter++) {
+			new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
+			new_project.database.AddToBatchInsert("iiliirrrriiiii", 		new_image_asset.asset_id,
+												1,
+												(long int) now.GetAsDOS(),
+												new_image_asset.asset_id,
+												-1, // Algorithm
+												warp_picking_radius,
+												warp_picking_radius, // Only one radius is used by warp
+												warp_picking_threshold, // This is actually a FOM threshold, not peak height, but its roughly parallel
+												-1, // No resolution Filter
+												warp_minimum_distance_from_exclusions,
+												0,
+												0,
+												-1, // Background boxes is nonsense here.
+												0);
+			my_progress->Update(counter+1);
+		}
+		new_project.database.EndBatchInsert();
+		delete my_progress;
+		new_project.database.Commit();
+		wxPrintf("\nDone with Particle Coordinate Metadata insert\n\n");
+	}
+
+
+
+
+
+	wxPrintf("\nDone with database operations for Warp import\n\n");
+
+	if (do_import_refinement_package) {
+		wxPrintf("\nImporting Refinement Package from Live2D\n\n");
+		double pixel_size = new_image_asset.pixel_size;
+		double voltage = new_image_asset.microscope_voltage;
+		double spherical_aberration = new_image_asset.spherical_aberration;
+		double amplitude_contrast = ctf_list.at(0).GetAmplitudeContrast();
+		wxString star_filename = warp_directory + "allparticles_" + boxnet_name + ".star";
+		wxString stack_filename = live_2d_directory + "combined_stack.mrcs";
+		Refinement refinement;
+		RefinementPackage *refinement_package = LoadRefinementPackageFromLive2D(star_filename, stack_filename, pixel_size, particle_mass, voltage, spherical_aberration, amplitude_contrast, warp_picking_radius, new_project.database, movie_list, refinement);
+		new_project.database.Begin();
+		wxPrintf("\nRefinement Package Loading Complete\nInserting Into Database\n\n");
+		new_project.database.AddRefinementPackageAsset(refinement_package);
+		new_project.database.AddRefinement(&refinement);
+		ArrayofAngularDistributionHistograms all_histograms;
+		all_histograms = refinement.ReturnAngularDistributions(refinement_package->symmetry);
+		for (int class_counter = 0; class_counter < refinement.number_of_classes; class_counter++)
+		{
+			new_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], refinement.refinement_id, class_counter + 1);
+		}
+		new_project.database.Commit();
+		wxPrintf("\nDone Inserting Refinement Package\n\n");
+	}
+
+
+	if (do_import_classification_results) {
+		wxPrintf("\nImporting Classification Results from Live2D\n\n");
+		wxString latest_settings_filename = live_2d_directory + "latest_run.json";
+		ArrayofClassifications classification_list = LoadClassificationsFromLive2D(live_2d_directory, latest_settings_filename);
+		Classification* classification;
+		wxPrintf("\nDone Importing Classification Results\nInserting Into Database\n\n");
+		new_project.database.Begin();
+		my_progress = new ProgressBar(classification_list.GetCount());
+		for (counter = 0; counter < classification_list.GetCount(); counter++) {
+			classification = & classification_list.Item(counter);
+			new_project.database.AddClassification(classification);
+			long refinement_package_id = 1; // hardcoded above.
+			long classification_id = classification->classification_id;
+			new_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_CLASSIFICATIONS_LIST_%li (CLASSIFICATION_NUMBER, CLASSIFICATION_ID) VALUES (%li, %li);", refinement_package_id, classification_id,  classification_id));
+			my_progress->Update(counter+1);
+		}
+		delete my_progress;
+		new_project.database.Commit();
+		wxPrintf("\nDone Inserting Classification Results\n\n");
+	}
+	if (do_import_images) {
 		wxPrintf("\nPreparing scaled images and spectra\n\n");
 		my_progress = new ProgressBar(image_list.number_of_assets);
 		Image large_image;
@@ -739,14 +1014,14 @@ bool WarpToCistemApp::DoCalculation()
 
 			//Scaled Image - borrowed the logic heavily from Unblur
 			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-//			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
-//			png_image = wxImage(current_scaled_filename);
-//			png_data = png_image.GetData();
-//			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
-//			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++) {
-//				buffer_image.real_values[output_address] = (float)(png_data[output_address*3]);
-//			}
-//			buffer_image.AddFFTWPadding();
+	//			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
+	//			png_image = wxImage(current_scaled_filename);
+	//			png_data = png_image.GetData();
+	//			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
+	//			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++) {
+	//				buffer_image.real_values[output_address] = (float)(png_data[output_address*3]);
+	//			}
+	//			buffer_image.AddFFTWPadding();
 			int largest_dimension =  std::max(new_image_asset.x_size, new_image_asset.y_size);
 			float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
 			if (scale_factor > 1) scale_factor=1.0;

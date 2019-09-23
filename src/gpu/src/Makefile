@@ -17,7 +17,7 @@ $(info $$OBJECTS is [${OBJECTS}])
 
 
 # Forces stream synchronization after all kernels and asynchronous API calls (where wrapped) for proper debugging/ timing.
-#DEFINES += -DHEAVY_ERROR_CHECKING=true        
+DEFINES += -DHEAVY_ERROR_CHECKING=true        
 
 
 NVCCFLAGS += --default-stream per-thread -m64 

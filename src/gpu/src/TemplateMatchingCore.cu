@@ -152,7 +152,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 	// Either do not delete the single precision, or add in a copy here so that each loop over defocus vals
 	// have a copy to work with. Otherwise this will not exist on the second loop
-	d_input_image.ConvertToHalfPrecision(false);
+//	d_input_image.ConvertToHalfPrecision(false);
 
 	checkCudaErrors(cudaMalloc((void **)&my_peaks, sizeof(Peaks)*d_input_image.real_memory_allocated));
 	checkCudaErrors(cudaMalloc((void **)&my_stats, sizeof(Stats)*d_input_image.real_memory_allocated));
@@ -208,7 +208,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 			d_padded_reference.ForwardFFT(false);
 			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
+//			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
+			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu, false);
 
 
 			if (DO_HISTOGRAM)
@@ -222,8 +223,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			}
 
 
-			this->MipPixelWise(d_padded_reference, __float2half(current_psi) , __float2half(global_euler_search.list_of_search_parameters[current_search_position][1]),
-																			 	 __float2half(global_euler_search.list_of_search_parameters[current_search_position][0]));
+			this->MipPixelWise(d_padded_reference, float(current_psi) , float(global_euler_search.list_of_search_parameters[current_search_position][1]),
+																			 	 float(global_euler_search.list_of_search_parameters[current_search_position][0]));
 			this->SumPixelWise(d_padded_reference);
 
 

@@ -545,11 +545,10 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
 //	// Temp override for profiling:
-//	factorizable_x = 6144;
-//	factorizable_y = 6144;
+//	factorizable_x = 2048;
+//	factorizable_y = 2048;
 
 	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
-
 
 //	factorizable_x = original_input_image_x;
 //	factorizable_y = original_input_image_y;

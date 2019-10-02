@@ -990,7 +990,13 @@ void AutoRefinementManager::BeginRefinementCycle()
 		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size != active_refinement_package->stack_box_size ||
 		fabsf(volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
 	{
-		my_parent->WriteErrorText("Error: The reference volume has different dimensions / pixel size from the input stack.  This will currently not work.");
+		my_parent->WriteErrorText(wxString::Format("Error: The reference volume (%i, %i, %i; psize: %f) has different dimensions / pixel size from the input stack (%i; psize: %f).  This will currently not work.",
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->x_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->y_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size,
+													active_refinement_package->stack_box_size,
+													input_refinement->resolution_statistics_pixel_size));
 	}
 
 	for (class_counter = 0; class_counter < number_of_classes; class_counter++)
@@ -1073,7 +1079,7 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].should_auto_mask = active_should_auto_mask;
 		output_refinement->class_refinement_results[class_counter].should_refine_input_params = true;
 		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = active_should_mask;
-		output_refinement->class_refinement_results[class_counter].mask_asset_id = -1;
+		output_refinement->class_refinement_results[class_counter].mask_asset_id = active_mask_asset_id;
 		output_refinement->class_refinement_results[class_counter].mask_edge_width = 0.0f;
 		output_refinement->class_refinement_results[class_counter].outside_mask_weight = 0.0f;
 		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = false;

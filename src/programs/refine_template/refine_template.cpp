@@ -600,7 +600,7 @@ bool RefineTemplateApp::DoCalculation()
 
 		number_of_peaks_found++;
 
-		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size =  %6i, %6i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, myroundint(current_peak.x), myroundint(current_peak.y), current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size =  %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
 	}
 
 	if (defocus_refine_step <= 0.0)
@@ -811,7 +811,7 @@ bool RefineTemplateApp::DoCalculation()
 //								best_phi.real_values[current_address] = current_phi + phi_i * angular_step;
 								best_defocus_local.real_values[best_address] = current_defocus + defocus_is * defocus_step;
 //								best_pixel_size_local.real_values[best_address] = current_pixel_size;
-								if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %4i, %4i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, myroundint(best_peak.x), myroundint(best_peak.y), \
+								if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size, \
 										best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address], \
 										best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address], \
 										best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
@@ -887,7 +887,7 @@ bool RefineTemplateApp::DoCalculation()
 															best_phi_local.real_values[best_address] = current_phi + phi_i * angular_step;
 															best_defocus_local.real_values[best_address] = current_defocus + defocus_i * defocus_refine_step;
 															best_pixel_size_local.real_values[best_address] = current_pixel_size;
-															if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %4i, %4i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, myroundint(best_peak.x), myroundint(best_peak.y), \
+															if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size, \
 																	best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address], \
 																	best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address], \
 																	best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
@@ -945,7 +945,7 @@ bool RefineTemplateApp::DoCalculation()
 								temp_float = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
 	//							if (max_threads == 1) wxPrintf("Value for dpsi, dtheta, dphi, dpixel size = %f, %f, %f, %f : %f\n", psi_i * in_plane_angular_step, theta_i * angular_step, phi_i * angular_step, size_is * pixel_size_refine_step, temp_float);
 								best_pixel_size_local.real_values[best_address] = current_pixel_size + size_is * pixel_size_refine_step;
-								if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %4i, %4i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, myroundint(best_peak.x), myroundint(best_peak.y), \
+								if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size, \
 										best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address], \
 										best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address], \
 										best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
@@ -1044,7 +1044,7 @@ bool RefineTemplateApp::DoCalculation()
 															best_phi_local.real_values[best_address] = current_phi + phi_i * angular_step;
 															best_defocus_local.real_values[best_address] = current_defocus;
 															best_pixel_size_local.real_values[best_address] = current_pixel_size + size_i * pixel_size_refine_step;
-															if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %4i, %4i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, myroundint(best_peak.x), myroundint(best_peak.y), \
+															if (max_threads == 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size, \
 																	best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address], \
 																	best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address], \
 																	best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
@@ -1073,7 +1073,7 @@ bool RefineTemplateApp::DoCalculation()
 		best_scaled_mip_local.real_values[best_address] = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
 		best_mip_local.real_values[best_address] = score_adjustment * best_score * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
 //		if (max_threads > 1) wxPrintf("Peak %i: in = %f, out = %f\n", peak_number + 1, scaled_mip_image.real_values[best_address], best_scaled_mip_local.real_values[best_address]);
-		if (max_threads > 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %4i, %4i, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | peak in = %10.6f, peak out = %10.6f\n", peak_number + 1,  myroundint(best_peak.x), myroundint(best_peak.y), \
+		if (max_threads > 1) wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | peak in = %10.6f, peak out = %10.6f\n", peak_number + 1,  best_peak.x * pixel_size, best_peak.y * pixel_size, \
 				best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address], \
 				best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address], \
 				best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], starting_score, best_scaled_mip_local.real_values[best_address]);

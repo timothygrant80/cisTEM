@@ -278,7 +278,7 @@ bool MakeTemplateResult::DoCalculation()
 			coordinates[4] = current_peak.y * pixel_size;
 //			coordinates[5] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
 //			coordinates[5] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
-			coordinates[5] = - current_defocus;
+			coordinates[5] = current_defocus;
 			coordinates[6] = current_pixel_size;
 			coordinates[7] = current_peak.value;
 			coordinate_file.WriteLine(coordinates);
@@ -292,12 +292,12 @@ bool MakeTemplateResult::DoCalculation()
 			current_phi = coordinates[2];
 			current_peak.x = coordinates[3] / pixel_size;
 			current_peak.y = coordinates[4] / pixel_size;
-			current_defocus = - coordinates[5];
+			current_defocus = coordinates[5];
 			current_pixel_size = coordinates[6];
 			current_peak.value = coordinates[7];
 		}
 
-		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
 
 			// ok get a projection
 

@@ -159,13 +159,13 @@ bool MakeTemplateResult::DoCalculation()
 	long text_file_access_type;
 	int i,j;
 
-	float coordinates[7];
+	float coordinates[8];
 	if (read_coordinates) text_file_access_type = OPEN_TO_READ;
 	else text_file_access_type = OPEN_TO_WRITE;
-	NumericTextFile coordinate_file(xyz_coords_filename, text_file_access_type, 7);
+	NumericTextFile coordinate_file(xyz_coords_filename, text_file_access_type, 8);
 	if (! read_coordinates)
 	{
-		coordinate_file.WriteCommentLine("         Psi          Theta            Phi              X              Y              Z           Peak");
+		coordinate_file.WriteCommentLine("         Psi          Theta            Phi              X              Y              Z      PixelSize           Peak");
 
 		mip_image.QuickAndDirtyReadSlice(input_mip_filename.ToStdString(), result_number);
 		psi_image.QuickAndDirtyReadSlice(input_best_psi_filename.ToStdString(), result_number);
@@ -277,8 +277,10 @@ bool MakeTemplateResult::DoCalculation()
 			coordinates[3] = current_peak.x * pixel_size;
 			coordinates[4] = current_peak.y * pixel_size;
 //			coordinates[5] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
-			coordinates[5] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
-			coordinates[6] = current_peak.value;
+//			coordinates[5] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
+			coordinates[5] = - current_defocus;
+			coordinates[6] = current_pixel_size;
+			coordinates[7] = current_peak.value;
 			coordinate_file.WriteLine(coordinates);
 		}
 		else
@@ -290,8 +292,9 @@ bool MakeTemplateResult::DoCalculation()
 			current_phi = coordinates[2];
 			current_peak.x = coordinates[3] / pixel_size;
 			current_peak.y = coordinates[4] / pixel_size;
-			current_defocus = binned_pixel_size * slab.physical_address_of_box_center_z - coordinates[5];
-			current_peak.value = coordinates[6];
+			current_defocus = - coordinates[5];
+			current_pixel_size = coordinates[6];
+			current_peak.value = coordinates[7];
 		}
 
 		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);

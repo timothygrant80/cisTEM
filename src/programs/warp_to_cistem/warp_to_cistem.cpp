@@ -56,7 +56,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	wanted_binned_pixel_size = my_input -> GetFloatFromUser("Binned Pixel Size", "Pixel size to resample movies to after import.", "1.0", 0.0);
 	do_import_images = my_input -> GetYesNoFromUser("Import Images?", "Should we import aligned averaged images from WARP (using a different motion correction system than cisTEM)?", "Yes");
 	if (do_import_images) {
-		do_scale_images_and_make_spectra = my_input -> GetYesNoFromUser("Generated Scaled Images and Spectra?", "Should we make scaled images and spectra? Scaled images are very slow to generate but accelerate normal cisTEM operations", "No");
+		do_scale_images_and_make_spectra = my_input -> GetYesNoFromUser("Generate Scaled Images and Spectra?", "Should we make scaled images and spectra? Scaled images are very slow to generate but accelerate normal cisTEM operations", "No");
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
 	} else {
 		do_scale_images_and_make_spectra=false;

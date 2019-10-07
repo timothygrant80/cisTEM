@@ -121,9 +121,6 @@ void RefineCTFApp::DoInteractiveUserInput()
 	int first_particle = my_input->GetIntFromUser("First particle to refine (0 = first in stack)", "The first particle in the stack that should be refined", "1", 0);
 	int last_particle = my_input->GetIntFromUser("Last particle to refine (0 = last in stack)", "The last particle in the stack that should be refined", "0", 0);
 	float pixel_size = my_input->GetFloatFromUser("Pixel size of reconstruction (A)", "Pixel size of input reconstruction in Angstroms", "1.0", 0.0);
-//	float voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
-//	float spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
-//	float amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
 	float molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
 	float inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the input reconstruction in Angstroms", "0.0", 0.0);
 	float outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the input reconstruction and images during refinement, in Angstroms", "100.0", inner_mask_radius);
@@ -154,7 +151,7 @@ void RefineCTFApp::DoInteractiveUserInput()
 	delete my_input;
 
 //	my_current_job.Reset(32);
-	my_current_job.ManualSetArguments("ttttbtttttiifffffffffbbbbbbbiiit",
+    	my_current_job.ManualSetArguments("ttttbtttttiifffffffffbbbbbbbiii",
 		input_particle_images.ToUTF8().data(),
 		input_star_filename.ToUTF8().data(),
 		input_reconstruction.ToUTF8().data(),
@@ -168,9 +165,6 @@ void RefineCTFApp::DoInteractiveUserInput()
 		first_particle,
 		last_particle,
 		pixel_size,
-//		voltage_kV,
-//		spherical_aberration_mm,
-//		amplitude_contrast,
 		molecular_mass_kDa,
 		inner_mask_radius,
 		outer_mask_radius,
@@ -210,9 +204,6 @@ bool RefineCTFApp::DoCalculation()
 	int		 first_particle						= my_current_job.arguments[10].ReturnIntegerArgument();
 	int		 last_particle						= my_current_job.arguments[11].ReturnIntegerArgument();
 	float 	 pixel_size							= my_current_job.arguments[12].ReturnFloatArgument();
-//	float    voltage_kV							= my_current_job.arguments[13].ReturnFloatArgument();
-//	float 	 spherical_aberration_mm			= my_current_job.arguments[14].ReturnFloatArgument();
-//	float    amplitude_contrast					= my_current_job.arguments[15].ReturnFloatArgument();
 	float	 molecular_mass_kDa					= my_current_job.arguments[13].ReturnFloatArgument();
 	float    inner_mask_radius					= my_current_job.arguments[14].ReturnFloatArgument();
 	float    outer_mask_radius					= my_current_job.arguments[15].ReturnFloatArgument();
@@ -252,7 +243,7 @@ bool RefineCTFApp::DoCalculation()
 //	float defocus_upper_limit = 25000.0f * sqrtf(voltage_kV / 300.0f);
 	float voltage_kV = 0.0f;
 	float spherical_aberration_mm;
-	float phase_multiplier = 20.0f;
+	float phase_multiplier = 1.0f;
 	float beamtilt_x, beamtilt_y;
 	float particle_shift_x, particle_shift_y;
 	float mask_falloff = 20.0f;	// in Angstrom
@@ -792,7 +783,9 @@ bool RefineCTFApp::DoCalculation()
 				// Normalize background variance and average
 				variance = input_image_local.ReturnVarianceOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
 				average = input_image_local.ReturnAverageOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-				input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+
+				if (variance == 0.0f) input_image_local.SetToConstant(0.0f);
+				else input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 			}
 			else input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
@@ -917,22 +910,22 @@ bool RefineCTFApp::DoCalculation()
 
 			}
 
-/*		if (is_running_locally == false) // send results back to the gui..
-		{
-			intermediate_result = new JobResult;
-			intermediate_result->job_number = my_current_job.job_number;
-
-			gui_result_parameters[0] = current_class;
-			for (result_parameter_counter = 1; result_parameter_counter < refine_particle.number_of_parameters + 1; result_parameter_counter++)
+			if (is_running_locally == false) // send results back to the gui..
 			{
-				gui_result_parameters[result_parameter_counter] = output_parameters[result_parameter_counter - 1];
+				JobResult *intermediate_result = new JobResult;
+				intermediate_result->job_number = my_current_job.job_number;
+				float result_line[5];
+
+				result_line[0] = output_parameters.position_in_stack;
+				result_line[1] = output_parameters.defocus_1;
+				result_line[2] = output_parameters.defocus_2;
+				result_line[3] = output_parameters.logp;
+				result_line[4] = output_parameters.score;
+
+				intermediate_result->SetResult(5, result_line);
+				AddJobToResultQueue(intermediate_result);
 			}
-
-			intermediate_result->SetResult(refine_particle.number_of_parameters + 1, gui_result_parameters);
-			AddJobToResultQueue(intermediate_result);
-		} */
-
-			if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
+			else if (ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 		}
 
 		if (beamtilt_refinement)
@@ -979,16 +972,71 @@ bool RefineCTFApp::DoCalculation()
 			//phase_difference_sum.DivideByConstant(float(148436));
 			phase_difference_sum.CosineMask(0.45f, pixel_size / mask_falloff);
 
-			input_ctf.Init(voltage_kV, spherical_aberration_mm, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, pixel_size, 0.0f);
-			score = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image, beamtilt_image, sum_power, beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y, phase_multiplier, is_running_locally);
+
+
+			#pragma omp parallel num_threads(max_threads) default(none) shared(voltage_kV, spherical_aberration_mm, pixel_size, temp_image, beamtilt_image, sum_power, beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y, phase_multiplier, max_threads, score, phase_difference_sum) private(input_ctf)
+			{
+				float score_local = FLT_MAX;
+				float beamtilt_x_local;
+				float beamtilt_y_local;
+				float particle_shift_x_local;
+				float particle_shift_y_local;
+
+				Image temp_image_local;
+				Image beamtilt_image_local;
+				Image sum_power_local;
+				Image phase_difference_sum_local;
+
+				temp_image_local.CopyFrom(&temp_image);
+				beamtilt_image_local.CopyFrom(&beamtilt_image);
+				sum_power_local.CopyFrom(&sum_power);
+				phase_difference_sum_local.CopyFrom(&phase_difference_sum);
+
+				const int total_number_of_positions = 290880; // hard coded based on FindBeamTilt, not very nice.
+
+				int first_position_to_search;
+				int last_position_to_search;
+				int number_of_positions_per_thread = int(ceilf(total_number_of_positions / max_threads));
+
+				first_position_to_search = ReturnThreadNumberOfCurrentThread()*number_of_positions_per_thread;
+				last_position_to_search = (ReturnThreadNumberOfCurrentThread() + 1) * number_of_positions_per_thread - 1;
+
+				if (first_position_to_search < 0) first_position_to_search = 0;
+				if (last_position_to_search > total_number_of_positions - 1) last_position_to_search = total_number_of_positions - 1;
+
+				input_ctf.Init(voltage_kV, spherical_aberration_mm, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, pixel_size, 0.0f);
+
+				// need to work out which section we should be running
+
+				//wxPrintf("first = %i, last = %i\n", first_position_to_search, last_position_to_search);
+				score_local = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image_local, beamtilt_image_local, sum_power_local, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search);
+
+				#pragma omp critical
+				{
+					if (score_local > score)
+					{
+						score = score_local;
+						beamtilt_x = beamtilt_x_local;
+						beamtilt_y = beamtilt_y_local;
+						particle_shift_x = particle_shift_x_local;
+						particle_shift_y = particle_shift_y_local;
+						sum_power.CopyFrom(&sum_power_local);
+						beamtilt_image.CopyFrom(&beamtilt_image_local);
+						temp_image.CopyFrom(&temp_image_local);
+					}
+				}
+
+			} // end omp
+
 
 			temp_image.WriteSlice(&ouput_phase_difference_file,1);
 
+			wxPrintf("Final score = %f\n", score);
+			sum_power.WriteSlice(&ouput_difference_file,1);
+			beamtilt_image.WriteSlice(&ouput_beamtilt_file,1);
+
 			if (score > 10.0f)
 			{
-				sum_power.WriteSlice(&ouput_difference_file,1);
-				beamtilt_image.WriteSlice(&ouput_beamtilt_file,1);
-
 				wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
 				wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
 
@@ -1002,7 +1050,7 @@ bool RefineCTFApp::DoCalculation()
 			}
 			else
 			{
-				wxPrintf("\nNo beam tilt detected, set to zero\n");
+				wxPrintf("\nNo detectable beam tilt, set to zero\n");
 			}
 		}
 
@@ -1088,7 +1136,15 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float *result_array, long ar
 
 	if (number_of_received_results == number_of_expected_results) // we should be done
 	{
-		wxPrintf("Estimating Beam Tilt...\n");
+		// write out the scaled sum to disk for the gui to run a beam tilt estimation on..
+		std::string phase_error_filename = current_job_package.jobs[0].arguments[7].ReturnStringArgument();
+		float pixel_size = current_job_package.jobs[0].arguments[12].ReturnFloatArgument();
+
+		sum_for_master.DivideByConstant(total_results_for_master);
+		sum_for_master.CosineMask(0.45f, pixel_size / 20.0f);
+		sum_for_master.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
+
+/*		wxPrintf("Estimating Beam Tilt...\n");
 		std::string phase_error_filename = current_job_package.jobs[0].arguments[7].ReturnStringArgument();
 		std::string found_beamtilt_filename = current_job_package.jobs[0].arguments[8].ReturnStringArgument();
 		float pixel_size = current_job_package.jobs[0].arguments[12].ReturnFloatArgument();
@@ -1104,12 +1160,15 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float *result_array, long ar
 		Image difference_image;
 		Image beamtilt_image;
 
+		phase_error.Allocate(sum_for_master.logical_x_dimension, sum_for_master.logical_y_dimension, 1, true);
+		difference_image.Allocate(sum_for_master.logical_x_dimension, sum_for_master.logical_y_dimension, 1, true);
+		beamtilt_image.Allocate(sum_for_master.logical_x_dimension, sum_for_master.logical_y_dimension, 1, true);
 
 		sum_for_master.DivideByConstant(total_results_for_master);
 		sum_for_master.CosineMask(0.45f, pixel_size / 20.0f);
 
 		input_ctf.Init(voltage_for_master, spherical_aberration_for_master, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, pixel_size, 0.0f);
-		score = sum_for_master.FindBeamTilt(input_ctf, pixel_size, phase_error, beamtilt_image, difference_image, found_beamtilt_x, found_beamtilt_y, found_particle_shift_x, found_particle_shift_y, 20.0f, is_running_locally);
+		score = sum_for_master.FindBeamTilt(input_ctf, pixel_size, phase_error, beamtilt_image, difference_image, found_beamtilt_x, found_beamtilt_y, found_particle_shift_x, found_particle_shift_y, 1.0f, true);
 
 		phase_error.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
 		beamtilt_image.QuickAndDirtyWriteSlice(found_beamtilt_filename, 1, true);
@@ -1123,7 +1182,7 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float *result_array, long ar
 		{
 			wxPrintf("\nNo beam tilt detected, set to zero\n");
 		}
-
+*/
 
 	}
 }

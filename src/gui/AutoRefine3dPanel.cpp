@@ -1080,10 +1080,10 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].should_refine_input_params = true;
 		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = active_should_mask;
 		output_refinement->class_refinement_results[class_counter].mask_asset_id = active_mask_asset_id;
-		output_refinement->class_refinement_results[class_counter].mask_edge_width = 0.0f;
-		output_refinement->class_refinement_results[class_counter].outside_mask_weight = 0.0f;
-		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = false;
-		output_refinement->class_refinement_results[class_counter].filter_resolution = 0.0f;
+		output_refinement->class_refinement_results[class_counter].mask_edge_width = active_mask_edge;
+		output_refinement->class_refinement_results[class_counter].outside_mask_weight = active_mask_weight;
+		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = active_should_low_pass_filter_mask;
+		output_refinement->class_refinement_results[class_counter].filter_resolution = active_mask_filter_resolution;
 	}
 
 	output_refinement->percent_used = current_percent_used;

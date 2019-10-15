@@ -50,6 +50,771 @@ CtffindApp : public MyApp
 
 };
 
+double SampleTiltScoreFunctionForSimplex(void *pt2Object, double values[]);
+float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
+	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
+
+class CTFTilt
+{
+	int refine_mode;
+	int micrograph_subregion_dimension;
+	int micrograph_binned_dimension_for_ctf;
+	int micrograph_square_dimension;
+	int sub_section_dimension_x;
+	int sub_section_dimension_y;
+	int box_size;
+	int n_sections;
+	int n_steps;
+	int box_convolution;
+	int input_image_x_dimension;
+	int input_image_y_dimension;
+	int image_buffer_counter;
+	float tilt_binning_factor;
+	float original_pixel_size;
+	float ctf_fit_pixel_size;
+	float tilt_fit_pixel_size;
+	float low_res_limit;
+	float acceleration_voltage_in_kV;
+	float spherical_aberration_in_mm;
+	float amplitude_contrast;
+	float additional_phase_shift_in_radians;
+	float high_res_limit_ctf_fit;
+	float high_res_limit_tilt_fit;
+	float minimum_defocus;
+	float maximum_defocus;
+
+	Image input_image;
+	Image input_image_binned;
+	Image average_spectrum;
+	Image power_spectrum_binned_image;
+	Image power_spectrum_sub_section;
+	Image resampled_power_spectrum;
+	Image resampled_power_spectrum_binned_image;
+	Image average_power_spectrum;
+	Image ctf_transform;
+	Image ctf_image;
+	Image sub_section;
+	Image *resampled_power_spectra;
+	Image *input_image_buffer;
+
+	bool rough_defocus_determined;
+	bool defocus_astigmatism_determined;
+	bool power_spectra_calculated;
+public:
+
+	CTFTilt(ImageFile &wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus, \
+		float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians);
+	~CTFTilt();
+	void CalculatePowerSpectra(bool subtract_average = false);
+	void UpdateInputImage(Image *wanted_input_image);
+	float FindRoughDefocus();
+	float FindDefocusAstigmatism();
+	float SearchTiltAxisAndAngle();
+	float RefineTiltAxisAndAngle();
+	float CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
+		int box_size, Image *resampled_spectrum);
+	double ScoreValues(double []);
+
+	float defocus_1;
+	float defocus_2;
+	float astigmatic_angle;
+	float best_tilt_axis;
+	float best_tilt_angle;
+};
+
+class
+NikoTestApp : public MyApp
+{
+
+	public:
+
+	bool DoCalculation();
+	void DoInteractiveUserInput();
+
+	void AddCommandLineOptions();
+
+	private:
+};
+
+CTFTilt::CTFTilt(ImageFile &wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus, \
+		float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians)
+{
+	box_size = 128;
+	n_sections = 3;
+	n_steps = 4;
+	rough_defocus_determined = false;
+	defocus_astigmatism_determined = false;
+	power_spectra_calculated = false;
+
+	// Must be odd
+	box_convolution = 55;
+
+	// Set later
+	sub_section_dimension_x = 0;
+	sub_section_dimension_y = 0;
+
+	micrograph_square_dimension = std::max(wanted_input_file.ReturnXSize(), wanted_input_file.ReturnYSize());
+	if (IsOdd((micrograph_square_dimension))) micrograph_square_dimension++;
+	input_image_x_dimension = micrograph_square_dimension;
+	input_image_y_dimension = micrograph_square_dimension;
+	input_image_buffer = new Image [wanted_input_file.ReturnZSize()];
+	image_buffer_counter = 0;
+
+	original_pixel_size = wanted_pixel_size;
+	low_res_limit = 40.0f;
+	refine_mode = 0;
+	defocus_1 = 0.0f;
+	defocus_2 = 0.0f;
+	astigmatic_angle = 0.0f;
+	acceleration_voltage_in_kV = wanted_acceleration_voltage_in_kV;
+	spherical_aberration_in_mm = wanted_spherical_aberration_in_mm;
+	amplitude_contrast = wanted_amplitude_contrast;
+	additional_phase_shift_in_radians = wanted_additional_phase_shift_in_radians;
+	best_tilt_axis = 0.0f;
+	best_tilt_angle = 0.0f;
+	high_res_limit_ctf_fit = wanted_high_res_limit_ctf_fit;
+	high_res_limit_tilt_fit = wanted_high_res_limit_tilt_fit;
+	minimum_defocus = wanted_minimum_defocus;
+	maximum_defocus = wanted_maximum_defocus;
+
+	float binning_factor = 0.5f * high_res_limit_ctf_fit / original_pixel_size;
+	micrograph_binned_dimension_for_ctf = ReturnClosestFactorizedUpper(myroundint(micrograph_square_dimension / binning_factor), 5, true);
+	binning_factor = float(micrograph_square_dimension) / float(micrograph_binned_dimension_for_ctf);
+	ctf_fit_pixel_size = original_pixel_size * binning_factor;
+
+	resampled_power_spectrum.Allocate(box_size, box_size, 1);
+	resampled_power_spectrum_binned_image.Allocate(box_size, box_size, 1);
+	resampled_power_spectrum_binned_image.SetToConstant(0.0f);
+	average_spectrum.Allocate(box_size, box_size, 1);
+	ctf_transform.Allocate(box_size, box_size, 1);
+	ctf_image.Allocate(box_size, box_size, 1);
+
+	micrograph_subregion_dimension = 2000.0f / ctf_fit_pixel_size;
+	micrograph_subregion_dimension = ReturnClosestFactorizedLower(micrograph_subregion_dimension, 5);
+	if (micrograph_subregion_dimension < micrograph_square_dimension) power_spectrum_binned_image.Allocate(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
+	else power_spectrum_binned_image.Allocate(micrograph_square_dimension, micrograph_square_dimension, 1);
+
+	resampled_power_spectra = new Image [((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
+	tilt_binning_factor = 0.5f * high_res_limit_tilt_fit / original_pixel_size;
+	tilt_fit_pixel_size = original_pixel_size * tilt_binning_factor;
+
+	int ix, iy;
+	int sub_section_dimension;
+	int section_counter = 0;
+	sub_section_dimension_x = myroundint(input_image_x_dimension / tilt_binning_factor) / n_sections;
+	if (IsOdd(sub_section_dimension_x)) sub_section_dimension_x--;
+	sub_section_dimension_y = myroundint(input_image_y_dimension / tilt_binning_factor) / n_sections;
+	if (IsOdd(sub_section_dimension_y)) sub_section_dimension_y--;
+	sub_section_dimension = std::min(sub_section_dimension_x, sub_section_dimension_y);
+	sub_section.Allocate(sub_section_dimension, sub_section_dimension, 1, true);
+	power_spectrum_sub_section.Allocate(sub_section_dimension, sub_section_dimension, 1);
+
+	for (iy = - (n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2 ; iy++)
+	{
+		for (ix = - (n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++)
+		{
+			resampled_power_spectra[section_counter].Allocate(box_size, box_size, 1, true);
+			resampled_power_spectra[section_counter].SetToConstant(0.0f);
+			section_counter++;
+		}
+	}
+//	CalculatePowerSpectra(true);
+}
+
+CTFTilt::~CTFTilt()
+{
+	delete [] resampled_power_spectra;
+}
+
+void CTFTilt::CalculatePowerSpectra(bool subtract_average)
+{
+	MyDebugAssertTrue(! power_spectra_calculated,"Error: Power spectra already calculated\n");
+
+	int i;
+	int section_counter = 0;
+	int ix, iy;
+
+	Image temp_image;
+
+	// Power spectrum for rough CTF fit
+	temp_image.Allocate(resampled_power_spectrum_binned_image.logical_x_dimension, resampled_power_spectrum_binned_image.logical_y_dimension, false);
+	input_image_binned.Allocate(micrograph_square_dimension, micrograph_square_dimension, true);
+	input_image.ClipInto(&input_image_binned);
+	input_image_binned.ForwardFFT();
+	input_image_binned.Resize(micrograph_binned_dimension_for_ctf, micrograph_binned_dimension_for_ctf, 1);
+	input_image_binned.complex_values[0] = 0.0f + I * 0.0f;
+	input_image_binned.BackwardFFT();
+	input_image_binned.CosineRectangularMask(0.9f * input_image_binned.physical_address_of_box_center_x, 0.9f * input_image_binned.physical_address_of_box_center_y, 0.0f, 0.1f * input_image_binned.logical_x_dimension);
+
+	if (micrograph_subregion_dimension < input_image_binned.logical_x_dimension) input_image_binned.Resize(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
+	input_image_binned.ForwardFFT();
+	input_image_binned.ComputeAmplitudeSpectrumFull2D(&power_spectrum_binned_image);
+//	for (int i = 0; i < power_spectrum_binned_image.real_memory_allocated; i++) power_spectrum_binned_image.real_values[i] = powf(power_spectrum_binned_image.real_values[i], 2);
+	power_spectrum_binned_image.ForwardFFT();
+	power_spectrum_binned_image.ClipInto(&temp_image);
+	temp_image.BackwardFFT();
+	resampled_power_spectrum_binned_image.AddImage(&temp_image);
+//	resampled_power_spectrum_binned_image.CosineMask(resampled_power_spectrum.logical_x_dimension * 0.1f, resampled_power_spectrum.logical_x_dimension * 0.2f, true);
+	if (subtract_average)
+	{
+		resampled_power_spectrum_binned_image.SpectrumBoxConvolution(&average_spectrum, box_convolution, float(resampled_power_spectrum_binned_image.logical_x_dimension) * ctf_fit_pixel_size / low_res_limit);
+		resampled_power_spectrum_binned_image.SubtractImage(&average_spectrum);
+	}
+//	resampled_power_spectrum_binned_image.CosineMask(resampled_power_spectrum_binned_image.logical_x_dimension * 0.4f, resampled_power_spectrum_binned_image.logical_x_dimension * 0.2f);
+//	resampled_power_spectrum_binned_image.AddMultiplyConstant(-resampled_power_spectrum_binned_image.ReturnAverageOfRealValues(), sqrtf(1.0f / resampled_power_spectrum_binned_image.ReturnVarianceOfRealValues()));
+	// Scaling to yield correlation coefficient when evaluating scores
+//	resampled_power_spectrum_binned_image.MultiplyByConstant(2.0f / resampled_power_spectrum_binned_image.logical_x_dimension / resampled_power_spectrum_binned_image.logical_y_dimension);
+
+	// Power spectra for tilted CTF fit
+	temp_image.Allocate(resampled_power_spectra[0].logical_x_dimension, resampled_power_spectra[0].logical_y_dimension, false);
+	input_image.ForwardFFT();
+	input_image.Resize(myroundint(input_image.logical_x_dimension / tilt_binning_factor), myroundint(input_image.logical_y_dimension / tilt_binning_factor), 1);
+	input_image.complex_values[0] = 0.0f + I * 0.0f;
+	input_image.BackwardFFT();
+
+	for (iy = - (n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2 ; iy++)
+	{
+		for (ix = - (n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++)
+		{
+//			pointer_to_original_image->QuickAndDirtyWriteSlice("binned_input_image.mrc", 1);
+			input_image.ClipInto(&sub_section, 0.0f, false, 0.0f, float(ix) * sub_section_dimension_x / float(n_steps), float(iy) * sub_section_dimension_y / float(n_steps), 0);
+			sub_section.CosineRectangularMask(0.9f * sub_section.physical_address_of_box_center_x, 0.9f * sub_section.physical_address_of_box_center_y, 0.0f, 0.1f * sub_section.logical_x_dimension);
+//			sub_section.QuickAndDirtyWriteSlice("sub_sections.mrc", 1 + section_counter);
+			sub_section.MultiplyByConstant(sqrtf(1.0f / sub_section.ReturnVarianceOfRealValues()));
+			sub_section.ForwardFFT();
+			sub_section.ComputeAmplitudeSpectrumFull2D(&power_spectrum_sub_section);
+			for (i = 0; i < power_spectrum_sub_section.real_memory_allocated; i++) power_spectrum_sub_section.real_values[i] = powf(power_spectrum_sub_section.real_values[i], 2);
+			power_spectrum_sub_section.ForwardFFT();
+			power_spectrum_sub_section.ClipInto(&temp_image);
+//			resampled_power_spectra[section_counter].CosineMask(0.45f, 0.1f);
+			temp_image.BackwardFFT();
+			resampled_power_spectra[section_counter].AddImage(&temp_image);
+			if (subtract_average)
+			{
+				resampled_power_spectra[section_counter].SpectrumBoxConvolution(&average_spectrum, box_convolution, float(resampled_power_spectra[0].logical_x_dimension) * tilt_fit_pixel_size / low_res_limit);
+				resampled_power_spectra[section_counter].SubtractImage(&average_spectrum);
+			}
+//			resampled_power_spectrum.CosineMask(resampled_power_spectrum.logical_x_dimension * 0.45f, resampled_power_spectrum.logical_x_dimension * 0.1f);
+//			resampled_power_spectra[section_counter].QuickAndDirtyWriteSlice("power_spectra.mrc", 1 + section_counter);
+			section_counter++;
+		}
+	}
+	power_spectra_calculated = true;
+}
+
+void CTFTilt::UpdateInputImage(Image *wanted_input_image)
+{
+	MyDebugAssertTrue(input_image_x_dimension == wanted_input_image->logical_x_dimension && input_image_y_dimension == wanted_input_image->logical_y_dimension,"Error: Image dimensions do not match\n");
+
+	input_image_buffer[image_buffer_counter].Allocate(wanted_input_image->logical_x_dimension, wanted_input_image->logical_y_dimension, 1, true);
+	input_image_buffer[image_buffer_counter].CopyFrom(wanted_input_image);
+	image_buffer_counter++;
+	input_image.CopyFrom(wanted_input_image);
+	power_spectra_calculated = false;
+}
+
+float CTFTilt::FindRoughDefocus()
+{
+	float variance;
+	float variance_max = -FLT_MAX;
+	float defocus;
+	float average_defocus;
+	double start_values[4];
+
+	refine_mode = 0;
+
+	for (defocus = minimum_defocus; defocus < maximum_defocus; defocus += 100.0f)
+	{
+		start_values[1] = defocus;
+		start_values[2] = defocus;
+		start_values[3] = 0.0f;
+		variance = - ScoreValues(start_values);
+
+		if (variance > variance_max)
+		{
+			variance_max = variance;
+			average_defocus = defocus;
+		}
+	}
+
+	defocus_1 = average_defocus;
+	defocus_2 = average_defocus;
+	rough_defocus_determined = true;
+
+//	wxPrintf("defocus, var = %g %g\n\n", average_defocus, variance_max);
+	return variance_max;
+}
+
+float CTFTilt::FindDefocusAstigmatism()
+{
+	MyDebugAssertTrue(rough_defocus_determined,"Error: Rough defocus not yet determined\n");
+
+	DownhillSimplex simplex_minimzer(3);
+
+	float average_defocus = (defocus_1 + defocus_2) / 2.0f;
+	double ranges[4];
+	double start_values[4];
+	double min_values[4];
+
+	refine_mode = 0;
+
+	ranges[0] = 0.0f;
+	ranges[1] = 1000.0f;
+	ranges[2] = 1000.0f;
+	ranges[3] = 180.0f;
+
+	start_values[0] = 0.0f;
+	start_values[1] = average_defocus;
+	start_values[2] = average_defocus;
+	start_values[3] = 0.0f;
+
+	simplex_minimzer.SetIinitalValues(start_values, ranges);
+
+	simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(8.0f / 9.0f);
+	simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[1][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[2][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(2.0f / 9.0f);
+	simplex_minimzer.initial_values[2][2] = start_values[2] * simplex_minimzer.value_scalers[2] + ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(2.0f / 3.0f);
+	simplex_minimzer.initial_values[2][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[3][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(2.0f / 9.0f);
+	simplex_minimzer.initial_values[3][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(2.0f / 3.0f);
+	simplex_minimzer.initial_values[3][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[4][1] = start_values[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[4][2] = start_values[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[4][3] = start_values[3] * simplex_minimzer.value_scalers[3] + ranges[3] * simplex_minimzer.value_scalers[3];
+
+	simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplex);
+	simplex_minimzer.GetMinimizedValues(min_values);
+
+	defocus_1 = min_values[1];
+	defocus_2 = min_values[2];
+	astigmatic_angle = min_values[3];
+	defocus_astigmatism_determined = true;
+
+//	wxPrintf("defocus_1, defocus_2, astigmatic_angle = %g %g %g\n\n", defocus_1, defocus_2, astigmatic_angle);
+	return - ScoreValues(min_values);
+}
+
+float CTFTilt::SearchTiltAxisAndAngle()
+{
+	MyDebugAssertTrue(power_spectra_calculated,"Error: Power spectra not calculated\n");
+	MyDebugAssertTrue(defocus_astigmatism_determined,"Error: Defocus astigmatism not yet determined\n");
+
+	float variance;
+	float variance_max = -FLT_MAX;
+	float axis_step = 10.0f;
+	float angle_step = 5.0f;
+	float tilt_angle;
+	float tilt_axis;
+	float average_defocus = (defocus_1 + defocus_2) / 2.0f;
+	double start_values[4];
+
+//	if (! power_spectra_calculated) CalculatePowerSpectra();
+
+	refine_mode = 1;
+
+	for (tilt_angle = 0.0f; tilt_angle <= 60.0f; tilt_angle += angle_step)
+	{
+		for (tilt_axis = 0.0f; tilt_axis < 360.0f; tilt_axis += axis_step)
+		{
+			start_values[1] = tilt_axis;
+			start_values[2] = tilt_angle;
+			start_values[3] = average_defocus;
+			variance = - ScoreValues(start_values);
+
+			if (variance > variance_max)
+			{
+				variance_max = variance;
+				best_tilt_axis = tilt_axis;
+				best_tilt_angle = tilt_angle;
+//				wxPrintf("tilt axis, angle, var = %g %g %g\n", best_tilt_axis, best_tilt_angle, variance_max);
+			}
+		}
+	}
+	return variance_max;
+}
+
+float CTFTilt::RefineTiltAxisAndAngle()
+{
+	MyDebugAssertTrue(power_spectra_calculated,"Error: Power spectra not calculated\n");
+	MyDebugAssertTrue(defocus_astigmatism_determined,"Error: Defocus astigmatism not yet determined\n");
+
+	DownhillSimplex simplex_minimzer(3);
+
+	float average_defocus = (defocus_1 + defocus_2) / 2.0f;
+	double ranges[4];
+	double start_values[4];
+	double min_values[4];
+
+//	if (! power_spectra_calculated) CalculatePowerSpectra();
+
+	refine_mode = 1;
+
+	ranges[0] = 0.0f;
+	ranges[1] = 40.0f;
+	ranges[2] = 20.0f;
+	ranges[3] = 1000.0f;
+
+	start_values[0] = 0.0f;
+	start_values[1] = best_tilt_axis;
+	start_values[2] = best_tilt_angle;
+	start_values[3] = average_defocus;
+
+	simplex_minimzer.SetIinitalValues(start_values, ranges);
+
+	simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(8.0f / 9.0f);
+	simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[1][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[2][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(2.0f / 9.0f);
+	simplex_minimzer.initial_values[2][2] = start_values[2] * simplex_minimzer.value_scalers[2] + ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(2.0f / 3.0f);
+	simplex_minimzer.initial_values[2][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[3][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(2.0f / 9.0f);
+	simplex_minimzer.initial_values[3][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(2.0f / 3.0f);
+	simplex_minimzer.initial_values[3][3] = start_values[3] * simplex_minimzer.value_scalers[3] - ranges[3] * simplex_minimzer.value_scalers[3] / 3.0f;
+
+	simplex_minimzer.initial_values[4][1] = start_values[1] * simplex_minimzer.value_scalers[1];
+	simplex_minimzer.initial_values[4][2] = start_values[2] * simplex_minimzer.value_scalers[2];
+	simplex_minimzer.initial_values[4][3] = start_values[3] * simplex_minimzer.value_scalers[3] + ranges[3] * simplex_minimzer.value_scalers[3];
+
+	simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplex);
+	simplex_minimzer.GetMinimizedValues(min_values);
+
+	defocus_1 = defocus_1 + min_values[3] - average_defocus;
+	defocus_2 = defocus_2 + min_values[3] - average_defocus;
+	best_tilt_axis = min_values[1];
+	best_tilt_angle = min_values[2];
+
+	return - ScoreValues(min_values);
+}
+
+float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
+	int box_size, Image *resampled_spectrum)
+{
+//	MyDebugAssertTrue(power_spectra_calculated,"Error: Power spectra not calculated\n");
+//	MyDebugAssertTrue(image_to_correct.is_in_real_space,"Error: Input image not in real space\n");
+	MyDebugAssertTrue(resampled_spectrum->logical_x_dimension == resampled_spectrum->logical_y_dimension,"Error: Output spectrum not square\n");
+
+	int i;
+	int sub_section_x;
+	int sub_section_y;
+	int sub_section_dimension;
+	int stretched_dimension;
+	int n_sec;
+	int n_stp = 2;
+	int ix, iy;
+	int image_counter;
+	float height;
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+	float x_rotated;
+	float y_rotated;
+	float average_defocus = (defocus_1 + defocus_2) / 2.0f;
+	float stretch_factor;
+	float padding_value;
+	float pixel_size_for_fitting;
+//	float offset_x;
+//	float offset_y;
+
+	AnglesAndShifts rotation_angle;
+	Image section;
+	Image stretched_section;
+	Image power_spectrum;
+	Image resampled_power_spectrum;
+	Image counts_per_pixel;
+
+	pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, false);
+
+	n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
+	if (IsEven(n_sec)) n_sec++;
+//	wxPrintf("n_sec = %i\n", n_sec);
+
+	sub_section_x = input_image_buffer[0].logical_x_dimension / n_sec;
+	if (IsOdd(sub_section_x)) sub_section_x--;
+	sub_section_y = input_image_buffer[0].logical_y_dimension / n_sec;
+	if (IsOdd(sub_section_y)) sub_section_y--;
+//	sub_section_dimension = std::min(sub_section_x, sub_section_y);
+	sub_section_dimension = resampled_spectrum->logical_x_dimension;
+//	offset_x = float(n_sec) / 2.0f * sub_section_x;
+//	offset_y = float(n_sec) / 2.0f * sub_section_y;
+
+	section.Allocate(sub_section_dimension, sub_section_dimension, 1, true);
+	power_spectrum.Allocate(sub_section_dimension, sub_section_dimension, 1, true);
+//	resampled_power_spectrum.Allocate(resampled_spectrum.logical_x_dimension, resampled_spectrum.logical_y_dimension, false);
+	resampled_spectrum->SetToConstant(0.0f);
+	resampled_spectrum->is_in_real_space = true;
+
+	rotation_angle.GenerateRotationMatrix2D(best_tilt_axis);
+	counts_per_pixel.Allocate(resampled_spectrum->logical_x_dimension, resampled_spectrum->logical_y_dimension, true);
+	counts_per_pixel.SetToConstant(0.0f);
+
+//	int section_counter = 0;
+	for (image_counter = 0; image_counter < image_buffer_counter; image_counter++)
+	{
+//		wxPrintf("working on frame %i\n", image_counter);
+		for (iy = - (n_sec - 1) * n_stp / 2; iy <= (n_sec - 1) * n_stp / 2; iy++)
+		{
+			for (ix = - (n_sec - 1) * n_stp / 2; ix <= (n_sec - 1) * n_stp / 2; ix++)
+			{
+				x_coordinate_2d = float(ix) * sub_section_x / float(n_stp) * pixel_size_for_fitting;
+				y_coordinate_2d = float(iy) * sub_section_y / float(n_stp) * pixel_size_for_fitting;
+				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+				height = y_rotated * tanf(deg_2_rad(best_tilt_angle));
+				if (average_defocus != 0.0f) stretch_factor = sqrtf(fabsf(average_defocus + height) / average_defocus);
+				else stretch_factor = 1.0f;
+//				wxPrintf("x, y, x_coordinate_2d, y_coordinate_2d, stretch_factor = %i %i %g %g %g\n", ix, iy, x_coordinate_2d, y_coordinate_2d, stretch_factor);
+
+				input_image_buffer[image_counter].ClipInto(&section, 0.0f, false, 0.0f, myroundint(float(ix) * sub_section_x / float(n_stp)), myroundint(float(iy) * sub_section_y / float(n_stp)), 0);
+				padding_value = section.ReturnAverageOfRealValues();
+				section.CosineRectangularMask(0.9f * section.physical_address_of_box_center_x, 0.9f * section.physical_address_of_box_center_y, \
+					0.0f, 0.1f * section.logical_x_dimension, false, true, padding_value);
+				section.MultiplyByConstant(sqrtf(1.0f / section.ReturnVarianceOfRealValues()));
+//				section.QuickAndDirtyWriteSlice("sections.mrc", section_counter + 1);
+				section.ForwardFFT();
+				section.complex_values[0] = 0.0f + I * 0.0f;
+				section.ComputeAmplitudeSpectrumFull2D(&power_spectrum);
+//				power_spectrum.QuickAndDirtyWriteSlice("spectrum.mrc", section_counter + 1);
+//				section_counter++;
+//				for (i = 0; i < power_spectrum_sub_section.real_memory_allocated; i++) power_spectrum_sub_section.real_values[i] = powf(power_spectrum_sub_section.real_values[i], 2);
+
+				PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, true, stretch_factor);
+
+//				power_spectrum.ForwardFFT();
+//				stretched_dimension = myroundint(resampled_spectrum->logical_x_dimension * stretch_factor);
+//				if (IsOdd(stretched_dimension)) stretched_dimension++;
+//				if (fabsf(stretched_dimension - resampled_spectrum->logical_x_dimension * stretch_factor) > fabsf(stretched_dimension - 2 - resampled_spectrum->logical_x_dimension * stretch_factor)) stretched_dimension -= 2;
+//				resampled_power_spectrum.Allocate(stretched_dimension, stretched_dimension, false);
+//				power_spectrum.ClipInto(&resampled_power_spectrum);
+//				resampled_power_spectrum.BackwardFFT();
+//				resampled_power_spectrum.Resize(resampled_spectrum->logical_x_dimension, resampled_spectrum->logical_y_dimension, 1, 0.0f);
+				resampled_spectrum->AddImage(&resampled_power_spectrum);
+				for (i = 0; i < resampled_spectrum->real_memory_allocated; i++) if (resampled_power_spectrum.real_values[i] != 0.0f) counts_per_pixel.real_values[i] += 1.0f;
+			}
+		}
+	}
+	resampled_spectrum->DividePixelWise(counts_per_pixel);
+//	resampled_spectrum.SpectrumBoxConvolution(&average_spectrum, box_convolution, float(resampled_power_spectra[0].logical_x_dimension) * tilt_fit_pixel_size / low_res_limit);
+//	resampled_spectrum.SubtractImage(&average_spectrum);
+
+	return pixel_size_for_fitting;
+}
+
+double CTFTilt::ScoreValues(double input_values[])
+{
+	// 0 = ignore, stupid code conversion
+
+	// refine_mode = 0
+	// 1 = defocus_1
+	// 2 = defocus_2
+	// 3 = astigmatic_angle
+
+	// refine_mode = 1
+	// 1 = tilt_axis
+	// 2 = tilt_angle
+	// 3 = average_defocus
+
+	int i, j;
+	int ix, iy;
+	long pointer;
+	long counter = 0;
+	int section_counter = 0;
+	float fraction_of_nonzero_pixels;
+	float minimum_radius_sq;
+	float radius_sq;
+	float average_defocus;
+	float ddefocus;
+	float height;
+	float variance;
+	float x_coordinate_2d;
+	float y_coordinate_2d;
+	float x_rotated;
+	float y_rotated;
+	double sum_ctf = 0.0;
+	double sum_power = 0.0;
+	double sum_ctf_squared = 0.0;
+	double sum_power_squared = 0.0;
+	double sum_ctf_power = 0.0;
+	double correlation_coefficient;
+
+	AnglesAndShifts rotation_angle;
+
+	CTF input_ctf;
+
+	switch (refine_mode)
+	{
+		case 0:
+			minimum_radius_sq = powf(float(resampled_power_spectrum.logical_x_dimension) * ctf_fit_pixel_size / low_res_limit, 2);
+			average_defocus = (input_values[1] + input_values[2]) / 2.0f;
+			input_ctf.Init(acceleration_voltage_in_kV, spherical_aberration_in_mm, amplitude_contrast, input_values[1], input_values[2], input_values[3], ctf_fit_pixel_size, additional_phase_shift_in_radians);
+			ctf_transform.CalculateCTFImage(input_ctf);
+			ctf_transform.ComputeAmplitudeSpectrumFull2D(&ctf_image);
+//			ctf_image.CosineMask(ctf_image.logical_x_dimension * 0.4f, ctf_image.logical_x_dimension * 0.2f);
+			for (i = 0; i < ctf_image.real_memory_allocated; i++) ctf_image.real_values[i] = powf(ctf_image.real_values[i], 4);
+			resampled_power_spectrum.CopyFrom(&resampled_power_spectrum_binned_image);
+//			ctf_image.QuickAndDirtyWriteSlice("junk1.mrc", 1);
+//			resampled_power_spectrum.QuickAndDirtyWriteSlice("junk2.mrc", 1);
+
+			pointer = 0;
+			for (j = 0; j < ctf_image.logical_y_dimension; j++)
+			{
+				for (i = 0; i < ctf_image.logical_x_dimension; i++)
+				{
+					radius_sq = float((i - ctf_image.physical_address_of_box_center_x) * (i - ctf_image.physical_address_of_box_center_x) + (j - ctf_image.physical_address_of_box_center_y) * (j - ctf_image.physical_address_of_box_center_y));
+					if (radius_sq > minimum_radius_sq)
+					{
+						sum_ctf += ctf_image.real_values[pointer];
+						sum_ctf_squared += pow(ctf_image.real_values[pointer], 2);
+						sum_power += resampled_power_spectrum.real_values[pointer];
+						sum_power_squared += pow(resampled_power_spectrum.real_values[pointer], 2);
+						sum_ctf_power += ctf_image.real_values[pointer] * resampled_power_spectrum.real_values[pointer];
+						counter++;
+					}
+					pointer++;
+				}
+				pointer += ctf_image.padding_jump_value;
+			}
+		break;
+
+		case 1:
+			MyDebugAssertTrue(sub_section_dimension_x > 0 && sub_section_dimension_y > 0,"Error: sub_section_dimensions not set\n");
+
+			minimum_radius_sq = powf(float(resampled_power_spectrum.logical_x_dimension) * tilt_fit_pixel_size / low_res_limit, 2);
+			rotation_angle.GenerateRotationMatrix2D(input_values[1]);
+
+			for (iy = - (n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2 ; iy++)
+			{
+				for (ix = - (n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++)
+				{
+					x_coordinate_2d = float(ix) * sub_section_dimension_x / float(n_steps) * tilt_fit_pixel_size;
+					y_coordinate_2d = float(iy) * sub_section_dimension_y / float(n_steps) * tilt_fit_pixel_size;
+					rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+					height = y_rotated * tanf(deg_2_rad(input_values[2]));;
+
+					average_defocus = input_values[3] + height;
+					ddefocus = average_defocus - (defocus_1 + defocus_2) / 2.0f;
+					input_ctf.Init(acceleration_voltage_in_kV, spherical_aberration_in_mm, amplitude_contrast, defocus_1 + ddefocus, defocus_2 + ddefocus, astigmatic_angle, tilt_fit_pixel_size, additional_phase_shift_in_radians);
+					ctf_transform.CalculateCTFImage(input_ctf);
+					ctf_transform.ComputeAmplitudeSpectrumFull2D(&ctf_image);
+//					ctf_image.QuickAndDirtyWriteSlice("ctf_images.mrc", 1 + section_counter);
+					for (i = 0; i < ctf_image.real_memory_allocated; i++) ctf_image.real_values[i] = powf(ctf_image.real_values[i], 2);
+
+					pointer = 0;
+					for (j = 0; j < ctf_image.logical_y_dimension; j++)
+					{
+						for (i = 0; i < ctf_image.logical_x_dimension; i++)
+						{
+							radius_sq = float((i - ctf_image.physical_address_of_box_center_x) * (i - ctf_image.physical_address_of_box_center_x) + (j - ctf_image.physical_address_of_box_center_y) * (j - ctf_image.physical_address_of_box_center_y));
+							if (radius_sq > minimum_radius_sq)
+							{
+								sum_ctf += ctf_image.real_values[pointer];
+								sum_ctf_squared += pow(ctf_image.real_values[pointer], 2);
+								sum_power += resampled_power_spectra[section_counter].real_values[pointer];
+								sum_power_squared += pow(resampled_power_spectra[section_counter].real_values[pointer], 2);
+								sum_ctf_power += ctf_image.real_values[pointer] * resampled_power_spectra[section_counter].real_values[pointer];
+								counter++;
+							}
+							pointer++;
+						}
+						pointer += ctf_image.padding_jump_value;
+					}
+					section_counter++;
+				}
+			}
+
+		break;
+	}
+
+	sum_ctf /= counter;
+	sum_ctf_squared /= counter;
+	sum_power /= counter;
+	sum_power_squared /= counter;
+	sum_ctf_power /= counter;
+	correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
+
+	return - correlation_coefficient;
+}
+
+double SampleTiltScoreFunctionForSimplex(void *pt2Object, double values[])
+{
+	CTFTilt *scorer_to_use = reinterpret_cast < CTFTilt *> (pt2Object);
+//	float score = scorer_to_use->ScoreValues(values);
+//	wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
+	return scorer_to_use->ScoreValues(values);
+}
+
+float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
+	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool do_resampling, float stretch_factor)
+{
+	int temporary_box_size;
+	int stretched_dimension;
+	float pixel_size_for_fitting;
+	bool resampling_is_necessary;
+
+	Image temp_image;
+
+	// Resample the amplitude spectrum
+	if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
+	{
+		// The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
+		temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
+		if (IsOdd(temporary_box_size)) temporary_box_size++;
+		resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+		if (do_resampling)
+		{
+			if (resampling_is_necessary || stretch_factor != 1.0f)
+			{
+				stretched_dimension = myroundint(temporary_box_size * stretch_factor);
+				if (IsOdd(stretched_dimension)) stretched_dimension++;
+				if (fabsf(stretched_dimension - temporary_box_size * stretch_factor) > fabsf(stretched_dimension - 2 - temporary_box_size * stretch_factor)) stretched_dimension -= 2;
+
+				current_power_spectrum->ForwardFFT(false);
+				resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+				current_power_spectrum->ClipInto(resampled_power_spectrum);
+				resampled_power_spectrum->BackwardFFT();
+				temp_image.Allocate(box_size, box_size, 1, true);
+				temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+				resampled_power_spectrum->ClipInto(&temp_image);
+				resampled_power_spectrum->Consume(&temp_image);
+			}
+			else
+			{
+				resampled_power_spectrum->CopyFrom(current_power_spectrum);
+			}
+		}
+		pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
+	}
+	else
+	{
+		// The regular way (the input pixel size was large enough)
+		resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+		if (do_resampling)
+		{
+			if (resampling_is_necessary || stretch_factor != 1.0f)
+			{
+				stretched_dimension = myroundint(box_size * stretch_factor);
+				if (IsOdd(stretched_dimension)) stretched_dimension++;
+				if (fabsf(stretched_dimension - box_size * stretch_factor) > fabsf(stretched_dimension - 2 - box_size * stretch_factor)) stretched_dimension -= 2;
+
+				current_power_spectrum->ForwardFFT(false);
+				resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+				current_power_spectrum->ClipInto(resampled_power_spectrum);
+				resampled_power_spectrum->BackwardFFT();
+			}
+			else
+			{
+				resampled_power_spectrum->CopyFrom(current_power_spectrum);
+			}
+		}
+		pixel_size_for_fitting = pixel_size_of_input_image;
+	}
+
+	return pixel_size_for_fitting;
+}
+
 class ImageCTFComparison
 {
 public:
@@ -305,6 +1070,7 @@ void CtffindApp::DoInteractiveUserInput()
 	bool should_restrain_astigmatism = false;
 	float astigmatism_tolerance = 0.0;
 	bool find_additional_phase_shift = false;
+	bool determine_tilt = false;
 	float minimum_additional_phase_shift = 0.0;
 	float maximum_additional_phase_shift = 0.0;
 	float additional_phase_shift_search_step = 0.0;
@@ -628,6 +1394,9 @@ void CtffindApp::DoInteractiveUserInput()
 			additional_phase_shift_search_step = 0.0;
 		}
 
+		// Currently, tilt determination only works when there is no additional phase shift
+		if (! find_additional_phase_shift) determine_tilt = my_input->GetYesNoFromUser("Determine sample tilt?","Answer yes if you tilted the sample and need to determine tilt axis and angle","no");
+
 		give_expert_options						= my_input->GetYesNoFromUser("Do you want to set expert options?","There are options which normally not changed, but can be accessed by answering yes here","no");
 		if (give_expert_options)
 		{
@@ -722,8 +1491,8 @@ void CtffindApp::DoInteractiveUserInput()
 
 	}
 
-	my_current_job.Reset(37);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), //1
+//	my_current_job.Reset(38);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbi",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -759,6 +1528,7 @@ void CtffindApp::DoInteractiveUserInput()
 																			known_defocus_1,
 																			known_defocus_2,
 																			known_phase_shift,
+																			determine_tilt,
 																			desired_number_of_threads);
 	}
 
@@ -821,7 +1591,8 @@ bool CtffindApp::DoCalculation()
 	const float			known_defocus_1						= my_current_job.arguments[33].ReturnFloatArgument();
 	const float			known_defocus_2						= my_current_job.arguments[34].ReturnFloatArgument();
 	const float			known_phase_shift					= my_current_job.arguments[35].ReturnFloatArgument();
-	int					desired_number_of_threads			= my_current_job.arguments[36].ReturnIntegerArgument();
+	const bool  		determine_tilt						= my_current_job.arguments[36].ReturnBoolArgument();
+	int					desired_number_of_threads			= my_current_job.arguments[37].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -931,6 +1702,8 @@ bool CtffindApp::DoCalculation()
 	ImageFile			dark_file;
 	Image				*dark = new Image();
 	float				final_score;
+	float				tilt_axis;
+	float				tilt_angle;
 
 	// Timings variables
 	wxDateTime time_before_spectrum_computation;
@@ -941,6 +1714,11 @@ bool CtffindApp::DoCalculation()
 
 
 	// Some argument checking
+	if (determine_tilt && find_additional_phase_shift)
+	{
+		SendError(wxString::Format("Error: Finding additional phase shift and determining sample tilt cannot be active at the same time. Terminating."));
+		ExitMainLoop();
+	}
 	if (minimum_resolution < maximum_resolution)
 	{
 		SendError(wxString::Format("Error: Minimum resolution (%f) higher than maximum resolution (%f). Terminating.", minimum_resolution,maximum_resolution));
@@ -1037,6 +1815,8 @@ bool CtffindApp::DoCalculation()
 		}
 		else
 		{
+			CTFTilt tilt_scorer(input_file, 5.0f, 10.0f, minimum_defocus, maximum_defocus, pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast, 0.0f);
+
 			for (current_first_frame_within_average = 1; current_first_frame_within_average <= number_of_movie_frames; current_first_frame_within_average += number_of_frames_to_average)
 			{
 				for (current_frame_within_average = 1; current_frame_within_average <= number_of_frames_to_average; current_frame_within_average++)
@@ -1143,60 +1923,100 @@ bool CtffindApp::DoCalculation()
 				//current_input_image->TaperEdges();
 
 				number_of_tiles_used++;
-
-				// Compute the amplitude spectrum
-				current_power_spectrum->Allocate(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension,true);
-				current_input_image->ForwardFFT(false);
-				current_input_image->ComputeAmplitudeSpectrumFull2D(current_power_spectrum);
-
-				//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_resampling.mrc",1);
-
-				// Set origin of amplitude spectrum to 0.0
-				current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x,current_power_spectrum->physical_address_of_box_center_y,current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
-
-				// Resample the amplitude spectrum
-				if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
+				if (determine_tilt)
 				{
-					// The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
-					temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
-					if (IsOdd(temporary_box_size)) temporary_box_size++;
-					resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
-					if (resampling_is_necessary)
-					{
-						current_power_spectrum->ForwardFFT(false);
-						resampled_power_spectrum->Allocate(temporary_box_size,temporary_box_size,1,false);
-						current_power_spectrum->ClipInto(resampled_power_spectrum);
-						resampled_power_spectrum->BackwardFFT();
-						temp_image->Allocate(box_size,box_size,1,true);
-						temp_image->SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
-						resampled_power_spectrum->ClipInto(temp_image);
-						resampled_power_spectrum->Consume(temp_image);
-					}
-					else
-					{
-						resampled_power_spectrum->CopyFrom(current_power_spectrum);
-					}
-					pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
+//					wxPrintf("Read frame = %i\n", number_of_tiles_used);
+					tilt_scorer.UpdateInputImage(current_input_image);
+					if (current_first_frame_within_average + number_of_frames_to_average > number_of_movie_frames) tilt_scorer.CalculatePowerSpectra(true);
+					else tilt_scorer.CalculatePowerSpectra();
 				}
 				else
 				{
-					// The regular way (the input pixel size was large enough)
-					resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
-					if (resampling_is_necessary)
-					{
-						current_power_spectrum->ForwardFFT(false);
-						resampled_power_spectrum->Allocate(box_size,box_size,1,false);
-						current_power_spectrum->ClipInto(resampled_power_spectrum);
-						resampled_power_spectrum->BackwardFFT();
-					}
-					else
-					{
-						resampled_power_spectrum->CopyFrom(current_power_spectrum);
-					}
+					// Compute the amplitude spectrum
+					current_power_spectrum->Allocate(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension,true);
+					current_input_image->ForwardFFT(false);
+					current_input_image->ComputeAmplitudeSpectrumFull2D(current_power_spectrum);
+
+					//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_resampling.mrc",1);
+
+					// Set origin of amplitude spectrum to 0.0
+					current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x,current_power_spectrum->physical_address_of_box_center_y,current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
+
+					// Resample the amplitude spectrum
+					pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, current_power_spectrum, resampled_power_spectrum);
+
+//					if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
+//					{
+//						// The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
+//						temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
+//						if (IsOdd(temporary_box_size)) temporary_box_size++;
+//						resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+//						if (resampling_is_necessary)
+//						{
+//							current_power_spectrum->ForwardFFT(false);
+//							resampled_power_spectrum->Allocate(temporary_box_size,temporary_box_size,1,false);
+//							current_power_spectrum->ClipInto(resampled_power_spectrum);
+//							resampled_power_spectrum->BackwardFFT();
+//							temp_image->Allocate(box_size,box_size,1,true);
+//							temp_image->SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+//							resampled_power_spectrum->ClipInto(temp_image);
+//							resampled_power_spectrum->Consume(temp_image);
+//						}
+//						else
+//						{
+//							resampled_power_spectrum->CopyFrom(current_power_spectrum);
+//						}
+//						pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
+//					}
+//					else
+//					{
+//						// The regular way (the input pixel size was large enough)
+//						resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+//						if (resampling_is_necessary)
+//						{
+//							current_power_spectrum->ForwardFFT(false);
+//							resampled_power_spectrum->Allocate(box_size,box_size,1,false);
+//							current_power_spectrum->ClipInto(resampled_power_spectrum);
+//							resampled_power_spectrum->BackwardFFT();
+//						}
+//						else
+//						{
+//							resampled_power_spectrum->CopyFrom(current_power_spectrum);
+//						}
+//					}
+
+					average_spectrum->AddImage(resampled_power_spectrum);
 				}
 
-				average_spectrum->AddImage(resampled_power_spectrum);
 			} // end of loop over movie frames
+
+			if (determine_tilt)
+			{
+				// Find rough defocus
+				tilt_scorer.FindRoughDefocus();
+			//	wxPrintf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+
+				// Find astigmatism
+				tilt_scorer.FindDefocusAstigmatism();
+			//	wxPrintf("\nFindDefocusAstigmatism values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+
+				// Search tilt axis and angle
+				tilt_scorer.SearchTiltAxisAndAngle();
+			//	wxPrintf("\nSearchTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+
+				// Refine tilt axis and angle
+				tilt_scorer.RefineTiltAxisAndAngle();
+			//	wxPrintf("\nRefineTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+
+				tilt_axis = tilt_scorer.best_tilt_axis;
+				tilt_angle = tilt_scorer.best_tilt_angle;
+				if (tilt_angle < 0.0f) {tilt_axis += 180.0f; tilt_angle = - tilt_angle;}
+				if (tilt_axis > 360.0f) {tilt_axis -= 360.0f;}
+//				wxPrintf("Final values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g || %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+
+				pixel_size_for_fitting = tilt_scorer.CalculateTiltCorrectedSpectra(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, average_spectrum);
+				average_spectrum->MultiplyByConstant(float(number_of_tiles_used));
+			}
 
 			// We need to take care of the scaling of the FFTs, as well as the averaging of tiles
 			if (resampling_is_necessary)
@@ -1953,6 +2773,7 @@ bool CtffindApp::DoCalculation()
 			{
 				wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n",current_ctf->GetAdditionalPhaseShift() / PIf * 180.0, current_ctf->GetAdditionalPhaseShift(),current_ctf->GetAdditionalPhaseShift() / PIf);
 			}
+			if (determine_tilt) wxPrintf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
 			wxPrintf("Score                           : %0.5f\n", final_score);
 			wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n",pixel_size_for_fitting);
 			if (compute_extra_stats)

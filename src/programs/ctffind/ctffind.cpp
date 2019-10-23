@@ -223,6 +223,7 @@ CTFTilt::CTFTilt(ImageFile &wanted_input_file, float wanted_high_res_limit_ctf_f
 
 CTFTilt::~CTFTilt()
 {
+	delete [] input_image_buffer;
 	delete [] resampled_power_spectra;
 }
 

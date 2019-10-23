@@ -131,6 +131,7 @@ MyApp : public wxAppConsole, public SocketCommunicator
 
 		JobResult my_result;
 		ArrayofJobResults job_queue;
+		ArrayofJobResults master_job_queue;
 
 		// socket stuff
 
@@ -187,6 +188,7 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		int thread_next_action;
 
 		long time_of_last_queue_send;
+		long time_of_last_master_queue_send;
 
 		void AddJobToResultQueue(JobResult *);
 		JobResult * PopJobFromResultQueue();

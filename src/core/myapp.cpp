@@ -35,6 +35,7 @@ bool MyApp::OnInit()
 	currently_running_a_job = false;
 
 	time_of_last_queue_send = 0;
+	time_of_last_master_queue_send = 0;
 	number_of_results_sent = 0;
 
 	total_milliseconds_spent_on_threads = 0;
@@ -287,9 +288,9 @@ void MyApp::SendJobResultQueue(ArrayofJobResults &queue_to_send)
 
 void MyApp::MasterSendIntenalQueue()
 {
-	SendJobResultQueue(job_queue);
-	job_queue.Clear();
-	time_of_last_queue_send = time(NULL);
+	SendJobResultQueue(master_job_queue);
+	master_job_queue.Clear();
+	time_of_last_master_queue_send = time(NULL);
 }
 
 void MyApp::SendAllJobsFinished()
@@ -302,7 +303,7 @@ void MyApp::SendAllJobsFinished()
 	wxSleep(1);
 	Yield();
 
-	if (job_queue.GetCount() != 0) MasterSendIntenalQueue();
+	if (master_job_queue.GetCount() != 0) MasterSendIntenalQueue();
 
 	WriteToSocket(controller_socket, socket_all_jobs_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	WriteToSocket(controller_socket, &total_milliseconds_spent_on_threads, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_WXSTRING);
@@ -367,21 +368,21 @@ void MyApp::OnZombieTimer(wxTimerEvent& event)
 	}
 }
 
+void MyApp::OnMasterQueueTimer(wxTimerEvent& event)
+{
+	if (master_job_queue.GetCount() > 0)
+	{
+		MasterSendIntenalQueue();
+	}
+
+	master_queue_timer_set = false;
+	delete master_queue_timer;
+
+}
+
 void MyApp::OnQueueTimer(wxTimerEvent& event)
 {
-	//wxPrintf("Queue timer fired\n");
-	if (i_am_the_master == true)
-	{
-		if (job_queue.GetCount() > 0)
-		{
-			//	wxPrintf("sending from timer\n");
-			MasterSendIntenalQueue();
-		}
-	}
-	else
-	{
-		SendAllResultsFromResultQueue();
-	}
+	SendAllResultsFromResultQueue();
 
 	queue_timer_set = false;
 	delete queue_timer;
@@ -1095,18 +1096,18 @@ void MyApp::HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJo
 
 	for (int counter = 0; counter < received_queue->GetCount(); counter++)
 	{
-		job_queue.Add(received_queue->Item(counter));
+		master_job_queue.Add(received_queue->Item(counter));
 	}
 
 	delete received_queue;
 
 	// if there is no timer running, start one.
 
-	if (queue_timer_set == false)
+	if (master_queue_timer_set == false)
 	{
-		queue_timer_set = true;
-		queue_timer = new wxTimer(this, 2);
-		queue_timer->StartOnce(1000);
+		master_queue_timer_set = true;
+		master_queue_timer = new wxTimer(this, 3);
+		master_queue_timer->StartOnce(1000);
 	}
 }
 
@@ -1128,17 +1129,17 @@ void MyApp::HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, I
 
 	JobResult job_to_queue;
 	job_to_queue.SetResult(1, &temp_float);
-	job_queue.Add(job_to_queue);
+	master_job_queue.Add(job_to_queue);
 
-	if (queue_timer_set == false)
+	if (master_queue_timer_set == false)
 	{
-		queue_timer_set = true;
-		queue_timer = new wxTimer(this, 2);
-		queue_timer->StartOnce(1000);
+		master_queue_timer_set = true;
+		master_queue_timer = new wxTimer(this, 3);
+		master_queue_timer->StartOnce(1000);
 	}
 	else
 	{
-		if (time(NULL) - time_of_last_queue_send > 2)
+		if (time(NULL) - time_of_last_master_queue_send > 2)
 		{
 			// must be a lot of queued event, so the timer is not being called -  send the current result queue anyway so the gui gets updated;
 

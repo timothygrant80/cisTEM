@@ -1722,6 +1722,7 @@ void MyFindParticlesPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
 	if (received_result.result_size > 0)
 	{
+		my_job_tracker.MarkJobFinished();
 		ProcessResult(&received_result);
 	}
 }

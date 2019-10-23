@@ -20,6 +20,7 @@
 #include "PlotFSCPanel.h"
 #include "ResultsDataViewListCtrl.h"
 #include "ShowCTFResultsPanel.h"
+#include "ShowTemplateMatchResultsPanel.h"
 #include "UnblurResultsPanel.h"
 #include "my_controls.h"
 
@@ -1066,7 +1067,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	
 	fgSizer1->Add( bSizer26311, 1, wxEXPAND, 5 );
 	
-	m_staticText651 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Auto Center Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText651 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Auto Centre Averages?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText651->Wrap( -1 );
 	fgSizer1->Add( m_staticText651, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -2028,6 +2029,26 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	IcinessStaticText->Wrap( -1 );
 	gSizer14->Add( IcinessStaticText, 0, wxALL, 5 );
 	
+	m_staticText866 = new wxStaticText( m_panel86, wxID_ANY, wxT("Tilt Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText866->Wrap( -1 );
+	m_staticText866->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText866, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	TiltAngleStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	TiltAngleStaticText->Wrap( -1 );
+	gSizer14->Add( TiltAngleStaticText, 0, wxALL, 5 );
+	
+	m_staticText868 = new wxStaticText( m_panel86, wxID_ANY, wxT("Tilt Axis :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText868->Wrap( -1 );
+	m_staticText868->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	gSizer14->Add( m_staticText868, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	TiltAxisStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	TiltAxisStaticText->Wrap( -1 );
+	gSizer14->Add( TiltAxisStaticText, 0, wxALL, 5 );
+	
 	
 	bSizer305->Add( gSizer14, 0, 0, 5 );
 	
@@ -2078,6 +2099,155 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 
 ShowCTFResultsParentPanel::~ShowCTFResultsParentPanel()
 {
+}
+
+ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer92;
+	bSizer92 = new wxBoxSizer( wxVERTICAL );
+	
+	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16->SetSashGravity( 0.5 );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	
+	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer301;
+	bSizer301 = new wxBoxSizer( wxVERTICAL );
+	
+	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter15->SetSashGravity( 0.5 );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	
+	m_panel89 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer303;
+	bSizer303 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer538;
+	bSizer538 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PeakTableStaticText = new wxStaticText( m_panel89, wxID_ANY, wxT("Table of Peaks"), wxDefaultPosition, wxDefaultSize, 0 );
+	PeakTableStaticText->Wrap( -1 );
+	PeakTableStaticText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer538->Add( PeakTableStaticText, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	
+	
+	bSizer538->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticline148 = new wxStaticLine( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer538->Add( m_staticline148, 0, wxEXPAND | wxALL, 5 );
+	
+	SaveButton = new NoFocusBitmapButton( m_panel89, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
+	SaveButton->SetDefault(); 
+	bSizer538->Add( SaveButton, 0, wxALL, 5 );
+	
+	
+	bSizer303->Add( bSizer538, 0, wxEXPAND, 5 );
+	
+	m_staticline82 = new wxStaticLine( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer303->Add( m_staticline82, 0, wxEXPAND | wxALL, 5 );
+	
+	PeakListCtrl = new wxListCtrl( m_panel89, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL );
+	bSizer303->Add( PeakListCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	m_panel89->SetSizer( bSizer303 );
+	m_panel89->Layout();
+	bSizer303->Fit( m_panel89 );
+	BottomPanel = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer302;
+	bSizer302 = new wxBoxSizer( wxVERTICAL );
+	
+	SurvivalHistogramText = new wxStaticText( BottomPanel, wxID_ANY, wxT("Survival Histogram"), wxDefaultPosition, wxDefaultSize, 0 );
+	SurvivalHistogramText->Wrap( -1 );
+	SurvivalHistogramText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer302->Add( SurvivalHistogramText, 0, wxALL, 5 );
+	
+	m_staticline81 = new wxStaticLine( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer302->Add( m_staticline81, 0, wxEXPAND | wxALL, 5 );
+	
+	HistogramPlotPanel = new PlotCurvePanel( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer302->Add( HistogramPlotPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	PeakChangesPanel = new wxPanel( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer594;
+	bSizer594 = new wxBoxSizer( wxVERTICAL );
+	
+	ChangesListCtrl = new wxListCtrl( PeakChangesPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL );
+	bSizer594->Add( ChangesListCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	PeakChangesPanel->SetSizer( bSizer594 );
+	PeakChangesPanel->Layout();
+	bSizer594->Fit( PeakChangesPanel );
+	bSizer302->Add( PeakChangesPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	BottomPanel->SetSizer( bSizer302 );
+	BottomPanel->Layout();
+	bSizer302->Fit( BottomPanel );
+	m_splitter15->SplitHorizontally( m_panel89, BottomPanel, 0 );
+	bSizer301->Add( m_splitter15, 1, wxEXPAND, 5 );
+	
+	
+	m_panel87->SetSizer( bSizer301 );
+	m_panel87->Layout();
+	bSizer301->Fit( m_panel87 );
+	m_panel86 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer304;
+	bSizer304 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer305;
+	bSizer305 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer304->Add( bSizer305, 0, wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer306;
+	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
+	
+	m_staticText394 = new wxStaticText( m_panel86, wxID_ANY, wxT("Image / MIP / Found Templates"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText394->Wrap( -1 );
+	m_staticText394->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer306->Add( m_staticText394, 0, wxALL, 5 );
+	
+	ImageFileText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ImageFileText->Wrap( -1 );
+	ImageFileText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer306->Add( ImageFileText, 0, wxALL, 5 );
+	
+	
+	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
+	
+	m_staticline86 = new wxStaticLine( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline86, 0, wxEXPAND | wxALL, 5 );
+	
+	ImageDisplayPanel = new DisplayPanel( m_panel86, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer304->Add( ImageDisplayPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	m_panel86->SetSizer( bSizer304 );
+	m_panel86->Layout();
+	bSizer304->Fit( m_panel86 );
+	m_splitter16->SplitVertically( m_panel87, m_panel86, 700 );
+	bSizer92->Add( m_splitter16, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer92 );
+	this->Layout();
+	
+	// Connect Events
+	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+}
+
+ShowTemplateMatchResultsParentPanel::~ShowTemplateMatchResultsParentPanel()
+{
+	// Disconnect Events
+	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+	
 }
 
 Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
@@ -3002,6 +3172,423 @@ FindCTFResultsPanel::~FindCTFResultsPanel()
 	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnNextButtonClick ), NULL, this );
 	DeleteFromGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnRemoveFromGroupClick ), NULL, this );
 	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFResultsPanel::OnAddToGroupClick ), NULL, this );
+	
+}
+
+MatchTemplateResultsPanelParent::MatchTemplateResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer63;
+	bSizer63 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline25 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer63->Add( m_staticline25, 0, wxEXPAND | wxALL, 5 );
+	
+	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter4->SetSashGravity( 0.5 );
+	m_splitter4->Connect( wxEVT_IDLE, wxIdleEventHandler( MatchTemplateResultsPanelParent::m_splitter4OnIdle ), NULL, this );
+	
+	m_panel13 = new wxPanel( m_splitter4, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer66;
+	bSizer66 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer64;
+	bSizer64 = new wxBoxSizer( wxHORIZONTAL );
+	
+	AllImagesButton = new wxRadioButton( m_panel13, wxID_ANY, wxT("All Images"), wxDefaultPosition, wxDefaultSize, 0 );
+	AllImagesButton->Hide();
+	
+	bSizer64->Add( AllImagesButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ByFilterButton = new wxRadioButton( m_panel13, wxID_ANY, wxT("By Filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	ByFilterButton->Hide();
+	
+	bSizer64->Add( ByFilterButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	FilterButton = new wxButton( m_panel13, wxID_ANY, wxT("Define Filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	FilterButton->Enable( false );
+	FilterButton->Hide();
+	
+	bSizer64->Add( FilterButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer64->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticline77 = new wxStaticLine( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer64->Add( m_staticline77, 0, wxEXPAND | wxALL, 5 );
+	
+	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	
+	bSizer66->Add( bSizer64, 0, wxEXPAND, 5 );
+	
+	ResultDataView = new ResultsDataViewListCtrl( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_VERT_RULES );
+	bSizer66->Add( ResultDataView, 1, wxALL|wxEXPAND, 5 );
+	
+	wxBoxSizer* bSizer68;
+	bSizer68 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PreviousButton = new wxButton( m_panel13, wxID_ANY, wxT("&Previous"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer68->Add( PreviousButton, 0, wxALL, 5 );
+	
+	
+	bSizer68->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	AddAllToGroupButton = new wxButton( m_panel13, wxID_ANY, wxT("Add All To Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer68->Add( AddAllToGroupButton, 0, wxALL, 5 );
+	
+	
+	bSizer68->Add( 0, 0, 1, 0, 5 );
+	
+	NextButton = new wxButton( m_panel13, wxID_ANY, wxT("&Next"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer68->Add( NextButton, 0, wxALL, 5 );
+	
+	
+	bSizer66->Add( bSizer68, 0, wxEXPAND, 5 );
+	
+	
+	m_panel13->SetSizer( bSizer66 );
+	m_panel13->Layout();
+	bSizer66->Fit( m_panel13 );
+	RightPanel = new wxPanel( m_splitter4, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer681;
+	bSizer681 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer73;
+	bSizer73 = new wxBoxSizer( wxVERTICAL );
+	
+	JobDetailsPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer101;
+	bSizer101 = new wxBoxSizer( wxVERTICAL );
+	
+	JobTitleStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("MyLabel"), wxDefaultPosition, wxDefaultSize, 0 );
+	JobTitleStaticText->Wrap( -1 );
+	JobTitleStaticText->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	bSizer101->Add( JobTitleStaticText, 0, wxALL, 5 );
+	
+	InfoSizer = new wxFlexGridSizer( 0, 8, 0, 0 );
+	InfoSizer->SetFlexibleDirection( wxBOTH );
+	InfoSizer->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText72 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Job ID :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText72->Wrap( -1 );
+	m_staticText72->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText72, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	JobIDStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	JobIDStaticText->Wrap( -1 );
+	InfoSizer->Add( JobIDStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText74 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Date of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText74->Wrap( -1 );
+	m_staticText74->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText74, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	DateOfRunStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	DateOfRunStaticText->Wrap( -1 );
+	InfoSizer->Add( DateOfRunStaticText, 0, wxALL, 5 );
+	
+	m_staticText93 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Time Of Run :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText93->Wrap( -1 );
+	m_staticText93->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText93, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	TimeOfRunStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	TimeOfRunStaticText->Wrap( -1 );
+	InfoSizer->Add( TimeOfRunStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText788 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Ref. Volume ID :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText788->Wrap( -1 );
+	m_staticText788->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText788, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	RefVolumeIDStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	RefVolumeIDStaticText->Wrap( -1 );
+	InfoSizer->Add( RefVolumeIDStaticText, 0, wxALL, 5 );
+	
+	m_staticText790 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Used Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText790->Wrap( -1 );
+	m_staticText790->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText790, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	SymmetryStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	SymmetryStaticText->Wrap( -1 );
+	InfoSizer->Add( SymmetryStaticText, 0, wxALL, 5 );
+	
+	m_staticText78 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText78->Wrap( -1 );
+	m_staticText78->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText78, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	PixelSizeStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeStaticText->Wrap( -1 );
+	InfoSizer->Add( PixelSizeStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText83 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Voltage :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText83->Wrap( -1 );
+	m_staticText83->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText83, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	VoltageStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	VoltageStaticText->Wrap( -1 );
+	InfoSizer->Add( VoltageStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText82 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Cs :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText82->Wrap( -1 );
+	m_staticText82->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText82, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	CsStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	CsStaticText->Wrap( -1 );
+	InfoSizer->Add( CsStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Amp. Contrast :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText96->Wrap( -1 );
+	m_staticText96->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText96, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	AmplitudeContrastStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	AmplitudeContrastStaticText->Wrap( -1 );
+	InfoSizer->Add( AmplitudeContrastStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText85 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText85->Wrap( -1 );
+	m_staticText85->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText85, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	Defocus1StaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus1StaticText->Wrap( -1 );
+	InfoSizer->Add( Defocus1StaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText792 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText792->Wrap( -1 );
+	m_staticText792->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText792, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	Defocus2StaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Defocus2StaticText->Wrap( -1 );
+	InfoSizer->Add( Defocus2StaticText, 0, wxALL, 5 );
+	
+	m_staticText794 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText794->Wrap( -1 );
+	m_staticText794->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText794, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	DefocusAngleStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusAngleStaticText->Wrap( -1 );
+	InfoSizer->Add( DefocusAngleStaticText, 0, wxALL, 5 );
+	
+	m_staticText796 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText796->Wrap( -1 );
+	m_staticText796->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText796, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	PhaseShiftStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PhaseShiftStaticText->Wrap( -1 );
+	InfoSizer->Add( PhaseShiftStaticText, 0, wxALL, 5 );
+	
+	m_staticText87 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Low Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText87->Wrap( -1 );
+	m_staticText87->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText87, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	LowResLimitStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	LowResLimitStaticText->Wrap( -1 );
+	InfoSizer->Add( LowResLimitStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText89 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("High Res. Limit :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText89->Wrap( -1 );
+	m_staticText89->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText89, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	HighResLimitStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	HighResLimitStaticText->Wrap( -1 );
+	InfoSizer->Add( HighResLimitStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText91 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("OOP Angluar Step :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText91->Wrap( -1 );
+	m_staticText91->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText91, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	OOPAngluarStepStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	OOPAngluarStepStaticText->Wrap( -1 );
+	InfoSizer->Add( OOPAngluarStepStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText79 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("IP Angular Step :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText79->Wrap( -1 );
+	m_staticText79->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText79, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	IPAngluarStepStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	IPAngluarStepStaticText->Wrap( -1 );
+	InfoSizer->Add( IPAngluarStepStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText798 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Range :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText798->Wrap( -1 );
+	m_staticText798->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText798, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	DefocusRangeStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusRangeStaticText->Wrap( -1 );
+	InfoSizer->Add( DefocusRangeStaticText, 0, wxALL, 5 );
+	
+	m_staticText95 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Defocus Step :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText95->Wrap( -1 );
+	m_staticText95->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText95, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	DefocusStepStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusStepStaticText->Wrap( -1 );
+	InfoSizer->Add( DefocusStepStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	LargeAstigExpectedLabel = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size Range :"), wxDefaultPosition, wxDefaultSize, 0 );
+	LargeAstigExpectedLabel->Wrap( -1 );
+	LargeAstigExpectedLabel->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( LargeAstigExpectedLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	PixelSizeRangeStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeRangeStaticText->Wrap( -1 );
+	InfoSizer->Add( PixelSizeRangeStaticText, 0, wxALL, 5 );
+	
+	m_staticText99 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size Step :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText99->Wrap( -1 );
+	m_staticText99->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText99, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	PixelSizeStepStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeStepStaticText->Wrap( -1 );
+	InfoSizer->Add( PixelSizeStepStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+	
+	m_staticText872 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Min. Peak Radius :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText872->Wrap( -1 );
+	m_staticText872->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText872, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	MinPeakRadiusStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	MinPeakRadiusStaticText->Wrap( -1 );
+	InfoSizer->Add( MinPeakRadiusStaticText, 0, wxALL, 5 );
+	
+	m_staticText874 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Shift Threshold :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText874->Wrap( -1 );
+	m_staticText874->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText874, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	ShiftThresholdStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ShiftThresholdStaticText->Wrap( -1 );
+	InfoSizer->Add( ShiftThresholdStaticText, 0, wxALL, 5 );
+	
+	m_staticText876 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Ignore Shifted Peaks :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText876->Wrap( -1 );
+	m_staticText876->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	InfoSizer->Add( m_staticText876, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	IgnoreShiftedPeaksStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	IgnoreShiftedPeaksStaticText->Wrap( -1 );
+	InfoSizer->Add( IgnoreShiftedPeaksStaticText, 0, wxALL, 5 );
+	
+	
+	bSizer101->Add( InfoSizer, 1, wxEXPAND, 5 );
+	
+	m_staticline30 = new wxStaticLine( JobDetailsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer101->Add( m_staticline30, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	JobDetailsPanel->SetSizer( bSizer101 );
+	JobDetailsPanel->Layout();
+	bSizer101->Fit( JobDetailsPanel );
+	bSizer73->Add( JobDetailsPanel, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer681->Add( bSizer73, 0, wxEXPAND, 5 );
+	
+	wxGridSizer* gSizer5;
+	gSizer5 = new wxGridSizer( 0, 6, 0, 0 );
+	
+	
+	bSizer681->Add( gSizer5, 0, wxEXPAND, 5 );
+	
+	ResultPanel = new ShowTemplateMatchResultsPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer681->Add( ResultPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer69;
+	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
+	
+	DeleteFromGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Delete Image From Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer69->Add( DeleteFromGroupButton, 0, wxALL, 5 );
+	
+	AddToGroupButton = new wxButton( RightPanel, wxID_ANY, wxT("Add Image To Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer69->Add( AddToGroupButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	GroupComboBox = new MemoryComboBox( RightPanel, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	GroupComboBox->SetMinSize( wxSize( 200,-1 ) );
+	
+	bSizer69->Add( GroupComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer681->Add( bSizer69, 0, wxALIGN_RIGHT, 5 );
+	
+	
+	RightPanel->SetSizer( bSizer681 );
+	RightPanel->Layout();
+	bSizer681->Fit( RightPanel );
+	m_splitter4->SplitVertically( m_panel13, RightPanel, 450 );
+	bSizer63->Add( m_splitter4, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer63 );
+	this->Layout();
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateResultsPanelParent::OnUpdateUI ) );
+	AllImagesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAllImagesSelect ), NULL, this );
+	ByFilterButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnByFilterSelect ), NULL, this );
+	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnDefineFilterClick ), NULL, this );
+	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnJobDetailsToggle ), NULL, this );
+	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnPreviousButtonClick ), NULL, this );
+	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddAllToGroupClick ), NULL, this );
+	NextButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnRemoveFromGroupClick ), NULL, this );
+	AddToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddToGroupClick ), NULL, this );
+}
+
+MatchTemplateResultsPanelParent::~MatchTemplateResultsPanelParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateResultsPanelParent::OnUpdateUI ) );
+	AllImagesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAllImagesSelect ), NULL, this );
+	ByFilterButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnByFilterSelect ), NULL, this );
+	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnDefineFilterClick ), NULL, this );
+	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnJobDetailsToggle ), NULL, this );
+	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnPreviousButtonClick ), NULL, this );
+	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddAllToGroupClick ), NULL, this );
+	NextButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnNextButtonClick ), NULL, this );
+	DeleteFromGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnRemoveFromGroupClick ), NULL, this );
+	AddToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddToGroupClick ), NULL, this );
 	
 }
 
@@ -5533,6 +6120,8 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxFlexGridSizer* fgSizer1;
@@ -6151,7 +6740,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, -21 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, 20 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 	
 	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6766,14 +7355,32 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	wxBoxSizer* bSizer215;
 	bSizer215 = new wxBoxSizer( wxVERTICAL );
 	
-	m_checkBox56 = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Refine CTF Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer215->Add( m_checkBox56, 0, wxALL, 5 );
+	RefineBeamTiltCheckBox = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Refine Beam Tilt Parms."), wxDefaultPosition, wxDefaultSize, 0 );
+	RefineBeamTiltCheckBox->SetValue(true); 
+	bSizer215->Add( RefineBeamTiltCheckBox, 0, wxALL, 5 );
 	
-	m_checkBox57 = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Refine Beam Tilt"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer215->Add( m_checkBox57, 0, wxALL, 5 );
+	m_staticline142 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer215->Add( m_staticline142, 0, wxEXPAND | wxALL, 5 );
+	
+	RefineCTFCheckBox = new wxCheckBox( InputParamsPanel, wxID_ANY, wxT("Refine Defocus Params."), wxDefaultPosition, wxDefaultSize, 0 );
+	RefineCTFCheckBox->SetValue(true); 
+	bSizer215->Add( RefineCTFCheckBox, 0, wxALL, 5 );
+	
+	wxBoxSizer* bSizer520;
+	bSizer520 = new wxBoxSizer( wxHORIZONTAL );
+	
+	HiResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Hi-Res Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	HiResLimitStaticText->Wrap( -1 );
+	bSizer520->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("3.5"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer520->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	
-	bSizer215->Add( 0, 0, 1, wxEXPAND, 5 );
+	bSizer215->Add( bSizer520, 1, wxEXPAND, 5 );
+	
+	m_staticline143 = new wxStaticLine( InputParamsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer215->Add( m_staticline143, 0, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer357->Add( bSizer215, 0, wxEXPAND, 5 );
@@ -6782,13 +7389,6 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	fgSizer22 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer22->SetFlexibleDirection( wxBOTH );
 	fgSizer22->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
-	
-	HiResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Hi-Res Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	HiResLimitStaticText->Wrap( -1 );
-	fgSizer22->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
-	
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("3.5"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer22->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
 	
 	
 	bSizer357->Add( fgSizer22, 1, wxEXPAND, 5 );
@@ -6889,7 +7489,7 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	fgSizer1->SetFlexibleDirection( wxBOTH );
 	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("General Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText202 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("CTF Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText202->Wrap( -1 );
 	m_staticText202->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
@@ -6925,15 +7525,6 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	
 	SignedCCResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( SignedCCResolutionTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText323 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("CTF Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText323->Wrap( -1 );
-	m_staticText323->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
-	
-	fgSizer1->Add( m_staticText323, 0, wxALL, 5 );
-	
-	
-	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 	
 	DefocusSearchRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	DefocusSearchRangeStaticText->Wrap( -1 );
@@ -7034,22 +7625,6 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	AutoCenterStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocenter reconstruction?"), wxDefaultPosition, wxDefaultSize, 0 );
-	AutoCenterStaticText->Wrap( -1 );
-	fgSizer1->Add( AutoCenterStaticText, 0, wxALL, 5 );
-	
-	wxBoxSizer* bSizer266121;
-	bSizer266121 = new wxBoxSizer( wxHORIZONTAL );
-	
-	AutoCenterYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
-	bSizer266121->Add( AutoCenterYesRadioButton, 0, wxALL, 5 );
-	
-	AutoCenterNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer266121->Add( AutoCenterNoRadioButton, 0, wxALL, 5 );
-	
-	
-	fgSizer1->Add( bSizer266121, 1, wxEXPAND, 5 );
-	
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText405->Wrap( -1 );
 	m_staticText405->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
@@ -7149,7 +7724,7 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	bSizer61->Fit( InfoPanel );
 	bSizer46->Add( InfoPanel, 70, wxEXPAND | wxALL, 5 );
 	
-	ShowRefinementResultsPanel = new DisplayRefinementResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ShowRefinementResultsPanel = new DisplayCTFRefinementResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	ShowRefinementResultsPanel->Hide();
 	
 	bSizer46->Add( ShowRefinementResultsPanel, 80, wxEXPAND | wxALL, 5 );
@@ -7193,7 +7768,7 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	wxBoxSizer* bSizer59;
 	bSizer59 = new wxBoxSizer( wxHORIZONTAL );
 	
-	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
 	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
@@ -7887,6 +8462,38 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	
 	fgSizer1->Add( bSizer26612, 1, wxEXPAND, 5 );
+	
+	m_staticText879 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Apply Ewald Sphere correction?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText879->Wrap( -1 );
+	fgSizer1->Add( m_staticText879, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer266121;
+	bSizer266121 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ApplyEwaldSphereCorrectionYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266121->Add( ApplyEwaldSphereCorrectionYesButton, 0, wxALL, 5 );
+	
+	ApplyEwaldSphereCorrectionNoButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266121->Add( ApplyEwaldSphereCorrectionNoButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer266121, 1, wxEXPAND, 5 );
+	
+	ApplyInverseHandLabelText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tApply For Inverse Hand?"), wxDefaultPosition, wxDefaultSize, 0 );
+	ApplyInverseHandLabelText->Wrap( -1 );
+	fgSizer1->Add( ApplyInverseHandLabelText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer2661211;
+	bSizer2661211 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ApplyEwaldInverseHandYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2661211->Add( ApplyEwaldInverseHandYesButton, 0, wxALL, 5 );
+	
+	ApplyEwaldInverseHandNoButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2661211->Add( ApplyEwaldInverseHandNoButton, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2661211, 1, wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -8680,7 +9287,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	wxBoxSizer* bSizer123;
 	bSizer123 = new wxBoxSizer( wxHORIZONTAL );
 	
-	MovieRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Movies"), wxDefaultPosition, wxDefaultSize, 0 );
+	MovieRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Movies"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
 	bSizer123->Add( MovieRadioButton, 0, wxALL, 5 );
 	
 	ImageRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Images"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -8709,6 +9316,22 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	
 	AmplitudeContrastNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.07"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( AmplitudeContrastNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	TiltStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Also Search for Tilt?"), wxDefaultPosition, wxDefaultSize, 0 );
+	TiltStaticText->Wrap( -1 );
+	fgSizer1->Add( TiltStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer1231;
+	bSizer1231 = new wxBoxSizer( wxHORIZONTAL );
+	
+	SearchTiltYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer1231->Add( SearchTiltYesRadio, 0, wxALL, 5 );
+	
+	SearchTiltNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer1231->Add( SearchTiltNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer1231, 1, wxEXPAND, 5 );
 	
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
@@ -8975,6 +9598,8 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::OnExpertOptionsToggle ), NULL, this );
 	MovieRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnMovieRadioButton ), NULL, this );
 	ImageRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnImageRadioButton ), NULL, this );
+	SearchTiltYesRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnMovieRadioButton ), NULL, this );
+	SearchTiltNoRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnImageRadioButton ), NULL, this );
 	LargeAstigmatismExpectedCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnLargeAstigmatismExpectedCheckBox ), NULL, this );
 	RestrainAstigmatismCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnRestrainAstigmatismCheckBox ), NULL, this );
 	AdditionalPhaseShiftCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
@@ -8991,6 +9616,8 @@ FindCTFPanel::~FindCTFPanel()
 	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::OnExpertOptionsToggle ), NULL, this );
 	MovieRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnMovieRadioButton ), NULL, this );
 	ImageRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnImageRadioButton ), NULL, this );
+	SearchTiltYesRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnMovieRadioButton ), NULL, this );
+	SearchTiltNoRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( FindCTFPanel::OnImageRadioButton ), NULL, this );
 	LargeAstigmatismExpectedCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnLargeAstigmatismExpectedCheckBox ), NULL, this );
 	RestrainAstigmatismCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnRestrainAstigmatismCheckBox ), NULL, this );
 	AdditionalPhaseShiftCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
@@ -9006,8 +9633,12 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
 	
-	m_staticline12 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline12, 0, wxEXPAND | wxALL, 5 );
+	m_staticline149 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline149, 0, wxEXPAND | wxALL, 5 );
+	
+	InputPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer534;
+	bSizer534 = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer45;
 	bSizer45 = new wxBoxSizer( wxHORIZONTAL );
@@ -9020,21 +9651,21 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	fgSizer15->SetFlexibleDirection( wxHORIZONTAL );
 	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText262 = new wxStaticText( this, wxID_ANY, wxT("Input Image Group :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262 = new wxStaticText( InputPanel, wxID_ANY, wxT("Input Image Group :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
 	m_staticText262->Wrap( -1 );
 	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	GroupComboBox = new ImageGroupPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox = new ImageGroupPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
 	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
 	
 	fgSizer15->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
 	
-	m_staticText478 = new wxStaticText( this, wxID_ANY, wxT("Reference Volume :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText478 = new wxStaticText( InputPanel, wxID_ANY, wxT("Reference Volume :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText478->Wrap( -1 );
 	fgSizer15->Add( m_staticText478, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
-	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	ReferenceSelectPanel->SetMinSize( wxSize( 350,-1 ) );
 	ReferenceSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
 	
@@ -9043,32 +9674,28 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	bSizer557->Add( fgSizer15, 0, wxEXPAND, 5 );
 	
-	m_staticline155 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
-	bSizer557->Add( m_staticline155, 0, wxEXPAND | wxALL, 5 );
-	
-	wxBoxSizer* bSizer559;
-	bSizer559 = new wxBoxSizer( wxVERTICAL );
-	
-	wxBoxSizer* bSizer560;
-	bSizer560 = new wxBoxSizer( wxHORIZONTAL );
-	
-	
-	bSizer559->Add( bSizer560, 0, wxEXPAND, 5 );
-	
-	
-	bSizer557->Add( bSizer559, 0, wxEXPAND, 5 );
-	
 	
 	bSizer45->Add( bSizer557, 1, wxEXPAND, 5 );
 	
-	ExpertToggleButton = new wxToggleButton( this, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer45->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_RIGHT|wxALL, 5 );
+	
+	bSizer534->Add( bSizer45, 1, wxEXPAND, 5 );
+	
+	PleaseEstimateCTFStaticText = new wxStaticText( InputPanel, wxID_ANY, wxT("Please run CTF estimation on this group before picking particles"), wxDefaultPosition, wxDefaultSize, 0 );
+	PleaseEstimateCTFStaticText->Wrap( -1 );
+	PleaseEstimateCTFStaticText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	PleaseEstimateCTFStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	PleaseEstimateCTFStaticText->Hide();
+	
+	bSizer534->Add( PleaseEstimateCTFStaticText, 0, wxALL, 5 );
+	
+	m_staticline151 = new wxStaticLine( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer534->Add( m_staticline151, 0, wxEXPAND | wxALL, 5 );
 	
 	
-	bSizer43->Add( bSizer45, 0, wxEXPAND, 5 );
-	
-	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+	InputPanel->SetSizer( bSizer534 );
+	InputPanel->Layout();
+	bSizer534->Fit( InputPanel );
+	bSizer43->Add( InputPanel, 0, wxEXPAND | wxALL, 5 );
 	
 	wxBoxSizer* bSizer46;
 	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
@@ -9086,10 +9713,10 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	m_staticText201->Wrap( -1 );
 	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
 	
-	fgSizer1->Add( m_staticText201, 0, wxALL, 5 );
+	fgSizer1->Add( m_staticText201, 0, wxALIGN_BOTTOM|wxALL, 5 );
 	
-	
-	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	ResetAllDefaultsButton = new wxButton( ExpertPanel, wxID_ANY, wxT("Reset All Defaults"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( ResetAllDefaultsButton, 0, wxALIGN_RIGHT|wxALL, 5 );
 	
 	m_staticText189 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Out of Plane Angular Step (°) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText189->Wrap( -1 );
@@ -9112,47 +9739,104 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	HighResolutionLimitNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( HighResolutionLimitNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
-	m_staticText764 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Est. Particle Size (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText764->Wrap( -1 );
-	fgSizer1->Add( m_staticText764, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	EstimatedParticleSizeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( EstimatedParticleSizeTextCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText1901 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText1901->Wrap( -1 );
-	fgSizer1->Add( m_staticText1901, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( DefocusSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText19011 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText19011->Wrap( -1 );
-	fgSizer1->Add( m_staticText19011, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	DefocusSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( DefocusSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText1902 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pixel Size Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText1902->Wrap( -1 );
-	fgSizer1->Add( m_staticText1902, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( PixelSizeSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
-	
-	m_staticText19022 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pixel Size Search Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText19022->Wrap( -1 );
-	fgSizer1->Add( m_staticText19022, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	
-	PixelSizeSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.01"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	fgSizer1->Add( PixelSizeSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
-	
 	m_staticText19021 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pointgroup Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText19021->Wrap( -1 );
 	fgSizer1->Add( m_staticText19021, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
 	SymmetryComboBox = new wxComboBox( ExpertPanel, wxID_ANY, wxT("C1"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 ); 
 	fgSizer1->Add( SymmetryComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText698 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Perform Defocus Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText698->Wrap( -1 );
+	fgSizer1->Add( m_staticText698, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer265;
+	bSizer265 = new wxBoxSizer( wxHORIZONTAL );
+	
+	DefocusSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer265->Add( DefocusSearchYesRadio, 0, wxALL, 5 );
+	
+	DefocusSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer265->Add( DefocusSearchNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer265, 1, wxEXPAND, 5 );
+	
+	DefocusRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusRangeStaticText->Wrap( -1 );
+	DefocusRangeStaticText->Enable( false );
+	
+	fgSizer1->Add( DefocusRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchRangeNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( DefocusSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	DefocusStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusStepStaticText->Wrap( -1 );
+	DefocusStepStaticText->Enable( false );
+	
+	fgSizer1->Add( DefocusStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DefocusSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchStepNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( DefocusSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText699 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Perform Pixel Size Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText699->Wrap( -1 );
+	fgSizer1->Add( m_staticText699, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer2651;
+	bSizer2651 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PixelSizeSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2651->Add( PixelSizeSearchYesRadio, 0, wxALL, 5 );
+	
+	PixelSizeSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2651->Add( PixelSizeSearchNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2651, 1, wxEXPAND, 5 );
+	
+	PixelSizeRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPixel Size Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeRangeStaticText->Wrap( -1 );
+	PixelSizeRangeStaticText->Enable( false );
+	
+	fgSizer1->Add( PixelSizeRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.05"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchRangeNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( PixelSizeSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	PixelSizeStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPixel Size Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeStepStaticText->Wrap( -1 );
+	PixelSizeStepStaticText->Enable( false );
+	
+	fgSizer1->Add( PixelSizeStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.01"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchStepNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( PixelSizeSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText857 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Peak Selection"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText857->Wrap( -1 );
+	m_staticText857->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( m_staticText857, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText849 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Minimum peak radius (px.) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText849->Wrap( -1 );
+	fgSizer1->Add( m_staticText849, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	MinPeakRadiusNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MinPeakRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 	
 	
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -9191,10 +9875,10 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	bSizer61->Fit( InfoPanel );
 	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
 	
-	CTFResultsPanel = new ShowCTFResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	CTFResultsPanel->Hide();
+	ResultsPanel = new ShowTemplateMatchResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ResultsPanel->Hide();
 	
-	bSizer46->Add( CTFResultsPanel, 80, wxEXPAND | wxALL, 5 );
+	bSizer46->Add( ResultsPanel, 80, wxEXPAND | wxALL, 5 );
 	
 	
 	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
@@ -9287,7 +9971,7 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::OnExpertOptionsToggle ), NULL, this );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
@@ -9298,11 +9982,420 @@ MatchTemplateParentPanel::~MatchTemplateParentPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::OnExpertOptionsToggle ), NULL, this );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
 	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::StartEstimationClick ), NULL, this );
+	
+}
+
+RefineTemplateParentPanel::RefineTemplateParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : JobPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer43;
+	bSizer43 = new wxBoxSizer( wxVERTICAL );
+	
+	m_staticline149 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline149, 0, wxEXPAND | wxALL, 5 );
+	
+	InputPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer534;
+	bSizer534 = new wxBoxSizer( wxVERTICAL );
+	
+	wxBoxSizer* bSizer45;
+	bSizer45 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer557;
+	bSizer557 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxFlexGridSizer* fgSizer15;
+	fgSizer15 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer15->SetFlexibleDirection( wxHORIZONTAL );
+	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText262 = new wxStaticText( InputPanel, wxID_ANY, wxT("Input Image Group :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262->Wrap( -1 );
+	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	GroupComboBox = new ImageGroupPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
+	
+	m_staticText478 = new wxStaticText( InputPanel, wxID_ANY, wxT("Reference Volume :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText478->Wrap( -1 );
+	fgSizer15->Add( m_staticText478, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ReferenceSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	ReferenceSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
+	
+	fgSizer15->Add( ReferenceSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer557->Add( fgSizer15, 0, wxEXPAND, 5 );
+	
+	
+	bSizer45->Add( bSizer557, 1, wxEXPAND, 5 );
+	
+	
+	bSizer534->Add( bSizer45, 1, wxEXPAND, 5 );
+	
+	InputErrorText = new wxStaticText( InputPanel, wxID_ANY, wxT("Please run Match Template on all images in this group before running refine."), wxDefaultPosition, wxDefaultSize, 0 );
+	InputErrorText->Wrap( -1 );
+	InputErrorText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, false, wxEmptyString ) );
+	InputErrorText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	
+	bSizer534->Add( InputErrorText, 0, wxALL, 5 );
+	
+	m_staticline151 = new wxStaticLine( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer534->Add( m_staticline151, 0, wxEXPAND | wxALL, 5 );
+	
+	
+	InputPanel->SetSizer( bSizer534 );
+	InputPanel->Layout();
+	bSizer534->Fit( InputPanel );
+	bSizer43->Add( InputPanel, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer46;
+	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
+	ExpertPanel->SetScrollRate( 5, 5 );
+	InputSizer = new wxBoxSizer( wxVERTICAL );
+	
+	wxFlexGridSizer* fgSizer1;
+	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer1->SetFlexibleDirection( wxBOTH );
+	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+	
+	m_staticText847 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Peak Selection"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText847->Wrap( -1 );
+	m_staticText847->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
+	
+	fgSizer1->Add( m_staticText847, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	
+	ResetAllDefaultsButton = new wxButton( ExpertPanel, wxID_ANY, wxT("Reset All Defaults"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( ResetAllDefaultsButton, 0, wxALIGN_RIGHT|wxALL, 5 );
+	
+	m_staticText849 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Minimum peak radius (px.) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText849->Wrap( -1 );
+	fgSizer1->Add( m_staticText849, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	MinPeakRadiusNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MinPeakRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText846 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Threshold for Peak Selection : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText846->Wrap( -1 );
+	fgSizer1->Add( m_staticText846, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PeakSelectionThresholdNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( PeakSelectionThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText848 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Threshold for Results :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText848->Wrap( -1 );
+	fgSizer1->Add( m_staticText848, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PeakPlottingThresholdNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( PeakPlottingThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	mask_radius = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Remove Highly Shifted Peaks?"), wxDefaultPosition, wxDefaultSize, 0 );
+	mask_radius->Wrap( -1 );
+	fgSizer1->Add( mask_radius, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer2652;
+	bSizer2652 = new wxBoxSizer( wxHORIZONTAL );
+	
+	RemoveShiftedPeaksYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2652->Add( RemoveShiftedPeaksYesRadio, 0, wxALL, 5 );
+	
+	RemoveShiftedPeaksNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2652->Add( RemoveShiftedPeaksNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2652, 1, wxEXPAND, 5 );
+	
+	ShiftThresholdStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tShift Threshold (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ShiftThresholdStaticText->Wrap( -1 );
+	ShiftThresholdStaticText->Enable( false );
+	
+	fgSizer1->Add( ShiftThresholdStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PeakChangeThresholdNumericTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PeakChangeThresholdNumericTextCtrl->Enable( false );
+	
+	fgSizer1->Add( PeakChangeThresholdNumericTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText201->Wrap( -1 );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), 70, 90, 92, true, wxEmptyString ) );
+	
+	fgSizer1->Add( m_staticText201, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	
+	
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+	
+	m_staticText852 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText852->Wrap( -1 );
+	fgSizer1->Add( m_staticText852, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	MaskRadiusNumericTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MaskRadiusNumericTextCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText189 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Out of Plane Angular Step (°) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText189->Wrap( -1 );
+	fgSizer1->Add( m_staticText189, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	OutofPlaneStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( OutofPlaneStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText190 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("In Plane Angular Step (°) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText190->Wrap( -1 );
+	fgSizer1->Add( m_staticText190, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	InPlaneStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( InPlaneStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText190211 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText190211->Wrap( -1 );
+	fgSizer1->Add( m_staticText190211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	HighResolutionLimitNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( HighResolutionLimitNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText19021 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Pointgroup Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText19021->Wrap( -1 );
+	fgSizer1->Add( m_staticText19021, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	SymmetryComboBox = new wxComboBox( ExpertPanel, wxID_ANY, wxT("C1"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 ); 
+	fgSizer1->Add( SymmetryComboBox, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText698 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Perform Defocus Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText698->Wrap( -1 );
+	fgSizer1->Add( m_staticText698, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer265;
+	bSizer265 = new wxBoxSizer( wxHORIZONTAL );
+	
+	DefocusSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer265->Add( DefocusSearchYesRadio, 0, wxALL, 5 );
+	
+	DefocusSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer265->Add( DefocusSearchNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer265, 1, wxEXPAND, 5 );
+	
+	DefocusRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusRangeStaticText->Wrap( -1 );
+	DefocusRangeStaticText->Enable( false );
+	
+	fgSizer1->Add( DefocusRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchRangeNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( DefocusSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	DefocusStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusStepStaticText->Wrap( -1 );
+	DefocusStepStaticText->Enable( false );
+	
+	fgSizer1->Add( DefocusStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	DefocusSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchStepNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( DefocusSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText699 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Perform Pixel Size Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText699->Wrap( -1 );
+	fgSizer1->Add( m_staticText699, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer2651;
+	bSizer2651 = new wxBoxSizer( wxHORIZONTAL );
+	
+	PixelSizeSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2651->Add( PixelSizeSearchYesRadio, 0, wxALL, 5 );
+	
+	PixelSizeSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2651->Add( PixelSizeSearchNoRadio, 0, wxALL, 5 );
+	
+	
+	fgSizer1->Add( bSizer2651, 1, wxEXPAND, 5 );
+	
+	PixelSizeRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPixel Size Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeRangeStaticText->Wrap( -1 );
+	PixelSizeRangeStaticText->Enable( false );
+	
+	fgSizer1->Add( PixelSizeRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.05"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchRangeNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( PixelSizeSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	PixelSizeStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPixel Size Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeStepStaticText->Wrap( -1 );
+	PixelSizeStepStaticText->Enable( false );
+	
+	fgSizer1->Add( PixelSizeStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	PixelSizeSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.01"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchStepNumericCtrl->Enable( false );
+	
+	fgSizer1->Add( PixelSizeSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	
+	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
+	
+	
+	ExpertPanel->SetSizer( InputSizer );
+	ExpertPanel->Layout();
+	InputSizer->Fit( ExpertPanel );
+	bSizer46->Add( ExpertPanel, 0, wxALL|wxEXPAND, 5 );
+	
+	OutputTextPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	OutputTextPanel->Hide();
+	
+	wxBoxSizer* bSizer56;
+	bSizer56 = new wxBoxSizer( wxVERTICAL );
+	
+	output_textctrl = new wxTextCtrl( OutputTextPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_READONLY );
+	bSizer56->Add( output_textctrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	OutputTextPanel->SetSizer( bSizer56 );
+	OutputTextPanel->Layout();
+	bSizer56->Fit( OutputTextPanel );
+	bSizer46->Add( OutputTextPanel, 20, wxEXPAND | wxALL, 5 );
+	
+	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer61;
+	bSizer61 = new wxBoxSizer( wxVERTICAL );
+	
+	InfoText = new wxRichTextCtrl( InfoPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY|wxHSCROLL|wxVSCROLL );
+	bSizer61->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	InfoPanel->SetSizer( bSizer61 );
+	InfoPanel->Layout();
+	bSizer61->Fit( InfoPanel );
+	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	ResultsPanel = new ShowTemplateMatchResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ResultsPanel->Hide();
+	
+	bSizer46->Add( ResultsPanel, 80, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
+	
+	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer48;
+	bSizer48 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer70;
+	bSizer70 = new wxBoxSizer( wxHORIZONTAL );
+	
+	ProgressPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ProgressPanel->Hide();
+	
+	wxBoxSizer* bSizer57;
+	bSizer57 = new wxBoxSizer( wxHORIZONTAL );
+	
+	wxBoxSizer* bSizer59;
+	bSizer59 = new wxBoxSizer( wxHORIZONTAL );
+	
+	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberConnectedText->Wrap( -1 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
+	ProgressBar->SetValue( 0 ); 
+	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	
+	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	TimeRemainingText->Wrap( -1 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
+	
+	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
+	FinishButton->Hide();
+	
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
+	
+	
+	ProgressPanel->SetSizer( bSizer57 );
+	ProgressPanel->Layout();
+	bSizer57->Fit( ProgressPanel );
+	bSizer70->Add( ProgressPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer48->Add( bSizer70, 1, wxEXPAND, 5 );
+	
+	StartPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer58;
+	bSizer58 = new wxBoxSizer( wxHORIZONTAL );
+	
+	RunProfileText = new wxStaticText( StartPanel, wxID_ANY, wxT("Run Profile :"), wxDefaultPosition, wxDefaultSize, 0 );
+	RunProfileText->Wrap( -1 );
+	bSizer58->Add( RunProfileText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	RunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ); 
+	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	wxBoxSizer* bSizer60;
+	bSizer60 = new wxBoxSizer( wxVERTICAL );
+	
+	StartEstimationButton = new wxButton( StartPanel, wxID_ANY, wxT("Start Search"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer60->Add( StartEstimationButton, 0, wxALL, 5 );
+	
+	
+	bSizer58->Add( bSizer60, 50, wxEXPAND, 5 );
+	
+	
+	StartPanel->SetSizer( bSizer58 );
+	StartPanel->Layout();
+	bSizer58->Fit( StartPanel );
+	bSizer48->Add( StartPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	bSizer43->Add( bSizer48, 0, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer43 );
+	this->Layout();
+	
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
+}
+
+RefineTemplateParentPanel::~RefineTemplateParentPanel()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
 	
 }
 
@@ -9774,12 +10867,12 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	bSizer45 = new wxBoxSizer( wxVERTICAL );
 	
 	wxFlexGridSizer* fgSizer2;
-	fgSizer2 = new wxFlexGridSizer( 3, 2, 0, 0 );
+	fgSizer2 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer2->AddGrowableCol( 1 );
 	fgSizer2->SetFlexibleDirection( wxBOTH );
 	fgSizer2->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText45 = new wxStaticText( this, wxID_ANY, wxT("Command :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText45 = new wxStaticText( this, wxID_ANY, wxT("Command To Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText45->Wrap( -1 );
 	fgSizer2->Add( m_staticText45, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
@@ -9788,16 +10881,23 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	
 	fgSizer2->Add( CommandTextCtrl, 1, wxALL|wxEXPAND, 5 );
 	
-	m_staticText46 = new wxStaticText( this, wxID_ANY, wxT("No. Copies :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText46 = new wxStaticText( this, wxID_ANY, wxT("No. Copies To Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText46->Wrap( -1 );
 	fgSizer2->Add( m_staticText46, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	NumberCopiesSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999, 1 );
 	fgSizer2->Add( NumberCopiesSpinCtrl, 1, wxALL|wxEXPAND, 5 );
 	
-	m_staticText58 = new wxStaticText( this, wxID_ANY, wxT("Delay (ms) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThreadsPerCopySpinCtrl = new wxStaticText( this, wxID_ANY, wxT("No. Threads Per Copy :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThreadsPerCopySpinCtrl->Wrap( -1 );
+	fgSizer2->Add( ThreadsPerCopySpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	NumberThreadsSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999999, 1 );
+	fgSizer2->Add( NumberThreadsSpinCtrl, 0, wxALL|wxEXPAND, 5 );
+	
+	m_staticText58 = new wxStaticText( this, wxID_ANY, wxT("Launch Delay (ms) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText58->Wrap( -1 );
-	fgSizer2->Add( m_staticText58, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	fgSizer2->Add( m_staticText58, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	DelayTimeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10000, 100 );
 	fgSizer2->Add( DelayTimeSpinCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -9805,12 +10905,29 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	
 	bSizer45->Add( fgSizer2, 0, wxEXPAND, 5 );
 	
+	m_staticline166 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer45->Add( m_staticline166, 0, wxEXPAND | wxALL, 5 );
+	
 	ErrorStaticText = new wxStaticText( this, wxID_ANY, wxT("Oops! - Command must contain \"$command\""), wxDefaultPosition, wxDefaultSize, 0 );
 	ErrorStaticText->Wrap( -1 );
 	ErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 	ErrorStaticText->Hide();
 	
 	bSizer45->Add( ErrorStaticText, 0, wxALIGN_CENTER|wxALL, 5 );
+	
+	wxBoxSizer* bSizer590;
+	bSizer590 = new wxBoxSizer( wxHORIZONTAL );
+	
+	OverrideCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Override Apparent No. Copies :"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer590->Add( OverrideCheckBox, 0, wxALL, 5 );
+	
+	OverridenNoCopiesSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0 );
+	OverridenNoCopiesSpinCtrl->Enable( false );
+	
+	bSizer590->Add( OverridenNoCopiesSpinCtrl, 1, wxALL|wxEXPAND, 5 );
+	
+	
+	bSizer45->Add( bSizer590, 0, wxALIGN_CENTER, 5 );
 	
 	m_staticline14 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer45->Add( m_staticline14, 0, wxEXPAND | wxALL, 5 );
@@ -9830,12 +10947,12 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	
 	this->SetSizer( bSizer45 );
 	this->Layout();
-	bSizer45->Fit( this );
 	
 	this->Centre( wxBOTH );
 	
 	// Connect Events
 	CommandTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( AddRunCommandDialog::OnEnter ), NULL, this );
+	OverrideCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOverrideCheckbox ), NULL, this );
 	OKButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnCancelClick ), NULL, this );
 }
@@ -9844,6 +10961,7 @@ AddRunCommandDialog::~AddRunCommandDialog()
 {
 	// Disconnect Events
 	CommandTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( AddRunCommandDialog::OnEnter ), NULL, this );
+	OverrideCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOverrideCheckbox ), NULL, this );
 	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnCancelClick ), NULL, this );
 	
@@ -12090,6 +13208,104 @@ DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWind
 }
 
 DisplayRefinementResultsPanelParent::~DisplayRefinementResultsPanelParent()
+{
+}
+
+DisplayCTFRefinementResultsPanelParent::DisplayCTFRefinementResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+{
+	wxBoxSizer* bSizer92;
+	bSizer92 = new wxBoxSizer( wxVERTICAL );
+	
+	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	LeftRightSplitter->SetSashGravity( 0.5 );
+	LeftRightSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
+	
+	LeftPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer301;
+	bSizer301 = new wxBoxSizer( wxVERTICAL );
+	
+	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	TopBottomSplitter->SetSashGravity( 0.5 );
+	TopBottomSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
+	
+	TopPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer302;
+	bSizer302 = new wxBoxSizer( wxVERTICAL );
+	
+	DefocusChangeText = new wxStaticText( TopPanel, wxID_ANY, wxT("Defocus Change Histogram"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusChangeText->Wrap( -1 );
+	DefocusChangeText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer302->Add( DefocusChangeText, 0, wxALL, 5 );
+	
+	DefocusPlotLine = new wxStaticLine( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer302->Add( DefocusPlotLine, 0, wxEXPAND | wxALL, 5 );
+	
+	DefocusHistorgramPlotPanel = new PlotCurvePanel( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer302->Add( DefocusHistorgramPlotPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	TopPanel->SetSizer( bSizer302 );
+	TopPanel->Layout();
+	bSizer302->Fit( TopPanel );
+	BottomPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer303;
+	bSizer303 = new wxBoxSizer( wxVERTICAL );
+	
+	FSCResultsPanel = new MyFSCPanel( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer303->Add( FSCResultsPanel, 1, wxEXPAND | wxALL, 5 );
+	
+	
+	BottomPanel->SetSizer( bSizer303 );
+	BottomPanel->Layout();
+	bSizer303->Fit( BottomPanel );
+	TopBottomSplitter->SplitHorizontally( TopPanel, BottomPanel, 0 );
+	bSizer301->Add( TopBottomSplitter, 1, wxEXPAND, 5 );
+	
+	
+	LeftPanel->SetSizer( bSizer301 );
+	LeftPanel->Layout();
+	bSizer301->Fit( LeftPanel );
+	RightPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer304;
+	bSizer304 = new wxBoxSizer( wxVERTICAL );
+	
+	OrthText = new wxStaticText( RightPanel, wxID_ANY, wxT("Orthogonal Slices / Projections"), wxDefaultPosition, wxDefaultSize, 0 );
+	OrthText->Wrap( -1 );
+	OrthText->SetFont( wxFont( 10, 74, 90, 92, false, wxT("Sans") ) );
+	
+	bSizer304->Add( OrthText, 0, wxALL, 5 );
+	
+	m_staticline109 = new wxStaticLine( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline109, 0, wxEXPAND | wxALL, 5 );
+	
+	ShowOrthDisplayPanel = new DisplayPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer304->Add( ShowOrthDisplayPanel, 66, wxEXPAND | wxALL, 5 );
+	
+	RoundPlotPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RoundPlotPanel->Hide();
+	
+	bSizer304->Add( RoundPlotPanel, 33, wxEXPAND | wxALL, 5 );
+	
+	wxBoxSizer* bSizer306;
+	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
+	
+	
+	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
+	
+	
+	RightPanel->SetSizer( bSizer304 );
+	RightPanel->Layout();
+	bSizer304->Fit( RightPanel );
+	LeftRightSplitter->SplitVertically( LeftPanel, RightPanel, 600 );
+	bSizer92->Add( LeftRightSplitter, 1, wxEXPAND, 5 );
+	
+	
+	this->SetSizer( bSizer92 );
+	this->Layout();
+}
+
+DisplayCTFRefinementResultsPanelParent::~DisplayCTFRefinementResultsPanelParent()
 {
 }
 

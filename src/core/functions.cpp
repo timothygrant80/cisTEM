@@ -164,6 +164,166 @@ bool SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket)
 	return true;
 }
 
+bool SendTemplateMatchingResultToSocket(wxSocketBase *socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes)
+{
+	// send the image number and all the peak details...
+
+	int number_of_peaks = peak_infos.GetCount();
+	int number_of_changes = peak_changes.GetCount();
+
+	int number_of_bytes = sizeof(int) + sizeof(float) + sizeof(int) + sizeof(int) + (number_of_peaks * sizeof(float) * 8) + (number_of_changes * sizeof(float) * 10); // THIS WILL NEED TO BE CHANGED IF EXTRA THINGS ARE ADDED
+
+	unsigned char *data_buffer = new unsigned char[number_of_bytes];
+
+	int *pointer_to_first_byte = reinterpret_cast < int *> (data_buffer);
+	pointer_to_first_byte[0] = image_number;
+	pointer_to_first_byte[1] = number_of_peaks;
+	pointer_to_first_byte[2] = number_of_changes;
+
+	float *pointer_to_float_data = reinterpret_cast < float *> (data_buffer + (sizeof(int) * 3));
+
+	int float_position = 0;
+	pointer_to_float_data[float_position] = threshold_used;
+	float_position++;
+
+	// peaks..
+
+	for (int counter = 0; counter < peak_infos.GetCount(); counter++)
+	{
+		pointer_to_float_data[float_position] = peak_infos[counter].x_pos;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].y_pos;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].psi;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].theta;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].phi;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].defocus;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].pixel_size;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_infos[counter].peak_height;
+		float_position++;
+	}
+
+	// changes..
+
+	for (int counter = 0; counter < number_of_changes; counter++)
+	{
+		pointer_to_float_data[float_position] = peak_changes[counter].x_pos;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].y_pos;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].psi;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].theta;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].phi;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].defocus;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].pixel_size;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].peak_height;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].original_peak_number;
+		float_position++;
+		pointer_to_float_data[float_position] = peak_changes[counter].new_peak_number;
+		float_position++;
+	}
+
+	if (WriteToSocket(socket, socket_template_match_result_ready, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+	if (WriteToSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+	if (WriteToSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+
+	return true;
+}
+
+bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase *socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes)
+{
+	int number_of_bytes;
+	int number_of_peaks;
+	int number_of_changes;
+
+	if (ReadFromSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+
+	unsigned char *data_buffer = new unsigned char[number_of_bytes];
+	if (ReadFromSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false) return false;
+
+	peak_infos.Clear();
+	peak_changes.Clear();
+
+	TemplateMatchFoundPeakInfo temp_peak_info;
+
+	int *pointer_to_first_byte = reinterpret_cast < int *> (data_buffer);
+	image_number = pointer_to_first_byte[0];
+	number_of_peaks = pointer_to_first_byte[1];
+	number_of_changes = pointer_to_first_byte[2];
+
+	float *pointer_to_float_data = reinterpret_cast < float *> (data_buffer + (sizeof(int) * 3));
+	int float_position = 0;
+
+	threshold_used = pointer_to_float_data[float_position];
+	float_position++;
+
+	for (int counter = 0; counter < number_of_peaks; counter++)
+	{
+		temp_peak_info.x_pos = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.y_pos = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.psi = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.theta = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.phi = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.defocus = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.pixel_size = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.peak_height = pointer_to_float_data[float_position];
+		float_position++;
+
+		peak_infos.Add(temp_peak_info);
+	}
+
+	for (int counter = 0; counter < number_of_changes; counter++)
+	{
+		temp_peak_info.x_pos = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.y_pos = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.psi = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.theta = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.phi = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.defocus = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.pixel_size = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.peak_height = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.original_peak_number = pointer_to_float_data[float_position];
+		float_position++;
+		temp_peak_info.new_peak_number = pointer_to_float_data[float_position];
+		float_position++;
+
+
+		peak_changes.Add(temp_peak_info);
+	}
+
+
+	delete [] data_buffer;
+
+	return true;
+}
+
+
 // This is here as when the binned resolution is too close to the refinement resolution or reconstruction
 // resolution (could be 1 or other or both), then it seems to cause some problems - e.g. in Proteasome.
 // I'm going to add a 1.3 factor here, but this can be changed.

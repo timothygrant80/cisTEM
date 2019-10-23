@@ -603,7 +603,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageSelectPanel->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 0)
 				{
 					if (RefinementPackageSelectPanel->GetSelection() != wxNOT_FOUND && ReferenceSelectPanel->GetSelection() != wxNOT_FOUND)
 					{
@@ -1407,8 +1407,10 @@ void AutoRefinementManager::SetupReconstructionJob()
 			bool threshold_input_3d = true;
 			int max_threads = 1;
 
+			int correct_ewald_sphere = 0;
 
-			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
+
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1441,6 +1443,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data(),
+																		correct_ewald_sphere,
 																		max_threads);
 
 
@@ -1659,7 +1662,14 @@ void AutoRefinementManager::SetupRefinementJob()
 			float    inner_mask_radius						= active_inner_mask_radius;
 			float    low_resolution_limit					= active_low_resolution_limit;
 			float    high_resolution_limit					= class_high_res_limits[class_counter];
-			float	 signed_CC_limit						= 0;//my_parent->SignedCCResolutionTextCtrl->ReturnValue();
+
+			float	 signed_CC_limit;
+			//signed_CC_limit = 0.0f;
+			if (IsOdd(number_of_rounds_run) == true || this_is_the_final_round == true || number_of_rounds_run == 0) signed_CC_limit = 0.0f;
+			else signed_CC_limit = 15.0f;
+
+
+
 			//float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
 			float    classification_resolution_limit        = 20.0f + (8.0f - 20.0f) * (float(number_of_rounds_run) / 9.0f);
 			if (classification_resolution_limit < lowest_res) classification_resolution_limit = lowest_res;

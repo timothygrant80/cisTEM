@@ -247,7 +247,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared > mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -255,7 +255,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared <= mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -281,7 +281,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				{
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						sum += powf(real_values[address],2);
+						sum += pow(real_values[address],2);
 						address++;
 					}
 					address += padding_jump_value;

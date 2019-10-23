@@ -230,7 +230,7 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageComboBox->GetCount() > 0 && RefinementRunProfileComboBox->GetSelection() >= 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 )
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 0 )
 				{
 					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND && InputParametersComboBox->GetSelection() != wxNOT_FOUND)
 					{
@@ -626,7 +626,7 @@ void MyRefine2DPanel::SetDefaults()
 		AutoPercentUsedRadioYes->SetValue(true);
 		PercentUsedTextCtrl->SetValue("100.00");
 		AutoMaskRadioNo->SetValue(true);
-		AutoCentreRadioNo->SetValue(true);
+		AutoCentreRadioYes->SetValue(true);
 		ExpertPanel->Thaw();
 	}
 }

@@ -69,6 +69,7 @@ public :
 	long ReturnSingleLongFromSelectCommand(wxString select_command);
 	double ReturnSingleDoubleFromSelectCommand(wxString select_command);
 
+	wxArrayInt ReturnIntArrayFromSelectCommand(wxString select_command);
 	wxArrayLong ReturnLongArrayFromSelectCommand(wxString select_command);
 	wxArrayString ReturnStringArrayFromSelectCommand(wxString select_command);
 
@@ -95,12 +96,18 @@ public :
 	int ReturnHighestParticlePositionID();
 	long ReturnHighestClassumSelectionID();
 
+	int ReturnHighestTemplateMatchID();
+	int ReturnHighestTemplateMatchJobID();
+	void SetActiveTemplateMatchJobForGivenImageAssetID(long image_asset, long template_match_job_id);
+
 	int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
+	int ReturnNumberOfPreviousTemplateMatchesByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
 	int ReturnNumberOfPreviousParticlePicksByAssetID(int wanted_asset_id);
 
 	int ReturnNumberOfAlignmentJobs();
 	int ReturnNumberOfCTFEstimationJobs();
+	int ReturnNumberOfTemplateMatchingJobs();
 	int ReturnNumberOfPickingJobs();
 	int ReturnNumberOfImageAssetsWithCTFEstimates();
 
@@ -108,13 +115,14 @@ public :
 
 	void GetUniqueAlignmentIDs(int *alignment_job_ids, int number_of_alignmnet_jobs);
 	void GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
+	void GetUniqueTemplateMatchIDs(long *template_match_job_ids, int number_of_template_match_jobs);
 	void GetUniquePickingJobIDs(int *picking_job_ids, int number_of_picking_jobs);
 	void GetUniqueIDsOfImagesWithCTFEstimations(int *image_ids, int &number_of_image_ids);
 
 	void GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &movies_are_dark_corrected, wxString dark_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white);
 	void GetImageImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, bool &protein_is_white);
 
-	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float&amplitude_contrast);
+	void GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float &amplitude_contrast, float &tilt_angle, float &tilt_axis);
 
 	void AddRefinementPackageAsset(RefinementPackage *asset_to_add);
 
@@ -186,6 +194,10 @@ public :
 																																														"RECONSTRUCTION_ID", "SHOULD_AUTOMASK", "SHOULD_REFINE_INPUT_PARAMS", "SHOULD_USE_SUPPLIED_MASK",
 																																														"MASK_ASSET_ID", "MASK_EDGE_WIDTH", "OUTSIDE_MASK_WEIGHT", "SHOULD_LOWPASS_OUTSIDE_MASK", "MASK_FILTER_RESOLUTION");};
 
+
+	bool CreateTemplateMatchingResultsTable() { return CreateTable("TEMPLATE_MATCH_LIST", "Ptllilllitrrrrrrrrrrrrrrrrrrrrrrittttttttt", "TEMPLATE_MATCH_ID", "JOB_NAME", "DATETIME_OF_RUN", "TEMPLATE_MATCH_JOB_ID", "JOB_TYPE_CODE", "INPUT_TEMPLATE_MATCH_ID", "IMAGE_ASSET_ID", "REFERENCE_VOLUME_ASSET_ID", "IS_ACTIVE", "USED_SYMMETRY", "USED_PIXEL_SIZE", "USED_VOLTAGE", "USED_SPHERICAL_ABERRATION", "USED_AMPLITUDE_CONTRAST", "USED_DEFOCUS1", "USED_DEFOCUS2", "USED_DEFOCUS_ANGLE", "USED_PHASE_SHIFT", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "OUT_OF_PLANE_ANGULAR_STEP", "IN_PLANE_ANGULAR_STEP", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_STEP", "PIXEL_SIZE_SEARCH_RANGE", "PIXEL_SIZE_STEP", "REFINEMENT_THRESHOLD", "USED_THRESHOLD", "REF_BOX_SIZE_IN_ANGSTROMS", "MASK_RADIUS", "MIN_PEAK_RADIUS", "XY_CHANGE_THRESHOLD", "EXCLUDE_ABOVE_XY_THRESHOLD", "MIP_OUTPUT_FILE", "SCALED_MIP_OUTPUT_FILE", "PSI_OUTPUT_FILE", "THETA_OUTPUT_FILE", "PHI_OUTPUT_FILE", "DEFOCUS_OUTPUT_FILE", "PIXEL_SIZE_OUTPUT_FILE", "HISTOGRAM_OUTPUT_FILE", "PROJECTION_RESULT_OUTPUT_FILE");}
+	bool CreateTemplateMatchPeakListTable(const long template_match_job_id) {return CreateTable(wxString::Format("TEMPLATE_MATCH_PEAK_LIST_%li", template_match_job_id), "prrrrrrrr", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT");}
+	bool CreateTemplateMatchPeakChangeListTable(const long template_match_job_id) {return CreateTable(wxString::Format("TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", template_match_job_id), "prrrrrrrrii", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT", "ORIGINAL_PEAK_NUMBER", "NEW_PEAK_NUMBER");}
 
 	bool CreateRefinementResultTable(const long refinement_id, const int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrrirrrrrrrr", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y");};
 	bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_number) {return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_number), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");};
@@ -278,7 +290,12 @@ public :
 	void AddRefinement(Refinement *refinement_to_add);
 	void UpdateRefinementResolutionStatistics(Refinement *refinement_to_update);
 
+	void AddTemplateMatchingResult(long wanted_template_match_id, TemplateMatchJobResults &job_details);
+
+	TemplateMatchJobResults GetTemplateMatchingResultByID(long wanted_template_match_id);
+
 	void AddRefinementAngularDistribution(AngularDistributionHistogram &histogram_to_add, long refinement_id, int class_number);
+	void CopyRefinementAngularDistributions(long refinement_id_to_copy, long refinement_id_to_copy_to, int wanted_class_number);
 	void  GetRefinementAngularDistributionHistogramData(long wanted_refinement_id, int wanted_class_number, AngularDistributionHistogram &histogram_to_fill);
 
 

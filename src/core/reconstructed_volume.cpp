@@ -262,7 +262,7 @@ void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, Ang
 	MyDebugAssertTrue(CTF.logical_x_dimension == density_map->logical_x_dimension && CTF.logical_y_dimension == density_map->logical_y_dimension, "Error: CTF image has different size");
 	MyDebugAssertTrue(projection.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(projection.is_in_memory, "Memory not allocated for receiving image");
-	MyDebugAssertTrue(density_map->IsCubic(), "Image volume to project is not cubic");
+	MyDebugAssertTrue(density_map->IsCubic(), "Image volume to project is not cubic (%i, %i, %i)", density_map->logical_x_dimension, density_map->logical_y_dimension, density_map->logical_z_dimension);
 	MyDebugAssertTrue(! density_map->object_is_centred_in_box, "Image volume quadrants not swapped");
 
 	if (current_phi != angles_and_shifts_of_projection.ReturnPhiAngle() || current_theta != angles_and_shifts_of_projection.ReturnThetaAngle()

@@ -48,6 +48,9 @@ bool RemoveINFandNAN::DoCalculation()
 
 	Image buffer_image;
 	long pixel_counter;
+	long images_with_inf_or_nan = 0;
+
+	bool has_bad_pixel;
 
 	input_file.OpenFile(input_filename, false);
 	output_file.OpenFile(output_filename, true);
@@ -59,17 +62,26 @@ bool RemoveINFandNAN::DoCalculation()
 	for (int counter = 1; counter <= input_file.ReturnNumberOfSlices(); counter++ )
 	{
 		buffer_image.ReadSlice(&input_file, counter);
+		has_bad_pixel = false;
 
 		for (pixel_counter = 0; pixel_counter < buffer_image.real_memory_allocated; pixel_counter++)
 		{
-			if (std::isnan(buffer_image.real_values[pixel_counter]) != 0 || std::isinf(buffer_image.real_values[pixel_counter]) != 0) buffer_image.real_values[pixel_counter] = 0.0;
+			if (std::isnan(buffer_image.real_values[pixel_counter]) != 0 || std::isinf(buffer_image.real_values[pixel_counter]) != 0)
+			{
+				buffer_image.real_values[pixel_counter] = 0.0;
+				has_bad_pixel = true;
+			}
 		}
+
+		if (has_bad_pixel == true) images_with_inf_or_nan++;
 
 		buffer_image.WriteSlice(&output_file, counter);
 		my_progress->Update(counter);
 	}
 
 	delete my_progress;
+
+	wxPrintf("\n\n%li Images contained inf or nan\n\n", images_with_inf_or_nan);
 
 
 	return true;

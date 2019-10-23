@@ -279,6 +279,8 @@ bool UnBlurApp::DoCalculation()
 	std::string aligned_frames_filename 			= my_current_job.arguments[34].ReturnStringArgument();
 	std::string output_shift_text_file				= my_current_job.arguments[35].ReturnStringArgument();
 
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
+
 	//my_current_job.PrintAllArguments();
 
 	// Profiling

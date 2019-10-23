@@ -453,6 +453,8 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	wxString output_diagnostic_file;
 	int number_of_frames_averaged;
 	double iciness;
+	double tilt_axis;
+	double tilt_angle;
 	//wxString input_filename;
 
 	// get the alignment_id and all the other details..;
@@ -467,7 +469,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 		DEBUG_ABORT;
 	}
 
-	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtiir", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected,&iciness);
+	main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtiirrr", &ctf_estimation_id, &ctf_estimation_job_id,&datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected,&iciness, &tilt_angle, &tilt_axis);
 	//wxPrintf("%i,%i,%li,%i,%i,%f,%f,%f,%f,%i,%f,%f,%f,%f,%f,%i,%f,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%s\n", ctf_estimation_id, ctf_estimation_job_id,datetime_of_run, image_asset_id, estimated_on_movie_frames, voltage, spherical_aberration, pixel_size, amplitude_contrast, box_size, min_resolution, max_resolution, min_defocus, max_defocus, defocus_step, restrain_astigmatism, tolerated_astigmatism, find_additional_phase_shift, min_phase_shift, max_phase_shift, phase_shift_step, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, output_diagnostic_file);
 	main_frame->current_project.database.EndBatchSelect();
 
@@ -552,7 +554,7 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column)
 	// now get the result, and draw it as we go..
 
 	wxString ImageFile = image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromAssetID(current_image_id));
-	ResultPanel->Draw(output_diagnostic_file, find_additional_phase_shift, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, iciness, ImageFile);
+	ResultPanel->Draw(output_diagnostic_file, find_additional_phase_shift, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, iciness, tilt_angle, tilt_axis, ImageFile);
 	RightPanel->Layout();
 
 }

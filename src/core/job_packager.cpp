@@ -150,6 +150,47 @@ bool JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 		 transfer_buffer[byte_counter] = char_pointer[3];
 		 byte_counter++;
 
+		 // number of threads..
+
+		 char_pointer = (unsigned char*) &my_profile.run_commands[command_counter].number_of_threads_per_copy;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
+		 // should_override..
+
+		 int should_override = int(my_profile.run_commands[command_counter].override_total_copies);
+		 char_pointer = (unsigned char*) &should_override;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
+		 // overriden number of copies..
+
+		 char_pointer = (unsigned char*) &my_profile.run_commands[command_counter].overriden_number_of_copies;
+
+		 transfer_buffer[byte_counter] = char_pointer[0];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[1];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[2];
+		 byte_counter++;
+		 transfer_buffer[byte_counter] = char_pointer[3];
+		 byte_counter++;
+
+
 		 // delay time in ms..
 
 		 char_pointer = (unsigned char*) &my_profile.run_commands[command_counter].delay_time_in_ms;
@@ -311,11 +352,11 @@ bool JobPackage::SendJobPackage(wxSocketBase *socket) // package the whole objec
 	 // disable events on the socket..
 	 //socket->SetNotify(wxSOCKET_LOST_FLAG);
 	 // inform what we want to do..
-	 if (WriteToSocket(socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false)
-	 {
-		 delete [] transfer_buffer;
-		 return false;
-	 }
+//	 if (WriteToSocket(socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING) == false)
+//	 {
+//		 delete [] transfer_buffer;
+//		 return false;
+//	 }
 
    	 // first - send how many bytes it is..
 
@@ -353,6 +394,9 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 	int wanted_number_of_processes;
 	int number_of_run_commands;
 	int number_of_copies;
+	int number_of_threads_per_copy;
+	int overriden_total_number_of_copies;
+	int override_total_number_of_copies;
 	int delay_in_ms;
 	std::string wanted_command_to_run;
 
@@ -517,6 +561,46 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 		 char_pointer[3] = transfer_buffer[byte_counter];
  		 byte_counter++;
 
+		 // number of threads..
+
+		 char_pointer = (unsigned char*)&number_of_threads_per_copy;
+
+ 		 char_pointer[0] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[1] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[2] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+
+		 // should_override..
+
+		 char_pointer = (unsigned char*)&override_total_number_of_copies;
+
+ 		 char_pointer[0] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[1] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[2] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+
+		 // override_number..
+
+		 char_pointer = (unsigned char*)&overriden_total_number_of_copies;
+
+ 		 char_pointer[0] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[1] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+ 		 char_pointer[2] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+		 char_pointer[3] = transfer_buffer[byte_counter];
+ 		 byte_counter++;
+
+
  		 // delay_in_ms..
 
 		 char_pointer = (unsigned char*)&delay_in_ms;
@@ -532,7 +616,7 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 
  		 // add the command.
 
- 		 temp_run_profile.AddCommand(temp_wxstring, number_of_copies, delay_in_ms);
+ 		 temp_run_profile.AddCommand(temp_wxstring, number_of_copies, number_of_threads_per_copy, bool(override_total_number_of_copies), overriden_total_number_of_copies, delay_in_ms);
 	 }
 
 	// now we need to loop over all the jobs..
@@ -713,6 +797,9 @@ long JobPackage::ReturnEncodedByteTransferSize()
 		byte_size += 4; // length_of_current_command;
 		byte_size += my_profile.run_commands[counter].command_to_run.Length(); // actual text;
 		byte_size += 4; // number_of_copies;
+		byte_size += 4; // number_of_threads
+		byte_size += 4; // override_total_commands as int;
+		byte_size += 4; // overriden_total_commannds;
 		byte_size += 4; // delay time in ms
 	}
 

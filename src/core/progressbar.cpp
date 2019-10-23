@@ -168,6 +168,8 @@ void ProgressBar::Update(long current_tick)
 		}
 	}
 
+	CallOnUpdate(); // by default this does nothing, but can be overridden
+
 
 }
 

@@ -78,6 +78,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator
 		void ClearRefine3DScratch();
 		void ClearAutoRefine3DScratch();
 		void ClearGenerate3DScratch();
+		void ClearRefineCTFScratch();
 
 		wxString ReturnScratchDirectory();
 		wxString ReturnStartupScratchDirectory();
@@ -85,6 +86,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator
 		wxString ReturnRefine3DScratchDirectory();
 		wxString ReturnAutoRefine3DScratchDirectory();
 		wxString ReturnGenerate3DScratchDirectory();
+		wxString ReturnRefineCTFScratchDirectory();
 
 		bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
 

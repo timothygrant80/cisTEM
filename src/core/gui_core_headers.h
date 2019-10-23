@@ -71,6 +71,7 @@
 #include "../gui/MyImageImportDialog.h"
 #include "../gui/AlignMoviesPanel.h"
 #include "../gui/ShowCTFResultsPanel.h"
+#include "../gui/ShowTemplateMatchResultsPanel.h"
 #include "../gui/FindCTFPanel.h"
 #include "../gui/FindParticlesPanel.h"
 #include "../gui/MyMovieAlignResultsPanel.h"
@@ -113,10 +114,12 @@
 #include "../gui/Sharpen3DPanel.h"
 #include "../gui/PlotCurvePanel.h"
 #include "../gui/DistributionPlotDialog.h"
+#include "../gui/RefineCTFPanel.h"
 
 #ifdef EXPERIMENTAL
 #include "../gui/MatchTemplatePanel.h"
-#include "../gui/RefineCTFPanel.h"
+#include "../gui/MatchTemplateResultsPanel.h"
+#include "../gui/RefineTemplatePanel.h"
 #endif
 
 #define REFINEMENT 0
@@ -125,3 +128,4 @@
 #define STARTUP 3
 #define PREPARE_STACK 4
 #define ALIGN_SYMMETRY 5
+#define ESTIMATE_BEAMTILT 6

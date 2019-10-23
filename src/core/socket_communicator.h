@@ -61,7 +61,7 @@ class SocketCommunicator
 	virtual void HandleSocketYouAreConnected(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreConnected)\n");}
 	virtual void HandleSocketSendJobDetails(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n");}
 	virtual void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n");}
-	virtual void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n");}
+	virtual void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n");}
 	virtual void HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheSlave)\n");}
 	virtual void HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n");}
 	virtual void HandleSocketTimeToDie(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n");}
@@ -77,6 +77,7 @@ class SocketCommunicator
 	virtual void HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, float *data_array, int size_of_data_array, int result_number, int number_of_expected_results) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n");}
 	virtual void HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n");}
 	virtual void HandleSocketDisconnect(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n");}
+	virtual void HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes ) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n");}
 
 };
 

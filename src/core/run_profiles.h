@@ -6,9 +6,12 @@ public:
 
 	wxString command_to_run;
 	int number_of_copies;
+	int number_of_threads_per_copy;
+	bool override_total_copies;
+	int overriden_number_of_copies;
 	int delay_time_in_ms;
 
-	void SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms);
+	void SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms);
 };
 
 class RunProfile {
@@ -36,7 +39,7 @@ public:
 	wxString executable_name;
 
 	void AddCommand(RunCommand wanted_command);
-	void AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms);
+	void AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms);
 	void RemoveCommand(int number_to_remove);
 	void RemoveAll();
 	long ReturnTotalJobs();

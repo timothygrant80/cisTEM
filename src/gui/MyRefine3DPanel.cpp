@@ -857,7 +857,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageComboBox->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 0)
 				{
 					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND && InputParametersComboBox->GetSelection() != wxNOT_FOUND)
 					{
@@ -1633,8 +1633,9 @@ void RefinementManager::SetupReconstructionJob()
 
 
 			bool threshold_input_3d = true;
+			int correct_ewald_sphere = 0;
 
-			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1667,6 +1668,7 @@ void RefinementManager::SetupReconstructionJob()
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data(),
+																		correct_ewald_sphere,
 																		max_threads);
 
 

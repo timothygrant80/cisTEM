@@ -14,12 +14,18 @@ class MatchTemplatePanel : public MatchTemplateParentPanel
 		Image result_image;
 		wxBitmap result_bitmap;
 
+		wxArrayString input_image_filenames;
+
+		float ref_box_size_in_pixels;
+
 		AssetGroup active_group;
+		bool all_images_have_defocus_values;
+
+		ArrayOfTemplateMatchJobResults cached_results;
 
 public:
 
 		MatchTemplatePanel( wxWindow* parent );
-		JobResult *buffered_results;
 
 		bool group_combo_is_dirty;
 		bool run_profiles_are_dirty;
@@ -33,19 +39,21 @@ public:
 
 		// methods
 		void WriteResultToDataBase();
-		void OnExpertOptionsToggle( wxCommandEvent& event );
 		void OnUpdateUI( wxUpdateUIEvent& event );
 		void FillGroupComboBox();
 		void FillRunProfileComboBox();
 		void StartEstimationClick( wxCommandEvent& event );
 		void FinishButtonClick( wxCommandEvent& event );
 		void TerminateButtonClick( wxCommandEvent& event );
+		void ResetAllDefaultsClick( wxCommandEvent& event );
 
 		void OnSocketJobResultMsg(JobResult &received_result);
 		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
 		void SetNumberConnectedText(wxString wanted_text);
 		void SetTimeRemainingText(wxString wanted_text);
 		void OnSocketAllJobsFinished();
+		void HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes);
+		bool CheckGroupHasDefocusValues();
 
 	//void Refresh();
 		void SetInfo();
@@ -59,7 +67,6 @@ public:
 		void ProcessAllJobsFinished();
 		void UpdateProgressBar();
 
-		virtual void OnJobSocketEvent(wxSocketEvent& event);
 		void Reset();
 		void ResetDefaults();
 

@@ -1,3 +1,5 @@
+WX_DEFINE_ARRAY_PTR(wxSocketBase *, ArrayOfSocketBasePointers);
+
 class ReturnProgramDefinedResultEvent;
 wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEvent);
 
@@ -83,9 +85,13 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		wxTimer *queue_timer;
 		bool queue_timer_set;
 
+		wxTimer *master_queue_timer;
+		bool master_queue_timer_set;
+
 
 
 		void OnQueueTimer(wxTimerEvent& event);
+		void OnMasterQueueTimer(wxTimerEvent& event);
 		void OnZombieTimer(wxTimerEvent& event);
 
 		virtual float GetMaxJobWaitTimeInSeconds() {return 30.0f;}
@@ -105,8 +111,8 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		// Socket overides
 
 		void HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code);
-		void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package);
-		void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket);
+		//void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package);
+		void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPackage *received_package);
 		void HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string);
 		void HandleSocketTimeToDie(wxSocketBase *connected_socket);
 		void HandleSocketJobResult(wxSocketBase *connected_socket, JobResult *received_result);
@@ -129,7 +135,10 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		// socket stuff
 
 		wxSocketClient *controller_socket;
+		wxSocketClient *master_socket;
+
 		bool 			is_connected;
+		bool			connected_to_the_master;
 		bool            currently_running_a_job;
 		wxIPV4address 	active_controller_address;
 		long 			controller_port;
@@ -139,8 +148,10 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		wxString my_port_string;
 
 		bool is_running_locally;
+		int number_of_threads_requested_on_command_line;
 
 		bool i_am_the_master;
+		bool i_am_a_slave;
 
 		int number_of_results_sent;
 		int number_of_timing_results_received;
@@ -152,11 +163,13 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		wxString master_port_string;
 		short int master_port;
 
-		long number_of_connected_slaves; // for the master...
+		long max_number_of_connected_slaves; // for the master...
 		long number_of_dispatched_jobs;
 		long number_of_finished_jobs;
 
-		wxSocketBase **slave_sockets;  // POINTER TO POINTER..
+		//wxSocketBase **slave_sockets;  // POINTER TO POINTER..
+		ArrayOfSocketBasePointers slave_socket_pointers;
+
 
 		wxCmdLineParser command_line_parser;
 

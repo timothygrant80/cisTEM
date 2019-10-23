@@ -31,7 +31,8 @@ extern Refine2DResultsPanel *refine2d_results_panel;
 
 #ifdef EXPERIMENTAL
 extern MatchTemplatePanel *match_template_panel;
-
+extern MatchTemplateResultsPanel *match_template_results_panel;
+extern RefineTemplatePanel *refine_template_panel;
 #endif
 
 extern MyOverviewPanel *overview_panel;
@@ -218,6 +219,7 @@ void MyMainFrame::ResetAllPanels()
 	refine2d_results_panel->Clear();
 	refinement_results_panel->Clear();
 
+
 	align_movies_panel->Reset();
 	findctf_panel->Reset();
 	findparticles_panel->Reset();
@@ -228,6 +230,12 @@ void MyMainFrame::ResetAllPanels()
 	refine_ctf_panel->Reset();
 	generate_3d_panel->Reset();
 	sharpen_3d_panel->Reset();
+
+#ifdef EXPERIMENTAL
+	match_template_panel->Reset();
+	match_template_results_panel->Clear();
+	refine_template_panel->Reset();
+#endif
 
 	DirtyEverything();
 }
@@ -255,6 +263,7 @@ void MyMainFrame::DirtyVolumes()
 
 #ifdef EXPERIMENTAL
 	match_template_panel->volumes_are_dirty = true;
+	refine_template_panel->volumes_are_dirty = true;
 #endif
 
 }
@@ -276,6 +285,8 @@ void MyMainFrame::DirtyImageGroups()
 	picking_results_panel->group_combo_is_dirty = true;
 #ifdef EXPERIMENTAL
 	match_template_panel->group_combo_is_dirty = true;
+	match_template_results_panel->group_combo_is_dirty = true;
+	refine_template_panel->group_combo_is_dirty = true;
 #endif
 
 }
@@ -332,6 +343,7 @@ void MyMainFrame::DirtyRunProfiles()
 	generate_3d_panel->run_profiles_are_dirty = true;
 #ifdef EXPERIMENTAL
 	match_template_panel->run_profiles_are_dirty = true;
+	refine_template_panel->run_profiles_are_dirty = true;
 #endif
 }
 
@@ -581,7 +593,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 
 
 		int counter;
-		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 9, this);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Open Project", "Opening Project", 10, this);
 
 		movie_asset_panel->ImportAllFromDatabase();
 		my_dialog->Update(1, "Opening project (loading image assets...)");
@@ -600,9 +612,15 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
 	//	current_project.database.AddCTFIcinessColumnIfNecessary();
 		ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
-		my_dialog->Update(8, "Opening project (finishing...)");
+	//	current_project.database.AddCTFIcinessColumnIfNecessary();
+#ifdef EXPERIMENTAL
+		my_dialog->Update(8, "Opening project (loading Match Template Results...)");
+		match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
+#endif
+
+		my_dialog->Update(9, "Opening project (finishing...)");
 		picking_results_panel->OnProjectOpen();
-		my_dialog->Update(9, "Opening project (all done)");
+		my_dialog->Update(10, "Opening project (all done)");
 
 		SetTitle("cisTEM - [" + current_project.project_name + "]");
 		DirtyEverything();
@@ -706,6 +724,14 @@ void MyMainFrame::ClearScratchDirectory()
 	ClearRefine3DScratch();
 	ClearAutoRefine3DScratch();
 	ClearGenerate3DScratch();
+	ClearRefineCTFScratch();
+}
+
+
+void MyMainFrame::ClearRefineCTFScratch()
+{
+	if (wxDir::Exists(ReturnRefineCTFScratchDirectory()) == true) wxFileName::Rmdir(ReturnRefineCTFScratchDirectory(), wxPATH_RMDIR_RECURSIVE);
+	if (wxDir::Exists(ReturnRefineCTFScratchDirectory()) == false) wxFileName::Mkdir(ReturnRefineCTFScratchDirectory());
 }
 
 void MyMainFrame::ClearStartupScratch()
@@ -768,6 +794,11 @@ wxString MyMainFrame::ReturnGenerate3DScratchDirectory()
 	return current_project.scratch_directory.GetFullPath() + "/Generate3D/";
 }
 
+wxString MyMainFrame::ReturnRefineCTFScratchDirectory()
+{
+	return current_project.scratch_directory.GetFullPath() + "/RefineCTF/";
+}
+
 bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_project_directory)
 {
 	// this is very boring.. go through and update all the links in the database..
@@ -807,6 +838,18 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 	current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_LIST SET CLASS_AVERAGE_FILE = REPLACE(CLASS_AVERAGE_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
 
 	// Commit
+
+	// Template Matching...
+
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET MIP_OUTPUT_FILE = REPLACE(MIP_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET SCALED_MIP_OUTPUT_FILE = REPLACE(SCALED_MIP_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET PSI_OUTPUT_FILE = REPLACE(PSI_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET THETA_OUTPUT_FILE = REPLACE(THETA_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET PHI_OUTPUT_FILE = REPLACE(PHI_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET DEFOCUS_OUTPUT_FILE = REPLACE(DEFOCUS_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET PIXEL_SIZE_OUTPUT_FILE = REPLACE(PIXEL_SIZE_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET HISTOGRAM_OUTPUT_FILE = REPLACE(HISTOGRAM_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
+	current_project.database.ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCHLIST SET PROJECTION_RESULT_OUTPUT_FILE = REPLACE(PROJECTION_RESULT_OUTPUT_FILE, '%s', '%s');", old_project_directory, new_project_directory).ToUTF8().data());
 
 	current_project.database.Commit();
 

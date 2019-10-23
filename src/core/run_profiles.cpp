@@ -5,7 +5,9 @@ RunCommand::RunCommand()
 	command_to_run = "";
 	number_of_copies = 0;
 	delay_time_in_ms = 0;
-
+	number_of_threads_per_copy = 0;
+	override_total_copies = false;
+	overriden_number_of_copies = true;
 }
 
 RunCommand::~RunCommand()
@@ -13,10 +15,13 @@ RunCommand::~RunCommand()
 
 }
 
-void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms)
+void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms)
 {
 	command_to_run = wanted_command;
 	number_of_copies = wanted_number_of_copies;
+	number_of_threads_per_copy = wanted_number_of_threads_per_copy;
+	override_total_copies = wanted_override_total_copies;
+	overriden_number_of_copies = false;
 	delay_time_in_ms = wanted_delay_time_in_ms;
 }
 
@@ -91,7 +96,7 @@ void RunProfile::AddCommand(RunCommand wanted_command)
 	number_of_run_commands++;
 }
 
-void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_delay_time_in_ms)
+void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms)
 {
 	// check we have enough memory
 
@@ -119,6 +124,9 @@ void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies
 
 	run_commands[number_of_run_commands].command_to_run = wanted_command;
 	run_commands[number_of_run_commands].number_of_copies = wanted_number_of_copies;
+	run_commands[number_of_run_commands].number_of_threads_per_copy = wanted_number_of_threads_per_copy;
+	run_commands[number_of_run_commands].override_total_copies = wanted_override_total_copies;
+	run_commands[number_of_run_commands].overriden_number_of_copies = wanted_overriden_number_of_copies;
 	run_commands[number_of_run_commands].delay_time_in_ms = wanted_delay_time_in_ms;
 	number_of_run_commands++;
 }
@@ -146,7 +154,14 @@ long RunProfile::ReturnTotalJobs()
 
 	for (long counter = 0; counter < number_of_run_commands; counter++)
 	{
-		total_jobs += run_commands[counter].number_of_copies;
+		if (run_commands[counter].override_total_copies == true)
+		{
+			total_jobs += run_commands[counter].overriden_number_of_copies;
+		}
+		else
+		{
+			total_jobs += run_commands[counter].number_of_copies;
+		}
 	}
 
 	return total_jobs;
@@ -300,7 +315,7 @@ void RunProfileManager::AddBlankProfile()
 	run_profiles[number_of_run_profiles].gui_address = "";
 	run_profiles[number_of_run_profiles].controller_address = "";
 
-	run_profiles[number_of_run_profiles].AddCommand("$command", 2, 10);
+	run_profiles[number_of_run_profiles].AddCommand("$command", 2, 1, false, 0, 10);
 
 	number_of_run_profiles++;
 
@@ -346,7 +361,7 @@ void RunProfileManager::AddDefaultLocalProfile()
 	if (number_of_cores == -1) number_of_cores = 1;
 	number_of_cores++;
 
-	run_profiles[number_of_run_profiles].AddCommand(execution_command, number_of_cores, 10);
+	run_profiles[number_of_run_profiles].AddCommand(execution_command, number_of_cores, 1, false, 0, 10);
 	number_of_run_profiles++;
 
 }
@@ -400,14 +415,7 @@ long RunProfileManager::ReturnProfileID(long wanted_profile)
 
 long RunProfileManager::ReturnTotalJobs(long wanted_profile)
 {
-	long total_jobs = 0;
-
-	for (long counter = 0; counter < run_profiles[wanted_profile].number_of_run_commands; counter++)
-	{
-		total_jobs += run_profiles[wanted_profile].run_commands[counter].number_of_copies;
-	}
-
-	return total_jobs;
+	return run_profiles[wanted_profile].ReturnTotalJobs();
 }
 
 

@@ -20,20 +20,8 @@ public:
 	float active_high_resolution_limit;
 	float active_mask_radius;
 	float active_signed_cc_limit;
-	float active_global_mask_radius;
-	int active_number_results_to_refine;
-	float active_angular_search_step;
-	float active_search_range_x;
-	float active_search_range_y;
-	float active_classification_high_res_limit;
-	bool active_should_focus_classify;
-	float active_sphere_x_coord;
-	float active_sphere_y_coord;
-	float active_sphere_z_coord;
-	bool active_should_refine_ctf;
 	float active_defocus_search_range;
 	float active_defocus_search_step;
-	float active_percent_used;
 	float active_inner_mask_radius;
 	float active_resolution_limit_rec;
 	float active_score_weight_conversion;
@@ -43,16 +31,8 @@ public:
 	bool active_should_apply_blurring;
 	float active_smoothing_factor;
 	float active_sphere_radius;
-	bool active_do_global_refinement;
-	bool active_also_refine_input;
-	bool active_should_refine_psi;
-	bool active_should_refine_theta;
-	bool active_should_refine_phi;
-	bool active_should_refine_x_shift;
-	bool active_should_refine_y_shift;
 	bool active_should_mask;
 	bool active_should_auto_mask;
-	bool active_centre_mass;
 	wxString active_mask_filename;
 	bool active_should_low_pass_filter_mask;
 	float active_mask_filter_resolution;
@@ -60,21 +40,31 @@ public:
 	float active_mask_weight;
 	long active_mask_asset_id;
 
+	bool active_ctf_refinement;
+	bool active_beamtilt_refinement;
+
 	long current_job_starttime;
 	long time_of_last_update;
+	long time_of_last_histogram_update;
 	int number_of_generated_3ds;
 
 	int running_job_type;
-	int number_of_rounds_to_run;
-	int number_of_rounds_run;
 	long current_job_id;
 
 	long current_refinement_package_asset_id;
 	long current_input_refinement_id;
 	long current_output_refinement_id;
 
-	long number_of_received_particle_results;
+	long number_of_received_results;
 	long number_of_expected_results;
+
+	float best_beamtilt_x;
+	float best_beamtilt_y;
+	float best_particle_shift_x;
+	float best_particle_shift_y;
+	float best_score;
+
+	Curve defocus_change_histogram;
 
 	RefinementPackage *active_refinement_package;
 	Refinement *input_refinement;
@@ -90,7 +80,6 @@ public:
 	void SetParent(RefineCTFPanel *wanted_parent);
 
 	void BeginRefinementCycle();
-	void CycleRefinement();
 
 	void SetupRefinementJob();
 	void SetupReconstructionJob();
@@ -105,6 +94,8 @@ public:
 	void RunRefinementJob();
 	void RunReconstructionJob();
 	void RunMerge3dJob();
+
+	void RunBeamTiltEstimationJob();
 
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();

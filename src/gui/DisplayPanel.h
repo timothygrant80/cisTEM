@@ -57,8 +57,9 @@ public:
 
 	void Initialise(int style_flags = 0);
 
-	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false);
+	void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false, bool force_local_survey = false);
 	void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
+	void ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers = NULL);
 
 	void OpenImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong *wanted_included_image_numbers = NULL);
 	void ChangeImage(Image *image_to_View, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong *wanted_included_image_numbers = NULL);
@@ -74,6 +75,9 @@ public:
 	void ToggleImageSelected(long wanted_image, bool refresh = true);
 	void ClearSelection(bool refresh = true);
 	bool IsImageSelected(long wanted_image);
+
+	void SetActiveTemplateMatchMarkerPostion(float wanted_x_pos, float wanted_y_pos, float wanted_radius);
+	void ClearActiveTemplateMatchMarker();
 
 	void RefreshCurrentPanel();
 
@@ -162,6 +166,8 @@ DisplayNotebookPanel : public wxPanel
 
 	Image *image_to_display;
 	bool do_i_have_image_ownership;
+
+	bool use_unscaled_image_for_popup;
 
 	wxImage *panel_image;
 
@@ -259,6 +265,10 @@ DisplayNotebookPanel : public wxPanel
 	long location_on_last_draw;
 	long images_in_x_on_last_draw;
 	long images_in_y_on_last_draw;
+
+	int template_matching_marker_x_pos;
+	int template_matching_marker_y_pos;
+	int template_matching_marker_radius;
 
 	double pixel_size;
 
@@ -364,6 +374,9 @@ public:
 
     int x_pos;
     int y_pos;
+
+	float current_low_grey_value;
+	float current_high_grey_value;
 
 
 };

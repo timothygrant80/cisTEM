@@ -107,6 +107,34 @@ int Database::ReturnSingleIntFromSelectCommand(wxString select_command)
 	return value;
 }
 
+wxArrayInt Database::ReturnIntArrayFromSelectCommand(wxString select_command)
+{
+	wxArrayInt ints_to_return;
+
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	int return_code;
+	sqlite3_stmt *current_statement;
+	int current_value;
+
+	Prepare(select_command, &current_statement);
+	//Step(current_statement);
+
+	return_code = Step(current_statement);
+
+	while (return_code == SQLITE_ROW)
+	{
+		current_value = sqlite3_column_int(current_statement, 0);
+		ints_to_return.Add(current_value);
+		return_code = Step(current_statement);
+	}
+
+	Finalize(current_statement);
+
+	return ints_to_return;
+
+}
+
 wxArrayLong Database::ReturnLongArrayFromSelectCommand(wxString select_command)
 {
 	wxArrayLong longs_to_return;
@@ -185,14 +213,14 @@ long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 	return value;
 }
 
-void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float &amplitude_contrast)
+void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defocus_1, float &defocus_2, float &defocus_angle, float &phase_shift, float &amplitude_contrast, float &tilt_angle, float &tilt_axis)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
 	int return_code;
 	sqlite3_stmt *current_statement;
 	int value;
-	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, AMPLITUDE_CONTRAST FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
+	wxString select_command = wxString::Format("SELECT DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, AMPLITUDE_CONTRAST, TILT_ANGLE, TILT_AXIS FROM ESTIMATED_CTF_PARAMETERS, IMAGE_ASSETS WHERE ESTIMATED_CTF_PARAMETERS.CTF_ESTIMATION_ID=IMAGE_ASSETS.CTF_ESTIMATION_ID AND IMAGE_ASSETS.IMAGE_ASSET_ID=%li;", wanted_image_id);
 
 	Prepare(select_command, &current_statement);
 	Step(current_statement);
@@ -202,6 +230,8 @@ void Database::GetActiveDefocusValuesByImageID(long wanted_image_id, float &defo
 	defocus_angle = float(sqlite3_column_double(current_statement, 2));
 	phase_shift = float(sqlite3_column_double(current_statement, 3));
 	amplitude_contrast = float(sqlite3_column_double(current_statement,4));
+	tilt_angle = float(sqlite3_column_double(current_statement,5));
+	tilt_axis = float(sqlite3_column_double(current_statement,6));
 
 	Finalize(current_statement);
 }
@@ -248,6 +278,12 @@ int Database::ReturnHighestAlignmentID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_ID) FROM MOVIE_ALIGNMENT_LIST");
 }
+
+int Database::ReturnHighestTemplateMatchID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCH_ID) FROM TEMPLATE_MATCH_LIST");
+}
+
 
 int Database::ReturnHighestFindCTFID()
 {
@@ -298,6 +334,12 @@ int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id
 	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID = %i", wanted_asset_id));
 }
 
+int Database::ReturnNumberOfPreviousTemplateMatchesByAssetID(int wanted_asset_id)
+{
+	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM TEMPLATE_MATCH_LIST WHERE IMAGE_ASSET_ID = %i", wanted_asset_id));
+}
+
+
 int Database::ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id)
 {
 	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID = %i", wanted_asset_id));
@@ -312,6 +354,11 @@ int Database::ReturnNumberOfPreviousParticlePicksByAssetID(int wanted_asset_id)
 int Database::ReturnHighestAlignmentJobID()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT MAX(ALIGNMENT_JOB_ID) FROM MOVIE_ALIGNMENT_LIST");
+}
+
+int Database::ReturnHighestTemplateMatchJobID()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCH_JOB_ID) FROM TEMPLATE_MATCH_LIST");
 }
 
 int Database::ReturnHighestFindCTFJobID()
@@ -338,6 +385,12 @@ int Database::ReturnNumberOfCTFEstimationJobs()
 {
 	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT CTF_ESTIMATION_JOB_ID) FROM ESTIMATED_CTF_PARAMETERS");
 }
+
+int Database::ReturnNumberOfTemplateMatchingJobs()
+{
+	return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT TEMPLATE_MATCH_JOB_ID) FROM TEMPLATE_MATCH_LIST");
+}
+
 
 int Database::ReturnNumberOfPickingJobs()
 {
@@ -409,6 +462,29 @@ void Database::GetUniqueCTFEstimationIDs(int *ctf_estimation_job_ids, int number
 		}
 
 		more_data = GetFromBatchSelect("i", &ctf_estimation_job_ids[counter]);
+
+	}
+
+	EndBatchSelect();
+}
+
+void Database::GetUniqueTemplateMatchIDs(long *template_match_job_ids, int number_of_template_match_jobs)
+{
+	MyDebugAssertTrue(is_open == true, "database not open!");
+
+	bool more_data;
+
+	more_data = BeginBatchSelect("SELECT DISTINCT TEMPLATE_MATCH_JOB_ID FROM TEMPLATE_MATCH_LIST") == true;
+
+	for (int counter = 0; counter < number_of_template_match_jobs; counter++)
+	{
+		if (more_data == false)
+		{
+			MyPrintWithDetails("Unexpected end of select command");
+			DEBUG_ABORT;
+		}
+
+		more_data = GetFromBatchSelect("l", &template_match_job_ids[counter]);
 
 	}
 
@@ -696,8 +772,6 @@ bool Database::CreateAllTables()
 {
 	bool success;
 
-	// this succes thing won't work, as it needs to be checked each time - oh well!
-
 	BeginCommitLocker active_locker(this);
 
 	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
@@ -742,7 +816,9 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateReconstructionListTable();
 	CheckSuccess(success);
-	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtiir", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED","ICINESS");
+	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtiirrr", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED","ICINESS", "TILT_ANGLE", "TILT_AXIS");
+	CheckSuccess(success);
+	success = CreateTemplateMatchingResultsTable();
 	CheckSuccess(success);
 
 	return success;
@@ -1314,7 +1390,7 @@ RunProfile Database::GetNextRunProfile()
 
 	while (  return_code == SQLITE_ROW)
 	{
-		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2), sqlite3_column_int(list_statement, 3));
+		temp_profile.AddCommand(sqlite3_column_text(list_statement, 1), sqlite3_column_int(list_statement, 2), sqlite3_column_int(list_statement, 3), bool(sqlite3_column_int(list_statement, 4)), sqlite3_column_int(list_statement, 5), sqlite3_column_int(list_statement, 6));
 		return_code = Step(list_statement);
 	}
 
@@ -1715,11 +1791,11 @@ void Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)
 	BeginCommitLocker active_locker(this);
 	InsertOrReplace("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID", profile_to_add->id, profile_to_add->name.ToUTF8().data(), profile_to_add->manager_command.ToUTF8().data(), profile_to_add->gui_address.ToUTF8().data(), profile_to_add->controller_address.ToUTF8().data(), profile_to_add->id);
 	DeleteTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id));
-	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "DELAY_TIME_IN_MS");
+	CreateTable(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptiiiii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "NUMBER_OF_THREADS_PER_COPY", "OVERRIDE_TOTAL_NUMBER_OF_COPIES", "OVERIDDEN_TOTAL_NUMBER_OF_COPIES", "DELAY_TIME_IN_MS");
 
 	for (int counter = 0; counter < profile_to_add->number_of_run_commands; counter++)
 	{
-		InsertOrReplace(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "DELAY_TIME_IN_MS", counter, profile_to_add->run_commands[counter].command_to_run.ToUTF8().data(), profile_to_add->run_commands[counter].number_of_copies, profile_to_add->run_commands[counter].delay_time_in_ms);
+		InsertOrReplace(wxString::Format("RUN_PROFILE_COMMANDS_%i", profile_to_add->id), "ptiiiii", "COMMANDS_NUMBER", "COMMAND_STRING", "NUMBER_OF_COPIES", "NUMBER_OF_THREADS_PER_COPY", "OVERRIDE_TOTAL_NUMBER_OF_COPIES", "OVERIDDEN_TOTAL_NUMBER_OF_COPIES", "DELAY_TIME_IN_MS", counter, profile_to_add->run_commands[counter].command_to_run.ToUTF8().data(), profile_to_add->run_commands[counter].number_of_copies, profile_to_add->run_commands[counter].number_of_threads_per_copy, int(profile_to_add->run_commands[counter].override_total_copies), profile_to_add->run_commands[counter].overriden_number_of_copies, profile_to_add->run_commands[counter].delay_time_in_ms);
 	}
 }
 
@@ -1829,6 +1905,156 @@ void Database::GetReconstructionJob(long wanted_reconstruction_id, long &refinem
 
 	Finalize(list_statement);
 
+}
+
+void Database::AddTemplateMatchingResult(long wanted_template_match_id, TemplateMatchJobResults &job_details)
+{
+
+	int peak_counter;
+
+	InsertOrReplace("TEMPLATE_MATCH_LIST", "Ptllillltrrrrrrrrrrrrrrrrrrrrrrittttttttt", "TEMPLATE_MATCH_ID", "JOB_NAME", "DATETIME_OF_RUN", "TEMPLATE_MATCH_JOB_ID", "JOB_TYPE_CODE", "INPUT_TEMPLATE_MATCH_ID", "IMAGE_ASSET_ID", "REFERENCE_VOLUME_ASSET_ID", "USED_SYMMETRY", "USED_PIXEL_SIZE", "USED_VOLTAGE", "USED_SPHERICAL_ABERRATION", "USED_AMPLITUDE_CONTRAST", "USED_DEFOCUS1", "USED_DEFOCUS2", "USED_DEFOCUS_ANGLE", "USED_PHASE_SHIFT", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "OUT_OF_PLANE_ANGULAR_STEP", "IN_PLANE_ANGULAR_STEP", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_STEP", "PIXEL_SIZE_SEARCH_RANGE", "PIXEL_SIZE_STEP", "REFINEMENT_THRESHOLD", "USED_THRESHOLD", "REF_BOX_SIZE_IN_ANGSTROMS", "MASK_RADIUS", "MIN_PEAK_RADIUS", "XY_CHANGE_THRESHOLD", "EXCLUDE_ABOVE_XY_THRESHOLD", "MIP_OUTPUT_FILE", "SCALED_MIP_OUTPUT_FILE", "PSI_OUTPUT_FILE", "THETA_OUTPUT_FILE", "PHI_OUTPUT_FILE", "DEFOCUS_OUTPUT_FILE", "PIXEL_SIZE_OUTPUT_FILE", "HISTOGRAM_OUTPUT_FILE", "PROJECTION_RESULT_OUTPUT_FILE", wanted_template_match_id, job_details.job_name.ToUTF8().data(), job_details.datetime_of_run, job_details.job_id, job_details.job_type, job_details.input_job_id, job_details.image_asset_id, job_details.ref_volume_asset_id, job_details.symmetry.ToUTF8().data(), job_details.pixel_size, job_details.voltage, job_details.spherical_aberration, job_details.amplitude_contrast, job_details.defocus1, job_details.defocus2, job_details.defocus_angle, job_details.phase_shift, job_details.low_res_limit, job_details.high_res_limit, job_details.out_of_plane_step, job_details.in_plane_step, job_details.defocus_search_range, job_details.defocus_step, job_details.pixel_size_search_range, job_details.pixel_size_step, job_details.refinement_threshold, job_details.used_threshold, job_details.reference_box_size_in_angstroms, job_details.mask_radius, job_details.min_peak_radius, job_details.xy_change_threshold, int(job_details.exclude_above_xy_threshold), job_details.mip_filename.ToUTF8().data(), job_details.scaled_mip_filename.ToUTF8().data(), job_details.psi_filename.ToUTF8().data(), job_details.theta_filename.ToUTF8().data(), job_details.phi_filename.ToUTF8().data(), job_details.defocus_filename.ToUTF8().data(), job_details.pixel_size_filename.ToUTF8().data(), job_details.histogram_filename.ToUTF8().data(), job_details.projection_result_filename.ToUTF8().data());
+
+	CreateTemplateMatchPeakListTable(wanted_template_match_id);
+
+	BeginBatchInsert(wxString::Format("TEMPLATE_MATCH_PEAK_LIST_%li", wanted_template_match_id), 9 ,"PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT");
+
+	for (peak_counter = 1; peak_counter <= job_details.found_peaks.GetCount(); peak_counter++)
+	{
+		AddToBatchInsert("irrrrrrrr",  peak_counter, job_details.found_peaks[peak_counter - 1].x_pos, job_details.found_peaks[peak_counter - 1].y_pos, job_details.found_peaks[peak_counter - 1].phi,job_details.found_peaks[peak_counter - 1].theta, job_details.found_peaks[peak_counter - 1].psi, job_details.found_peaks[peak_counter - 1].defocus, job_details.found_peaks[peak_counter - 1].pixel_size, job_details.found_peaks[peak_counter - 1].peak_height);
+	}
+
+	EndBatchInsert();
+
+	CreateTemplateMatchPeakChangeListTable(wanted_template_match_id);
+
+	BeginBatchInsert(wxString::Format("TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", wanted_template_match_id), 11 ,"PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT", "ORIGINAL_PEAK_NUMBER", "NEW_PEAK_NUMBER");
+
+	for (peak_counter = 1; peak_counter <= job_details.peak_changes.GetCount(); peak_counter++)
+	{
+		AddToBatchInsert("irrrrrrrrii",  peak_counter, job_details.peak_changes[peak_counter - 1].x_pos, job_details.peak_changes[peak_counter - 1].y_pos, job_details.peak_changes[peak_counter - 1].phi,job_details.peak_changes[peak_counter - 1].theta, job_details.peak_changes[peak_counter - 1].psi, job_details.peak_changes[peak_counter - 1].defocus, job_details.peak_changes[peak_counter - 1].pixel_size, job_details.peak_changes[peak_counter - 1].peak_height, job_details.peak_changes[peak_counter - 1].original_peak_number, job_details.peak_changes[peak_counter - 1].new_peak_number);
+	}
+
+	EndBatchInsert();
+}
+
+TemplateMatchJobResults Database::GetTemplateMatchingResultByID(long wanted_template_match_id)
+{
+	TemplateMatchJobResults temp_result;
+	TemplateMatchFoundPeakInfo temp_peak_info;
+
+	wxString sql_select_command;
+	int return_code;
+	long template_match_id;
+	sqlite3_stmt *list_statement = NULL;
+	bool more_data;
+	sql_select_command = wxString::Format("SELECT * FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_ID=%li", wanted_template_match_id);
+	Prepare(sql_select_command, &list_statement);
+	return_code = Step(list_statement);
+
+	template_match_id = sqlite3_column_int64(list_statement, 0);
+	temp_result.job_name = sqlite3_column_text(list_statement, 1);
+	temp_result.datetime_of_run = sqlite3_column_int64(list_statement, 2);
+	temp_result.job_id = sqlite3_column_int64(list_statement, 3);
+	temp_result.job_type = sqlite3_column_int(list_statement, 4);
+	temp_result.input_job_id = sqlite3_column_int64(list_statement, 5);
+	temp_result.image_asset_id = sqlite3_column_int64(list_statement, 6);
+	temp_result.ref_volume_asset_id = sqlite3_column_int64(list_statement, 7);
+
+	// number 8 is "IS ACTIVE" which i am not recording in the class
+
+	temp_result.symmetry = sqlite3_column_text(list_statement, 9);
+	temp_result.pixel_size = sqlite3_column_double(list_statement, 10);
+	temp_result.voltage = sqlite3_column_double(list_statement, 11);
+	temp_result.spherical_aberration = sqlite3_column_double(list_statement, 12);
+	temp_result.amplitude_contrast = sqlite3_column_double(list_statement, 13);
+	temp_result.defocus1 = sqlite3_column_double(list_statement, 14);
+	temp_result.defocus2 = sqlite3_column_double(list_statement, 15);
+	temp_result.defocus_angle = sqlite3_column_double(list_statement, 16);
+	temp_result.phase_shift = sqlite3_column_double(list_statement, 17);
+	temp_result.low_res_limit = sqlite3_column_double(list_statement, 18);
+	temp_result.high_res_limit = sqlite3_column_double(list_statement, 19);
+	temp_result.out_of_plane_step = sqlite3_column_double(list_statement, 20);
+	temp_result.in_plane_step = sqlite3_column_double(list_statement, 21);
+	temp_result.defocus_search_range = sqlite3_column_double(list_statement, 22);
+	temp_result.defocus_step = sqlite3_column_double(list_statement, 23);
+	temp_result.pixel_size_search_range = sqlite3_column_double(list_statement, 24);
+	temp_result.pixel_size_step = sqlite3_column_double(list_statement, 25);
+	temp_result.refinement_threshold = sqlite3_column_double(list_statement, 26);
+	temp_result.used_threshold = sqlite3_column_double(list_statement, 27);
+	temp_result.reference_box_size_in_angstroms = sqlite3_column_double(list_statement, 28);
+	temp_result.mask_radius = sqlite3_column_double(list_statement, 29);
+	temp_result.min_peak_radius = sqlite3_column_double(list_statement, 30);
+	temp_result.xy_change_threshold = sqlite3_column_double(list_statement, 31);
+	temp_result.exclude_above_xy_threshold = bool(sqlite3_column_int(list_statement, 32));
+	temp_result.mip_filename = sqlite3_column_text(list_statement, 33);
+	temp_result.scaled_mip_filename = sqlite3_column_text(list_statement, 34);
+	temp_result.psi_filename = sqlite3_column_text(list_statement, 35);
+	temp_result.theta_filename = sqlite3_column_text(list_statement, 36);
+	temp_result.phi_filename = sqlite3_column_text(list_statement, 37);
+	temp_result.defocus_filename = sqlite3_column_text(list_statement, 38);
+	temp_result.pixel_size_filename = sqlite3_column_text(list_statement, 39);
+	temp_result.histogram_filename = sqlite3_column_text(list_statement, 40);
+	temp_result.projection_result_filename = sqlite3_column_text(list_statement, 41);
+
+	Finalize(list_statement);
+
+	// now get all the peaks
+	sql_select_command = wxString::Format("SELECT * FROM TEMPLATE_MATCH_PEAK_LIST_%li", template_match_id);
+	more_data = BeginBatchSelect(sql_select_command);
+
+
+	int peak_number;
+	while (more_data == true)
+	{
+		more_data = GetFromBatchSelect("issssssss", &peak_number,
+													&temp_peak_info.x_pos,
+													&temp_peak_info.y_pos,
+													&temp_peak_info.psi,
+													&temp_peak_info.theta,
+													&temp_peak_info.phi,
+													&temp_peak_info.defocus,
+													&temp_peak_info.pixel_size,
+													&temp_peak_info.peak_height);
+
+		temp_result.found_peaks.Add(temp_peak_info);
+	}
+
+	EndBatchSelect();
+
+	// now all the changes..
+
+	// now get all the peaks
+	sql_select_command = wxString::Format("SELECT * FROM TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", template_match_id);
+	more_data = BeginBatchSelect(sql_select_command);
+
+	while (more_data == true)
+	{
+
+		more_data = GetFromBatchSelect("issssssssii", &peak_number,
+													&temp_peak_info.x_pos,
+													&temp_peak_info.y_pos,
+													&temp_peak_info.psi,
+													&temp_peak_info.theta,
+													&temp_peak_info.phi,
+													&temp_peak_info.defocus,
+													&temp_peak_info.pixel_size,
+													&temp_peak_info.peak_height,
+													&temp_peak_info.original_peak_number,
+													&temp_peak_info.new_peak_number);
+
+		temp_result.peak_changes.Add(temp_peak_info);
+	}
+
+	EndBatchSelect();
+
+	return temp_result;
+}
+
+void Database::SetActiveTemplateMatchJobForGivenImageAssetID(long image_asset, long template_match_job_id)
+{
+	BeginCommitLocker active_locker(this);
+	ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCH_LIST SET IS_ACTIVE=0 WHERE IMAGE_ASSET_ID=%li", image_asset));
+	ExecuteSQL(wxString::Format("UPDATE TEMPLATE_MATCH_LIST SET IS_ACTIVE=1 WHERE IMAGE_ASSET_ID=%li AND TEMPLATE_MATCH_JOB_ID=%li", image_asset, template_match_job_id));
 }
 
 
@@ -2263,6 +2489,12 @@ void Database::AddRefinementAngularDistribution(AngularDistributionHistogram &hi
 	}
 
 	EndBatchInsert();
+}
+
+void Database::CopyRefinementAngularDistributions(long refinement_id_to_copy, long refinement_id_to_copy_to, int wanted_class_number)
+{
+	CreateRefinementAngularDistributionTable(refinement_id_to_copy_to, wanted_class_number);
+	ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i SELECT * FROM REFINEMENT_ANGULAR_DISTRIBUTION_%li_%i", refinement_id_to_copy_to, wanted_class_number, refinement_id_to_copy, wanted_class_number).ToUTF8().data());
 }
 
 void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinement_id, int wanted_class_number, AngularDistributionHistogram &histogram_to_fill) // must be correct size

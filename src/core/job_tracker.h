@@ -32,7 +32,12 @@ public :
 	void AddConnection();
 	void MarkJobFinished();
 	TimeRemaining ReturnRemainingTime();
-	inline int ReturnPercentCompleted() {return int(myround((float(total_number_of_finished_jobs) / float(total_number_of_jobs)) * 100.0)); wxPrintf("Returning %i%\n", int(myround((float(total_number_of_finished_jobs) / float(total_number_of_jobs)) * 100.0)));};
+	inline int ReturnPercentCompleted()
+	{
+		int percent_completed = myround((float(total_number_of_finished_jobs) / float(total_number_of_jobs)) * 100.0);
+		if (percent_completed > 100) percent_completed = 100;
+		else if (percent_completed < 0) percent_completed = 0;
+	}
 
 	bool ShouldUpdate();
 

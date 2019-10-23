@@ -269,8 +269,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_x) || isinf(beam_tilt_x)) beam_tilt_x = other_params.beam_tilt_x;
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
-	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
-	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y; // WHY FIXME
+	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
 }
 
 cisTEMParameterLine::~cisTEMParameterLine()

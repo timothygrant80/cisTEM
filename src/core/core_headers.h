@@ -109,6 +109,7 @@ protected:
 #include "assets.h"
 #include "asset_group.h"
 #include "socket_codes.h"
+#include "template_matching.h"
 #include "functions.h"
 #include "run_profiles.h"
 #include "job_packager.h"

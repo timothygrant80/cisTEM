@@ -114,7 +114,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 
 //	my_current_job.Reset(33);
 //	my_current_job.ManualSetArguments("ttttttttiifffffffffffffbbbbbbbbbibtt",	input_particle_stack.ToUTF8().data(),
-	my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbtti",	input_particle_stack.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttttttiiffffffffffbbbbbbbbbbttii",	input_particle_stack.ToUTF8().data(),
 																				input_star_filename.ToUTF8().data(),
 																				input_reconstruction.ToUTF8().data(),
 																				output_reconstruction_1.ToUTF8().data(),
@@ -131,6 +131,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 																				use_input_reconstruction, threshold_input_3d, dump_arrays,
 																				dump_file_1.ToUTF8().data(),
 																				dump_file_2.ToUTF8().data(),
+																				correct_ewald_sphere,
 																				max_threads);
 }
 
@@ -168,11 +169,13 @@ bool Reconstruct3DApp::DoCalculation()
 	bool	 use_input_reconstruction			= my_current_job.arguments[27].ReturnBoolArgument();
 	bool	 threshold_input_3d					= my_current_job.arguments[28].ReturnBoolArgument();
 //	int		 correct_ewald_sphere				= my_current_job.arguments[32].ReturnIntegerArgument();
-	int		 correct_ewald_sphere				= 0;
 	bool	 dump_arrays						= my_current_job.arguments[29].ReturnBoolArgument();
 	wxString dump_file_1 						= my_current_job.arguments[30].ReturnStringArgument();
 	wxString dump_file_2 						= my_current_job.arguments[31].ReturnStringArgument();
-	int 	 max_threads 						= my_current_job.arguments[32].ReturnIntegerArgument();
+	int		 correct_ewald_sphere				= my_current_job.arguments[32].ReturnIntegerArgument();
+	int 	 max_threads 						= my_current_job.arguments[33].ReturnIntegerArgument();
+
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
 
 	ReconstructedVolume input_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d(molecular_mass_kDa);
@@ -734,6 +737,12 @@ bool Reconstruct3DApp::DoCalculation()
 		{
 			//input_par_file.ReadLine(input_parameters, current_image);
 			input_parameters = input_star_file.ReturnLine(current_image);
+
+			// swap the sign of the image shifts (I don't know why we need to do this)
+
+			input_parameters.image_shift_x = -input_parameters.image_shift_x;
+			input_parameters.image_shift_y = -input_parameters.image_shift_y;
+
 			current_image++;
 			if (input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle)
 			{
@@ -827,7 +836,9 @@ bool Reconstruct3DApp::DoCalculation()
 				// Normalize background variance and average
 				variance = temp_image_local.ReturnVarianceOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
 				average = temp_image_local.ReturnAverageOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
-				temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+
+				if (variance == 0.0f) temp_image_local.SetToConstant(0.0f);
+				else temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			}
 			else
 			if (use_input_reconstruction)
@@ -983,7 +994,9 @@ bool Reconstruct3DApp::DoCalculation()
 					// Normalize background variance and average
 					variance = temp_image_local.ReturnVarianceOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
 					average = temp_image_local.ReturnAverageOfRealValues(temp_image_local.physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
-					temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+
+					if (variance == 0.0f) temp_image_local.SetToConstant(0.0f);
+					else temp_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 				}
 				else
 				if (use_input_reconstruction)
@@ -1068,7 +1081,9 @@ bool Reconstruct3DApp::DoCalculation()
 					// Normalize background variance and average
 					variance = input_particle.particle_image->ReturnVarianceOfRealValues(input_particle.particle_image->physical_address_of_box_center_x - mask_falloff / original_pixel_size, 0.0, 0.0, 0.0, true);
 					average = input_particle.particle_image->ReturnAverageOfRealValues(input_particle.particle_image->physical_address_of_box_center_x - mask_falloff / original_pixel_size, true);
-					input_particle.particle_image->AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+
+					if (variance == 0.0f) input_particle.particle_image->SetToConstant(0.0f);
+					else input_particle.particle_image->AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 				}
 				else
 				if (use_input_reconstruction)

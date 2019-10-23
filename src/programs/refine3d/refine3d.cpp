@@ -414,6 +414,8 @@ bool Refine3DApp::DoCalculation()
 	bool	 ignore_input_angles				= my_current_job.arguments[51].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
 	bool	 defocus_bias						= my_current_job.arguments[52].ReturnBoolArgument(); // during ab-initio 3D, biases random selection of particles towards higher defocus values
 
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
+
 // Constraints for phi, theta, psi not yet implemented
 	refine_particle.constraints_used.phi = false;
 	refine_particle.constraints_used.theta = false;
@@ -1133,7 +1135,9 @@ bool Refine3DApp::DoCalculation()
 			// Normalize background variance and average
 			variance = input_image_local.ReturnVarianceOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, 0.0, 0.0, 0.0, true);
 			average = input_image_local.ReturnAverageOfRealValues(input_image_local.physical_address_of_box_center_x - mask_falloff / pixel_size, true);
-			input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
+
+			if (variance == 0.0f) input_image_local.SetToConstant(0.0f);
+			else input_image_local.AddMultiplyConstant(- average, 1.0 / sqrtf(variance));
 			// At this point, input_image_local should have white background with a variance of 1. The variance should therefore be about 1/binning_factor^2 after binning.
 		}
 		else input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);

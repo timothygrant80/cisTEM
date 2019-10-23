@@ -1834,7 +1834,7 @@ bool CtffindApp::DoCalculation()
 							// don't crash, as this will lead to the gui job never finishing, instead send a blank result..
 							SendError(wxString::Format("Error: location %i of input file %s is blank, defocus parameters will be set to 0",current_input_location, input_filename));
 
-							float results_array[7];
+							float results_array[10];
 							results_array[0] = 0.0;				// Defocus 1 (Angstroms)
 							results_array[1] = 0.0;				// Defocus 2 (Angstroms)
 							results_array[2] = 0.0;				// Astigmatism angle (degrees)
@@ -1842,8 +1842,11 @@ bool CtffindApp::DoCalculation()
 							results_array[4] = 0.0;				// CTFFIND score
 							results_array[5] = 0.0;
 							results_array[6] = 0.0;
+							results_array[7] = 0.0;
+							results_array[8] = 0.0;
+							results_array[9] = 0.0;
 
-							my_result.SetResult(7,results_array);
+							my_result.SetResult(10, results_array);
 
 							delete average_spectrum;
 							delete average_spectrum_masked;
@@ -2016,6 +2019,11 @@ bool CtffindApp::DoCalculation()
 
 				pixel_size_for_fitting = tilt_scorer.CalculateTiltCorrectedSpectra(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, average_spectrum);
 				average_spectrum->MultiplyByConstant(float(number_of_tiles_used));
+			}
+			else
+			{
+				tilt_angle = 0.0f;
+				tilt_axis = 0.0f;
 			}
 
 			// We need to take care of the scaling of the FFTs, as well as the averaging of tiles
@@ -2880,12 +2888,13 @@ bool CtffindApp::DoCalculation()
 
 
 	// Send results back
-	float results_array[8];
+	float results_array[10];
 	results_array[0] = current_ctf->GetDefocus1() * pixel_size_for_fitting;				// Defocus 1 (Angstroms)
 	results_array[1] = current_ctf->GetDefocus2() * pixel_size_for_fitting;				// Defocus 2 (Angstroms)
 	results_array[2] = current_ctf->GetAstigmatismAzimuth() * 180.0 / PIf;	// Astigmatism angle (degrees)
 	results_array[3] = current_ctf->GetAdditionalPhaseShift();				// Additional phase shift (e.g. from phase plate) (radians)
 	results_array[4] = final_score;		// CTFFIND score
+
 	if (last_bin_with_good_fit == 0)
 	{
 		results_array[5] = 0.0;															//	A value of 0.0 indicates that the calculation to determine the goodness of fit failed for some reason
@@ -2904,8 +2913,12 @@ bool CtffindApp::DoCalculation()
 	}
 
 	results_array[7] = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
+	results_array[8] = tilt_angle;
+	results_array[9] = tilt_axis;
 
-	my_result.SetResult(8,results_array);
+
+	my_result.SetResult(10,results_array);
+
 
 
 	// Cleanup

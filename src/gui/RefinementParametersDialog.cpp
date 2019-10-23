@@ -31,11 +31,19 @@ RefinementParametersDialogParent( parent, id, title, pos, size, style)
 	ParameterListCtrl->InsertColumn(7, wxT("Defocus 2 (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 	ParameterListCtrl->InsertColumn(8, wxT("Defocus Angle (°)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 	ParameterListCtrl->InsertColumn(9, wxT("Phase Shift (°)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-	ParameterListCtrl->InsertColumn(10, wxT("Occupancy"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-	ParameterListCtrl->InsertColumn(11, wxT("logP"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-	ParameterListCtrl->InsertColumn(12, wxT("Sigma"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-	ParameterListCtrl->InsertColumn(13, wxT("Score"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-	ParameterListCtrl->InsertColumn(14, wxT("Image Active?"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(10, wxT("Beam Tilt X (mrad)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(11, wxT("Beam Tilt Y (mrad)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(12, wxT("Image Shift X (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(13, wxT("Image Shift Y (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(14, wxT("Voltage (kV)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(15, wxT("Cs (mm)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(16, wxT("Amplitude Contrast"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(17, wxT("Pixel Size (Å)"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(18, wxT("Occupancy"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(19, wxT("logP"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(20, wxT("Sigma"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(21, wxT("Score"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+	ParameterListCtrl->InsertColumn(22, wxT("Image Active?"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
 
 	ParameterListCtrl->SetItemCount(refinement_results_panel->buffered_full_refinement->number_of_particles);
 	ParameterListCtrl->RefreshItems(0, ParameterListCtrl->GetItemCount() - 1);

@@ -47,7 +47,10 @@ void MyRunProfilesPanel::FillCommandsBox()
 	CommandsListBox->ClearAll();
 	CommandsListBox->InsertColumn(0, "Command", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
 	CommandsListBox->InsertColumn(1, "No. Copies", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
-	CommandsListBox->InsertColumn(2, "Launch Delay (ms)", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	CommandsListBox->InsertColumn(2, "No. Threads Per Copy", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	CommandsListBox->InsertColumn(3, "Override Total No. Copies?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	CommandsListBox->InsertColumn(4, "Overriden Total No. Copies?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
+	CommandsListBox->InsertColumn(5, "Launch Delay (ms)", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE);
 
 	// Fill it from the run_profile_manager..
 
@@ -89,9 +92,15 @@ void MyRunProfilesPanel::FillCommandsBox()
 		{
 			CommandsListBox->InsertItem(counter, buffer_profile.run_commands[counter].command_to_run, counter);
 			CommandsListBox->SetItem(counter, 1, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].number_of_copies));
-			CommandsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].delay_time_in_ms));
-			total_number_of_jobs += buffer_profile.run_commands[counter].number_of_copies;
+			CommandsListBox->SetItem(counter, 2, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].number_of_threads_per_copy));
+
+			if (buffer_profile.run_commands[counter].override_total_copies == true) CommandsListBox->SetItem(counter, 3, "Yes");
+			else CommandsListBox->SetItem(counter, 3, "No");
+			CommandsListBox->SetItem(counter, 4, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].overriden_number_of_copies));
+			CommandsListBox->SetItem(counter, 5, wxString::Format(wxT("%i"), buffer_profile.run_commands[counter].delay_time_in_ms));
 		}
+
+		total_number_of_jobs = buffer_profile.ReturnTotalJobs();
 
 		NumberProcessesStaticText->SetLabel(wxString::Format(wxT("%i"), total_number_of_jobs));
 
@@ -161,6 +170,9 @@ void MyRunProfilesPanel::SizeCommandsColumns()
 
 	int current_name_width;
 	int current_number_width;
+	int current_number_threads_width;
+	int current_should_override_number_width;
+	int current_overriden_number_width;
 	int current_delay_width;
 
 	int remainder;
@@ -169,14 +181,21 @@ void MyRunProfilesPanel::SizeCommandsColumns()
 	CommandsListBox->SetColumnWidth(0, -2);
 	CommandsListBox->SetColumnWidth(1, -2);
 	CommandsListBox->SetColumnWidth(2, -2);
+	CommandsListBox->SetColumnWidth(3, -2);
+	CommandsListBox->SetColumnWidth(4, -2);
+	CommandsListBox->SetColumnWidth(5, -2);
 
 	old_commands_listbox_client_width = client_width;
 
 	current_name_width = CommandsListBox->GetColumnWidth(0);
 	current_number_width = CommandsListBox->GetColumnWidth(1);
-	current_delay_width = CommandsListBox->GetColumnWidth(2);
+	current_number_threads_width = CommandsListBox->GetColumnWidth(2);
+	current_should_override_number_width =CommandsListBox->GetColumnWidth(3);
+	current_overriden_number_width = CommandsListBox->GetColumnWidth(4);
+	current_delay_width = CommandsListBox->GetColumnWidth(5);
 
-	if (current_name_width + current_number_width + current_delay_width < client_width)
+
+	if (current_name_width + current_number_width + current_delay_width + current_number_threads_width + current_should_override_number_width + current_overriden_number_width < client_width)
 	{
 		remainder = client_width - current_number_width - current_delay_width;
 		CommandsListBox->SetColumnWidth(0, remainder);
@@ -408,6 +427,9 @@ void MyRunProfilesPanel::WriteRunProfilesToDisk(wxString filename, wxArrayInt pr
 		{
 			output_file.AddLine(wxString::Format("profile_%i_command_%i_command_to_run=\"%s\"", profile_counter,  command_counter, run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].command_to_run));
 			output_file.AddLine(wxString::Format("profile_%i_command_%i_number_of_copies=%i", profile_counter,  command_counter, run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].number_of_copies));
+			output_file.AddLine(wxString::Format("profile_%i_command_%i_number_of_threads_per_copy=%i", profile_counter,  command_counter, run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].number_of_threads_per_copy));
+			output_file.AddLine(wxString::Format("profile_%i_command_%i_should_override_total_number_of_copies=%i", profile_counter,  command_counter, int(run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].override_total_copies)));
+			output_file.AddLine(wxString::Format("profile_%i_command_%i_overriden_total_number_of_copies=%i", profile_counter,  command_counter, run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].overriden_number_of_copies));
 			output_file.AddLine(wxString::Format("profile_%i_command_%i_delay_time_in_ms=%i", profile_counter,  command_counter, run_profile_manager.run_profiles[profiles_to_write.Item(profile_counter)].run_commands[command_counter].delay_time_in_ms));
 		}
 	}
@@ -427,6 +449,9 @@ bool MyRunProfilesPanel::ImportRunProfilesFromDisk(wxString filename)
 	wxString buffer_command_to_run;
 	long buffer_number_of_run_commands;
 	long buffer_number_of_copies;
+	long buffer_number_of_threads;
+	long buffer_override_total_jobs;
+	long buffer_overriden_total_jobs;
 	long buffer_delay_time_in_ms;
 	long number_of_profiles;
 	bool success;
@@ -480,12 +505,24 @@ bool MyRunProfilesPanel::ImportRunProfilesFromDisk(wxString filename)
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_number_of_copies);
 			if (success == false) return false;
 
+			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_number_of_threads_per_copy=", profile_counter, command_counter), "") != 1) return false;
+			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_number_of_threads);
+			if (success == false) return false;
+
+			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_should_override_total_number_of_copies=", profile_counter, command_counter), "") != 1) return false;
+			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_override_total_jobs);
+			if (success == false) return false;
+
+			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_overriden_total_number_of_copies=", profile_counter, command_counter), "") != 1) return false;
+			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_overriden_total_jobs);
+			if (success == false) return false;
+
 			line_buffer = input_file.GetNextLine();
 			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_delay_time_in_ms=", profile_counter, command_counter), "") != 1) return false;
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_delay_time_in_ms);
 			if (success == false) return false;
 
-			profiles_buffer[profile_counter].AddCommand(buffer_command_to_run, int(buffer_number_of_copies), int(buffer_delay_time_in_ms));
+			profiles_buffer[profile_counter].AddCommand(buffer_command_to_run, int(buffer_number_of_copies), int(buffer_number_of_threads), bool(buffer_override_total_jobs), int (buffer_overriden_total_jobs), int(buffer_delay_time_in_ms));
 
 
 		}
@@ -709,7 +746,7 @@ void MyRunProfilesPanel::ManagerTextChanged( wxCommandEvent& event )
 
 void MyRunProfilesPanel::AddCommandButtonClick( wxCommandEvent& event )
 {
-	buffer_profile.AddCommand("$command", 1, 10);
+	buffer_profile.AddCommand("$command", 1, 1, false, 0, 10);
 	FillCommandsBox();
 
 	SetSelectedCommand(buffer_profile.number_of_run_commands - 1);
@@ -760,7 +797,22 @@ void MyRunProfilesPanel::EditCommand()
 	add_dialog->CommandTextCtrl->SetValue(buffer_profile.run_commands[selected_command].command_to_run);
 	add_dialog->NumberCopiesSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].number_of_copies);
 	add_dialog->DelayTimeSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].delay_time_in_ms);
+	add_dialog->NumberThreadsSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].number_of_threads_per_copy);
+
+	if (buffer_profile.run_commands[selected_command].override_total_copies == true)
+	{
+		add_dialog->OverrideCheckBox->SetValue(true);
+		add_dialog->OverridenNoCopiesSpinCtrl->Enable(true);
+	}
+	else
+	{
+			add_dialog->OverrideCheckBox->SetValue(false);
+			add_dialog->OverridenNoCopiesSpinCtrl->Enable(false);
+	}
+
+	add_dialog->OverridenNoCopiesSpinCtrl->SetValue(buffer_profile.run_commands[selected_command].overriden_number_of_copies);
 	add_dialog->ShowModal();
+
 }
 
 void MyRunProfilesPanel::ImportAllFromDatabase()

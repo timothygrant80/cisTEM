@@ -77,7 +77,8 @@ public :
 
 	// Methods
 
-	void Update(long current_tick);
+	virtual void Update(long current_tick);
+	virtual void CallOnUpdate() {}; // function that can be overidden to have control on extra things passed progressbars should do (this is primarily used for allowing GUI panels to track progress bars
 
 
 };

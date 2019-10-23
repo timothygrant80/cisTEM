@@ -61,7 +61,7 @@ void ShowCTFResultsPanel::Clear()
 	Refresh();
 }
 
-void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, wxString ImageFile)
+void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, float tilt_angle, float tilt_axis, wxString ImageFile)
 {
 	Image result_image;
 	wxString avrot_filename;
@@ -87,8 +87,8 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
 	else AliasResText->SetLabel(wxString::Format(wxT("%.2f Å"), alias_res));
 
 	IcinessStaticText->SetLabel(wxString::Format(wxT("%.2f"),iciness));
-
-
+	TiltAngleStaticText->SetLabel(wxString::Format(wxT("%.2f  °"),tilt_angle));
+	TiltAxisStaticText->SetLabel(wxString::Format(wxT("%.2f  °"),tilt_axis));
 
 	if (DoesFileExist(diagnostic_filename) == true)
 	{

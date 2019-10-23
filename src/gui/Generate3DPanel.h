@@ -71,6 +71,8 @@ class Generate3DPanel : public Generate3DPanelParent
 		bool active_crop_images;
 		bool active_save_half_maps;
 		bool active_update_statistics;
+		bool active_apply_ewald_correction;
+		bool active_apply_inverse_hand;
 
 		Refinement *input_refinement;
 

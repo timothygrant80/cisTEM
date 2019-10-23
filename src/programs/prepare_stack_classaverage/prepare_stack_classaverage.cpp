@@ -251,7 +251,7 @@ bool PrepareStackApp::DoCalculation()
 		for (line_counter = 0; line_counter < input_star_file.ReturnNumberofLines(); line_counter++)
 		{
 
-			if (input_star_file.ReturnImageIsActive(line_counter) == classaverages_to_make[current_classaverage])
+			if (input_star_file.ReturnBest2DClass(line_counter) == classaverages_to_make[current_classaverage])
 			{
 				temp_line = input_star_file.ReturnLine(line_counter);
 

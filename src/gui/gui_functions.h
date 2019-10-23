@@ -38,6 +38,7 @@ void global_delete_refine3d_scratch();
 void global_delete_startup_scratch();
 void global_delete_autorefine3d_scratch();
 void global_delete_generate3d_scratch();
+void global_delete_refinectf_scratch();
 
 inline wxColour GetColourBarValue(float current_value, float min_value, float max_value)
 {

@@ -260,7 +260,7 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average)
 		resampled_power_spectrum_binned_image.SpectrumBoxConvolution(&average_spectrum, box_convolution, float(resampled_power_spectrum_binned_image.logical_x_dimension) * ctf_fit_pixel_size / low_res_limit);
 		resampled_power_spectrum_binned_image.SubtractImage(&average_spectrum);
 	}
-//	resampled_power_spectrum_binned_image.CosineMask(resampled_power_spectrum_binned_image.logical_x_dimension * 0.4f, resampled_power_spectrum_binned_image.logical_x_dimension * 0.2f);
+	resampled_power_spectrum_binned_image.CosineMask(resampled_power_spectrum_binned_image.logical_x_dimension * 0.3f, resampled_power_spectrum_binned_image.logical_x_dimension * 0.4f);
 //	resampled_power_spectrum_binned_image.AddMultiplyConstant(-resampled_power_spectrum_binned_image.ReturnAverageOfRealValues(), sqrtf(1.0f / resampled_power_spectrum_binned_image.ReturnVarianceOfRealValues()));
 	// Scaling to yield correlation coefficient when evaluating scores
 //	resampled_power_spectrum_binned_image.MultiplyByConstant(2.0f / resampled_power_spectrum_binned_image.logical_x_dimension / resampled_power_spectrum_binned_image.logical_y_dimension);
@@ -564,7 +564,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 				y_coordinate_2d = float(iy) * sub_section_y / float(n_stp) * pixel_size_for_fitting;
 				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
 				height = y_rotated * tanf(deg_2_rad(best_tilt_angle));
-				if (average_defocus != 0.0f) stretch_factor = sqrtf(fabsf(average_defocus + height) / average_defocus);
+				if (average_defocus > 100.0f) stretch_factor = sqrtf(fabsf(average_defocus + height) / average_defocus);
 				else stretch_factor = 1.0f;
 //				wxPrintf("x, y, x_coordinate_2d, y_coordinate_2d, stretch_factor = %i %i %g %g %g\n", ix, iy, x_coordinate_2d, y_coordinate_2d, stretch_factor);
 

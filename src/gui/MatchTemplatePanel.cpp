@@ -553,11 +553,11 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	current_image_euler_search->CalculateGridSearchPositions(false);
 
-
 #ifdef USEGPU
-	number_of_jobs_per_image_in_gui = number_of_processes;
-	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
-	wxPrintf("In USEGPU There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
+	int number_of_jobs =  number_of_jobs_per_image_in_gui * active_group.number_of_members;
+
+	wxPrintf("In USEGPU:\n There are %d search positions\nThere are %d jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
 	delete current_image_euler_search;
 
 #else

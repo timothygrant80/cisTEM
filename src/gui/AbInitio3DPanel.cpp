@@ -1441,7 +1441,7 @@ void AbInitioManager::SetupReconstructionJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	if (active_use_classums == false) number_of_particles = active_refinement_package->contained_particles.GetCount();
 	else number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
@@ -1641,7 +1641,7 @@ void AbInitioManager::RunReconstructionJob()
 void AbInitioManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs() - 1;
+	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
 
 	int class_counter;
 

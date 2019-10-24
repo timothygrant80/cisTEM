@@ -35,6 +35,10 @@ public:
 	int3 logical_upper_bound_real;
 	int3 logical_lower_bound_real;
 
+	int device_idx;
+	int number_of_streaming_multiprocessors;
+	int limit_SMs_by_threads;
+
 	float3 fourier_voxel_size;
 
 
@@ -95,9 +99,8 @@ public:
 
  ////////////////////////////////////////////////////////
 
-
-	cudaEvent_t calcEvent, copyEvent;
-	cublasHandle_t cublasHandle;
+	cudaEvent_t nppCalcEvent;
+//	cublasHandle_t cublasHandle;
 
 	cufftHandle cuda_plan_forward;
 	cufftHandle cuda_plan_inverse;
@@ -110,9 +113,9 @@ public:
 	NppStreamContext nppStream;
 
 	bool is_fft_planned;
-	bool is_cublas_loaded;
+//	bool is_cublas_loaded;
 	bool is_npp_loaded;
-	cublasStatus_t cublas_stat;
+//	cublasStatus_t cublas_stat;
 	NppStatus npp_stat;
 
 	// For the full image set width/height, otherwise set on function call.
@@ -141,6 +144,8 @@ public:
 				int wanted_coordinate_of_box_center_x,
 				int wanted_coordinate_of_box_center_y,
 				int wanted_coordinate_of_box_center_z);
+	void ClipIntoReturnMask(GpuImage *other_image);
+
 	void ForwardFFT(bool should_scale = true);                                           /**CPU_eq**/
 	void BackwardFFT();                                                                   /**CPU_eq**/
 	void ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scale);
@@ -168,6 +173,7 @@ public:
 	void CopyVolumeHostToDevice();
 	void CopyVolumeDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
 	// Synchronize the full stream.
+	void Record();
 	void Wait();
 	// Maximum intensity projection
 	void MipPixelWise(GpuImage &other_image);
@@ -191,6 +197,15 @@ public:
 	  gridDims = dim3((input_dims.w/div + threadsPerBlock.x - 1) / threadsPerBlock.x,
 					  (input_dims.y     + threadsPerBlock.y - 1) / threadsPerBlock.y,
 					   input_dims.z);
+	};
+
+	__inline__  void ReturnLaunchParamtersLimitSMs(int N, int M)
+	{
+		// This should only be called for kernels with grid stride loops setup. The idea
+		// is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
+		// limit_SMs_by_threads is default 1, so this must be set prior to this call.
+	  threadsPerBlock = dim3(M, 1, 1);
+	  gridDims = dim3( N* number_of_streaming_multiprocessors );
 	};
 
 	void CopyFromCpuImage(Image &cpu_image);
@@ -243,33 +258,35 @@ public:
   ///// Methods for creating or storing masks used for otherwise slow looping operations
   ////////////////////////////////////////////////////////////////////////
 
-  enum BufferType : int  { b_image, b_sum, b_min, b_minIDX, b_max, b_maxIDX, b_minmax, b_minmaxIDX, b_mean, b_meanstddev,
-  	  	  	  	  	  	   b_countinrange, b_histogram, b_16f, b_l2norm, b_dotproduct};
+	enum BufferType : int  { b_image, b_sum, b_min, b_minIDX, b_max, b_maxIDX, b_minmax, b_minmaxIDX, b_mean, b_meanstddev,
+						   b_countinrange, b_histogram, b_16f, b_l2norm, b_dotproduct, b_clip_into_mask};
 
-  void CublasInit();
-  void NppInit();
-  void BufferInit(BufferType bt);
+	//  void CublasInit();
+	void NppInit();
+	void BufferInit(BufferType bt);
 
 
 
-  // Real buffer = size real_values
-  GpuImage* image_buffer; bool is_allocated_image_buffer;
+	// Real buffer = size real_values
+	GpuImage* image_buffer; bool is_allocated_image_buffer;
 
-  // Npp specific buffers;
-  Npp8u* sum_buffer; 			bool is_allocated_sum_buffer;
-  Npp8u* min_buffer; 			bool is_allocated_min_buffer;
-  Npp8u* minIDX_buffer; 		bool is_allocated_minIDX_buffer;
-  Npp8u* max_buffer; 			bool is_allocated_max_buffer;
-  Npp8u* maxIDX_buffer; 		bool is_allocated_maxIDX_buffer;
-  Npp8u* minmax_buffer; 		bool is_allocated_minmax_buffer;
-  Npp8u* minmaxIDX_buffer; 		bool is_allocated_minmaxIDX_buffer;
-  Npp8u* mean_buffer; 			bool is_allocated_mean_buffer;
-  Npp8u* meanstddev_buffer; 	bool is_allocated_meanstddev_buffer;
-  Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
-  Npp8u* l2norm_buffer;			bool is_allocated_l2norm_buffer;
-  Npp8u* dotproduct_buffer;		bool is_allocated_dotproduct_buffer;
-  	  	  	  	  	  	  	  	bool is_allocated_16f_buffer;
-  	  	  	  	  	  	  	  	bool is_set_realLoadAndClipInto;
+	// Npp specific buffers;
+	Npp8u* sum_buffer; 			bool is_allocated_sum_buffer;
+	Npp8u* min_buffer; 			bool is_allocated_min_buffer;
+	Npp8u* minIDX_buffer; 		bool is_allocated_minIDX_buffer;
+	Npp8u* max_buffer; 			bool is_allocated_max_buffer;
+	Npp8u* maxIDX_buffer; 		bool is_allocated_maxIDX_buffer;
+	Npp8u* minmax_buffer; 		bool is_allocated_minmax_buffer;
+	Npp8u* minmaxIDX_buffer; 		bool is_allocated_minmaxIDX_buffer;
+	Npp8u* mean_buffer; 			bool is_allocated_mean_buffer;
+	Npp8u* meanstddev_buffer; 	bool is_allocated_meanstddev_buffer;
+	Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
+	Npp8u* l2norm_buffer;			bool is_allocated_l2norm_buffer;
+	Npp8u* dotproduct_buffer;		bool is_allocated_dotproduct_buffer;
+								bool is_allocated_16f_buffer;
+	int* clip_into_mask;		bool is_allocated_clip_into_mask; bool is_set_realLoadAndClipInto;
+
+
 
   
   GpuImage* mask_CSOS;   bool is_allocated_mask_CSOS;

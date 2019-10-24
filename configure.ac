@@ -313,6 +313,8 @@ fi
 if test "x$static_link" = "xtrue"; then
  if test "x$CXX" = "xicpc"; then
  	LDFLAGS="$LDFLAGS -static-intel -qopenmp-link=static"
+ 	# There is no static library for libcilkrts. Suppress this warning.
+ 	LDFLAGS="$LDFLAGS -wd10237"
  else
 	LDFLAGS="$LDFLAGS -static"
  fi

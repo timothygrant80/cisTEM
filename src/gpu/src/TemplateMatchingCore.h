@@ -12,27 +12,37 @@
 //
 //} Peaks;
 
+typedef
+struct __align__(8) _Peaks {
+	// This should be 128 byte words, so good for read access?
+	__half mip;
+	__half psi;
+	__half theta;
+	__half phi;
+
+} Peaks;
 //typedef
-//struct __align__(8) _Peaks {
+//struct __align__(16) _Peaks {
 //	// This should be 128 byte words, so good for read access?
+//	float mip;
+//	float psi;
+//	float theta;
+//	float phi;
+//
+//} Peaks;
+
+//typedef
+//struct __align__(16)_Stats{
 //	__half mip;
 //	__half psi;
 //	__half theta;
 //	__half phi;
-//
-//} Peaks;
+//	__half mean;
+//	__half sum_sq_diff;
+//	int N;
+//} Stats;
 typedef
-struct __align__(16) _Peaks {
-	// This should be 128 byte words, so good for read access?
-	float mip;
-	float psi;
-	float theta;
-	float phi;
-
-} Peaks;
-
-typedef
-struct __align__(8)_Stats{
+struct __align__(8) _Stats{
 	cufftReal sum;
 	cufftReal sq_sum;
 } Stats;
@@ -59,6 +69,8 @@ public:
 	Image input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
 
 
+	cudaGraph_t graph;
+	cudaGraphExec_t graphExec;
 
 	// These are assumed to be empty containers at the outset, so xfer host-->device is skipped
 	GpuImage d_max_intensity_projection;
@@ -114,7 +126,7 @@ public:
 	Stats* my_stats;
 	Peaks* my_peaks;
 	void SumPixelWise(GpuImage &image);
-    void MipPixelWise(GpuImage &image, float psi, float theta, float phi);
+    void MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi);
 	void MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi);
 	void AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum);
 

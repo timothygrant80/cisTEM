@@ -27,7 +27,6 @@ public:
 	size_t size_of_temp_hist;
 	float* cummulative_histogram;
 
-
 	int histogram_n_bins; //
 	float histogram_min;
 	float histogram_max;

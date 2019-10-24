@@ -17,11 +17,12 @@ $(info $$OBJECTS is [${OBJECTS}])
 
 
 # Forces stream synchronization after all kernels and asynchronous API calls (where wrapped) for proper debugging/ timing.
-DEFINES += -DHEAVY_ERROR_CHECKING=true        
+#DEFINES += -DHEAVY_ERROR_CHECKING=true    
+#DEFINES += -DDEBUG_MODE=true    
 
-
-NVCCFLAGS += --default-stream per-thread -m64 
-NVCCFLAGS += -Xptxas --warn-on-double-precision-use,--warn-on-local-memory-usage,--warn-on-spills --generate-line-info
+#--warn-on-double-precision-use
+NVCCFLAGS += --default-stream per-thread -m64 -O3 --use_fast_math
+NVCCFLAGS += -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info
 NVCCFLAGS += -Xcompiler= -std=c++11 -Xlinker -lculibos
 NVCCFLAGS += -lfftw3f,-lwx_gtk2u_richtext-3.0,-lwx_gtk2u_aui-3.0,-lwx_gtk2u_xrc-3.0,-lwx_gtk2u_html-3.0,-lwx_gtk2u_qa-3.0,lwx_gtk2u_adv-3.0,-lwx_gtk2u_core-3.0,-lwx_baseu_xml-3.0,-lwx_baseu_net-3.0,-lwx_baseu-3.0,-ltiff,-pthread,-fopenmp --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75
 

@@ -188,7 +188,6 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 //	MyDebugAssertTrue(is_in_real_space, "Not in real space");
 
-	// Fixme WHY does this return sum(x^2)/N for real space and sum(X^2) for Fourier space?? this is really confusing - BAH
 	int i;
 	int j;
 	int k;
@@ -4791,8 +4790,8 @@ bool Image::FourierComponentIsExplicitHermitianMate(int physical_index_x, int ph
 //
 //
 // 	A note on scaling: by default, we divide by N, the number of pixels. This ensures that after we do an inverse FT (without further scaling),
-//	we will return to our original values. However, it means that while in Fourier space, the amplitudes are too low, by a factor of sqrt(N), because the scaling happens as
-//  sqrt(N) on the forward and then sqrt(N) on the inverse. This means that, for example, Parserval's theorem is not satisfied.
+//	we will return to our original values. However, it means that while in Fourier space, the amplitudes are too high, by a factor of sqrt(N),
+//  such that, for example, Parserval's theorem is not satisfied.
 void Image::ForwardFFT(bool should_scale)
 {
 

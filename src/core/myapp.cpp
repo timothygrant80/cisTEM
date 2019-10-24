@@ -456,7 +456,7 @@ void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
 	WriteToSocket(master_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
 	WriteToSocket(master_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float), true, "SendResultImageDataFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-	SendwxStringToSocket(&filename_to_write, controller_socket);
+	SendwxStringToSocket(&filename_to_write, master_socket);
 }
 
 void MyApp::OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my_event)

@@ -786,11 +786,14 @@ public:
 	@return The format string */
 	const wxString& SetLabelFormat() { return m_labelFormat; };
 	
+	void SetMinStep(double wanted_min_step) {min_step = wanted_min_step;};
+
 protected:
     int m_flags; //!< Flag for axis alignment
     bool m_ticks; //!< Flag to toggle between ticks or grid
     unsigned int m_labelType; //!< Select labels mode: mpX_NORMAL for normal labels, mpX_TIME for time axis in hours, minutes, seconds
 	wxString m_labelFormat; //!< Format string used to print labels
+	double min_step;
 
     DECLARE_DYNAMIC_CLASS(mpScaleX)
 };

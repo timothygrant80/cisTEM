@@ -241,6 +241,8 @@ void Generate3DPanel::SetDefaults()
 		AutoCropNoRadioButton->SetValue(true);
 		SaveHalfMapsNoButton->SetValue(true);
 		OverwriteStatisticsYesButton->SetValue(true);
+		ApplyEwaldSphereCorrectionNoButton->SetValue(true);
+		ApplyEwaldInverseHandNoButton->SetValue(true);
 
 		ExpertPanel->Thaw();
 	}
@@ -324,11 +326,24 @@ void Generate3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				}
 			}
 
+			if (ApplyEwaldSphereCorrectionYesButton->GetValue() == true)
+			{
+				ApplyInverseHandLabelText->Enable(true);
+				ApplyEwaldInverseHandYesButton->Enable(true);
+				ApplyEwaldInverseHandNoButton->Enable(true);
+			}
+			else
+			{
+				ApplyInverseHandLabelText->Enable(false);
+				ApplyEwaldInverseHandYesButton->Enable(false);
+				ApplyEwaldInverseHandNoButton->Enable(false);
+			}
+
 			bool estimation_button_status = false;
 
 			if (RefinementPackageComboBox->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 0)
 				{
 					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND && InputParametersComboBox->GetSelection() != wxNOT_FOUND)
 					{
@@ -479,6 +494,8 @@ void Generate3DPanel::StartReconstructionClick( wxCommandEvent& event )
 	active_crop_images	= AutoCropYesRadioButton->GetValue();
 	active_save_half_maps = SaveHalfMapsYesButton->GetValue();
 	active_update_statistics = OverwriteStatisticsYesButton->GetValue();
+	active_apply_ewald_correction = ApplyEwaldSphereCorrectionYesButton->GetValue();
+	active_apply_inverse_hand = ApplyEwaldInverseHandYesButton->GetValue();
 
 	active_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection());
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[ReconstructionRunProfileComboBox->GetSelection()];
@@ -497,6 +514,7 @@ void Generate3DPanel::StartReconstructionClick( wxCommandEvent& event )
 	InfoPanel->Show(false);
 	OutputTextPanel->Show(true);
 	ShowRefinementResultsPanel->Clear();
+
 
 	//if (ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == true) ShowRefinementResultsPanel->LeftRightSplitter->Unsplit();
 
@@ -667,8 +685,16 @@ void Generate3DPanel::SetupReconstructionJob()
 
 			bool threshold_input_3d = true;
 			int max_threads = 1;
+			int correct_ewald_sphere;
 
-			current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
+			if (active_apply_ewald_correction == true) correct_ewald_sphere = 0;
+			else
+			{
+				if (active_apply_inverse_hand == true) correct_ewald_sphere = 1;
+				else correct_ewald_sphere = -1;
+			}
+
+			current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -701,6 +727,7 @@ void Generate3DPanel::SetupReconstructionJob()
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data(),
+																		correct_ewald_sphere,
 																		max_threads);
 
 

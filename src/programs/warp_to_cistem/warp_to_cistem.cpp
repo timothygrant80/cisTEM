@@ -41,6 +41,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	wxString project_name = "";
 	float wanted_binned_pixel_size = 1.0;
 	bool do_import_images = false;
+	bool do_scale_images_and_make_spectra = false;
 	bool do_import_ctf_results = false;
 	bool do_import_particle_coordinates = false;
 	bool do_import_refinement_package = false;
@@ -55,8 +56,10 @@ void WarpToCistemApp::DoInteractiveUserInput()
 	wanted_binned_pixel_size = my_input -> GetFloatFromUser("Binned Pixel Size", "Pixel size to resample movies to after import.", "1.0", 0.0);
 	do_import_images = my_input -> GetYesNoFromUser("Import Images?", "Should we import aligned averaged images from WARP (using a different motion correction system than cisTEM)?", "Yes");
 	if (do_import_images) {
+		do_scale_images_and_make_spectra = my_input -> GetYesNoFromUser("Generate Scaled Images and Spectra?", "Should we make scaled images and spectra? Scaled images are very slow to generate but accelerate normal cisTEM operations", "No");
 		do_import_ctf_results = my_input -> GetYesNoFromUser("Import CTF Estimates?", "Should we import results of CTF estimation from Warp?", "Yes");
 	} else {
+		do_scale_images_and_make_spectra=false;
 		do_import_ctf_results=false;
 	}
 	if (do_import_ctf_results) {
@@ -75,7 +78,7 @@ void WarpToCistemApp::DoInteractiveUserInput()
 
 	delete my_input;
 
-	my_current_job.ManualSetArguments("tttbfbbbtfb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.ToUTF8().data(), particle_mass, do_import_classification_results);
+	my_current_job.ManualSetArguments("tttbbfbbbtfb",	warp_directory.ToUTF8().data(), cistem_parent_directory.ToUTF8().data(), project_name.ToUTF8().data(), do_import_images, do_scale_images_and_make_spectra, wanted_binned_pixel_size, do_import_ctf_results, do_import_particle_coordinates, do_import_refinement_package, live_2d_directory.ToUTF8().data(), particle_mass, do_import_classification_results);
 
 
 }
@@ -587,13 +590,14 @@ bool WarpToCistemApp::DoCalculation()
 	wxString cistem_parent_directory = my_current_job.arguments[1].ReturnStringArgument();
 	wxString project_name = my_current_job.arguments[2].ReturnStringArgument();
 	bool do_import_images = my_current_job.arguments[3].ReturnBoolArgument();
-	float wanted_binned_pixel_size = my_current_job.arguments[4].ReturnFloatArgument();
-	bool do_import_ctf_results = my_current_job.arguments[5].ReturnBoolArgument();
-	bool do_import_particle_coordinates = my_current_job.arguments[6].ReturnBoolArgument();
-	bool do_import_refinement_package = my_current_job.arguments[7].ReturnBoolArgument();
-	wxString live_2d_directory = my_current_job.arguments[8].ReturnStringArgument();
-	float particle_mass = my_current_job.arguments[9].ReturnFloatArgument();
-	bool do_import_classification_results = my_current_job.arguments[10].ReturnBoolArgument();
+	bool do_scale_images_and_make_spectra = my_current_job.arguments[4].ReturnBoolArgument();
+	float wanted_binned_pixel_size = my_current_job.arguments[5].ReturnFloatArgument();
+	bool do_import_ctf_results = my_current_job.arguments[6].ReturnBoolArgument();
+	bool do_import_particle_coordinates = my_current_job.arguments[7].ReturnBoolArgument();
+	bool do_import_refinement_package = my_current_job.arguments[8].ReturnBoolArgument();
+	wxString live_2d_directory = my_current_job.arguments[9].ReturnStringArgument();
+	float particle_mass = my_current_job.arguments[10].ReturnFloatArgument();
+	bool do_import_classification_results = my_current_job.arguments[11].ReturnBoolArgument();
 
 	ProgressBar *my_progress;
 	long counter;
@@ -781,6 +785,78 @@ bool WarpToCistemApp::DoCalculation()
 		wxPrintf("\nDone with Image Alignment Jobs\n\n");
 	}
 
+	if (do_scale_images_and_make_spectra) {
+		wxPrintf("\nPreparing scaled images and spectra\n\n");
+		my_progress = new ProgressBar(image_list.number_of_assets);
+		Image large_image;
+		Image buffer_image;
+		float average;
+		float sigma;
+		for (counter = 0; counter < image_list.number_of_assets; counter++)
+		{
+			new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
+			//Spectrum
+			wxString wanted_spectrum_filename = wanted_folder_name + wxString::Format("/Assets/Images/Spectra/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
+			wxString current_spectrum_filename = warp_directory + wxString::Format("powerspectrum/%s.mrc", new_image_asset.asset_name);
+
+			// Warp spectra are halved and unthresholded, so this fixes that.
+			large_image.QuickAndDirtyReadSlice(current_spectrum_filename.ToStdString(), 1); // reusing large image and buffer_image here
+			buffer_image.Allocate(large_image.logical_x_dimension, large_image.logical_y_dimension * 2, 1);
+			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++)
+			{
+				buffer_image.real_values[output_address] = large_image.real_values[output_address];
+			}
+			int input_address = buffer_image.real_memory_allocated / 2;
+			for (int address = large_image.real_memory_allocated - 1; address >= 0; address--)
+			{
+			   buffer_image.real_values[input_address] = large_image.real_values[address];
+			   input_address++;
+			}
+
+			buffer_image.CosineRingMask(0, buffer_image.logical_x_dimension / 2, 5.0f);
+			buffer_image.ForwardFFT();
+			buffer_image.CosineMask(0, 0.05, true);
+			buffer_image.BackwardFFT();
+			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
+			buffer_image.DivideByConstant(sigma);
+			buffer_image.SetMaximumValueOnCentralCross(average/sigma+10.0);
+
+			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
+			buffer_image.SetMinimumAndMaximumValues(average - 15.0, average + 15.0);
+			buffer_image.QuickAndDirtyWriteSlice(wanted_spectrum_filename.ToStdString(), 1);
+			// Also write fake diagnostic ctf spectrum in this scope to reuse the work done above.
+			if (do_import_ctf_results) {
+				wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name);
+				buffer_image.QuickAndDirtyWriteSlice(wanted_ctf_filename.ToStdString(), 1,true);
+			}
+
+
+			//Scaled Image - borrowed the logic heavily from Unblur
+			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
+	//			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
+	//			png_image = wxImage(current_scaled_filename);
+	//			png_data = png_image.GetData();
+	//			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
+	//			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++) {
+	//				buffer_image.real_values[output_address] = (float)(png_data[output_address*3]);
+	//			}
+	//			buffer_image.AddFFTWPadding();
+			int largest_dimension =  std::max(new_image_asset.x_size, new_image_asset.y_size);
+			float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+			if (scale_factor > 1) scale_factor=1.0;
+			large_image.QuickAndDirtyReadSlice(new_image_asset.filename.GetFullPath().ToStdString(), 1);
+			large_image.ForwardFFT();
+			buffer_image.Allocate(myroundint(new_image_asset.x_size*scale_factor), myroundint(new_image_asset.y_size*scale_factor), false);
+			large_image.ClipInto(&buffer_image);
+			buffer_image.BackwardFFT();
+			buffer_image.QuickAndDirtyWriteSlice(wanted_scaled_filename.ToStdString(), 1,true);
+
+			my_progress->Update(counter+1);
+		}
+		delete my_progress;
+		wxPrintf("\nDone writing spectra and scaled images\n\n");
+	}
+
 	if (do_import_ctf_results) {
 		wxPrintf("\nInserting CTF results in database\n\n");
 		wxDateTime now = wxDateTime::Now();
@@ -965,77 +1041,6 @@ bool WarpToCistemApp::DoCalculation()
 		delete my_progress;
 		new_project.database.Commit();
 		wxPrintf("\nDone Inserting Classification Results\n\n");
-	}
-	if (do_import_images) {
-		wxPrintf("\nPreparing scaled images and spectra\n\n");
-		my_progress = new ProgressBar(image_list.number_of_assets);
-		Image large_image;
-		Image buffer_image;
-		float average;
-		float sigma;
-		for (counter = 0; counter < image_list.number_of_assets; counter++)
-		{
-			new_image_asset = reinterpret_cast <ImageAsset *> (image_list.assets)[counter];
-			//Spectrum
-			wxString wanted_spectrum_filename = wanted_folder_name + wxString::Format("/Assets/Images/Spectra/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-			wxString current_spectrum_filename = warp_directory + wxString::Format("powerspectrum/%s.mrc", new_image_asset.asset_name);
-
-			// Warp spectra are halved and unthresholded, so this fixes that.
-			large_image.QuickAndDirtyReadSlice(current_spectrum_filename.ToStdString(), 1); // reusing large image and buffer_image here
-			buffer_image.Allocate(large_image.logical_x_dimension, large_image.logical_y_dimension * 2, 1);
-			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++)
-			{
-				buffer_image.real_values[output_address] = large_image.real_values[output_address];
-			}
-			int input_address = buffer_image.real_memory_allocated / 2;
-			for (int address = large_image.real_memory_allocated - 1; address >= 0; address--)
-			{
-			   buffer_image.real_values[input_address] = large_image.real_values[address];
-			   input_address++;
-			}
-
-			buffer_image.CosineRingMask(0, buffer_image.logical_x_dimension / 2, 5.0f);
-			buffer_image.ForwardFFT();
-			buffer_image.CosineMask(0, 0.05, true);
-			buffer_image.BackwardFFT();
-			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
-			buffer_image.DivideByConstant(sigma);
-			buffer_image.SetMaximumValueOnCentralCross(average/sigma+10.0);
-
-			buffer_image.ComputeAverageAndSigmaOfValuesInSpectrum(float(buffer_image.logical_x_dimension)*0.5,float(buffer_image.logical_x_dimension),average,sigma,12);
-			buffer_image.SetMinimumAndMaximumValues(average - 15.0, average + 15.0);
-			buffer_image.QuickAndDirtyWriteSlice(wanted_spectrum_filename.ToStdString(), 1);
-			// Also write fake diagnostic ctf spectrum in this scope to reuse the work done above.
-			if (do_import_ctf_results) {
-				wxString wanted_ctf_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0.mrc", new_image_asset.asset_name);
-				buffer_image.QuickAndDirtyWriteSlice(wanted_ctf_filename.ToStdString(), 1,true);
-			}
-
-
-			//Scaled Image - borrowed the logic heavily from Unblur
-			wxString wanted_scaled_filename = wanted_folder_name + wxString::Format("/Assets/Images/Scaled/%s.mrc", new_image_asset.asset_name); //, new_image_asset.asset_id, 0); _%i_%i
-	//			wxString current_scaled_filename = warp_directory + wxString::Format("thumbnails/%s.png");
-	//			png_image = wxImage(current_scaled_filename);
-	//			png_data = png_image.GetData();
-	//			buffer_image.Allocate(png_image.GetWidth(), png_image.GetHeight(), true);
-	//			for (int output_address = 0; output_address < large_image.real_memory_allocated; output_address++) {
-	//				buffer_image.real_values[output_address] = (float)(png_data[output_address*3]);
-	//			}
-	//			buffer_image.AddFFTWPadding();
-			int largest_dimension =  std::max(new_image_asset.x_size, new_image_asset.y_size);
-			float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
-			if (scale_factor > 1) scale_factor=1.0;
-			large_image.QuickAndDirtyReadSlice(new_image_asset.filename.GetFullPath().ToStdString(), 1);
-			large_image.ForwardFFT();
-			buffer_image.Allocate(myroundint(new_image_asset.x_size*scale_factor), myroundint(new_image_asset.y_size*scale_factor), false);
-			large_image.ClipInto(&buffer_image);
-			buffer_image.BackwardFFT();
-			buffer_image.QuickAndDirtyWriteSlice(wanted_scaled_filename.ToStdString(), 1,true);
-
-			my_progress->Update(counter+1);
-		}
-		delete my_progress;
-		wxPrintf("\nDone writing spectra and scaled images\n\n");
 	}
 
 	wxPrintf("\ncisTEM project ready to be loaded by GUI.\n");

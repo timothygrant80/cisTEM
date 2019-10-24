@@ -384,16 +384,21 @@ void SocketCommunicator::SetJobCode(unsigned char *code_to_set)
 
 void SocketCommunicator::StopMonitoringSocket(wxSocketBase *socket_to_monitor)
 {
-	wxMutexLocker monitor_socket_lock(remove_sockets_mutex);
-	if (monitor_socket_lock.IsOk() == true)
+	if (monitor_is_running == true)
 	{
-		socket_monitor_thread->sockets_to_remove_next_cycle.Add(socket_to_monitor);
+		wxMutexLocker monitor_socket_lock(remove_sockets_mutex);
+		if (monitor_socket_lock.IsOk() == true)
+		{
+			socket_monitor_thread->sockets_to_remove_next_cycle.Add(socket_to_monitor);
+		}
+		else MyPrintWithDetails("Error: Can't get remove socket lock");
 	}
-	else MyPrintWithDetails("Error: Can't get remove socket lock");
 }
 
 void SocketCommunicator::StopMonitoringAndDestroySocket(wxSocketBase *socket_to_monitor)
 {
+	if (monitor_is_running == false) return;
+
 	wxMutexLocker monitor_socket_lock(remove_sockets_and_destroy_mutex);
 	if (monitor_socket_lock.IsOk() == true)
 	{
@@ -624,7 +629,20 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 							else
 							if (memcmp(socket_input_buffer, socket_you_are_the_master, SOCKET_CODE_SIZE) == 0)
 							{
-								parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketYouAreTheMaster, parent_pointer, monitored_sockets[socket_counter]));
+								JobPackage *temp_package = new JobPackage;
+								if (temp_package->ReceiveJobPackage(monitored_sockets[socket_counter]) == true)
+								{
+									parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketYouAreTheMaster, parent_pointer, monitored_sockets[socket_counter], temp_package));
+								}
+								else
+								{
+									delete temp_package;
+
+									// socket is not ok.. pass on a message to the handler and remove it..
+									parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketDisconnect,parent_pointer, monitored_sockets[socket_counter]));
+									monitored_sockets.RemoveAt(socket_counter);
+									socket_counter--;
+								}
 							}
 							else
 							if (memcmp(socket_input_buffer, socket_you_are_a_slave, SOCKET_CODE_SIZE) == 0)
@@ -906,6 +924,7 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 									socket_counter--;
 								}
 							}
+							else
 							if (memcmp(socket_input_buffer, socket_send_thread_timing, SOCKET_CODE_SIZE) == 0)
 							{
 
@@ -924,6 +943,26 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 								}
 
 
+							}
+							else
+							if (memcmp(socket_input_buffer, socket_template_match_result_ready, SOCKET_CODE_SIZE) == 0)
+							{
+								int image_number;
+								float threshold_used;
+								ArrayOfTemplateMatchFoundPeakInfos peak_infos;
+								ArrayOfTemplateMatchFoundPeakInfos peak_changes;
+
+								if (ReceiveTemplateMatchingResultFromSocket(monitored_sockets[socket_counter], image_number, threshold_used, peak_infos, peak_changes) == true)
+								{
+									parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketTemplateMatchResultReady,parent_pointer, monitored_sockets[socket_counter], image_number, threshold_used, peak_infos, peak_changes));
+								}
+								else
+								{
+									// socket is not ok.. pass on a message to the handler and remove it..
+									parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketDisconnect,parent_pointer, monitored_sockets[socket_counter]));
+									monitored_sockets.RemoveAt(socket_counter);
+									socket_counter--;
+								}
 							}
 						}
 						else // socket is likely dead

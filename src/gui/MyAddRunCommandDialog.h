@@ -18,6 +18,7 @@ class MyAddRunCommandDialog : public AddRunCommandDialog
 		void OnOKClick( wxCommandEvent& event );
 		void OnCancelClick( wxCommandEvent& event );
 		void OnEnter( wxCommandEvent& event );
+		void OnOverrideCheckbox( wxCommandEvent& event );
 
 	//// end generated class members
 	

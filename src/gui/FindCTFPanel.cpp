@@ -132,6 +132,7 @@ void MyFindCTFPanel::Reset()
 void MyFindCTFPanel::ResetDefaults()
 {
 	MovieRadioButton->SetValue(true);
+	SearchTiltNoRadio->SetValue(true);
 	NoFramesToAverageSpinCtrl->SetValue(3);
 	BoxSizeSpinCtrl->SetValue(512);
 	AmplitudeContrastNumericCtrl->ChangeValueFloat(0.07f);
@@ -410,7 +411,7 @@ void MyFindCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 0)
 				{
 					StartEstimationButton->Enable(true);
 				}
@@ -597,6 +598,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	float max_movie_size_in_gb;
 	float min_memory_in_gb_if_run_on_one_machine;
 
+	bool determine_tilt;
+
 
 	// allocate space for the buffered results..
 
@@ -616,6 +619,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 	maximum_defocus = HighDefocusNumericCtrl->ReturnValue();
 	defocus_search_step = DefocusStepNumericCtrl->ReturnValue();
 	large_astigmatism_expected = LargeAstigmatismExpectedCheckBox->IsChecked();
+
+	determine_tilt = SearchTiltYesRadio->GetValue();
+
 
 	if (RestrainAstigmatismCheckBox->IsChecked() == false) astigmatism_tolerance = -100.0f;
 	else astigmatism_tolerance = ToleratedAstigmatismNumericCtrl->ReturnValue();
@@ -746,7 +752,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		const int number_of_threads = 1;
 
-		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffi",	input_filename.c_str(), // 0
+		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbi",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -782,6 +788,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	known_defocus_1,
 																	known_defocus_2,
 																	known_phase_shift,
+																	determine_tilt,
 																	number_of_threads);
 
 		my_progress_dialog->Update(counter + 1);
@@ -817,7 +824,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs + 1;
+		if (current_job_package.number_of_jobs < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs;
 		else number_of_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_processes >= 100000) length_of_process_number = 6;
@@ -995,7 +1002,7 @@ void  MyFindCTFPanel::ProcessResult(JobResult *result_to_process) // this will h
 
 		wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath();
 
-		CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], image_filename);
+		CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], result_to_process->result_data[8], result_to_process->result_data[9], image_filename);
 		time_of_last_result_update = time(NULL);
 	}
 
@@ -1075,7 +1082,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 	main_frame->current_project.database.Begin();
 
 	// loop over all the jobs, and add them..
-	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 32,
+	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 34,
 			                                                                              "CTF_ESTIMATION_ID",
 																						  "CTF_ESTIMATION_JOB_ID",
 																						  "DATETIME_OF_RUN",
@@ -1107,7 +1114,9 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																						  "OUTPUT_DIAGNOSTIC_FILE",
 																						  "NUMBER_OF_FRAMES_AVERAGED",
 																						  "LARGE_ASTIGMATISM_EXPECTED",
-																						  "ICINESS");
+																						  "ICINESS",
+																						  "TILT_ANGLE",
+																						  "TILT_AXIS");
 
 
 
@@ -1144,7 +1153,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 		}
 
 
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiir", ctf_estimation_id,
+		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrr", ctf_estimation_id,
 																					 ctf_estimation_job_id,
 																					 (long int) now.GetAsDOS(),
 																					 image_asset_id,
@@ -1175,7 +1184,9 @@ void MyFindCTFPanel::WriteResultToDataBase()
 																					 current_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
 																					 current_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
 																					 current_job_package.jobs[counter].arguments[14].ReturnBoolArgument(),  // large astigmatism expected
-																					 buffered_results[counter].result_data[7]); // iciness
+																					 buffered_results[counter].result_data[7], // iciness
+																					 buffered_results[counter].result_data[8], // tilt angle
+																					 buffered_results[counter].result_data[9]); // tilt axis
 		ctf_estimation_id++;
 		my_progress_dialog->Update(counter + 1);
 

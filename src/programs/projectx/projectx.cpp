@@ -35,6 +35,8 @@ SettingsPanel *settings_panel;
 #ifdef EXPERIMENTAL
 ExperimentalPanel *experimental_panel;
 MatchTemplatePanel *match_template_panel;
+MatchTemplateResultsPanel *match_template_results_panel;
+RefineTemplatePanel *refine_template_panel;
 #endif
 
 MyMovieAssetPanel *movie_asset_panel;
@@ -95,6 +97,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	#include "../../gui/icons/match_template_icon.cpp"
+	#include "../../gui/icons/refine_template_icon.cpp"
 #endif
 
 	wxImage::AddHandler(new wxPNGHandler);
@@ -159,6 +162,8 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	match_template_panel = new MatchTemplatePanel(experimental_panel->ExperimentalBook);
+	match_template_results_panel = new MatchTemplateResultsPanel(experimental_panel->ExperimentalBook);
+	refine_template_panel = new RefineTemplatePanel(experimental_panel->ExperimentalBook);
 #endif
 
 	// Setup list books
@@ -207,6 +212,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	wxBitmap match_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(match_template_icon);
+	wxBitmap refine_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(refine_template_icon);
 #endif
 
 	delete suppress_png_warnings;
@@ -248,6 +254,7 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	ExperimentalBookIconImages->Add(match_template_icon_bmp);
+	ExperimentalBookIconImages->Add(refine_template_icon_bmp);
 #endif
 
 	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
@@ -301,6 +308,10 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
+	experimental_panel->ExperimentalBook->AddPage(refine_template_panel, "Refine Template", false, 1);
+	experimental_panel->ExperimentalBook->AddPage(match_template_results_panel, "MT Results", false, 0);
+
+
 //	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
 #endif
 

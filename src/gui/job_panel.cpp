@@ -15,7 +15,7 @@ JobPanel::~JobPanel()
 void JobPanel::HandleSocketSendJobDetails(wxSocketBase *connected_socket)
 {
 	// send the job package
-
+	WriteToSocket(connected_socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	current_job_package.SendJobPackage(connected_socket);
 }
 
@@ -55,7 +55,7 @@ void JobPanel::HandleSocketNumberOfConnections(wxSocketBase *connected_socket, i
 {
 	my_job_tracker.AddConnection();
 	int total_processes = current_job_package.my_profile.ReturnTotalJobs();
-	if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) total_processes = current_job_package.number_of_jobs + 1;
+	if (current_job_package.number_of_jobs  < current_job_package.my_profile.ReturnTotalJobs()) total_processes = current_job_package.number_of_jobs;
 	else total_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 	int length_of_process_number;
@@ -98,7 +98,7 @@ void JobPanel::HandleSocketAllJobsFinished(wxSocketBase *connected_socket, long 
 void JobPanel::SetNumberConnectedTextToZeroAndStartTracking()
 {
 	long number_of_refinement_processes;
-	if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs + 1;
+	if (current_job_package.number_of_jobs < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs;
 	else number_of_refinement_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 	int length_of_process_number;

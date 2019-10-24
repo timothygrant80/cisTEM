@@ -1426,19 +1426,43 @@ wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) con
 		    case 9  : // phase shift
 		    	return wxString::Format("%.2f",rad_2_deg(current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phase_shift));
 		       	break;
-		    case 10  : // occupancy
+		    case 10  : // Beam Tilt X
+		    	return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_x);
+		    	break;
+		    case 11  : // Beam Tilt Y
+		    	return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_y);
+		    	break;
+		    case 12  : // Image Shift X
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_x);
+		    	break;
+		    case 13  : // Image Shift Y
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_y);
+		    	break;
+		    case 14  : // Voltage
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_voltage_kv);
+		    	break;
+		    case 15  : // Cs
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_spherical_aberration_mm);
+		    	break;
+		    case 16  : // Amplitude Contrast
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].amplitude_contrast);
+		    	break;
+		    case 17  : // Pixel Size
+		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].pixel_size);
+		    	break;
+		    case 18  : // occupancy
 		    	return wxString::Format("%.1f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].occupancy);
 		     	break;
-		    case 11  : // logp
+		    case 19  : // logp
 		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].logp);
 		     	break;
-		    case 12  : // sigma
+		    case 20  : // sigma
 		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].sigma);
 		     	break;
-		    case 13 : // score
+		    case 21 : // score
 		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].score);
 		     	break;
-		    case 14 : // image is active
+		    case 22 : // image is active
 		    	if (current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_is_active < 0) return "No";
 		    	else return "Yes";
 		     	break;

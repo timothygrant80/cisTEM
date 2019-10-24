@@ -230,7 +230,7 @@ void MyRefine2DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageComboBox->GetCount() > 0 && RefinementRunProfileComboBox->GetSelection() >= 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 )
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 0 )
 				{
 					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND && InputParametersComboBox->GetSelection() != wxNOT_FOUND)
 					{
@@ -626,7 +626,7 @@ void MyRefine2DPanel::SetDefaults()
 		AutoPercentUsedRadioYes->SetValue(true);
 		PercentUsedTextCtrl->SetValue("100.00");
 		AutoMaskRadioNo->SetValue(true);
-		AutoCentreRadioNo->SetValue(true);
+		AutoCentreRadioYes->SetValue(true);
 		ExpertPanel->Thaw();
 	}
 }
@@ -1028,13 +1028,13 @@ void ClassificationManager::RunRefinementJob()
 	wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
 
 	number_of_refinement_processes = active_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes - 1;
+	number_of_refinement_jobs = number_of_refinement_processes;
 	number_of_particles = output_classification->number_of_particles;
 
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1.0;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
-	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_jobs);
+	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_processes);
 	current_particle_counter = 1.0;
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)

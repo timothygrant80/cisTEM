@@ -8,7 +8,7 @@ class AggregatedTemplateResult
 public:
 
 
-	float image_number;
+	int image_number;
 	int number_of_received_results;
 	float total_number_of_ccs;
 
@@ -28,9 +28,13 @@ public:
 	void AddResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
 };
 
+
+
+
 WX_DECLARE_OBJARRAY(AggregatedTemplateResult, ArrayOfAggregatedTemplateResults);
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
+
 
 
 // nasty globals to track histogram size
@@ -46,9 +50,9 @@ MatchTemplateApp : public MyApp
 
 	bool DoCalculation();
 	void DoInteractiveUserInput();
-	//void SendProgramDefinedResultToMaster(float *result_array, int array_size, int result_number, int number_of_expected_results); // overidden as i want to do complicated stuff
 	void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
 	void ProgramSpecificInit();
+
 	// for master collation
 
 	ArrayOfAggregatedTemplateResults aggregated_results;
@@ -213,13 +217,15 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	int last_search_position = -1;
 	int image_number_for_gui = 0;
 	int number_of_jobs_per_image_in_gui = 0;
+	float min_peak_radius = 10.0f;
 
 	wxString directory_for_results = "/dev/null"; // shouldn't be used in interactive
+	wxString result_filename = "/dev/null"; // shouldn't be used in interactive
 
 	delete my_input;
 
-//	my_current_job.Reset(35);
-	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitt",	input_search_images.ToUTF8().data(),
+
+	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttf",	input_search_images.ToUTF8().data(),
 															input_reconstruction.ToUTF8().data(),
 															pixel_size,
 															voltage_kV,
@@ -256,7 +262,9 @@ void MatchTemplateApp::DoInteractiveUserInput()
 															image_number_for_gui,
 															number_of_jobs_per_image_in_gui,
 															correlation_average_output_file.ToUTF8().data(),
-															directory_for_results.ToUTF8().data());
+															directory_for_results.ToUTF8().data(),
+															result_filename.ToUTF8().data(),
+															min_peak_radius);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -362,6 +370,9 @@ bool MatchTemplateApp::DoCalculation()
 	int 		number_of_jobs_per_image_in_gui = my_current_job.arguments[35].ReturnIntegerArgument();
 	wxString    correlation_average_output_file = my_current_job.arguments[36].ReturnStringArgument();
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
+	wxString	result_output_filename = my_current_job.arguments[38].ReturnStringArgument();
+	float		min_peak_radius = my_current_job.arguments[39].ReturnFloatArgument();
+
 
 
 	// For trouble shooting parallelism, report the host name we are actually running on.
@@ -714,6 +725,13 @@ bool MatchTemplateApp::DoCalculation()
 		defocus_search_range = 0.0f;
 		defocus_step = 100.0f;
 	}
+
+	if (pixel_size_step <= 0.0f)
+	{
+		pixel_size_search_range = 0.0f;
+		pixel_size_step = 0.02f;
+	}
+
 	total_correlation_positions *= (2 * myroundint(float(defocus_search_range)/float(defocus_step)) + 1);
 
 	number_of_rotations = 0;
@@ -1404,7 +1422,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 	int array_location = -1;
 	long pixel_counter;
 
-	wxPrintf("Master Handling result for image %i..", result_number);
+	//wxPrintf("Master Handling result for image %i..", result_number);
 
 	for (int result_counter = 0; result_counter < aggregated_results.GetCount(); result_counter++)
 	{
@@ -1438,7 +1456,39 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 //		wxPrintf("temp x, y, n, resize x, y = %i %i %i %i %i \n", int(aggregated_results[array_location].collated_data_array[0]), \
 //			int(aggregated_results[array_location].collated_data_array[1]), int(result_array[2]), int(result_array[5]), int(result_array[6]));
+
 		Image temp_image;
+
+		Image scaled_mip;
+		Image psi_image;
+		Image phi_image;
+		Image theta_image;
+		Image defocus_image;
+		Image pixel_size_image;
+
+		Image result_image;
+		Image input_reconstruction;
+		Image current_projection;
+
+		int number_of_peaks_found = 0;
+		float sq_dist_x;
+		float sq_dist_y;
+		float current_phi;
+		float current_psi;
+		float current_theta;
+		int i;
+		int j;
+		long address;
+
+		ArrayOfTemplateMatchFoundPeakInfos all_peak_infos;
+		TemplateMatchFoundPeakInfo temp_peak_info;
+
+		Peak current_peak;
+		AnglesAndShifts angles;
+
+		ImageFile input_reconstruction_file;
+		input_reconstruction_file.OpenFile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[1].ReturnStringArgument(), false);
+
 		temp_image.Allocate(int(aggregated_results[array_location].collated_data_array[0]), int(aggregated_results[array_location].collated_data_array[1]), true);
 
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
@@ -1449,11 +1499,17 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		float central_average;
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 //		wxPrintf("writing to %s/n", wxString::Format("%s/mip.mrc\n", directory_for_writing_results));
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		wxPrintf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[21].ReturnStringArgument(), 1);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// psi
@@ -1464,11 +1520,18 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_psi_data[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[22].ReturnStringArgument(), 1);
+		psi_image.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		//theta
@@ -1479,11 +1542,18 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_theta_data[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[23].ReturnStringArgument(), 1);
+		theta_image.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// phi
@@ -1494,11 +1564,18 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_phi_data[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[24].ReturnStringArgument(), 1);
+		phi_image.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// defocus
@@ -1509,11 +1586,19 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_defocus_data[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[25].ReturnStringArgument(), 1);
+		defocus_image.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// pixel size
@@ -1525,11 +1610,18 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_size_data[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/pixel_size.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, 0.0f);
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/pixel_size.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[26].ReturnStringArgument(), 1);
+		pixel_size_image.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// do the scaling..
@@ -1557,11 +1649,18 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
+<<<<<<< HEAD
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number,true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument(), 1);
+		scaled_mip.CopyFrom(&temp_image);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// sums
@@ -1572,12 +1671,17 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
 		}
 
+<<<<<<< HEAD
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		// square sums
@@ -1590,19 +1694,25 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		//temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 
+<<<<<<< HEAD
 		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 		temp_image.Resize(int(result_array[5]) - remove_npix_from_edge, int(result_array[6] - remove_npix_from_edge), 1, 0.0f);
 		central_average = temp_image.ReturnAverageOfRealValues(0.5*(result_array[5] + result_array[6] - remove_npix_from_edge*2), false);
 		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, central_average);
 
 		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number, true);
+=======
+		temp_image.Resize(int(result_array[5]), int(result_array[6]), 1, temp_image.ReturnAverageOfRealValuesOnEdges());
+	//	temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+>>>>>>> origin/master
 		temp_image.Deallocate();
 
 		/// histogram
 
 		float histogram_step = (histogram_max - histogram_min) / float(histogram_number_of_points);
 		float temp_float = histogram_min + (histogram_step / 2.0f); // start position
-		NumericTextFile histogram_file(wxString::Format("%s/histogram_%i.txt", directory_for_writing_results, myroundint(aggregated_results[array_location].image_number)), OPEN_TO_WRITE, 4);
+		//NumericTextFile histogram_file(wxString::Format("%s/histogram_%i.txt", directory_for_writing_results, aggregated_results[array_location].image_number), OPEN_TO_WRITE, 4);
+		NumericTextFile histogram_file(	current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[31].ReturnStringArgument(), OPEN_TO_WRITE, 4);
 
 		double *expected_survival_histogram = new double[histogram_number_of_points];
 		double *survival_histogram = new double[histogram_number_of_points];
@@ -1624,6 +1734,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter))/sqrtf(2.0f))/2.0f)*(aggregated_results[array_location].collated_data_array[0] * aggregated_results[array_location].collated_data_array[1] * aggregated_results[array_location].total_number_of_ccs);
 		}
 
+<<<<<<< HEAD
 		// calculate the expected threshold (from peter's paper)
 		const float CCG_NOISE_STDDEV = 1.0;
 		double temp_threshold = 0.0;
@@ -1637,6 +1748,25 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		expected_threshold = sqrtf(2.0f)*(float)temp_threshold*CCG_NOISE_STDDEV;
 
 //		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+=======
+
+	//	expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+	//	expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((1.0f / (original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+
+        // calculate the expected threshold (from peter's paper)
+        const float CCG_NOISE_STDDEV = 1.0;
+        double temp_threshold = 0.0;
+        double erf_input = 1.0 / (2.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_ccs));
+//              wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
+
+#ifdef MKL
+        vdErfcInv(1, &erf_input, &temp_threshold);
+#else
+        temp_threshold = cisTEM_erfcinv(erf_input);
+#endif
+        expected_threshold = sqrtf(2.0f)*(float)temp_threshold*CCG_NOISE_STDDEV;
+//        expected_threshold = 6.2f;
+>>>>>>> origin/master
 
 		histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
 		histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");
@@ -1652,12 +1782,139 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		histogram_file.Close();
 
+		// Calculate the result image, and keep the peak info to send back...
+
+		float min_peak_radius = powf(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument(), 2);
+
+		result_image.Allocate(scaled_mip.logical_x_dimension, scaled_mip.logical_y_dimension, 1);
+		result_image.SetToConstant(0.0f);
+
+		input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices());
+		float max_density = input_reconstruction.ReturnAverageOfMaxN();
+		input_reconstruction.DivideByConstant(max_density);
+		input_reconstruction.ForwardFFT();
+		input_reconstruction.MultiplyByConstant(sqrtf(input_reconstruction.logical_x_dimension * input_reconstruction.logical_y_dimension * sqrtf(input_reconstruction.logical_z_dimension)));
+		input_reconstruction.ZeroCentralPixel();
+		input_reconstruction.SwapRealSpaceQuadrants();
+
+		// assume cube
+
+		current_projection.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_x_dimension, false);
+
+		// loop until the found peak is below the threshold
+
+		while (1==1)
+		{
+			// look for a peak..
+
+			current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, 50);
+			if (current_peak.value < expected_threshold) break;
+
+			// ok we have peak..
+
+			number_of_peaks_found++;
+
+			// get angles and mask out the local area so it won't be picked again..
+
+			address = 0;
+
+			current_peak.x = current_peak.x + scaled_mip.physical_address_of_box_center_x;
+			current_peak.y = current_peak.y + scaled_mip.physical_address_of_box_center_y;
+
+			temp_peak_info.x_pos = current_peak.x * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument(); // RETURNING IN ANGSTROMS
+			temp_peak_info.y_pos = current_peak.y * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument(); // RETURNING IN ANGSTROMS
+
+
+	//		wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
+
+			for ( j = 0; j < scaled_mip.logical_y_dimension; j ++ )
+			{
+				sq_dist_y = float(pow(j-current_peak.y, 2));
+				for ( i = 0; i < scaled_mip.logical_x_dimension; i ++ )
+				{
+					sq_dist_x = float(pow(i-current_peak.x,2));
+
+					// The square centered at the pixel
+
+					if (sq_dist_x == 0 && sq_dist_y == 0)
+					{
+						current_phi = phi_image.real_values[address];
+						current_theta = theta_image.real_values[address];
+						current_psi = psi_image.real_values[address];
+
+						temp_peak_info.phi = phi_image.real_values[address];
+						temp_peak_info.theta = theta_image.real_values[address];
+						temp_peak_info.psi = psi_image.real_values[address];
+
+						temp_peak_info.defocus = defocus_image.real_values[address];  // RETURNING MINUS
+						temp_peak_info.pixel_size = pixel_size_image.real_values[address];
+						temp_peak_info.peak_height = scaled_mip.real_values[address];
+
+					}
+
+					if ( sq_dist_x + sq_dist_y <= min_peak_radius )
+					{
+						scaled_mip.real_values[address] = -FLT_MAX;
+					}
+
+
+					address++;
+				}
+				address += scaled_mip.padding_jump_value;
+			}
+
+	//		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+	//		coordinates[0] = current_peak.x * pixel_size;
+	//		coordinates[1] = current_peak.y * pixel_size;
+	////		coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
+	//		coordinates[2] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
+	//		coordinate_file.WriteLine(coordinates);
+
+			// ok get a projection
+
+			//////////////////////////////////////////////
+			// CURRENTLY HARD CODED TO ONLY DO 1000 MAX //
+			//////////////////////////////////////////////
+
+			if (number_of_peaks_found <= 1000)
+			{
+
+				angles.Init(current_phi, current_theta, current_psi, 0.0, 0.0);
+
+				input_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
+				current_projection.SwapRealSpaceQuadrants();
+
+				current_projection.MultiplyByConstant(sqrtf(current_projection.logical_x_dimension * current_projection.logical_y_dimension));
+				current_projection.BackwardFFT();
+				current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges());
+
+				// insert it into the output image
+
+				result_image.InsertOtherImageAtSpecifiedPosition(&current_projection, current_peak.x - result_image.physical_address_of_box_center_x, current_peak.y - result_image.physical_address_of_box_center_y, 0, 0.0f);
+				all_peak_infos.Add(temp_peak_info);
+
+				//current_projection.QuickAndDirtyWriteSlice("/tmp/projs.mrc", all_peak_infos.GetCount());
+			}
+
+		}
+
+		// save the output image
+
+		result_image.QuickAndDirtyWriteSlice(	current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[38].ReturnStringArgument(), 1, true);
+
+		// tell the gui that this result is available...
+
+		ArrayOfTemplateMatchFoundPeakInfos blank_changes;
+		SendTemplateMatchingResultToSocket(controller_socket, aggregated_results[array_location].image_number, expected_threshold, all_peak_infos, blank_changes);
 
 		// this should be done now.. so delete it
 
 		aggregated_results.RemoveAt(array_location);
 		delete [] expected_survival_histogram;
 		delete [] survival_histogram;
+
+
+
 
 	}
 }
@@ -1715,7 +1972,6 @@ void AggregatedTemplateResult::AddResult(float *result_array, long array_size, i
 	}
 
 	total_number_of_ccs += result_array[4];
-
 
 	float *result_mip_data = &result_array[7];
 	float *result_psi_data = &result_array[7 + int(result_array[2])];

@@ -267,6 +267,42 @@ void DisplayPanel::Clear()
 	UpdateToolbar();
 }
 
+void DisplayPanel::SetActiveTemplateMatchMarkerPostion(float wanted_x_pos, float wanted_y_pos, float wanted_radius)
+{
+
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_x_pos = wanted_x_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_y_pos = wanted_y_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_radius = wanted_radius;
+
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_x_pos = wanted_x_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_y_pos = wanted_y_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_radius = 5;
+
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_x_pos = wanted_x_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_y_pos =  wanted_y_pos;
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_radius = wanted_radius;
+
+	RefreshCurrentPanel();
+}
+
+void DisplayPanel::ClearActiveTemplateMatchMarker()
+{
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_x_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_y_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(0))->template_matching_marker_radius = -1;
+
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_x_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_y_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(1))->template_matching_marker_radius = -1;
+
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_x_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_y_pos = -1;
+	((DisplayNotebookPanel*) my_notebook->GetPage(2))->template_matching_marker_radius = -1;
+
+	RefreshCurrentPanel();
+
+}
+
 
 void DisplayPanel::CloseAllTabs()
 {
@@ -833,7 +869,7 @@ void DisplayPanel::ClearSelection(bool refresh)
 	current_panel->ClearSelection(refresh);
 }
 
-void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers, bool keep_scale_and_location_if_possible)
+void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers, bool keep_scale_and_location_if_possible, bool force_local_survey)
 {
 
 	double current_scale_factor;
@@ -887,6 +923,8 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 		if (no_notebook_panel != NULL) no_notebook_panel->Destroy();
 		no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
 		my_panel = no_notebook_panel;
+
+		if (force_local_survey == true) no_notebook_panel->grey_values_decided_by = LOCAL_GREYS;
 		MainSizer->Insert( 1, no_notebook_panel, 1, wxEXPAND | wxALL, 5 );
 		Layout();
 	}
@@ -894,6 +932,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 	{
 		panel_counter++;
 		my_panel = new DisplayNotebookPanel(my_notebook, panel_counter);
+		if (force_local_survey == true) my_panel->grey_values_decided_by = LOCAL_GREYS;
 	}
 
 	my_panel->my_file.OpenFile(wanted_filename.ToStdString(), false);
@@ -992,24 +1031,8 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 	ChangeFocusToPanel();
 }
 
-
-void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
+void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
 {
-
-	if (popup_exists == true)
-	{
-		DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
-
-		if (current_panel != NULL)
-		{
-			current_panel->ReleaseMouse();
-			current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
-			popup->Destroy();
-			popup_exists = false;
-		}
-
-	}
-
 	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
 	{
 		if (no_notebook_panel == NULL)
@@ -1018,16 +1041,30 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 			return;
 		}
 	}
+
+	DisplayNotebookPanel *current_panel;
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) current_panel = no_notebook_panel;
 	else
 	{
-		if (my_notebook->GetPageCount() == 0)
+
+		MyDebugAssertTrue(wanted_tab_number < my_notebook->GetPageCount() && wanted_tab_number >= 0, "Asking for a tab that does not exist");
+
+		if (wanted_tab_number == my_notebook->GetSelection() && popup_exists == true)
 		{
-			OpenFile(wanted_filename, wanted_tab_title, wanted_included_image_numbers);
-			return;
+			DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
+
+			if (current_panel != NULL)
+			{
+				current_panel->ReleaseMouse();
+				current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+				popup->Destroy();
+				popup_exists = false;
+			}
 		}
+
+		current_panel = (DisplayNotebookPanel*) my_notebook->GetPage(wanted_tab_number);
 	}
 
-	DisplayNotebookPanel *current_panel = ReturnCurrentPanel();
 	if (current_panel == NULL) return;
 
 	if (DoesFileExist(wanted_filename) == false)
@@ -1035,8 +1072,6 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 		wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_filename), wxT( "Error" ), wxOK | wxICON_INFORMATION, this );
 		return;
 	}
-
-	if (current_panel == NULL) return;
 
 	if (current_panel->input_is_a_file == true)
 	{
@@ -1083,7 +1118,6 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	current_panel->filename = wanted_filename;
 	current_panel->input_is_a_file = true;
 
-
 	if (current_panel->image_is_selected != NULL)
 	{
 		delete[] current_panel->image_is_selected;
@@ -1102,8 +1136,6 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 		current_panel->number_of_selections = 0;
 	}
 
-
-
 	// add the panel
 
 	current_panel->current_location = 1;
@@ -1121,21 +1153,34 @@ void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_titl
 	}
 	else
 	{
-		my_notebook->SetPageText(my_notebook->GetSelection(), wanted_tab_title);
+
+		my_notebook->SetPageText(wanted_tab_number, wanted_tab_title);
+
+		if (wanted_tab_number == my_notebook->GetSelection())
+		{
+			// we have switched focus so update toolbar..
+
+			UpdateToolbar();
+
+			current_panel->ReDrawPanel();
+			ChangeFocusToPanel();
+			//notebook->SetFocus(
+		}
 	}
 
-	// we have switched focus so update toolbar..
+	current_panel->Refresh();
+	current_panel->Update();
 
-	UpdateToolbar();
+}
 
-	// we can directly call the drawing now..
+void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong *wanted_included_image_numbers)
+{
+	if ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK)
+	{
+		ChangeFileForTabNumber(-1, wanted_filename, wanted_tab_title, wanted_included_image_numbers);
 
-	Refresh();
-	Update();
-
-	current_panel->ReDrawPanel();
-	//notebook->SetFocus();
-	ChangeFocusToPanel();
+	}
+	else ChangeFileForTabNumber(my_notebook->GetSelection(), wanted_filename, wanted_tab_title, wanted_included_image_numbers);
 }
 
 void DisplayPanel::OpenImage(Image *image_to_view, wxString wanted_tab_title, bool take_ownership, wxArrayLong *wanted_included_image_numbers)
@@ -1482,6 +1527,12 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
 	resolution_instead_of_radius = false;
 
 	blue_selection_square_location = -1;
+
+	template_matching_marker_x_pos = -1.0;
+	template_matching_marker_y_pos = -1.0;
+	template_matching_marker_radius = -1.0;
+
+	use_unscaled_image_for_popup = false;
 
 
 
@@ -3167,6 +3218,15 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt )
 				}
 			}
 
+			if (template_matching_marker_x_pos != -1.0 && template_matching_marker_y_pos != -1.0)
+			{
+				dc.SetPen(*wxRED);
+				dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+				int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
+				if (radius < 5) radius = 5;
+				dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
+			}
+
 			if (current_location <= blue_selection_square_location && blue_selection_square_location <= (current_location + images_in_current_view))
 			{
 				counter = current_location;
@@ -3208,9 +3268,86 @@ DisplayPopup::DisplayPopup(wxWindow * parent, int flags)
 	Bind(wxEVT_PAINT, &DisplayPopup::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &DisplayPopup::OnEraseBackground, this);
 
-
 	parent_display_panel = reinterpret_cast <DisplayPanel *> (parent);
 	SetBackgroundColour(*wxBLACK);
+
+	DisplayNotebookPanel *current_panel = parent_display_panel->ReturnCurrentPanel();
+
+
+	if (current_panel->use_unscaled_image_for_popup == true)
+	{
+
+
+		float high_grey;
+		float low_grey;
+
+		if (current_panel->grey_values_decided_by == LOCAL_GREYS)
+		{
+			current_panel->image_memory_buffer->GetMinMax(low_grey, high_grey);
+		}
+		else
+		if (current_panel->grey_values_decided_by == AUTO_GREYS) // auto contrast
+		{
+			// work out mean, and stdev..
+
+			float image_total = 0;
+			float image_total_squared = 0;
+			long number_of_pixels = 0;
+			int i,j;
+
+			long address = 0;
+
+			for (j = 0; j < current_panel->image_memory_buffer->logical_y_dimension; j++)
+			{
+				for (i = 0; i < current_panel->image_memory_buffer->logical_x_dimension; i++)
+				{
+					if (current_panel->image_memory_buffer->real_values[address] != 0.)
+					{
+						image_total += current_panel->image_memory_buffer->real_values[address];
+						image_total_squared += powf(current_panel->image_memory_buffer->real_values[address], 2);
+						number_of_pixels++;
+					}
+					address++;
+				}
+
+				address += current_panel->image_memory_buffer->padding_jump_value;
+			}
+
+			if (image_total_squared == 0.0f)
+			{
+				low_grey = 0.0f;
+				high_grey = 0.0f;
+			}
+			else
+			{
+			   float image_average_density = image_total / number_of_pixels;
+			   float  image_variance = (image_total_squared / number_of_pixels) - powf(image_average_density, 2);
+			   float image_stdev = sqrt(image_variance);
+
+			   low_grey = image_average_density - (image_stdev * 2.5);
+			   high_grey = image_average_density + (image_stdev * 2.5);
+			}
+		}
+		else
+		{
+			//  we aren't scaling locally, so threshold to the global values..
+
+			low_grey = current_panel->low_grey_value;
+			high_grey = current_panel->high_grey_value;
+
+		}
+
+		if (current_panel->invert_contrast == true && current_panel->use_fft == false)
+		{
+			current_low_grey_value = high_grey;
+			current_high_grey_value = low_grey;
+		}
+		else
+		{
+			current_low_grey_value = low_grey;
+			current_high_grey_value = high_grey;
+		}
+	}
 
 }
 
@@ -3220,11 +3357,6 @@ void DisplayPopup::OnPaint(wxPaintEvent& evt )
 
 	DisplayNotebookPanel *current_panel = parent_display_panel->ReturnCurrentPanel();
 
-	// We are going to grab the section of the panel bitmap which corresponds to
-	// a 128x128 square under the panel.  It is made slightly more complicated by the
-	// fact that if we request part of a bitmap which does not exist the entire square
-	// will be blank, so we have to do some bounds checking..
-
 	int sub_bitmap_x_pos = x_pos + 64;
 	int sub_bitmap_y_pos = y_pos + 64;
 	int sub_bitmap_x_size = 128;
@@ -3232,27 +3364,111 @@ void DisplayPopup::OnPaint(wxPaintEvent& evt )
 	int sub_bitmap_x_offset = 0;
 	int sub_bitmap_y_offset = 0;
 
-	if (sub_bitmap_x_pos < 0) { sub_bitmap_x_offset = abs(sub_bitmap_x_pos); sub_bitmap_x_size -= sub_bitmap_x_offset;}
-	else
-	if (sub_bitmap_x_pos >= current_panel->panel_bitmap.GetWidth() - 128 && sub_bitmap_x_pos < current_panel->panel_bitmap.GetWidth()) sub_bitmap_x_size = current_panel->panel_bitmap.GetWidth() - sub_bitmap_x_pos;
 
-	if (sub_bitmap_y_pos < 0 && sub_bitmap_y_pos > -128) { sub_bitmap_y_offset = abs(sub_bitmap_y_pos); sub_bitmap_y_size -= sub_bitmap_y_offset;}
-	else
-	if (sub_bitmap_y_pos >= current_panel->panel_bitmap.GetHeight() - 128 && sub_bitmap_y_pos < current_panel->panel_bitmap.GetHeight()) sub_bitmap_y_size = current_panel->panel_bitmap.GetHeight() - sub_bitmap_y_pos;
-
-
-	// the following line is a whole host of checks designed to not grab a dodgy bit of bitmap
-
-	if (sub_bitmap_x_pos + sub_bitmap_x_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset < current_panel->panel_bitmap.GetHeight() && sub_bitmap_x_pos + sub_bitmap_x_offset < current_panel->panel_bitmap.GetWidth() && sub_bitmap_x_size > 0 && sub_bitmap_y_size > 0)
+	if (current_panel->use_unscaled_image_for_popup == true)
 	{
-		wxBitmap section = current_panel->panel_bitmap.GetSubBitmap(wxRect(sub_bitmap_x_pos + sub_bitmap_x_offset, sub_bitmap_y_pos + sub_bitmap_y_offset, sub_bitmap_x_size, sub_bitmap_y_size));
-		wxImage paintimage = section.ConvertToImage();
-		paintimage.Rescale(section.GetWidth() * 2, section.GetHeight() * 2);
-		wxBitmap topaint(paintimage);
+		// get the original image position..
 
+		int original_x_pos = myroundint(double(x_pos + 128) / current_panel->actual_scale_factor);
+		int original_y_pos = myroundint(double(y_pos + 128) / current_panel->actual_scale_factor);
+
+		int x,y;
+		int image_x_coord;
+		int image_y_coord;
+
+		int current_value;
+		float range;
+
+		long counter;
+		long red_counter;
+		long green_counter;
+		long blue_counter;
+
+		wxImage subimage(sub_bitmap_x_size, sub_bitmap_y_size);
+		unsigned char *image_data = subimage.GetData();
+
+		range = current_high_grey_value - current_low_grey_value;
+		range /=256.0;
+
+		counter = 0;
+		red_counter = 0;
+		green_counter = 1;
+		blue_counter = 2;
+
+		for (y = -63; y < 65; y++)
+		{
+			for (x = -63; x < 65; x++)
+			{
+
+				if (current_high_grey_value - current_low_grey_value == 0) current_value = 128;
+				else
+				{
+					image_x_coord = original_x_pos + x;
+					image_y_coord = original_y_pos + y;
+
+					if (image_x_coord >= 0 && image_x_coord < current_panel->image_memory_buffer->logical_x_dimension && image_y_coord >= 0 && image_y_coord < current_panel->image_memory_buffer->logical_y_dimension)
+					{
+						current_value = int(myround((current_panel->image_memory_buffer->ReturnRealPixelFromPhysicalCoord(image_x_coord, current_panel->image_memory_buffer->logical_y_dimension - image_y_coord, 0) - current_low_grey_value) / range));
+					}
+					else current_value = 0;
+				}
+
+
+				if (current_value > 255) current_value = 255;
+				else
+				if (current_value < 0) current_value = 0;
+
+				image_data[red_counter] = (unsigned char)(current_value);
+				image_data[green_counter] = (unsigned char)(current_value);
+				image_data[blue_counter] = (unsigned char)(current_value);
+
+				red_counter+=3;
+				green_counter+=3;
+				blue_counter+=3;
+
+			}
+		}
+
+		subimage.Rescale(sub_bitmap_x_size * 2, sub_bitmap_y_size * 2);
+		wxBitmap topaint(subimage);
 		dc.DrawBitmap(topaint, sub_bitmap_x_offset * 2, sub_bitmap_y_offset * 2);
-		dc.SetPen(wxPen(*wxRED, 2, wxLONG_DASH));
-		dc.CrossHair(128, 128);
+	}
+	else
+	{
+
+		// We are going to grab the section of the panel bitmap which corresponds to
+		// a 128x128 square under the panel.  It is made slightly more complicated by the
+		// fact that if we request part of a bitmap which does not exist the entire square
+		// will be blank, so we have to do some bounds checking..
+
+		int sub_bitmap_x_pos = x_pos + 64;
+		int sub_bitmap_y_pos = y_pos + 64;
+		int sub_bitmap_x_size = 128;
+		int sub_bitmap_y_size = 128;
+		int sub_bitmap_x_offset = 0;
+		int sub_bitmap_y_offset = 0;
+
+		if (sub_bitmap_x_pos < 0) { sub_bitmap_x_offset = abs(sub_bitmap_x_pos); sub_bitmap_x_size -= sub_bitmap_x_offset;}
+		else
+		if (sub_bitmap_x_pos >= current_panel->panel_bitmap.GetWidth() - 128 && sub_bitmap_x_pos < current_panel->panel_bitmap.GetWidth()) sub_bitmap_x_size = current_panel->panel_bitmap.GetWidth() - sub_bitmap_x_pos;
+
+		if (sub_bitmap_y_pos < 0 && sub_bitmap_y_pos > -128) { sub_bitmap_y_offset = abs(sub_bitmap_y_pos); sub_bitmap_y_size -= sub_bitmap_y_offset;}
+		else
+		if (sub_bitmap_y_pos >= current_panel->panel_bitmap.GetHeight() - 128 && sub_bitmap_y_pos < current_panel->panel_bitmap.GetHeight()) sub_bitmap_y_size = current_panel->panel_bitmap.GetHeight() - sub_bitmap_y_pos;
+
+		// the following line is a whole host of checks designed to not grab a dodgy bit of bitmap
+
+		if (sub_bitmap_x_pos + sub_bitmap_x_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset < current_panel->panel_bitmap.GetHeight() && sub_bitmap_x_pos + sub_bitmap_x_offset < current_panel->panel_bitmap.GetWidth() && sub_bitmap_x_size > 0 && sub_bitmap_y_size > 0)
+		{
+			wxBitmap section = current_panel->panel_bitmap.GetSubBitmap(wxRect(sub_bitmap_x_pos + sub_bitmap_x_offset, sub_bitmap_y_pos + sub_bitmap_y_offset, sub_bitmap_x_size, sub_bitmap_y_size));
+			wxImage paintimage = section.ConvertToImage();
+			paintimage.Rescale(section.GetWidth() * 2, section.GetHeight() * 2);
+			wxBitmap topaint(paintimage);
+
+			dc.DrawBitmap(topaint, sub_bitmap_x_offset * 2, sub_bitmap_y_offset * 2);
+			dc.SetPen(wxPen(*wxRED, 2, wxLONG_DASH));
+			dc.CrossHair(128, 128);
+		}
 	}
 
 	evt.Skip();

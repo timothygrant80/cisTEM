@@ -336,7 +336,7 @@ void Particle::InitCTFImage(float voltage_kV, float spherical_aberration_mm, flo
 
 	InitCTF(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, phase_shift, beam_tilt_x, beam_tilt_y, particle_shift_x, particle_shift_y);
 	complex_ctf = calculate_complex_ctf;
-	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 40.0 / pixel_size) == false || ! ctf_image_calculated)
+	if (ctf_parameters.IsAlmostEqualTo(&current_ctf, 1 / pixel_size) == false || ! ctf_image_calculated)
 	// Need to calculate current_ctf_image to be inserted into ctf_reconstruction
 	{
 		current_ctf = ctf_parameters;

@@ -269,8 +269,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_x) || isinf(beam_tilt_x)) beam_tilt_x = other_params.beam_tilt_x;
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
-	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;
-	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y; // WHY FIXME
+	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
 }
 
 cisTEMParameterLine::~cisTEMParameterLine()
@@ -379,7 +378,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 {
 
 	wxFileName cisTEM_star_filename = wanted_filename;
-	cisTEM_star_filename.SetExt("star");
+	if (wanted_filename != "/dev/null") cisTEM_star_filename.SetExt("star"); // When the filename was set to /dev/null, this gives the malformed /dev/null.star, which somehow leads to occasional crashes on some clusters (whereas /dev/null does not)
 	long particle_counter;
 
 	wxTextFile *cisTEM_star_file = new wxTextFile(cisTEM_star_filename.GetFullPath());

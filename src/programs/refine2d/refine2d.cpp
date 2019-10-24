@@ -161,6 +161,8 @@ bool Refine2DApp::DoCalculation()
 	bool auto_centre							= my_current_job.arguments[23].ReturnBoolArgument();
 	int	 max_threads							= my_current_job.arguments[24].ReturnIntegerArgument();
 
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
+
 	input_particle.constraints_used.x_shift = true;		// Constraint for X shifts
 	input_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
 

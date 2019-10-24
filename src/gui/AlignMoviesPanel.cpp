@@ -404,7 +404,7 @@ void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 0)
 				{
 					StartAlignmentButton->Enable(true);
 				}
@@ -711,8 +711,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
 
 
-		number_of_frames_for_running_average = 1;
-		max_threads = 1;
+		number_of_frames_for_running_average = 10;
+		max_threads = 40;
 
 		bool saved_aligned_frames = false;
 		std::string aligned_frames_filename = "/dev/null";
@@ -787,7 +787,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	if (my_job_id != -1)
 	{
-		if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs + 1;
+		if (current_job_package.number_of_jobs  < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs;
 		else number_of_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_processes >= 100000) length_of_process_number = 6;

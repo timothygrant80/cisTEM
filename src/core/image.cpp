@@ -248,7 +248,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared > mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -256,7 +256,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared <= mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -282,7 +282,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				{
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						sum += powf(real_values[address],2);
+						sum += pow(real_values[address],2);
 						address++;
 					}
 					address += padding_jump_value;
@@ -10778,56 +10778,96 @@ void Image::Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle
 	rotated_image.object_is_centred_in_box = true;
 }
 
-void Image::Skew2D(Image &skewed_image, float height_offset, float skew_axis, float skew_angle)
+float Image::Skew2D(Image &skewed_image, float height_offset, float minimum_height, float tilt_axis, float tilt_angle, bool adjust_signal)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(skewed_image.is_in_memory, "skewed_image memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+	MyDebugAssertTrue(height_offset > 0.0f, "height_offset is <= 0");
 
 	int i, j;
-	int height_min_i;
-	int height_min_j;
+//	int height_max_i;
+//	int height_max_j;
+	int offset_i;
+	int offset_j;
 	long pixel_counter;
-	float pad_value = ReturnAverageOfRealValues();
+	long nonzero_pixels = 0;
+//	long counter_offset;
+//	float pad_value = ReturnAverageOfRealValues();
+	float pad_value = ReturnAverageOfRealValuesOnEdges();
 	float height;
-//	float height_min;
-	float tan_angle = tanf(deg_2_rad(skew_angle));
+	float height_max;
+//	float shrink_factor;
+	float shrink_factor_squared;
+	float tan_angle;
 	float x_coordinate_2d;
 	float y_coordinate_2d;
 	float x_rotated;
 	float y_rotated;
 	float x_skewed;
 	float y_skewed;
+	float y0;
+	float y0_skewed;
+	float min_x, max_x, min_y, max_y;
+	float padding_factor = float (logical_x_dimension) / float(skewed_image.logical_x_dimension);
+
+	skewed_image.is_in_real_space = true;
+	skewed_image.SetToConstant(pad_value);
+
+	if (fabsf(tilt_angle) < 0.1f)
+	{
+		pixel_counter = 0;
+		for (j = 0; j < skewed_image.logical_y_dimension; j++)
+		{
+			for (i = 0; i < skewed_image.logical_x_dimension; i++)
+			{
+				x_rotated = i * padding_factor;
+				y_rotated = j * padding_factor;
+//				skewed_image.real_values[pixel_counter] = ReturnNearest2D(x_rotated, y_rotated);
+				skewed_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
+//				nonzero_pixels++;
+
+				pixel_counter++;
+			}
+			pixel_counter += skewed_image.padding_jump_value;
+		}
+		return 1.0f;
+	}
+
 	AnglesAndShifts rotation_angle;
 	AnglesAndShifts inverse_rotation_angle;
 
-	skewed_image.is_in_real_space = true;
-//	skewed_image.SetToConstant(pad_value);
+	if (tilt_angle < 0.0f)
+	{
+		tilt_angle = -tilt_angle;
+		tilt_axis += 180.0f;
+	}
+	tan_angle = tanf(deg_2_rad(tilt_angle));
 
-	rotation_angle.GenerateRotationMatrix2D(skew_axis);
-	inverse_rotation_angle.GenerateRotationMatrix2D(-skew_axis);
+	// Add 90deg to tilt_axis since we need direction normal to axis (see original ctftilt code)
+//	rotation_angle.GenerateRotationMatrix2D(tilt_axis + 90.0f);
+//	inverse_rotation_angle.GenerateRotationMatrix2D(-tilt_axis - 90.0f);
+	rotation_angle.GenerateRotationMatrix2D(tilt_axis);
+	inverse_rotation_angle.GenerateRotationMatrix2D(-tilt_axis);
 
-//	height_min = FLT_MAX;
-//	pixel_counter = 0;
-//	for (j = 0; j < skewed_image.logical_y_dimension; j++)
+//	if (tan_angle > 0.01f)
 //	{
-//		y_coordinate_2d = j - skewed_image.physical_address_of_box_center_y;
-//		for (i = 0; i < skewed_image.logical_x_dimension; i++)
-//		{
-//			x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x;
-//			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
-//			height = fabsf(height_offset + y_rotated * tan_angle);
-//			if (height < height_min)
-//			{
-//				height_min_i = i;
-//				height_min_j = j;
-//				height_min = height;
-//			}
-//			pixel_counter++;
-//		}
-//		pixel_counter += skewed_image.padding_jump_value;
+//		y0 = 2.0f * sqrtf(height_offset) / tan_angle * (sqrtf(minimum_height) - sqrtf(minimum_height + height_offset));
+		y0 = - 2.0f * height_offset / tan_angle;
+		y0_skewed = - height_offset / tan_angle;
 //	}
+//	else
+//	{
+//		y0 = FLT_MAX;
+//		y0_skewed = - FLT_MAX;
+//	}
+//	wxPrintf("y0, y0_skewed = %g %g\n", y0, y0_skewed);
 
+//	height_max = -FLT_MAX;
+	min_x = float(skewed_image.logical_x_dimension) - 1.0f;
+	max_x = 0.0f;
+	min_y = float(skewed_image.logical_y_dimension) - 1.0f;
+	max_y = 0.0f;
 	pixel_counter = 0;
 	for (j = 0; j < skewed_image.logical_y_dimension; j++)
 	{
@@ -10837,21 +10877,108 @@ void Image::Skew2D(Image &skewed_image, float height_offset, float skew_axis, fl
 			x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x;
 			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
 
+//			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated * sqrtf(minimum_height / height_offset + 1.0f);
 			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated;
-			x_skewed = x_rotated * sqrtf((fabsf(height_offset + y_skewed * tan_angle)) / height_offset);
+			if (y_rotated < y0) y_skewed = y0 - y_skewed;
+
+			height = fabsf(height_offset + y_skewed * tan_angle);
+			if (height > minimum_height)
+			{
+//			if (y_rotated * tan_angle >= - height_offset) y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated * sqrtf(minimum_height / height_offset + 1.0f);
+//			else y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset - y_rotated * sqrtf(minimum_height / height_offset - 1.0f);
+//			x_skewed = x_rotated * sqrtf((fabsf(height_offset + y_skewed * tan_angle) + minimum_height) / height_offset);
+			x_skewed = x_rotated * sqrtf(height / height_offset);
 
 			inverse_rotation_angle.euler_matrix.RotateCoords2D(x_skewed, y_skewed, x_rotated, y_rotated);
-			x_rotated += physical_address_of_box_center_x;
-			y_rotated += physical_address_of_box_center_y;
+			x_rotated += skewed_image.physical_address_of_box_center_x;
+			y_rotated += skewed_image.physical_address_of_box_center_y;
+
+			min_x = std::min(x_rotated, min_x);
+			max_x = std::max(x_rotated, max_x);
+			min_y = std::min(y_rotated, min_y);
+			max_y = std::max(y_rotated, max_y);
+//			height = fabsf(height_offset + y_skewed * tan_angle) + minimum_height;
+//			if (height > height_max)
+//			{
+//				height_max_i = i;
+//				height_max_j = j;
+//				height_max = height;
+//			}
+			}
+			pixel_counter++;
+		}
+		pixel_counter += skewed_image.padding_jump_value;
+	}
+	offset_i = skewed_image.physical_address_of_box_center_x - myroundint((min_x + max_x) / 2.0f);
+	offset_j = skewed_image.physical_address_of_box_center_y - myroundint((min_y + max_y) / 2.0f);
+
+//	counter_offset = long(logical_x_dimension + padding_jump_value) * long(offset_j) + long(offset_i);
+//	offset_i = myroundint((physical_address_of_box_center_x - (min_x + max_x)) / 2.0f);
+//	offset_j = myroundint((physical_address_of_box_center_y - (min_y + max_y)) / 2.0f);
+//	if (min_x < 0.0f) offset_i = int(ceil(-min_x));
+//	if (max_x > float(logical_x_dimension) - 1.0f) offset_i = - int(ceil(max_x - float(logical_x_dimension) + 1.0f));
+//	if (min_y < 0.0f) offset_j = int(ceil(-min_y));
+//	if (max_y > float(logical_y_dimension) - 1.0f) offset_j = - int(ceil(max_y - float(logical_y_dimension) + 1.0f));
+//	wxPrintf("minx, maxx, miny, maxy, offx, offy = %g %g %g %g %i %i\n", min_x, max_x, min_y, max_y, offset_i, offset_j);
+
+
+//	counter_offset = long(skewed_image.logical_x_dimension + skewed_image.padding_jump_value) * long(1000) + long(500);
+	pixel_counter = 0;
+	for (j = 0; j < skewed_image.logical_y_dimension; j++)
+	{
+		y_coordinate_2d = j - skewed_image.physical_address_of_box_center_y + offset_j;
+		for (i = 0; i < skewed_image.logical_x_dimension; i++)
+		{
+			x_coordinate_2d = i - skewed_image.physical_address_of_box_center_x + offset_i;
+			rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+
+//			if (pixel_counter == counter_offset) wxPrintf("x_rotated, y_rotated = %g %g\n", x_rotated, y_rotated);
+//			if (pixel_counter == counter_offset) wxPrintf("tan_angle, height_offset, minimum_height = %g %g %g\n", tan_angle, height_offset, minimum_height);
+
+//			x_rotated, y_rotated = -296.31 -1764.21
+//			tan_angle, height_offset, minimum_height = 1.19175 1360 60
+
+//			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated * sqrtf(minimum_height / height_offset + 1.0f);
+			y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated;
+//			if (x_coordinate_2d == y_coordinate_2d) wxPrintf("tan, off, x, y, rad', rad = %g %g %g %g %g %g\n", tan_angle, height_offset, x_coordinate_2d, y_coordinate_2d, y_rotated, y_skewed);
+//			if (y_rotated < y0_skewed) y_skewed = y0 - y_skewed;
+			if (y_rotated < y0) y_skewed = y0 - y_skewed;
+
+			height = fabsf(height_offset + y_skewed * tan_angle);
+			if (height > minimum_height)
+			{
+//			if (y_rotated * tan_angle >= - height_offset) y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset + y_rotated * sqrtf(minimum_height / height_offset + 1.0f);
+//			else y_skewed = powf(y_rotated, 2) / 4.0f * tan_angle / height_offset - y_rotated * sqrtf(minimum_height / height_offset - 1.0f);
+//			x_skewed = x_rotated * sqrtf((fabsf(height_offset + y_skewed * tan_angle) + minimum_height) / height_offset);
+			shrink_factor_squared = height / height_offset;
+			x_skewed = x_rotated * sqrtf(shrink_factor_squared);
+//			if (pixel_counter == counter_offset) wxPrintf("x_skewed, y_skewed = %g %g\n", x_skewed, y_skewed);
+
+			inverse_rotation_angle.euler_matrix.RotateCoords2D(x_skewed, y_skewed, x_rotated, y_rotated);
+			x_rotated = x_rotated * padding_factor + physical_address_of_box_center_x;
+			y_rotated = y_rotated * padding_factor + physical_address_of_box_center_y;
 //			wxPrintf("x in, out = %g %g    y in, out = %g %g\n", x_coordinate_2d, x_rotated, y_coordinate_2d, y_rotated);
 			// Keep margin of one pixel to make sure interpolation is reasonable.
-			if (x_rotated >= 1.0f && x_rotated < logical_x_dimension -1 && y_rotated >= 1.0f && y_rotated < logical_y_dimension - 1) skewed_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
-			else skewed_image.real_values[pixel_counter] = pad_value;
+			if (x_rotated >= 1.0f && x_rotated < logical_x_dimension -1 && y_rotated >= 1.0f && y_rotated < logical_y_dimension - 1)
+			{
+//				skewed_image.real_values[pixel_counter] = ReturnNearest2D(x_rotated, y_rotated);
+				skewed_image.real_values[pixel_counter] = ReturnLinearInterpolated2D(x_rotated, y_rotated);
+				if (adjust_signal) skewed_image.real_values[pixel_counter] *= shrink_factor_squared;
+				nonzero_pixels++;
+			}
+//			else
+//			{
+//				skewed_image.real_values[pixel_counter] = pad_value;
+//				nonzero_pixels++;
+//			}
+			}
 
 			pixel_counter++;
 		}
 		pixel_counter += skewed_image.padding_jump_value;
 	}
+
+	return float(nonzero_pixels) / float(skewed_image.number_of_real_space_pixels);
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND

@@ -23,6 +23,7 @@ class ClassificationPlotPanel;
 class ClassificationSelectionListCtrl;
 class ContainedParticleListControl;
 class ContentsList;
+class DisplayCTFRefinementResultsPanel;
 class DisplayPanel;
 class DisplayRefinementResultsPanel;
 class ImageGroupPickerComboPanel;
@@ -45,6 +46,7 @@ class RefinementParametersListCtrl;
 class RefinementPickerComboPanel;
 class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
+class ShowTemplateMatchResultsPanel;
 class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
 
@@ -538,6 +540,10 @@ class ShowCTFResultsParentPanel : public wxPanel
 		wxStaticText* PhaseShiftText;
 		wxStaticText* IcinessLabel;
 		wxStaticText* IcinessStaticText;
+		wxStaticText* m_staticText866;
+		wxStaticText* TiltAngleStaticText;
+		wxStaticText* m_staticText868;
+		wxStaticText* TiltAxisStaticText;
 		wxStaticLine* m_staticline83;
 		wxStaticText* m_staticText394;
 		wxStaticText* ImageFileText;
@@ -561,6 +567,58 @@ class ShowCTFResultsParentPanel : public wxPanel
 		{
 			m_splitter15->SetSashPosition( 0 );
 			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ShowTemplateMatchResultsParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class ShowTemplateMatchResultsParentPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxSplitterWindow* m_splitter16;
+		wxPanel* m_panel87;
+		wxSplitterWindow* m_splitter15;
+		wxPanel* m_panel89;
+		wxStaticText* PeakTableStaticText;
+		wxStaticLine* m_staticline148;
+		wxStaticLine* m_staticline82;
+		wxPanel* BottomPanel;
+		wxStaticText* SurvivalHistogramText;
+		wxStaticLine* m_staticline81;
+		wxPanel* PeakChangesPanel;
+		wxPanel* m_panel86;
+		wxStaticText* m_staticText394;
+		wxStaticText* ImageFileText;
+		wxStaticLine* m_staticline86;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnSavePeaksClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		NoFocusBitmapButton* SaveButton;
+		wxListCtrl* PeakListCtrl;
+		PlotCurvePanel* HistogramPlotPanel;
+		wxListCtrl* ChangesListCtrl;
+		DisplayPanel* ImageDisplayPanel;
+		
+		ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+		~ShowTemplateMatchResultsParentPanel();
+		
+		void m_splitter16OnIdle( wxIdleEvent& )
+		{
+			m_splitter16->SetSashPosition( 700 );
+			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+		}
+		
+		void m_splitter15OnIdle( wxIdleEvent& )
+		{
+			m_splitter15->SetSashPosition( 0 );
+			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
 		}
 	
 };
@@ -806,6 +864,110 @@ class FindCTFResultsPanel : public wxPanel
 		{
 			m_splitter4->SetSashPosition( 450 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindCTFResultsPanel::m_splitter4OnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class MatchTemplateResultsPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class MatchTemplateResultsPanelParent : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline25;
+		wxSplitterWindow* m_splitter4;
+		wxPanel* m_panel13;
+		wxRadioButton* AllImagesButton;
+		wxRadioButton* ByFilterButton;
+		wxButton* FilterButton;
+		wxStaticLine* m_staticline77;
+		wxToggleButton* JobDetailsToggleButton;
+		ResultsDataViewListCtrl* ResultDataView;
+		wxButton* PreviousButton;
+		wxButton* AddAllToGroupButton;
+		wxButton* NextButton;
+		wxPanel* RightPanel;
+		wxPanel* JobDetailsPanel;
+		wxStaticText* JobTitleStaticText;
+		wxFlexGridSizer* InfoSizer;
+		wxStaticText* m_staticText72;
+		wxStaticText* JobIDStaticText;
+		wxStaticText* m_staticText74;
+		wxStaticText* DateOfRunStaticText;
+		wxStaticText* m_staticText93;
+		wxStaticText* TimeOfRunStaticText;
+		wxStaticText* m_staticText788;
+		wxStaticText* RefVolumeIDStaticText;
+		wxStaticText* m_staticText790;
+		wxStaticText* SymmetryStaticText;
+		wxStaticText* m_staticText78;
+		wxStaticText* PixelSizeStaticText;
+		wxStaticText* m_staticText83;
+		wxStaticText* VoltageStaticText;
+		wxStaticText* m_staticText82;
+		wxStaticText* CsStaticText;
+		wxStaticText* m_staticText96;
+		wxStaticText* AmplitudeContrastStaticText;
+		wxStaticText* m_staticText85;
+		wxStaticText* Defocus1StaticText;
+		wxStaticText* m_staticText792;
+		wxStaticText* Defocus2StaticText;
+		wxStaticText* m_staticText794;
+		wxStaticText* DefocusAngleStaticText;
+		wxStaticText* m_staticText796;
+		wxStaticText* PhaseShiftStaticText;
+		wxStaticText* m_staticText87;
+		wxStaticText* LowResLimitStaticText;
+		wxStaticText* m_staticText89;
+		wxStaticText* HighResLimitStaticText;
+		wxStaticText* m_staticText91;
+		wxStaticText* OOPAngluarStepStaticText;
+		wxStaticText* m_staticText79;
+		wxStaticText* IPAngluarStepStaticText;
+		wxStaticText* m_staticText798;
+		wxStaticText* DefocusRangeStaticText;
+		wxStaticText* m_staticText95;
+		wxStaticText* DefocusStepStaticText;
+		wxStaticText* LargeAstigExpectedLabel;
+		wxStaticText* PixelSizeRangeStaticText;
+		wxStaticText* m_staticText99;
+		wxStaticText* PixelSizeStepStaticText;
+		wxStaticText* m_staticText872;
+		wxStaticText* MinPeakRadiusStaticText;
+		wxStaticText* m_staticText874;
+		wxStaticText* ShiftThresholdStaticText;
+		wxStaticText* m_staticText876;
+		wxStaticText* IgnoreShiftedPeaksStaticText;
+		wxStaticLine* m_staticline30;
+		ShowTemplateMatchResultsPanel* ResultPanel;
+		wxButton* DeleteFromGroupButton;
+		wxButton* AddToGroupButton;
+		MemoryComboBox* GroupComboBox;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnAllImagesSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnByFilterSelect( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDefineFilterClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddAllToGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRemoveFromGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		MatchTemplateResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+		~MatchTemplateResultsPanelParent();
+		
+		void m_splitter4OnIdle( wxIdleEvent& )
+		{
+			m_splitter4->SetSashPosition( 450 );
+			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MatchTemplateResultsPanelParent::m_splitter4OnIdle ), NULL, this );
 		}
 	
 };
@@ -1780,10 +1942,12 @@ class RefineCTFParentPanel : public JobPanel
 		wxCheckBox* UseMaskCheckBox;
 		VolumeAssetPickerComboPanel* MaskSelectPanel;
 		wxStaticLine* m_staticline52;
-		wxCheckBox* m_checkBox56;
-		wxCheckBox* m_checkBox57;
+		wxCheckBox* RefineBeamTiltCheckBox;
+		wxStaticLine* m_staticline142;
+		wxCheckBox* RefineCTFCheckBox;
 		wxStaticText* HiResLimitStaticText;
 		NumericTextCtrl* HighResolutionLimitTextCtrl;
+		wxStaticLine* m_staticline143;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticLine* m_staticline101;
 		ReferenceVolumesListControlRefinement* Active3DReferencesListCtrl;
@@ -1801,7 +1965,6 @@ class RefineCTFParentPanel : public JobPanel
 		NumericTextCtrl* InnerMaskRadiusTextCtrl;
 		wxStaticText* m_staticText317;
 		NumericTextCtrl* SignedCCResolutionTextCtrl;
-		wxStaticText* m_staticText323;
 		wxStaticText* DefocusSearchRangeStaticText;
 		NumericTextCtrl* DefocusSearchRangeTextCtrl;
 		wxStaticText* DefocusSearchStepStaticText;
@@ -1824,9 +1987,6 @@ class RefineCTFParentPanel : public JobPanel
 		wxRadioButton* ApplyBlurringNoRadioButton;
 		wxStaticText* SmoothingFactorStaticText;
 		NumericTextCtrl* SmoothingFactorTextCtrl;
-		wxStaticText* AutoCenterStaticText;
-		wxRadioButton* AutoCenterYesRadioButton;
-		wxRadioButton* AutoCenterNoRadioButton;
 		wxStaticText* m_staticText405;
 		wxStaticText* AutoMaskStaticText;
 		wxRadioButton* AutoMaskYesRadioButton;
@@ -1876,7 +2036,7 @@ class RefineCTFParentPanel : public JobPanel
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		RefinementPickerComboPanel* InputParametersComboBox;
-		DisplayRefinementResultsPanel* ShowRefinementResultsPanel;
+		DisplayCTFRefinementResultsPanel* ShowRefinementResultsPanel;
 		
 		RefineCTFParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
 		~RefineCTFParentPanel();
@@ -1998,6 +2158,12 @@ class Generate3DPanelParent : public JobPanel
 		wxStaticText* m_staticText631;
 		wxRadioButton* OverwriteStatisticsYesButton;
 		wxRadioButton* OverwriteStatisticsNoButton;
+		wxStaticText* m_staticText879;
+		wxRadioButton* ApplyEwaldSphereCorrectionYesButton;
+		wxRadioButton* ApplyEwaldSphereCorrectionNoButton;
+		wxStaticText* ApplyInverseHandLabelText;
+		wxRadioButton* ApplyEwaldInverseHandYesButton;
+		wxRadioButton* ApplyEwaldInverseHandNoButton;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -2164,6 +2330,9 @@ class FindCTFPanel : public JobPanel
 		wxSpinCtrl* BoxSizeSpinCtrl;
 		wxStaticText* m_staticText196;
 		NumericTextCtrl* AmplitudeContrastNumericCtrl;
+		wxStaticText* TiltStaticText;
+		wxRadioButton* SearchTiltYesRadio;
+		wxRadioButton* SearchTiltNoRadio;
 		wxStaticText* m_staticText201;
 		wxStaticText* m_staticText189;
 		NumericTextCtrl* MinResNumericCtrl;
@@ -2235,33 +2404,41 @@ class MatchTemplateParentPanel : public JobPanel
 	private:
 	
 	protected:
-		wxStaticLine* m_staticline12;
+		wxStaticLine* m_staticline149;
+		wxPanel* InputPanel;
 		wxStaticText* m_staticText262;
 		wxStaticText* m_staticText478;
 		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
-		wxStaticLine* m_staticline155;
-		wxToggleButton* ExpertToggleButton;
-		wxStaticLine* m_staticline10;
+		wxStaticText* PleaseEstimateCTFStaticText;
+		wxStaticLine* m_staticline151;
 		wxScrolledWindow* ExpertPanel;
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText201;
+		wxButton* ResetAllDefaultsButton;
 		wxStaticText* m_staticText189;
 		NumericTextCtrl* OutofPlaneStepNumericCtrl;
 		wxStaticText* m_staticText190;
 		NumericTextCtrl* InPlaneStepNumericCtrl;
 		wxStaticText* m_staticText190211;
 		NumericTextCtrl* HighResolutionLimitNumericCtrl;
-		wxStaticText* m_staticText764;
-		NumericTextCtrl* EstimatedParticleSizeTextCtrl;
-		wxStaticText* m_staticText1901;
-		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
-		wxStaticText* m_staticText19011;
-		NumericTextCtrl* DefocusSearchStepNumericCtrl;
-		wxStaticText* m_staticText1902;
-		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
-		wxStaticText* m_staticText19022;
-		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
 		wxStaticText* m_staticText19021;
+		wxStaticText* m_staticText698;
+		wxRadioButton* DefocusSearchYesRadio;
+		wxRadioButton* DefocusSearchNoRadio;
+		wxStaticText* DefocusRangeStaticText;
+		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
+		wxStaticText* DefocusStepStaticText;
+		NumericTextCtrl* DefocusSearchStepNumericCtrl;
+		wxStaticText* m_staticText699;
+		wxRadioButton* PixelSizeSearchYesRadio;
+		wxRadioButton* PixelSizeSearchNoRadio;
+		wxStaticText* PixelSizeRangeStaticText;
+		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
+		wxStaticText* PixelSizeStepStaticText;
+		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
+		wxStaticText* m_staticText857;
+		wxStaticText* m_staticText849;
+		NumericTextCtrl* MinPeakRadiusNumericCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -2281,7 +2458,7 @@ class MatchTemplateParentPanel : public JobPanel
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
@@ -2291,10 +2468,100 @@ class MatchTemplateParentPanel : public JobPanel
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
 		wxComboBox* SymmetryComboBox;
-		ShowCTFResultsPanel* CTFResultsPanel;
+		ShowTemplateMatchResultsPanel* ResultsPanel;
 		
 		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~MatchTemplateParentPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RefineTemplateParentPanel
+///////////////////////////////////////////////////////////////////////////////
+class RefineTemplateParentPanel : public JobPanel
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline149;
+		wxPanel* InputPanel;
+		wxStaticText* m_staticText262;
+		wxStaticText* m_staticText478;
+		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
+		wxStaticText* InputErrorText;
+		wxStaticLine* m_staticline151;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText847;
+		wxButton* ResetAllDefaultsButton;
+		wxStaticText* m_staticText849;
+		NumericTextCtrl* MinPeakRadiusNumericCtrl;
+		wxStaticText* m_staticText846;
+		NumericTextCtrl* PeakSelectionThresholdNumericCtrl;
+		wxStaticText* m_staticText848;
+		NumericTextCtrl* PeakPlottingThresholdNumericCtrl;
+		wxStaticText* mask_radius;
+		wxRadioButton* RemoveShiftedPeaksYesRadio;
+		wxRadioButton* RemoveShiftedPeaksNoRadio;
+		wxStaticText* ShiftThresholdStaticText;
+		NumericTextCtrl* PeakChangeThresholdNumericTextCtrl;
+		wxStaticText* m_staticText201;
+		wxStaticText* m_staticText852;
+		NumericTextCtrl* MaskRadiusNumericTextCtrl;
+		wxStaticText* m_staticText189;
+		NumericTextCtrl* OutofPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190;
+		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190211;
+		NumericTextCtrl* HighResolutionLimitNumericCtrl;
+		wxStaticText* m_staticText19021;
+		wxStaticText* m_staticText698;
+		wxRadioButton* DefocusSearchYesRadio;
+		wxRadioButton* DefocusSearchNoRadio;
+		wxStaticText* DefocusRangeStaticText;
+		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
+		wxStaticText* DefocusStepStaticText;
+		NumericTextCtrl* DefocusSearchStepNumericCtrl;
+		wxStaticText* m_staticText699;
+		wxRadioButton* PixelSizeSearchYesRadio;
+		wxRadioButton* PixelSizeSearchNoRadio;
+		wxStaticText* PixelSizeRangeStaticText;
+		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
+		wxStaticText* PixelSizeStepStaticText;
+		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RunProfileComboBox;
+		wxButton* StartEstimationButton;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		ImageGroupPickerComboPanel* GroupComboBox;
+		wxComboBox* SymmetryComboBox;
+		ShowTemplateMatchResultsPanel* ResultsPanel;
+		
+		RefineTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+		~RefineTemplateParentPanel();
 	
 };
 
@@ -2443,7 +2710,9 @@ class AddRunCommandDialog : public wxDialog
 	protected:
 		wxStaticText* m_staticText45;
 		wxStaticText* m_staticText46;
+		wxStaticText* ThreadsPerCopySpinCtrl;
 		wxStaticText* m_staticText58;
+		wxStaticLine* m_staticline166;
 		wxStaticText* ErrorStaticText;
 		wxStaticLine* m_staticline14;
 		wxButton* OKButton;
@@ -2451,6 +2720,7 @@ class AddRunCommandDialog : public wxDialog
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOverrideCheckbox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
 		
@@ -2458,9 +2728,12 @@ class AddRunCommandDialog : public wxDialog
 	public:
 		wxTextCtrl* CommandTextCtrl;
 		wxSpinCtrl* NumberCopiesSpinCtrl;
+		wxSpinCtrl* NumberThreadsSpinCtrl;
 		wxSpinCtrl* DelayTimeSpinCtrl;
+		wxCheckBox* OverrideCheckBox;
+		wxSpinCtrl* OverridenNoCopiesSpinCtrl;
 		
-		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 528,262 ), long style = wxDEFAULT_DIALOG_STYLE ); 
 		~AddRunCommandDialog();
 	
 };
@@ -3412,6 +3685,48 @@ class DisplayRefinementResultsPanelParent : public wxPanel
 		{
 			TopBottomSplitter->SetSashPosition( 0 );
 			TopBottomSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
+		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class DisplayCTFRefinementResultsPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class DisplayCTFRefinementResultsPanelParent : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* OrthText;
+		wxStaticLine* m_staticline109;
+	
+	public:
+		wxSplitterWindow* LeftRightSplitter;
+		wxPanel* LeftPanel;
+		wxSplitterWindow* TopBottomSplitter;
+		wxPanel* TopPanel;
+		wxStaticText* DefocusChangeText;
+		wxStaticLine* DefocusPlotLine;
+		PlotCurvePanel* DefocusHistorgramPlotPanel;
+		wxPanel* BottomPanel;
+		MyFSCPanel* FSCResultsPanel;
+		wxPanel* RightPanel;
+		DisplayPanel* ShowOrthDisplayPanel;
+		wxPanel* RoundPlotPanel;
+		
+		DisplayCTFRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+		~DisplayCTFRefinementResultsPanelParent();
+		
+		void LeftRightSplitterOnIdle( wxIdleEvent& )
+		{
+			LeftRightSplitter->SetSashPosition( 600 );
+			LeftRightSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
+		}
+		
+		void TopBottomSplitterOnIdle( wxIdleEvent& )
+		{
+			TopBottomSplitter->SetSashPosition( 0 );
+			TopBottomSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
 		}
 	
 };

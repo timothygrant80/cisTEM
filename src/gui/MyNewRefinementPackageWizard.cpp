@@ -678,6 +678,16 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		float image_defocus_angle;
 		float image_phase_shift;
 		float image_amplitude_contrast;
+		float image_tilt_angle;
+		float image_tilt_axis;
+
+		// for tilt calculations
+		AnglesAndShifts rotation_angle;
+		float image_x_position;
+		float image_y_position;
+		float x_rotated;
+		float y_rotated;
+		float tilt_based_height;
 
 		ImageAsset *current_image_asset = NULL;
 		ParticlePositionAsset *current_particle_position_asset = NULL;
@@ -768,7 +778,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				// we have to get the defocus stuff from the database..
 
-				main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast);
+				main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast, image_tilt_angle, image_tilt_axis);
 			}
 
 			// do the cutting..
@@ -791,23 +801,39 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			temp_particle_info.parent_image_id = current_particle_parent_image_id;
 			temp_particle_info.pixel_size = current_image_asset->pixel_size;
 			temp_particle_info.position_in_stack = position_in_stack;
-			temp_particle_info.defocus_1 = image_defocus_1;
-			temp_particle_info.defocus_2 = image_defocus_2;
 			temp_particle_info.defocus_angle = image_defocus_angle;
 			temp_particle_info.phase_shift = image_phase_shift;
 			temp_particle_info.amplitude_contrast = image_amplitude_contrast;
-
 			temp_particle_info.x_pos = current_particle_position_asset->x_position;
 			temp_particle_info.y_pos = current_particle_position_asset->y_position;
 			temp_particle_info.original_particle_position_asset_id = current_particle_position_asset->asset_id;
+
+			if (image_tilt_angle == 0.0f && image_tilt_axis == 0.0f)
+			{
+				temp_particle_info.defocus_1 = image_defocus_1;
+				temp_particle_info.defocus_2 = image_defocus_2;
+			}
+			else // calculate a defocus value based on tilt..
+			{
+				rotation_angle.GenerateRotationMatrix2D(image_tilt_axis);
+				image_x_position = current_x_pos * current_image_asset->pixel_size;
+				image_y_position = current_y_pos * current_image_asset->pixel_size;
+
+				rotation_angle.euler_matrix.RotateCoords2D(image_x_position, image_y_position, x_rotated, y_rotated);
+				tilt_based_height = y_rotated * tanf(deg_2_rad(image_tilt_angle));
+				temp_particle_info.defocus_1 = image_defocus_1 + tilt_based_height;
+				temp_particle_info.defocus_2 = image_defocus_2 + tilt_based_height;
+
+		//		wxPrintf("axis = %f, angle = %f, height = %f\n", image_tilt_axis, image_tilt_angle, tilt_based_height);
+			}
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
 			for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
 			{
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].position_in_stack = counter + 1;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = image_defocus_1;
-				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = image_defocus_2;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = temp_particle_info.defocus_1;
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = temp_particle_info.defocus_2;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = image_defocus_angle;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = image_phase_shift;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
@@ -1062,6 +1088,16 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		float image_defocus_angle;
 		float image_phase_shift;
 		float image_amplitude_contrast;
+		float image_tilt_angle;
+		float image_tilt_axis;
+
+		// for tilt calculations
+		AnglesAndShifts rotation_angle;
+		float image_x_position;
+		float image_y_position;
+		float x_rotated;
+		float y_rotated;
+		float tilt_based_height;
 
 		long currently_opened_refinement_package_particle_stack = -1;
 		MRCFile input_stack_file;
@@ -1215,7 +1251,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 					// we have to get the defocus stuff from the database..
 
-					main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast);
+					main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast, image_tilt_angle, image_tilt_axis);
 				}
 
 				// do the cutting..
@@ -1231,11 +1267,27 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_particle_info.parent_image_id = current_particle_parent_image_id;
 				temp_particle_info.pixel_size = current_image_asset->pixel_size;
 				temp_particle_info.position_in_stack = position_in_stack;
-				temp_particle_info.defocus_1 = image_defocus_1;
-				temp_particle_info.defocus_2 = image_defocus_2;
 				temp_particle_info.defocus_angle = image_defocus_angle;
 				temp_particle_info.phase_shift = image_phase_shift;
 				temp_particle_info.amplitude_contrast = image_amplitude_contrast;
+
+				if (image_tilt_angle == 0.0f && image_tilt_axis == 0.0f)
+					{
+						temp_particle_info.defocus_1 = image_defocus_1;
+						temp_particle_info.defocus_2 = image_defocus_2;
+					}
+					else // calculate a defocus value based on tilt..
+					{
+						rotation_angle.GenerateRotationMatrix2D(image_tilt_axis);
+						image_x_position = current_x_pos * current_image_asset->pixel_size;
+						image_y_position = current_y_pos * current_image_asset->pixel_size;
+
+						rotation_angle.euler_matrix.RotateCoords2D(image_x_position, image_y_position, x_rotated, y_rotated);
+						tilt_based_height = y_rotated * tanf(deg_2_rad(image_tilt_angle));
+						temp_particle_info.defocus_1 = image_defocus_1 + tilt_based_height;
+						temp_particle_info.defocus_2 = image_defocus_2 + tilt_based_height;
+					}
+
 
 				// fill in the refinement data..
 
@@ -1776,6 +1828,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
  	this->SetSizer(main_sizer);
  	main_sizer->Fit(this);
   	main_sizer->Add(my_panel);
+
+  	my_panel->OutputPixelSizeTextCtrl->SetPrecision(4);
  	//my_panel->InfoText->AutoWrap();
    }
 

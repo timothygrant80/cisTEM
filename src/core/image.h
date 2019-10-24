@@ -150,7 +150,7 @@ public:
 	void Rotate2D(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
 	void Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels = 0.0);
 	void Rotate2DSample(Image &rotated_image, AnglesAndShifts &rotation_angle, float mask_radius_in_pixels = 0.0);
-	void Skew2D(Image &skewed_image, float height_offset, float skew_axis, float skew_angle);
+	float Skew2D(Image &skewed_image, float height_offset, float minimum_height, float skew_axis, float skew_angle, bool adjust_signal = false);
 	float ReturnLinearInterpolated2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	float ReturnNearest2D(float &wanted_physical_x_coordinate, float &wanted_physical_y_coordinate);
 	void ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);

@@ -5,6 +5,7 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 : wxPanel(parent, id, pos, size, style, name)
 {
 
+
 	current_xaxis = NULL;
 	current_yaxis = NULL;
 	info_coords = NULL;
@@ -18,8 +19,7 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 
 	current_plot_window = new mpWindow( this, -1, wxPoint(0,0), wxSize(100, 100), wxSUNKEN_BORDER );
 
-
-    GraphSizer->Add(current_plot_window, 1, wxEXPAND );
+	GraphSizer->Add(current_plot_window, 1, wxEXPAND );
     current_plot_window->EnableDoubleBuffer(true);
     current_plot_window->EnableMousePanZoom(false);
 
@@ -30,6 +30,16 @@ PlotCurvePanel::PlotCurvePanel(wxWindow* parent, wxWindowID id, const wxPoint& p
     should_draw_x_axis_ticks = false;
     should_draw_y_axis_ticks = false;
     should_draw_coords_box = false;
+
+    min_x_step_size = -std::numeric_limits<double>::max();
+    centre_x_axis = false;
+
+    Bind(wxEVT_ERASE_BACKGROUND, &PlotCurvePanel::OnEraseBackground, this);
+}
+
+void PlotCurvePanel::OnEraseBackground(wxEraseEvent& event)
+{
+	// do nothing
 }
 
 void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wanted_y_axis_text)
@@ -41,7 +51,11 @@ void PlotCurvePanel::SetupBaseLayers(wxString wanted_x_axis_text, wxString wante
 	wxFont graphFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
 	current_xaxis = new mpScaleX(wanted_x_axis_text, mpALIGN_BOTTOM, should_draw_x_axis_ticks, mpX_NORMAL);
-	current_yaxis = new mpScaleY(wanted_y_axis_text, mpALIGN_LEFT, should_draw_y_axis_ticks);
+
+	if (centre_x_axis == true) current_yaxis = new mpScaleY(wanted_y_axis_text, mpALIGN_CENTER, should_draw_y_axis_ticks);
+	else current_yaxis = new mpScaleY(wanted_y_axis_text, mpALIGN_LEFT, should_draw_y_axis_ticks);
+
+	current_xaxis->SetMinStep(min_x_step_size);
 
 	title = new mpTitle("");
 	legend = new mpTopInfoLegend();
@@ -73,7 +87,7 @@ PlotCurvePanel::~PlotCurvePanel()
 	delete current_plot_window;
 }
 
-void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, bool show_coordinates, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_x_axis_ticks, bool wanted_draw_y_axis_ticks)
+void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_axis_text, bool show_legend, bool show_coordinates, int wanted_top_margin, int wanted_bottom_margin, int wanted_left_margin, int wanted_right_margin, bool wanted_draw_x_axis_ticks, bool wanted_draw_y_axis_ticks, bool wanted_centre_x_axis)
 {
 	current_plot_window->SetMargins(20, 20, 50, 60);
 	current_plot_window->SetMargins(wanted_top_margin, wanted_right_margin, wanted_bottom_margin, wanted_left_margin);
@@ -83,6 +97,7 @@ void PlotCurvePanel::Initialise(wxString wanted_x_axis_text, wxString wanted_y_a
 	stored_x_axis_text = wanted_x_axis_text;
 	stored_y_axis_text = wanted_y_axis_text;
 	should_draw_coords_box = show_coordinates;
+	centre_x_axis = wanted_centre_x_axis;
 
 	Clear();
 
@@ -102,7 +117,7 @@ void PlotCurvePanel::Clear(bool update_display)
 
 }
 
-void PlotCurvePanel::AddCurve(Curve &curve_to_add, wxColour wanted_plot_colour, wxString wanted_name)
+void PlotCurvePanel::AddCurve(Curve &curve_to_add, wxColour wanted_plot_colour, wxString wanted_name, int line_width, wxPenStyle wanted_pen_style)
 {
 	curves_to_plot.Add(curve_to_add);
 
@@ -114,7 +129,7 @@ void PlotCurvePanel::AddCurve(Curve &curve_to_add, wxColour wanted_plot_colour, 
 
 	current_plot_vector_layer = new mpFXYVector(wanted_name);
 
-	wxPen vectorpen(wanted_plot_colour, 2, wxSOLID);
+	wxPen vectorpen(wanted_plot_colour, line_width, wanted_pen_style);
 
 	current_plot_vector_layer->SetContinuity(true);
 	current_plot_vector_layer->SetPen(vectorpen);
@@ -182,6 +197,11 @@ void PlotCurvePanel::Draw()
 void PlotCurvePanel::SetXAxisLabel(wxString wanted_label)
 {
 	current_xaxis->SetName(wanted_label);
+}
+
+void PlotCurvePanel::SetXAxisMinStep(double wanted_step)
+{
+	min_x_step_size = wanted_step;
 }
 
 void PlotCurvePanel::SetYAxisLabel(wxString wanted_label)

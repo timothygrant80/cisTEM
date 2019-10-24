@@ -958,7 +958,7 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			}
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1 && PickingAlgorithmComboBox->GetCurrentSelection() >= 0 && image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 0 && PickingAlgorithmComboBox->GetCurrentSelection() >= 0 && image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
 				{
 					StartPickingButton->Enable(true);
 				}
@@ -1482,7 +1482,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 			time_of_last_result_update = time(NULL);
 		}
 
-		my_job_tracker.MarkJobFinished();
+		//my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 
 		// store the results..
@@ -1490,7 +1490,7 @@ void  MyFindParticlesPanel::ProcessResult(JobResult *result_to_process, const in
 	}
 	else
 	{
-		my_job_tracker.MarkJobFinished();
+		//my_job_tracker.MarkJobFinished();
 		if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
 /*
 		if (my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs)
@@ -1722,6 +1722,7 @@ void MyFindParticlesPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
 	if (received_result.result_size > 0)
 	{
+		my_job_tracker.MarkJobFinished();
 		ProcessResult(&received_result);
 	}
 }

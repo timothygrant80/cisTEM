@@ -6,19 +6,13 @@ extern MyImageAssetPanel *image_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
 extern MyMainFrame *main_frame;
-// extern MyFindCTFResultsPanel *ctf_results_panel;
+extern MatchTemplateResultsPanel *match_template_results_panel;
 
 MatchTemplatePanel::MatchTemplatePanel( wxWindow* parent )
 :
 MatchTemplateParentPanel( parent )
 {
 	// Set variables
-
-	buffered_results = NULL;
-
-	// Fill combo box..
-
-	//FillGroupComboBox();
 
 	my_job_id = -1;
 	running_job = false;
@@ -86,6 +80,12 @@ void MatchTemplatePanel::EnableMovieProcessingIfAppropriate()
 	}
 }
 */
+
+void MatchTemplatePanel::ResetAllDefaultsClick( wxCommandEvent& event )
+{
+	ResetDefaults();
+}
+
 void MatchTemplatePanel::OnInfoURL(wxTextUrlEvent& event)
 {
 	 const wxMouseEvent& ev = event.GetMouseEvent();
@@ -115,28 +115,21 @@ void MatchTemplatePanel::Reset()
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
-	CTFResultsPanel->Show(false);
+	ResultsPanel->Show(false);
+	InputPanel->Show(true);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 
-	ExpertToggleButton->SetValue(false);
-	ExpertPanel->Show(false);
+	ResultsPanel->Clear();
 
 	if (running_job == true)
 	{
 		main_frame->job_controller.KillJob(my_job_id);
-
-		if (buffered_results != NULL)
-		{
-			delete [] buffered_results;
-			buffered_results = NULL;
-		}
+		cached_results.Clear();
 
 		running_job = false;
 	}
 
-	CTFResultsPanel->CTF2DResultsPanel->should_show = false;
-	CTFResultsPanel->CTF2DResultsPanel->Refresh();
 
 	ResetDefaults();
 	Layout();
@@ -146,11 +139,17 @@ void MatchTemplatePanel::ResetDefaults()
 {
 	OutofPlaneStepNumericCtrl->ChangeValueFloat(2.5);
 	InPlaneStepNumericCtrl->ChangeValueFloat(1.5);
-	DefocusSearchRangeNumericCtrl->ChangeValueFloat(0.0);
-	DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0);
-	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.0);
-	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.01);
-	EstimatedParticleSizeTextCtrl->ChangeValueFloat(200.0);
+	MinPeakRadiusNumericCtrl->ChangeValueFloat(10.0f);
+
+	DefocusSearchYesRadio->SetValue(true);
+	PixelSizeSearchNoRadio->SetValue(true);
+
+	SymmetryComboBox->SetValue("C1");
+
+	DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
+	DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0f);
+	PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.05f);
+	PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.01f);
 
 //	AssetGroup active_group;
 	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
@@ -172,6 +171,21 @@ void MatchTemplatePanel::OnGroupComboBox(wxCommandEvent &event)
 		ImageAsset *current_image;
 		current_image = image_asset_panel->ReturnAssetPointer(GroupComboBox->GetSelection());
 		HighResolutionLimitNumericCtrl->ChangeValueFloat(2.0f * current_image->pixel_size);
+	}
+
+
+	if (GroupComboBox->GetCount() > 0 && main_frame->current_project.is_open == true) all_images_have_defocus_values = CheckGroupHasDefocusValues();
+
+	if (all_images_have_defocus_values == true && PleaseEstimateCTFStaticText->IsShown() == true)
+	{
+		PleaseEstimateCTFStaticText->Show(false);
+		Layout();
+	}
+	else
+	if (all_images_have_defocus_values == false && PleaseEstimateCTFStaticText->IsShown() == false)
+	{
+		PleaseEstimateCTFStaticText->Show(true);
+		Layout();
 	}
 }
 
@@ -292,11 +306,52 @@ void MatchTemplatePanel::SetInfo()
 void MatchTemplatePanel::FillGroupComboBox()
 {
 	GroupComboBox->FillComboBox(true);
+
+	if (GroupComboBox->GetCount() > 0 && main_frame->current_project.is_open == true) all_images_have_defocus_values = CheckGroupHasDefocusValues();
+
+	if (all_images_have_defocus_values == true && PleaseEstimateCTFStaticText->IsShown() == true)
+	{
+		PleaseEstimateCTFStaticText->Show(false);
+		Layout();
+	}
+	else
+	if (all_images_have_defocus_values == false && PleaseEstimateCTFStaticText->IsShown() == false)
+	{
+		PleaseEstimateCTFStaticText->Show(true);
+		Layout();
+	}
 }
 
 void MatchTemplatePanel::FillRunProfileComboBox()
 {
 	RunProfileComboBox->FillWithRunProfiles();
+}
+
+bool MatchTemplatePanel::CheckGroupHasDefocusValues()
+{
+	wxArrayLong images_with_defocus_values = main_frame->current_project.database.ReturnLongArrayFromSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
+	long current_image_id;
+	int images_with_defocus_counter;
+	bool image_was_found;
+
+	for (int image_in_group_counter = 0; image_in_group_counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); image_in_group_counter++ )
+	{
+		current_image_id = image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), image_in_group_counter))->asset_id;
+		image_was_found = false;
+
+		for (images_with_defocus_counter = 0; images_with_defocus_counter < images_with_defocus_values.GetCount(); images_with_defocus_counter++)
+		{
+			if (images_with_defocus_values[images_with_defocus_counter] == current_image_id)
+			{
+				image_was_found = true;
+				break;
+			}
+		}
+
+		if (image_was_found == false) return false;
+	}
+
+	return true;
 }
 
 void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
@@ -306,9 +361,9 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 	{
 		RunProfileComboBox->Enable(false);
 		GroupComboBox->Enable(false);
-		ExpertToggleButton->Enable(false);
 		StartEstimationButton->Enable(false);
 		ReferenceSelectPanel->Enable(false);
+
 	}
 	else
 	{
@@ -319,11 +374,10 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RunProfileComboBox->Enable(true);
 			GroupComboBox->Enable(true);
 			ReferenceSelectPanel->Enable(true);
-			ExpertToggleButton->Enable(true);
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
-				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 1)
+				if (image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 0 && all_images_have_defocus_values == true)
 				{
 					StartEstimationButton->Enable(true);
 				}
@@ -333,10 +387,39 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				StartEstimationButton->Enable(false);
 			}
+
+			if (DefocusSearchYesRadio->GetValue() == true)
+			{
+				DefocusRangeStaticText->Enable(true);
+				DefocusSearchRangeNumericCtrl->Enable(true);
+				DefocusStepStaticText->Enable(true);
+				DefocusSearchStepNumericCtrl->Enable(true);
+			}
+			else
+			{
+				DefocusRangeStaticText->Enable(false);
+				DefocusSearchRangeNumericCtrl->Enable(false);
+				DefocusStepStaticText->Enable(false);
+				DefocusSearchStepNumericCtrl->Enable(false);
+			}
+
+			if (PixelSizeSearchYesRadio->GetValue() == true)
+			{
+				PixelSizeRangeStaticText->Enable(true);
+				PixelSizeSearchRangeNumericCtrl->Enable(true);
+				PixelSizeStepStaticText->Enable(true);
+				PixelSizeSearchStepNumericCtrl->Enable(true);
+			}
+			else
+			{
+				PixelSizeRangeStaticText->Enable(false);
+				PixelSizeSearchRangeNumericCtrl->Enable(false);
+				PixelSizeStepStaticText->Enable(false);
+				PixelSizeSearchStepNumericCtrl->Enable(false);
+			}
 		}
 		else
 		{
-			ExpertToggleButton->Enable(false);
 			GroupComboBox->Enable(false);
 			ReferenceSelectPanel->Enable(false);
 			RunProfileComboBox->Enable(false);
@@ -364,26 +447,9 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 	}
 }
 
-void MatchTemplatePanel::OnExpertOptionsToggle(wxCommandEvent& event )
-{
-
-	if (ExpertToggleButton->GetValue() == true)
-	{
-		ExpertPanel->Show(true);
-		Layout();
-	}
-	else
-	{
-		ExpertPanel->Show(false);
-		Layout();
-	}
-}
-
-
 void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 {
 
-	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
 	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
 
 	float resolution_limit;
@@ -398,6 +464,19 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
 
+	double voltage_kV;
+	double spherical_aberration_mm;
+	double amplitude_contrast;
+	double defocus1;
+	double defocus2;
+	double defocus_angle;
+	double phase_shift;
+	double iciness;
+
+	input_image_filenames.Clear();
+	cached_results.Clear();
+
+	ResultsPanel->Clear();
 
 	// Package the job details..
 
@@ -406,16 +485,45 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	VolumeAsset *current_volume;
 
 	current_volume = volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->GetSelection());
+	ref_box_size_in_pixels = current_volume->x_size / current_volume->pixel_size;
 
 	ParameterMap parameter_map;
 	parameter_map.SetAllTrue();
 
 	float wanted_out_of_plane_angular_step = OutofPlaneStepNumericCtrl->ReturnValue();
 	float wanted_in_plane_angular_step = InPlaneStepNumericCtrl->ReturnValue();
-	float defocus_search_range = DefocusSearchRangeNumericCtrl->ReturnValue();
-	float defocus_step = DefocusSearchStepNumericCtrl->ReturnValue();
-	float pixel_size_search_range = PixelSizeSearchRangeNumericCtrl->ReturnValue();
-	float pixel_size_step = PixelSizeSearchStepNumericCtrl->ReturnValue();
+
+	float defocus_search_range;
+	float defocus_step;
+	float pixel_size_search_range;
+	float pixel_size_step;
+
+	if (DefocusSearchYesRadio->GetValue() == true)
+	{
+		defocus_search_range = DefocusSearchRangeNumericCtrl->ReturnValue();
+		defocus_step = DefocusSearchStepNumericCtrl->ReturnValue();
+	}
+	else
+	{
+		defocus_search_range = 0.0f;
+		defocus_step = 0.0f;
+	}
+
+	if (PixelSizeSearchYesRadio->GetValue() == true)
+	{
+
+		pixel_size_search_range = PixelSizeSearchRangeNumericCtrl->ReturnValue();
+		pixel_size_step = PixelSizeSearchStepNumericCtrl->ReturnValue();
+	}
+	else
+	{
+		pixel_size_search_range = 0.0f;
+		pixel_size_step = 0.0f;
+	}
+
+	float min_peak_radius = MinPeakRadiusNumericCtrl->ReturnValue();
+
+
 	wxString wanted_symmetry = SymmetryComboBox->GetValue();
 	wanted_symmetry = SymmetryComboBox->GetValue().Upper();
 	float high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue();
@@ -483,6 +591,14 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", active_group.number_of_members, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 
+	TemplateMatchJobResults temp_result;
+	temp_result.input_job_id = -1;
+	temp_result.job_type = TEMPLATE_MATCH_FULL_SEARCH;
+	temp_result.mask_radius = 0.0f;
+	temp_result.min_peak_radius = min_peak_radius;
+	temp_result.exclude_above_xy_threshold = false;
+	temp_result.xy_change_threshold = 0.0f;
+
 	for (int image_counter = 0; image_counter < active_group.number_of_members; image_counter++)
 	{
 		image_number_for_gui = image_counter + 1;
@@ -507,8 +623,11 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		}
 		current_image_euler_search->CalculateGridSearchPositions(false);
 
-		number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
-		number_of_pixel_size_positions = 2 * myround(float(pixel_size_search_range)/float(pixel_size_step)) + 1;
+		if (DefocusSearchYesRadio->GetValue() == true) number_of_defocus_positions = 2 * myround(float(defocus_search_range)/float(defocus_step)) + 1;
+		else number_of_defocus_positions = 1;
+
+		if (PixelSizeSearchYesRadio->GetValue() == true) number_of_pixel_size_positions = 2 * myround(float(pixel_size_search_range)/float(pixel_size_step)) + 1;
+		else number_of_pixel_size_positions = 1;
 
 		wxPrintf("There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
 		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions);
@@ -516,45 +635,95 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions;
 		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_jobs_per_image_in_gui) / float(number_of_jobs_per_image_in_gui);
 
+		int number_of_previous_template_matches =  main_frame->current_project.database.ReturnNumberOfPreviousTemplateMatchesByAssetID(current_image->asset_id);
+		main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift, iciness);
+
+		wxString mip_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		mip_output_file += wxString::Format("/%s_mip_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString best_psi_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		best_psi_output_file += wxString::Format("/%s_psi_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString best_theta_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		best_theta_output_file += wxString::Format("/%s_theta_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString best_phi_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		best_phi_output_file += wxString::Format("/%s_phi_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+
+		wxString best_defocus_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		best_defocus_output_file += wxString::Format("/%s_defocus_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString best_pixel_size_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		best_pixel_size_output_file += wxString::Format("/%s_pixel_size_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString scaled_mip_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		scaled_mip_output_file += wxString::Format("/%s_scaled_mip_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString output_histogram_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		output_histogram_file += wxString::Format("/%s_histogram_%i_%i.txt", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString output_result_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		output_result_file += wxString::Format("/%s_plotted_result_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString correlation_variance_output_file = "/dev/null";
 		current_orientation_counter = 0;
+
+		wxString 	input_search_image = current_image->filename.GetFullPath();
+		wxString 	input_reconstruction = current_volume->filename.GetFullPath();
+		float		pixel_size = current_image->pixel_size;
+
+		input_image_filenames.Add(input_search_image);
+
+		float low_resolution_limit = 300.0f;
+
+		temp_result.image_asset_id = current_image->asset_id;
+		temp_result.job_name = wxString::Format("Full search with %s", current_volume->filename.GetName());
+		temp_result.ref_volume_asset_id = current_volume->asset_id;
+		wxDateTime now = wxDateTime::Now();
+		temp_result.datetime_of_run = (long int) now.GetAsDOS();
+		temp_result.symmetry = wanted_symmetry;
+		temp_result.pixel_size = pixel_size;
+		temp_result.voltage = voltage_kV;
+		temp_result.spherical_aberration = spherical_aberration_mm;
+		temp_result.amplitude_contrast = amplitude_contrast;
+		temp_result.defocus1 = defocus1;
+		temp_result.defocus2 = defocus2;
+		temp_result.defocus_angle = defocus_angle;
+		temp_result.phase_shift = phase_shift;
+		temp_result.low_res_limit = low_resolution_limit;
+		temp_result.high_res_limit = high_resolution_limit;
+		temp_result.out_of_plane_step = wanted_out_of_plane_angular_step;
+		temp_result.in_plane_step = wanted_in_plane_angular_step;
+		temp_result.defocus_search_range = defocus_search_range;
+		temp_result.defocus_step = defocus_step;
+		temp_result.pixel_size_search_range = pixel_size_search_range;
+		temp_result.pixel_size_step = pixel_size_step;
+		temp_result.reference_box_size_in_angstroms = ref_box_size_in_pixels * pixel_size;
+		temp_result.mip_filename = mip_output_file;
+		temp_result.scaled_mip_filename = scaled_mip_output_file;
+		temp_result.psi_filename = best_psi_output_file;
+		temp_result.theta_filename = best_theta_output_file;
+		temp_result.phi_filename = best_phi_output_file;
+		temp_result.defocus_filename = best_defocus_output_file;
+		temp_result.pixel_size_filename = best_pixel_size_output_file;
+		temp_result.histogram_filename = output_histogram_file;
+		temp_result.projection_result_filename = output_result_file;
+
+		cached_results.Add(temp_result);
 
 		for (job_counter = 0; job_counter < number_of_jobs_per_image_in_gui; job_counter++)
 		{
-			wxString 	input_search_images = current_image->filename.GetFullPath();
-			wxString 	input_reconstruction = current_volume->filename.GetFullPath();
-			float		pixel_size = current_image->pixel_size;
 
-			double voltage_kV;
-			double spherical_aberration_mm;
-			double amplitude_contrast;
-			double defocus1;
-			double defocus2;
-			double defocus_angle;
-			double phase_shift;
-			double iciness;
 
-			main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift, iciness);
-
-			float low_resolution_limit = 300.0f;
 //			float high_resolution_limit = resolution_limit;
-			float angular_step = wanted_out_of_plane_angular_step;
 			int best_parameters_to_keep = 1;
 //			float defocus_search_range = 0.0f;
 //			float defocus_step = 0.0f;
 			float padding = 1;
 			bool ctf_refinement = false;
-			float mask_radius_search = EstimatedParticleSizeTextCtrl->ReturnValue();
-			wxString mip_output_file = "/dev/null";
-			wxString best_psi_output_file = "/dev/null";
-			wxString best_theta_output_file = "/dev/null";
-			wxString best_phi_output_file = "/dev/null";
-			wxString best_defocus_output_file = "/dev/null";
-			wxString best_pixel_size_output_file = "/dev/null";
-			wxString scaled_mip_output_file ="/dev/null";
-			wxString correlation_variance_output_file = "/dev/null";
-			wxString my_symmetry = wanted_symmetry; //"C1";
-			float in_plane_angular_step = wanted_in_plane_angular_step;
-			wxString output_histogram_file = "/dev/null";
+			float mask_radius_search = current_volume->x_size; // this is actually not really used...
+
 
 			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int first_search_position = myroundint(current_orientation_counter);
@@ -570,7 +739,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitt",	input_search_images.ToUTF8().data(),
+			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttf",	input_search_image.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -581,7 +750,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	defocus_angle,
 																	low_resolution_limit,
 																	high_resolution_limit,
-																	angular_step,
+																	wanted_out_of_plane_angular_step,
 																	best_parameters_to_keep,
 																	defocus_search_range,
 																	defocus_step,
@@ -599,15 +768,17 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_pixel_size_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
 																	correlation_variance_output_file.ToUTF8().data(),
-																	my_symmetry.ToUTF8().data(),
-																	in_plane_angular_step,
+																	wanted_symmetry.ToUTF8().data(),
+																	wanted_in_plane_angular_step,
 																	output_histogram_file.ToUTF8().data(),
 																	first_search_position,
 																	last_search_position,
 																	image_number_for_gui,
 																	number_of_jobs_per_image_in_gui,
 																	correlation_variance_output_file.ToUTF8().data(),
-																	directory_for_results.ToUTF8().data());
+																	directory_for_results.ToUTF8().data(),
+																	output_result_file.ToUTF8().data(),
+																	min_peak_radius);
 		}
 
 		delete current_image_euler_search;
@@ -627,20 +798,30 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 		StartPanel->Show(false);
 		ProgressPanel->Show(true);
-
+		InputPanel->Show(false);
 
 		ExpertPanel->Show(false);
 		InfoPanel->Show(false);
 		OutputTextPanel->Show(true);
-		CTFResultsPanel->Show(true);
+		ResultsPanel->Show(true);
 
-		ExpertToggleButton->Enable(false);
 		GroupComboBox->Enable(false);
 		Layout();
 	}
 
 
 	ProgressBar->Pulse();
+}
+
+void MatchTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes)
+{
+	// result is available for an image..
+
+	cached_results[image_number - 1].found_peaks.Clear();
+	cached_results[image_number - 1].found_peaks = peak_infos;
+	cached_results[image_number - 1].used_threshold = threshold_used;
+
+	ResultsPanel->SetActiveResult(cached_results[image_number - 1]);
 }
 
 void MatchTemplatePanel::FinishButtonClick( wxCommandEvent& event )
@@ -654,17 +835,15 @@ void MatchTemplatePanel::FinishButtonClick( wxCommandEvent& event )
 	StartPanel->Show(true);
 	OutputTextPanel->Show(false);
 	output_textctrl->Clear();
-	CTFResultsPanel->Show(false);
+	ResultsPanel->Show(false);
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
+	InputPanel->Show(true);
 
-	if (ExpertToggleButton->GetValue() == true) ExpertPanel->Show(true);
-	else ExpertPanel->Show(false);
+	ExpertPanel->Show(true);
+
 	running_job = false;
 	Layout();
-
-	CTFResultsPanel->CTF2DResultsPanel->should_show = false;
-	CTFResultsPanel->CTF2DResultsPanel->Refresh();
 }
 
 void MatchTemplatePanel::TerminateButtonClick( wxCommandEvent& event )
@@ -680,12 +859,7 @@ void MatchTemplatePanel::TerminateButtonClick( wxCommandEvent& event )
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
-
-	if (buffered_results != NULL)
-	{
-		delete [] buffered_results;
-		buffered_results = NULL;
-	}
+	cached_results.Clear();
 
 	//running_job = false;
 }
@@ -738,174 +912,7 @@ void MatchTemplatePanel::OnSocketAllJobsFinished()
 	ProcessAllJobsFinished();
 }
 
-void MatchTemplatePanel::OnJobSocketEvent(wxSocketEvent& event)
-{
-/*	SETUP_SOCKET_CODES
 
-	wxString s = _("OnSocketEvent: ");
-	wxSocketBase *sock = event.GetSocket();
-	sock->SetFlags(wxSOCKET_BLOCK | wxSOCKET_WAITALL);
-
-
-	// First, print a message
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT : s.Append(_("wxSOCKET_INPUT\n")); break;
-	case wxSOCKET_LOST  : s.Append(_("wxSOCKET_LOST\n")); break;
-	default             : s.Append(_("Unexpected event !\n")); break;
-	}
-
-	//m_text->AppendText(s);
-
-	//MyDebugPrint(s);
-
-	// Now we process the event
-	switch(event.GetSocketEvent())
-	{
-	case wxSOCKET_INPUT:
-	{
-
-		MyDebugAssertTrue(sock == main_frame->job_controller.job_list[my_job_id].socket, "Socket event from Non conduit socket??");
-
-		// We disable input events, so that the test doesn't trigger
-		// wxSocketEvent again.
-		sock->SetNotify(wxSOCKET_LOST_FLAG);
-		ReadFromSocket(sock, &socket_input_buffer, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-
-		if (memcmp(socket_input_buffer, socket_send_job_details, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// send the job details..
-
-			//wxPrintf("Sending Job Details...\n");
-			my_job_package.SendJobPackage(sock);
-
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_an_error, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString error_message;
-			error_message = ReceivewxStringFromSocket(sock);
-
-			WriteErrorText(error_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_i_have_info, SOCKET_CODE_SIZE) == 0) // identification
-		{
-
-			wxString info_message;
-			info_message = ReceivewxStringFromSocket(sock);
-
-			WriteInfoText(info_message);
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// which job is finished?
-
-			int finished_job;
-			ReadFromSocket(sock, &finished_job, sizeof(int), true, "SendJobNumber", FUNCTION_DETAILS_AS_WXSTRING);
-			my_job_tracker.MarkJobFinished();
-
-			//	 		 if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-			//WriteInfoText(wxString::Format("Job %i has finished!", finished_job));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			JobResult temp_result;
-			temp_result.ReceiveFromSocket(sock);
-
-			if (temp_result.result_size > 0)
-			{
-				ProcessResult(&temp_result);
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_job_result_queue, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			ArrayofJobResults temp_queue;
-			ReceiveResultQueueFromSocket(sock, temp_queue);
-
-			for (int counter = 0; counter < temp_queue.GetCount(); counter++)
-			{
-				ProcessResult(&temp_queue.Item(counter));
-			}
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_number_of_connections, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// how many connections are there?
-
-			int number_of_connections;
-			ReadFromSocket(sock, &number_of_connections, sizeof(int), true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_WXSTRING);
-
-
-			my_job_tracker.AddConnection();
-
-			//          if (graph_is_hidden == true) ProgressBar->Pulse();
-
-			//WriteInfoText(wxString::Format("There are now %i connections\n", number_of_connections));
-
-			// send the info to the gui
-			int total_processes;
-
-			if (my_job_package.number_of_jobs + 1 < my_job_package.my_profile.ReturnTotalJobs()) total_processes = my_job_package.number_of_jobs + 1;
-			else total_processes =  my_job_package.my_profile.ReturnTotalJobs();
-
-			if (number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", number_of_connections));
-
-			if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", number_of_connections, total_processes));
-			else
-			if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", number_of_connections, total_processes));
-			else
-				NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", number_of_connections, total_processes));
-		}
-		else
-		if (memcmp(socket_input_buffer, socket_all_jobs_finished, SOCKET_CODE_SIZE) == 0) // identification
-		{
-			// As soon as it sends us the message that all jobs are finished, the controller should also
-			// send timing info - we need to remember this
-			long timing_from_controller;
-			ReadFromSocket(sock, &timing_from_controller, sizeof(long), true, "SendTotalMillisecondsSpentOnThreads", FUNCTION_DETAILS_AS_WXSTRING);
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours + timing_from_controller / 3600000.0 >= main_frame->current_project.total_cpu_hours,"Oops. Double overflow when summing hours spent on project.");
-			main_frame->current_project.total_cpu_hours += timing_from_controller / 3600000.0;
-			MyDebugAssertTrue(main_frame->current_project.total_cpu_hours >= 0.0,"Negative total_cpu_hour");
-			main_frame->current_project.total_jobs_run += my_job_tracker.total_number_of_jobs;
-
-			// Update project statistics in the database
-			main_frame->current_project.WriteProjectStatisticsToDatabase();
-
-			// Other stuff to do once all jobs finished
-			ProcessAllJobsFinished();
-		}
-
-
-		// Enable input events again.
-
-		sock->SetNotify(wxSOCKET_LOST_FLAG | wxSOCKET_INPUT_FLAG);
-		break;
-	}
-
-
-
-	case wxSOCKET_LOST:
-	{
-
-		//MyDebugPrint("Socket Disconnected!!\n");
-		main_frame->job_controller.KillJobIfSocketExists(sock);
-		break;
-	}
-	default: ;
-	}
-*/
-}
 
 void  MatchTemplatePanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
 {
@@ -969,7 +976,7 @@ void  MatchTemplatePanel::ProcessResult(JobResult *result_to_process) // this wi
 
 		wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath();
 
-		CTFResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], image_filename);
+		ResultsPanel->Draw(my_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument(), my_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument(), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], image_filename);
 		time_of_last_result_update = time(NULL);
 	}
 */
@@ -993,17 +1000,14 @@ void  MatchTemplatePanel::ProcessAllJobsFinished()
 	overview_panel->SetProjectInfo();
 
 	//
-	//WriteResultToDataBase();
+	WriteResultToDataBase();
+	match_template_results_panel->is_dirty = true;
 
 	// let the FindParticles panel check whether any of the groups are now ready to be picked
 	//extern MyFindParticlesPanel *findparticles_panel;
 	//findparticles_panel->CheckWhetherGroupsCanBePicked();
 
-	if (buffered_results != NULL)
-	{
-		delete [] buffered_results;
-		buffered_results = NULL;
-	}
+	cached_results.Clear();
 
 	// Kill the job (in case it isn't already dead)
 	main_frame->job_controller.KillJob(my_job_id);
@@ -1019,192 +1023,29 @@ void  MatchTemplatePanel::ProcessAllJobsFinished()
 
 void MatchTemplatePanel::WriteResultToDataBase()
 {
-/*
-	long counter;
-	int frame_counter;
-	int array_location;
-	bool have_errors = false;
-	int image_asset_id;
-	int current_asset;
-	bool restrain_astigmatism;
-	bool find_additional_phase_shift;
-	float min_phase_shift;
-	float max_phase_shift;
-	float phase_shift_step;
-	float tolerated_astigmatism;
-	wxString current_table_name;
-	int counter_aliasing_within_fit_range;
 
+	// find the current highest template match numbers in the database, then increment by one
 
-	// find the current highest alignment number in the database, then increment by one
-
-	int starting_ctf_estimation_id = main_frame->current_project.database.ReturnHighestFindCTFID();
-	int ctf_estimation_id = starting_ctf_estimation_id + 1;
-	int ctf_estimation_job_id =  main_frame->current_project.database.ReturnHighestFindCTFJobID() + 1;
-
-	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 2, this, wxPD_APP_MODAL);
-
-	// global begin
-
+	int template_match_id = main_frame->current_project.database.ReturnHighestTemplateMatchID() + 1;
+	int template_match_job_id =  main_frame->current_project.database.ReturnHighestTemplateMatchJobID() + 1;
 	main_frame->current_project.database.Begin();
 
-	// loop over all the jobs, and add them..
-	main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 31,
-			                                                                              "CTF_ESTIMATION_ID",
-																						  "CTF_ESTIMATION_JOB_ID",
-																						  "DATETIME_OF_RUN",
-																						  "IMAGE_ASSET_ID",
-																						  "ESTIMATED_ON_MOVIE_FRAMES",
-																						  "VOLTAGE",
-																						  "SPHERICAL_ABERRATION",
-																						  "PIXEL_SIZE",
-																						  "AMPLITUDE_CONTRAST",
-																						  "BOX_SIZE",
-																						  "MIN_RESOLUTION",
-																						  "MAX_RESOLUTION",
-																						  "MIN_DEFOCUS",
-																						  "MAX_DEFOCUS",
-																						  "DEFOCUS_STEP",
-																						  "RESTRAIN_ASTIGMATISM",
-																						  "TOLERATED_ASTIGMATISM",
-																						  "FIND_ADDITIONAL_PHASE_SHIFT",
-																						  "MIN_PHASE_SHIFT",
-																						  "MAX_PHASE_SHIFT",
-																						  "PHASE_SHIFT_STEP",
-																						  "DEFOCUS1",
-																						  "DEFOCUS2",
-																						  "DEFOCUS_ANGLE",
-																				ProcessJobRes		  "ADDITIONAL_PHASE_SHIFT",
-																						  "SCORE",
-																						  "DETECTED_RING_RESOLUTION",
-																						  "DETECTED_ALIAS_RESOLUTION",
-																						  "OUTPUT_DIAGNOSTIC_FILE",
-																						  "NUMBER_OF_FRAMES_AVERAGED",
-																						  "LARGE_ASTIGMATISM_EXPECTED");
 
-
-
-	wxDateTime now = wxDateTime::Now();
-	counter_aliasing_within_fit_range = 0;
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
+	for (int counter = 0; counter < cached_results.GetCount(); counter++)
 	{
-		image_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->asset_id;
-
-		if (my_job_package.jobs[counter].arguments[15].ReturnFloatArgument() < 0)
-		{
-			restrain_astigmatism = false;
-			tolerated_astigmatism = 0;
-		}
-		else
-		{
-			restrain_astigmatism = true;
-			tolerated_astigmatism = my_job_package.jobs[counter].arguments[15].ReturnFloatArgument();
-		}
-
-		if ( my_job_package.jobs[counter].arguments[16].ReturnBoolArgument())
-		{
-			find_additional_phase_shift = true;
-			min_phase_shift = my_job_package.jobs[counter].arguments[17].ReturnFloatArgument();
-			max_phase_shift = my_job_package.jobs[counter].arguments[18].ReturnFloatArgument();
-			phase_shift_step = my_job_package.jobs[counter].arguments[19].ReturnFloatArgument();
-		}
-		else
-		{
-			find_additional_phase_shift = false;
-			min_phase_shift = 0;
-			max_phase_shift = 0;
-			phase_shift_step = 0;
-		}
-
-
-		main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtii", ctf_estimation_id,
-																					 ctf_estimation_job_id,
-																					 (long int) now.GetAsDOS(),
-																					 image_asset_id,
-																					 my_job_package.jobs[counter].arguments[1].ReturnBoolArgument(), // input_is_a_movie
-																					 my_job_package.jobs[counter].arguments[5].ReturnFloatArgument(), // voltage
-																					 my_job_package.jobs[counter].arguments[6].ReturnFloatArgument(), // spherical_aberration
-																					 my_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // pixel_size
-																					 my_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // amplitude contrast
-																					 my_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // box_size
-																					 my_job_package.jobs[counter].arguments[9].ReturnFloatArgument(), // min resolution
-																					 my_job_package.jobs[counter].arguments[10].ReturnFloatArgument(),  // max resolution
-																					 my_job_package.jobs[counter].arguments[11].ReturnFloatArgument(), // min defocus
-																					 my_job_package.jobs[counter].arguments[12].ReturnFloatArgument(), // max defocus
-																					 my_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // defocus_step
-																					 restrain_astigmatism,
-																					 tolerated_astigmatism,
-																					 find_additional_phase_shift,
-																					 min_phase_shift,
-																					 max_phase_shift,
-																					 phase_shift_step,
-																					 buffered_results[counter].result_data[0], // defocus1
-																					 buffered_results[counter].result_data[1], // defocus2
-																					 buffered_results[counter].result_data[2], // defocus angle
-																					 buffered_results[counter].result_data[3], // additional phase shift
-																					 buffered_results[counter].result_data[4], // score
-																					 buffered_results[counter].result_data[5], // detected ring resolution
-																					 buffered_results[counter].result_data[6], // detected aliasing resolution
-																					 my_job_package.jobs[counter].arguments[3].ReturnStringArgument().c_str(), // output diagnostic filename
-																					 my_job_package.jobs[counter].arguments[2].ReturnIntegerArgument(),  // number of movie frames averaged
-																					 my_job_package.jobs[counter].arguments[14].ReturnBoolArgument()); // large astigmatism expected
-		ctf_estimation_id++;
-		my_progress_dialog->Update(counter + 1);
-
-		if (buffered_results[counter].result_data[6] > MaxResNumericCtrl->ReturnValue()) counter_aliasing_within_fit_range ++;
-
+		cached_results[counter].job_id = template_match_job_id;
+		main_frame->current_project.database.AddTemplateMatchingResult(template_match_id, cached_results[counter]);
+		template_match_id++;
 	}
 
-	main_frame->current_project.database.EndBatchInsert();
-
-	if (counter_aliasing_within_fit_range > 0)
+	for (int counter = 0; counter < cached_results.GetCount(); counter++)
 	{
-		WriteInfoText(wxString::Format("For %i of %i micrographs, CTF aliasing was detected within the fit range. Aliasing may affect the detected fit resolution and/or the quality of the defocus estimates. To reduce aliasing, use a larger box size (current box size: %i)\n", counter_aliasing_within_fit_range, my_job_tracker.total_number_of_jobs,BoxSizeSpinCtrl->GetValue()));
+		main_frame->current_project.database.SetActiveTemplateMatchJobForGivenImageAssetID(cached_results[counter].image_asset_id, template_match_job_id);
 	}
 
-	// we need to update the image assets with the correct CTF estimation number..
-
-	ctf_estimation_id = starting_ctf_estimation_id + 1;
-	main_frame->current_project.database.BeginImageAssetInsert();
-
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-		current_asset = active_group.members[counter];
-
-		main_frame->current_project.database.AddNextImageAsset(image_asset_panel->ReturnAssetPointer(current_asset)->asset_id,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->asset_name,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->filename.GetFullPath(),
-															   image_asset_panel->ReturnAssetPointer(current_asset)->position_in_stack,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->parent_id,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->alignment_id,
-															   ctf_estimation_id,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->x_size,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->y_size,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->microscope_voltage,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->pixel_size,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->spherical_aberration,
-															   image_asset_panel->ReturnAssetPointer(current_asset)->protein_is_white);
-
-
-		image_asset_panel->ReturnAssetPointer(current_asset)->ctf_estimation_id = ctf_estimation_id;
-
-		ctf_estimation_id++;
-		my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + counter + 1);
-
-
-	}
-
-	main_frame->current_project.database.EndImageAssetInsert();
-
-	// Global Commit
 	main_frame->current_project.database.Commit();
 
-
-	my_progress_dialog->Destroy();
-	ctf_results_panel->is_dirty = true;
-
-	*/
-
+	match_template_results_panel->is_dirty = true;
 }
 
 

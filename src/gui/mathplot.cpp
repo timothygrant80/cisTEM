@@ -997,6 +997,7 @@ mpScaleX::mpScaleX(wxString name, int flags, bool ticks, unsigned int type)
     m_labelType = type;
     m_type = mpLAYER_AXIS;
 	m_labelFormat = wxT("");
+	min_step = -std::numeric_limits<double>::max();
 }
 
 void mpScaleX::Plot(wxDC & dc, mpWindow & w)
@@ -1150,6 +1151,7 @@ void mpScaleX::Plot(wxDC & dc, mpWindow & w)
 		}
 		// Actually draw labels, taking care of not overlapping them, and distributing them regularly
 		double labelStep = ceil((maxExtent + mpMIN_X_AXIS_LABEL_SEPARATION)/(w.GetScaleX()*step))*step;
+		if (labelStep < min_step) labelStep = min_step;
 		for (n = n0; n < end; n += labelStep) {
 			const int p = (int)((n - w.GetPosX()) * w.GetScaleX());
 #ifdef MATHPLOT_DO_LOGGING

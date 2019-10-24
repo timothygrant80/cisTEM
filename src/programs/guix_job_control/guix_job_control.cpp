@@ -55,10 +55,12 @@ JobControlApp : public wxAppConsole, public SocketCommunicator
 	void HandleSocketIHaveInfo(wxSocketBase *connected_socket, wxString info_message);
 	void HandleSocketJobResult(wxSocketBase *connected_socket, JobResult *received_result);
 	void HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJobResults *received_queue);
-	void HandleSocketSendJobDetails(wxSocketBase *connected_socket);
+	//void HandleSocketSendJobDetails(wxSocketBase *connected_socket);
 	void HandleSocketJobFinished(wxSocketBase *connected_socket, int finished_job_number);
 	void HandleSocketAllJobsFinished(wxSocketBase *connected_socket, long received_timing_in_milliseconds);
 	void HandleSocketDisconnect(wxSocketBase *connected_socket);
+	void HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes);
+
 	// end
 
 	void SendError(wxString error_to_send);
@@ -277,8 +279,8 @@ void LaunchJobThread::LaunchRemoteJob()
 	// IP address, port and job code..
 
 	wxString executable;
+	wxString executable_with_threads;
 	wxString execution_command;
-
 
 	if(current_run_profile.controller_address == "")
 	{
@@ -299,18 +301,18 @@ void LaunchJobThread::LaunchRemoteJob()
 
 
 
-	if (actual_number_of_jobs + 1 < current_run_profile.ReturnTotalJobs()) number_of_commands_to_run = actual_number_of_jobs + 1;
+	if (actual_number_of_jobs < current_run_profile.ReturnTotalJobs()) number_of_commands_to_run = actual_number_of_jobs;
 	else
 	number_of_commands_to_run = current_run_profile.ReturnTotalJobs();
 
 	for (command_counter = 0; command_counter <  current_run_profile.number_of_run_commands; command_counter++)
 	{
-
 		if (number_of_commands_to_run - number_of_commands_run < current_run_profile.run_commands[command_counter].number_of_copies) number_to_run_for_this_command = number_of_commands_to_run - number_of_commands_run;
 		else number_to_run_for_this_command = current_run_profile.run_commands[command_counter].number_of_copies;
 
 		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
-		execution_command.Replace("$command", executable);
+		executable_with_threads = executable + wxString::Format(" %i", current_run_profile.run_commands[command_counter].number_of_threads_per_copy);
+		execution_command.Replace("$command", executable_with_threads);
 
 		execution_command += "&";
 
@@ -445,6 +447,7 @@ void JobControlApp::HandleNewSocketConnection(wxSocketBase *new_connection, unsi
 			 have_assigned_master = true;
 
 			 WriteToSocket(new_connection, socket_you_are_the_master, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+			 current_job_package.SendJobPackage(new_connection);
 
 			 bool no_error;
 			 master_ip_address = ReceivewxStringFromSocket(new_connection, no_error);
@@ -560,12 +563,13 @@ void JobControlApp::HandleSocketTimeToDie(wxSocketBase *connected_socket)
 //                    THESE SHOULD BE FROM THE MASTER                               //
 //////////////////////////////////////////////////////////////////////////////////////
 
-void JobControlApp::HandleSocketSendJobDetails(wxSocketBase *connected_socket)
-{
+//void JobControlApp::HandleSocketSendJobDetails(wxSocketBase *connected_socket)
+//{
 	// send it the job package we should have already received from the gui..
 
-	current_job_package.SendJobPackage(connected_socket);
-}
+//	WriteToSocket(connected_socket, socket_sending_job_package, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+//	current_job_package.SendJobPackage(connected_socket);
+//}
 
 void JobControlApp::HandleSocketIHaveAnError(wxSocketBase *connected_socket, wxString error_message)
 {
@@ -616,6 +620,13 @@ void JobControlApp::HandleSocketAllJobsFinished(wxSocketBase *connected_socket, 
 	SendAllJobsFinished(received_timing_in_milliseconds);
 }
 
+void JobControlApp::HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes)
+{
+	// pass on to the gui..
+
+	SendTemplateMatchingResultToSocket(gui_socket, image_number, threshold_used, peak_infos, peak_changes);
+}
+
 void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 {
 	// what disconnected..
@@ -649,7 +660,8 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 	{
 		//must be from the master..
 
-		SendError("Controller received a disconnect from the master before the job was finished..");
+		MyDebugPrint("Controller got disconnect from master...");
+		//	SendError("Controller received a disconnect from the master before the job was finished..");
 
 
 		ShutDownServer();

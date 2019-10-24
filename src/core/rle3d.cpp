@@ -115,43 +115,6 @@ void rle3d::EncodeFrom(Image &input3d)
 			pixel_counter += input3d.padding_jump_value;
 		}
 	}
-
-	/*
-	for (z = 0; z < input3d->z_size; z++)
-	{
-		for (y = 0; y < input3d->y_size; y++)
-		{
-			for (x = 0; x < input3d->x_size; x++)
-			{
-
-				// is the current pixel 1?
-
-				if (input3d->GetPixelValue(x, y, z) == 1.)
-				{
-					// how long is it white for?
-
-					current_length = 1;
-
-					while(1==1)
-					{
-						if (input3d->GetPixelValue(x + current_length, y, z) == 1.) current_length++;
-						else break;
-					}
-
-					// now we have the length add to the list..
-
-					AddCoord(x, y, z, current_length);
-
-					// we can skip forward in x now..
-
-					x += current_length;
-
-
-				}
-
-			}
-		}
-	}*/
 }
 
 

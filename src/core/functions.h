@@ -48,6 +48,9 @@ wxString ReturnSocketErrorText(wxSocketBase *socket_to_check);
 bool SendwxStringToSocket(wxString *string_to_send, wxSocketBase *socket);
 wxString ReceivewxStringFromSocket(wxSocketBase *socket, bool &receive_worked);
 
+bool SendTemplateMatchingResultToSocket(wxSocketBase *socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes);
+bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase *socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes);
+
 inline bool WriteToSocket(	wxSocketBase *socket, const void * 	buffer, wxUint32 nbytes, bool die_on_error = false,  wxString identification_code = "NO_IDENT", wxString sender_details = "NO_DETAILS" )
 {
 	if (socket != NULL)

@@ -603,7 +603,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 			if (RefinementPackageSelectPanel->GetCount() > 0 && ReconstructionRunProfileComboBox->GetCount() > 0)
 			{
-				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 1 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 1)
+				if (run_profiles_panel->run_profile_manager.ReturnTotalJobs(RefinementRunProfileComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(ReconstructionRunProfileComboBox->GetSelection()) > 0)
 				{
 					if (RefinementPackageSelectPanel->GetSelection() != wxNOT_FOUND && ReferenceSelectPanel->GetSelection() != wxNOT_FOUND)
 					{
@@ -990,7 +990,13 @@ void AutoRefinementManager::BeginRefinementCycle()
 		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size != active_refinement_package->stack_box_size ||
 		fabsf(volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
 	{
-		my_parent->WriteErrorText("Error: The reference volume has different dimensions / pixel size from the input stack.  This will currently not work.");
+		my_parent->WriteErrorText(wxString::Format("Error: The reference volume (%i, %i, %i; psize: %f) has different dimensions / pixel size from the input stack (%i; psize: %f).  This will currently not work.",
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->x_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->y_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size,
+													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size,
+													active_refinement_package->stack_box_size,
+													input_refinement->resolution_statistics_pixel_size));
 	}
 
 	for (class_counter = 0; class_counter < number_of_classes; class_counter++)
@@ -1073,11 +1079,11 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].should_auto_mask = active_should_auto_mask;
 		output_refinement->class_refinement_results[class_counter].should_refine_input_params = true;
 		output_refinement->class_refinement_results[class_counter].should_use_supplied_mask = active_should_mask;
-		output_refinement->class_refinement_results[class_counter].mask_asset_id = -1;
-		output_refinement->class_refinement_results[class_counter].mask_edge_width = 0.0f;
-		output_refinement->class_refinement_results[class_counter].outside_mask_weight = 0.0f;
-		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = false;
-		output_refinement->class_refinement_results[class_counter].filter_resolution = 0.0f;
+		output_refinement->class_refinement_results[class_counter].mask_asset_id = active_mask_asset_id;
+		output_refinement->class_refinement_results[class_counter].mask_edge_width = active_mask_edge;
+		output_refinement->class_refinement_results[class_counter].outside_mask_weight = active_mask_weight;
+		output_refinement->class_refinement_results[class_counter].should_low_pass_filter_mask = active_should_low_pass_filter_mask;
+		output_refinement->class_refinement_results[class_counter].filter_resolution = active_mask_filter_resolution;
 	}
 
 	output_refinement->percent_used = current_percent_used;
@@ -1401,8 +1407,10 @@ void AutoRefinementManager::SetupReconstructionJob()
 			bool threshold_input_3d = true;
 			int max_threads = 1;
 
+			int correct_ewald_sphere = 0;
 
-			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
+
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1435,6 +1443,7 @@ void AutoRefinementManager::SetupReconstructionJob()
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data(),
+																		correct_ewald_sphere,
 																		max_threads);
 
 
@@ -1653,7 +1662,14 @@ void AutoRefinementManager::SetupRefinementJob()
 			float    inner_mask_radius						= active_inner_mask_radius;
 			float    low_resolution_limit					= active_low_resolution_limit;
 			float    high_resolution_limit					= class_high_res_limits[class_counter];
-			float	 signed_CC_limit						= 0;//my_parent->SignedCCResolutionTextCtrl->ReturnValue();
+
+			float	 signed_CC_limit;
+			//signed_CC_limit = 0.0f;
+			if (IsOdd(number_of_rounds_run) == true || this_is_the_final_round == true || number_of_rounds_run == 0) signed_CC_limit = 0.0f;
+			else signed_CC_limit = 15.0f;
+
+
+
 			//float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
 			float    classification_resolution_limit        = 20.0f + (8.0f - 20.0f) * (float(number_of_rounds_run) / 9.0f);
 			if (classification_resolution_limit < lowest_res) classification_resolution_limit = lowest_res;

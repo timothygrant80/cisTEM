@@ -401,6 +401,12 @@ void AbInitio3DPanel::NewRefinementPackageSelected()
 {
 	selected_refinement_package = RefinementPackageComboBox->GetSelection();
 	if (ImageInputRadioButton->GetValue() == false && RefinementPackageComboBox->GetCount() > 0) ClassSelectionComboBox->FillComboBox(false, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).asset_id);
+
+	if (ImageInputRadioButton->GetValue() == true && RefinementPackageComboBox->GetCount() > 0)
+	{
+		SymmetryComboBox->SetValue(refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry);
+		old_symmetry = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).symmetry;
+	}
 	SetDefaults();
 	//wxPrintf("New Refinement Package Selection\n");
 
@@ -414,7 +420,12 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults()
 		ExpertPanel->Freeze();
 
 		float 	 molecular_mass_kDa = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-		wxString current_symmetry_string = SymmetryComboBox->GetValue();
+
+		wxString current_symmetry_string;
+
+		current_symmetry_string = SymmetryComboBox->GetValue();
+
+
 		wxChar   symmetry_type;
 
 		current_symmetry_string = current_symmetry_string.Trim();
@@ -1784,7 +1795,7 @@ void AbInitioManager::SetupRefinementJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes - 1;
+	number_of_refinement_jobs = number_of_refinement_processes;
 
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
 	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
@@ -2051,8 +2062,8 @@ void AbInitioManager::SetupPrepareStackJob()
 		// setup the job
 
 		int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-		int	number_of_refinement_jobs = number_of_refinement_processes - 1;
-		float class_averages_per_job = float(active_classification_selection.selections.GetCount()) / float(number_of_refinement_jobs - 1);
+		int	number_of_refinement_jobs = number_of_refinement_processes;
+		float class_averages_per_job = float(active_classification_selection.selections.GetCount()) / float(number_of_refinement_jobs);
 
 		if (class_averages_per_job < 1)
 		{
@@ -2115,7 +2126,7 @@ void AbInitioManager::SetupPrepareStackJob()
 	{
 		float particles_per_job;
 		int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-		int	number_of_refinement_jobs = number_of_refinement_processes - 1;
+		int	number_of_refinement_jobs = number_of_refinement_processes;
 
 		int	number_of_particles = active_refinement_package->contained_particles.GetCount();
 		particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
@@ -2218,7 +2229,7 @@ void AbInitioManager::SetupAlignSymmetryJob()
 	float angle_step;
 
 	int number_of_refinement_processes= active_refinement_run_profile.ReturnTotalJobs() ;
-	int	number_of_refinement_jobs_per_class = (number_of_refinement_processes - 1) / input_refinement->number_of_classes;
+	int	number_of_refinement_jobs_per_class = (number_of_refinement_processes) / input_refinement->number_of_classes;
 
 	if (number_of_refinement_jobs_per_class < 1)
 	{

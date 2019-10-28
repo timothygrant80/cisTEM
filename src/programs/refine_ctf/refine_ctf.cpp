@@ -1073,29 +1073,33 @@ bool RefineCTFApp::DoCalculation()
 	}
 	else // we need to send our section of the beam tilt images back to the master..
 	{
-		long result_array_counter;
-		long number_of_result_floats = 6; // first  is x size, second float y size of images, 3rd is number allocated, 4th  images_to_process, voltage, spherical_aberration
-		long pixel_counter;
 
-		number_of_result_floats += phase_difference_sum.real_memory_allocated;
-
-		float *result = new float[number_of_result_floats];
-		result[0] = phase_difference_sum.logical_x_dimension;
-		result[1] = phase_difference_sum.logical_y_dimension;
-		result[2] = phase_difference_sum.real_memory_allocated;
-		result[3] = images_to_process;
-		result[4] = voltage_kV;
-		result[5] = spherical_aberration_mm;
-
-		result_array_counter = 6;
-
-		for (pixel_counter = 0; pixel_counter < phase_difference_sum.real_memory_allocated; pixel_counter++)
+		if (beamtilt_refinement == true)
 		{
-			result[result_array_counter] = phase_difference_sum.real_values[pixel_counter];
-			result_array_counter++;
-		}
+			long result_array_counter;
+			long number_of_result_floats = 6; // first  is x size, second float y size of images, 3rd is number allocated, 4th  images_to_process, voltage, spherical_aberration
+			long pixel_counter;
 
-		SendProgramDefinedResultToMaster(result, number_of_result_floats, job_number_from_gui, expected_number_of_jobs_from_gui);
+			number_of_result_floats += phase_difference_sum.real_memory_allocated;
+
+			float *result = new float[number_of_result_floats];
+			result[0] = phase_difference_sum.logical_x_dimension;
+			result[1] = phase_difference_sum.logical_y_dimension;
+			result[2] = phase_difference_sum.real_memory_allocated;
+			result[3] = images_to_process;
+			result[4] = voltage_kV;
+			result[5] = spherical_aberration_mm;
+
+			result_array_counter = 6;
+
+			for (pixel_counter = 0; pixel_counter < phase_difference_sum.real_memory_allocated; pixel_counter++)
+			{
+				result[result_array_counter] = phase_difference_sum.real_values[pixel_counter];
+				result_array_counter++;
+			}
+
+			SendProgramDefinedResultToMaster(result, number_of_result_floats, job_number_from_gui, expected_number_of_jobs_from_gui);
+		}
 	}
 
 	return true;

@@ -1294,8 +1294,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
 				{
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].position_in_stack = counter + 1;
-					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = image_defocus_1;
-					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = image_defocus_2;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1 = temp_particle_info.defocus_1;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2 = temp_particle_info.defocus_2;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle = image_defocus_angle;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift = image_phase_shift;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;

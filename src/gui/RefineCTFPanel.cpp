@@ -926,6 +926,7 @@ void CTFRefinementManager::BeginRefinementCycle()
 void CTFRefinementManager::RunRefinementJob()
 {
 	running_job_type = REFINEMENT;
+
 	number_of_received_results = 0;
 	number_of_expected_results = input_refinement->number_of_particles;
 
@@ -1081,7 +1082,7 @@ void CTFRefinementManager::RunBeamTiltEstimationJob()
 	best_score = -FLT_MAX;
 
 	int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	int number_of_refinement_jobs = number_of_refinement_processes - 1;
+	int number_of_refinement_jobs = number_of_refinement_processes;
 
 	const int total_number_of_positions = 290880; // hard coded based on FindBeamTilt, not very nice.
 	number_of_expected_results = total_number_of_positions;
@@ -1160,7 +1161,7 @@ void CTFRefinementManager::RunBeamTiltEstimationJob()
 void CTFRefinementManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs() - 1;
+	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
 
 	int class_counter;
 
@@ -1217,7 +1218,7 @@ void CTFRefinementManager::RunMerge3dJob()
 	if (current_job_id != -1)
 	{
 		long number_of_refinement_processes;
-	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
+	    if (my_parent->current_job_package.number_of_jobs < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs;
 	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
@@ -1283,10 +1284,8 @@ void CTFRefinementManager::SetupReconstructionJob()
 	long number_of_particles;
 	float particles_per_job;
 
-	// for now, number of jobs is number of processes -1 (master)..
-
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
@@ -1373,8 +1372,9 @@ void CTFRefinementManager::SetupReconstructionJob()
 
 
 			bool threshold_input_3d = true;
+			int correct_ewald_sphere = 0;
 
-			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbtti",
+			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
 																		input_particle_stack.ToUTF8().data(),
 																		input_parameter_file.ToUTF8().data(),
 																		input_reconstruction.ToUTF8().data(),
@@ -1407,6 +1407,7 @@ void CTFRefinementManager::SetupReconstructionJob()
 																		dump_arrays,
 																		dump_file_1.ToUTF8().data(),
 																		dump_file_2.ToUTF8().data(),
+																		correct_ewald_sphere,
 																		max_threads);
 
 
@@ -1543,7 +1544,7 @@ void CTFRefinementManager::SetupRefinementJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes - 1;
+	number_of_refinement_jobs = number_of_refinement_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
@@ -1571,7 +1572,7 @@ void CTFRefinementManager::SetupRefinementJob()
 		long	 first_particle							= myroundint(current_particle_counter);
 
 		current_particle_counter += particles_per_job;
-		if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
+		if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs) current_particle_counter = number_of_particles;
 
 		long	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
@@ -1719,7 +1720,6 @@ void CTFRefinementManager::ProcessJobResult(JobResult *result_to_process)
 			my_parent->ShowRefinementResultsPanel->DefocusHistorgramPlotPanel->Draw(-active_defocus_search_range, active_defocus_search_range, 0, defocus_change_histogram.ReturnMaximumValue());
 
 			wxPrintf("\n\n\n\n");
-			defocus_change_histogram.PrintToStandardOut();
 		}
 
 	}

@@ -49,7 +49,6 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 	//for (int i = 0; i < comparison_object->particle->number_of_parameters; i++) {comparison_object->particle->temp_float[i] = comparison_object->particle->current_parameters[i];}
 	comparison_object->particle->temp_parameters = comparison_object->particle->current_parameters;
 
-
 	comparison_object->particle->UnmapParameters(array_of_values);
 
 //	comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
@@ -491,6 +490,7 @@ bool Refine3DApp::DoCalculation()
 	float psi_start;
 	float score;
 	float best_score;
+	float frealign_score_local;
 	float mask_radius_for_noise;
 	float percentage;
 	float variance;
@@ -965,7 +965,7 @@ bool Refine3DApp::DoCalculation()
 	private(image_counter, refine_particle_local, current_line_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object, \
 		best_score, defocus_i, score, cg_starting_point, input_image_local, unbinned_image, search_particle_local, intermediate_result, gui_result_parameters, image_shift_x, image_shift_y, \
 		binned_image, projection_image_local, best_defocus_i, defocus_score, temp_image2_local, search_projection_image, cg_accuracy, search_reference_3d_local, \
-		temp_image_local, search_parameters, istart, parameter_to_keep, conjugate_gradient_minimizer, i, final_image, input_3d_local, euler_search_local)
+		temp_image_local, search_parameters, istart, parameter_to_keep, conjugate_gradient_minimizer, i, final_image, input_3d_local, euler_search_local, frealign_score_local)
 	{ // for omp
 
 //	input_3d_local = input_3d;
@@ -1218,10 +1218,11 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle_local.WeightBySSNR(input_3d_local.statistics.part_SSNR, 1);
 
 //		input_parameters[15] = 10.0;
-		input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
+//		input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 
 		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search || local_refinement))
 		{
+			input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 			if (global_search)
 			{
 //				my_time_in = wxDateTime::UNow();
@@ -1464,17 +1465,17 @@ bool Refine3DApp::DoCalculation()
 //			wxPrintf("in, out, diff = %g %g %g\n", input_parameters.score, output_parameters.score, output_parameters.score_change);
 			if (output_parameters.score_change < 0.0f) output_parameters = input_parameters;
 		}
-		else
-		{
-//			input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
+//		else
+//		{
+////			input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
+////			output_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 //			output_parameters.score = input_parameters.score;
-			output_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
-			output_parameters.score_change = output_parameters.score - input_parameters.score;
-		}
+//			output_parameters.score_change = 0.0f;
+//		}
 
 		refine_particle_local.SetParameters(output_parameters);
 
-		refine_particle_local.SetAlignmentParameters(output_parameters.phi, output_parameters.theta, output_parameters.psi, 0.0, 0.0);
+//		refine_particle_local.SetAlignmentParameters(output_parameters.phi, output_parameters.theta, output_parameters.psi, 0.0, 0.0);
 //		unbinned_image.ClipInto(refine_particle_local.particle_image);
 //		refine_particle_local.particle_image->MultiplyByConstant(binning_factor_refine);
 //		refine_particle_local.particle_image->QuickAndDirtyWriteSlice("part3.mrc", 1);
@@ -1486,8 +1487,18 @@ bool Refine3DApp::DoCalculation()
 //		unbinned_image.ClipInto(&final_image);
 //		logp = refine_particle_local.ReturnLogLikelihood(input_image_local, final_image, pixel_size, classification_resolution_limit, alpha, sigma);
 
+		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search || local_refinement))
+		{
+			output_parameters.logp = refine_particle_local.ReturnLogLikelihood(input_image_local, unbinned_image, input_ctf, input_3d_local, input_statistics, classification_resolution_limit);
+		}
+		else
+		{
+			output_parameters.logp = refine_particle_local.ReturnLogLikelihood(input_image_local, unbinned_image, input_ctf, input_3d_local, input_statistics, classification_resolution_limit, &frealign_score_local);
+			output_parameters.score = - 100.0f * frealign_score_local;
+			output_parameters.score_change = output_parameters.score - input_parameters.score;
+		}
+
 //		logp = refine_particle_local.ReturnLogLikelihood(input_3d_local, refine_statistics, classification_resolution_limit);
-		output_parameters.logp = refine_particle_local.ReturnLogLikelihood(input_image_local, unbinned_image, input_ctf, input_3d_local, input_statistics, classification_resolution_limit);
 //		output_parameters[14] = sigma * binning_factor_refine;
 
 //		refine_particle_local.CalculateMaskedLogLikelihood(projection_image_local, input_3d_local, classification_resolution_limit);
@@ -1504,6 +1515,7 @@ bool Refine3DApp::DoCalculation()
 
 		if (calculate_matching_projections)
 		{
+			refine_particle_local.SetAlignmentParameters(output_parameters.phi, output_parameters.theta, output_parameters.psi, 0.0, 0.0);
 			current_projection++;
 			refine_particle_local.CalculateProjection(projection_image_local, input_3d_local);
 			projection_image_local.ClipInto(&unbinned_image);

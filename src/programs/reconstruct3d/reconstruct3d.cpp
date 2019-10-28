@@ -338,7 +338,7 @@ bool Reconstruct3DApp::DoCalculation()
 
 	if (correct_ewald_sphere != 0) calculate_complex_ctf = true;
 
-	if (is_running_locally == false) max_threads = 1;
+//	if (is_running_locally == false) max_threads = 1;
 
 	my_time_in = wxDateTime::Now();
 	output_statistics_file.WriteCommentLine("C Refine3D run date and time:              " + my_time_in.FormatISOCombined(' '));

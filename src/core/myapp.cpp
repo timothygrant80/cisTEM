@@ -836,6 +836,10 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 
 	SetupServer();
 
+	// bind to the master queue timer..
+
+	Bind(wxEVT_TIMER, wxTimerEventHandler( MyApp::OnMasterQueueTimer ), this, 3);
+
 	my_port = ReturnServerPort();
 	my_port_string = ReturnServerPortString();
 
@@ -882,8 +886,7 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 		//ExitMainLoop();
 	}
 
-
-		// I have to send my ip address to the controller..
+	// I have to send my ip address to the controller..
 
 
 	// This is possibly dodgy as it's not being controlled by SocketCommunicator - hopefully it is ok, as this socket is not yet

@@ -49,7 +49,7 @@ public:
 	void PrepareForProjections(float low_resolution_limit, float high_resolution_limit, bool approximate_binning = false, bool apply_binning = true);
 //	void PrepareForProjections(float resolution_limit, bool approximate_binning = false, bool apply_binning = true);
 	void CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection, float mask_radius = 0.0, float mask_falloff = 0.0,
-			float resolution_limit = 1.0, bool swap_quadrants = false, bool apply_shifts = false, bool whiten = false, bool apply_ctf = false, bool abolute_ctf = false);
+		float resolution_limit = 1.0, bool swap_quadrants = false, bool apply_shifts = false, bool whiten = false, bool apply_ctf = false, bool abolute_ctf = false, bool calculate_projection = true);
 	void Calculate3DSimple(Reconstruct3D &reconstruction);
 	void Calculate3DOptimal(Reconstruct3D &reconstruction, ResolutionStatistics &statistics, float weiner_filter_nominater = 1.0f);
 	float Correct3D(float mask_radius = 0.0);

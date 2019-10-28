@@ -150,11 +150,11 @@ public:
 	int MapParameters(float *mapped_parameters);
 	int UnmapParametersToExternal(cisTEMParameterLine &output_parameters, float *mapped_parameters);
 	int UnmapParameters(float *mapped_parameters);
-	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit);
+	float ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit, float *frealign_score = NULL);
 	void CalculateMaskedLogLikelihood(Image &projection_image, ReconstructedVolume &input_3d, float classification_resolution_limit);
 	float MLBlur(Image *input_classes_cache, float var_X, Image &cropped_input_image, Image *rotation_cache, Image &blurred_image,
-			int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,
-			float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only = false, bool uncrop = true, bool apply_ctf_to_classes = true,
-			Image *image_to_blur = NULL, Image *diff_image_to_blur = NULL, float max_shift_in_angstroms = FLT_MAX);
+		int current_class, int number_of_rotations, float psi_step, float psi_start, float smoothing_factor, float &max_log_particle, int best_class,
+		float best_psi, Image &best_correlation_map, bool calculate_correlation_map_only = false, bool uncrop = true, bool apply_ctf_to_classes = true,
+		Image *image_to_blur = NULL, Image *diff_image_to_blur = NULL, float max_shift_in_angstroms = FLT_MAX);
 	void EstimateSigmaNoise();
 };

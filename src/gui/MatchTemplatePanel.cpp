@@ -532,7 +532,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()];
 
-	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs() - 1;
+	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
 
 	// how many jobs are there going to be..
 
@@ -554,7 +554,9 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	current_image_euler_search->CalculateGridSearchPositions(false);
 
 #ifdef USEGPU
-	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
+//	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
+	number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
+
 	int number_of_jobs =  number_of_jobs_per_image_in_gui * active_group.number_of_members;
 
 	wxPrintf("In USEGPU:\n There are %d search positions\nThere are %d jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
@@ -722,7 +724,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 //			float defocus_step = 0.0f;
 			float padding = 1;
 			bool ctf_refinement = false;
-			float mask_radius_search = current_volume->x_size; // this is actually not really used...
+			float mask_radius_search = 0.0f; //current_volume->x_size; // this is actually not really used...
 
 
 			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;

@@ -106,7 +106,6 @@ static __device__ cufftReal CB_realLoadAndClipInto(void* dataIn, size_t offset, 
 
 static __device__ cufftReal CB_realLoadAndClipInto(void* dataIn, size_t offset, void* callerInfo, void* sharedPtr)
 {
- CB_realLoadAndClipInto_params* my_params = (CB_realLoadAndClipInto_params *)callerInfo;
 
 	 CB_realLoadAndClipInto_params* my_params = (CB_realLoadAndClipInto_params *)callerInfo;
 	 int idx = my_params->mask[offset];

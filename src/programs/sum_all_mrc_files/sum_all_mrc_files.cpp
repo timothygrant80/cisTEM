@@ -39,7 +39,8 @@ void SumAllMRC::DoInteractiveUserInput()
 		output_gain_filename		=	my_input->GetFilenameFromUser("Output gain file name", "Filename of output gain image", "gain_image.mrc", false );
 	}
 
-	max_threads = my_input->GetIntFromUser("Max number of threads to use", "maximum number of threads to use for processing.", "1", 1);
+	max_threads = my_input->GetIntFromUser("Max number of threads to use", "maximum number of threads to use for processing.", "1",1);
+
 	delete my_input;
 
 	my_current_job.Reset(5);

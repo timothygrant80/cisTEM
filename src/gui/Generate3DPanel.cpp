@@ -603,7 +603,7 @@ void Generate3DPanel::SetupReconstructionJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 

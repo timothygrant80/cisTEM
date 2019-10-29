@@ -70,6 +70,7 @@ RefineCTFParentPanel( parent )
 	ShowRefinementResultsPanel->DefocusHistorgramPlotPanel->Initialise(wxT("Defocus Change (Å)"), "Number of Images", false, false, 20, 50, 60, 20, true, false, true);
 	ShowRefinementResultsPanel->DefocusHistorgramPlotPanel->SetXAxisMinStep(100);
 
+	Active3DReferencesListCtrl->refinement_package_picker_to_use = RefinementPackageComboBox;
 
 }
 

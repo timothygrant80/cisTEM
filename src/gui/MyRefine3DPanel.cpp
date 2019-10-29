@@ -69,6 +69,8 @@ Refine3DPanel( parent )
 	active_mask_thread_id = -1;
 	next_thread_id = 1;
 
+	Active3DReferencesListCtrl->refinement_package_picker_to_use = RefinementPackageComboBox;
+
 
 }
 

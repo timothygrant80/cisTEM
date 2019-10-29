@@ -266,6 +266,8 @@ class ReferenceVolumesListControlRefinement: public ReferenceVolumesListControl{
 	ReferenceVolumesListControlRefinement(wxWindow *parent, wxWindowID id, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_ICON, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
 	 wxString OnGetItemText(long item, long column) const;
 
+	 RefinementPackagePickerComboPanel *refinement_package_picker_to_use;
+
 };
 
 class RefinementParametersDialog;

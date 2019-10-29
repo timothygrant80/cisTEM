@@ -1335,17 +1335,18 @@ ReferenceVolumesListControlRefinement::ReferenceVolumesListControlRefinement(wxW
 :
 ReferenceVolumesListControl(parent, id, pos, size, style, validator, name)
 {
-
+	refinement_package_picker_to_use = NULL;
 }
 
 wxString ReferenceVolumesListControlRefinement::OnGetItemText(long item, long column) const
 {
 	extern MyVolumeAssetPanel *volume_asset_panel;
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
-	extern MyRefine3DPanel *refine_3d_panel;
-	int selected_refinement_package = refine_3d_panel->RefinementPackageComboBox->GetSelection();
+	int selected_refinement_package;
 
-	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && selected_refinement_package >= 0)
+	if (refinement_package_picker_to_use != NULL)  selected_refinement_package = refinement_package_picker_to_use->GetSelection();
+
+	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && selected_refinement_package >= 0 && refinement_package_picker_to_use != NULL)
 	{
 		switch(column)
 		{

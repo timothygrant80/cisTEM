@@ -223,6 +223,8 @@ bool RefineCTFApp::DoCalculation()
 	int		 expected_number_of_jobs_from_gui	= my_current_job.arguments[29].ReturnIntegerArgument();
 	int		 max_threads						= my_current_job.arguments[30].ReturnIntegerArgument();
 
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
+
 	wxString currently_open_3d_filename;
 	wxArrayString all_reference_3d_filenames;
 
@@ -638,10 +640,10 @@ bool RefineCTFApp::DoCalculation()
 			{
 				mask_radius_for_noise = 0.95f * input_stack.ReturnXSize() / 2.0f - mask_falloff / 2.0f / input_parameters.pixel_size;
 			}
-			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
 			variance = input_image_local.ReturnVarianceOfRealValues(mask_radius_for_noise, 0.0f, 0.0f, 0.0f, true);
 			if (variance == 0.0f) continue;
 			input_image_local.MultiplyByConstant(1.0f / sqrtf(variance));
+			if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
 			input_image_local.CosineMask(mask_radius_for_noise, mask_falloff / input_parameters.pixel_size, true);
 			input_image_local.ForwardFFT();
 			temp_image_local.CopyFrom(&input_image_local);

@@ -767,7 +767,7 @@ bool MatchTemplateApp::DoCalculation()
 	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
 	int nThreads = 2;
-	int nGPUs = -1;
+	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
 	if (use_gpu && nThreads > nJobs)
 	{
@@ -787,7 +787,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	if (use_gpu) {
 #ifdef ENABLEGPU
-	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+//	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
 	GPU = new TemplateMatchingCore[nThreads];
 	gpuDev.Init(nGPUs);
 
@@ -819,10 +819,9 @@ bool MatchTemplateApp::DoCalculation()
 		{
 #ifdef ENABLEGPU
 
-	omp_set_num_threads(nThreads);
-	#pragma omp parallel
+	#pragma omp parallel num_threads(nThreads)
 	{
-		int tIDX = omp_get_thread_num();
+		int tIDX = ReturnThreadNumberOfCurrentThread();
 		gpuDev.SetGpu(tIDX);
 	if (first_gpu_loop)
 	{
@@ -871,11 +870,11 @@ bool MatchTemplateApp::DoCalculation()
 			{
 #ifdef ENABLEGPU
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
-			omp_set_num_threads(nThreads);
 
-			#pragma omp parallel firstprivate(projection_filter)
+
+			#pragma omp parallel firstprivate(projection_filter) num_threads(nThreads)
 			{
-				int tIDX = omp_get_thread_num();
+				int tIDX = ReturnThreadNumberOfCurrentThread();
 				gpuDev.SetGpu(tIDX);
 
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);

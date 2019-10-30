@@ -2409,7 +2409,6 @@ class MatchTemplateParentPanel : public JobPanel
 		wxStaticText* m_staticText262;
 		wxStaticText* m_staticText478;
 		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
-		wxCheckBox* UseGpuCheckBox;
 		wxStaticText* PleaseEstimateCTFStaticText;
 		wxStaticLine* m_staticline151;
 		wxScrolledWindow* ExpertPanel;
@@ -2455,11 +2454,11 @@ class MatchTemplateParentPanel : public JobPanel
 		wxPanel* StartPanel;
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
+		wxCheckBox* UseGpuCheckBox;
 		wxButton* StartEstimationButton;
 		
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnUseGpuCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
@@ -2472,7 +2471,7 @@ class MatchTemplateParentPanel : public JobPanel
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
 		
-		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1279,818 ), long style = wxTAB_TRAVERSAL ); 
+		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
 		~MatchTemplateParentPanel();
 	
 };

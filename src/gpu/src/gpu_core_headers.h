@@ -9,8 +9,8 @@
 #ifndef GPU_CORE_HEADERS_H_
 #define GPU_CORE_HEADERS_H_
 
-#ifndef USEGPU
-#define USEGPU true
+#ifndef ENABLEGPU
+#define ENABLEGPU true
 #endif
 
 #ifndef HEAVY_ERROR_CHECKING

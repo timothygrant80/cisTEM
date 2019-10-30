@@ -12,7 +12,7 @@
 #include <wx/dir.h>
 
 class
-SumAllMRCPowerSpectra : public MyApp
+SumAllPowerSpectra : public MyApp
 {
 
 	public:
@@ -25,11 +25,11 @@ SumAllMRCPowerSpectra : public MyApp
 
 
 
-IMPLEMENT_APP(SumAllMRCPowerSpectra)
+IMPLEMENT_APP(SumAllPowerSpectra)
 
 // override the DoInteractiveUserInput
 
-void SumAllMRCPowerSpectra::DoInteractiveUserInput()
+void SumAllPowerSpectra::DoInteractiveUserInput()
 {
 
 	int new_z_size = 1;
@@ -52,7 +52,7 @@ void SumAllMRCPowerSpectra::DoInteractiveUserInput()
 
 // override the do calculation method which will be what is actually run..
 
-bool SumAllMRCPowerSpectra::DoCalculation()
+bool SumAllPowerSpectra::DoCalculation()
 {
 
 	long frame_counter;
@@ -174,7 +174,7 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 	{
 		//wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
 		Image buffer_image;
-		int threadIDX = omp_get_thread_num();
+		int threadIDX = ReturnThreadNumberOfCurrentThread();
 
 		if (is_mrc)
 		{
@@ -238,7 +238,7 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 	#pragma omp critical
 	{
 		total_summed += my_total_summed;
-		int threadIDX = omp_get_thread_num();
+		int threadIDX = ReturnThreadNumberOfCurrentThread();
 
 		if (threadIDX > 0)
 		{

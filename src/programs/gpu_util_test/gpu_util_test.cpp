@@ -68,11 +68,11 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 		DeviceManager gpuDev;
 		gpuDev.Init(nGPUs);
 
-		omp_set_num_threads(nThreads);
-		#pragma omp parallel
+
+		#pragma omp parallel num_threads(nThreads)
 		{
 
-			int tIDX = omp_get_thread_num();
+			int tIDX = ReturnThreadNumberOfCurrentThread();
 
 	    	Image template_reconstruction;
 	    	Image projection_filter;
@@ -214,11 +214,10 @@ void GpuUtilTest::createImageAddOne()
 //    ContextManager CM[gDev.nGPUs];
 //
 //
-    omp_set_num_threads(wanted_number_threads_per_gpu * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
-	#pragma omp parallel
+	#pragma omp parallel num_threads(wanted_number_threads_per_gpu * gpuDev.nGPUs)
     {
 
-		int threadIDX = omp_get_thread_num();
+		int threadIDX = ReturnThreadNumberOfCurrentThread();
 		gpuDev.SetGpu(threadIDX);
 
 		Image cpu_image_half;

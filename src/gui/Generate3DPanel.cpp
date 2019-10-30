@@ -603,7 +603,7 @@ void Generate3DPanel::SetupReconstructionJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
@@ -764,7 +764,7 @@ void Generate3DPanel::RunReconstructionJob()
 	if (current_job_id != -1)
 	{
 		long number_of_refinement_processes;
-	    if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs + 1;
+	    if (current_job_package.number_of_jobs < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs;
 	    else number_of_refinement_processes =  current_job_package.my_profile.ReturnTotalJobs();
 
 		if (number_of_refinement_processes >= 100000) length_of_process_number = 6;
@@ -803,7 +803,7 @@ void Generate3DPanel::RunReconstructionJob()
 void Generate3DPanel::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs() - 1;
+	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
 
 	int class_counter;
 

@@ -744,7 +744,8 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, float classification_resolution_limit)
+float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, \
+	float classification_resolution_limit, float *frealign_score)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
 
@@ -770,7 +771,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	Image *temp_image1 = new Image;
 	temp_image1->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	Image *temp_image2 = new Image;
-	temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+//	temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
 	Image *projection_image = new Image;
 	projection_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 	Image *temp_projection = new Image;
@@ -798,6 +799,21 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 //	CenterInCorner();
 //	input_3d.CalculateProjection(*projection_image, *ctf_image, alignment_parameters, mask_radius, mask_falloff, original_pixel_size / filter_radius_high, false, true);
 	input_3d.density_map->ExtractSlice(*temp_image1, alignment_parameters, pixel_size / filter_radius_high);
+
+	if (frealign_score != NULL)
+	{
+		temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+		temp_image2->CopyFrom(temp_image1);
+		if (no_ctf_weighting) input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, false, false, false, false, false);
+		// Case for normal parameter refinement with weighting applied to particle images and 3D reference
+		else if (includes_reference_ssnr_weighting) input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, true, true, false, false, false);
+		// Case for normal parameter refinement with weighting applied only to particle images
+		else input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, true, false, true, true, false);
+
+		*frealign_score = - particle_image->GetWeightedCorrelationWithImage(*temp_image2, bin_index, pixel_size / signed_CC_limit) - ReturnParameterPenalty(current_parameters);
+		wxPrintf("pixel_size, signed_CC_limit, filter_radius_high, frealign_score = %g %g %g\n", pixel_size, signed_CC_limit, filter_radius_high, *frealign_score);
+	}
+
 	temp_image1->SwapRealSpaceQuadrants();
 	temp_image1->BackwardFFT();
 	temp_image1->AddConstant(- temp_image1->ReturnAverageOfRealValues(mask_radius / pixel_size, true));

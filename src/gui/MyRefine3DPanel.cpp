@@ -1418,7 +1418,7 @@ void RefinementManager::RunRefinementJob()
 void RefinementManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs() - 1;
+	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
 
 	int class_counter;
 
@@ -1548,7 +1548,7 @@ void RefinementManager::SetupReconstructionJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes - 1;
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
@@ -1775,7 +1775,7 @@ void RefinementManager::SetupRefinementJob()
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes - 1;
+	number_of_refinement_jobs = number_of_refinement_processes;
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;

@@ -51,6 +51,7 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
+#include <omp.h>
 
 
 class StackDump : public wxStackWalker // so we can give backtraces..
@@ -160,12 +161,13 @@ protected:
 #include "json/jsonwriter.h"
 #include "json/jsonreader.h"
 #include "json/jsonval.h"
+
 #ifdef EXPERIMENTAL
 #include "pdb.h"
 #include "water.h"
 #endif
 
-#ifdef USEGPU
+#ifdef ENABLEGPU
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include <cublas_v2.h>
@@ -184,12 +186,15 @@ protected:
 #include <thrust/functional.h>
 #include <typeinfo>
 #include <limits>
-#include <omp.h>
+
+
+ // These headers are need so that gpu specific types can be instantiated outside the if(use_gpu) brackets.
 #include "../gpu/src/DeviceManager.h"
 #include "../gpu/src/GpuImage.h"
 #include "../gpu/src/Histogram.h"
 #include "../gpu/src/TemplateMatchingCore.h"
 #endif
+
 
 
 

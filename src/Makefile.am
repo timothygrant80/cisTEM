@@ -215,7 +215,7 @@ bin_PROGRAMS += match_template refine_template make_template_result  scattering_
 endif
 
 link_gpu_library=
-if USEGPU_AM
+if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test
 link_gpu_library += ../../../src/gpu/lib/libcisTEMGPU.a
 endif
@@ -611,7 +611,7 @@ refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
 endif
 
-if USEGPU_AM
+if ENABLEGPU_AM
 
 gpu_util_test_SUFFIXES = .cpp 
 gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp 

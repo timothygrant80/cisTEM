@@ -346,8 +346,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-	
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 	
 	wxBoxSizer* bSizer258;
@@ -9673,6 +9671,10 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	fgSizer15->Add( ReferenceSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 	
+	UseGpuCheckBox = new wxCheckBox( InputPanel, wxID_ANY, wxT("Use GPU"), wxDefaultPosition, wxDefaultSize, 0 );
+	UseGpuCheckBox->SetValue(true); 
+	fgSizer15->Add( UseGpuCheckBox, 0, wxALL, 5 );
+	
 	
 	bSizer557->Add( fgSizer15, 0, wxEXPAND, 5 );
 	
@@ -9973,6 +9975,7 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
+	UseGpuCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::OnUseGpuCheckBox ), NULL, this );
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
@@ -9984,6 +9987,7 @@ MatchTemplateParentPanel::~MatchTemplateParentPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
+	UseGpuCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::OnUseGpuCheckBox ), NULL, this );
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );

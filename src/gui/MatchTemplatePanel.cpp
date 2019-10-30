@@ -20,6 +20,10 @@ MatchTemplateParentPanel( parent )
 	group_combo_is_dirty = false;
 	run_profiles_are_dirty = false;
 
+#ifndef ENABLEGPU
+	UseGpuCheckBox->Show(false);
+#endif
+
 	SetInfo();
 	FillGroupComboBox();
 	FillRunProfileComboBox();
@@ -58,6 +62,7 @@ MatchTemplateParentPanel( parent )
   	SymmetryComboBox->SetSelection(0);
 
   	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MatchTemplatePanel::OnGroupComboBox, this);
+
 }
 
 /*
@@ -145,6 +150,12 @@ void MatchTemplatePanel::ResetDefaults()
 	PixelSizeSearchNoRadio->SetValue(true);
 
 	SymmetryComboBox->SetValue("C1");
+
+#ifdef ENABLEGPU
+  	UseGpuCheckBox->SetValue(true);
+#else
+  	UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+#endif
 
 	DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
 	DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0f);
@@ -374,6 +385,9 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RunProfileComboBox->Enable(true);
 			GroupComboBox->Enable(true);
 			ReferenceSelectPanel->Enable(true);
+#ifdef ENABLEGPU
+			UseGpuCheckBox->Enable(true);
+#endif
 
 			if (RunProfileComboBox->GetCount() > 0)
 			{
@@ -423,6 +437,7 @@ void MatchTemplatePanel::OnUpdateUI( wxUpdateUIEvent& event )
 			GroupComboBox->Enable(false);
 			ReferenceSelectPanel->Enable(false);
 			RunProfileComboBox->Enable(false);
+			UseGpuCheckBox->Enable(false); // Doesn't matter if ENABLEGPU
 			//StartAlignmentButton->SetLabel("Stop Job");
 			//StartAlignmentButton->Enable(true);
 		}
@@ -461,8 +476,11 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	int number_of_defocus_positions;
 	int number_of_pixel_size_positions;
 
+	bool use_gpu;
+
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
+	int number_of_jobs;
 
 	double voltage_kV;
 	double spherical_aberration_mm;
@@ -523,6 +541,14 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	float min_peak_radius = MinPeakRadiusNumericCtrl->ReturnValue();
 
+	if (UseGpuCheckBox->GetValue() == true)
+	{
+		use_gpu = true;
+	}
+	else
+	{
+		use_gpu = false;
+	}
 
 	wxString wanted_symmetry = SymmetryComboBox->GetValue();
 	wanted_symmetry = SymmetryComboBox->GetValue().Upper();
@@ -553,25 +579,27 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	current_image_euler_search->CalculateGridSearchPositions(false);
 
-#ifdef USEGPU
-//	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
-	number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
+	if (use_gpu)
+	{
+		//	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
+		number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
 
-	int number_of_jobs =  number_of_jobs_per_image_in_gui * active_group.number_of_members;
+		number_of_jobs =  number_of_jobs_per_image_in_gui * active_group.number_of_members;
 
-	wxPrintf("In USEGPU:\n There are %d search positions\nThere are %d jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
-	delete current_image_euler_search;
-
-#else
-	if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
+		wxPrintf("In USEGPU:\n There are %d search positions\nThere are %d jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+		delete current_image_euler_search;
+	}
 	else
-	if (current_image_euler_search->number_of_search_positions > number_of_processes * 250) number_of_jobs_per_image_in_gui = number_of_processes * 10;
-	else number_of_jobs_per_image_in_gui = number_of_processes * 5;
+	{
+		if (active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20) number_of_jobs_per_image_in_gui = number_of_processes;
+		else
+		if (current_image_euler_search->number_of_search_positions > number_of_processes * 250) number_of_jobs_per_image_in_gui = number_of_processes * 10;
+		else number_of_jobs_per_image_in_gui = number_of_processes * 5;
 
-	int number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
+		number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
 
-	delete current_image_euler_search;
-#endif
+		delete current_image_euler_search;
+	}
 
 // Some settings for testing
 //	float defocus_search_range = 1200.0f;
@@ -741,7 +769,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttf",	input_search_image.ToUTF8().data(),
+			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfb",	input_search_image.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -780,7 +808,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	correlation_variance_output_file.ToUTF8().data(),
 																	directory_for_results.ToUTF8().data(),
 																	output_result_file.ToUTF8().data(),
-																	min_peak_radius);
+																	min_peak_radius,
+																	use_gpu);
 		}
 
 		delete current_image_euler_search;

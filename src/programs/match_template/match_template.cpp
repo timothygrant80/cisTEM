@@ -1,6 +1,5 @@
 #include "../../core/core_headers.h"
 
-#include <unistd.h> // For trouble shooting parallelism, report the host name we are actually running on.
 
 // Values for data that are passed around in the results.
 const int number_of_output_images = 8; //mip, scaledmip, psi, theta, phi, pixel, defocus, sums, sqsums
@@ -64,6 +63,8 @@ MatchTemplateApp : public MyApp
 	long original_input_image_y;
 	int remove_npix_from_edge = 0;
 	double snr_estimate;
+
+	bool use_gpu = false;
 
 	private:
 };
@@ -180,6 +181,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	float		particle_radius_angstroms = 0.0f;
 	wxString	my_symmetry = "C1";
 	float 		in_plane_angular_step = 0;
+	bool 		use_gpu_input = false;
 
 	UserInput *my_input = new UserInput("MatchTemplate", 1.00);
 
@@ -216,6 +218,9 @@ void MatchTemplateApp::DoInteractiveUserInput()
 //	ctf_refinement = my_input->GetYesNoFromUser("Refine defocus", "Should the particle defocus be refined?", "No");
 	particle_radius_angstroms = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "0.0", 0.0);
 //	my_symmetry = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
+#ifdef ENABLEGPU
+	use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Offload expensive calcs to GPU","false");
+#endif
 
 
 	int first_search_position = -1;
@@ -230,7 +235,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	delete my_input;
 
 
-	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttf",	input_search_images.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfb",	input_search_images.ToUTF8().data(),
 															input_reconstruction.ToUTF8().data(),
 															pixel_size,
 															voltage_kV,
@@ -269,7 +274,8 @@ void MatchTemplateApp::DoInteractiveUserInput()
 															correlation_average_output_file.ToUTF8().data(),
 															directory_for_results.ToUTF8().data(),
 															result_filename.ToUTF8().data(),
-															min_peak_radius);
+															min_peak_radius,
+															use_gpu_input);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -377,14 +383,8 @@ bool MatchTemplateApp::DoCalculation()
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
 	wxString	result_output_filename = my_current_job.arguments[38].ReturnStringArgument();
 	float		min_peak_radius = my_current_job.arguments[39].ReturnFloatArgument();
+				this->use_gpu   = my_current_job.arguments[40].ReturnBoolArgument();
 
-
-
-	// For trouble shooting parallelism, report the host name we are actually running on.
-	char hostNameBuffer[255];
-	int hostName;
-	hostName = gethostname(hostNameBuffer, sizeof(hostNameBuffer));
-	MyAssertFalse(hostName == -1, "Hostname error");
 
 	/*wxPrintf("input image = %s\n", input_search_images_filename);
 	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
@@ -471,7 +471,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	//
 	remove_npix_from_edge = myroundint(particle_radius_angstroms / pixel_size);
-	wxPrintf("Removing %d pixels around the edge.\n", remove_npix_from_edge);
+//	wxPrintf("Removing %d pixels around the edge.\n", remove_npix_from_edge);
 
 	Image input_image;
 	Image padded_reference;
@@ -561,17 +561,11 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
-//	// Temp override for profiling:
-//	factorizable_x = 2048;
-//	factorizable_y = 2048;
 
-	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+//	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
 
-//	factorizable_x = original_input_image_x;
-//	factorizable_y = original_input_image_y;
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-//	input_image.QuickAndDirtyWriteSlice("factor.mrc", 1);
-//	exit(0);
+
 	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -591,16 +585,9 @@ bool MatchTemplateApp::DoCalculation()
 	best_theta.SetToConstant(0.0f);
 	best_phi.SetToConstant(0.0f);
 	best_defocus.SetToConstant(0.0f);
-//	correlation_pixel_sum.SetToConstant(0.0f);
-//	correlation_pixel_sum_of_squares.SetToConstant(0.0f);
+
 	ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
 	ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
-
-// Some settings for testing
-//	padding = 1.0f;
-//	ctf_refinement = true;
-//	defocus_search_range = 200.0f;
-//	defocus_step = 50.0f;
 
 	input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices());
 	if (padding != 1.0f)
@@ -669,7 +656,7 @@ bool MatchTemplateApp::DoCalculation()
 	// search grid
 
 	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
-	wxPrintf("%s",my_symmetry);
+//	wxPrintf("%s",my_symmetry);
 	if (my_symmetry.StartsWith("C1")) // TODO 2x check me - w/o this O symm at least is broken
 	{
 		if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
@@ -777,18 +764,12 @@ bool MatchTemplateApp::DoCalculation()
 	wxDateTime 	overall_finish;
 	overall_start = wxDateTime::Now();
 
-#ifdef USEGPU
-
+	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
 	int nThreads = 2;
 	int nGPUs = -1;
 	int nJobs = last_search_position-first_search_position+1;
-	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
-//	if (factorizable_x*factorizable_y < 2048 * 2048) {nThreads = 6 * nGPUs;}
-//	else if (factorizable_x*factorizable_y < 4096 *072) {nThreads = 4 * nGPUs;}
-//	else {nThreads =  2 * nGPUs;}
-
-	if (nThreads > nJobs)
+	if (use_gpu && nThreads > nJobs)
 	{
 		wxPrintf("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", nThreads, nJobs);
 		nThreads = nJobs;
@@ -798,17 +779,23 @@ bool MatchTemplateApp::DoCalculation()
 	int maxPos = last_search_position;
 	int incPos = (nJobs) / (nThreads);
 
-	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
-
-	TemplateMatchingCore GPU[nThreads];
-
+//	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
+#ifdef ENABLEGPU
+	TemplateMatchingCore *GPU;
 	DeviceManager gpuDev;
+#endif
+
+	if (use_gpu) {
+#ifdef ENABLEGPU
+	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+	GPU = new TemplateMatchingCore[nThreads];
 	gpuDev.Init(nGPUs);
 
 //	wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
 //	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
 #endif
+	}
 
 
 
@@ -816,7 +803,9 @@ bool MatchTemplateApp::DoCalculation()
 //	wxPrintf("Starting job\n");
 	for (size_i = - myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i++)
 	{
-		wxPrintf("\n\n\t\tStarting on pixel size %d factor %3.3f %3.3f\n\n", size_i, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, pixel_size);
+
+		// FIXME when status bars work for gpu, get rid of this
+		if (use_gpu) wxPrintf("\n\n\t\tStarting on pixel size %d factor %3.3f %3.3f\n\n", size_i, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, pixel_size);
 
 //		template_reconstruction.CopyFrom(&input_reconstruction);
 		input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, 0.001f, true);
@@ -826,7 +815,9 @@ bool MatchTemplateApp::DoCalculation()
 
 //		wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
 
-#ifdef USEGPU
+		if (use_gpu)
+		{
+#ifdef ENABLEGPU
 
 	omp_set_num_threads(nThreads);
 	#pragma omp parallel
@@ -850,10 +841,9 @@ bool MatchTemplateApp::DoCalculation()
 							max_padding, t_first_search_position, t_last_search_position);
 
 			wxPrintf("%d\n",tIDX);
-			wxPrintf("%s\n", hostNameBuffer);
 			wxPrintf("%d\n", t_first_search_position);
 			wxPrintf("%d\n", t_last_search_position);
-			wxPrintf("Staring TemplateMatchingCore object %d on host %s to work on position range %d-%d\n", tIDX, hostNameBuffer, t_first_search_position, t_last_search_position);
+			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
 
 		first_gpu_loop = false;
 
@@ -864,10 +854,12 @@ bool MatchTemplateApp::DoCalculation()
 	}
 	} // end of omp block
 #endif
+	}
 		for (defocus_i = - myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 		{
 
-			wxPrintf("\n\n\t\tStarting on defocus size %d %3.3f\n\n", defocus_i, (defocus1 + float(defocus_i) * defocus_step) / pixel_size);
+			// FIXME when status bars work for gpu, get rid of this
+			if (use_gpu) wxPrintf("\n\n\t\tStarting on defocus size %d %3.3f\n\n", defocus_i, (defocus1 + float(defocus_i) * defocus_step) / pixel_size);
 
 			// make the projection filter, which will be CTF * whitening filter
 			input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
@@ -875,7 +867,9 @@ bool MatchTemplateApp::DoCalculation()
 			projection_filter.ApplyCurveFilter(&whitening_filter);
 
 //			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
-#ifdef USEGPU
+			if (use_gpu)
+			{
+#ifdef ENABLEGPU
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 			omp_set_num_threads(nThreads);
 
@@ -972,6 +966,7 @@ bool MatchTemplateApp::DoCalculation()
 			continue;
 
 #endif
+			}
 
 			for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
 			{
@@ -1744,8 +1739,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
 		histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");
 
+		if (use_gpu)
+		{
 		// In the GPU code, I am not histogramming the padding regions which are not valid. Adjust the counts here. Maybe not the best approach. FIXME also the cpu counts.
-#ifdef USEGPU
+#ifdef ENABLEGPU
 		double sum_expected = 0.0;
 		double sum_counted = 0.0;
 
@@ -1759,6 +1756,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			survival_histogram[line_counter] *= (float)(sum_expected / sum_counted);
 		}
 #endif
+		}
 
 
 		for (int line_counter = 0; line_counter < histogram_number_of_points; line_counter++)

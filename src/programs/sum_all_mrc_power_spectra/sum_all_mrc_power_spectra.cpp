@@ -62,15 +62,51 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 
 	int file_x_size;
 	int file_y_size;
+	int file_z_size;
 
 	std::string	output_filename 					= my_current_job.arguments[0].ReturnStringArgument();
 	int max_threads									= my_current_job.arguments[1].ReturnIntegerArgument();
+	bool is_mrc = false;
 
 	wxArrayString all_files;
-	wxDir::GetAllFiles 	( ".", &all_files, "*.mrc", wxDIR_FILES);
+	wxPrintf("first checking for .tif\n");
+
+	wxDir::GetAllFiles 	( ".", &all_files, "*.tif", wxDIR_FILES);
+	if (all_files.GetCount() > 0)
+	{
+		wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount());
+
+	}
+	else
+	{
+		wxPrintf("no tif, checking for .tiff\n");
+		wxDir::GetAllFiles 	( ".", &all_files, "*.tiff", wxDIR_FILES);
+		if (all_files.GetCount() > 0)
+		{
+			wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount());
+
+		}
+		else
+		{
+			wxPrintf("no tif or tiff, checking for .mrc\n");
+			wxDir::GetAllFiles 	( ".", &all_files, "*.mrc", wxDIR_FILES);
+			if (all_files.GetCount() > 0)
+			{
+				is_mrc = true;
+				wxPrintf("\nThere are %li MRC files in this directory.\n", all_files.GetCount());
+
+			}
+			else
+			{
+				wxPrintf("\n\tError : did not find any files of tif, tiff, or mrc extension.\n\n");
+				exit(-1);
+			}
+		}
+	}
 	all_files.Sort();
 
-	MRCFile *current_input_file;
+	MRCFile *current_mrc_file;
+	ImageFile *current_tif_file;
 
 
 	Image output_PS;
@@ -81,18 +117,30 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 	// find all the mrc files in the current directory..
 
 
-	wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount());
+	if (is_mrc)
+	{
+		current_mrc_file = new MRCFile(all_files.Item(0).ToStdString(), false);
+		file_x_size = current_mrc_file->ReturnXSize();
+		file_y_size = current_mrc_file->ReturnYSize();
+		delete current_mrc_file;
+	}
+	else
+	{
+		current_tif_file = new ImageFile(all_files.Item(0).ToStdString(), false);
+		file_x_size = current_tif_file->ReturnXSize();
+		file_y_size = current_tif_file->ReturnYSize();
+		delete current_tif_file;
 
-	current_input_file = new MRCFile(all_files.Item(0).ToStdString(), false);
+	}
 
-	file_x_size = current_input_file->ReturnXSize();
-	file_y_size = current_input_file->ReturnYSize();
+
+
 
 	int wanted_sq_size = 3456;
 
-	wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files.Item(0), current_input_file->ReturnXSize(), current_input_file->ReturnYSize());
+	wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files.Item(0), file_x_size, file_y_size);
 
-	delete current_input_file;
+
 
 //	output_PS.Allocate(file_x_size, file_y_size, 1);
 	output_PS.Allocate(wanted_sq_size, wanted_sq_size, 1);
@@ -115,7 +163,7 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 
 	int number_processed = 0;
 	// thread if available
-	#pragma omp parallel default(none) num_threads(max_threads) shared(output_PS, output_PS_double, max_threads, all_files, total_summed, number_processed, my_progress) private(file_counter, current_input_file, frame_counter, pixel_counter)
+	#pragma omp parallel default(none) num_threads(max_threads) shared(output_PS, output_PS_double, max_threads, all_files, total_summed, number_processed, my_progress, is_mrc) private(file_counter, file_z_size, current_mrc_file, current_tif_file, frame_counter, pixel_counter)
 	{ // bracket for omp
 
 	int my_total_summed = 0;
@@ -128,11 +176,23 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 		Image buffer_image;
 		int threadIDX = omp_get_thread_num();
 
-		current_input_file = new MRCFile(all_files.Item(file_counter).ToStdString(), false);
-
-		for (frame_counter = 0; frame_counter < current_input_file->ReturnNumberOfSlices(); frame_counter++)
+		if (is_mrc)
 		{
-			buffer_image.ReadSlice(current_input_file, frame_counter + 1);
+			current_mrc_file = new MRCFile(all_files.Item(file_counter).ToStdString(), false);
+			file_z_size = current_mrc_file->ReturnNumberOfSlices();
+		}
+		else
+		{
+			current_tif_file = new ImageFile(all_files.Item(file_counter).ToStdString(), false);
+			file_z_size = current_tif_file->ReturnNumberOfSlices();
+		}
+
+		for (frame_counter = 0; frame_counter < file_z_size; frame_counter++)
+		{
+
+			if (is_mrc)  buffer_image.ReadSlice(current_mrc_file, frame_counter + 1);
+			else 		 buffer_image.ReadSlice(current_tif_file, frame_counter + 1);
+
 
 			my_total_summed++;
 
@@ -156,8 +216,16 @@ bool SumAllMRCPowerSpectra::DoCalculation()
 		}
 
 
-		current_input_file->CloseFile();
-		delete current_input_file;
+		if (is_mrc)
+		{
+			current_mrc_file->CloseFile();
+			delete current_mrc_file;
+		}
+		{
+			current_tif_file->CloseFile();
+			delete current_tif_file;
+		}
+
 
 		#pragma omp atomic
 		number_processed++;

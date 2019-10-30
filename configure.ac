@@ -70,8 +70,8 @@ then
 	AX_CUDA
 	
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS -DUSEGPU"
-    CXXFLAGS="$CXXFLAGS $CUDA_CFLAGS -DUSEGPU"	
+    CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS -DENABLEGPU"
+    CXXFLAGS="$CXXFLAGS $CUDA_CFLAGS -DENABLEGPU"	
     LIBS="$LIBS $CUDA_LIBS"	
 fi
 
@@ -79,7 +79,7 @@ fi
 # END CUDA CHECKS AND SETS
 ##############################
 
-AM_CONDITIONAL([USEGPU_AM], [test "$want_cuda" = "yes"])
+AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
 
 #
 # What kind of OS are we on?

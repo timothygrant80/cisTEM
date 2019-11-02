@@ -408,7 +408,7 @@ void GpuImage::printVal(std::string msg, int idx)
   float h_printVal = -9999.0f;
 
   cudaErr(cudaMemcpy(&h_printVal, &real_values_gpu[idx], sizeof(float), cudaMemcpyDeviceToHost));
-  RecordAndWait();
+  cudaStreamSynchronize(cudaStreamPerThread);
   wxPrintf("%s %6.6e\n", msg, h_printVal);
 
 };
@@ -458,7 +458,7 @@ float GpuImage::ReturnAverageOfRealValuesOnEdges()
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 	// Need to wait on the return value
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 
 
   return *tmpVal;
@@ -469,6 +469,7 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
 
 	int pixel_counter;
 	int line_counter;
+	int plane_counter;
 
 	double sum = 0.0;
 	int number_of_pixels = 0;
@@ -724,7 +725,7 @@ float GpuImage::ReturnSumOfSquares()
 	nppErr(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)real_values_gpu, pitch, npp_ROI,
 									 	   (Npp64f *)tmpValComplex, (Npp8u *)this->l2norm_buffer, nppStream));
 
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 	return (float)(*tmpValComplex * *tmpValComplex);
 
@@ -758,6 +759,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	const std::complex<float> c2(sqrtf(0.5f),sqrtf(0.5f)); // original code is pow(abs(Val),2)*0.5
 	const std::complex<float> c3(1.0,1.0);
 	const std::complex<float> c4(0.0,0.0);
+	float returnValue;
 
 	if ( ! is_allocated_mask_CSOS )
 	{
@@ -816,7 +818,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 		cudaErr(cudaMemcpyAsync(mask_CSOS->real_values_gpu, mask_CSOS->real_values,sizeof(float)*real_memory_allocated,cudaMemcpyHostToDevice,cudaStreamPerThread));
 		pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 		// TODO change this to an event that can then be later checked prior to deleteing
-		RecordAndWait();
+		cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 		cudaErr(cudaFreeHost(mask_CSOS->real_values));
 
 	} // end of mask creation
@@ -841,7 +843,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	nppErr(nppiNorm_L2_32f_C1R_Ctx((Npp32f *)image_buffer->real_values_gpu, pitch, npp_ROI_fourier_with_real_functor,
 									 	   (Npp64f *)tmpValComplex, (Npp8u *)this->l2norm_buffer, nppStream));
 
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 	return (float)(*tmpValComplex * *tmpValComplex );
 
@@ -1030,7 +1032,7 @@ void GpuImage::Min()
 	NppInit();
 	BufferInit(b_min);
 	nppErr(nppiMin_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, min_buffer, (Npp32f *)&min_value,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 }
 void GpuImage::MinAndCoords()
 {
@@ -1040,7 +1042,7 @@ void GpuImage::MinAndCoords()
 	NppInit();
 	BufferInit(b_minIDX);
 	nppErr(nppiMinIndx_32f_C1R_Ctx((const Npp32f *)real_values_gpu, pitch, npp_ROI, minIDX_buffer, (Npp32f *)&min_value, &min_idx.x, &min_idx.y,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 }
 void GpuImage::Max()
@@ -1052,7 +1054,7 @@ void GpuImage::Max()
 	NppInit();
 	BufferInit(b_max);
 	nppErr(nppiMax_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, max_buffer, (Npp32f *)&max_value,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 }
 void GpuImage::MaxAndCoords()
@@ -1064,7 +1066,7 @@ void GpuImage::MaxAndCoords()
 	NppInit();
 	BufferInit(b_maxIDX);
 	nppErr(nppiMaxIndx_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, maxIDX_buffer, (Npp32f *)&max_value, &max_idx.x, &max_idx.y, nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 }
 
@@ -1077,7 +1079,7 @@ void GpuImage::MinMax()
 	NppInit();
 	BufferInit(b_minmax);
 	nppErr(nppiMinMax_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, (Npp32f *)&min_value, (Npp32f *)&max_value, minmax_buffer,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 }
 void GpuImage::MinMaxAndCoords()
@@ -1089,7 +1091,7 @@ void GpuImage::MinMaxAndCoords()
 	NppInit();
 	BufferInit(b_minmaxIDX);
 	nppErr(nppiMinMaxIndx_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, (Npp32f *)&min_value, (Npp32f *)&max_value,  &min_idx, &max_idx,minmax_buffer,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 }
 
@@ -1101,7 +1103,7 @@ void GpuImage::Mean()
 	NppInit();
 	BufferInit(b_mean);
 	nppErr(nppiMean_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, mean_buffer, npp_mean, nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 	this->img_mean   = (float)*npp_mean;
 
@@ -1116,7 +1118,7 @@ void GpuImage::MeanStdDev()
 	NppInit();
 	BufferInit(b_meanstddev);
 	nppErr(nppiMean_StdDev_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI, meanstddev_buffer, npp_mean, npp_stdDev,nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 	this->img_mean   = (float)*npp_mean;
 	this->img_stdDev = (float)*npp_stdDev;
@@ -1204,7 +1206,7 @@ void GpuImage::CountInRange(float lower_bound, float upper_bound)
 	NppInit();
 	nppErr(nppiCountInRange_32f_C1R_Ctx((const Npp32f *)real_values_gpu, pitch, npp_ROI, &number_of_pixels_in_range,
 											(Npp32f)lower_bound,(Npp32f)upper_bound,countinrange_buffer, nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
 
 
 }
@@ -1218,7 +1220,8 @@ float GpuImage::ReturnSumOfRealValues()
 	NppInit();
 	BufferInit(b_sum);
 	nppErr(nppiSum_32f_C1R_Ctx((const Npp32f*)real_values_gpu, pitch, npp_ROI,sum_buffer, (Npp64f *)tmpValComplex, nppStream));
-	RecordAndWait();
+	cudaErr(cudaStreamSynchronize(nppStream.hStream));
+
 	return (float)*tmpValComplex;
 }
 void GpuImage::AddImage(GpuImage &other_image)
@@ -1493,8 +1496,7 @@ void GpuImage::ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scal
 		cudaErr(cudaMalloc((void **)&d_params,sizeof(CB_realLoadAndClipInto_params)));
 		cudaErr(cudaMemcpyAsync(d_params, &h_params, sizeof(CB_realLoadAndClipInto_params), cudaMemcpyHostToDevice, cudaStreamPerThread));
 		cudaErr(cudaMemcpyFromSymbol(&h_realLoadAndClipInto,d_realLoadAndClipInto, sizeof(h_realLoadAndClipInto)));
-
-		RecordAndWait();
+		cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 
 		cudaErr(cufftXtSetCallback(cuda_plan_forward, (void **)&h_realLoadAndClipInto, CUFFT_CB_LD_REAL, (void **)&d_params));
 		is_set_realLoadAndClipInto = true;
@@ -1576,8 +1578,8 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 				cudaErr(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad_32f, sizeof(h_complexConjMulLoad)));
 			}
 
-			RecordAndWait();
-
+			Record();
+			Wait();
 			cudaErr(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&d_params));
 
 //		d_complexConjMulLoad;

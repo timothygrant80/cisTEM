@@ -119,6 +119,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 
 
+
     
     // For now we are only working on the inner loop, so no need to track best_defocus and best_pixel_size
 
@@ -177,6 +178,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 //	cudaErr(cudaFuncSetCacheConfig(SumPixelWiseKernel, cudaFuncCachePreferL1));
 
+	bool make_graph = true;
 	bool first_loop_complete = false;
 
 	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
@@ -203,25 +205,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
 
 
+
 			// Make sure the device has moved on to the padded projection
 			cudaStreamWaitEvent(cudaStreamPerThread,projection_is_free_Event, 0);
-
-			if ( ! is_graph_allocated && first_loop_complete)
-			{
-				cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
-				wxPrintf("\nBeginning stream capture for creation of graph\n");
-				cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
-			}
-
-
-			if (first_loop_complete && is_graph_allocated)
-			{
-				cudaGraphLaunch(graphExec, cudaStreamPerThread);
-
-			}
-			else
-			{
-
 
 
 			//// TO THE GPU ////
@@ -255,8 +241,19 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 				histogram.AddToHistogram(d_padded_reference);
 			}
 
-
-
+//			if (make_graph && first_loop_complete)
+//			{
+//				wxPrintf("\nBeginning stream capture for creation of graph\n");
+//				cudaStreamBeginCapture(cudaStreamPerThread, cudaStreamCaptureModeGlobal);
+//			}
+//
+//			if (first_loop_complete && ! make_graph)
+//			{
+//				cudaGraphLaunch(graphExec, cudaStreamPerThread);
+//
+//			}
+//			else
+//			{
 				this->MipPixelWise(d_padded_reference, __float2half_rn(current_psi) , __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][1]),
 																					  __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][0]));
 	//			this->MipPixelWise(d_padded_reference, float(current_psi) , float(global_euler_search.list_of_search_parameters[current_search_position][1]),
@@ -265,7 +262,13 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //			}
 
 
-
+//			if (make_graph && first_loop_complete)
+//			{
+//				wxPrintf("\nEnding stream capture for creation of graph\n");
+//				cudaStreamEndCapture(cudaStreamPerThread, &graph);
+//				cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0);
+//				make_graph = false;
+//			}
 
 
 			ccc_counter++;
@@ -306,18 +309,9 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //			d_padded_reference.Zeros();
 			cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
-			} // end of non-graph launch loop
 
+			first_loop_complete = true;
 
-			if (! is_graph_allocated && first_loop_complete)
-			{
-				wxPrintf("\nEnding stream capture for creation of graph\n");
-				cudaStreamEndCapture(cudaStreamPerThread, &graph);
-				cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0);
-				is_graph_allocated = true;
-			}
-
-			if (!first_loop_complete) first_loop_complete = true;
 
 			} // loop over psi angles
 

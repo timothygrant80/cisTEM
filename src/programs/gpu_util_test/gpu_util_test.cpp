@@ -179,7 +179,7 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			{
 				histogram_data[iBin] = 0;
 			}
-//			GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+			GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 			std::string fileNameOUT4 = "/tmp/tmpMip" + std::to_string(tIDX) + ".mrc";
 			max_intensity_projection.QuickAndDirtyWriteSlice(fileNameOUT4,1,true,1.5);
 

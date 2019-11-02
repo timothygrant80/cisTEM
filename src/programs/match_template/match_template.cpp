@@ -1145,7 +1145,6 @@ bool MatchTemplateApp::DoCalculation()
 
 		// scale images..
 
-		temp_double = snr_estimate;
 		for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
 		{
 
@@ -1163,7 +1162,7 @@ bool MatchTemplateApp::DoCalculation()
 				correlation_pixel_sum_of_squares[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares[pixel_counter]) * (float)snr_estimate;
 			}
 			else correlation_pixel_sum_of_squares[pixel_counter] = 0.0f;
-			correlation_pixel_sum[pixel_counter] *= temp_double;
+			correlation_pixel_sum[pixel_counter] *= (float)snr_estimate;
 
 		}
 
@@ -1549,11 +1548,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
 		{
-			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
+			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter]*snr_estimate;
 		}
 
-		float central_average;
-		temp_image.MultiplyByConstant((float)aggregated_results[array_location].collated_data_array[5]);
+
 //		wxPrintf("writing to %s/n", wxString::Format("%s/mip.mrc\n", directory_for_writing_results));
 
 		wxPrintf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
@@ -1640,11 +1638,14 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
 		{
 			aggregated_results[array_location].collated_pixel_sums[pixel_counter] /= aggregated_results[array_location].total_number_of_ccs;
-			aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] / aggregated_results[array_location].total_number_of_ccs - powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2);
+			aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] /
+																					       aggregated_results[array_location].total_number_of_ccs - powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2);
 			if (aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f)
 			{
-				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter])	* (float)aggregated_results[array_location].collated_data_array[5];
-				aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) / aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
+
+				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]) * snr_estimate;
+				aggregated_results[array_location].collated_mip_data[pixel_counter] = snr_estimate*(aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) /
+																					   	   	   	    aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
 			}
 			else
 			{
@@ -1658,7 +1659,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
 
 		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument(), 1);
@@ -1673,10 +1673,11 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant((float)aggregated_results[array_location].collated_data_array[5]);
+		temp_image.MultiplyByConstant(snr_estimate);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument(), 1);
 
 
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+//		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.Deallocate();
 
 		// square sums
@@ -1687,10 +1688,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
 		}
 
-		//temp_image.MultiplyByConstant(sqrtf(temp_image.logical_x_dimension * temp_image.logical_y_dimension));
+		temp_image.MultiplyByConstant(snr_estimate);
 
 
-	//	temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/square_sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument(), 1);
 		temp_image.Deallocate();
 
 		/// histogram

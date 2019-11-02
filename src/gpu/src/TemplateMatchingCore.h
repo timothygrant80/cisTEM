@@ -71,6 +71,7 @@ public:
 
 	cudaGraph_t graph;
 	cudaGraphExec_t graphExec;
+	bool is_graph_allocated = false;
 
 	// These are assumed to be empty containers at the outset, so xfer host-->device is skipped
 	GpuImage d_max_intensity_projection;

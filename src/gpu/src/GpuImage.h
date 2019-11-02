@@ -94,7 +94,8 @@ public:
 
 	bool is_meta_data_initialized;
 	float* tmpVal;
-	float* tmpValComplex;
+	double* tmpValComplex;
+
   
 
  ////////////////////////////////////////////////////////
@@ -175,6 +176,7 @@ public:
 	// Synchronize the full stream.
 	void Record();
 	void Wait();
+	void RecordAndWait();
 	// Maximum intensity projection
 	void MipPixelWise(GpuImage &other_image);
 	void MipPixelWise(GpuImage &other_image, GpuImage &psi, GpuImage &phi, GpuImage &theta,

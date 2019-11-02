@@ -2063,7 +2063,7 @@ void GpuImage::SetCufftPlan(bool use_half_precision)
     cudaErr(cufftCreate(&cuda_plan_inverse));
 
     cudaErr(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
-    cudaErr(cufftSetStream(cuda_plan_forward, cudaStreamPerThread));
+    cudaErr(cufftSetStream(cuda_plan_inverse, cudaStreamPerThread));
 
     if (dims.z > 1) 
     { 

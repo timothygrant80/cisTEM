@@ -34,10 +34,10 @@ bool GpuUtilTest::DoCalculation()
 
   wxPrintf("GpuUtilTest is running!\n");
 
-  this->createImageAddOne();
+//  this->createImageAddOne();
   int nThreads = 1;
   int nGPUs = 1;
-//  this->TemplateMatchingStandalone(nThreads, nGPUs);
+  this->TemplateMatchingStandalone(nThreads, nGPUs);
 
   int gpuID = 0;
   wxPrintf("I made it here\n");
@@ -50,11 +50,11 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 {
 
 	int number_of_jobs_per_image_in_gui = 1;
-	nThreads = 1;
+	nThreads = 2;
 	nGPUs = 1;
 	int minPos = 0;
-	int maxPos = 10;
-	int incPos = 10 / (nThreads*nGPUs); // FIXME
+	int maxPos = 60;
+	int incPos = 60 / (nThreads*nGPUs); // FIXME
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel

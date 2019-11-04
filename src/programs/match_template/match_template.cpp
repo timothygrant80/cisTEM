@@ -371,7 +371,7 @@ bool MatchTemplateApp::DoCalculation()
 	wxString    best_defocus_output_file = my_current_job.arguments[25].ReturnStringArgument();
 	wxString    best_pixel_size_output_file = my_current_job.arguments[26].ReturnStringArgument();
 	wxString    scaled_mip_output_file = my_current_job.arguments[27].ReturnStringArgument();
-	wxString    correlation_variance_output_file = my_current_job.arguments[28].ReturnStringArgument();
+	wxString    correlation_sum_output_file = my_current_job.arguments[28].ReturnStringArgument();
 	wxString 	my_symmetry = my_current_job.arguments[29].ReturnStringArgument();
 	float		in_plane_angular_step = my_current_job.arguments[30].ReturnFloatArgument();
 	wxString    output_histogram_file = my_current_job.arguments[31].ReturnStringArgument();
@@ -379,7 +379,7 @@ bool MatchTemplateApp::DoCalculation()
 	int 		last_search_position = my_current_job.arguments[33].ReturnIntegerArgument();
 	int 		image_number_for_gui = my_current_job.arguments[34].ReturnIntegerArgument();
 	int 		number_of_jobs_per_image_in_gui = my_current_job.arguments[35].ReturnIntegerArgument();
-	wxString    correlation_average_output_file = my_current_job.arguments[36].ReturnStringArgument();
+	wxString    correlation_variance_output_file = my_current_job.arguments[36].ReturnStringArgument();
 	wxString	directory_for_results = my_current_job.arguments[37].ReturnStringArgument();
 	wxString	result_output_filename = my_current_job.arguments[38].ReturnStringArgument();
 	float		min_peak_radius = my_current_job.arguments[39].ReturnFloatArgument();
@@ -1133,8 +1133,11 @@ bool MatchTemplateApp::DoCalculation()
 	// I don't like this solution. The whole padding operation really makes a mess of the code. Be smarter. FIXME
 	for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
 	{
-		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
-		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+		// FIXME the arrays will need to be modified for the local jobs.
+		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter] * snr_estimate;
+		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter] * snr_estimate * snr_estimate;
+		max_intensity_projection.real_values[pixel_counter] *= snr_estimate;
+
 	}
 
 
@@ -1241,7 +1244,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_image.ReturnAverageOfRealValuesOnEdges());
-		correlation_pixel_sum_image.QuickAndDirtyWriteSlice(correlation_average_output_file.ToStdString(), 1, pixel_size);
+		correlation_pixel_sum_image.QuickAndDirtyWriteSlice(correlation_sum_output_file.ToStdString(), 1, pixel_size);
 		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, correlation_pixel_sum_of_squares_image.ReturnAverageOfRealValuesOnEdges());
 		correlation_pixel_sum_of_squares_image.QuickAndDirtyWriteSlice(correlation_variance_output_file.ToStdString(), 1, pixel_size);
 		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
@@ -1387,7 +1390,7 @@ bool MatchTemplateApp::DoCalculation()
 		result[2] = max_intensity_projection.real_memory_allocated;
 		result[3] = histogram_number_of_points;
 		result[4] = actual_number_of_ccs_calculated;
-		result[5] = (float)snr_estimate;
+		result[5] = (float)snr_estimate; // FIXME this should not be needed now that I'm pre-scaling
 //		result[5] = original_input_image_x;
 //		result[6] = original_input_image_y;
 
@@ -1548,7 +1551,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
 		{
-			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter]*snr_estimate;
+			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
 		}
 
 
@@ -1582,10 +1585,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/theta.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[23].ReturnStringArgument(), 1);
 		theta_image.CopyFrom(&temp_image);
 		temp_image.Deallocate();
+
 
 		// phi
 
@@ -1596,10 +1599,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/phi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[24].ReturnStringArgument(), 1);
 		phi_image.CopyFrom(&temp_image);
 		temp_image.Deallocate();
+
 
 		// defocus
 
@@ -1610,15 +1613,12 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-
-
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/defocus.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[25].ReturnStringArgument(), 1);
 		defocus_image.CopyFrom(&temp_image);
 		temp_image.Deallocate();
 
-		// pixel size
 
+		// pixel size
 
 		temp_image.Allocate(int(aggregated_results[array_location].collated_data_array[0]), int(aggregated_results[array_location].collated_data_array[1]), true);
 		for (pixel_counter = 0; pixel_counter <  int(result_array[2]); pixel_counter++)
@@ -1627,7 +1627,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/pixel_size.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[26].ReturnStringArgument(), 1);
 		pixel_size_image.CopyFrom(&temp_image);
 		temp_image.Deallocate();
@@ -1643,9 +1642,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			if (aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f)
 			{
 
-				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]) * snr_estimate;
-				aggregated_results[array_location].collated_mip_data[pixel_counter] = snr_estimate*(aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) /
-																					   	   	   	    aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
+				// Save the variance, not the stdDev
+//				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
+				aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) /
+																					   	   	   	    sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
 			}
 			else
 			{
@@ -1660,10 +1660,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		}
 
 
-		//temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/scaled_mip.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
 		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument(), 1);
 		scaled_mip.CopyFrom(&temp_image);
 		temp_image.Deallocate();
+
 
 		// sums
 
@@ -1673,12 +1673,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant(snr_estimate);
-		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument(), 1);
-
-
-//		temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/sums.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument(), 1);
 		temp_image.Deallocate();
+
 
 		// square sums
 
@@ -1688,11 +1685,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
 		}
 
-		temp_image.MultiplyByConstant(snr_estimate);
-
-
-		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument(), 1);
+		temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument(), 1);
 		temp_image.Deallocate();
+
 
 		/// histogram
 

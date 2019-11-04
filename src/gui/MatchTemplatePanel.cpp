@@ -696,8 +696,14 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		wxString output_result_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
 		output_result_file += wxString::Format("/%s_plotted_result_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
-		wxString correlation_variance_output_file = "/dev/null";
-		current_orientation_counter = 0;
+		wxString correlation_sum_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		correlation_sum_output_file += wxString::Format("/%s_sum_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString correlation_variance_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		correlation_variance_output_file += wxString::Format("/%s_variance_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+//		wxString correlation_variance_output_file = "/dev/null";
+//		current_orientation_counter = 0;
 
 		wxString 	input_search_image = current_image->filename.GetFullPath();
 		wxString 	input_reconstruction = current_volume->filename.GetFullPath();
@@ -739,6 +745,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		temp_result.pixel_size_filename = best_pixel_size_output_file;
 		temp_result.histogram_filename = output_histogram_file;
 		temp_result.projection_result_filename = output_result_file;
+		temp_result.sum_filename = correlation_sum_output_file;
+		temp_result.variance_filename = correlation_variance_output_file;
 
 		cached_results.Add(temp_result);
 
@@ -797,7 +805,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_defocus_output_file.ToUTF8().data(),
 																	best_pixel_size_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
-																	correlation_variance_output_file.ToUTF8().data(),
+																	correlation_sum_output_file.ToUTF8().data(),
 																	wanted_symmetry.ToUTF8().data(),
 																	wanted_in_plane_angular_step,
 																	output_histogram_file.ToUTF8().data(),

@@ -63,8 +63,8 @@ public:
 	wxString pixel_size_filename;
 	wxString histogram_filename;
 	wxString projection_result_filename;
-	wxString sum_filename;
-	wxString variance_filename;
+	wxString avg_filename;
+	wxString std_filename;
 
 	float refinement_threshold;
 	float used_threshold;

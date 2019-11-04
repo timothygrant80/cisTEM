@@ -223,11 +223,13 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
 
 
+			// For the cpu code (MKL and FFTW) the image is multiplied by N on the forward xform, and subsequently normalized by 1/N
+			// cuFFT multiplies by 1/root(N) forward and then 1/root(N) on the inverse. The input image is done on the cpu, and so has no scaling.
+			// Stating false on the forward FFT leaves the ref = ref*root(N). Then we have root(N)*ref*input * root(N) (on the inverse) so we need a factor of 1/N to come out proper. This is included in BackwardFFTAfterComplexConjMul
 			d_padded_reference.ForwardFFT(false);
 			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
 			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
 //			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu, false);
-
 
 
 

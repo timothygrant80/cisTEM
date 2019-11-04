@@ -696,13 +696,13 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		wxString output_result_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
 		output_result_file += wxString::Format("/%s_plotted_result_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
-		wxString correlation_sum_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
-		correlation_sum_output_file += wxString::Format("/%s_sum_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+		wxString correlation_avg_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		correlation_avg_output_file += wxString::Format("/%s_avg_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
-		wxString correlation_variance_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
-		correlation_variance_output_file += wxString::Format("/%s_variance_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+		wxString correlation_std_output_file = main_frame->current_project.template_matching_asset_directory.GetFullPath();
+		correlation_std_output_file += wxString::Format("/%s_std_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
-//		wxString correlation_variance_output_file = "/dev/null";
+//		wxString correlation_std_output_file = "/dev/null";
 //		current_orientation_counter = 0;
 
 		wxString 	input_search_image = current_image->filename.GetFullPath();
@@ -745,8 +745,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		temp_result.pixel_size_filename = best_pixel_size_output_file;
 		temp_result.histogram_filename = output_histogram_file;
 		temp_result.projection_result_filename = output_result_file;
-		temp_result.sum_filename = correlation_sum_output_file;
-		temp_result.variance_filename = correlation_variance_output_file;
+		temp_result.avg_filename = correlation_avg_output_file;
+		temp_result.std_filename = correlation_std_output_file;
 
 		cached_results.Add(temp_result);
 
@@ -805,7 +805,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	best_defocus_output_file.ToUTF8().data(),
 																	best_pixel_size_output_file.ToUTF8().data(),
 																	scaled_mip_output_file.ToUTF8().data(),
-																	correlation_sum_output_file.ToUTF8().data(),
+																	correlation_avg_output_file.ToUTF8().data(),
 																	wanted_symmetry.ToUTF8().data(),
 																	wanted_in_plane_angular_step,
 																	output_histogram_file.ToUTF8().data(),
@@ -813,7 +813,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	last_search_position,
 																	image_number_for_gui,
 																	number_of_jobs_per_image_in_gui,
-																	correlation_variance_output_file.ToUTF8().data(),
+																	correlation_std_output_file.ToUTF8().data(),
 																	directory_for_results.ToUTF8().data(),
 																	output_result_file.ToUTF8().data(),
 																	min_peak_radius,

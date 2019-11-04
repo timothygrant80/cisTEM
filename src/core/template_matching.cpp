@@ -44,8 +44,8 @@ TemplateMatchJobResults::TemplateMatchJobResults()
 	pixel_size_filename = "";
 	histogram_filename = "";
 	projection_result_filename = "";
-	sum_filename = "";
-	variance_filename = '';
+	avg_filename = "";
+	std_filename = "";
 
 	refinement_threshold = 0.0f;
 	used_threshold = 0.0f;

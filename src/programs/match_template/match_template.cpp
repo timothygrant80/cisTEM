@@ -766,7 +766,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
-	int nThreads = 2;
+	int nThreads = 1;
 	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
 	if (use_gpu && nThreads > nJobs)
@@ -822,7 +822,7 @@ bool MatchTemplateApp::DoCalculation()
 	#pragma omp parallel num_threads(nThreads)
 	{
 		int tIDX = ReturnThreadNumberOfCurrentThread();
-		wxPrintf("Thread idx is %d\n",tIDX);
+		wxPrintf("Thread idx is %d vs %d\n",tIDX, omp_get_thread_num());
 		gpuDev.SetGpu(tIDX);
 	if (first_gpu_loop)
 	{
@@ -866,6 +866,7 @@ bool MatchTemplateApp::DoCalculation()
 			projection_filter.CalculateCTFImage(input_ctf);
 			projection_filter.ApplyCurveFilter(&whitening_filter);
 
+
 //			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
 			if (use_gpu)
 			{
@@ -876,6 +877,7 @@ bool MatchTemplateApp::DoCalculation()
 			#pragma omp parallel firstprivate(projection_filter) num_threads(nThreads)
 			{
 				int tIDX = ReturnThreadNumberOfCurrentThread();
+				wxPrintf("Thread idx is %d vs %d \n",tIDX, omp_get_thread_num());
 				gpuDev.SetGpu(tIDX);
 
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
@@ -896,7 +898,8 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
-//					mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
+					std::string fileNameOUT = "tmpMip" + std::to_string(GPU[tIDX].first_search_position) + "-" + std::to_string(GPU[tIDX].last_search_position) + ".mrc";
+					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT,1);
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum;

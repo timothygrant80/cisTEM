@@ -1578,8 +1578,7 @@ template < typename T > void GpuImage::BackwardFFTAfterComplexConjMul(T* image_t
 				cudaErr(cudaMemcpyFromSymbol(&h_complexConjMulLoad,d_complexConjMulLoad_32f, sizeof(h_complexConjMulLoad)));
 			}
 
-			Record();
-			Wait();
+			cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 			cudaErr(cufftXtSetCallback(cuda_plan_inverse, (void **)&h_complexConjMulLoad, CUFFT_CB_LD_COMPLEX, (void **)&d_params));
 
 //		d_complexConjMulLoad;

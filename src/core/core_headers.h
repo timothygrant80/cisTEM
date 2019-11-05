@@ -185,7 +185,7 @@ protected:
 #include <thrust/functional.h>
 #include <typeinfo>
 #include <limits>
-
+#include <omp.h>
 
  // These headers are need so that gpu specific types can be instantiated outside the if(use_gpu) brackets.
 #include "../gpu/src/DeviceManager.h"

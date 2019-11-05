@@ -778,6 +778,7 @@ bool MatchTemplateApp::DoCalculation()
 	int minPos = first_search_position;
 	int maxPos = last_search_position;
 	int incPos = (nJobs) / (nThreads);
+	wxPrintf("Angular steps are : in-plane %f out-of-plane %f\n", angular_step, in_plane_angular_step);
 
 //	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 #ifdef ENABLEGPU
@@ -822,36 +823,36 @@ bool MatchTemplateApp::DoCalculation()
 	#pragma omp parallel num_threads(nThreads)
 	{
 		int tIDX = ReturnThreadNumberOfCurrentThread();
-		wxPrintf("Thread idx is %d vs %d\n",tIDX, omp_get_thread_num());
 		gpuDev.SetGpu(tIDX);
-	if (first_gpu_loop)
-	{
 
-			int t_first_search_position = first_search_position + (tIDX*incPos);
-			int t_last_search_position = first_search_position + (incPos-1) + (tIDX*incPos);
+		if (first_gpu_loop)
+		{
 
-			if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
+				int t_first_search_position = first_search_position + (tIDX*incPos);
+				int t_last_search_position = first_search_position + (incPos-1) + (tIDX*incPos);
 
-			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
-							pixel_size_search_range, pixel_size_step, pixel_size,
-							defocus_search_range, defocus_step, defocus1, defocus2,
-							psi_max, psi_start, psi_step,
-							angles, global_euler_search,
-							histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
-							max_padding, t_first_search_position, t_last_search_position);
+				if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
-			wxPrintf("%d\n",tIDX);
-			wxPrintf("%d\n", t_first_search_position);
-			wxPrintf("%d\n", t_last_search_position);
-			wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
+				GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
+								pixel_size_search_range, pixel_size_step, pixel_size,
+								defocus_search_range, defocus_step, defocus1, defocus2,
+								psi_max, psi_start, psi_step,
+								angles, global_euler_search,
+								histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
+								max_padding, t_first_search_position, t_last_search_position);
 
-		first_gpu_loop = false;
+				wxPrintf("%d\n",tIDX);
+				wxPrintf("%d\n", t_first_search_position);
+				wxPrintf("%d\n", t_last_search_position);
+				wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
 
-	}
-	else
-	{
-		GPU[tIDX].template_reconstruction.CopyFrom(&template_reconstruction);
-	}
+			first_gpu_loop = false;
+
+		}
+		else
+		{
+			GPU[tIDX].template_reconstruction.CopyFrom(&template_reconstruction);
+		}
 	} // end of omp block
 #endif
 	}
@@ -877,7 +878,6 @@ bool MatchTemplateApp::DoCalculation()
 			#pragma omp parallel firstprivate(projection_filter) num_threads(nThreads)
 			{
 				int tIDX = ReturnThreadNumberOfCurrentThread();
-				wxPrintf("Thread idx is %d vs %d \n",tIDX, omp_get_thread_num());
 				gpuDev.SetGpu(tIDX);
 
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
@@ -967,6 +967,7 @@ bool MatchTemplateApp::DoCalculation()
 				AddJobToResultQueue(temp_result);
 			}
 			continue;
+
 
 #endif
 			}

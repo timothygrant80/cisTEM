@@ -16,8 +16,11 @@ DeviceManager::DeviceManager(int wanted_number_of_gpus)
 
 DeviceManager::~DeviceManager() 
 {
-	// TODO make sure this only destroying the proper context.
-	checkCudaErrors(cudaDeviceReset());
+	if (is_manager_initialized)
+	{
+		checkCudaErrors(cudaDeviceReset());
+	}
+
 };
 
 
@@ -71,6 +74,8 @@ void DeviceManager::Init(int wanted_number_of_gpus)
   wxPrintf("Found a max mem of %zd bytes on gpuIDX %d\n", max_mem, max_mem_idx);
   this->nGPUs = wanted_number_of_gpus;
   this->gpuIDX = max_mem_idx;
+
+  is_manager_initialized = true;
 
 };
 

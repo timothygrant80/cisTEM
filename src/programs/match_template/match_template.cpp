@@ -766,7 +766,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
-	int nThreads = 1;
+	int nThreads = 2;
 	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
 	if (use_gpu && nThreads > nJobs)
@@ -898,8 +898,8 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
-					std::string fileNameOUT = "tmpMip" + std::to_string(GPU[tIDX].first_search_position) + "-" + std::to_string(GPU[tIDX].last_search_position) + ".mrc";
-					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT,1);
+//					std::string fileNameOUT = "tmpMip" + std::to_string(GPU[tIDX].first_search_position) + "-" + std::to_string(GPU[tIDX].last_search_position) + ".mrc";
+//					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT,1);
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum;

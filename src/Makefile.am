@@ -217,7 +217,7 @@ endif
 link_gpu_library=
 if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test
-link_gpu_library += ../../../src/gpu/lib/libcisTEMGPU.a
+link_gpu_library += ../../../src/gpu/src/libcisTEMGPU.a
 endif
 
 

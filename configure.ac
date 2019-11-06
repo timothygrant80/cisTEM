@@ -47,7 +47,8 @@ want_cuda="no"
 ###############################
 
 AC_MSG_NOTICE([Checking for gpu request and vars])
-AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
+AC_ARG_WITH([cuda],
+    AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=yes)]),
 [
 	with_cuda=$withval
 	if test "$withval" = "no"
@@ -60,8 +61,8 @@ AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix whe
 		want_cuda="yes"
 		cuda_home_path=$withval
 	fi
-], [ want_cuda="no"] )
-
+])
+  
 
 if test "$want_cuda" = "yes" 
 then

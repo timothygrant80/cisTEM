@@ -34,7 +34,7 @@ DEFINES += -D _FILE_OFFSET_BITS=64 -DWXUSINGDLL  -DGPU   -D__WXGTK__ -DSTDC_HEAD
 
 SMS ?= 70 75
 
-all: $(OBJECTS) link.o ../lib/libcisTEMGPU.a
+all: $(OBJECTS) link.o libcisTEMGPU.a
 
 $(OBJECTS):$(SOURCES)
 +++$(NVCC) $(NVCCFLAGS) $(DEFINES) $(INCLUDES) --device-c $^
@@ -42,7 +42,7 @@ $(OBJECTS):$(SOURCES)
 link.o : $(OBJECTS)
 +++$(NVCC) $(NVCCFLAGS) $(DEFINES) $(INCLUDES) --device-link  $^ --output-file $@ $(LDFLAGS)
 
-../lib/libcisTEMGPU.a: link.o $(OBJECTS) 
+libcisTEMGPU.a: link.o $(OBJECTS) 
 +++$(NVCC) $(NVCCFLAGS) --lib --output-file $@ $^
 
 

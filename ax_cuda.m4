@@ -40,8 +40,11 @@
 #		AC_SUBST(NVCC)
 #		AC_SUBST(NVCCFLAGS)
 #
+
+
 AC_DEFUN([AX_CUDA],
 [
+
 AC_ARG_WITH([cuda],
     AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=yes)]),
 [
@@ -83,7 +86,7 @@ then
 
 	# test if nvcc version is >= 2.3
 	NVCC_VERSION=`$NVCC --version | grep release | awk 'gsub(/,/, "") {print [$]5}'`
-	AC_MSG_RESULT([nvcc version : $NVCC_VERSION])
+	AC_MSG_RESULT([nvcc version : $NVCC_VERSION $NVCC_VERSION])
 	
   # we'll only use 64 bit arch
         libdir=lib64
@@ -127,6 +130,7 @@ then
 
 	AC_LANG_PUSH(C)
 	AC_MSG_CHECKING([for Cuda headers])
+  AC_MSG_NOTICE([cuda path is $cuda_home_path])
 	AC_COMPILE_IFELSE(
 	[
 		AC_LANG_PROGRAM([@%:@include <cuda.h>], [])

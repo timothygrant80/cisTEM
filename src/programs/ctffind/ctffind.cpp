@@ -518,6 +518,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 	float stretch_factor;
 	float padding_value;
 	float pixel_size_for_fitting;
+//	float sigma;
 //	float offset_x;
 //	float offset_y;
 
@@ -532,11 +533,11 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 
 	n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
 	if (IsEven(n_sec)) n_sec++;
-//	wxPrintf("n_sec = %i\n", n_sec);
+//	wxPrintf("n_sec, n_stp = %i %i\n", n_sec, n_stp);
 
-	sub_section_x = input_image_buffer[0].logical_x_dimension / n_sec;
+	sub_section_x = input_image_buffer[0].logical_x_dimension / (n_sec + 1);
 	if (IsOdd(sub_section_x)) sub_section_x--;
-	sub_section_y = input_image_buffer[0].logical_y_dimension / n_sec;
+	sub_section_y = input_image_buffer[0].logical_y_dimension / (n_sec + 1);
 	if (IsOdd(sub_section_y)) sub_section_y--;
 //	sub_section_dimension = std::min(sub_section_x, sub_section_y);
 	sub_section_dimension = resampled_spectrum->logical_x_dimension;
@@ -573,7 +574,8 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 				padding_value = section.ReturnAverageOfRealValues();
 				section.CosineRectangularMask(0.9f * section.physical_address_of_box_center_x, 0.9f * section.physical_address_of_box_center_y, \
 					0.0f, 0.1f * section.logical_x_dimension, false, true, padding_value);
-				section.MultiplyByConstant(sqrtf(1.0f / section.ReturnVarianceOfRealValues()));
+//				sigma = sqrtf(section.ReturnVarianceOfRealValues());
+//				if (sigma > 0.0f) section.MultiplyByConstant(1.0f / sigma);
 //				section.QuickAndDirtyWriteSlice("sections.mrc", section_counter + 1);
 				section.ForwardFFT();
 				section.complex_values[0] = 0.0f + I * 0.0f;
@@ -1023,6 +1025,15 @@ float CtffindCurveObjectiveFunction(void *scoring_parameters, float array_of_val
 	// Note, we are not properly normalizing the cross correlation coefficient. For our
 	// purposes this should be OK, since the average power of the theoretical CTF should not
 	// change much with defocus. At least I hope so.
+//	if (! std::isfinite(- cross_product / sqrtf(norm_ctf * norm_curve)))
+//	{
+//		wxPrintf("param 1, 2, v1, v2, v3 = %g %g %g %g %g\n", array_of_values[0], array_of_values[1], cross_product, norm_ctf, norm_curve);
+//		for ( bin_counter = 0 ; bin_counter < comparison_object->number_of_bins; bin_counter ++ )
+//		{
+//			wxPrintf("bin, val = %i, %g\n", bin_counter, comparison_object->curve[bin_counter]);
+//		}
+//		exit(0);
+//	}
 	return - cross_product / sqrtf(norm_ctf * norm_curve);
 
 

@@ -16,7 +16,12 @@ AC_PROG_LIBTOOL
 AC_LANG(C++)
 
 # Set this for the gpu makefile hack
-export TOPSRCDIR=$srcdir
+TOPSRCDIR=$srcdir
+
+if test "$TOPSRCDIR" = "." ; then
+	TOPSRCDIR=`pwd`
+fi
+
 
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
@@ -96,13 +101,7 @@ then
 	       	fi
 	    fi
 	])
-    
-    `awk -v CP=$cuda_home_path -v CC=$CXX -v WX=$wx_path -v TD=${TOPSRCDIR} \
-			'{if(/^CUDA_PATH/) print "CUDA_PATH ?= "CP ; \
-			if(/^HOST_COMPILER/) print "HOST_COMPILER ?= "CC;  \
-			if(/^WX_PATH/) print "WX_PATH ?= "WX"/../.."; \
-			if(/^LOCAL_SOURCES/) printf "%s\n%s\n",$0,"SOURCES=\$(addprefix "TD"/src/gpu/,\$(LOCAL_SOURCES))"; 
-			else print $0}' ${TOPSRCDIR}/src/gpu/Makefile.template > src/gpu/Makefile`
+
 fi
 
 ##############################
@@ -295,12 +294,32 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
           WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
           WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml`"
         fi
+        
+        if test "$want_cuda" ; then
+          WX_CXX_CUDA_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//' | sed -e 's/-pthread//'` "
+          WX_LIBS_CUDA_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml | sed -e 's/-fno-exceptions//' | sed -e 's/-pthread//'` "
+          WX_LIBS_CUDA_BASE="$WX_CXX_CUDA_BASE $WX_LIBS_CUDA_BASE"
+        fi
                 
         wx_is_available=1
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
 fi
+
+
+if test "$want_cuda" = "yes" ; then
+
+    
+    `awk -v CP="$cuda_home_path" -v CC="$CXX" -v WX="$WX_LIBS_CUDA_BASE" -v WP="$wx_path" -v TD="$TOPSRCDIR" \
+			'{if(/^CUDA_PATH/) print "CUDA_PATH ?= "CP ; else \
+			if(/^HOST_COMPILER/) print "HOST_COMPILER ?= "CC; else \
+			if(/^WX_LIBS/) print "WX_LIBS ?= "WX; else \
+			if(/^LOCAL_SOURCES/) printf "%s\n%s\n",$0,"SOURCES=\$(addprefix "TD"/src/gpu/,\$(LOCAL_SOURCES))"; 
+			else print $0}' ${TOPSRCDIR}/src/gpu/Makefile.template > src/gpu/Makefile`
+
+fi
+
 
 # Do FFTW3 Checks
 

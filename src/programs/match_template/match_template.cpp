@@ -778,7 +778,6 @@ bool MatchTemplateApp::DoCalculation()
 	int minPos = first_search_position;
 	int maxPos = last_search_position;
 	int incPos = (nJobs) / (nThreads);
-	wxPrintf("Angular steps are : in-plane %f out-of-plane %f\n", angular_step, in_plane_angular_step);
 
 //	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 #ifdef ENABLEGPU
@@ -898,8 +897,7 @@ bool MatchTemplateApp::DoCalculation()
 					GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
 					GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
-//					std::string fileNameOUT = "tmpMip" + std::to_string(GPU[tIDX].first_search_position) + "-" + std::to_string(GPU[tIDX].last_search_position) + ".mrc";
-//					mip_buffer.QuickAndDirtyWriteSlice(fileNameOUT,1);
+//					mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
 					// TODO should prob aggregate these across all workers
 				// TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
 					Image sum;

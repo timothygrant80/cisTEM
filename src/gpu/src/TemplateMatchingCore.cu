@@ -233,6 +233,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 
 
+
 			if (DO_HISTOGRAM)
 			{
 				if ( ! histogram.is_allocated_histogram )

@@ -49,6 +49,7 @@ AC_ARG_WITH([cuda],
     AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=yes)]),
 [
 	with_cuda=$withval
+  cuda_home_path="/usr/local/cuda"
 	if test "$withval" = "no"
 	then
 		want_cuda="no"
@@ -61,7 +62,7 @@ AC_ARG_WITH([cuda],
 	fi
 ],
 [
-	want_cuda="yes"
+	want_cuda="no"
 ])
 
 

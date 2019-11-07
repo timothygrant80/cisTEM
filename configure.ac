@@ -15,6 +15,9 @@ AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
 AC_LANG(C++)
 
+# Set this for the gpu makefile hack
+export TOPSRCDIR=$srcdir
+
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
 CXXFLAGS="$INPUT_CXXFLAGS"
@@ -50,6 +53,7 @@ AC_MSG_NOTICE([Checking for gpu request and vars])
 AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
 [
 	with_cuda=$withval
+	cuda_home_path="/usr/local/cuda"
 	if test "$withval" = "no"
 	then
 		want_cuda="no"
@@ -65,14 +69,40 @@ AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix whe
 
 if test "$want_cuda" = "yes" 
 then
-	# Set conditional and run macro
-	
+
+	# Set conditional and run macro	
 	AX_CUDA
 	
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
     CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS -DENABLEGPU"
     CXXFLAGS="$CXXFLAGS $CUDA_CFLAGS -DENABLEGPU"	
     LIBS="$LIBS $CUDA_LIBS"	
+    
+    # Autotools does not play nice with cuda, so this takes vars from configure and puts them
+    # into a gpu specific makefile. This makefile is called with a rule made in Makefile.am
+    wx_path=""
+	AC_ARG_WITH(wx-config,
+	[[  --with-wx-config=FILE   Use the given path to wx-config when determining
+	                          wxWidgets configuration; defaults to "wx-config"]],
+	[
+	    if test "$withval" != "yes" -a "$withval" != ""; then
+	        wx_path=`$withval --prefix`     
+        else 
+        	if test "$withval" == "" ; then
+        		wx_path=`wx-config --prefix`
+        	fi
+        	if test "$wx_path" == "" ; then
+	        	AC_MSG_ERROR([wx-config must be on PATH or a full path to wx-config file passed via --with-wx-config=FILE is required for the gpu version!])
+	       	fi
+	    fi
+	])
+    
+    `awk -v CP=$cuda_home_path -v CC=$CXX -v WX=$wx_path -v TD=${TOPSRCDIR} \
+			'{if(/^CUDA_PATH/) print "CUDA_PATH ?= "CP ; \
+			if(/^HOST_COMPILER/) print "HOST_COMPILER ?= "CC;  \
+			if(/^WX_PATH/) print "WX_PATH ?= "WX"/../.."; \
+			if(/^LOCAL_SOURCES/) printf "%s\n%s\n",$0,"SOURCES=\$(addprefix "TD"/src/gpu/,\$(LOCAL_SOURCES))"; 
+			else print $0}' ${TOPSRCDIR}/src/gpu/Makefile.template > src/gpu/Makefile`
 fi
 
 ##############################

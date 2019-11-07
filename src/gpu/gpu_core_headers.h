@@ -17,7 +17,7 @@
 #define HEAVE_ERROR_CHECKING false
 #endif
 
-#include "../../core/core_headers.h"
+#include "../core/core_headers.h"
 
 
 const int MAX_GPU_COUNT = 32;

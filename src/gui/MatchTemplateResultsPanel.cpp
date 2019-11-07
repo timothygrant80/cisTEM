@@ -204,7 +204,7 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
 
 			if (array_position < 0 || current_asset < 0)
 			{
-				MyPrintWithDetails("Error: Something wrong finding asset %i, skipping", current_asset);
+				MyPrintWithDetails("Error: Something wrong finding asset %i, skipping - have you deleted an image?", current_asset);
 			}
 			else
 			{

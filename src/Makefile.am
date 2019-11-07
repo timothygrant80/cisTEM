@@ -217,7 +217,16 @@ endif
 link_gpu_library=
 if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test
-link_gpu_library += ../../../src/gpu/src/libcisTEMGPU.a
+
+# Autotools does not play nice with cuda. This creates a target that is put into the main makefile.
+SUBDIRS = gpu
+.PHONY: subdirs $(SUBDIRS)
+subdirs:$(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@ -f Makefile
+
+link_gpu_library += gpu/libgpucore.a
 endif
 
 

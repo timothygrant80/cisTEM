@@ -214,25 +214,30 @@ if EXPERIMENTAL_AM
 bin_PROGRAMS += match_template refine_template make_template_result  scattering_potential sum_all_power_spectra
 endif
 
-link_gpu_library=
 if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test
+noinst_LIBRARIES += libgpucore.a  
 
-# Autotools does not play nice with cuda. This creates a target that is put into the main makefile.
-SUBDIRS = gpu
-.PHONY: subdirs $(SUBDIRS)
-subdirs:$(SUBDIRS)
+libgpucore_a_SOURCES =       gpu/Histogram.cu \
+                             gpu/TemplateMatchingCore.cu \
+                             gpu/DeviceManager.cu \
+                             gpu/GpuImage.cu
 
-$(SUBDIRS):
-	$(MAKE) -C $@ -f Makefile
+libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
+libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
+libgpucore_a_LIBADD = gpu/gpudevicecode.o
+libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
 
-link_gpu_library += gpu/libgpucore.a
+.cu.o:
+	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
+
+gpu/gpudevicecode.o: gpu/GpuImage.o 
+	$(NVCC) $(CUDA_CXXFLAGS) --device-link gpu/Histogram.o gpu/TemplateMatchingCore.o gpu/DeviceManager.o gpu/GpuImage.o -o gpu/gpudevicecode.o $(CUDA_LIBS)
 endif
 
-
 libcore_a_SOURCES =    core/functions.cpp \
-					   core/globals.cpp \
-					   core/randomnumbergenerator.cpp \
+		       core/globals.cpp \
+		       core/randomnumbergenerator.cpp \
                        core/userinput.cpp \
                        core/angles_and_shifts.cpp \
                        core/parameter_constraints.cpp \
@@ -591,16 +596,20 @@ warp_to_cistem_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 warp_to_cistem_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
+match_template_SOURCES = programs/match_template/match_template.cpp
+match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+
+if ENABLEGPU_AM 
+match_template_LDADD = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+else
+match_template_LDADD = libcore.a $(WX_LIBS_BASE)
+endif
 
 make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp
 make_template_result_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_LDADD = libcore.a $(WX_LIBS_BASE)
-
-match_template_SOURCES = programs/match_template/match_template.cpp
-match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-match_template_LDADD = $(link_gpu_library) libcore.a $(WX_LIBS_BASE)
 
 scattering_potential_SOURCES =  programs/scattering_potential/scattering_potential.cpp 
 scattering_potential_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -625,8 +634,8 @@ if ENABLEGPU_AM
 gpu_util_test_SUFFIXES = .cpp 
 gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp 
 gpu_util_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_LDADD =  $(link_gpu_library) libcore.a $(WX_LIBS_BASE)
+gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE) 
+gpu_util_test_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 
 endif
 

@@ -17,12 +17,9 @@ AC_LANG(C++)
 
 # Set this for the gpu makefile hack
 TOPSRCDIR=$srcdir
-
 if test "$TOPSRCDIR" = "." ; then
 	TOPSRCDIR=`pwd`
 fi
-
-
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
 CXXFLAGS="$INPUT_CXXFLAGS"
@@ -48,67 +45,6 @@ else
 	
 	LIBS="$LIBS -ldl"
 fi
-
-want_cuda="no"
-###############################
-# BEGIN CUDA CHECKS AND SETS
-###############################
-
-AC_MSG_NOTICE([Checking for gpu request and vars])
-AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
-[
-	with_cuda=$withval
-	cuda_home_path="/usr/local/cuda"
-	if test "$withval" = "no"
-	then
-		want_cuda="no"
-	elif test "$withval" = "yes"
-	then
-		want_cuda="yes"
-	else
-		want_cuda="yes"
-		cuda_home_path=$withval
-	fi
-], [ want_cuda="no"] )
-
-
-if test "$want_cuda" = "yes" 
-then
-
-	# Set conditional and run macro	
-	AX_CUDA
-	
-    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS -DENABLEGPU"
-    CXXFLAGS="$CXXFLAGS $CUDA_CFLAGS -DENABLEGPU"	
-    LIBS="$LIBS $CUDA_LIBS"	
-    
-    # Autotools does not play nice with cuda, so this takes vars from configure and puts them
-    # into a gpu specific makefile. This makefile is called with a rule made in Makefile.am
-    wx_path=""
-	AC_ARG_WITH(wx-config,
-	[[  --with-wx-config=FILE   Use the given path to wx-config when determining
-	                          wxWidgets configuration; defaults to "wx-config"]],
-	[
-	    if test "$withval" != "yes" -a "$withval" != ""; then
-	        wx_path=`$withval --prefix`     
-        else 
-        	if test "$withval" == "" ; then
-        		wx_path=`wx-config --prefix`
-        	fi
-        	if test "$wx_path" == "" ; then
-	        	AC_MSG_ERROR([wx-config must be on PATH or a full path to wx-config file passed via --with-wx-config=FILE is required for the gpu version!])
-	       	fi
-	    fi
-	])
-
-fi
-
-##############################
-# END CUDA CHECKS AND SETS
-##############################
-
-AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
 
 #
 # What kind of OS are we on?
@@ -202,7 +138,49 @@ AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[defa
   fi
   ])
   
-  
+want_cuda="no"
+###############################
+# BEGIN CUDA CHECKS AND SETS
+###############################
+cuda_home_path="/usr/local/cuda"
+AC_MSG_NOTICE([Checking for gpu request and vars])
+AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
+[
+	with_cuda=$withval
+	if test "$withval" = "no"
+	then
+		want_cuda="no"
+	elif test "$withval" = "yes"
+	then
+		want_cuda="yes"
+	else
+		want_cuda="yes"
+		cuda_home_path=$withval
+	fi
+], [ want_cuda="no"] )
+
+
+if test "$want_cuda" = "yes" 
+then
+
+	# Set conditional and run macro	
+	AX_CUDA
+	
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CUDA_CPPFLAGS="$CUDA_CFLAGS -DENABLEGPU -ccbin $CXX --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75 --default-stream per-thread -m64 -O3 --use_fast_math -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -std=c++11 -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS -DENABLEGPU -ccbin $CXX --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75 --default-stream per-thread -m64 -O3 --use_fast_math -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -std=c++11 -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"	
+    CUDA_LIBS="$CUDA_LIBS -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt -lcuda"	
+    CXXFLAGS="$CXXFLAGS -DENABLEGPU $CUDA_CFLAGS"
+    CPPFLAGS="$CPPFLAGS -DENABLEGPU $CUDA_CFLAGS"
+    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+fi
+
+##############################
+# END CUDA CHECKS AND SETS
+##############################  
+
+AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
 
 # fftw
 
@@ -294,32 +272,12 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
           WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
           WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml`"
         fi
-        
-        if test "$want_cuda" ; then
-          WX_CXX_CUDA_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//' | sed -e 's/-pthread//'` "
-          WX_LIBS_CUDA_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml | sed -e 's/-fno-exceptions//' | sed -e 's/-pthread//'` "
-          WX_LIBS_CUDA_BASE="$WX_CXX_CUDA_BASE $WX_LIBS_CUDA_BASE"
-        fi
                 
         wx_is_available=1
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
 fi
-
-
-if test "$want_cuda" = "yes" ; then
-
-    
-    `awk -v CP="$cuda_home_path" -v CC="$CXX" -v WX="$WX_LIBS_CUDA_BASE" -v WP="$wx_path" -v TD="$TOPSRCDIR" \
-			'{if(/^CUDA_PATH/) print "CUDA_PATH ?= "CP ; else \
-			if(/^HOST_COMPILER/) print "HOST_COMPILER ?= "CC; else \
-			if(/^WX_LIBS/) print "WX_LIBS ?= "WX; else \
-			if(/^LOCAL_SOURCES/) printf "%s\n%s\n",$0,"SOURCES=\$(addprefix "TD"/src/gpu/,\$(LOCAL_SOURCES))"; 
-			else print $0}' ${TOPSRCDIR}/src/gpu/Makefile.template > src/gpu/Makefile`
-
-fi
-
 
 # Do FFTW3 Checks
 
@@ -399,6 +357,9 @@ AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)
 AC_SUBST(WX_CPPFLAGS_BASE)
+AC_SUBST(CUDA_CXXFLAGS)
+AC_SUBST(CUDA_CPPFLAGS)
+AC_SUBST(CUDA_LIBS)
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 

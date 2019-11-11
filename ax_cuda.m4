@@ -227,7 +227,7 @@ AC_ARG_ENABLE([emu],
 #then
 #    NVCCFLAGS=" -deviceemu"
 #fi
-NVCCFLAGS=" --cudart=static -ccbin g++ -O3 --warn-on-double-precision-use"
+#NVCCFLAGS=" --cudart=static -ccbin g++ -O3 --warn-on-double-precision-use"
 
 #
 #AS_IF([test "x$want_cuda" = xyes],
@@ -284,7 +284,6 @@ fi
 ##m4_foreach_w([var], ["$NVCCFLAGS"], AS_ECHO([$var])AS_ECHO([" "]))
 #m4_map_args_w([$NVCCFLAGS], [AS_ECHO([\",], [\"])])
 
-AC_MSG_NOTICE([Using NVCCFLAGS=$NVCCFLAGS])
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(NVCCFLAGS)

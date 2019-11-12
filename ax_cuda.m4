@@ -90,28 +90,22 @@ then
 	AC_MSG_RESULT([nvcc version : $NVCC_VERSION $NVCC_VERSION])
 	
   # we'll only use 64 bit arch
-        libdir=lib64
-#	# test if architecture is 64 bits and NVCC version >= 2.3
-#        libdir=lib
-#	if test "x$host_cpu" = xx86_64 ; then
-#	   if test "x$NVCC_VERSION" \> "x2.2" ; then
-#              libdir=lib64
-#           fi
-#	fi
+  libdir=lib64
 
 	# set CUDA flags
 	if test -n "$cuda_home_path"
 	then
 	    CUDA_CFLAGS="-I$cuda_home_path/include  -I$cuda_home_path/samples/common/inc/"
-#      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lculibos"
-#####      CUDA_LIBS="-L$cuda_home_path/$libdir  -L$cuda_home_path/nvvm/lib64 -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lpthread -ldl -lrt"
       CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
-#      CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lcufft_static -lcublas_static -lcurand_static -lnppc_static -lnppial_static -lnppist_static -lculibos"
-#	    CUDA_LIBS="-L$cuda_home_path/$libdir -L$cuda_home_path/$libdir/nvvm/lib64 -lcudart -lcufft -lcublas -lcurand -lculibos"
 	else
-	    CUDA_CFLAGS="-I/usr/local/cuda/include"
-	    CUDA_LIBS="-L/usr/local/cuda/$libdir -lcudart -lcufft -L/usr/local/cuda/nvmm/$libdir"
+	    CUDA_CFLAGS="-I/usr/local/cuda/include  -I/usr/local/cuda/samples/common/inc/"
+	    CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
 	fi
+
+
+	saved_CPPFLAGS=$CPPFLAGS
+	saved_LIBS=$LIBS
+  saved_CUDA_LIBS=$CUDA_LIBS
 
 	# Env var CUDA_DRIVER_LIB_PATH can be used to set an alternate driver library path
 	# this is usefull when building on a host where only toolkit (nvcc) is installed
@@ -122,9 +116,6 @@ then
 	else
 	    CUDA_LIBS+=" -lcuda"
 	fi
-
-	saved_CPPFLAGS=$CPPFLAGS
-	saved_LIBS=$LIBS
 
 	CPPFLAGS="$CPPFLAGS $CUDA_CFLAGS"
 	LIBS="$LIBS $CUDA_LIBS"
@@ -175,6 +166,7 @@ then
 
 	CPPFLAGS=$saved_CPPFLAGS
 	LIBS=$saved_LIBS
+  CUDA_LIBS=$saved_CUDA_LIBS
 	
 	if test "$have_cuda_headers" = "yes" -a "$have_cuda_libs" = "yes" -a "$have_nvcc" = "yes"
 	then
@@ -212,77 +204,26 @@ AC_ARG_WITH([cuda-fast-math],
 )
 
 
-AC_ARG_ENABLE([emu],
-    AS_HELP_STRING([--enable-emu], [Turn on device emulation for CUDA]),
-    [case "${enableval}" in
-        yes) EMULATION=true ;;
-        no)  EMULATION=false ;;
-        *)   AC_MSG_ERROR([bad value ${enableval} for --enable-emu]) ;;
-    esac],
-    [EMULATION=false]
-)
+# Default nvcc flags
 
-# default nvcc flags
-#if test x$EMULATION = xtrue
-#then
-#    NVCCFLAGS=" -deviceemu"
-#fi
-#NVCCFLAGS=" --cudart=static -ccbin g++ -O3 --warn-on-double-precision-use"
-
-#
-#AS_IF([test "x$want_cuda" = xyes],
-#    [AS_IF([test "x$NVCCFLAGS" = x],
-#        [dnl generate CUDA code for broad spectrum of devices
-#         dnl Note: cc 13 for Tesla
-#         dnl Note: cc 20 for Fermi
-#	 dnl Note: cc 30 for Kepler K10
-#	 dnl Note: cc 35 for Kepler K20
-#         NVCCFLAGS=["-gencode arch=compute_10,code=sm_10 \
-# -gencode arch=compute_11,code=sm_11 \
-# -gencode arch=compute_13,code=sm_13 \
-# -gencode arch=compute_20,code=sm_20 \
-# -gencode arch=compute_30,code=sm_30 \
-# -gencode arch=compute_35,code=sm_35"]
-#                ]
-#             )
-#            ]
-#        )
-# For now just compile for London - add other arch when needed FIXME
-AS_IF([test "x$want_cuda" = xyes],
-    [AS_IF([test "x$NVCCFLAGS" = x],
-        [dnl generate CUDA code for broad spectrum of devices
-         dnl Note: cc 13 for Tesla
-         dnl Note: cc 20 for Fermi
-	 dnl Note: cc 30 for Kepler K10
-	 dnl Note: cc 35 for Kepler K20
-         NVCCFLAGS+=["-gencode arch=compute_70,code=sm_70 "]
-                ]
-             )
-            ]
-        )
-if test x$want_fast_math = xyes
-then
-	NVCCFLAGS+=" -use_fast_math"
-fi
-
-# Put these at the end to pass to g++
-#NVCCFLAGS+=" -Xcompiler=\"fopenmp -march=native\""
-#AS_ECHO([" "])
-#AS_ECHO([" "])
+NVCCFLAGS=" -ccbin $CXX"
+#AC_ARG_ENABLE([emu],
+#    AS_HELP_STRING([--enable-emu], [Turn on device emulation for CUDA]),
+#    [case "${enableval}" in
+#        yes) EMULATION=true ;;
+#        no)  EMULATION=false ;;
+#        *)   AC_MSG_ERROR([bad value ${enableval} for --enable-emu]) ;;
+#    esac],
+#    [EMULATION=false]
+#)
 
 
-#myvar="esyscmd(echo "I am echoing from the shell")"
-#myvarout="esyscmd(./test.sh \"testINPUT\")"
-#AC_MSG_NOTICE([$myvar])
-#AC_MSG_NOTICE([$(subst(ee,EE,feet on the street))])
-#turd='esyscmd(./test.sh NVCCFLAGS)'
 
-#AC_MSG_NOTICE([$turd])
+# For now just compile for Volta and Turing arch
+NVCCFLAGS+=" --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75"
 
-##m4_foreach_w([var], [[$NVCCFLAGS"]], [AC_MSG_NOTICE([-Xcompiler="m4_joinall([,],var)"])])
 
-##m4_foreach_w([var], ["$NVCCFLAGS"], AS_ECHO([$var])AS_ECHO([" "]))
-#m4_map_args_w([$NVCCFLAGS], [AS_ECHO([\",], [\"])])
+NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -std=c++11 -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
 
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(CUDA_CFLAGS)

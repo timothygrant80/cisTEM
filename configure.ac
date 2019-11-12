@@ -167,9 +167,8 @@ then
 	AX_CUDA
 	
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CUDA_CPPFLAGS="$CUDA_CFLAGS -DENABLEGPU -ccbin $CXX --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75 --default-stream per-thread -m64 -O3 --use_fast_math -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -std=c++11 -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
-    CUDA_CXXFLAGS="$CUDA_CFLAGS -DENABLEGPU -ccbin $CXX --gpu-architecture=compute_70 --gpu-code=sm_70,sm_75 --default-stream per-thread -m64 -O3 --use_fast_math -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -std=c++11 -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"	
-    CUDA_LIBS="$CUDA_LIBS -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt -lcuda"	
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
     CXXFLAGS="$CXXFLAGS -DENABLEGPU $CUDA_CFLAGS"
     CPPFLAGS="$CPPFLAGS -DENABLEGPU $CUDA_CFLAGS"
     AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])

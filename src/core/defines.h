@@ -19,8 +19,8 @@
 #define LORENTZ_FACTOR_300 1.587f
 #define ELECTRON_REST_MASS 510998.0f // eV
 
-
-
+// Used in pdb.h simulate.h
+#define NUMBER_OF_ATOM_TYPES 21
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"

@@ -284,6 +284,23 @@ public:
 		return (logical_x_dimension == logical_y_dimension);
 	}
 
+	inline void ReturnCosineMaskBandpassResolution(float pixel_size_in_angstrom, float &wanted_cutoff_in_angstrom, float &wanted_falloff_in_number_of_fourier_space_voxels)
+	{
+		// For example, if you want a cutoff at 2 Angstrom res, with a 14 pixel fall off, and your image is at 1.2 apix, inputs will be 1.2, 2, 14
+		// output in the last two args will be the mask_outer_radius, and mask_edge that are passed to CosineRingMask.
+		  wanted_cutoff_in_angstrom = 0.5f*(pixel_size_in_angstrom*2.0f/wanted_cutoff_in_angstrom);
+
+		  if (logical_z_dimension > 1)
+		  {
+			  wanted_falloff_in_number_of_fourier_space_voxels = wanted_falloff_in_number_of_fourier_space_voxels/3.0f*(fourier_voxel_size_x + fourier_voxel_size_y + fourier_voxel_size_z);
+		  }
+		  else
+		  {
+			  wanted_falloff_in_number_of_fourier_space_voxels = wanted_falloff_in_number_of_fourier_space_voxels/2.0f*(fourier_voxel_size_x + fourier_voxel_size_y);
+		  }
+
+	}
+
 	bool IsBinary();
 
 	void SetLogicalDimensions(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1);

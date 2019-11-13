@@ -23,7 +23,7 @@ const float inelastic_scalar = 0.66f ;
 const AtomType SOLVENT_TYPE = oxygen; // 2 N, 3 O 15, fit water
 const float water_oxygen_ratio = 1.0f;//0.8775;
 
-const int SUB_PIXEL_NEIGHBORHOOD = 2;
+const int SUB_PIXEL_NEIGHBORHOOD = 1;
 const int SUB_PIXEL_NeL = (SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1);
 
 
@@ -36,7 +36,7 @@ const float TAPER[29] = {0,0,0,0,0,
 const int IMAGEPADDING =  512; // Padding applied for the Fourier operations in the propagation steps. Removed prior to writing out.
 const int IMAGETRIMVAL = IMAGEPADDING + 2*TAPERWIDTH;
 
-const float MAX_PIXEL_SIZE = 3.0f;
+const float MAX_PIXEL_SIZE = 5.0f;
 
 
 // Intermediate images that may be useful for diagnostics.
@@ -286,9 +286,10 @@ class SimulateApp : public MyApp
 	}
 
 
-	inline void return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id, float &temp_potential)
+	inline float return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id)
 	{
 
+		float temp_potential = 0.0f;
 		for (int iGaussian = 0; iGaussian < 5; iGaussian++)
 		{
 
@@ -299,35 +300,39 @@ class SimulateApp : public MyApp
 
 		} // loop over gaussian fits
 
-		temp_potential *= this->lead_term;
+		return temp_potential *= this->lead_term;
 
 	};
 
-	inline void return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id, float &temp_potential,
+	inline float return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id,
 											int &iLim, int &jLim, int &kLim)
 	{
 
 
+		float temp_potential = 0.0f;
 		// Vector to lower left of given voxel, with centered spatial coords (pixel 0 is from -0.5 --> 0.5)
-		R.x1 *= (iLim);
-		R.y1 *= (jLim);
-		R.z1 *= (kLim);
-
-		R.x2 *= (1-iLim);
-		R.y2 *= (1-jLim);
-		R.z2 *= (1-kLim);
+		if (iLim == 0)
+		{
+			R.x1 = R.x2;
+		}
+		if (jLim == 0)
+		{
+			R.y1 = R.y2;
+		}
+		if (kLim == 0)
+		{
+			R.z1 = R.z2;
+		}
 
 		for (int iGaussian = 0; iGaussian < 5; iGaussian++)
 		{
 
 			temp_potential += (sp.ReturnScatteringParamtersA(atom_id,iGaussian) *
-					   fabsf((erff(bPlusB[iGaussian]*R.x1)-erff(bPlusB[iGaussian]*R.x2)) *
-							 (erff(bPlusB[iGaussian]*R.y1)-erff(bPlusB[iGaussian]*R.y2)) *
-							 (erff(bPlusB[iGaussian]*R.z1)-erff(bPlusB[iGaussian]*R.z2))));
+					  	  	  fabsf(erff(bPlusB[iGaussian]*R.x1) * erff(bPlusB[iGaussian]*R.y1) * erff(bPlusB[iGaussian]*R.z1)));
 
 		} // loop over gaussian fits
 
-		temp_potential *= this->lead_term;
+		return temp_potential *= this->lead_term;
 
 	};
 
@@ -667,7 +672,7 @@ void SimulateApp::DoInteractiveUserInput()
 
 	 //	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength / this->wanted_pixel_size_sq / 8.0f;
 	 	 // the 1/8 just comes from the integration of the gaussian which is too large by a factor of 2 in each dimension
-	 	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength  / 8.0f;
+	 	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength  / 64.0f;
 
 	delete my_input;
 
@@ -1212,7 +1217,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		}
 		else
 		{
-			this->size_neighborhood_water = myroundint(ceilf(1.0f / this->wanted_pixel_size));
+			this->size_neighborhood_water = 1;//1+myroundint(ceilf(1.0f / this->wanted_pixel_size));
 
 		}
 
@@ -2704,7 +2709,7 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 									for (iLim = 0; iLim < 2; iLim++)
 									{
 
-										return_scattering_potential(R, bPlusB, atom_id, temp_potential, iLim, jLim, kLim);
+										temp_potential += return_scattering_potential(R, bPlusB, atom_id, iLim, jLim, kLim);
 
 
 									}
@@ -2716,7 +2721,7 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 						else
 						{
 
-							return_scattering_potential(R, bPlusB, atom_id,temp_potential);
+							temp_potential += return_scattering_potential(R, bPlusB, atom_id);
 
 						}
 
@@ -2768,8 +2773,6 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 	float radius;
 	float water_lead_term;
 
-
-
 	// Private variables:
 	AtomType atom_id;
 	if (DO_PHASE_PLATE)
@@ -2789,7 +2792,8 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 		}
 	}
 
-	if (DO_PRINT) {wxPrintf("\nbFactor and leadterm %f %f\n",bFactor,water_lead_term);}
+	if (DO_PRINT) 	 {wxPrintf("\nbFactor and leadterm and wavelength %f %4.4e %4.4e %4.4e\n",bFactor,water_lead_term,lead_term,wavelength);}
+
 
 	float bPlusB[5];
 	float ix(0), iy(0), iz(0);
@@ -2803,7 +2807,6 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 
 	float center_offset = 0.0f;
 	float  pixel_offset = 0.5f;
-	float  pixel_offset2 = 0.5f;
 
 
 
@@ -2813,26 +2816,24 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 	}
 
 
-
 	int nSubPixCenter = 0;
 
 	for (int iSubPixZ = -SUB_PIXEL_NEIGHBORHOOD; iSubPixZ <= SUB_PIXEL_NEIGHBORHOOD ; iSubPixZ++)
 	{
 		dz = ((float)iSubPixZ / (float)(SUB_PIXEL_NEIGHBORHOOD*2+2) + center_offset);
 
-		for (int iSubPixY = -SUB_PIXEL_NEIGHBORHOOD; iSubPixY <= SUB_PIXEL_NEIGHBORHOOD ; iSubPixY++)
+	for (int iSubPixY = -SUB_PIXEL_NEIGHBORHOOD; iSubPixY <= SUB_PIXEL_NEIGHBORHOOD ; iSubPixY++)
+	{
+		dy =  ((float)iSubPixY / (float)(SUB_PIXEL_NEIGHBORHOOD*2+2) + center_offset);
+
+		for (int iSubPixX = -SUB_PIXEL_NEIGHBORHOOD; iSubPixX <= SUB_PIXEL_NEIGHBORHOOD ; iSubPixX++)
 		{
-			dy =  ((float)iSubPixY / (float)(SUB_PIXEL_NEIGHBORHOOD*2+2) + center_offset);
-
-			for (int iSubPixX = -SUB_PIXEL_NEIGHBORHOOD; iSubPixX <= SUB_PIXEL_NEIGHBORHOOD ; iSubPixX++)
-			{
-				dx =  ((float)iSubPixX / (float)(SUB_PIXEL_NEIGHBORHOOD*2+2) + center_offset);
+			dx =  ((float)iSubPixX / (float)(SUB_PIXEL_NEIGHBORHOOD*2+2) + center_offset);
 
 
-
-				int n_atoms_added = 0;
-				float temp_potential = 0;
-				double temp_potential_sum = 0;
+			int n_atoms_added = 0;
+			float temp_potential = 0.0f;
+			double temp_potential_sum = 0.0;
 
 			corners R;
 
@@ -2840,7 +2841,6 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 			{
 				R.x1 = (sx - pixel_offset - dx) * this->wanted_pixel_size;
 				R.x2 = (R.x1 + this->wanted_pixel_size);
-
 
 				for (sy = -size_neighborhood_water ; sy <=  size_neighborhood_water; sy++)
 				{
@@ -2859,8 +2859,6 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 
 							// Calculate the scattering potential
 							temp_potential = 0.0f;
-
-
 							// The case of the central voxel is special
 							if (sx == 0 && sy == 0 && sz == 0)
 							{
@@ -2870,13 +2868,10 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 									{
 										for (iLim = 0; iLim < 2; iLim++)
 										{
-											return_scattering_potential(R, bPlusB, atom_id,temp_potential, iLim, jLim, kLim);
-
+											temp_potential += return_scattering_potential(R, bPlusB, atom_id, iLim, jLim, kLim);
 										}
 									}
 								}
-
-
 							}
 							else
 							{
@@ -2885,7 +2880,7 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 								// General case
 								for (iGaussian = 0; iGaussian < 5; iGaussian++)
 								{
-									return_scattering_potential(R, bPlusB, atom_id,temp_potential);
+									temp_potential += return_scattering_potential(R, bPlusB, atom_id);
 
 
 								} // loop over gaussian fits
@@ -2893,13 +2888,16 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 
 							}
 
+
+
+
 							temp_potential_sum += (double)(temp_potential);
 
 //							wxPrintf("nSubPix, ir,dr,cr, %d  %d, %d, %d  %3.3f,%3.3f,%3.3f  %3.3f,%3.3f,%3.3f\n ",nSubPixCenter,iSubPixX,iSubPixY,iSubPixZ,sx,sy,sz,dx,dy,dz);
 
 					} // end of loop over Z
 
-					projected_water[nSubPixCenter].real_values[projected_water[nSubPixCenter].ReturnReal1DAddressFromPhysicalCoord(sx+size_neighborhood_water,sy+size_neighborhood_water,0)] = (float)temp_potential_sum * water_scaling;
+					projected_water[nSubPixCenter].real_values[projected_water[nSubPixCenter].ReturnReal1DAddressFromPhysicalCoord(sx+size_neighborhood_water,sy+size_neighborhood_water,0)] = (float)temp_potential_sum * water_scaling ;
 
 
 			} // end of loop Y
@@ -2910,9 +2908,9 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 
 		nSubPixCenter++;
 
-			} // inner SubPixZ
-		}  // mid SubPiX
-	} // outer SubPixY
+			} // inner SubPixX
+		}  // mid SubPiY
+	} // outer SubPixZ
 
 
 	if (SAVE_PROJECTED_WATER)
@@ -2928,6 +2926,7 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 		mrc_out.CloseFile();
 	}
 
+	exit(0);
 }
 
 void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scattering_slab, Image *scattering_potential,

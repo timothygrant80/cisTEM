@@ -582,67 +582,30 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 	} // loop on contrast
 
-//	return ((total_contrast/phase_contrast) - 1.0f);
-	return ( 1.0f - total_contrast/phase_contrast);
-
+	return ( 1.0f - (total_contrast - phase_contrast)/total_contrast);
 
 }
 
 void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus, float* contrast, float* mean_value)
 {
-	*contrast = wave_function_sq_modulus.ReturnAverageOfRealValues(sqrtf(unpadded_x_dimension*unpadded_x_dimension + unpadded_y_dimension*unpadded_y_dimension),false);
-	/*
-	Image buffer1;
+//	*contrast = wave_function_sq_modulus.ReturnAverageOfRealValues(sqrtf(unpadded_x_dimension*unpadded_x_dimension + unpadded_y_dimension*unpadded_y_dimension),false);
+
+	Image buffer1, buffer2;
 	buffer1.CopyFrom(&wave_function_sq_modulus);
-//	buffer1.CalculateDerivative(0.0f, 0.0f, 0.0f);
-
-	EmpiricalDistribution dist;
-
-	int padVal_y = (buffer1.logical_y_dimension - unpadded_y_dimension)/2;
-	int padVal_x = (buffer1.logical_x_dimension - unpadded_x_dimension)/2;
 
 
-	for (int j = padVal_y ; j <  buffer1.logical_y_dimension - padVal_y - 1 ; j ++)
-	{
-		for (int i = padVal_x ;i < buffer1.logical_x_dimension - padVal_x - 1; i ++)
-		{
-			dist.AddSampleValue(buffer1.ReturnRealPixelFromPhysicalCoord(i,j,0));
-		}
-	}
 
-	wxPrintf("Min max mean %f %f %f\n", dist.GetMinimum(), dist.GetMaximum(), dist.GetSampleMean());
-	float firstSubtract = -1.0f*dist.GetMinimum();
-	float thenDivide = 1.0f/(dist.GetMaximum() + firstSubtract);
-	buffer1.AddMultiplyConstant(firstSubtract, thenDivide);
+	buffer1.CopyFrom(&wave_function_sq_modulus);
+	buffer2.CopyFrom(&wave_function_sq_modulus);
 
-
-	dist.Reset();
-	for (int j = padVal_y ; j <  buffer1.logical_y_dimension - padVal_y - 1 ; j ++)
-	{
-		for (int i = padVal_x ;i < buffer1.logical_x_dimension - padVal_x - 1; i ++)
-		{
-			dist.AddSampleValue(buffer1.ReturnRealPixelFromPhysicalCoord(i,j,0));
-		}
-	}
-
-	wxPrintf("Min max mean %f %f %f\n", dist.GetMinimum(), dist.GetMaximum(), dist.GetSampleMean());
-
-	*contrast = sqrtf(dist.GetSampleVariance());
-*/
-
-//	, buffer2;
-//	buffer1.CopyFrom(&wave_function_sq_modulus);
-//	buffer2.CopyFrom(&wave_function_sq_modulus);
-//
-//	*mean_value = buffer1.ReturnAverageOfRealValues(0.0f, false);
+	*mean_value = 1.0f;//buffer1.ReturnAverageOfRealValues(0.0f, false);
 //	wxPrintf("\nAverage of wave funct sq is %3.3e\n",*mean_value);
-//	buffer1.MultiplyAddConstant(-1.0f,*mean_value);
-////	buffer1.DivideByConstant(*mean_value);
-//	buffer2.AddConstant(*mean_value);
-//	buffer1.DividePixelWise(buffer2);
+	buffer1.MultiplyAddConstant(-1.0f,*mean_value);
+//	buffer1.DivideByConstant(*mean_value);
+	buffer2.AddConstant(*mean_value);
+	buffer1.DividePixelWise(buffer2);
 
-
-//	*contrast = (max - min) / (max + min);//buffer1.ReturnAverageOfRealValues(0.0f,false);
+	*contrast = buffer1.ReturnAverageOfRealValues(0.0f,false);
 }
 
 

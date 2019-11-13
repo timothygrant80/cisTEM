@@ -243,6 +243,7 @@ class SimulateApp : public MyApp
 	float particle_shift_x = 0.0f;
 	float particle_shift_y =0.0f;
 	float DO_BEAM_TILT_FULL = false;
+	float amplitude_contrast;
 
 
 //    double   	average_at_cutoff[4] = {0,0,0,0};
@@ -533,14 +534,14 @@ void SimulateApp::DoInteractiveUserInput()
 	 }
 
 
-	if (doParticleStack > 0 || this->tilt_series)
-	{
+//	if (doParticleStack > 0 || this->tilt_series)
+//	{
 		parameter_file_name = output_filename + ".par";
 		wxString parameter_header = "C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE";
 		this->parameter_file.Open(parameter_file_name,1,17);
 		this->parameter_file.WriteCommentLine(parameter_header);
 
-	}
+//	}
 
 	this->get_devel_options			= my_input->GetYesNoFromUser("Set development options?","","no");
 
@@ -1908,12 +1909,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		this->taper_edges(scattering_potential, nSlabs, false);
 		this->taper_edges(inelastic_potential, nSlabs, true);
-		float amplitude_contrast;
+
 
 		for (int iLoop = 0; iLoop < nLoops; iLoop ++)
 		{
 
-			amplitude_contrast = wave_function.DoPropagation(sum_image, scattering_potential,inelastic_potential, iTilt_IDX, nSlabs, image_mean, inelastic_mean, propagator_distance);
+			// TODO Set to only calculate the amplitude contrast on the first frame.
+			amplitude_contrast = wave_function.DoPropagation(sum_image, scattering_potential,inelastic_potential, iTilt_IDX, nSlabs, image_mean, inelastic_mean, propagator_distance) / 2.0f;
 			wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
 
 			if (SAVE_PROBABILITY_WAVE && iLoop < 1)
@@ -2103,6 +2105,7 @@ timer_start = wxDateTime::Now();
 				parameter_vect[8] = wanted_defocus_1_in_angstroms;
 				parameter_vect[9] = wanted_defocus_2_in_angstroms;
 				parameter_vect[10]= wanted_astigmatism_azimuth;
+				parameter_vect[11]= 1000*atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
 
 				parameter_file.WriteLine(parameter_vect, false);
 			}
@@ -2217,7 +2220,7 @@ timer_start = wxDateTime::Now();
 			// Normalize to 1 sigma, at a radius 2/3 the box size
 			/////particle_stack[iTilt].ZeroFloatAndNormalize(1.0,0.33*particle_stack[0].logical_x_dimension,true);
 		}
-		else if (this->tilt_series && ! this->use_existing_params)
+		else if (! this->use_existing_params)
 		{
 
 			parameter_vect[0] = iTilt + 1;
@@ -2230,6 +2233,8 @@ timer_start = wxDateTime::Now();
 				parameter_vect[5]  = shift_y[iTilt]; // shy
 			}
 		    parameter_vect[6]  = mag_diff[iTilt]; // mag
+			parameter_vect[11]= 1000*atanf(amplitude_contrast/sqrtf(1.0 - powf(amplitude_contrast, 2)));
+
 
 		    parameter_file.WriteLine(parameter_vect, false);
 

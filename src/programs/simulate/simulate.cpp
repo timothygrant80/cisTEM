@@ -23,7 +23,7 @@ const float inelastic_scalar = 0.66f ;
 const AtomType SOLVENT_TYPE = oxygen; // 2 N, 3 O 15, fit water
 const float water_oxygen_ratio = 1.0f;//0.8775;
 
-const int SUB_PIXEL_NEIGHBORHOOD = 1;
+const int SUB_PIXEL_NEIGHBORHOOD = 2;
 const int SUB_PIXEL_NeL = (SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1)*(SUB_PIXEL_NEIGHBORHOOD*2+1);
 
 
@@ -286,17 +286,26 @@ class SimulateApp : public MyApp
 	}
 
 
-	inline float return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id)
+	inline float return_scattering_potential(corners &R, float* bPlusB, AtomType &atom_id)
 	{
 
 		float temp_potential = 0.0f;
+		float t0;
+		bool t1,t2,t3;
+
+		// if product < 0, we need to sum the two independent terms, otherwise we want the difference.
+		t1 = R.x1 * R.x2 < 0  ?  false : true;
+		t2 = R.y1 * R.y2 < 0  ?  false : true;
+		t3 = R.z1 * R.z2 < 0  ?  false : true;
+
 		for (int iGaussian = 0; iGaussian < 5; iGaussian++)
 		{
 
-			temp_potential += (sp.ReturnScatteringParamtersA(atom_id,iGaussian) *
-					   fabsf((erff(bPlusB[iGaussian]*R.x1)-erff(bPlusB[iGaussian]*R.x2)) *
-							 (erff(bPlusB[iGaussian]*R.y1)-erff(bPlusB[iGaussian]*R.y2)) *
-							 (erff(bPlusB[iGaussian]*R.z1)-erff(bPlusB[iGaussian]*R.z2))));
+			t0  = (t1) ? erff(bPlusB[iGaussian]*R.x2) - erff(bPlusB[iGaussian]*R.x1) : fabsf(erff(bPlusB[iGaussian]*R.x2)) + fabsf(erff(bPlusB[iGaussian]*R.x1));
+			t0 *= (t2) ? erff(bPlusB[iGaussian]*R.y2) - erff(bPlusB[iGaussian]*R.y1) : fabsf(erff(bPlusB[iGaussian]*R.y2)) + fabsf(erff(bPlusB[iGaussian]*R.y1));
+			t0 *= (t3) ? erff(bPlusB[iGaussian]*R.z2) - erff(bPlusB[iGaussian]*R.z1) : fabsf(erff(bPlusB[iGaussian]*R.z2)) + fabsf(erff(bPlusB[iGaussian]*R.z1));
+
+			temp_potential += sp.ReturnScatteringParamtersA(atom_id,iGaussian) * fabsf(t0) ;
 
 		} // loop over gaussian fits
 
@@ -304,37 +313,6 @@ class SimulateApp : public MyApp
 
 	};
 
-	inline float return_scattering_potential(corners R, float* bPlusB, AtomType &atom_id,
-											int &iLim, int &jLim, int &kLim)
-	{
-
-
-		float temp_potential = 0.0f;
-		// Vector to lower left of given voxel, with centered spatial coords (pixel 0 is from -0.5 --> 0.5)
-		if (iLim == 0)
-		{
-			R.x1 = R.x2;
-		}
-		if (jLim == 0)
-		{
-			R.y1 = R.y2;
-		}
-		if (kLim == 0)
-		{
-			R.z1 = R.z2;
-		}
-
-		for (int iGaussian = 0; iGaussian < 5; iGaussian++)
-		{
-
-			temp_potential += (sp.ReturnScatteringParamtersA(atom_id,iGaussian) *
-					  	  	  fabsf(erff(bPlusB[iGaussian]*R.x1) * erff(bPlusB[iGaussian]*R.y1) * erff(bPlusB[iGaussian]*R.z1)));
-
-		} // loop over gaussian fits
-
-		return temp_potential *= this->lead_term;
-
-	};
 
 	// Shift the curves to the right as the values from Shang/Sigworth are distance to VDW radius (avg C/O/N/H = 1.48 A)
 	// FIXME now that you are saving distances, you can also consider polar/non-polar residues separately for an "effective" distance since the curves have the same shape with a linear offset.
@@ -1217,7 +1195,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		}
 		else
 		{
-			this->size_neighborhood_water = 1;//1+myroundint(ceilf(1.0f / this->wanted_pixel_size));
+			this->size_neighborhood_water = 1+myroundint(ceilf(1.0f / this->wanted_pixel_size));
 
 		}
 
@@ -2603,18 +2581,16 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 	float atoms_distances_tmp[cubic_vol];
 
 	int n_atoms_added;
-	float temp_potential;
 	float pixel_offset = 0.5f;
 	float bfX(0), bfY(0), bfZ(0);
 
 	// TODO experiment with the scheduling. Until the specimen is consistently full, many consecutive slabs may have very little work for the assigned threads to handle.
-	#pragma omp parallel for num_threads(this->number_of_threads) private(atom_id, bFactor, bPlusB, radius, ix,iy,iz,x1,x2,y1,y2,z1,z2,indX,indY,indZ,sx,sy,sz,xDistSq,yDistSq,zDistSq,iLim,jLim,kLim, iGaussian,water_offset,atoms_values_tmp,atoms_added_idx,atoms_distances_tmp,n_atoms_added,temp_potential,pixel_offset,bfX,bfY,bfZ)
+	#pragma omp parallel for num_threads(this->number_of_threads) private(atom_id, bFactor, bPlusB, radius, ix,iy,iz,x1,x2,y1,y2,z1,z2,indX,indY,indZ,sx,sy,sz,xDistSq,yDistSq,zDistSq,iLim,jLim,kLim, iGaussian,water_offset,atoms_values_tmp,atoms_added_idx,atoms_distances_tmp,n_atoms_added,pixel_offset,bfX,bfY,bfZ)
 	for (long current_atom = 0; current_atom < nAtoms; current_atom++)
 	{
 
 
 		n_atoms_added = 0;
-		temp_potential = 0.0f;
 
 		atom_id = current_specimen->my_atoms.Item(current_atom).atom_type;
 		element_inelastic_ratio = inelastic_scalar / sp.ReturnAtomicNumber(atom_id); // Reimer/Ross_Messemer 1989
@@ -2699,37 +2675,11 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 					{
 						// Calculate the scattering potential
 
-						// The case of the central voxel is special
-						if (sx == 0 && sy == 0 && sz == 0)
-						{
-							for (kLim = 0; kLim < 2; kLim++)
-							{
-								for (jLim = 0; jLim < 2; jLim++)
-								{
-									for (iLim = 0; iLim < 2; iLim++)
-									{
-
-										temp_potential += return_scattering_potential(R, bPlusB, atom_id, iLim, jLim, kLim);
-
-
-									}
-								}
-							}
-
-
-						}
-						else
-						{
-
-							temp_potential += return_scattering_potential(R, bPlusB, atom_id);
-
-						}
 
 
 							atoms_added_idx[n_atoms_added] = scattering_slab.ReturnReal1DAddressFromPhysicalCoord(indX,indY,indZ - slabIDX_start[iSlab]);
-							atoms_values_tmp[n_atoms_added] = temp_potential;
+							atoms_values_tmp[n_atoms_added] = return_scattering_potential(R, bPlusB, atom_id);
 							atoms_distances_tmp[n_atoms_added] = xDistSq + yDistSq + zDistSq;
-							temp_potential = 0.0f;
 
 //							scattering_slab->real_values[atoms_added_idx[n_atoms_added]] += temp_potential;
 							n_atoms_added++;
@@ -2832,10 +2782,10 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 
 
 			int n_atoms_added = 0;
-			float temp_potential = 0.0f;
 			double temp_potential_sum = 0.0;
 
 			corners R;
+
 
 			for (sx = -size_neighborhood_water ; sx <= size_neighborhood_water ; sx++)
 			{
@@ -2857,43 +2807,7 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 					    R.z2 = R.z1 + this->wanted_pixel_size;
 
 
-							// Calculate the scattering potential
-							temp_potential = 0.0f;
-							// The case of the central voxel is special
-							if (sx == 0 && sy == 0 && sz == 0)
-							{
-								for (kLim = 0; kLim < 2; kLim++)
-								{
-									for (jLim = 0; jLim < 2; jLim++)
-									{
-										for (iLim = 0; iLim < 2; iLim++)
-										{
-											temp_potential += return_scattering_potential(R, bPlusB, atom_id, iLim, jLim, kLim);
-										}
-									}
-								}
-							}
-							else
-							{
-
-
-								// General case
-								for (iGaussian = 0; iGaussian < 5; iGaussian++)
-								{
-									temp_potential += return_scattering_potential(R, bPlusB, atom_id);
-
-
-								} // loop over gaussian fits
-
-
-							}
-
-
-
-
-							temp_potential_sum += (double)(temp_potential);
-
-//							wxPrintf("nSubPix, ir,dr,cr, %d  %d, %d, %d  %3.3f,%3.3f,%3.3f  %3.3f,%3.3f,%3.3f\n ",nSubPixCenter,iSubPixX,iSubPixY,iSubPixZ,sx,sy,sz,dx,dy,dz);
+							temp_potential_sum += (double)return_scattering_potential(R, bPlusB, atom_id);
 
 					} // end of loop over Z
 
@@ -3017,7 +2931,6 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scatt
 
 
 		int int_x,int_y,int_z;
-		float temp_potential = 0;
 		double temp_potential_sum = 0;
 		double norm_value = 0;
 

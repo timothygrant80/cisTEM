@@ -17,7 +17,7 @@ const float DISTANCE_INIT = 100000.0f; // Set the distance slab to a large value
 const int N_WATER_TERMS = 40;
 
 const float MIN_BFACTOR = 10.0f;
-const float inelastic_scalar = 0.66f ;
+const float inelastic_scalar = 0.75f ;
 
 // Parameters for calculating water. Because all waters are the same, except a sub-pixel origin offset. A SUB_PIXEL_NeL stack of projected potentials is pre-calculated with given offsets.
 const AtomType SOLVENT_TYPE = oxygen; // 2 N, 3 O 15, fit water
@@ -36,12 +36,12 @@ const float TAPER[29] = {0,0,0,0,0,
 const int IMAGEPADDING =  512; // Padding applied for the Fourier operations in the propagation steps. Removed prior to writing out.
 const int IMAGETRIMVAL = IMAGEPADDING + 2*TAPERWIDTH;
 
-const float MAX_PIXEL_SIZE = 5.0f;
+const float MAX_PIXEL_SIZE = 2.0f;
 
 
 // Intermediate images that may be useful for diagnostics.
-#define SAVE_WATER_AND_OTHER true
-#define SAVE_PROJECTED_WATER true
+#define SAVE_WATER_AND_OTHER false
+#define SAVE_PROJECTED_WATER false
 #define SAVE_PHASE_GRATING false
 #define SAVE_PHASE_GRATING_DOSE_FILTERED false
 #define SAVE_PHASE_GRATING_PLUS_WATER false
@@ -266,12 +266,12 @@ class SimulateApp : public MyApp
 
 	void probability_density_2d(PDB *pdb_ensemble, int time_step);
 	// Note the water does not take the dose as an argument.
-	void  calc_scattering_potential(const PDB * current_specimen,Image &scattering_slab, Image &inelastic_slab, Image &distance_slab, RotationMatrix rotate_waters,
+	void  calc_scattering_potential(const PDB * current_specimen, Image *scattering_slab, Image *inelastic_slab, Image *distance_slab, RotationMatrix rotate_waters,
 			                        float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
 
 	void  calc_water_potential(Image *projected_water);
-	void  fill_water_potential(const PDB * current_specimen,Image &scattering_slab, Image *scattering_potential,
-							   Image *inelastic_potential, Image &distance_slab, Water *water_box,RotationMatrix rotate_waters,
+	void  fill_water_potential(const PDB * current_specimen,Image *scattering_slab, Image *scattering_potential,
+							   Image *inelastic_potential, Image *distance_slab, Water *water_box,RotationMatrix rotate_waters,
 														   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
 
 
@@ -650,7 +650,7 @@ void SimulateApp::DoInteractiveUserInput()
 
 	 //	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength / this->wanted_pixel_size_sq / 8.0f;
 	 	 // the 1/8 just comes from the integration of the gaussian which is too large by a factor of 2 in each dimension
-	 	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength  / 64.0f;
+	 	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength  / 8.0f;
 
 	delete my_input;
 
@@ -1280,8 +1280,9 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		// Apply acurrent_specimen.vol_nY global shifts and rotations
 //		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, shift_x[iTilt], shift_y[iTilt], shift_z[iTilt], rotate_waters);
-				current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0f, rotate_waters);
 
+
+				current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0f, rotate_waters);
 
 		// Compute the solvent fraction, with ratio of protein/ water density.
 		// Assuming an average 2.2Ang vanderwaal radius ~50 cubic ang, 33.33 waters / cubic nanometer.
@@ -1464,7 +1465,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 			if (! DO_PHASE_PLATE)
 			{
-				this->calc_scattering_potential(&current_specimen, scattering_slab, inelastic_slab, distance_slab, rotate_waters, rotated_oZ, slabIDX_start, slabIDX_end, iSlab);
+				this->calc_scattering_potential(&current_specimen, &scattering_slab, &inelastic_slab, &distance_slab, rotate_waters, rotated_oZ, slabIDX_start, slabIDX_end, iSlab);
 			}
 
 			this->span_atoms += (wxDateTime::Now()-this->timer_start);
@@ -1588,7 +1589,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					mrc_out.SetPixelSize(this->wanted_pixel_size * this->bin3d);
 					mrc_out.CloseFile();
 					// Exit after writing the final slice for the reference. Is this the best way to do this? FIXME
-					exit(-1);
+					exit(0);
 				}
 				continue;
 
@@ -1737,8 +1738,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 				if (DO_PRINT) {wxPrintf("Working on waters, slab %d\n",iSlab);}
 
 
-				this->fill_water_potential(&current_specimen, scattering_slab,
-										   scattering_potential,inelastic_potential, distance_slab, &water_box,rotate_waters,
+				this->fill_water_potential(&current_specimen, &scattering_slab,
+										   scattering_potential,inelastic_potential, &distance_slab, &water_box,rotate_waters,
 						   	   	   	   	   rotated_oZ, slabIDX_start, slabIDX_end, iSlab);
 
 				this->span_waters += wxDateTime::Now() - this->timer_start;
@@ -2537,9 +2538,15 @@ timer_start = wxDateTime::Now();
 
 }
 
-void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &scattering_slab,Image &inelastic_slab, Image &distance_slab,
+void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
+											Image *scattering_slab,
+											Image *inelastic_slab,
+											Image *distance_slab,
 											RotationMatrix rotate_waters,
-													   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab)
+											float rotated_oZ,
+											int *slabIDX_start,
+											int *slabIDX_end,
+											int iSlab)
 
 // The if conditions needed to have water and protein in the same function
 // make it too complicated and about 10x less parallel friendly.
@@ -2589,7 +2596,6 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 	for (long current_atom = 0; current_atom < nAtoms; current_atom++)
 	{
 
-
 		n_atoms_added = 0;
 
 		atom_id = current_specimen->my_atoms.Item(current_atom).atom_type;
@@ -2618,7 +2624,7 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 			dx = modff(current_specimen->vol_oX + (x1 / wanted_pixel_size + pixel_offset), &ix);
 			dy = modff(current_specimen->vol_oY + (y1 / wanted_pixel_size + pixel_offset), &iy);
 			// Notes this is the unmodified dz (not using z1)
-			dz = modff(rotated_oZ 			    + (current_specimen->my_atoms.Item(current_atom).z_coordinate / wanted_pixel_size + pixel_offset), &iz);
+			dz = modff(rotated_oZ 			    + ((float)current_specimen->my_atoms.Item(current_atom).z_coordinate / wanted_pixel_size + pixel_offset), &iz);
 		}
 		else
 		{
@@ -2677,7 +2683,7 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 
 
 
-							atoms_added_idx[n_atoms_added] = scattering_slab.ReturnReal1DAddressFromPhysicalCoord(indX,indY,indZ - slabIDX_start[iSlab]);
+							atoms_added_idx[n_atoms_added] = scattering_slab->ReturnReal1DAddressFromPhysicalCoord(indX,indY,indZ - slabIDX_start[iSlab]);
 							atoms_values_tmp[n_atoms_added] = return_scattering_potential(R, bPlusB, atom_id);
 							atoms_distances_tmp[n_atoms_added] = xDistSq + yDistSq + zDistSq;
 
@@ -2691,22 +2697,20 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,Image &
 			} // end of loop over the neighborhood Y
 		} // end of loop over the neighborhood X
 
-
+//		wxPrintf("Possible positions added %3.3e %\n", 100.0f* (float)n_atoms_added/(float)cubic_vol);
 
 			for (int iIDX = 0; iIDX < n_atoms_added-1; iIDX++)
 			{
 				#pragma omp atomic update
-				scattering_slab.real_values[atoms_added_idx[iIDX]] += (atoms_values_tmp[iIDX]);
+				scattering_slab->real_values[atoms_added_idx[iIDX]] += (atoms_values_tmp[iIDX]);
 				// This is the value for 100 KeV --> scale (if needed) the final projected density
-				inelastic_slab.real_values[atoms_added_idx[iIDX]]  += element_inelastic_ratio * atoms_values_tmp[iIDX];
-				distance_slab.real_values[atoms_added_idx[iIDX]] = std::min(distance_slab.real_values[atoms_added_idx[iIDX]],atoms_distances_tmp[iIDX]);
+				inelastic_slab->real_values[atoms_added_idx[iIDX]]  += element_inelastic_ratio * atoms_values_tmp[iIDX];
+				distance_slab->real_values[atoms_added_idx[iIDX]] = std::min(distance_slab->real_values[atoms_added_idx[iIDX]],atoms_distances_tmp[iIDX]);
 			}
 
 		}// if statment into neigh
 
 	} // end loop over atoms
-
-
 
 
 
@@ -2840,11 +2844,11 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 		mrc_out.CloseFile();
 	}
 
-	exit(0);
+
 }
 
-void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scattering_slab, Image *scattering_potential,
-												  Image *inelastic_potential, Image &distance_slab, Water *water_box, RotationMatrix rotate_waters,
+void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scattering_slab, Image *scattering_potential,
+												  Image *inelastic_potential, Image *distance_slab, Water *water_box, RotationMatrix rotate_waters,
 													   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab)
 {
 
@@ -2883,19 +2887,19 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scatt
 
 
 	Image projected_water_atoms;
-	projected_water_atoms.Allocate(scattering_slab.logical_x_dimension,scattering_slab.logical_y_dimension,1);
+	projected_water_atoms.Allocate(scattering_slab->logical_x_dimension,scattering_slab->logical_y_dimension,1);
 	projected_water_atoms.SetToConstant(0.0f);
 
 
 	Image water_mask;
 	if (add_mean_water_potential)
 	{
-		water_mask.Allocate(scattering_slab.logical_x_dimension,scattering_slab.logical_y_dimension,scattering_slab.logical_z_dimension);
+		water_mask.Allocate(scattering_slab->logical_x_dimension,scattering_slab->logical_y_dimension,scattering_slab->logical_z_dimension);
 		water_mask.SetToConstant(1.0f);
 
-		for (long iVoxel = 0; iVoxel < scattering_slab.real_memory_allocated; iVoxel++)
+		for (long iVoxel = 0; iVoxel < scattering_slab->real_memory_allocated; iVoxel++)
 		{
-			current_potential = scattering_slab.real_values[iVoxel];
+			current_potential = scattering_slab->real_values[iVoxel];
 
 
 			if (DO_PHASE_PLATE)
@@ -2953,8 +2957,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scatt
 
 		}
 
-		dx = modff(ix + scattering_slab.logical_x_dimension/2, &ix);
-		dy = modff(iy + scattering_slab.logical_y_dimension/2, &iy);
+		dx = modff(ix + scattering_slab->logical_x_dimension/2, &ix);
+		dy = modff(iy + scattering_slab->logical_y_dimension/2, &iy);
 		dz = modff(iz + rotated_oZ, &iz); // Why am I subtracting here? Should it be an add? TODO
 
 		// Convert these once to avoid type conversion in every loop
@@ -2972,12 +2976,12 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image &scatt
 		iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
 
 
-		if ( iz >= slabIDX_start[iSlab] && iz  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab.logical_x_dimension && int_y-1 < scattering_slab.logical_y_dimension)
+		if ( iz >= slabIDX_start[iSlab] && iz  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
 
 
-			current_potential = scattering_slab.ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
-			current_distance  = distance_slab.ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
+			current_potential = scattering_slab->ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
+			current_distance  = distance_slab->ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
 
 			// FIXME
 			if (DO_PHASE_PLATE)

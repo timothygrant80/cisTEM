@@ -15,6 +15,7 @@ class Atom {
 
 	public:
 
+		// If any fields are added or modified here, be sure to update the CopyAtom method in the PDB class.
 		wxString name;
 		AtomType atom_type;
 		float x_coordinate;  // Angstrom
@@ -23,6 +24,7 @@ class Atom {
 		float occupancy;
 		float bfactor;
 		float charge;
+
 
 };
 
@@ -101,6 +103,22 @@ class PDB {
 
 		// H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
 
+
+		// This should probably be a copy constructor in the Atom class FIXME
+		Atom CopyAtom(Atom &atom_to_copy)
+		{
+			Atom atom_out;
+			atom_out.name = atom_to_copy.name;
+			atom_out.atom_type = atom_to_copy.atom_type;
+			atom_out.x_coordinate = atom_to_copy.x_coordinate;  // Angstrom
+			atom_out.y_coordinate = atom_to_copy.y_coordinate;  // Angstrom
+			atom_out.z_coordinate = atom_to_copy.z_coordinate;  // Angstrom
+			atom_out.occupancy = atom_to_copy.occupancy;
+			atom_out.bfactor = atom_to_copy.bfactor;
+			atom_out.charge = atom_to_copy.charge;
+
+			return atom_out;
+		};
 
 		// Methods
 

@@ -6,7 +6,7 @@ WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 
 
 
-const double MIN_PADDING_Z    = 16;
+const double MIN_PADDING_Z    = 4;
 const int MAX_XY_DIMENSION = 4096;
 
 // Define fixed width limits for PDB reading
@@ -309,6 +309,7 @@ void PDB::Init()
 
 				my_atoms.Item(current_atom_number).name =  current_line.Mid(NAMESTART,NAMELENGTH).Trim(true).Trim(false);
 
+
 				// Set all charge to zero - only override for Asp/Glu O that may be charged. Neutral at first in the simulation
 				my_atoms.Item(current_atom_number).charge = 0;
 
@@ -365,6 +366,7 @@ void PDB::Init()
 				temp_name = my_atoms.Item(current_atom_number).name;
 				temp_name.Trim(true).Trim(false);
 
+
 //				temp_name = current_line.Mid(WATERSTART,WATERLENGTH).Trim(true).Trim(false);
 				// First, check to see if it is a water, if not check to see if the element name exists.
 				if (temp_name.StartsWith("WTAA"))
@@ -374,8 +376,6 @@ void PDB::Init()
 				}
 				else
 				{
-
-
 
 					// Maybe this should be a switch statement
 					if (temp_name.StartsWith("O") ) {
@@ -414,8 +414,6 @@ void PDB::Init()
 						MyPrintWithDetails("Failed to match the element name %s\n",my_atoms.Item(current_atom_number).name);
 						DEBUG_ABORT;
 					};
-
-
 
 
 				}
@@ -791,9 +789,12 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 			for (current_atom = 0; current_atom < pdb_ensemble[current_pdb].number_of_atoms ; current_atom++)
 			{
 
-				ix =  pdb_ensemble[current_pdb].my_atoms.Item(current_atom).x_coordinate;
-				iy =  pdb_ensemble[current_pdb].my_atoms.Item(current_atom).y_coordinate;
-				iz =  pdb_ensemble[current_pdb].my_atoms.Item(current_atom).z_coordinate;
+
+				this->my_atoms.Item(current_total_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(current_atom));
+
+				ix =  my_atoms.Item(current_total_atom).x_coordinate;
+				iy =  my_atoms.Item(current_total_atom).y_coordinate;
+				iz =  my_atoms.Item(current_total_atom).z_coordinate;
 /*				wxPrintf("xyz at %f %f %f\n",pdb_ensemble[current_pdb].my_atoms.Item(current_atom).x_coordinate,
 											 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).y_coordinate,
 											 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).z_coordinate);
@@ -836,15 +837,6 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 				   this->max_z = this->my_atoms.Item(current_total_atom).z_coordinate;
 				}
 
-
-				//wxPrintf("\nCurrent atom %d\n",current_atom);
-				//wxPrintf("Current total atom %ld\n", current_total_atom);
-				// Copy in the atom characteristics, this would be the spot to increment damage as well.
-				// I wonder if there is a smarter way to do this rather than updating all of these?
-				this->my_atoms.Item(current_total_atom).occupancy	= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).occupancy;
-				this->my_atoms.Item(current_total_atom).bfactor		= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).bfactor;
-				this->my_atoms.Item(current_total_atom).charge		= pdb_ensemble[current_pdb].my_atoms.Item(current_atom).charge;
-
 				this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).atom_type]++;
 				current_total_atom++;
 
@@ -886,7 +878,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.35*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.05*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
 	if (this->cubic_size > 1)
 	{

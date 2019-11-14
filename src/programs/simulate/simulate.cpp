@@ -254,7 +254,10 @@ class SimulateApp : public MyApp
     float min_bFactor;
 
     FrealignParameterFile  parameter_file;
+    cisTEMParameters parameter_star;
+    cisTEMParameterLine parameters;
     std::string			   parameter_file_name;
+    std::string	parameter_star_file_name;
     long number_preexisting_particles;
     wxString preexisting_particle_file_name;
 
@@ -534,14 +537,13 @@ void SimulateApp::DoInteractiveUserInput()
 	 }
 
 
-//	if (doParticleStack > 0 || this->tilt_series)
-//	{
-		parameter_file_name = output_filename + ".par";
-		wxString parameter_header = "C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE";
-		this->parameter_file.Open(parameter_file_name,1,17);
-		this->parameter_file.WriteCommentLine(parameter_header);
 
-//	}
+	parameter_star_file_name = output_filename + ".star";
+
+	parameter_file_name = output_filename + ".par";
+	wxString parameter_header = "C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE";
+	this->parameter_file.Open(parameter_file_name,1,17);
+	this->parameter_file.WriteCommentLine(parameter_header);
 
 	this->get_devel_options			= my_input->GetYesNoFromUser("Set development options?","","no");
 
@@ -787,45 +789,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 
-    if (beam_tilt_x != 0.0 || beam_tilt_y != 0.0 )
-    {
-
-    	do_beam_tilt = true;
-    	beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
-    	beam_tilt = sqrtf(powf(beam_tilt_x, 2) + powf(beam_tilt_y, 2));
-
-    	beam_tilt   /= 1000.0f;
-    	beam_tilt_x /= 1000.0f;
-    	beam_tilt_y /= 1000.0f;
-
-    }
-
-
     wxPrintf("Using extra phase shift of %f radians\n",wanted_additional_phase_shift_in_radians);
-
-//    Image testFFT;
-//    int testFFT_size = 5308;
-//    testFFT_size = ReturnClosestFactorizedUpper(testFFT_size,3,true);
-//    testFFT.Allocate(testFFT_size,testFFT_size,1,true);
-//    testFFT.SetToConstant(0.0);
-//    testFFT.AddGaussianNoise(1.0);
-//
-//    wxDateTime startFFT = wxDateTime::Now();
-//    for (int iTime = 0; iTime < 10; iTime++)
-//    {
-//    	testFFT.ForwardFFT(true);
-//		testFFT.BackwardFFT();
-//    }
-//    wxPrintf("Timings: FFT: %s\n",(wxDateTime::Now()-startFFT).Format());
-//    throw;
-
-
-
-
 
 
 	if (use_existing_params)
 	{
+		// For now, we are only reading in from the par file FIXME
+
 		this->parameter_file.Open(preexisting_particle_file_name, 0,17);
 		this->parameter_file.ReadFile(true, number_preexisting_particles);
 
@@ -837,6 +807,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	}
 	else
 	{
+
 		parameter_vect[0]  = 1; // idx
 		parameter_vect[1]  = 0; // psi
 		parameter_vect[2]  = 0; // theta
@@ -854,15 +825,84 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		parameter_vect[14] = 10; //Sigma
 		parameter_vect[15] = 10; //Score
 		parameter_vect[16] = 0; // Change
+
+
+		int frame_lines;
+		if (ONLY_SAVE_SUMS) { frame_lines = 1; }
+		else { frame_lines = number_of_frames; }
+
+		if (this->tilt_series)
+		{
+			parameter_star.PreallocateMemoryAndBlank(n_tilt_angles * frame_lines);
+		}
+	    else if ( this->doParticleStack > 0)
+	    {
+	    	parameter_star.PreallocateMemoryAndBlank(doParticleStack * frame_lines);
+	    }
+	    else
+	    {
+	    	parameter_star.PreallocateMemoryAndBlank(frame_lines);
+	    }
+
+		parameter_star.parameters_to_write.SetNewToTrue();
+		parameter_star.parameters_to_write.image_is_active = false;
+		parameter_star.parameters_to_write.original_image_filename = false;
+		parameter_star.parameters_to_write.reference_3d_filename = false;
+		parameter_star.parameters_to_write.stack_filename = false;
+
+
+
+		parameters.position_in_stack = 0;
+		parameters.image_is_active = 0;
+		parameters.psi = 0.0f;
+		parameters.theta = 0.0f;
+		parameters.phi = 0.0f;
+		parameters.x_shift = 0.0f;
+		parameters.y_shift = 0.0f;
+		parameters.defocus_1 = wanted_defocus_1_in_angstroms;
+		parameters.defocus_2 = wanted_defocus_2_in_angstroms;
+		parameters.defocus_angle = wanted_astigmatism_azimuth;
+		parameters.phase_shift = wanted_additional_phase_shift_in_radians;
+		parameters.occupancy = 100.0f;
+		parameters.logp = -1000.0f;
+		parameters.sigma = 10.0f;
+		parameters.score = 10.0f;
+		parameters.score_change = 0.0f;
+		parameters.pixel_size = wanted_pixel_size;
+		parameters.microscope_voltage_kv = wanted_acceleration_voltage;
+		parameters.microscope_spherical_aberration_mm = wanted_spherical_aberration;
+		parameters.amplitude_contrast = 0.0f;
+		parameters.beam_tilt_x = beam_tilt_x;
+		parameters.beam_tilt_y = beam_tilt_y;
+		parameters.image_shift_x = particle_shift_x;
+		parameters.image_shift_y = particle_shift_y;
+		parameters.stack_filename = output_filename;
+		parameters.original_image_filename = wxEmptyString;
+		parameters.reference_3d_filename = wxEmptyString;
+		parameters.best_2d_class = 0;
+		parameters.beam_tilt_group = 0;
+		parameters.frame_number = 0;
+		parameters.pre_exposure = 0.0f;
+		parameters.total_exposure = 0.0f;
+
 	}
 
 
+	// Do this after intializing the parameters which should be stored in millirad
+    if (beam_tilt_x != 0.0 || beam_tilt_y != 0.0 )
+    {
 
+    	do_beam_tilt = true;
+    	beam_tilt_azimuth = atan2f(beam_tilt_y,beam_tilt_x);
+    	beam_tilt = sqrtf(powf(beam_tilt_x, 2) + powf(beam_tilt_y, 2));
+
+    	beam_tilt   /= 1000.0f;
+    	beam_tilt_x /= 1000.0f;
+    	beam_tilt_y /= 1000.0f;
+
+    }
 
     // TODO fix periodicity in Z on slab
-
-
-
 
 
     int iTilt;
@@ -872,7 +912,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     float * tilt_theta;
     float * tilt_phi;
 
-	// TODO either put into the class or better just update the global_random to use this.
+	// FIXME use new header in random
 	std::default_random_engine generator;
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -2077,6 +2117,30 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		defocus_offset = 0;
 
 
+		parameters.position_in_stack = (iTilt*(int)number_of_frames) + iFrame + 1;
+		parameters.psi = tilt_psi[iTilt];
+		parameters.theta = tilt_theta[iTilt];
+		parameters.phi = tilt_phi[iTilt];
+		if (this->stdErr != 0)
+		{
+			parameters.x_shift = shift_x[iTilt]; // shx
+			parameters.y_shift = shift_y[iTilt]; // shy
+		}
+		// TODO make sure this includes any random changes that might gave
+		parameters.defocus_1 = wanted_defocus_1_in_angstroms;
+		parameters.defocus_2 = wanted_defocus_2_in_angstroms;
+		parameters.defocus_angle = wanted_astigmatism_azimuth;
+		parameters.phase_shift = wanted_additional_phase_shift_in_radians;
+		parameters.pixel_size = wanted_pixel_size; // This includes any scaling due to mag changes.
+		parameters.microscope_voltage_kv = wanted_acceleration_voltage;
+		parameters.microscope_spherical_aberration_mm = wanted_spherical_aberration;
+		parameters.amplitude_contrast = amplitude_contrast;
+		parameters.frame_number = iFrame + 1;
+		parameters.pre_exposure =  current_total_exposure - dose_per_frame;
+		parameters.total_exposure = current_total_exposure;
+
+		parameter_star.all_parameters.Add(parameters);
+
     } // end of loop over frames
 
 
@@ -2092,6 +2156,9 @@ timer_start = wxDateTime::Now();
 
 			if (! this->use_existing_params)
 			{
+
+
+
 				parameter_vect[0] = iTilt + 1;
 				parameter_vect[1] = tilt_psi[iTilt];
 				parameter_vect[2] = tilt_theta[iTilt];
@@ -2222,6 +2289,7 @@ timer_start = wxDateTime::Now();
 		}
 		else if (! this->use_existing_params)
 		{
+
 
 			parameter_vect[0] = iTilt + 1;
 			parameter_vect[1] = tilt_psi[iTilt];
@@ -2526,6 +2594,8 @@ timer_start = wxDateTime::Now();
 	mrc_tlt_final.CloseFile();
 
 	this->parameter_file.Close();
+
+	parameter_star.WriteTocisTEMStarFile(parameter_star_file_name);
 
 	delete [] tilt_psi;
 	delete [] tilt_theta;

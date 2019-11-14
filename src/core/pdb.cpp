@@ -792,6 +792,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 
 				this->my_atoms.Item(current_total_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(current_atom));
 
+
 				ix =  my_atoms.Item(current_total_atom).x_coordinate;
 				iy =  my_atoms.Item(current_total_atom).y_coordinate;
 				iz =  my_atoms.Item(current_total_atom).z_coordinate;

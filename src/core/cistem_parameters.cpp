@@ -43,6 +43,17 @@ void cisTEMParameterMask::SetAllToTrue()
 	reference_3d_filename = true;
 	best_2d_class = true;
 	beam_tilt_group = true;
+	// Until I talk w/ Tim & Niko about this, always mask out these parameters. To include them call SetNewToTrue;
+	frame_number = false;
+	pre_exposure = false;
+	total_exposure = false;
+}
+
+void cisTEMParameterMask::SetNewToTrue()
+{
+	frame_number = true;
+	pre_exposure = true;
+	total_exposure = true;
 }
 
 void cisTEMParameterMask::SetAllToFalse()
@@ -76,6 +87,9 @@ void cisTEMParameterMask::SetAllToFalse()
 	reference_3d_filename = false;
 	best_2d_class = false;
 	beam_tilt_group = false;
+	frame_number = false;
+	pre_exposure = false;
+	total_exposure = false;
 }
 
 void cisTEMParameterMask::SetActiveParameters(long parameters_to_set)
@@ -109,6 +123,9 @@ void cisTEMParameterMask::SetActiveParameters(long parameters_to_set)
 	reference_3d_filename = ((parameters_to_set & REFERENCE_3D_FILENAME) == REFERENCE_3D_FILENAME);
 	best_2d_class = ((parameters_to_set & BEST_2D_CLASS) == BEST_2D_CLASS);
 	beam_tilt_group = ((parameters_to_set & BEAM_TILT_GROUP) == BEAM_TILT_GROUP);
+	frame_number = ((parameters_to_set & FRAME_NUMBER) == FRAME_NUMBER);
+	pre_exposure = ((parameters_to_set & PRE_EXPOSURE) == PRE_EXPOSURE);
+	total_exposure = ((parameters_to_set * TOTAL_EXPOSURE) == TOTAL_EXPOSURE);
 }
 
 
@@ -147,6 +164,9 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
+	frame_number += line_to_add.frame_number;
+	pre_exposure += line_to_add.pre_exposure;
+	total_exposure += line_to_add.total_exposure;
 
 	// not adding filenames or groups as it doesn't make sense
 }
@@ -177,6 +197,9 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
+	frame_number -= line_to_add.frame_number;
+	pre_exposure -= line_to_add.pre_exposure;
+	total_exposure -= line_to_add.total_exposure;
 
 	// not adding filenames or groups as it doesn't make sense
 }
@@ -207,6 +230,9 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
+	frame_number += powf(line_to_add.frame_number,2);
+	pre_exposure += powf(line_to_add.pre_exposure,2);
+	total_exposure += powf(line_to_add.total_exposure,2);
 
 	// not adding filenames or groups as it doesn't make sense
 
@@ -243,6 +269,9 @@ void cisTEMParameterLine::SetAllToZero()
 	reference_3d_filename = wxEmptyString;
 	best_2d_class = 0;
 	beam_tilt_group = 0;
+	frame_number = 0;
+	pre_exposure = 0.0f;
+	total_exposure = 0.0f;
 
 }
 
@@ -270,6 +299,9 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
+	if (isnan(frame_number) || isinf(frame_number)) frame_number = other_params.frame_number;
+	if (isnan(pre_exposure) || isinf(pre_exposure)) pre_exposure = other_params.pre_exposure;
+	if (isnan(total_exposure) || isinf(total_exposure)) total_exposure = other_params.total_exposure;
 }
 
 cisTEMParameterLine::~cisTEMParameterLine()
@@ -296,7 +328,18 @@ void cisTEMParameters::PreallocateMemoryAndBlank(int number_to_allocate)
 
 // THIS IS NOT BEING UPDATED...
 
-void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size, float wanted_microscope_voltage, float wanted_microscope_cs, float wanted_amplitude_contrast, float wanted_beam_tilt_x, float wanted_beam_tilt_y, float wanted_image_shift_x, float wanted_image_shift_y)
+void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename,
+											   float wanted_pixel_size,
+											   float wanted_microscope_voltage,
+											   float wanted_microscope_cs,
+											   float wanted_amplitude_contrast,
+											   float wanted_beam_tilt_x,
+											   float wanted_beam_tilt_y,
+											   float wanted_image_shift_x,
+											   float wanted_image_shift_y,
+											   int	 wanted_frame_number,
+											   float wanted_pre_exposure,
+											   float wanted_total_exposure)
 {
 	ClearAll();
 	float input_parameters[17];
@@ -338,6 +381,9 @@ void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename, float w
 		all_parameters[counter].beam_tilt_y = wanted_beam_tilt_y; // not there
 		all_parameters[counter].image_shift_x = wanted_image_shift_x; // not there
 		all_parameters[counter].image_shift_y = wanted_image_shift_y; // not there
+		all_parameters[counter].frame_number = wanted_frame_number; // not there
+		all_parameters[counter].pre_exposure = wanted_pre_exposure; // not there
+		all_parameters[counter].total_exposure = wanted_total_exposure; // not there
 	}
 }
 
@@ -595,6 +641,24 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		column_counter++;
 	}
 
+	if (parameters_to_write.frame_number == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMFrameNumber #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.pre_exposure == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPreExposure #%i", column_counter));
+		column_counter++;
+	}
+
+	if (parameters_to_write.total_exposure == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMTotalExposure #%i", column_counter));
+		column_counter++;
+	}
+
 	wxString data_line = "";
 
 	// header...
@@ -628,6 +692,9 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.stack_filename == true)  					data_line += "                                     STACK_FILENAME ";
 	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
 	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
+	if (parameters_to_write.frame_number == true) 						data_line += "   FRAME ";
+	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
+	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 
 	data_line[0] = '#';
 	cisTEM_star_file->AddLine(data_line);
@@ -672,6 +739,11 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.stack_filename == true)  data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].stack_filename));
 		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].original_image_filename));
 		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].reference_3d_filename));
+		if (parameters_to_write.frame_number == true) data_line += wxString::Format("%8u ", all_parameters[particle_counter].frame_number);
+		if (parameters_to_write.pre_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].pre_exposure);
+		if (parameters_to_write.total_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
+
+
 		cisTEM_star_file->AddLine(data_line);
 
 	}

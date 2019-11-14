@@ -91,8 +91,8 @@ class PDB {
 		float average_bFactor;
 		float pixel_size;
 		float vol_angX, vol_angY, vol_angZ;
-		long vol_nX, vol_nY, vol_nZ;
-		long vol_oX, vol_oY, vol_oZ;
+		int vol_nX, vol_nY, vol_nZ;
+		int vol_oX, vol_oY, vol_oZ;
 		float cubic_size;
 		float offset_z;
 		float min_z;

@@ -5,8 +5,8 @@ const double SOLVENT_DENSITY = 0.94; // 0.94 +/- 0.02 Ghormley JA, Hochanadel CJ
 const double CARBON_DENSITY  = 1.75; // 2.0; // NIST and Holography paper TODO add cite (using the lower density to match the Holography paper)
 const double MW_WATER        = 18.01528;
 const double MW_CARBON       = 12.0107;
-const double CARBON_X_ANG    = 1000.0;
-const double CARBON_Y_ANG    = 1000.0;
+const double CARBON_X_ANG    = 2000.0;
+const double CARBON_Y_ANG    = 2000.0;
 
 
 Water::Water(bool do_carbon)
@@ -15,12 +15,12 @@ Water::Water(bool do_carbon)
 
 }
 
-Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation, bool do_carbon)
+Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation, int *padX, int *padY, int nThreads, bool do_carbon)
 {
 
 	//
 	this->simulate_phase_plate = do_carbon;
-	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_tilt, in_plane_rotation);
+	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_tilt, in_plane_rotation, padX, padY, nThreads);
 
 
 }
@@ -34,12 +34,14 @@ Water::~Water()
 	}
 }
 
-void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation)
+void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation, int *padX, int *padY, int nThreads)
 {
 
 	this->size_neighborhood = wanted_size_neighborhood;
 	this->pixel_size = wanted_pixel_size;
 	this->dose_per_frame = wanted_dose_per_frame;
+
+	this->nThreads = nThreads;
 
 	if (this->simulate_phase_plate)
 	{
@@ -54,17 +56,18 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 	}
 	else
 	{
-		this->vol_nZ = current_specimen->vol_nZ;
-		this->vol_nX = ReturnPaddingForTilt(max_tilt, current_specimen->vol_nX); // This assums the tilting is only around the Y-Axis which isn't correct FIXME
-		this->vol_nY = current_specimen->vol_nY;
 
-		wxPrintf("size pre rot padding %d %d %f rot\n", vol_nX, vol_nY, in_plane_rotation);
-		int rotation_padding =  ReturnPaddingForRotation(in_plane_rotation, this->vol_nX);
-		this->vol_nY += (long)rotation_padding;
-		this->vol_nX += (long)rotation_padding;
-		wxPrintf("size post rot padding %d %d and pixel %f padding is %d\n", vol_nX, vol_nY, current_specimen->pixel_size, rotation_padding);
+		int padZ;
+		vol_nZ = current_specimen->vol_nZ;
 
+		wxPrintf("size pre rot padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
 
+		ReturnPadding(max_tilt, in_plane_rotation, current_specimen->vol_nZ, current_specimen->vol_nX, current_specimen->vol_nY, padX, padY, &padZ);
+
+		vol_nX = current_specimen->vol_nX + *padX + padZ; // This assums the tilting is only around the Y-Axis which isn't correct FIXME
+		vol_nY = current_specimen->vol_nY + *padY + padZ;
+
+		wxPrintf("size pre rot padding %d %d %f rot\n",vol_nX, vol_nY, in_plane_rotation);
 
 
 		MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
@@ -127,24 +130,48 @@ void Water::SeedWaters3d()
 	is_allocated_water_coords = true;
 
 
+	//  There are millions to billions of waters. We want to schedule the threads in a way that avoids atomic collisions
+	//  Since the updates are in a projected potential, this means we want a given thread to be assigned a block of waters that DO
+	//  overlap in Z, which it will handle serially. This is why K is on the inner loop here. To further optimize this, we can also increment the x/y dimensions
+	//  in multiples of the neigborhood.
 
-	for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
+	// Break up the x/y dims into ~ nThreads^2 thread blocks
+	int incX = ceil( vol_nX / nThreads);
+	int incY = ceil( vol_nY / nThreads);
+	int iLower, iUpper, jLower, jUpper,xUpper,yUpper;
+
+	xUpper =this->vol_nX - this->size_neighborhood;
+	yUpper =this->vol_nY - this->size_neighborhood;
+
+	for (int i = 0; i < nThreads; i++)
 	{
-		for (int j = this->size_neighborhood; j < this->vol_nY - this->size_neighborhood; j++)
+		iLower = i*incX + size_neighborhood;
+		iUpper = (1+i)*incX + size_neighborhood;
+		for (int j = 0; j < nThreads; j++)
 		{
-			for (int i = this->size_neighborhood; i < this->vol_nX - this->size_neighborhood; i++)
+			jLower = j*incY + size_neighborhood;
+			jUpper = (1+j)*incY + size_neighborhood;
+
+			for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
 			{
-				if (  my_rand.GetUniformRandomSTD(0.0,1.0) > random_sigma_cutoff )
+				for (int iInner = iLower; iInner < iUpper; iInner++)
 				{
+//					if (iInner > xUpper) { continue; }
+					for (int jInner = jLower; jInner < jUpper; jInner++)
+					{
+//						if (jInner > yUpper) { continue; }
 
-					water_coords[number_of_waters].x = (float)i;
-					water_coords[number_of_waters].y = (float)j;
-					water_coords[number_of_waters].z = (float)k;
+						if (  my_rand.GetUniformRandomSTD(0.0,1.0) > random_sigma_cutoff )
+						{
 
-					number_of_waters++;
+							water_coords[number_of_waters].x = (float)iInner;
+							water_coords[number_of_waters].y = (float)jInner;
+							water_coords[number_of_waters].z = (float)k;
+
+							number_of_waters++;
+						}
+					}
 				}
-
-
 			}
 		}
 
@@ -285,41 +312,40 @@ void Water::ShakeWaters3d(int number_of_threads)
 }
 
 
-int Water::ReturnPaddingForTilt(float max_tilt, long current_nX)
+void Water::ReturnPadding(float max_tilt, float in_plane_rotation, int current_thickness, int current_nX, int current_nY, int* padX, int* padY, int* padZ)
 {
 	// Assuming tilting only along the Y-axis
 	// TODO consider rotations of the projection which will also bring new water into view
 
 	MyAssertTrue(max_tilt < 70.01, "maximum tilt angle supported is 70 degrees")
-    if (fabsf(max_tilt) < 1e-1) { return current_nX ;}
 
-	int padded_nX;
-	float cos_max_tilt = cosf(max_tilt * (float)PIf / 180.0f);
-	padded_nX = myroundint((float)current_nX / cos_max_tilt + (vol_nZ / 2 * fabsf(tanf(max_tilt))));
-	return padded_nX;
-
-}
-
-int Water::ReturnPaddingForRotation(float in_plane_rotation, long current_nX)
-{
-	// Assuming tilting only along the Y-axis
-	// TODO consider rotations of the projection which will also bring new water into view
-	float max_ip_ang = 7.0f;
+	float max_ip_ang = 45.0f;
 	if( in_plane_rotation > max_ip_ang + .01)
 	{
 		wxPrintf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
 	}
-    if (fabsf(in_plane_rotation) < 1e-1) { return 0 ;}
 
-//	wxPrintf("sin %3.3f as %3.3f mult %3.3f int %d\n",
-//			sinf(in_plane_rotation * PIf / 180.0f),
-//			fabsf(sinf(in_plane_rotation * PIf / 180.0f)),
-//			(float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)),
-//			myroundint((float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f))));
+    // Now tack on the rotation padding
+    int rot_padding =
+    *padX = myroundint(0.5f*(float)current_nY * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
+    *padY = myroundint(0.5f*(float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
 
-	return myroundint((float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));
+    if (fabsf(max_tilt) < 1e-1)
+    {
+    	*padZ = 0;
+    }
+    else
+    {
+    	*padZ = myroundint(1.0f*current_thickness*sinf(max_tilt * (float)PIf / 180.0f));
+    }
+
+
+
+
 
 
 }
+
+
 
 

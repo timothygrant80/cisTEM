@@ -19,7 +19,7 @@ class Water {
 
 		// Constructors
 		Water(bool do_carbon = false);
-		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt,float in_plane_rotation, bool do_carbon = false);
+		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt,float in_plane_rotation, int *padX, int *padY, int nThreads, bool do_carbon = false);
 		~Water();
 
 		// data
@@ -43,15 +43,17 @@ class Water {
 		float max_z;
 		AtomPos* water_coords;
 		bool is_allocated_water_coords = false;
+		int nThreads;
+
+
 
 		//	void set_initial_trajectories(PDB *pdb_ensemble);
 
 
-		void Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation);
+		void Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation,int *padX, int *padY, int nThreads);
 		void SeedWaters3d();
 		void ShakeWaters3d(int number_of_threads);
-		int ReturnPaddingForTilt(float max_tilt, long current_nX);
-		int ReturnPaddingForRotation(float in_plane_rotation, long current_nX);
+		void ReturnPadding(float max_tilt, float in_plane_rotation, int current_thickness, int current_nX, int current_nY, int* padX, int* padY, int *padZ);
 
 
 		inline float Return_x_Coordinate(long current_atom) { return water_coords[current_atom].x ; }

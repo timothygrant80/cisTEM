@@ -839,6 +839,8 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 				}
 
 				this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).atom_type]++;
+
+				average_bFactor += my_atoms.Item(current_total_atom).bfactor;
 				current_total_atom++;
 
 
@@ -849,6 +851,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 
 	}
 
+	// This is used in the simulator to determine how large a window should be used for the calculation of the atoms.
 	this->average_bFactor /= current_total_atom;
 
 	if (current_total_atom > 2) // for single atom test
@@ -879,7 +882,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + 1.05*fabsf(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + (MIN_PADDING_Z+fabsf(this->max_z-this->min_z)))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
 	if (this->cubic_size > 1)
 	{
@@ -897,20 +900,20 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 	}
 
 
-	// Adjust the angstrom dimension to match the extended values
-	this->vol_angX = this->vol_nX * pixel_size;
-	this->vol_angY = this->vol_nY * pixel_size;
-	this->vol_angZ = this->vol_nZ * pixel_size;
-
-
-
-	this->vol_oX = floor(this->vol_nX / 2);
-	this->vol_oY = floor(this->vol_nY / 2);
-	this->vol_oZ = floor(this->vol_nZ / 2);
-
-
-
-	wxPrintf("vol_angZ = %3.3e\n angstroms", this->vol_angZ);
+//	// Adjust the angstrom dimension to match the extended values
+//	this->vol_angX = (float)this->vol_nX * pixel_size;
+//	this->vol_angY = (float)this->vol_nY * pixel_size;
+//	this->vol_angZ = (float)this->vol_nZ * pixel_size;
+//
+//
+//
+//	this->vol_oX = floor(this->vol_nX / 2);
+//	this->vol_oY = floor(this->vol_nY / 2);
+//	this->vol_oZ = floor(this->vol_nZ / 2);
+//
+//
+//
+//	wxPrintf("vol_angZ = %3.3e\n angstroms", this->vol_angZ);
 
 
 

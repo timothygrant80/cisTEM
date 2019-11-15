@@ -191,8 +191,8 @@ CTFTilt::CTFTilt(ImageFile &wanted_input_file, float wanted_high_res_limit_ctf_f
 
 	micrograph_subregion_dimension = 2000.0f / ctf_fit_pixel_size;
 	micrograph_subregion_dimension = ReturnClosestFactorizedLower(micrograph_subregion_dimension, 5);
-	if (micrograph_subregion_dimension < micrograph_square_dimension) power_spectrum_binned_image.Allocate(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
-	else power_spectrum_binned_image.Allocate(micrograph_square_dimension, micrograph_square_dimension, 1);
+	if (micrograph_subregion_dimension < micrograph_binned_dimension_for_ctf) power_spectrum_binned_image.Allocate(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
+	else power_spectrum_binned_image.Allocate(micrograph_binned_dimension_for_ctf, micrograph_binned_dimension_for_ctf, 1);
 
 	resampled_power_spectra = new Image [((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
 	tilt_binning_factor = 0.5f * high_res_limit_tilt_fit / original_pixel_size;

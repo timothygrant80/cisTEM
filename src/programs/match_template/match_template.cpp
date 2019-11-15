@@ -879,9 +879,37 @@ bool MatchTemplateApp::DoCalculation()
 				int tIDX = ReturnThreadNumberOfCurrentThread();
 				gpuDev.SetGpu(tIDX);
 
-				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
+				GPU[tIDX].RunInnerLoopA(&projection_filter, size_i, defocus_i, tIDX);
 
+				while (GPU[tIDX].current_search_position <= GPU[tIDX].last_search_position)
+				{
 
+					GPU[tIDX].RunInnerLoopB();
+
+					#pragma omp critical
+					{
+
+						for (int iPsi = 1; iPsi <= GPU[tIDX].ccc_counter; iPsi++)
+						{
+							current_correlation_position ++;
+							actual_number_of_ccs_calculated ++;
+
+							if (is_running_locally == true) my_progress->Update(current_correlation_position);
+
+							if (is_running_locally == false)
+							{
+								temp_float = current_correlation_position;
+								JobResult *temp_result = new JobResult;
+								temp_result->SetResult(1, &temp_float);
+								AddJobToResultQueue(temp_result);
+							}
+						}
+
+					}
+
+				}
+
+				GPU[tIDX].RunInnerLoopC();
 
 				#pragma omp critical
 				{
@@ -948,22 +976,12 @@ bool MatchTemplateApp::DoCalculation()
 
 					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
-					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
-					actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
+
 				} // end of omp critical block
 			} // end of parallel block
 
 
 
-			if (is_running_locally == true) my_progress->Update(current_correlation_position);
-
-			if (is_running_locally == false)
-			{
-				temp_float = current_correlation_position;
-				JobResult *temp_result = new JobResult;
-				temp_result->SetResult(1, &temp_float);
-				AddJobToResultQueue(temp_result);
-			}
 			continue;
 
 

@@ -172,7 +172,8 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			int defocus_i = 0;
 
 
-			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX);
+			GPU[tIDX].RunInnerLoopA(&projection_filter, size_i, defocus_i, tIDX);
+			// FIXME need a loop over positions for innerLoopB and then innerLoopC
 
 			long* histogram_data = new long[GPU[tIDX].histogram.histogram_n_bins];
 			for (int iBin = 0; iBin < GPU[tIDX].histogram.histogram_n_bins; iBin++)

@@ -67,6 +67,7 @@ public:
 	Image template_reconstruction;
 	Image current_projection;
 	Image input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
+	Image projection_filter;
 
 
 	cudaGraph_t graph;
@@ -115,6 +116,18 @@ public:
 	int last_search_position;
 	long total_number_of_cccs_calculated;
 
+	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
+	int ccc_counter = 0;
+	float average_on_edge;
+	bool make_graph = true;
+	bool first_loop_complete = false;
+
+
+
+
+//	cudaErr(cudaFuncSetCacheConfig(SumPixelWiseKernel, cudaFuncCachePreferL1));
+
+
 	Histogram histogram;
 
 	// Search objects
@@ -154,8 +167,10 @@ public:
 			int first_search_position,
 			int last_search_position);
 
-	void RunInnerLoop(Image &projection_filter, float pixel_i, float defocus_i, int threadIDX);
-
+	// TODO these could be named more descriptively. The goal here is to find the easiest way to produce a more actively updated progress bar.
+	void RunInnerLoopA(Image* projection_filter, float pixel_i, float defocus_i, int threadIDX);
+	void RunInnerLoopB();
+	void RunInnerLoopC();
 
 private:
 

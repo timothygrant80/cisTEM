@@ -133,7 +133,7 @@ void TemplateMatchingCore::Init(Image &template_reconstruction,
 
 };
 
-void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel, float c_defocus, int threadIDX)
+void TemplateMatchingCore::RunInnerLoopA(Image *projection_filter, float c_pixel, float c_defocus, int threadIDX)
 {
 
 
@@ -164,25 +164,26 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	cudaErr(cudaMalloc((void **)&my_peaks, sizeof(Peaks)*d_input_image.real_memory_allocated));
 	cudaErr(cudaMalloc((void **)&my_stats, sizeof(Stats)*d_input_image.real_memory_allocated));
 
-	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
 	cudaErr(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
 	cudaErr(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
 
-	int ccc_counter = 0;
-	int current_search_position;
-	float average_on_edge;
 
-	int thisDevice;
-	cudaGetDevice(&thisDevice);
-	wxPrintf("Thread %d is running on device %d\n", threadIDX, thisDevice);
 
 //	cudaErr(cudaFuncSetCacheConfig(SumPixelWiseKernel, cudaFuncCachePreferL1));
 
-	bool make_graph = true;
-	bool first_loop_complete = false;
+	make_graph = true;
+	first_loop_complete = false;
+	this->projection_filter.CopyFrom(projection_filter);
 
-	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
-	{
+	current_search_position = first_search_position;
+}
+
+void TemplateMatchingCore::RunInnerLoopB()
+{
+//	for (current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++)
+//	{
+		ccc_counter = 0;
+
 
 		if ( current_search_position % 10 == 0)
 		{
@@ -274,17 +275,18 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //			}
 
 
+				// This is used to handle the progress bar
 			ccc_counter++;
 			total_number_of_cccs_calculated++;
 
 
-			if ( ccc_counter % 10 == 0)
+			if ( total_number_of_cccs_calculated % 10 == 0)
 			{
 				this->AccumulateSums(my_stats, d_sum1, d_sumSq1);
 			}
 
 
-			if ( ccc_counter % 100 == 0)
+			if ( total_number_of_cccs_calculated % 100 == 0)
 			{
 
 				d_sum2.AddImage(d_sum1);
@@ -295,7 +297,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 			}
 
-			if ( ccc_counter % 10000 == 0)
+			if ( total_number_of_cccs_calculated % 10000 == 0)
 			{
 
 				d_sum3.AddImage(d_sum2);
@@ -318,10 +320,14 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 			} // loop over psi angles
 
-      
- 	} // end of outer loop euler sphere position
+		current_search_position++;
 
-	wxPrintf("\t\t\ntotal number %d\n",ccc_counter);
+ } // end of outer loop euler sphere position (innerloopB)
+
+void TemplateMatchingCore::RunInnerLoopC()
+{
+
+	wxPrintf("\t\t\ntotal number %d\n",total_number_of_cccs_calculated);
 
     cudaStreamWaitEvent(cudaStreamPerThread,gpu_work_is_done_Event, 0);
 
@@ -339,6 +345,10 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	histogram.Accumulate(d_padded_reference);
 
 	cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
+
+	cudaErr(cudaEventDestroy(projection_is_free_Event));
+	cudaErr(cudaEventDestroy(gpu_work_is_done_Event));
+
 
 	cudaErr(cudaFree(my_peaks));
 	cudaErr(cudaFree(my_stats));

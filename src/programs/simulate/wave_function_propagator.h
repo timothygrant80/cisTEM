@@ -83,7 +83,7 @@ public:
 
 	float DoPropagation(Image* sum_image, Image* scattering_potential, Image* inelastic_potential,
 			int tilt_IDX, int nSlabs,
-		   float* image_mean, float* inelastic_mean, float* propagator_distance);
+		   float* image_mean, float* inelastic_mean, float* propagator_distance, bool estimate_amplitude_contrast);
 
 	void  SetObjectiveAperture(float set_diameter_to) { objective_aperture_diameter = set_diameter_to; }
 	float GetObjectiveAperture() { return objective_aperture_diameter; }

@@ -227,7 +227,7 @@ void WaveFunctionPropagator::SetInputWaveFunction(int size_x, int size_y)
 
 float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_potential, Image* inelastic_potential,
 											int tilt_IDX, int nSlabs,
-										   float* image_mean, float* inelastic_mean, float* propagator_distance)
+										   float* image_mean, float* inelastic_mean, float* propagator_distance, bool estimate_amplitude_contrast)
 {
 	MyAssertTrue(is_set_ctf && is_set_fresnel_propagator, "Either the ctf or fresnel propagtor are not set")
 
@@ -244,10 +244,13 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 	float phase_contrast;
 	float mean_value;
 
+	int starting_val;
+	if (estimate_amplitude_contrast) starting_val = 0;
+	else starting_val = 1;
 
 
 	//
-	for (int iContrast = 0 ; iContrast < 2; iContrast++)
+	for (int iContrast = starting_val ; iContrast < 2; iContrast++)
 	{
 
 

@@ -63,6 +63,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/json/jsonval.h \
                  core/json/jsonreader.h \
                  core/json/jsonwriter.h \
+                 core/stopwatch.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -290,6 +291,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/json/jsonval.cpp \
                        core/json/jsonreader.cpp \
                        core/json/jsonwriter.cpp \
+                       core/stopwatch.cpp \
                        core/template_matching.cpp
 
 

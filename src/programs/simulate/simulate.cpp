@@ -3,7 +3,6 @@
 #include "scattering_potential.h"
 
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-#include <chrono>
 
 
 //#define DO_BEAM_TILT_FULL true
@@ -33,8 +32,8 @@ const float TAPER[29] = {0,0,0,0,0,
 						 0.287110, 0.345492, 0.406309, 0.468605, 0.531395, 0.593691, 0.654508, 0.712890,
 						 0.767913, 0.818712, 0.864484, 0.904508, 0.938153, 0.964888, 0.984292, 0.996057};
 
-const int IMAGEPADDING =  512; // Padding applied for the Fourier operations in the propagation steps. Removed prior to writing out.
-const int IMAGETRIMVAL = IMAGEPADDING + 2*TAPERWIDTH;
+const int IMAGEPADDING =  0;//512; // Padding applied for the Fourier operations in the propagation steps. Removed prior to writing out.
+const int IMAGETRIMVAL = 0;//IMAGEPADDING + 2*TAPERWIDTH;
 
 const float MAX_PIXEL_SIZE = 2.0f;
 
@@ -97,205 +96,6 @@ const float DQE_PARAMETERS_C[1][5] = {
 };
 
 
-class StopWatch {
-
-public:
-
-	enum TimeFormat : int { NANOSECONDS, MICROSECONDS, MILLISECONDS, SECONDS };
-	typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_pt;
-
-
-	std::vector<std::string> event_names = {};
-	std::vector<time_pt> 	 event_times = {};
-	std::vector<uint64_t> 	 elapsed_times = {};
-
-	uint64 hrminsec[4] = {0,0,0,0};
-	size_t current_index;
-	uint64_t null_time;
-	bool is_new;
-	TimeFormat time_fmt = MICROSECONDS;
-
-
-
-	StopWatch()
-	{
-		current_index = 0;
-		null_time = 0;
-		is_new = false;
-
-		std::string dummyString = "Stopwatch Overhead";
-		event_names.push_back(dummyString);
-		event_times.push_back(std::chrono::high_resolution_clock::now());
-		elapsed_times.push_back(stop(time_fmt, current_index));
-	}
-	~StopWatch()
-	{
-		// Do nothing;
-	}
-
-	void start(std::string name)
-	{
-		// Record overhead.
-		event_times[0] = std::chrono::high_resolution_clock::now();
-		// Check to see if the event has been encountered. If not, first create it and set elapsed time to zero. Return the events index.
-		check_for_name(name);
-		// Record the start time for the event.
-		if (! is_new)
-		{
-			event_times[current_index] = std::chrono::high_resolution_clock::now();
-		}
-
-		// Record the elapsed time for the start method.
-		elapsed_times[0] += stop(time_fmt, 0);
-	}
-
-	void lap(std::string name)
-	{
-		// Record overhead.
-		event_times[0] = std::chrono::high_resolution_clock::now();
-		// Check to see if the event has been encountered. If not, first create it and set elapsed time to zero. Return the events index.
-		check_for_name(name);
-		if (is_new) { wxPrintf("a new event name was encountered when calling Stopwatch::lap(%s) at line %d in file %s\n", name, __LINE__, __FILE__); exit(-1); }
-		elapsed_times[current_index] += stop(time_fmt, current_index);
-		elapsed_times[0] += stop(time_fmt, 0);
-	}
-
-	void check_for_name(std::string name)
-	{
-		// Either add to an existing event, or create a new one.
-		for (size_t iName = 0; iName < event_names.size(); iName++)
-		{
-			if (event_names[iName] == name)
-			{
-				current_index = iName;
-				is_new = false;
-				break;
-			}
-			else
-			{
-				is_new = true;
-			}
-
-		}
-
-		if (is_new)
-		{
-			event_names.push_back(name);
-			current_index = event_names.size() - 1;
-			event_times.push_back(std::chrono::high_resolution_clock::now());
-			elapsed_times.push_back(null_time);
-		}
-	}
-
-	void print_times()
-	{
-		// It would be nice to have a variable option for printing the time format in a given rep different from what was recorded.
-		std::string time_string;
-		switch (time_fmt)
-		{
-			case NANOSECONDS :
-				time_string = "ns";
-				break;
-
-			case MICROSECONDS :
-				time_string = "us";
-				break;
-
-			case MILLISECONDS :
-				time_string = "ms";
-				break;
-
-			case SECONDS :
-				time_string = "s";
-				break;
-
-		}
-		wxPrintf("\n\n\t\t---------Timing Results---------\n\n");
-		for (size_t iName = 0; iName < event_names.size(); iName++)
-		{
-			convert_time(elapsed_times[iName]);
-			if ( iName == 0)
-			{
-				wxPrintf("\t\t%-20s : %ld %s\n", event_names[iName], elapsed_times[iName], time_string);
-
-			}
-			else
-			{
-				wxPrintf("\t\t%-20s : %0.2ld:%0.2ld:%0.2ld:%0.2ld\n", event_names[iName], hrminsec[0], hrminsec[1], hrminsec[2], hrminsec[3]);
-
-			}
-		}
-		wxPrintf("\n\t\t--------------------------------\n\n");
-
-	}
-
-	uint64_t stop(TimeFormat T, int idx)
-	{
-		const auto current_time = std::chrono::high_resolution_clock::now();
-		const auto previous_time = event_times[idx];
-		return ticks(T, previous_time, current_time);
-	}
-
-
-	void convert_time(uint64_t microsec)
-	{
-		// Time is stored in microseconds
-		uint64 time_rem;
-		time_rem = microsec / 3600000000;
-		hrminsec[0] = time_rem;
-
-		microsec -= (time_rem * 3600000000);
-
-		time_rem = microsec / 60000000;
-		hrminsec[1] = time_rem;
-
-		microsec -= (time_rem * 60000000);
-
-		time_rem = microsec / 1000000;
-		hrminsec[2] = time_rem;
-
-		microsec -= (time_rem * 1000000);
-
-		time_rem = microsec / 1000;
-		hrminsec[3] = time_rem;
-
-		microsec -= (time_rem * 1000);
-
-	}
-
-
-
-private:
-
-
-	uint64_t ticks(TimeFormat T, const time_pt& start_time, const time_pt& end_time)
-	{
-		const auto duration = end_time - start_time;
-		const uint64_t ns_count = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-		uint64_t up;
-
-		switch (T)
-		{
-			case TimeFormat::MICROSECONDS :
-				up = ((ns_count / 100)%10 >= 5) ? 1 : 0;
-				up += (ns_count/1000);
-				break;
-
-
-			case TimeFormat::MILLISECONDS :
-				up = ((ns_count / 100000)%10 >= 5) ? 1 : 0;
-				up += (ns_count/1000000);
-				break;
-
-			case TimeFormat::SECONDS :
-				up = ((ns_count / 100000000)%10 >= 5) ? 1 : 0;
-				up += (ns_count/1000000000);
-				break;
-		}
-		return up;
-	}
-
-};
 
 struct corners {
 
@@ -303,6 +103,8 @@ struct corners {
 	float y1; float y2;
 	float z1; float z2;
 };
+
+#ifndef ENABLEGPU
 
 typedef struct _int3 {
 	int x;
@@ -315,6 +117,8 @@ typedef struct _float3 {
 	float y;
 	float z;
 } float3;
+
+#endif
 
 // Use to keep track of what the specimen looks like.
 enum PaddingStatus : int { none = 0, fft = 1, solvent = 2};
@@ -973,7 +777,6 @@ bool SimulateApp::DoCalculation()
 
 
 	// Profiling
-	wxDateTime	overall_start = wxDateTime::Now();
 
 	// get the arguments for this job..
 
@@ -1010,7 +813,6 @@ bool SimulateApp::DoCalculation()
 	// It gives a segfault at the end either way.
    // pdb_ensemble[0].Close();
 
-	//overall_finish = wxDateTime::Now();
 
 
 
@@ -1030,8 +832,6 @@ Leave this in until convinced it works ok.
 void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 {
 
-	timer.start("Overall");
-	timer.start("1");
 	bool SCALE_DEFOCUS_TO_MATCH_300 = true;
 	float scale_defocus = 1.0f;
 
@@ -1355,7 +1155,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 	}
 
-	timer.lap("1");
 	timer.start("Init H20 & Spec");
 	// We only want one water box for a tilt series. For a particle stack, re-initialize for each particle.
 	Water water_box(DO_PHASE_PLATE);
@@ -1492,7 +1291,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		timer.start("Xform Local");
 		current_specimen.TransformLocalAndCombine(pdb_ensemble,sp.number_of_pdbs,this->number_of_non_water_atoms, time_step, particle_rot, 0.0f); // Shift just defocus shift_z[iTilt]);
 		timer.lap("Xform Local");
-		timer.start("4");
 
 		// FIXME method for defining the size (in pixels) needed for incorporating the atoms density. The formulat used below is based on including the strongest likely scatterer (Phosphorous) given the bfactor.
 		float BF;
@@ -1514,7 +1312,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		}
 
 	    wxPrintf("using neighborhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n",powf(this->size_neighborhood_water*2+1,3),powf(this->size_neighborhood*2+1,3));
-	    timer.lap("4");
 	    timer.start("Calc H20 Atoms");
 	    ////////////////////////////////////////////////////////////////////////////////
 	    ////////// PRE_CALCULATE WATERS
@@ -1551,7 +1348,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		    water_box.Init( &current_specimen,this->size_neighborhood_water, this->wanted_pixel_size, this->dose_per_frame, max_tilt, tilt_axis, &padSpecimenX, &padSpecimenY, number_of_threads);
 	    }
 	    timer.lap("Calc H20 Box");
-	    timer.start("5");
+
+
 		coords.SetSpecimenVolume(current_specimen.vol_nX + padSpecimenX, current_specimen.vol_nY + padSpecimenY, current_specimen.vol_nZ);
 		coords.SetSolventPadding(water_box.vol_nX, water_box.vol_nY, water_box.vol_nZ);
 		coords.SetFFTPadding(5, 1);
@@ -1594,7 +1392,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		// Apply acurrent_specimen.vol_nY global shifts and rotations
 //		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, shift_x[iTilt], shift_y[iTilt], shift_z[iTilt], rotate_waters);
-		timer.lap("5");
+
 		timer.start("Xform Global");
 		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0f, rotate_waters);
 		timer.lap("Xform Global");
@@ -1628,12 +1426,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		}
 
-		timer.start("6");
+		timer.start("Allocate Sum");
 
 		// TODO with new solvent add, the edges should not need to be tapered or padded
 		coords.Allocate(&sum_image[iTilt_IDX], (PaddingStatus)fft, true, true);
 //		sum_image[iTilt_IDX].Allocate(padded_x_dim,padded_y_dim,true);
 		sum_image[iTilt_IDX].SetToConstant(0.0f);
+		timer.lap("Allocate Sum");
 
 		if (this->tilt_series)
 		{
@@ -1659,6 +1458,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		if ( this->propagation_distance < 0 ) {nSlabs  = 1; this->propagation_distance = fabsf(this->propagation_distance);}
 		else { nSlabs = ceilf( (float)rotated_Z * this->wanted_pixel_size/  this->propagation_distance);}
 
+		timer.start("Allocate potentials");
 		Image *scattering_potential = new Image[nSlabs];
 		Image *inelastic_potential = new Image[nSlabs];
 
@@ -1704,14 +1504,14 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		float* scattering_total_shift = new float[nSlabs];
 		float* scattering_mass = new float[nSlabs];
 		float scattering_center_of_mass = 0.0f;
-		timer.lap("6");
+		timer.lap("Allocate potentials");
+
+
 		for (iSlab = 0; iSlab < nSlabs; iSlab++)
 		{
 
-			timer.start("7");
-			timer.start("7a");
+
 			scattering_total_shift[iSlab] = 0.0f;
-			timer.start("Allocations");
 			propagator_distance[iSlab] =  ( this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 1) );
 
 			coords.Allocate(&scattering_potential[iSlab], (PaddingStatus)solvent, true, true);
@@ -1720,10 +1520,10 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			coords.Allocate(&inelastic_potential[iSlab], (PaddingStatus)solvent, true, true);
 //			inelastic_potential[iSlab].Allocate(current_specimen.vol_nX, current_specimen.vol_nY,1);
 			inelastic_potential[iSlab].SetToConstant(0.0f);
-			timer.lap("Allocations");
 
-			timer.lap("7a");
-			timer.start("7b");
+
+
+
 
 			if (SAVE_REF)
 			{
@@ -1743,8 +1543,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			Image scattering_slab;
 			Image distance_slab;
 			Image inelastic_slab;
-			timer.lap("7b");
-			timer.start("7c");
+
+			timer.start("Allocate 3d slabs");
 			coords.Allocate(&scattering_slab, (PaddingStatus)solvent, true, false);
 //			scattering_slab.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,slab_nZ);
 			scattering_slab.SetToConstant(0.0f);
@@ -1757,8 +1557,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			coords.Allocate(&inelastic_slab, (PaddingStatus)solvent, true, false);
 //			inelastic_slab.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,slab_nZ);
 			inelastic_slab.SetToConstant(0.0f);
-			timer.lap("7c");
-			timer.lap("7");
+			timer.lap("Allocate 3d slabs");
+
 			timer.start("Calc Atoms");
 			if (! DO_PHASE_PLATE)
 			{
@@ -1766,7 +1566,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			}
 			timer.lap("Calc Atoms");
 
-			timer.start("8");
 
 
 			////////////////////
@@ -1886,7 +1685,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 //			if (DO_EXPOSURE_FILTER == 3 && CALC_HOLES_ONLY == false && CALC_WATER_NO_HOLE == false)
-			timer.lap("8");
 			if (DO_EXPOSURE_FILTER == 3  && CALC_WATER_NO_HOLE == false)
 			{
 			// add in the exposure filter
@@ -1923,7 +1721,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 				timer.lap("Project 3d");
 
 			}
-timer.start("9");
 
 			// We need to check to make sure there is any material in this slab. Otherwise the wave function should not include any additional phase shifts.
 
@@ -1956,7 +1753,6 @@ timer.start("9");
 			}
 
 //			if (DO_EXPOSURE_FILTER == 2 && CALC_HOLES_ONLY == false && CALC_WATER_NO_HOLE == false)
-			timer.lap("9");
 			if (DO_EXPOSURE_FILTER == 2 && CALC_WATER_NO_HOLE == false)
 			{
 
@@ -2049,12 +1845,12 @@ timer.start("9");
 				}
 			}
 
-			timer.start("10");
 
-
-
+			timer.start("Deallocate Slabs");
 			scattering_slab.Deallocate();
 			inelastic_slab.Deallocate();
+			timer.lap("Deallocate Slabs");
+
 
 			if (DO_PHASE_PLATE)
 			{
@@ -2062,8 +1858,6 @@ timer.start("9");
 				jpr_sum_phase.AddImage(&scattering_potential[iSlab]);
 
 			}
-
-
 
 
 
@@ -2077,11 +1871,8 @@ timer.start("9");
 			}
 
 
-			timer.lap("10");
-
 		} // end loop nSlabs
 
-		timer.start("11");
 
 		float total_mass = 0.0f;
 		float total_prod = 0.0f;
@@ -2178,7 +1969,6 @@ timer.start("9");
 
 		wave_function.SetFresnelPropagator(wanted_acceleration_voltage, propagation_distance);
 //		wave_function.do_beam_tilt_full = true;
-		timer.lap("11");
 		timer.start("Taper Edges");
 		this->taper_edges(scattering_potential, nSlabs, false);
 		this->taper_edges(inelastic_potential, nSlabs, true);
@@ -2188,11 +1978,18 @@ timer.start("9");
 		{
 
 			timer.start("Propagate WaveFunc");
-			// TODO Set to only calculate the amplitude contrast on the first frame.
-			amplitude_contrast = wave_function.DoPropagation(sum_image, scattering_potential,inelastic_potential, iTilt_IDX, nSlabs, image_mean, inelastic_mean, propagator_distance) / 2.0f;
-			wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
+
+			if (iFrame == 0)
+			{
+				amplitude_contrast = wave_function.DoPropagation(sum_image, scattering_potential,inelastic_potential, iTilt_IDX, nSlabs, image_mean, inelastic_mean, propagator_distance, true) / 2.0f;
+				wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
+			}
+			else
+			{
+				 wave_function.DoPropagation(sum_image, scattering_potential,inelastic_potential, iTilt_IDX, nSlabs, image_mean, inelastic_mean, propagator_distance, false);
+			}
+
 			timer.lap("Propagate WaveFunc");
-			timer.start("12");
 			if (SAVE_PROBABILITY_WAVE && iLoop < 1)
 			{
 				std::string fileNameOUT = "withProbabilityWave_" + std::to_string(iTilt_IDX) + this->output_filename;
@@ -2216,7 +2013,6 @@ timer.start("9");
 				jpr_sum_detector.AddImage(&binImage);
 
 			}
-			timer.start("13");
 
 			if (DO_APPLY_DQE && iLoop < 1)
 			{
@@ -2317,7 +2113,7 @@ timer.start("9");
 //	    delete [] slabIDX_start;
 //	    delete [] slabIDX_end;
 //	    if (SOLVENT != 0) delete [] this->image_mean;
-timer.start("14");
+
 	    wxPrintf("before the destructor there are %ld non-water-atoms\n",this->number_of_non_water_atoms);
 		if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE)
 		{
@@ -2336,6 +2132,7 @@ timer.start("14");
 
 		}
 
+		timer.start("Delete potential");
 		delete [] scattering_potential;
 		if (SAVE_REF)
 		{
@@ -2343,9 +2140,10 @@ timer.start("14");
 		}
 
 		delete [] propagator_distance;
+		timer.lap("Delete potential");
 		defocus_offset = 0;
 
-
+		timer.start("Update parameters");
 		parameters.position_in_stack = (iTilt*(int)number_of_frames) + iFrame + 1;
 		parameters.psi = tilt_psi[iTilt];
 		parameters.theta = tilt_theta[iTilt];
@@ -2369,10 +2167,10 @@ timer.start("14");
 		parameters.total_exposure = current_total_exposure;
 
 		parameter_star.all_parameters.Add(parameters);
-		timer.lap("14");
+		timer.lap("Update parameters");
     } // end of loop over frames
 
-	timer.start("15");
+	timer.start("Final mods and save");
 
 		if (this->doParticleStack > 0)
 		{
@@ -2717,6 +2515,7 @@ timer.start("14");
 
 		// This assumes all tilts have been made the same size (which they should be.)
 //		tilt_sum.Allocate(xDIM,yDIM, 1);
+		wxPrintf("MaxSize %d\n",maxSize);
 		tilt_sum.Allocate(maxSize,maxSize, 1);
 		tilt_sum.SetToConstant(0.0);
 
@@ -2836,8 +2635,7 @@ timer.start("14");
     delete [] sum_image;
 
  //   delete noise_dist;
-	timer.lap("15");
-    timer.lap("Overall");
+    timer.lap("Final mods and save");
     timer.print_times();
 
 

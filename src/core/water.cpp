@@ -65,9 +65,9 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 		ReturnPadding(max_tilt, in_plane_rotation, current_specimen->vol_nZ, current_specimen->vol_nX, current_specimen->vol_nY, padX, padY, &padZ);
 
 		vol_nX = current_specimen->vol_nX + *padX + padZ; // This assums the tilting is only around the Y-Axis which isn't correct FIXME
-		vol_nY = current_specimen->vol_nY + *padY + padZ;
+		vol_nY = current_specimen->vol_nY + *padY;
 
-		wxPrintf("size pre rot padding %d %d %f rot\n",vol_nX, vol_nY, in_plane_rotation);
+		wxPrintf("size post rot padding %d %d padX %d padY %d padZ %d rot\n",vol_nX, vol_nY, *padX, *padY, padZ);
 
 
 		MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
@@ -320,6 +320,8 @@ void Water::ReturnPadding(float max_tilt, float in_plane_rotation, int current_t
 	MyAssertTrue(max_tilt < 70.01, "maximum tilt angle supported is 70 degrees")
 
 	float max_ip_ang = 45.0f;
+
+
 	if( in_plane_rotation > max_ip_ang + .01)
 	{
 		wxPrintf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
@@ -330,13 +332,25 @@ void Water::ReturnPadding(float max_tilt, float in_plane_rotation, int current_t
     *padX = myroundint(0.5f*(float)current_nY * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
     *padY = myroundint(0.5f*(float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
 
+
+
     if (fabsf(max_tilt) < 1e-1)
     {
     	*padZ = 0;
     }
     else
     {
-    	*padZ = myroundint(1.0f*current_thickness*sinf(max_tilt * (float)PIf / 180.0f));
+
+        float x0 = 0.5f*((float)current_nX + (float)*padX);
+        float y0 = 0.0f;
+        float z0 = -(float)current_thickness/2.0f;
+        float xf,yf,zf;
+        RotationMatrix rotmat;
+        rotmat.SetToEulerRotation(0.0f,max_tilt,0.0f);
+        rotmat.RotateCoords(x0, y0, z0, xf, yf, zf);
+
+        *padZ = myroundint(fabsf(2.0f*(xf-x0)));
+//    	*padZ = myroundint(1.0f*current_thickness*sinf(max_tilt * (float)PIf / 180.0f));
     }
 
 

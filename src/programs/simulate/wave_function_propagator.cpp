@@ -284,7 +284,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 		phase_grating[0].SetToConstant(0.0f);
 
-		scattering_potential[iSlab].ClipInto(&phase_grating[0],image_mean[iSlab]);
+		scattering_potential[iSlab].ClipInto(&phase_grating[0],scattering_potential[iSlab].ReturnAverageOfRealValuesOnEdges());
 
 		if (do_beam_tilt)
 		{
@@ -303,7 +303,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 		if (iContrast > 0) // FIXME temp override
 		{
-			inelastic_potential[iSlab].ClipInto(&amplitude_grating[0],inelastic_mean[iSlab]);
+			inelastic_potential[iSlab].ClipInto(&amplitude_grating[0],inelastic_potential[iSlab].ReturnAverageOfRealValuesOnEdges());
 
 			// FIXME this is just multipied by the average value of C+C+N+0+C -> a projected mass density would be more accurate (26/Z*1.27) - this is also only valid at 300 KeV
 //				amplitude_grating[0].MultiplyByConstant(3.2);

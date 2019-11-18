@@ -43,7 +43,7 @@ const float MAX_PIXEL_SIZE = 2.0f;
 #define SAVE_PROJECTED_WATER false
 #define SAVE_PHASE_GRATING false
 #define SAVE_PHASE_GRATING_DOSE_FILTERED false
-#define SAVE_PHASE_GRATING_PLUS_WATER false
+#define SAVE_PHASE_GRATING_PLUS_WATER true
 #define SAVE_PROBABILITY_WAVE false
 #define SAVE_TO_COMPARE_JPR false
 #define JPR_SIZE 514
@@ -154,16 +154,14 @@ public:
 
 	void SetSpecimenVolume(int nx, int ny, int nz)
 	{
-		if (is_set_specimen)
+
+
+		specimen = make_int3(nx, ny, nz);
+		if (! is_set_specimen)
 		{
-			SetLargestSpecimenVolume(nx, ny, nz);
-			specimen = make_int3(nx, ny, nz);
-		}
-		else
-		{
-			specimen = make_int3(nx, ny, nz);
 			is_set_specimen = true;
 		}
+		SetLargestSpecimenVolume(nx, ny, nz);
 	}
 	int3 GetSpecimenVolume() { CheckVectorIsSet( is_set_specimen) ; return specimen ; }
 
@@ -216,6 +214,23 @@ public:
 		return output;
 	}
 
+	int ReturnLargestDimension(int dimension)
+	{
+		int output;
+		switch (dimension)
+		{
+			case 0:	output = largest_specimen.x;
+					break;
+
+			case 1:	output = largest_specimen.y;
+					break;
+
+			case 2:	output = largest_specimen.z;
+					break;
+		}
+		return output;
+	}
+
 
 	void Allocate(Image* image_to_allocate, PaddingStatus status, bool should_be_in_real_space, bool only_2d)
 	{
@@ -259,6 +274,25 @@ public:
 	{
 		CheckVectorIsSet(is_set_specimen);
 		image_to_resize->Resize(specimen.x, specimen.y, specimen.z,0.0f);
+	}
+
+	void PadToLargestSpecimen(Image* image_to_resize, bool should_be_square)
+	{
+
+		CheckVectorIsSet(is_set_specimen);
+
+		if (should_be_square)
+		{
+			int sq_dim = std::max(largest_specimen.x, largest_specimen.y);
+			image_to_resize->Resize(sq_dim, sq_dim, 1);
+
+		}
+
+		else
+		{
+			image_to_resize->Resize(largest_specimen.x, largest_specimen.y, 1);
+
+		}
 	}
 
 
@@ -410,7 +444,7 @@ class SimulateApp : public MyApp
 
 
 	void  project(Image *image_to_project, Image *image_to_project_into,  int iSlab);
-	void  taper_edges(Image *image_to_taper,  int nSlabs, bool inelastic_img);
+	void  taper_edges(Image *image_to_taper,  int iSlab, bool inelastic_img);
 	void  apply_sqrt_DQE_or_NTF(Image *image_in, int iTilt_IDX, bool do_root_DQE);
 
 
@@ -1824,6 +1858,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 				timer.lap("Fill H20");
 
 
+				timer.start("Taper Edges");
+				this->taper_edges(scattering_potential, iSlab, false);
+				this->taper_edges(inelastic_potential, iSlab, true);
+				timer.lap("Taper Edges");
+
 				if (SAVE_PHASE_GRATING_PLUS_WATER)
 				{
 
@@ -1969,10 +2008,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		wave_function.SetFresnelPropagator(wanted_acceleration_voltage, propagation_distance);
 //		wave_function.do_beam_tilt_full = true;
-		timer.start("Taper Edges");
-		this->taper_edges(scattering_potential, nSlabs, false);
-		this->taper_edges(inelastic_potential, nSlabs, true);
-		timer.lap("Taper Edges");
+
+
 
 		for (int iLoop = 0; iLoop < nLoops; iLoop ++)
 		{
@@ -2370,35 +2407,10 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		CTF my_ctf;
 
-		// FIXME
-		// Pick the largest size and clip all to that
-		int maxX = 0;
-		int maxY = 0;
-		int maxSize;
-
-		for (iTilt=0; iTilt < nTilts; iTilt++)
-		{
-			if (particle_stack[iTilt].logical_x_dimension - IMAGETRIMVAL  > maxX) {maxX = particle_stack[iTilt].logical_x_dimension - IMAGETRIMVAL;}
-			if (particle_stack[iTilt].logical_y_dimension - IMAGETRIMVAL  > maxY) {maxY = particle_stack[iTilt].logical_y_dimension - IMAGETRIMVAL;}
-
-		}
-
-		if (maxX == 0 || maxY == 0)
-		{
-			wxPrintf("Something went quite wrong in determining the max image dimenstions for the particle stack maxX %d, maxY %d",maxX,maxY);
-			throw;
-		}
-		else
-		{
-			// Make the particle Square
-		    maxSize = std::min(maxX,maxY);
-
-		}
-
 		if (WHITEN_IMG)
 		{
-			whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((maxX / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-			number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((maxX / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+			whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((coords.ReturnLargestDimension(0)/ 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+			number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((coords.ReturnLargestDimension(0) / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 		}
 
 
@@ -2436,22 +2448,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 							    parameter_vect[8],parameter_vect[9],parameter_vect[10],this->wanted_pixel_size,parameter_vect[11]);
 
 				}
-				particle_stack[iTilt].Resize(maxSize,maxSize,1);
-				if (SAVE_REF) {	ref_stack[iTilt].Resize(maxSize,maxSize,1); }
+
+				coords.PadToLargestSpecimen(&particle_stack[iTilt], true);
+				if (SAVE_REF) {	coords.PadToLargestSpecimen(&ref_stack[iTilt],true); }
 
 
-//				// temp to test
-//				Image testImg;
-//				testImg.Allocate(512,512,false);
-//				testImg.SetToConstant(1.0);
-//				testImg.ApplyCTF(my_ctf,true);
-//				testImg.QuickAndDirtyWriteSlice("ctf_noEnvelop.mrc",1);
-//				testImg.SetToConstant(1.0);
-//				my_ctf.SetEnvelope(wanted_acceleration_voltage, this->dose_rate * this->wanted_pixel_size_sq);
-//				testImg.ApplyCTF(my_ctf,true, false, true);
-//				testImg.QuickAndDirtyWriteSlice("ctf_withEnvelope.mrc",1);
-//
-//				exit(-1);
 
 				if (WHITEN_IMG)
 				{
@@ -2503,15 +2504,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		int current_tilt_sub_frame = 1;
 		int current_tilt_sum_saved = 1;
-		int xDIM = sum_image[0].logical_x_dimension - IMAGETRIMVAL;
-		int yDIM = sum_image[0].logical_y_dimension - IMAGETRIMVAL;
+
 
 		// Make the particle Square
-	    int maxSize = std::max(xDIM,yDIM);
+	    int maxSize = std::max(coords.ReturnLargestDimension(0), coords.ReturnLargestDimension(1));
 
 		Image tilt_sum;
 		Image ref_sum;
-
 
 		// This assumes all tilts have been made the same size (which they should be.)
 //		tilt_sum.Allocate(xDIM,yDIM, 1);
@@ -2544,10 +2543,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			{
 
 
-				sum_image[iTilt].Resize(maxSize,maxSize, 1);
+				wxPrintf("\n\n\tLargest dims are %d %d\n", coords.ReturnLargestDimension(0), coords.ReturnLargestDimension(1));
+				coords.PadToLargestSpecimen(&sum_image[iTilt],true);
+//				sum_image[iTilt].Resize(maxSize,maxSize, 1);
 				if (SAVE_REF)
 				{
-					ref_image[iTilt].Resize(maxSize,maxSize, 1);
+					coords.PadToLargestSpecimen(&ref_image[iTilt],true);//
+//					ref_image[iTilt].Resize(maxSize,maxSize, 1);
 				}
 
 				sum_image[iTilt].WriteSlices(&mrc_out_final,1+iTilt,1+iTilt);
@@ -3072,7 +3074,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 
 		iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
 
-		if ( iz >= slabIDX_start[iSlab] && iz  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
+		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
 
 
@@ -3266,7 +3268,7 @@ void SimulateApp::project(Image *image_to_project, Image *image_to_project_into,
 
 }
 
-void SimulateApp::taper_edges(Image *image_to_taper,  int nSlabs, bool inelastic_img)
+void SimulateApp::taper_edges(Image *image_to_taper,  int iSlab, bool inelastic_img)
 {
 	// Taper edges to the mean TODO see if this can be removed
 	// Update with the current mean. Why am I saving this? Is it just for SOLVENT ==1 ? Then probably can kill TODO
@@ -3276,11 +3278,17 @@ void SimulateApp::taper_edges(Image *image_to_taper,  int nSlabs, bool inelastic
 	long slab_address;
 	float taper_val;
 
-	for (int iSlab = 0; iSlab < nSlabs; iSlab++)
-	{
+//	for (int iSlab = 0; iSlab < nSlabs; iSlab++)
+//	{
+
+
 		edgeX = 0;
 		edgeY = 0;
 
+		float avgRadius = std::min(image_to_taper[iSlab].logical_x_dimension/2 - TAPERWIDTH,image_to_taper[iSlab].logical_y_dimension/2 - TAPERWIDTH);
+		image_to_taper[iSlab].CosineRectangularMask(image_to_taper[iSlab].logical_x_dimension/2 - TAPERWIDTH,
+													image_to_taper[iSlab].logical_y_dimension/2 - TAPERWIDTH,
+													0.0, TAPERWIDTH/2, false, true, image_to_taper[iSlab].ReturnAverageOfRealValuesAtRadius(avgRadius));
 		if (inelastic_img)
 		{
 			this->inelastic_mean[iSlab] =  image_to_taper[iSlab].ReturnAverageOfRealValues(0.0);
@@ -3293,51 +3301,51 @@ void SimulateApp::taper_edges(Image *image_to_taper,  int nSlabs, bool inelastic
 		}
 		if (DO_PRINT) {wxPrintf("%d image mean for taper %f\n",iSlab, this->image_mean[iSlab]);}
 
-		for (prjX = 0  ; prjX < image_to_taper[iSlab].logical_x_dimension ; prjX++)
-		{
-			if (prjX < TAPERWIDTH) edgeX = prjX;
-			else edgeX = image_to_taper[iSlab].logical_x_dimension - prjX - 1 ;
-
-			for (prjY = 0 ; prjY < image_to_taper[iSlab].logical_y_dimension  ; prjY++)
-			{
-				if (prjY < TAPERWIDTH) edgeY = prjY  ;
-				else edgeY = image_to_taper[iSlab].logical_y_dimension  - prjY -1 ;
-
-				slab_address = image_to_taper[iSlab].ReturnReal1DAddressFromPhysicalCoord(prjX,prjY,0);
-
-				// Taper the edges
-				if (edgeX < TAPERWIDTH && edgeX <= edgeY)
-				{
-					taper_val = TAPER[edgeX];
-				}
-				else if (edgeY < TAPERWIDTH && edgeY <= edgeX)
-				{
-					taper_val = TAPER[edgeY];
-				}
-				else
-				{
-					taper_val = 1;
-				}
-
-				if (taper_val != 1)
-				{
-					image_to_taper[iSlab].real_values[slab_address] *= taper_val;
-					if (inelastic_img)
-					{
-						image_to_taper[iSlab].real_values[slab_address] += this->inelastic_mean[iSlab]*(1-taper_val);
-
-					}
-					else
-					{
-						image_to_taper[iSlab].real_values[slab_address] += this->image_mean[iSlab]*(1-taper_val);
-
-					}
-				}
-
-
-			}
-		}
-	}
+//		for (prjX = 0  ; prjX < image_to_taper[iSlab].logical_x_dimension ; prjX++)
+//		{
+//			if (prjX < TAPERWIDTH) edgeX = prjX;
+//			else edgeX = image_to_taper[iSlab].logical_x_dimension - prjX - 1 ;
+//
+//			for (prjY = 0 ; prjY < image_to_taper[iSlab].logical_y_dimension  ; prjY++)
+//			{
+//				if (prjY < TAPERWIDTH) edgeY = prjY  ;
+//				else edgeY = image_to_taper[iSlab].logical_y_dimension  - prjY -1 ;
+//
+//				slab_address = image_to_taper[iSlab].ReturnReal1DAddressFromPhysicalCoord(prjX,prjY,0);
+//
+//				// Taper the edges
+//				if (edgeX < TAPERWIDTH && edgeX <= edgeY)
+//				{
+//					taper_val = TAPER[edgeX];
+//				}
+//				else if (edgeY < TAPERWIDTH && edgeY <= edgeX)
+//				{
+//					taper_val = TAPER[edgeY];
+//				}
+//				else
+//				{
+//					taper_val = 1;
+//				}
+//
+//				if (taper_val != 1)
+//				{
+//					image_to_taper[iSlab].real_values[slab_address] *= taper_val;
+//					if (inelastic_img)
+//					{
+//						image_to_taper[iSlab].real_values[slab_address] += this->inelastic_mean[iSlab]*(1-taper_val);
+//
+//					}
+//					else
+//					{
+//						image_to_taper[iSlab].real_values[slab_address] += this->image_mean[iSlab]*(1-taper_val);
+//
+//					}
+//				}
+//
+//
+//			}
+//		}
+//	}
 
 
 }

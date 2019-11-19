@@ -729,7 +729,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.pixel_size == true) data_line += wxString::Format("%8.5f ", all_parameters[particle_counter].pixel_size);
 		if (parameters_to_write.microscope_voltage_kv == true)  data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].microscope_voltage_kv);
 		if (parameters_to_write.microscope_spherical_aberration_mm == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].microscope_spherical_aberration_mm);
-		if (parameters_to_write.amplitude_contrast == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].amplitude_contrast);
+		if (parameters_to_write.amplitude_contrast == true) data_line += wxString::Format("%7.4f ", all_parameters[particle_counter].amplitude_contrast);
 		if (parameters_to_write.beam_tilt_x == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].beam_tilt_x);
 		if (parameters_to_write.beam_tilt_y == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].beam_tilt_y);
 		if (parameters_to_write.image_shift_x == true) data_line += wxString::Format("%7.3f ", all_parameters[particle_counter].image_shift_x);

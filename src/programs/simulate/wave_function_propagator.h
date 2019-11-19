@@ -28,6 +28,7 @@ public:
 	int unpadded_y_dimension;
 	float *wave_function_in;
 	float requested_kv;
+	float expected_dose_per_pixel;
 
 	Image *temp_img;
 	Image *t_N;

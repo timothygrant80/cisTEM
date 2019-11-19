@@ -43,7 +43,7 @@ const float MAX_PIXEL_SIZE = 2.0f;
 #define SAVE_PROJECTED_WATER false
 #define SAVE_PHASE_GRATING false
 #define SAVE_PHASE_GRATING_DOSE_FILTERED false
-#define SAVE_PHASE_GRATING_PLUS_WATER true
+#define SAVE_PHASE_GRATING_PLUS_WATER false
 #define SAVE_PROBABILITY_WAVE false
 #define SAVE_TO_COMPARE_JPR false
 #define JPR_SIZE 514
@@ -219,10 +219,10 @@ public:
 		int output;
 		switch (dimension)
 		{
-			case 0:	output = largest_specimen.x;
+			case 0:	output = largest_specimen.x - 3*TAPERWIDTH;
 					break;
 
-			case 1:	output = largest_specimen.y;
+			case 1:	output = largest_specimen.y - 3*TAPERWIDTH;
 					break;
 
 			case 2:	output = largest_specimen.z;
@@ -283,14 +283,14 @@ public:
 
 		if (should_be_square)
 		{
-			int sq_dim = std::max(largest_specimen.x, largest_specimen.y);
+			int sq_dim = std::max(largest_specimen.x, largest_specimen.y) - 3*TAPERWIDTH;
 			image_to_resize->Resize(sq_dim, sq_dim, 1);
 
 		}
 
 		else
 		{
-			image_to_resize->Resize(largest_specimen.x, largest_specimen.y, 1);
+			image_to_resize->Resize(largest_specimen.x - 2*TAPERWIDTH, largest_specimen.y - 3*TAPERWIDTH, 1);
 
 		}
 	}
@@ -733,7 +733,7 @@ void SimulateApp::DoInteractiveUserInput()
 
 
 
-		this->minimum_padding_x_and_y = my_input->GetIntFromUser("minimum padding of images with solvent", "", "128", 32,4096);
+		this->minimum_padding_x_and_y = my_input->GetIntFromUser("minimum padding of images with solvent", "", "32", 32,4096);
 		this->minimum_thickness_z = my_input->GetIntFromUser("minimum thickness in Z", "", "20",2,10000);
 		this->propagation_distance = my_input->GetFloatFromUser("Propagation distance in angstrom","Also used as minimum thickness","20",-1e6,1e6);
 
@@ -766,7 +766,7 @@ void SimulateApp::DoInteractiveUserInput()
 		// Need to re-calculate with the input values.
 
 		// Set the expected dose by setting the amplitude of the incoming plane wave
-		set_real_part_wave_function_in = sqrtf(this->dose_per_frame);
+		set_real_part_wave_function_in = sqrtf(this->dose_per_frame * this->wanted_pixel_size_sq);
 		wxPrintf("Setting the real part of the object wavefunction to %f to start\n",set_real_part_wave_function_in);
 
 		///////////

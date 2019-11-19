@@ -24,8 +24,10 @@ WaveFunctionPropagator::WaveFunctionPropagator(float set_real_part_wave_function
 	wave_function_in[0] = set_real_part_wave_function_in;
 	wave_function_in[1] = 0.0f;
 
+
 	pixel_size = wanted_pixel_size;
 	pixel_size_squared = pixel_size * pixel_size;
+	expected_dose_per_pixel = wave_function_in[0]*wave_function_in[0];
 	nThreads = wanted_number_threads;
 
 	SetObjectiveAperture(wanted_objective_aperture_diameter_micron);
@@ -568,14 +570,14 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 
 		ReturnImageContrast(sum_image[tilt_IDX], &total_contrast, &mean_value);// - phase_contrast;
-		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
+//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
 
 		wxPrintf("Total contrast is %3.3e\n", total_contrast);
 	}
 	else
 	{
 		ReturnImageContrast(sum_image[tilt_IDX], &phase_contrast, &mean_value);
-		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
+//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
 		wxPrintf("Phase contrast estimate at %3.3e\n",phase_contrast);
 	}
 
@@ -601,11 +603,8 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 	buffer1.CopyFrom(&wave_function_sq_modulus);
 	buffer2.CopyFrom(&wave_function_sq_modulus);
 
-	*mean_value = 1.0f;//buffer1.ReturnAverageOfRealValues(0.0f, false);
-//	wxPrintf("\nAverage of wave funct sq is %3.3e\n",*mean_value);
-	buffer1.MultiplyAddConstant(-1.0f,*mean_value);
-//	buffer1.DivideByConstant(*mean_value);
-	buffer2.AddConstant(*mean_value);
+	buffer1.MultiplyAddConstant(-1.0f,expected_dose_per_pixel);
+	buffer2.AddConstant(expected_dose_per_pixel);
 	buffer1.DividePixelWise(buffer2);
 
 	*contrast = buffer1.ReturnAverageOfRealValues(0.0f,false);

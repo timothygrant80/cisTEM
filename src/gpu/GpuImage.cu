@@ -469,7 +469,7 @@ __global__ void ReturnSumOfRealValuesOnEdgesKernel(cufftReal *real_values_gpu, i
 
 	int pixel_counter;
 	int line_counter;
-	int plane_counter;
+//	int plane_counter;
 
 	double sum = 0.0;
 	int number_of_pixels = 0;
@@ -759,7 +759,7 @@ float GpuImage::ReturnSumSquareModulusComplexValues()
 	const std::complex<float> c2(sqrtf(0.5f),sqrtf(0.5f)); // original code is pow(abs(Val),2)*0.5
 	const std::complex<float> c3(1.0,1.0);
 	const std::complex<float> c4(0.0,0.0);
-	float returnValue;
+//	float returnValue;
 
 	if ( ! is_allocated_mask_CSOS )
 	{

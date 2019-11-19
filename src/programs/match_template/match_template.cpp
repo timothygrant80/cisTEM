@@ -441,6 +441,7 @@ bool MatchTemplateApp::DoCalculation()
 	int number_of_rotations;
 	long total_correlation_positions;
 	long current_correlation_position;
+	long total_correlation_positions_per_thread;
 	long pixel_counter;
 
 	int current_search_position;
@@ -580,7 +581,7 @@ bool MatchTemplateApp::DoCalculation()
 	double *correlation_pixel_sum_of_squares = new double[input_image.real_memory_allocated];
 
 	padded_reference.SetToConstant(0.0f);
-	max_intensity_projection.SetToConstant(0.0f);
+	max_intensity_projection.SetToConstant(-FLT_MAX);
 	best_psi.SetToConstant(0.0f);
 	best_theta.SetToConstant(0.0f);
 	best_phi.SetToConstant(0.0f);
@@ -733,6 +734,7 @@ bool MatchTemplateApp::DoCalculation()
 	}
 
 	total_correlation_positions *= (2 * myroundint(float(defocus_search_range)/float(defocus_step)) + 1);
+	total_correlation_positions_per_thread = total_correlation_positions;
 
 	number_of_rotations = 0;
 
@@ -743,17 +745,13 @@ bool MatchTemplateApp::DoCalculation()
 
 	ProgressBar *my_progress;
 
-	if (is_running_locally == true)
-	{
-		//Loop over ever search position
+	//Loop over ever search position
 
-		wxPrintf("\nSearching %i positions on the euler sphere.\n", last_search_position - first_search_position, first_search_position, last_search_position);
-		wxPrintf("Searching %i rotations per position.\n", number_of_rotations);
-		wxPrintf("There are %li correlation positions total.\n\n", total_correlation_positions);
+	wxPrintf("\nSearching %i positions on the euler sphere.\n", last_search_position - first_search_position, first_search_position, last_search_position);
+	wxPrintf("Searching %i rotations per position.\n", number_of_rotations);
+	wxPrintf("There are %li correlation positions total.\n\n", total_correlation_positions);
 
-		wxPrintf("Performing Search...\n\n");
-		my_progress = new ProgressBar(total_correlation_positions);
-	}
+	wxPrintf("Performing Search...\n\n");
 
 //	wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
 //	wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
@@ -785,7 +783,10 @@ bool MatchTemplateApp::DoCalculation()
 	DeviceManager gpuDev;
 #endif
 
-	if (use_gpu) {
+	if (use_gpu)
+	{
+		total_correlation_positions_per_thread = total_correlation_positions / nThreads;
+
 #ifdef ENABLEGPU
 //	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
 	GPU = new TemplateMatchingCore[nThreads];
@@ -797,7 +798,10 @@ bool MatchTemplateApp::DoCalculation()
 #endif
 	}
 
-
+	if (is_running_locally == true)
+	{
+		my_progress = new ProgressBar(total_correlation_positions_per_thread);
+	}
 
 
 //	wxPrintf("Starting job\n");
@@ -832,13 +836,14 @@ bool MatchTemplateApp::DoCalculation()
 
 				if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
 
-				GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
+				GPU[tIDX].Init(this, template_reconstruction, input_image, current_projection,
 								pixel_size_search_range, pixel_size_step, pixel_size,
 								defocus_search_range, defocus_step, defocus1, defocus2,
 								psi_max, psi_start, psi_step,
 								angles, global_euler_search,
 								histogram_min_scaled, histogram_step_scaled,histogram_number_of_points,
-								max_padding, t_first_search_position, t_last_search_position);
+								max_padding, t_first_search_position, t_last_search_position,
+								my_progress, total_correlation_positions_per_thread, is_running_locally);
 
 				wxPrintf("%d\n",tIDX);
 				wxPrintf("%d\n", t_first_search_position);
@@ -874,42 +879,14 @@ bool MatchTemplateApp::DoCalculation()
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 
 
-			#pragma omp parallel firstprivate(projection_filter) num_threads(nThreads)
+			#pragma omp parallel num_threads(nThreads)
 			{
 				int tIDX = ReturnThreadNumberOfCurrentThread();
 				gpuDev.SetGpu(tIDX);
 
-				GPU[tIDX].RunInnerLoopA(&projection_filter, size_i, defocus_i, tIDX);
+				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
 
-				while (GPU[tIDX].current_search_position <= GPU[tIDX].last_search_position)
-				{
 
-					GPU[tIDX].RunInnerLoopB();
-
-					#pragma omp critical
-					{
-
-						for (int iPsi = 1; iPsi <= GPU[tIDX].ccc_counter; iPsi++)
-						{
-							current_correlation_position ++;
-							actual_number_of_ccs_calculated ++;
-
-							if (is_running_locally == true) my_progress->Update(current_correlation_position);
-
-							if (is_running_locally == false)
-							{
-								temp_float = current_correlation_position;
-								JobResult *temp_result = new JobResult;
-								temp_result->SetResult(1, &temp_float);
-								AddJobToResultQueue(temp_result);
-							}
-						}
-
-					}
-
-				}
-
-				GPU[tIDX].RunInnerLoopC();
 
 				#pragma omp critical
 				{
@@ -976,10 +953,11 @@ bool MatchTemplateApp::DoCalculation()
 
 					GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
+//					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
+					actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
 
 				} // end of omp critical block
 			} // end of parallel block
-
 
 
 			continue;
@@ -1054,6 +1032,9 @@ bool MatchTemplateApp::DoCalculation()
 					current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges());
 
 
+//					variance = current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels;
+//					current_projection.DivideByConstant(sqrtf(variance));
+//					variance = current_projection.ReturnSumOfSquares();
 					variance = current_projection.ReturnSumOfSquares() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels \
 							- powf(current_projection.ReturnAverageOfRealValues() * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
 					current_projection.DivideByConstant(sqrtf(variance));
@@ -1077,6 +1058,15 @@ bool MatchTemplateApp::DoCalculation()
 
 					padded_reference.BackwardFFT();
 
+					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
+					{
+						temp_float = padded_reference.real_values[pixel_counter] / variance;
+						padded_reference.real_values[pixel_counter] = temp_float * padded_reference.real_values[pixel_counter] - powf(temp_float, 2) * variance;
+//						if (pixel_counter == 1000) wxPrintf("l, value = %g %g\n", temp_float, padded_reference.real_values[pixel_counter]);
+//						padded_reference.real_values[pixel_counter] *= powf(float(padded_reference.number_of_real_space_pixels), 2);
+//						padded_reference.real_values[pixel_counter] = temp_float;
+					}
+
 					// update mip, and histogram..
 					pixel_counter = 0;
 
@@ -1095,6 +1085,7 @@ bool MatchTemplateApp::DoCalculation()
 								best_defocus.real_values[pixel_counter] = float(defocus_i) * defocus_step;
 								best_pixel_size.real_values[pixel_counter] = float(size_i) * pixel_size_step;
 //								if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+//								correlation_pixel_sum[pixel_counter] = variance;
 							}
 
 							// histogram

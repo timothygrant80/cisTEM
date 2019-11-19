@@ -67,7 +67,6 @@ public:
 	Image template_reconstruction;
 	Image current_projection;
 	Image input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
-	Image projection_filter;
 
 
 	cudaGraph_t graph;
@@ -115,18 +114,9 @@ public:
 	int first_search_position;
 	int last_search_position;
 	long total_number_of_cccs_calculated;
+	long total_correlation_positions;
 
-	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
-	int ccc_counter = 0;
-	float average_on_edge;
-	bool make_graph = true;
-	bool first_loop_complete = false;
-
-
-
-
-//	cudaErr(cudaFuncSetCacheConfig(SumPixelWiseKernel, cudaFuncCachePreferL1));
-
+	bool is_running_locally;
 
 	Histogram histogram;
 
@@ -136,6 +126,9 @@ public:
 
 	int dummy;
 
+	ProgressBar *my_progress;
+
+	MyApp *parent_pointer;
 
 	Stats* my_stats;
 	Peaks* my_peaks;
@@ -145,7 +138,8 @@ public:
 	void AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum);
 
 
-	void Init(Image &template_reconstruction,
+	void Init(MyApp *parent_pointer,
+			Image &template_reconstruction,
 			Image &input_image,
 			Image &current_projection,
 			float pixel_size_search_range,
@@ -158,19 +152,20 @@ public:
 			float psi_max,
 			float psi_start,
 			float psi_step,
-			AnglesAndShifts angles,
-			EulerSearch global_euler_search,
+			AnglesAndShifts &angles,
+			EulerSearch &global_euler_search,
 			float histogram_min_scaled,
 			float histogram_step_scaled,
 			int histogram_number_of_bins,
 			int max_padding,
 			int first_search_position,
-			int last_search_position);
+			int last_search_position,
+			ProgressBar *my_progress,
+			long total_correlation_positions,
+			bool is_running_locally);
 
-	// TODO these could be named more descriptively. The goal here is to find the easiest way to produce a more actively updated progress bar.
-	void RunInnerLoopA(Image* projection_filter, float pixel_i, float defocus_i, int threadIDX);
-	void RunInnerLoopB();
-	void RunInnerLoopC();
+	void RunInnerLoop(Image &projection_filter, float pixel_i, float defocus_i, int threadIDX, long &current_correlation_position);
+
 
 private:
 

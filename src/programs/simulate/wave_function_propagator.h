@@ -55,8 +55,6 @@ public:
 	float beam_tilt_shift_factor_x;
 	float beam_tilt_shift_factor_y;
 
-	const float shift_sign = 1.0f;
-
 	float pixel_size;
 	float pixel_size_squared;
 	float objective_aperture_resolution;

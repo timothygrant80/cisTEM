@@ -290,6 +290,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 		if (do_beam_tilt)
 		{
+			wxPrintf("DO BEAM TILT\n\n");
 			// For tilted illumination, the scattering plane sees only the z-component of the wave-vector = lower energy = stronger interaction
 			// so the interaction constant must be scaled. (Ishizuka 1982 eq 12) cos(B) = K/Kz K = 1/Lambda pointing to the displaced origin of the Ewald Sphere
 			phase_grating[0].DivideByConstant(cosf(beam_tilt_magnitude));
@@ -423,10 +424,10 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 					// direction of propagtion, so that the next slice is relatively shifted forward along the direction of propagation.
 
 					// Phase shifts here are in pixels & tan(B) ~ B
-					float shift_x = shift_sign* propagator_distance[iSlab]*beam_tilt_shift_factor_x/pixel_size;
-					float shift_y = shift_sign* propagator_distance[iSlab]*beam_tilt_shift_factor_y/pixel_size;
+					float shift_x = -1.0f * propagator_distance[iSlab]*beam_tilt_shift_factor_x/pixel_size;
+					float shift_y = -1.0f * propagator_distance[iSlab]*beam_tilt_shift_factor_y/pixel_size;
 
-					wxPrintf("Shifting by %f %f on slab %d\n", shift_x, shift_y, iSlab);
+//					wxPrintf("Shifting by %f %f on slab %d\n", shift_x, shift_y, iSlab);
 
 					temp_img[iPar].MultiplyByConstant(cosf(beam_tilt_magnitude));
 					temp_img[iPar].PhaseShift(shift_x, shift_y ,0.0f);
@@ -513,9 +514,9 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 		if (do_beam_tilt_full)
 		{
-//			wxPrintf("Shifting back by half the total to keep particle centered ( %3.3f %3.3f) pixels\n",-0.5f*shift_sign*total_shift_x,-0.5f*shift_sign*total_shift_y);
-//
-//			t_N[iPar].PhaseShift(-0.5f*shift_sign*total_shift_x,-0.5f*shift_sign*total_shift_y,0.0f);
+			wxPrintf("Shifting back by half the total to keep particle centered ( %3.3f %3.3f) pixels\n",-0.5f*shift_sign*total_shift_x,-0.5f*shift_sign*total_shift_y);
+
+			t_N[iPar].PhaseShift(-0.5f*total_shift_x,-0.5f*total_shift_y,0.0f);
 		}
 
 		t_N[iPar].BackwardFFT();

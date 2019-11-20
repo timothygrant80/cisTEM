@@ -149,7 +149,10 @@ void DeviceManager::ReSetGpu()
 
 void DeviceManager::ListDevices()
 {
-	int gpu_check = -1;
+	// To get GPU load:
+	// https://stackoverflow.com/questions/46801136/cuda-get-gpu-load-percent
+
+	int gpu_check = 0;
 	size_t free_mem;
 	size_t total_mem;
 

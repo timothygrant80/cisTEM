@@ -215,7 +215,7 @@ bin_PROGRAMS += match_template refine_template make_template_result  scattering_
 endif
 
 if ENABLEGPU_AM
-bin_PROGRAMS += gpu_util_test
+bin_PROGRAMS += gpu_util_test gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
 libgpucore_a_SOURCES =       gpu/Histogram.cu \
@@ -631,12 +631,17 @@ endif
 
 if ENABLEGPU_AM
 
-gpu_util_test_SUFFIXES = .cpp 
-gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp 
+gpu_util_test_SUFFIXES = .cpp
+gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp
 gpu_util_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE) 
+gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 gpu_util_test_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 
+gpu_devices_SUFFIXES = .cpp
+gpu_devices_SOURCES =  programs/gpu_devices/gpu_devices.cpp
+gpu_devices_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+gpu_devices_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+gpu_devices_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 endif
 
 

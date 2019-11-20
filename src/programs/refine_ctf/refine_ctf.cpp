@@ -362,47 +362,48 @@ bool RefineCTFApp::DoCalculation()
 
 //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
-	wxPrintf("There are are %li 3D references\n", all_reference_3d_filenames.GetCount());
+	if (all_reference_3d_filenames.GetCount() > 1) wxPrintf("\nThere are %li 3D references\n", all_reference_3d_filenames.GetCount());
+	else wxPrintf("\nThere is 1 3D reference\n");
 	currently_open_3d_filename = all_reference_3d_filenames[0];
 
-	if (input_star_file.parameters_that_were_read.reference_3d_filename == true)
-	{
-		if (is_running_locally == true) MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
-		all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
-
-		// get all the filenames..
-
-		bool found_filename;
-
-		for (current_line = 1; current_line < input_star_file.ReturnNumberofLines(); current_line++)
-		{
-			found_filename = false;
-
-			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
-			{
-				if (all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false))
-				{
-					found_filename = true;
-					break;
-				}
-			}
-
-			if (found_filename == false)
-			{
-				all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
-			}
-		}
-	}
-	else
-	{
-			input_star_file.SetAllReference3DFilename(input_reconstruction);
-			all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
-	}
+//	if (input_star_file.parameters_that_were_read.reference_3d_filename == true)
+//	{
+//		if (is_running_locally == true) MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
+//		all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+//
+//		// get all the filenames..
+//
+//		bool found_filename;
+//
+//		for (current_line = 1; current_line < input_star_file.ReturnNumberofLines(); current_line++)
+//		{
+//			found_filename = false;
+//
+//			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
+//			{
+//				if (all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false))
+//				{
+//					found_filename = true;
+//					break;
+//				}
+//			}
+//
+//			if (found_filename == false)
+//			{
+//				all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
+//			}
+//		}
+//	}
+//	else
+//	{
+//			input_star_file.SetAllReference3DFilename(input_reconstruction);
+//			all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+//	}
 
 //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
 //	wxPrintf("There are %li 3D references\n", all_reference_3d_filenames.GetCount());
-	currently_open_3d_filename = all_reference_3d_filenames[0];
+//	currently_open_3d_filename = all_reference_3d_filenames[0];
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 
@@ -674,15 +675,19 @@ bool RefineCTFApp::DoCalculation()
 		}
 	}
 
-	wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n\n",
+	wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n",
 			parameter_average.sigma, parameter_average.score, parameter_average.x_shift, parameter_average.y_shift, sqrtf(parameter_variance.x_shift), sqrtf(parameter_variance.y_shift), images_to_process);
-
-	if (is_running_locally == true) my_progress = new ProgressBar(images_to_process / max_threads);
 
 	// look over all file names..
 
 	for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
 	{
+		if (is_running_locally == true)
+		{
+			if (all_reference_3d_filenames.GetCount() > 1) wxPrintf("\n3D reference # %i of %li\n\n", filename_counter + 1, all_reference_3d_filenames.GetCount());
+			else wxPrintf("\n");
+			my_progress = new ProgressBar(images_to_process / max_threads);
+		}
 
 		currently_open_3d_filename = all_reference_3d_filenames[filename_counter];
 		SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d , padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
@@ -957,13 +962,12 @@ bool RefineCTFApp::DoCalculation()
 		refine_particle.Deallocate();
 
 		} // end omp section
+
+		if (is_running_locally) delete my_progress;
 	}
 
 	if (is_running_locally == true)
 	{
-		delete my_progress;
-
-
 		if (beamtilt_refinement)
 		{
 			////phase_difference_sum.QuickAndDirtyWriteSlice("temp_phase_difference_sum.mrc", 1);

@@ -562,8 +562,8 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 		{
 			for (ix = - (n_sec - 1) * n_stp / 2; ix <= (n_sec - 1) * n_stp / 2; ix++)
 			{
-				x_coordinate_2d = float(ix) * sub_section_x / float(n_stp) * pixel_size_for_fitting;
-				y_coordinate_2d = float(iy) * sub_section_y / float(n_stp) * pixel_size_for_fitting;
+				x_coordinate_2d = float(ix) * sub_section_x / float(n_stp) * pixel_size_of_input_image;
+				y_coordinate_2d = float(iy) * sub_section_y / float(n_stp) * pixel_size_of_input_image;
 				rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
 				height = y_rotated * tanf(deg_2_rad(best_tilt_angle));
 				if (average_defocus > 100.0f) stretch_factor = sqrtf(fabsf(average_defocus + height) / average_defocus);
@@ -806,6 +806,10 @@ float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_
 				resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
 				current_power_spectrum->ClipInto(resampled_power_spectrum);
 				resampled_power_spectrum->BackwardFFT();
+				temp_image.Allocate(box_size, box_size, 1, true);
+				temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+				resampled_power_spectrum->ClipInto(&temp_image);
+				resampled_power_spectrum->Consume(&temp_image);
 			}
 			else
 			{
@@ -1341,7 +1345,7 @@ void CtffindApp::DoInteractiveUserInput()
 		ImageFile input_file(input_filename,false);
 		if (input_file.ReturnZSize() > 1)
 		{
-			input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","no");
+			input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","No");
 		}
 		else
 		{
@@ -1368,10 +1372,10 @@ void CtffindApp::DoInteractiveUserInput()
 		minimum_defocus 				= my_input->GetFloatFromUser("Minimum defocus","Positive values for underfocus. Lowest value to search over (Angstroms)","5000.0");
 		maximum_defocus 				= my_input->GetFloatFromUser("Maximum defocus","Positive values for underfocus. Highest value to search over (Angstroms)","50000.0",minimum_defocus);
 		defocus_search_step 			= my_input->GetFloatFromUser("Defocus search step","Step size for defocus search (Angstroms)","100.0",1.0);
-		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","no");
+		astigmatism_is_known			= my_input->GetYesNoFromUser("Do you know what astigmatism is present?","Answer yes if you already know how much astigmatism was present. If you answer no, the program will search for the astigmatism and astigmatism angle","No");
 		if (astigmatism_is_known)
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","no");;
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes to use a slower exhaustive search against 2D spectra (rather than 1D radial averages) for the initial search","No");;
 			should_restrain_astigmatism = false;
 			astigmatism_tolerance = -100.0;
 			known_astigmatism			= my_input->GetFloatFromUser("Known astigmatism", "In Angstroms, the amount of astigmatism, defined as the difference between the defocus along the major and minor axes","0.0",0.0);
@@ -1379,8 +1383,8 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 		else
 		{
-			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","no");
-			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","no");
+			slower_search				= my_input->GetYesNoFromUser("Slower, more exhaustive search?","Answer yes if you expect very high astigmatism (say, greater than 1000A) or in tricky cases. In that case, a slower exhaustive search against 2D spectra (rather than 1D radial averages) will be used for the initial search","No");
+			should_restrain_astigmatism = my_input->GetYesNoFromUser("Use a restraint on astigmatism?","If you answer yes, the CTF parameter search and refinement will penalise large astigmatism. You will specify the astigmatism tolerance in the next question. If you answer no, no such restraint will apply","No");
 			if (should_restrain_astigmatism)
 			{
 				astigmatism_tolerance 	= my_input->GetFloatFromUser("Expected (tolerated) astigmatism","Astigmatism values much larger than this will be penalised (Angstroms). Give a negative value to turn off this restraint.","200.0");
@@ -1391,7 +1395,7 @@ void CtffindApp::DoInteractiveUserInput()
 			}
 		}
 
-		find_additional_phase_shift = my_input->GetYesNoFromUser("Find additional phase shift?","Input micrograph was recorded using a phase plate with variable phase shift, which you want to find","no");
+		find_additional_phase_shift = my_input->GetYesNoFromUser("Find additional phase shift?","Input micrograph was recorded using a phase plate with variable phase shift, which you want to find","No");
 
 		if (find_additional_phase_shift)
 		{
@@ -1407,15 +1411,15 @@ void CtffindApp::DoInteractiveUserInput()
 		}
 
 		// Currently, tilt determination only works when there is no additional phase shift
-		if (! find_additional_phase_shift) determine_tilt = my_input->GetYesNoFromUser("Determine sample tilt?","Answer yes if you tilted the sample and need to determine tilt axis and angle","no");
+		if (! find_additional_phase_shift) determine_tilt = my_input->GetYesNoFromUser("Determine sample tilt?","Answer yes if you tilted the sample and need to determine tilt axis and angle","No");
 
-		give_expert_options						= my_input->GetYesNoFromUser("Do you want to set expert options?","There are options which normally not changed, but can be accessed by answering yes here","no");
+		give_expert_options						= my_input->GetYesNoFromUser("Do you want to set expert options?","There are options which normally not changed, but can be accessed by answering yes here","No");
 		if (give_expert_options)
 		{
-			resample_if_pixel_too_small 		= my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?","When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed","yes");
+			resample_if_pixel_too_small 		= my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?","When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed","Yes");
 			if (input_is_a_movie)
 			{
-				movie_is_dark_corrected			= my_input->GetYesNoFromUser("Movie is dark-subtracted?", "If the movie is not dark-subtracted you will need to provide a dark reference image", "yes");
+				movie_is_dark_corrected			= my_input->GetYesNoFromUser("Movie is dark-subtracted?", "If the movie is not dark-subtracted you will need to provide a dark reference image", "Yes");
 				if (movie_is_dark_corrected)
 				{
 					dark_filename 				= "";
@@ -1425,7 +1429,7 @@ void CtffindApp::DoInteractiveUserInput()
 					dark_filename 				= my_input->GetFilenameFromUser("Dark image filename", "The filename of the dark reference image for the detector/camera", "dark.dm4", true);
 				}
 
-				movie_is_gain_corrected			= my_input->GetYesNoFromUser("Movie is gain-corrected?", "If the movie is not gain-corrected, you will need to provide a gain reference image", "yes");
+				movie_is_gain_corrected			= my_input->GetYesNoFromUser("Movie is gain-corrected?", "If the movie is not gain-corrected, you will need to provide a gain reference image", "Yes");
 				if (movie_is_gain_corrected)
 				{
 					gain_filename 				= "";
@@ -1435,7 +1439,7 @@ void CtffindApp::DoInteractiveUserInput()
 					gain_filename 				= my_input->GetFilenameFromUser("Gain image filename", "The filename of the gain reference image for the detector/camera", "gain.dm4", true);
 				}
 
-				correct_movie_mag_distortion = my_input->GetYesNoFromUser("Correct Movie Mag. Distortion?", "If the movie has a mag distortion you can specify the parameters to correct it prior to estimation", "no");
+				correct_movie_mag_distortion = my_input->GetYesNoFromUser("Correct Movie Mag. Distortion?", "If the movie has a mag distortion you can specify the parameters to correct it prior to estimation", "No");
 
 				if (correct_movie_mag_distortion == true)
 				{
@@ -1460,7 +1464,7 @@ void CtffindApp::DoInteractiveUserInput()
 				gain_filename = "";
 				dark_filename = "";
 			}
-			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","no");
+			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","No");
 			if (defocus_is_known)
 			{
 				/*

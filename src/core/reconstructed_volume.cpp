@@ -258,8 +258,8 @@ void ReconstructedVolume::PrepareForProjections(float low_resolution_limit, floa
 void ReconstructedVolume::CalculateProjection(Image &projection, Image &CTF, AnglesAndShifts &angles_and_shifts_of_projection,
 		float mask_radius, float mask_falloff, float resolution_limit, bool swap_quadrants, bool apply_shifts, bool whiten, bool apply_ctf, bool abolute_ctf, bool calculate_projection)
 {
-	MyDebugAssertTrue(projection.logical_x_dimension == density_map->logical_x_dimension && projection.logical_y_dimension == density_map->logical_y_dimension, "Error: Images have different sizes");
-	MyDebugAssertTrue(CTF.logical_x_dimension == density_map->logical_x_dimension && CTF.logical_y_dimension == density_map->logical_y_dimension, "Error: CTF image has different size");
+//	MyDebugAssertTrue(projection.logical_x_dimension == density_map->logical_x_dimension && projection.logical_y_dimension == density_map->logical_y_dimension, "Error: Images have different sizes");
+	MyDebugAssertTrue(CTF.logical_x_dimension == projection.logical_x_dimension && CTF.logical_y_dimension == projection.logical_y_dimension, "Error: CTF image has different size");
 	MyDebugAssertTrue(projection.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(projection.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(density_map->IsCubic(), "Image volume to project is not cubic (%i, %i, %i)", density_map->logical_x_dimension, density_map->logical_y_dimension, density_map->logical_z_dimension);

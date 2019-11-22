@@ -5,7 +5,7 @@ class MRCFile : public AbstractImageFile {
 
 	public:
 
-	std::fstream my_file;
+	std::fstream *my_file;
 	MRCHeader my_header;
 	wxString filename;
 
@@ -18,12 +18,15 @@ class MRCFile : public AbstractImageFile {
 	MRCFile(std::string filename, bool overwrite, bool wait_for_file_to_exist);
 	~MRCFile();
 
-	inline int ReturnXSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionX();};
-	inline int ReturnYSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionY();};
-	inline int ReturnZSize() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
-	inline int ReturnNumberOfSlices() {MyDebugAssertTrue(my_file.is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
+	MRCFile & operator = (const MRCFile &other_file);
+	MRCFile & operator = (const MRCFile *other_file);
 
-	inline bool IsOpen() {return my_file.is_open();}
+	inline int ReturnXSize() {MyDebugAssertTrue(my_file->is_open(), "File not open!");	return my_header.ReturnDimensionX();};
+	inline int ReturnYSize() {MyDebugAssertTrue(my_file->is_open(), "File not open!");	return my_header.ReturnDimensionY();};
+	inline int ReturnZSize() {MyDebugAssertTrue(my_file->is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
+	inline int ReturnNumberOfSlices() {MyDebugAssertTrue(my_file->is_open(), "File not open!");	return my_header.ReturnDimensionZ();};
+
+	inline bool IsOpen() {return my_file->is_open();}
 
 	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false);
 	void CloseFile();
@@ -34,7 +37,7 @@ class MRCFile : public AbstractImageFile {
 	inline void WriteSliceToDisk(int slice_number, float *input_array) {WriteSlicesToDisk(slice_number, slice_number, input_array);}
 	void WriteSlicesToDisk(int start_slice, int end_slice, float *input_array);
 
-	inline void WriteHeader() {my_header.WriteHeader(&my_file);};
+	inline void WriteHeader() {my_header.WriteHeader(my_file);};
 
 	void PrintInfo();
 

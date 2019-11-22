@@ -744,7 +744,7 @@ int Particle::UnmapParameters(float *mapped_parameters)
 	return j;
 }
 
-float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, \
+float Particle::ReturnLogLikelihood(Image &input_image, CTF &input_ctf, ReconstructedVolume &input_3d, ResolutionStatistics &statistics, \
 	float classification_resolution_limit, float *frealign_score)
 {
 //!!!	MyDebugAssertTrue(is_ssnr_filtered, "particle_image not filtered");
@@ -759,7 +759,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float rotated_center_z;
 	float alpha;
 	float sigma;
-	float original_pixel_size = pixel_size * float(input_3d.density_map->logical_x_dimension) / float(padded_unbinned_image.logical_x_dimension);
+	float original_pixel_size = pixel_size * float(particle_image->logical_x_dimension) / float(input_image.logical_x_dimension);
 //	float effective_bfactor;
 
 	float pixel_center_2d_x = mask_center_2d_x / original_pixel_size - input_image.physical_address_of_box_center_x;
@@ -769,9 +769,9 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	float pixel_radius_2d = mask_radius_2d / original_pixel_size;
 
 	Image *temp_image1 = new Image;
-	temp_image1->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+	temp_image1->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
 	Image *temp_image2 = new Image;
-//	temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+//	temp_image2->Allocate(binned_image_box_size, binned_image_box_size, false);
 	Image *projection_image = new Image;
 	projection_image->Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
 	Image *temp_projection = new Image;
@@ -802,7 +802,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 
 	if (frealign_score != NULL)
 	{
-		temp_image2->Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+		temp_image2->Allocate(particle_image->logical_x_dimension, particle_image->logical_y_dimension, false);
 		temp_image2->CopyFrom(temp_image1);
 		if (no_ctf_weighting) input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, false, false, false, false, false);
 		// Case for normal parameter refinement with weighting applied to particle images and 3D reference
@@ -811,7 +811,7 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 		else input_3d.CalculateProjection(*temp_image2, *ctf_image, alignment_parameters, 0.0, 0.0, pixel_size / filter_radius_high, false, true, false, true, true, false);
 
 		*frealign_score = - particle_image->GetWeightedCorrelationWithImage(*temp_image2, bin_index, pixel_size / signed_CC_limit) - ReturnParameterPenalty(current_parameters);
-		wxPrintf("pixel_size, signed_CC_limit, filter_radius_high, frealign_score = %g %g %g\n", pixel_size, signed_CC_limit, filter_radius_high, *frealign_score);
+//		wxPrintf("pixel_size, signed_CC_limit, filter_radius_high, frealign_score = %g %g %g\n", pixel_size, signed_CC_limit, filter_radius_high, *frealign_score);
 	}
 
 	temp_image1->SwapRealSpaceQuadrants();
@@ -826,21 +826,23 @@ float Particle::ReturnLogLikelihood(Image &input_image, Image &padded_unbinned_i
 	if (includes_reference_ssnr_weighting) temp_image1->Whiten(pixel_size / filter_radius_high);
 //	temp_image1->PhaseFlipPixelWise(*ctf_image);
 //	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
-	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image1->CosineMask(0.45, 0.1);
-	temp_image1->ClipInto(&padded_unbinned_image);
-	padded_unbinned_image.BackwardFFT();
-	padded_unbinned_image.ClipInto(projection_image);
-	projection_image->ForwardFFT();
+	if (input_3d.density_map->logical_x_dimension != input_image.logical_x_dimension) temp_image1->CosineMask(0.45, 0.1);
+//	temp_image1->ClipInto(&padded_unbinned_image);
+//	padded_unbinned_image.BackwardFFT();
+//	padded_unbinned_image.ClipInto(projection_image);
+//	projection_image->ForwardFFT();
+	temp_image1->ClipInto(projection_image);
 	projection_image->PhaseFlipPixelWise(*ctf_input_image);
 	projection_image->MultiplyPixelWise(*beamtilt_input_image);
 
 //	temp_image2->MultiplyPixelWiseReal(*ctf_image);
 //	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.5 - pixel_size / 20.0, pixel_size / 10.0);
-	if (input_3d.density_map->logical_x_dimension != padded_unbinned_image.logical_x_dimension) temp_image2->CosineMask(0.45, 0.1);
-	temp_image2->ClipInto(&padded_unbinned_image);
-	padded_unbinned_image.BackwardFFT();
-	padded_unbinned_image.ClipInto(temp_projection);
-	temp_projection->ForwardFFT();
+	if (particle_image->logical_x_dimension != input_image.logical_x_dimension) temp_image2->CosineMask(0.45, 0.1);
+//	temp_image2->ClipInto(&padded_unbinned_image);
+//	padded_unbinned_image.BackwardFFT();
+//	padded_unbinned_image.ClipInto(temp_projection);
+//	temp_projection->ForwardFFT();
+	temp_image2->ClipInto(temp_projection);
 	temp_projection->MultiplyPixelWiseReal(*ctf_input_image);
 	temp_projection->MultiplyPixelWise(*beamtilt_input_image);
 //	temp_projection->CopyFrom(projection_image);

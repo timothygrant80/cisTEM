@@ -163,6 +163,7 @@ public:
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	float CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
+	void ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value);
 	void GaussianLowPassFilter(float sigma);
 	void GaussianHighPassFilter(float sigma);
 	void ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels);

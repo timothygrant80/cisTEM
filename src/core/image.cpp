@@ -4466,6 +4466,65 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
+void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+	int original_x_size;
+	int original_y_size;
+	int original_z_size;
+
+	int binned_x_size;
+	int binned_y_size;
+	int binned_z_size;
+
+	float original_average_value;
+	float average_value;
+	float average_of_max;
+	float threshold_value;
+	float binning_factor = filter_resolution_in_angstroms / 2.0f / pixel_size;
+
+	original_x_size = logical_x_dimension;
+	original_y_size = logical_y_dimension;
+	original_z_size = logical_z_dimension;
+
+	binned_x_size = original_x_size / binning_factor + 0.5f;
+	binned_y_size = original_y_size / binning_factor + 0.5f;
+	binned_z_size = original_z_size / binning_factor + 0.5f;
+
+	if (binned_x_size != original_x_size)
+	{
+		ForwardFFT();
+		Resize(binned_x_size, binned_y_size, binned_z_size);
+		BackwardFFT();
+	}
+
+	original_average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+
+	// remove disconnected density
+
+	SetMinimumValue(original_average_value);
+	average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+	average_of_max = ReturnAverageOfMaxN(number_of_real_space_pixels * 0.0001, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
+	threshold_value = average_value + ((average_of_max - average_value) * 0.02);
+
+	CosineMask(outer_mask_radius_in_angstroms / binning_factor / pixel_size, 1.0, false, true, -FLT_MAX);
+	Binarise(threshold_value);
+
+	rle3d my_rle3d(*this);
+	my_rle3d.ConnectedSizeDecodeTo(*this);
+	Binarise(ReturnMaximumValue() - 1.0f);
+
+	ForwardFFT();
+	GaussianLowPassFilter(0.25);
+	Resize(original_x_size, original_y_size, original_z_size, 0.0);
+	BackwardFFT();
+
+	DivideByConstant(ReturnMaximumValue());
+	Binarise(rebin_value);
+}
+
 Image & Image::operator = (const Image &other_image)
 {
 	*this = &other_image;

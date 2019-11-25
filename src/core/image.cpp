@@ -2447,7 +2447,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 
 void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit, bool apply_resolution_limit)
 {
-	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+//	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
@@ -2470,116 +2470,143 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
 	float y_coord_sq;
 
-	image_to_extract.object_is_centred_in_box = false;
-	image_to_extract.is_in_real_space = false;
-//	image_to_extract.SetToConstant(0.0);
+	bool padding = false;
+
+	Image *temp_image;
+
+	if (image_to_extract.logical_x_dimension != logical_x_dimension || image_to_extract.logical_y_dimension != logical_y_dimension) padding = true;
+
+	if (! padding)
+	{
+		temp_image = &image_to_extract;
+	}
+	else
+	{
+		temp_image = new Image;
+		temp_image->Allocate(logical_x_dimension, logical_y_dimension, false);
+	}
+
+	temp_image->object_is_centred_in_box = false;
+	temp_image->is_in_real_space = false;
+//	temp_image->SetToConstant(0.0);
 
 	if (apply_resolution_limit)
 	{
-		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d,2);
-			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
 				{
 					angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				}
 				else
 				{
-					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
 	// Now deal with special case of i = 0
-		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
 			}
 			else
 			{
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
-				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				temp_image->complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
-		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 			else
 			{
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
 			}
 		}
 	}
 	else
 	{
-		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 		}
 // Now deal with special case of i = 0
-		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+			temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
 		}
 // Deal with pixel at edge if image dimensions are even
-		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 		}
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
+	temp_image->complex_values[0] = 0.0f + I * 0.0f;
 // This was changed to make projections compatible with ML algorithm
-//	image_to_extract.complex_values[0] = complex_values[0];
+//	temp_image->complex_values[0] = complex_values[0];
 
-	image_to_extract.is_in_real_space = false;
+	temp_image->is_in_real_space = false;
+
+	if (padding)
+	{
+		temp_image->SwapRealSpaceQuadrants();
+		temp_image->BackwardFFT();
+		if (temp_image->logical_x_dimension < image_to_extract.logical_x_dimension && temp_image->logical_y_dimension < image_to_extract.logical_y_dimension) temp_image->ClipIntoLargerRealSpace2D(&image_to_extract);
+		else temp_image->ClipInto(&image_to_extract);
+		image_to_extract.ForwardFFT();
+		image_to_extract.SwapRealSpaceQuadrants();
+		delete temp_image;
+	}
 }
 
 void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wanted_matrix, float resolution_limit, bool apply_resolution_limit)
 {
-	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+//	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
@@ -2602,111 +2629,138 @@ void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wan
 	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
 	float y_coord_sq;
 
-	image_to_extract.object_is_centred_in_box = false;
-	image_to_extract.is_in_real_space = false;
-//	image_to_extract.SetToConstant(0.0);
+	bool padding = false;
+
+	Image *temp_image;
+
+	if (image_to_extract.logical_x_dimension != logical_x_dimension || image_to_extract.logical_y_dimension != logical_y_dimension) padding = true;
+
+	if (! padding)
+	{
+		temp_image = &image_to_extract;
+	}
+	else
+	{
+		temp_image = new Image;
+		temp_image->Allocate(logical_x_dimension, logical_y_dimension, false);
+	}
+
+	temp_image->object_is_centred_in_box = false;
+	temp_image->is_in_real_space = false;
+//	temp_image->SetToConstant(0.0);
 
 	if (apply_resolution_limit)
 	{
-		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d,2);
-			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
 				{
 					wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				}
 				else
 				{
-					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
 	// Now deal with special case of i = 0
-		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
 			}
 			else
 			{
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
-				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				temp_image->complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
-		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 			else
 			{
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
 			}
 		}
 	}
 	else
 	{
-		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 		}
 // Now deal with special case of i = 0
-		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
+			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+			temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
 		}
 // Deal with pixel at edge if image dimensions are even
-		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
+		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
+			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
-			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
+			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 		}
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
+	temp_image->complex_values[0] = 0.0f + I * 0.0f;
 // This was changed to make projections compatible with ML algorithm
-//	image_to_extract.complex_values[0] = complex_values[0];
+//	temp_image->complex_values[0] = complex_values[0];
 
-	image_to_extract.is_in_real_space = false;
+	temp_image->is_in_real_space = false;
+
+	if (padding)
+	{
+		temp_image->SwapRealSpaceQuadrants();
+		temp_image->BackwardFFT();
+		if (temp_image->logical_x_dimension < image_to_extract.logical_x_dimension && temp_image->logical_y_dimension < image_to_extract.logical_y_dimension) temp_image->ClipIntoLargerRealSpace2D(&image_to_extract);
+		else temp_image->ClipInto(&image_to_extract);
+		image_to_extract.ForwardFFT();
+		image_to_extract.SwapRealSpaceQuadrants();
+		delete temp_image;
+	}
 }
 
 std::complex<float> Image::ReturnNearestFourier2D(float &x, float &y)
@@ -4424,6 +4478,65 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
+void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+	int original_x_size;
+	int original_y_size;
+	int original_z_size;
+
+	int binned_x_size;
+	int binned_y_size;
+	int binned_z_size;
+
+	float original_average_value;
+	float average_value;
+	float average_of_max;
+	float threshold_value;
+	float binning_factor = filter_resolution_in_angstroms / 2.0f / pixel_size;
+
+	original_x_size = logical_x_dimension;
+	original_y_size = logical_y_dimension;
+	original_z_size = logical_z_dimension;
+
+	binned_x_size = original_x_size / binning_factor + 0.5f;
+	binned_y_size = original_y_size / binning_factor + 0.5f;
+	binned_z_size = original_z_size / binning_factor + 0.5f;
+
+	if (binned_x_size != original_x_size)
+	{
+		ForwardFFT();
+		Resize(binned_x_size, binned_y_size, binned_z_size);
+		BackwardFFT();
+	}
+
+	original_average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+
+	// remove disconnected density
+
+	SetMinimumValue(original_average_value);
+	average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+	average_of_max = ReturnAverageOfMaxN(number_of_real_space_pixels * 0.0001, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
+	threshold_value = average_value + ((average_of_max - average_value) * 0.02);
+
+	CosineMask(outer_mask_radius_in_angstroms / binning_factor / pixel_size, 1.0, false, true, -FLT_MAX);
+	Binarise(threshold_value);
+
+	rle3d my_rle3d(*this);
+	my_rle3d.ConnectedSizeDecodeTo(*this);
+	Binarise(ReturnMaximumValue() - 1.0f);
+
+	ForwardFFT();
+	GaussianLowPassFilter(0.25);
+	Resize(original_x_size, original_y_size, original_z_size, 0.0);
+	BackwardFFT();
+
+	DivideByConstant(ReturnMaximumValue());
+	Binarise(rebin_value);
+}
+
 Image & Image::operator = (const Image &other_image)
 {
 	*this = &other_image;
@@ -5092,7 +5205,7 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
 	MyDebugAssertTrue(start_slice > 0, "Start slice is less than 0, the first slice is 1!");
 	MyDebugAssertTrue(end_slice <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");
-	MyDebugAssertTrue(input_file->my_file.is_open(), "MRCFile not open!");
+	MyDebugAssertTrue(input_file->my_file->is_open(), "MRCFile not open!");
 
 
 	// check the allocations..
@@ -5161,7 +5274,7 @@ void Image::ReadSlices(DMFile *input_file, long start_slice, long end_slice)
 void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 {
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
-	MyDebugAssertTrue(input_file->my_file.is_open(), "MRCFile not open!");
+	MyDebugAssertTrue(input_file->my_file->is_open(), "MRCFile not open!");
 
 	// THIS PROBABLY NEEDS ATTENTION..
 
@@ -9947,8 +10060,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	beam_tilt_search_end_value = 	0.005f; // 5 radians
 	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
 
-//	particle_shift_search_start_value = -.25;//-1.0f;
-//	particle_shift_search_end_value = 0.25;//1.0f;
 	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
 	particle_shift_search_step_size = 0.05f;

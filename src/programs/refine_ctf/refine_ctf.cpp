@@ -241,6 +241,7 @@ bool RefineCTFApp::DoCalculation()
 	int best_defocus_i;
 	int random_reset_counter;
 	int random_reset_count = 10;
+	int binned_image_box_size;
 //	float defocus_lower_limit = 15000.0f * sqrtf(voltage_kV / 300.0f);
 //	float defocus_upper_limit = 25000.0f * sqrtf(voltage_kV / 300.0f);
 	float voltage_kV = 0.0f;
@@ -281,16 +282,13 @@ bool RefineCTFApp::DoCalculation()
 	refine_particle.constraints_used.x_shift = true;		// Constraint for X shifts
 	refine_particle.constraints_used.y_shift = true;		// Constraint for Y shifts
 
-	Image						input_image;
 	Image						input_image_local;
 	Image						sum_power;
 	Image						sum_power_local;
 	Image						temp_image;
 	Image						temp_image_local;
-	Image						unbinned_image;
 	Image						binned_image;
 	Image						projection_image_local;
-	Image						phase_difference_image;
 	Image						phase_difference_image_local;
 	Image						phase_difference_sum;
 	Image						phase_difference_sum_local;
@@ -362,10 +360,48 @@ bool RefineCTFApp::DoCalculation()
 
 //	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
 
-	wxPrintf("There are are %li 3D references\n", all_reference_3d_filenames.GetCount());
+	if (all_reference_3d_filenames.GetCount() > 1) wxPrintf("\nThere are %li 3D references\n", all_reference_3d_filenames.GetCount());
+	else wxPrintf("\nThere is 1 3D reference\n");
 	currently_open_3d_filename = all_reference_3d_filenames[0];
 
+//	if (input_star_file.parameters_that_were_read.reference_3d_filename == true)
+//	{
+//		if (is_running_locally == true) MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
+//		all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+//
+//		// get all the filenames..
+//
+//		bool found_filename;
+//
+//		for (current_line = 1; current_line < input_star_file.ReturnNumberofLines(); current_line++)
+//		{
+//			found_filename = false;
+//
+//			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
+//			{
+//				if (all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false))
+//				{
+//					found_filename = true;
+//					break;
+//				}
+//			}
+//
+//			if (found_filename == false)
+//			{
+//				all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
+//			}
+//		}
+//	}
+//	else
+//	{
+//			input_star_file.SetAllReference3DFilename(input_reconstruction);
+//			all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
+//	}
 
+//	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
+
+//	wxPrintf("There are %li 3D references\n", all_reference_3d_filenames.GetCount());
+//	currently_open_3d_filename = all_reference_3d_filenames[0];
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 
@@ -506,17 +542,15 @@ bool RefineCTFApp::DoCalculation()
 	}
 
 	refine_statistics = input_statistics;
-	input_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	input_3d.mask_radius = outer_mask_radius;
 
-	if (padding != 1.0)
-	{
-		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
-	}
+//	if (padding != 1.0)
+//	{
+//		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
+//	}
 
 	if (beamtilt_refinement)
 	{
-		phase_difference_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		phase_difference_sum.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		beamtilt_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		phase_difference_sum.SetToConstant(0.0f);
@@ -525,14 +559,15 @@ bool RefineCTFApp::DoCalculation()
 	SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d , padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
 
 	binning_factor_refine = input_3d.pixel_size / pixel_size;
+	binned_image_box_size = myroundint(input_stack.ReturnXSize() / binning_factor_refine);
 //	unbinned_image.Allocate(input_file.ReturnXSize() * padding, input_file.ReturnYSize() * padding, true);
-//	binned_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+//	binned_image.Allocate(binned_image_box_size, binned_image_box_size, false);
 
 	wxPrintf("\nBinning factor for refinement = %f, new pixel size = %f\n", binning_factor_refine, input_3d.pixel_size);
 
 	temp_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 	sum_power.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
-//	refine_particle.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension);
+//	refine_particle.Allocate(binned_image_box_size, binned_image_box_size);
 
 
 	// Read whole parameter file to work out average values and variances
@@ -549,7 +584,7 @@ bool RefineCTFApp::DoCalculation()
 	if (normalize_particles)
 	{
 		wxPrintf("Calculating noise power spectrum...\n\n");
-		random_reset_count = (random_reset_count, max_threads);
+		random_reset_count = std::max(random_reset_count, max_threads);
 		percentage = float(max_samples) / float(images_to_process) / random_reset_count;
 		sum_power.SetToConstant(0.0f);
 		number_of_blank_edges = 0;
@@ -637,32 +672,36 @@ bool RefineCTFApp::DoCalculation()
 		}
 	}
 
-	wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n\n",
+	wxPrintf("\nAverage sigma noise = %f, average LogP = %f\nAverage ShiftX = %f, average ShiftY = %f\nSigma ShiftX = %f, sigma ShiftY = %f\n\nNumber of particles to refine = %i\n",
 			parameter_average.sigma, parameter_average.score, parameter_average.x_shift, parameter_average.y_shift, sqrtf(parameter_variance.x_shift), sqrtf(parameter_variance.y_shift), images_to_process);
-
-	if (is_running_locally == true) my_progress = new ProgressBar(images_to_process / max_threads);
 
 	// look over all file names..
 
 	for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
 	{
+		if (is_running_locally == true)
+		{
+			if (all_reference_3d_filenames.GetCount() > 1) wxPrintf("\n3D reference # %i of %li\n\n", filename_counter + 1, all_reference_3d_filenames.GetCount());
+			else wxPrintf("\n");
+			my_progress = new ProgressBar(images_to_process / max_threads);
+		}
 
 		currently_open_3d_filename = all_reference_3d_filenames[filename_counter];
 		SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d , padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
 
 		#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, parameter_variance, input_star_file, input_stack, phase_difference_sum, max_threads, \
-		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
-		refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, \
+		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
+		refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, binned_image_box_size, \
 		binning_factor_refine, cg_accuracy, low_resolution_limit, input_statistics, output_star_file, beamtilt_refinement, currently_open_3d_filename, filename_counter) \
 		private(image_counter, refine_particle, current_line_local, phase_difference_sum_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object, \
-		best_score, defocus_i, score, cg_starting_point, input_image_local, phase_difference_image_local, unbinned_image, input_3d_local, unbinned_3d_local, \
+		best_score, defocus_i, score, cg_starting_point, input_image_local, phase_difference_image_local, input_3d_local, unbinned_3d_local, \
 		binned_image, projection_image_local, best_defocus_i, ctf_image_local, padded_projection_image_local)
 		{ // for omp
 
 		CTF ctf_copy;
 		Image image_copy;
 
-		refine_particle.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension);
+		refine_particle.Allocate(binned_image_box_size, binned_image_box_size);
 		refine_particle.SetParameterStatistics(parameter_average, parameter_variance);
 
 
@@ -673,9 +712,8 @@ bool RefineCTFApp::DoCalculation()
 			input_3d_local.CopyAllButVolume(&input_3d);
 			input_3d_local.density_map = input_3d.density_map;
 
-			unbinned_image.Allocate(input_stack.ReturnXSize() * padding, input_stack.ReturnYSize() * padding, true);
-			binned_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
-			projection_image_local.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
+			binned_image.Allocate(binned_image_box_size, binned_image_box_size, false);
+			projection_image_local.Allocate(binned_image_box_size, binned_image_box_size, false);
 		}
 
 		if (beamtilt_refinement)
@@ -684,8 +722,8 @@ bool RefineCTFApp::DoCalculation()
 			unbinned_3d_local.CopyAllButVolume(&unbinned_3d);
 			unbinned_3d_local.density_map = unbinned_3d.density_map;
 
-			ctf_image_local.Allocate(unbinned_3d_local.density_map->logical_x_dimension, unbinned_3d_local.density_map->logical_y_dimension, false);
-			padded_projection_image_local.Allocate(unbinned_3d_local.density_map->logical_x_dimension, unbinned_3d_local.density_map->logical_y_dimension, false);
+			ctf_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
+			padded_projection_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 			phase_difference_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 			phase_difference_sum_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 			phase_difference_sum_local.SetToConstant(0.0f);
@@ -706,7 +744,10 @@ bool RefineCTFApp::DoCalculation()
 				continue;
 			}
 
+			// ReadSlice requires omp critical to avoid parallel reads, which may lead to the wrong slice being read
+			#pragma omp critical
 			input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+
 			image_counter++;
 
 			output_parameters = input_parameters;
@@ -758,12 +799,10 @@ bool RefineCTFApp::DoCalculation()
 			// Option to add noise to images to get out of local optima
 			//		input_image.AddGaussianNoise(sqrtf(2.0 * input_image.ReturnVarianceOfRealValues()));
 
+			input_image_local.ForwardFFT();
 			if (ctf_refinement)
 			{
-
-				input_image_local.ClipInto(&unbinned_image);
-				unbinned_image.ForwardFFT();
-				unbinned_image.ClipInto(refine_particle.particle_image);
+				input_image_local.ClipInto(refine_particle.particle_image);
 				// Multiply by binning_factor so variance after binning is close to 1.
 				//			refine_particle.particle_image->MultiplyByConstant(binning_factor_refine);
 				comparison_object.reference_volume = &input_3d_local;
@@ -831,19 +870,20 @@ bool RefineCTFApp::DoCalculation()
 
 				ctf_copy.Init(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, output_parameters.defocus_1, output_parameters.defocus_2 , input_parameters.defocus_angle, 0.0, 0.0, 0.0, pixel_size, input_parameters.phase_shift);
 				image_copy.CopyFrom(&input_image_local);
-				output_parameters.logp = refine_particle.ReturnLogLikelihood(image_copy, unbinned_image, ctf_copy, input_3d_local, input_statistics, 2.0f * pixel_size);
+				output_parameters.logp = refine_particle.ReturnLogLikelihood(image_copy, ctf_copy, input_3d_local, input_statistics, 2.0f * pixel_size);
 			}
 
 			if (beamtilt_refinement)
 			{
-				input_image_local.ForwardFFT();
+//				input_image_local.ForwardFFT();
 				ctf_image_local.CalculateCTFImage(input_ctf);
-				if (padding != 1.0)
-				{
-					unbinned_3d_local.CalculateProjection(padded_projection_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
-					padded_projection_image_local.ClipInto(&phase_difference_image_local);
-				}
-				else unbinned_3d_local.CalculateProjection(phase_difference_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
+//				if (padding != 1.0)
+//				{
+//					unbinned_3d_local.CalculateProjection(padded_projection_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
+//					padded_projection_image_local.ClipInto(&phase_difference_image_local);
+//				}
+//				else unbinned_3d_local.CalculateProjection(phase_difference_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
+				unbinned_3d_local.CalculateProjection(phase_difference_image_local, ctf_image_local, refine_particle.alignment_parameters, 0.0, 0.0, 1.0, true, true, false, true, false);
 
 			//	phase_difference_image_local.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1, true);
 			//	input_image_local.QuickAndDirtyWriteSlice("/tmp/input.mrc", 1, true);
@@ -912,7 +952,6 @@ bool RefineCTFApp::DoCalculation()
 
 		if (ctf_refinement)
 		{
-			unbinned_image.Deallocate();
 			binned_image.Deallocate();
 			projection_image_local.Deallocate();
 		}
@@ -920,13 +959,12 @@ bool RefineCTFApp::DoCalculation()
 		refine_particle.Deallocate();
 
 		} // end omp section
+
+		if (is_running_locally) delete my_progress;
 	}
 
 	if (is_running_locally == true)
 	{
-		delete my_progress;
-
-
 		if (beamtilt_refinement)
 		{
 			////phase_difference_sum.QuickAndDirtyWriteSlice("temp_phase_difference_sum.mrc", 1);
@@ -974,16 +1012,10 @@ bool RefineCTFApp::DoCalculation()
 				// need to work out which section we should be running
 
 				//wxPrintf("first = %i, last = %i\n", first_position_to_search, last_position_to_search);
-
 				score_local = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image_local, beamtilt_image_local, sum_power_local, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search);
-				float shift_penalty = (sqrtf((1.0f-fabsf(particle_shift_x_local))) + sqrtf((1.0f-fabsf(particle_shift_y_local)))) / 2.0f;
-				if (isnan(shift_penalty)) shift_penalty = 0; // happens for particle shift > 1
-				shift_penalty = sqrtf(shift_penalty);
-				float pre_score = score_local;
-				score_local *= shift_penalty;
+
 				#pragma omp critical
 				{
-					wxPrintf("Score New:Old, %3.3e, %3.3e, %3.3e, args bt,sf, %3.3e,%3.3e,%3.3e,%3.3e weight %3.3e on thread %d\n",pre_score,score_local, score, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local,shift_penalty, ReturnThreadNumberOfCurrentThread());
 					if (score_local > score)
 					{
 						score = score_local;

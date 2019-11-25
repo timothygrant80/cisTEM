@@ -571,7 +571,4 @@ int ReturnThreadNumberOfCurrentThread();
 double cisTEM_erfinv(double x);
 double cisTEM_erfcinv(double x);
 
-bool StripEnclosingSingleQuotesFromString(wxString &string_to_strip);
-
-
-
+bool StripEnclosingSingleQuotesFromString(wxString &string_to_strip); // returns true if it was done, false if first and last characters are not '

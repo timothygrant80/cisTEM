@@ -11,8 +11,6 @@ RandomNumberGenerator::RandomNumberGenerator(int random_seed, bool internal) {
 	SetSeed(random_seed);
 }
 
-
-
 // Set seed for random number generator
 void RandomNumberGenerator::SetSeed(int random_seed) {
 
@@ -76,4 +74,3 @@ int RandomNumberGenerator::Internal_rand()
 //	wxPrintf("next = %i\n", next_seed);
     return((unsigned int)(next_seed / 65536) % 32768);
 }
-

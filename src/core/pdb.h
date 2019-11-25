@@ -2,7 +2,12 @@
 #define OPEN_TO_WRITE 1
 #define OPEN_TO_APPEND 2
 #define MAX_NUMBER_OF_TIMESTEPS 200
-#define NUMBER_OF_ATOM_TYPES 16
+
+enum  AtomType : int  { hydrogen = 0, 	carbon = 1, 	nitrogen = 2, 	oxygen = 3, 		fluorine = 4,
+						sodium = 5, 	magnesium = 6,  silicon = 17, 	phosphorus = 7, 	sulfur = 8,
+						chlorine = 9,	potassium = 10, calcium = 11, 	manganese = 12, 	iron = 13,
+						cobalt = 18, 	zinc = 14, 		selenium = 19, 	gold = 20, 			water = 15, oxygen_anion = 16};
+
 
 class Atom {
 	// We don't know how many atoms there will be at the outset so use this wxArrayObj
@@ -10,16 +15,15 @@ class Atom {
 
 	public:
 
+		// If any fields are added or modified here, be sure to update the CopyAtom method in the PDB class.
 		wxString name;
-		wxString atom_type;
+		AtomType atom_type;
 		float x_coordinate;  // Angstrom
 		float y_coordinate;  // Angstrom
 		float z_coordinate;  // Angstrom
 		float occupancy;
 		float bfactor;
 		float charge;
-		float relative_bfactor; // Meik et al.
-		int element_name;
 
 
 };
@@ -32,7 +36,6 @@ class ParticleTrajectory {
 	private:
 
 	public:
-
 
 		// I am assuming less than 200 time steps, but maybe too conservative. Cost is pretty small
 		float current_orientation[MAX_NUMBER_OF_TIMESTEPS][12]; // Total xyz shift in ang then listed in column major order (surprised that marix.cpp does this. m00,m10,m20...m22
@@ -66,10 +69,10 @@ class PDB {
 
 		// Constructors
 		PDB();
-		PDB(long number_of_non_water_atoms, float cubic_size, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
+		PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
 
-		PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
-		PDB(wxString Filename, long wanted_access_type, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
+		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line = 1, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
+		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
 
 
 		~PDB();
@@ -86,9 +89,10 @@ class PDB {
 		long number_of_each_atom[NUMBER_OF_ATOM_TYPES];
 		float atomic_volume;
 		float average_bFactor;
+		float pixel_size;
 		float vol_angX, vol_angY, vol_angZ;
-		long vol_nX, vol_nY, vol_nZ;
-		long vol_oX, vol_oY, vol_oZ;
+		int vol_nX, vol_nY, vol_nZ;
+		int vol_oX, vol_oY, vol_oZ;
 		float cubic_size;
 		float offset_z;
 		float min_z;
@@ -97,7 +101,24 @@ class PDB {
 		int MIN_PADDING_XY;
 		double MIN_THICKNESS;
 
+		// H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
 
+
+		// This should probably be a copy constructor in the Atom class FIXME
+		Atom CopyAtom(Atom &atom_to_copy)
+		{
+			Atom atom_out;
+			atom_out.name = atom_to_copy.name;
+			atom_out.atom_type = atom_to_copy.atom_type;
+			atom_out.x_coordinate = atom_to_copy.x_coordinate;  // Angstrom
+			atom_out.y_coordinate = atom_to_copy.y_coordinate;  // Angstrom
+			atom_out.z_coordinate = atom_to_copy.z_coordinate;  // Angstrom
+			atom_out.occupancy = atom_to_copy.occupancy;
+			atom_out.bfactor = atom_to_copy.bfactor;
+			atom_out.charge = atom_to_copy.charge;
+
+			return atom_out;
+		};
 
 		// Methods
 
@@ -115,9 +136,8 @@ class PDB {
         void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
         void TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3);
-        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms,float wanted_pixel_size, int time_step, RotationMatrix particle_rot, float shift_z);
+        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms, int time_step, RotationMatrix particle_rot, float shift_z);
         void TransformGlobalAndSortOnZ(long number_of_non_water_atoms,float shift_x, float shift_y, float shift_z,  RotationMatrix rotate_waters);
-        float ReturnRelativeBFactor(wxString residue_name);
 
         inline bool IsNonAminoAcid(wxString atom_name)
         {

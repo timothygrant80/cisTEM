@@ -37,6 +37,7 @@ const std::complex<float> I(0.0,1.0);
 #include <functional>
 #include <fftw3.h>
 #include <math.h>
+#include <chrono>
 #include "sqlite/sqlite3.h"
 #include <wx/wx.h>
 #include <wx/socket.h>
@@ -160,6 +161,7 @@ protected:
 #include "json/jsonwriter.h"
 #include "json/jsonreader.h"
 #include "json/jsonval.h"
+#include "stopwatch.h"
 
 #ifdef EXPERIMENTAL
 #include "pdb.h"

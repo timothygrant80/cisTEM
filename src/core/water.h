@@ -1,7 +1,13 @@
+typedef
+struct __attribute__((packed)) __attribute__((aligned(16))) _AtomPos
+{
+	float x;
+	float y;
+	float z;
 
+} AtomPos;
 
-
-class Water : Image {
+class Water {
 
 	// Track xyz coords for waters and provide some basic additions to the Image class.
 
@@ -13,12 +19,12 @@ class Water : Image {
 
 		// Constructors
 		Water(bool do_carbon = false);
-		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, bool do_carbon = false);
+		Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt,float in_plane_rotation, int *padX, int *padY, int nThreads, bool do_carbon = false);
 		~Water();
 
 		// data
 
-		long number_of_waters;
+		long number_of_waters = 0;
 		int size_neighborhood;
 		float pixel_size;
 		float dose_per_frame;
@@ -30,30 +36,37 @@ class Water : Image {
 		long number_of_each_atom[NUMBER_OF_ATOM_TYPES];
 		float atomic_volume;
 		float vol_angX, vol_angY, vol_angZ;
-		long vol_nX, vol_nY, vol_nZ;
-		long vol_oX, vol_oY, vol_oZ;
+		int vol_nX, vol_nY, vol_nZ;
+		float vol_oX, vol_oY, vol_oZ;
 		float offset_z;
 		float min_z;
 		float max_z;
+		AtomPos* water_coords;
+		bool is_allocated_water_coords = false;
+		int nThreads;
+
+
 
 		//	void set_initial_trajectories(PDB *pdb_ensemble);
 
 
-		void Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt);
+		void Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation,int *padX, int *padY, int nThreads);
 		void SeedWaters3d();
 		void ShakeWaters3d(int number_of_threads);
-		int ReturnPaddingForTilt(float max_tilt, int current_nX);
+		void ReturnPadding(float max_tilt, float in_plane_rotation, int current_thickness, int current_nX, int current_nY, int* padX, int* padY, int *padZ);
 
-		inline float Return_x_Coordinate(long current_atom) { return real_values[current_atom*3] ; }
+
+		inline float Return_x_Coordinate(long current_atom) { return water_coords[current_atom].x ; }
+
 
 		inline void ReturnCenteredCoordinates(long current_atom, float &dx, float &dy,float &dz)
 		{
 
 			// Find the water's coordinates in the rotated slab
 			// Shift those coordinates to a centered origin
-			dx = real_values[current_atom*3 + 0] - vol_oX;
-			dy = real_values[current_atom*3 + 1] - vol_oY;
-			dz = real_values[current_atom*3 + 2] - vol_oZ;
+			dx = water_coords[current_atom].x - vol_oX;
+			dy = water_coords[current_atom].y - vol_oY;
+			dz = water_coords[current_atom].z - vol_oZ;
 
 
 		}

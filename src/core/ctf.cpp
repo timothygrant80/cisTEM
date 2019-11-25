@@ -526,11 +526,11 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
 float CTF::PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, float beam_tilt, float particle_shift)
 {
 	float spatial_frequency = sqrtf(squared_spatial_frequency);
-	float phase_shift = 2.0f * PI * spherical_aberration * squared_wavelength * squared_spatial_frequency * spatial_frequency * beam_tilt;
-	phase_shift -= 2.0f * PI * spatial_frequency * particle_shift;
-	phase_shift = fmodf(phase_shift, 2.0f * (float)PI);
-	if (phase_shift > PI) phase_shift -= 2.0f * PI;
-	if (phase_shift <= -PI) phase_shift += 2.0f * PI;
+	float phase_shift = 2.0f * PIf * spherical_aberration * squared_wavelength * squared_spatial_frequency * spatial_frequency * beam_tilt;
+	phase_shift -= 2.0f * PIf * spatial_frequency * particle_shift;
+	phase_shift = fmodf(phase_shift, 2.0f * PIf);
+	if (phase_shift > PIf) phase_shift -= 2.0f * PIf;
+	if (phase_shift <= -PIf) phase_shift += 2.0f * PIf;
 	return phase_shift;
 }
 
@@ -555,7 +555,9 @@ float CTF::ParticleShiftGivenAzimuth(float azimuth)
 // Given acceleration voltage in keV, return the electron wavelength in Angstroms
 float CTF::WavelengthGivenAccelerationVoltage( float acceleration_voltage )
 {
-	return 12.26f / sqrtf(1000.0f * acceleration_voltage + 0.9784f * powf(1000.0f * acceleration_voltage,2)/powf(10.0f,6));
+//	return 12.26f / sqrtf(1000.0f * acceleration_voltage + 0.9784f * powf(1000.0f * acceleration_voltage,2)/powf(10.0f,6));
+	return 12.2639f / sqrtf(1000.0f * acceleration_voltage + 0.97845e-6 * powf(1000.0f * acceleration_voltage,2));
+
 }
 
 

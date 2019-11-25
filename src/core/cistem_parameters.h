@@ -29,6 +29,9 @@
 #define REFERENCE_3D_FILENAME		67108864
 #define BEST_2D_CLASS				134217728
 #define BEAM_TILT_GROUP				268435456
+#define FRAME_NUMBER				536870912
+#define PRE_EXPOSURE				1073741824
+#define TOTAL_EXPOSURE				2147483648
 
 class cisTEMParameterLine {
 
@@ -63,6 +66,9 @@ public:
 	wxString		reference_3d_filename;
 	int				best_2d_class;
 	int 			beam_tilt_group;
+	int				frame_number;
+	float			pre_exposure;
+	float			total_exposure;
 
 	//void SwapPsiAndPhi(); shouldn't need
 	void Add(cisTEMParameterLine &line_to_add);
@@ -112,8 +118,13 @@ public:
 	bool reference_3d_filename;
 	bool best_2d_class;
 	bool beam_tilt_group;
+	// These are set to false, even in SetAllToTrue. Call SetNewToTrue to activate. (Until we decide on their utility.)
+	bool frame_number;
+	bool pre_exposure;
+	bool total_exposure;
 
 	void SetAllToTrue();
+	void SetNewToTrue();
 	void SetAllToFalse();
 	void SetActiveParameters(long parameters_to_set); // uses takes the defines above bitwise
 
@@ -145,7 +156,18 @@ public :
 	~cisTEMParameters();
 
 	void ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers = false );
-	void ReadFromFrealignParFile(wxString wanted_filename, float wanted_pixel_size = 0.0f, float wanted_microscope_voltage = 0.0f, float wanted_microscope_cs = 0.0f, float wanted_amplitude_contrast = 0.0f, float wanted_beam_tilt_x = 0.0f, float wanted_beam_tilt_y = 0.0f, float wanted_image_shift_x = 0.0f, float wanted_image_shift_y = 0.0f);
+	void ReadFromFrealignParFile(wxString wanted_filename,
+								float wanted_pixel_size = 0.0f,
+								float wanted_microscope_voltage = 0.0f,
+								float wanted_microscope_cs = 0.0f,
+								float wanted_amplitude_contrast = 0.0f,
+								float wanted_beam_tilt_x = 0.0f,
+								float wanted_beam_tilt_y = 0.0f,
+								float wanted_image_shift_x = 0.0f,
+								float wanted_image_shift_y = 0.0f,
+								int	  wanted_frame_number = 1,
+								float wanted_pre_exposure = 0.0f,
+								float wanted_total_exposure = 0.1f);
 
 	void AddCommentToHeader(wxString comment_to_add);
 	void WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write = -1, int last_line_to_write = -1, int first_image_to_write = -1, int last_image_to_write = -1);
@@ -186,6 +208,9 @@ public :
 	inline wxString ReturnReference3DFilename(int line_number) {return all_parameters.Item(line_number).reference_3d_filename;}
 	inline int ReturnBest2DClass(int line_number) {return all_parameters.Item(line_number).best_2d_class;}
 	inline int ReturnBeamTiltGroup(int line_number) {return all_parameters.Item(line_number).beam_tilt_group;}
+	inline int ReturnFrameNumber(int line_number) {return all_parameters.Item(line_number).frame_number;}
+	inline float ReturnPreExposure(int line_number) {return all_parameters.Item(line_number).pre_exposure;}
+	inline float ReturnTotalExposure(int line_number) {return all_parameters.Item(line_number).total_exposure;}
 
 	float ReturnAverageSigma(bool exclude_negative_film_numbers = false);
 	float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);

@@ -66,43 +66,80 @@ void ElectronDose::Init(float wanted_acceleration_voltage, float wanted_pixel_si
 void ElectronDose::CalculateDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_start, float dose_finish)
 {
 
-	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
+//	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
 
 	int i;
 	int j;
+	int k;
 
 	float x;
 	float y;
-
-	float current_critical_dose;
-	float current_optimal_dose;
-	float current_filter_value;
+	float z;
 
 	int array_counter = 0;
 
-	for (j = 0; j < ref_image->logical_y_dimension; j++)
+	for (k = 0; k <= ref_image->physical_upper_bound_complex_z; k++)
 	{
-		y = pow(ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y, 2);
+		z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
+		z *= z;
 
-		for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
+		for (j = 0; j <= ref_image->physical_upper_bound_complex_y; j++)
 		{
-			if (i == 0 && j == 0) filter_array[array_counter] = 1;
-			else
+			y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
+			y *= y;
+
+			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
 			{
-				x = pow(i * ref_image->fourier_voxel_size_x, 2);
+				if (i == 0 && j == 0) filter_array[array_counter] = 1;
+				else
+				{
+					x = i * ref_image->fourier_voxel_size_x;
+					filter_array[array_counter] = ReturnDoseFilter(dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
+				}
 
-				current_critical_dose = ReturnCriticalDose(sqrt(x+y) / pixel_size);
-				current_optimal_dose =  2.51284 * current_critical_dose;
-
-				// if the starting dose is already above the optimal dose, set to 0, otherwise calculate the filter..
-
-//				if (dose_start > current_optimal_dose) filter_array[array_counter] =  0.0;
-//				else filter_array[array_counter] = ReturnDoseFilter(dose_finish, current_critical_dose);
-				filter_array[array_counter] = ReturnDoseFilter(dose_finish, current_critical_dose);
-
+				array_counter++;
 			}
+		}
+	}
 
-			array_counter++;
+}
+
+void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_finish)
+{
+
+//	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
+
+	int i;
+	int j;
+	int k;
+
+	float x;
+	float y;
+	float z;
+
+	int array_counter = 0;
+
+	for (k = 0; k <= ref_image->physical_upper_bound_complex_z; k++)
+	{
+		z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
+		z *= z;
+
+		for (j = 0; j <= ref_image->physical_upper_bound_complex_y; j++)
+		{
+			y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
+			y *= y;
+
+			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
+			{
+				if (i == 0 && j == 0) filter_array[array_counter] = 1;
+				else
+				{
+					x = i * ref_image->fourier_voxel_size_x;
+					filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
+				}
+
+				array_counter++;
+			}
 		}
 	}
 

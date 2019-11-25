@@ -247,7 +247,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared > mask_radius_squared)
 							{
-								sum += pow(real_values[address],2);
+								sum += powf(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -255,7 +255,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared <= mask_radius_squared)
 							{
-								sum += pow(real_values[address],2);
+								sum += powf(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -281,7 +281,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				{
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						sum += pow(real_values[address],2);
+						sum += powf(real_values[address],2);
 						address++;
 					}
 					address += padding_jump_value;
@@ -3163,6 +3163,10 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 //	MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
 	MyDebugAssertTrue(wanted_inner_radius <= wanted_outer_radius, "Inner radius larger than outer radius");
 
+	// If wanted_inner_radius < 0 only mask the outside.
+	bool do_inner_masking = true;
+	if (wanted_inner_radius < 0.0f) { do_inner_masking = false;}
+
 	int i;
 	int j;
 	int k;
@@ -3204,11 +3208,14 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 	outer_mask_radius_squared = powf(outer_mask_radius, 2);
 	outer_mask_radius_plus_edge_squared = powf(outer_mask_radius_plus_edge, 2);
 
+
+
 	inner_mask_radius = wanted_inner_radius + wanted_mask_edge / 2;
 	inner_mask_radius_minus_edge = inner_mask_radius - wanted_mask_edge;
-
 	inner_mask_radius_squared = powf(inner_mask_radius, 2);
 	inner_mask_radius_minus_edge_squared = powf(inner_mask_radius_minus_edge, 2);
+
+
 
 	outer_pixel_sum = 0.0;
 	outer_number_of_pixels = 0;
@@ -3425,14 +3432,19 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
 						edge = (1.0 + cosf(PI * (frequency - outer_mask_radius) / wanted_mask_edge)) / 2.0;
 						complex_values[pixel_counter] *= edge;
 					}
-					if (frequency_squared <= inner_mask_radius_squared && frequency_squared >= inner_mask_radius_minus_edge_squared)
+					if (do_inner_masking)
 					{
-						frequency = sqrtf(frequency_squared);
-						edge = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
-						complex_values[pixel_counter] *= edge;
+						if (frequency_squared <= inner_mask_radius_squared && frequency_squared >= inner_mask_radius_minus_edge_squared)
+						{
+							frequency = sqrtf(frequency_squared);
+							edge = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
+							complex_values[pixel_counter] *= edge;
+						}
+						if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
+
 					}
+
 					if (frequency_squared >= outer_mask_radius_plus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
-					if (frequency_squared <= inner_mask_radius_minus_edge_squared) complex_values[pixel_counter] = 0.0f + I * 0.0f;
 
 					pixel_counter++;
 				}

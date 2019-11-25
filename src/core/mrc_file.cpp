@@ -4,41 +4,47 @@ MRCFile::MRCFile()
 {
 	rewrite_header_on_close = false;
 	max_number_of_seconds_to_wait_for_file_to_exist = 30;
+	my_file = new std::fstream;
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite)
 {
 	rewrite_header_on_close = false;
 	max_number_of_seconds_to_wait_for_file_to_exist = 30;
+	my_file = new std::fstream;
 	OpenFile(filename, overwrite);
-
 }
 
 MRCFile::MRCFile(std::string filename, bool overwrite,bool wait_for_file_to_exist)
 {
 	rewrite_header_on_close = false;
 	max_number_of_seconds_to_wait_for_file_to_exist = 30;
+	my_file = new std::fstream;
 	OpenFile(filename, overwrite,wait_for_file_to_exist);
-
 }
 
 MRCFile::~MRCFile()
 {
-	CloseFile();
+	if (my_file != NULL)
+	{
+		CloseFile();
+		delete my_file;
+	}
+	my_file = NULL;
 }
 
 void MRCFile::CloseFile()
 {
-	if (my_file.is_open())
+	if (my_file->is_open())
 	{
 		if (rewrite_header_on_close == true) WriteHeader();
-		my_file.close();
+		my_file->close();
 	}
 }
 
 bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
 {
-//	MyDebugAssertFalse(my_file.is_open(), "File Already Open: %s",wanted_filename);
+//	MyDebugAssertFalse(my_file->is_open(), "File Already Open: %s",wanted_filename);
 	CloseFile();
 
 	bool file_already_exists;
@@ -64,15 +70,15 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 
 	if (file_already_exists == true)
 	{
-		my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+		my_file->open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::binary);
 
-		if (my_file.is_open() == false)
+		if (my_file->is_open() == false)
 		{
 			// Try without connecting the out (i.e. read only)
-			my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::binary);
+			my_file->open(wanted_filename.c_str(), std::ios::in | std::ios::binary);
 			
 			// If it still didn't work, we're buggered
-			if (my_file.is_open() == false)
+			if (my_file->is_open() == false)
 			{
 				MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
 				DEBUG_ABORT;
@@ -81,14 +87,14 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 
 		// read the header
 
-		if (file_already_exists == true) my_header.ReadHeader(&my_file);
+		if (file_already_exists == true) my_header.ReadHeader(my_file);
 
 	}
 	else
 	{
-		my_file.open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+		my_file->open(wanted_filename.c_str(), std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
 
-		if (my_file.is_open() == false)
+		if (my_file->is_open() == false)
 		{
 			MyPrintWithDetails("Opening of file %s failed!! - Exiting..\n\n", wanted_filename.c_str());
 			DEBUG_ABORT;
@@ -126,7 +132,7 @@ void MRCFile::SetPixelSize(float wanted_pixel_size)
 
 void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array)
 {
-	MyDebugAssertTrue(my_file.is_open(), "File not open!");
+	MyDebugAssertTrue(my_file->is_open(), "File not open!");
 	MyDebugAssertTrue(start_slice <= ReturnNumberOfSlices(), "Start slice number larger than total slices!");
 	MyDebugAssertTrue(end_slice <= ReturnNumberOfSlices(), "end slice number larger than total slices!");
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
@@ -157,7 +163,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		}
 
 		image_offset = (start_slice - 1) * bytes_per_slice;
-		current_position = my_file.tellg();
+		current_position = my_file->tellg();
 		seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
 	}
 	else
@@ -182,14 +188,15 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		}
 
-		current_position = my_file.tellg();
+		current_position = my_file->tellg();
 		seek_position = 1024 + image_offset + my_header.SymmetryDataBytes();
 	}
 
-	if (current_position != seek_position) my_file.seekg(seek_position);
+	if (current_position != seek_position) my_file->seekg(seek_position);
 
 	// we need a temp array for non float formats..
 
+//	wxPrintf("seek_position = %li\n", (seek_position - 1024) / 1679616 + 1);
 	switch ( my_header.Mode() )
 	{
 		// 1-byte integer
@@ -201,10 +208,10 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 			// For signed integers
 			char *temp_char_array = new char [records_to_read];
-			my_file.read(temp_char_array, records_to_read);
+			my_file->read(temp_char_array, records_to_read);
 			// For unsigned integers
 //			unsigned char *temp_char_array = new unsigned char [records_to_read];
-//			my_file.read((char *)temp_char_array, records_to_read);
+//			my_file->read((char *)temp_char_array, records_to_read);
 
 			for (long counter = 0; counter < records_to_read; counter++)
 			{
@@ -234,7 +241,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		case 1:
 		{
 			short *temp_short_array = new short [records_to_read];
-			my_file.read((char*)temp_short_array, records_to_read * 2);
+			my_file->read((char*)temp_short_array, records_to_read * 2);
 
 			for (long counter = 0; counter < records_to_read; counter++)
 			{
@@ -247,14 +254,14 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		// 4-byte real
 		case 2:
-			my_file.read((char*)output_array, records_to_read * 4);
+			my_file->read((char*)output_array, records_to_read * 4);
 		break;
 
 		// unsigned 2-byte integers
 		case 6:
 		{
 			unsigned short int *temp_int_array = new unsigned short int [records_to_read];
-			my_file.read((char*)temp_int_array, records_to_read * 2);
+			my_file->read((char*)temp_int_array, records_to_read * 2);
 			for (long counter = 0; counter < records_to_read; counter++)
 			{
 				output_array[counter] = float(temp_int_array[counter]);
@@ -280,7 +287,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 			uint8 low_4bits;
 
 			char *temp_char_array = new char [actual_bytes_to_read];
-			my_file.read(temp_char_array, actual_bytes_to_read);
+			my_file->read(temp_char_array, actual_bytes_to_read);
 
 			// now we have to convert..
 
@@ -389,7 +396,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_array)
 {
-	MyDebugAssertTrue(my_file.is_open(), "File not open!");
+	MyDebugAssertTrue(my_file->is_open(), "File not open!");
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
 	MyDebugAssertTrue(start_slice <= ReturnNumberOfSlices(), "Start slice number larger than total slices!");
 	MyDebugAssertTrue(end_slice <= ReturnNumberOfSlices(), "end slice number larger than total slices!");
@@ -400,10 +407,10 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 	long records_to_read = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long((end_slice - start_slice) + 1);
 	long bytes_per_slice = long(my_header.ReturnDimensionX()) * long(my_header.ReturnDimensionY()) * long(my_header.BytesPerPixel());
 	long image_offset = long(start_slice - 1) * bytes_per_slice;
-	long current_position = my_file.tellg();
+	long current_position = my_file->tellg();
 	long seek_position = 1024 + image_offset + long(my_header.SymmetryDataBytes());
 
-	if (current_position != seek_position) my_file.seekg(seek_position);
+	if (current_position != seek_position) my_file->seekg(seek_position);
 
 	// we need a temp array for non float formats..
 
@@ -418,7 +425,7 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 				temp_char_array[counter] = char(input_array[counter]);
 			}
 
-			my_file.write(temp_char_array, records_to_read);
+			my_file->write(temp_char_array, records_to_read);
 
 			delete [] temp_char_array;
 		}
@@ -433,14 +440,14 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 				temp_short_array[counter] = short(input_array[counter]);
 			}
 
-			my_file.write((char*)temp_short_array, records_to_read * 2);
+			my_file->write((char*)temp_short_array, records_to_read * 2);
 
 			delete [] temp_short_array;
 		}
 		break;
 
 		case 2:
-			my_file.write((char*)input_array, records_to_read * 4);
+			my_file->write((char*)input_array, records_to_read * 4);
 		break;
 
 		default:
@@ -452,3 +459,24 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_arr
 	}
 }
 
+MRCFile & MRCFile::operator = (const MRCFile &other_file)
+{
+	*this = &other_file;
+	return *this;
+}
+
+MRCFile & MRCFile::operator = (const MRCFile *other_file)
+{
+   // Check for self assignment
+   if(this != other_file)
+   {
+		my_file = other_file->my_file;
+		my_header = other_file->my_header;
+		filename = other_file->filename;
+
+		rewrite_header_on_close = other_file->rewrite_header_on_close;
+		max_number_of_seconds_to_wait_for_file_to_exist = other_file->max_number_of_seconds_to_wait_for_file_to_exist;
+   }
+
+   return *this;
+}

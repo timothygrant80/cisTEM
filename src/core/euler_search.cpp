@@ -447,7 +447,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections)
 	MyDebugAssertTrue(number_of_search_positions > 0,"EulerSearch not initialized");
 	MyDebugAssertTrue(particle.particle_image->is_in_memory,"Particle image not allocated");
 	MyDebugAssertTrue(input_3d.is_in_memory,"3D reference map not allocated");
-	MyDebugAssertTrue(particle.particle_image->logical_x_dimension == input_3d.logical_x_dimension && particle.particle_image->logical_y_dimension == input_3d.logical_y_dimension, "Error: Image and 3D reference incompatible");
+//	MyDebugAssertTrue(particle.particle_image->logical_x_dimension == input_3d.logical_x_dimension && particle.particle_image->logical_y_dimension == input_3d.logical_y_dimension, "Error: Image and 3D reference incompatible");
 
 	int i;
 	int j;
@@ -474,11 +474,11 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections)
 	Image *rotated_image = new Image;
 	Image *correlation_map = new Image;
 	Image *rotation_cache = NULL;
-	flipped_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
+	flipped_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
 	padded_image->Allocate(padding_factor_2d* flipped_image->logical_x_dimension, padding_factor_2d * flipped_image->logical_y_dimension, true);
-	projection_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
-	rotated_image->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
-	correlation_map->Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
+	projection_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+	rotated_image->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
+	correlation_map->Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
 	correlation_map->object_is_centred_in_box = false;
 	#ifndef MKL
 		float *temp_k1 = new float [flipped_image->real_memory_allocated];
@@ -524,7 +524,7 @@ void EulerSearch::Run(Particle &particle, Image &input_3d, Image *projections)
 	rotation_cache = new Image [psi_i];
 	for (i = 0; i < psi_i; i++)
 	{
-		rotation_cache[i].Allocate(input_3d.logical_x_dimension, input_3d.logical_y_dimension, false);
+		rotation_cache[i].Allocate(particle.particle_image->logical_x_dimension, particle.particle_image->logical_y_dimension, false);
 	}
 
 	flipped_image->CopyFrom(particle.particle_image);

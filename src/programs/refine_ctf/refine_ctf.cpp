@@ -365,44 +365,7 @@ bool RefineCTFApp::DoCalculation()
 	wxPrintf("There are are %li 3D references\n", all_reference_3d_filenames.GetCount());
 	currently_open_3d_filename = all_reference_3d_filenames[0];
 
-	if (input_star_file.parameters_that_were_read.reference_3d_filename == true)
-	{
-		if (is_running_locally == true) MyPrintfCyan("Running with per particle 3D reference from input star file..\n");
-		all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
 
-		// get all the filenames..
-
-		bool found_filename;
-
-		for (current_line = 1; current_line < input_star_file.ReturnNumberofLines(); current_line++)
-		{
-			found_filename = false;
-
-			for (filename_counter = 0; filename_counter < all_reference_3d_filenames.GetCount(); filename_counter++)
-			{
-				if (all_reference_3d_filenames[filename_counter] == input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false))
-				{
-					found_filename = true;
-					break;
-				}
-			}
-
-			if (found_filename == false)
-			{
-				all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(current_line).Trim(true).Trim(false));
-			}
-		}
-	}
-	else
-	{
-			input_star_file.SetAllReference3DFilename(input_reconstruction);
-			all_reference_3d_filenames.Add(input_star_file.ReturnReference3DFilename(0).Trim(true).Trim(false));
-	}
-
-//	input_star_file.WriteTocisTEMStarFile("/tmp/star_file_with_filename.star");
-
-//	wxPrintf("There are %li 3D references\n", all_reference_3d_filenames.GetCount());
-	currently_open_3d_filename = all_reference_3d_filenames[0];
 
 	MRCFile input_stack(input_particle_images.ToStdString(), false);
 
@@ -586,7 +549,7 @@ bool RefineCTFApp::DoCalculation()
 	if (normalize_particles)
 	{
 		wxPrintf("Calculating noise power spectrum...\n\n");
-		random_reset_count = std::max(random_reset_count, max_threads);
+		random_reset_count = (random_reset_count, max_threads);
 		percentage = float(max_samples) / float(images_to_process) / random_reset_count;
 		sum_power.SetToConstant(0.0f);
 		number_of_blank_edges = 0;
@@ -1011,10 +974,16 @@ bool RefineCTFApp::DoCalculation()
 				// need to work out which section we should be running
 
 				//wxPrintf("first = %i, last = %i\n", first_position_to_search, last_position_to_search);
-				score_local = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image_local, beamtilt_image_local, sum_power_local, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search);
 
+				score_local = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image_local, beamtilt_image_local, sum_power_local, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search);
+				float shift_penalty = (sqrtf((1.0f-fabsf(particle_shift_x_local))) + sqrtf((1.0f-fabsf(particle_shift_y_local)))) / 2.0f;
+				if (isnan(shift_penalty)) shift_penalty = 0; // happens for particle shift > 1
+				shift_penalty = sqrtf(shift_penalty);
+				float pre_score = score_local;
+				score_local *= shift_penalty;
 				#pragma omp critical
 				{
+					wxPrintf("Score New:Old, %3.3e, %3.3e, %3.3e, args bt,sf, %3.3e,%3.3e,%3.3e,%3.3e weight %3.3e on thread %d\n",pre_score,score_local, score, beamtilt_x_local, beamtilt_y_local, particle_shift_x_local, particle_shift_y_local,shift_penalty, ReturnThreadNumberOfCurrentThread());
 					if (score_local > score)
 					{
 						score = score_local;

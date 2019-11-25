@@ -9935,6 +9935,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	beam_tilt_search_end_value = 	0.005f; // 5 radians
 	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
 
+//	particle_shift_search_start_value = -.25;//-1.0f;
+//	particle_shift_search_end_value = 0.25;//1.0f;
 	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
 	particle_shift_search_step_size = 0.05f;

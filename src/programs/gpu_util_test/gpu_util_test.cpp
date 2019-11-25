@@ -55,6 +55,16 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 	int minPos = 0;
 	int maxPos = 60;
 	int incPos = 60 / (nThreads*nGPUs); // FIXME
+
+	ProgressBar *my_progress;
+	long total_correlation_positions = 1000; // Not calculated properly: FIXME
+	long current_correlation_position = 0;
+
+	if (is_running_locally == true)
+	{
+		my_progress = new ProgressBar(total_correlation_positions);
+	}
+
 //	DeviceManager gpuDev(nGPUs);
 //    omp_set_num_threads(nThreads * gpuDev.nGPUs);  // create as many CPU threads as there are CUDA devices
 //	#pragma omp parallel
@@ -120,7 +130,6 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			EulerSearch	global_euler_search;
 			AnglesAndShifts angles;
 
-
 			float angular_step = 2.5f;
 			float psi_step = 1.5f;
 			float pixel_size = 1.5;
@@ -160,20 +169,20 @@ void GpuUtilTest::TemplateMatchingStandalone(int nThreads, int nGPUs)
 			histogram_min_scaled = histogram_min / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
 			histogram_step_scaled = histogram_step / double(sqrt(input_image.logical_x_dimension * input_image.logical_y_dimension));
 
-			GPU[tIDX].Init(template_reconstruction, input_image, current_projection,
+			GPU[tIDX].Init(this, template_reconstruction, input_image, current_projection,
 					pixel_size_search_range, pixel_size_step, pixel_size,
 					defocus_search_range, defocus_step, defocus1, defocus2,
 					psi_max, psi_start, psi_step,
 					angles, global_euler_search,
 					histogram_min_scaled, histogram_step_scaled, histogram_number_of_points,
-					max_padding, first_search_position, last_search_position);
+					max_padding, first_search_position, last_search_position,
+					my_progress, total_correlation_positions, is_running_locally);
 
 			int size_i = 0;
 			int defocus_i = 0;
 
 
-			GPU[tIDX].RunInnerLoopA(&projection_filter, size_i, defocus_i, tIDX);
-			// FIXME need a loop over positions for innerLoopB and then innerLoopC
+			GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
 
 			long* histogram_data = new long[GPU[tIDX].histogram.histogram_n_bins];
 			for (int iBin = 0; iBin < GPU[tIDX].histogram.histogram_n_bins; iBin++)

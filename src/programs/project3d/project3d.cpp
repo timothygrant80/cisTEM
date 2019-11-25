@@ -198,7 +198,7 @@ bool Project3DApp::DoCalculation()
 	private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
 	{
 
-	projection_image.Allocate(projection_3d.logical_x_dimension, projection_3d.logical_y_dimension, false);
+	projection_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), false);
 	final_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), true);
 	RandomNumberGenerator local_random_generator(int(fabsf(global_random_number_generator.GetUniformRandom()*50000)), true);
 

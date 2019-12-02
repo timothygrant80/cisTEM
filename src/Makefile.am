@@ -633,7 +633,6 @@ refine_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
-
 endif
 
 if ENABLEGPU_AM

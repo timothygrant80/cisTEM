@@ -223,6 +223,8 @@ libgpucore_a_SOURCES =       gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
                              gpu/GpuImage.cu
+                            
+libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
 
 libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
@@ -232,8 +234,8 @@ libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
 .cu.o:
 	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
 
-gpu/gpudevicecode.o: gpu/GpuImage.o 
-	$(NVCC) $(CUDA_CXXFLAGS) --device-link gpu/Histogram.o gpu/TemplateMatchingCore.o gpu/DeviceManager.o gpu/GpuImage.o -o gpu/gpudevicecode.o $(CUDA_LIBS)
+gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
+	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
 endif
 
 libcore_a_SOURCES =    core/functions.cpp \

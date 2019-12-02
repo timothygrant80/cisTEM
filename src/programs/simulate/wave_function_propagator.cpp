@@ -514,8 +514,6 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 		if (do_beam_tilt_full)
 		{
-			wxPrintf("Shifting back by half the total to keep particle centered ( %3.3f %3.3f) pixels\n",-0.5f*shift_sign*total_shift_x,-0.5f*shift_sign*total_shift_y);
-
 			t_N[iPar].PhaseShift(-0.5f*total_shift_x,-0.5f*total_shift_y,0.0f);
 		}
 

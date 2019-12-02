@@ -665,7 +665,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		if (PixelSizeSearchYesRadio->GetValue() == true) number_of_pixel_size_positions = 2 * myround(float(pixel_size_search_range)/float(pixel_size_step)) + 1;
 		else number_of_pixel_size_positions = 1;
 
-		wxPrintf("There are %i search positions\nThere are %i jobs per image\n", current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
+		wxPrintf("For Image %li\nThere are %i search positions\nThere are %i jobs per image\n", active_group.members[image_counter],current_image_euler_search->number_of_search_positions, number_of_jobs_per_image_in_gui);
 		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions);
 		// how many orientations will each process do for this image..
 		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions;
@@ -709,7 +709,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		correlation_std_output_file += wxString::Format("/%s_std_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
 //		wxString correlation_std_output_file = "/dev/null";
-//		current_orientation_counter = 0;
+		current_orientation_counter = 0;
 
 		wxString 	input_search_image = current_image->filename.GetFullPath();
 		wxString 	input_reconstruction = current_volume->filename.GetFullPath();
@@ -717,7 +717,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 		input_image_filenames.Add(input_search_image);
 
-		float low_resolution_limit = 300.0f;
+		float low_resolution_limit = 300.0f; // FIXME set this somehwere that is not buried in the code!
 
 		temp_result.image_asset_id = current_image->asset_id;
 		temp_result.job_name = wxString::Format("Full search with %s", current_volume->filename.GetName());
@@ -768,7 +768,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			bool ctf_refinement = false;
 			float mask_radius_search = 0.0f; //current_volume->x_size; // this is actually not really used...
 
-
+			wxPrintf("\n\tFor image %i, current_orientation_counter is %f\n",image_number_for_gui,current_orientation_counter);
 			if (current_orientation_counter >= current_image_euler_search->number_of_search_positions) current_orientation_counter = current_image_euler_search->number_of_search_positions - 1;
 			int first_search_position = myroundint(current_orientation_counter);
 			current_orientation_counter += orientations_per_process;
@@ -829,6 +829,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		delete current_image_euler_search;
 		my_progress_dialog->Update(image_counter + 1);
 	}
+
 
 	my_progress_dialog->Destroy();
 

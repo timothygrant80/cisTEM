@@ -747,7 +747,8 @@ bool MatchTemplateApp::DoCalculation()
 
 	//Loop over ever search position
 
-	wxPrintf("\nSearching %i positions on the euler sphere.\n", last_search_position - first_search_position, first_search_position, last_search_position);
+	wxPrintf("\n\tFor image id %i\n",image_number_for_gui);
+	wxPrintf("Searching %i positions on the euler sphere (first-last: %i-%i.\n", last_search_position - first_search_position, first_search_position, last_search_position);
 	wxPrintf("Searching %i rotations per position.\n", number_of_rotations);
 	wxPrintf("There are %li correlation positions total.\n\n", total_correlation_positions);
 
@@ -808,8 +809,6 @@ bool MatchTemplateApp::DoCalculation()
 	for (size_i = - myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range)/float(pixel_size_step)); size_i++)
 	{
 
-		// FIXME when status bars work for gpu, get rid of this
-		if (use_gpu) wxPrintf("\n\n\t\tStarting on pixel size %d factor %3.3f %3.3f\n\n", size_i, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, pixel_size);
 
 //		template_reconstruction.CopyFrom(&input_reconstruction);
 		input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, 0.001f, true);
@@ -863,8 +862,6 @@ bool MatchTemplateApp::DoCalculation()
 		for (defocus_i = - myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 		{
 
-			// FIXME when status bars work for gpu, get rid of this
-			if (use_gpu) wxPrintf("\n\n\t\tStarting on defocus size %d %3.3f\n\n", defocus_i, (defocus1 + float(defocus_i) * defocus_step) / pixel_size);
 
 			// make the projection filter, which will be CTF * whitening filter
 			input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));

@@ -176,25 +176,24 @@ void MatchTemplatePanel::OnGroupComboBox(wxCommandEvent &event)
 {
 //	ResetDefaults();
 //	AssetGroup active_group;
-	MyPrintWithDetails("");
+
 	active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
-	MyPrintWithDetails("");
+
 	if (active_group.number_of_members > 0)
 	{
-		MyPrintWithDetails("");
+
 		ImageAsset *current_image;
-		current_image = image_asset_panel->ReturnAssetPointer(GroupComboBox->GetSelection());
-		MyPrintWithDetails("");
+		current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
 		HighResolutionLimitNumericCtrl->ChangeValueFloat(2.0f * current_image->pixel_size);
-		MyPrintWithDetails("");
+
 	}
-	MyPrintWithDetails("");
+
 
 	if (GroupComboBox->GetCount() > 0 && main_frame->current_project.is_open == true) all_images_have_defocus_values = CheckGroupHasDefocusValues();
-	MyPrintWithDetails("");
+
 	if (all_images_have_defocus_values == true && PleaseEstimateCTFStaticText->IsShown() == true)
 	{
-		MyPrintWithDetails("");
+
 		PleaseEstimateCTFStaticText->Show(false);
 		Layout();
 	}
@@ -204,7 +203,7 @@ void MatchTemplatePanel::OnGroupComboBox(wxCommandEvent &event)
 		PleaseEstimateCTFStaticText->Show(true);
 		Layout();
 	}
-	MyPrintWithDetails("");
+
 }
 
 void MatchTemplatePanel::SetInfo()

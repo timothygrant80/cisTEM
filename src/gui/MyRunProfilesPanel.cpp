@@ -494,6 +494,8 @@ bool MyRunProfilesPanel::ImportRunProfilesFromDisk(wxString filename)
 		success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_number_of_run_commands);
 		if (success == false) return false;
 
+		wxPrintf("Got here\n");
+
 		for (command_counter = 0; command_counter < buffer_number_of_run_commands; command_counter++)
 		{
 			line_buffer = input_file.GetNextLine();
@@ -505,14 +507,17 @@ bool MyRunProfilesPanel::ImportRunProfilesFromDisk(wxString filename)
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_number_of_copies);
 			if (success == false) return false;
 
+			line_buffer = input_file.GetNextLine();
 			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_number_of_threads_per_copy=", profile_counter, command_counter), "") != 1) return false;
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_number_of_threads);
 			if (success == false) return false;
 
+			line_buffer = input_file.GetNextLine();
 			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_should_override_total_number_of_copies=", profile_counter, command_counter), "") != 1) return false;
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_override_total_jobs);
 			if (success == false) return false;
 
+			line_buffer = input_file.GetNextLine();
 			if (line_buffer.Replace(wxString::Format("profile_%i_command_%i_overriden_total_number_of_copies=", profile_counter, command_counter), "") != 1) return false;
 			success = line_buffer.Trim(false).Trim(true).ToLong(&buffer_overriden_total_jobs);
 			if (success == false) return false;

@@ -711,8 +711,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
 
 
-		number_of_frames_for_running_average = 10;
-		max_threads = 40;
+		number_of_frames_for_running_average = 1;
+		max_threads = 1;
 
 		bool saved_aligned_frames = false;
 		std::string aligned_frames_filename = "/dev/null";

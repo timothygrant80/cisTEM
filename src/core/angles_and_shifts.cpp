@@ -26,6 +26,10 @@ void AnglesAndShifts::GenerateEulerMatrices(float wanted_euler_phi_in_degrees, f
 {
 
 	// This was the predecessor of the RotationMatrix::SetToEulerRotation method. Just call it here to avoid code duplication. BAH
+	euler_phi = wanted_euler_phi_in_degrees;
+	euler_theta = wanted_euler_theta_in_degrees;
+	euler_psi = wanted_euler_psi_in_degrees;
+
 	euler_matrix.SetToEulerRotation( wanted_euler_phi_in_degrees, wanted_euler_theta_in_degrees, wanted_euler_psi_in_degrees);
 
 }

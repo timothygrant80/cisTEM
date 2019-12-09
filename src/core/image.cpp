@@ -247,7 +247,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared > mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -255,7 +255,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared <= mask_radius_squared)
 							{
-								sum += powf(real_values[address],2);
+								sum += pow(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -281,7 +281,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				{
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						sum += powf(real_values[address],2);
+						sum += pow(real_values[address],2);
 						address++;
 					}
 					address += padding_jump_value;
@@ -301,9 +301,9 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				for (i = 0; i <= physical_upper_bound_complex_x; i++)
 				{
 					if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && (jj == 0 || (jj == logical_lower_bound_complex_y && x_is_even)) && (kk == 0 || (kk == logical_lower_bound_complex_z && x_is_even)))
-						sum += powf(abs(complex_values[address]),2) * 0.5;
-					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += powf(abs(complex_values[address]),2) * 0.25;
-					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += powf(abs(complex_values[address]),2);
+						sum += pow(abs(complex_values[address]),2) * 0.5;
+					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += pow(abs(complex_values[address]),2) * 0.25;
+					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += pow(abs(complex_values[address]),2);
 					address++;
 				}
 			}

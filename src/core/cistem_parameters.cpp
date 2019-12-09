@@ -125,7 +125,7 @@ void cisTEMParameterMask::SetActiveParameters(long parameters_to_set)
 	beam_tilt_group = ((parameters_to_set & BEAM_TILT_GROUP) == BEAM_TILT_GROUP);
 	frame_number = ((parameters_to_set & FRAME_NUMBER) == FRAME_NUMBER);
 	pre_exposure = ((parameters_to_set & PRE_EXPOSURE) == PRE_EXPOSURE);
-	total_exposure = ((parameters_to_set * TOTAL_EXPOSURE) == TOTAL_EXPOSURE);
+	total_exposure = ((parameters_to_set & TOTAL_EXPOSURE) == TOTAL_EXPOSURE);
 }
 
 

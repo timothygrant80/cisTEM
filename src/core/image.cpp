@@ -7391,6 +7391,54 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calcu
 	amplitude_spectrum->object_is_centred_in_box = true;
 }
 
+void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum,  float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting)
+{
+
+	// This is pulled from the ctffind.cpp App - this filtering is used also in wave_function_propagtor::ReturnImageContrast. Any changes here should affect both programs identically.
+	// The only change I (Ben) made is to change amplitud_spectrum-> to this->
+
+	int convolution_box_size;
+
+	// Try to weaken cross artefacts
+	this->ComputeAverageAndSigmaOfValuesInSpectrum(float(this->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(this->logical_x_dimension),average,sigma,12);
+	this->DivideByConstant(sigma);
+	this->SetMaximumValueOnCentralCross(average/sigma+10.0);
+//			average_spectrum_masked->CopyFrom(this);
+
+	//this->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+
+	// Compute low-pass filtered version of the spectrum
+	convolution_box_size = int( float(this->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
+	if (IsEven(convolution_box_size)) convolution_box_size++;
+	current_power_spectrum->Allocate(this->logical_x_dimension,this->logical_y_dimension,true);
+	current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
+	this->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(this->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
+
+	//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
+
+	// Subtract low-pass-filtered spectrum from the spectrum. This should remove the background slope.
+	this->SubtractImage(current_power_spectrum);
+
+//			this->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
+
+	// Threshold high values
+	this->SetMaximumValue(this->ReturnMaximumValue(3,3));
+
+//			convolution_box_size = int( float(this->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
+//			if (IsEven(convolution_box_size)) convolution_box_size++;
+//			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
+//			average_spectrum_masked->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
+//			average_spectrum_masked->SubtractImage(current_power_spectrum);
+//			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
+
+	average_spectrum_masked->CopyFrom(this);
+	average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f),float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 4.0f), true);
+//			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
+//			average_spectrum_masked->CorrectSinc();
+//			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);
+}
+
+
 //END_FOR_STAND_ALONE_CTFFIND
 
 // Compute the local mean and variance of the image at every point. The mask image must have the same dimensions as the image itself.
